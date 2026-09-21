@@ -1,6 +1,6 @@
 "use client";
 
-import { usePrivy, useSendTransaction, useWallets } from "@privy-io/react-auth";
+import { useMfa, usePrivy, useSendTransaction, useWallets } from "@privy-io/react-auth";
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, ArrowRight, Check, ExternalLink, LoaderCircle, ShieldAlert, X } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -17,6 +17,7 @@ export function BorrowWorkspace() {
   const { wallets } = useWallets();
   const { getAccessToken } = usePrivy();
   const { sendTransaction } = useSendTransaction();
+  const { mfaMethods } = useMfa();
   const wallet = useMemo(() => wallets.find((item) => item.walletClientType === "privy") ?? wallets[0], [wallets]);
   const [open, setOpen] = useState(false);
   const [action, setAction] = useState<Action>("borrow");
@@ -47,7 +48,9 @@ export function BorrowWorkspace() {
     try {
       token = await getAccessToken(); if (!token) throw new Error("Your secure session expired.");
       const intentResponse = await fetch("/api/intents/evaluate", { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ type: action, walletAddress: wallet.address, chainId: 8453, asset: symbol, amount, destination: market.data.market, estimatedUsd: symbol === "USDC" ? Number(amount) : undefined }) });
-      const intent = await intentResponse.json() as { intentId?: string; message?: string }; if (!intentResponse.ok || !intent.intentId) throw new Error(intent.message ?? "Policy review failed."); intentId = intent.intentId;
+      const intent = await intentResponse.json() as { intentId?: string; message?: string; decision?: { requiresStepUp?: boolean } }; if (!intentResponse.ok || !intent.intentId) throw new Error(intent.message ?? "Policy review failed.");
+      intentId = intent.intentId;
+      if (intent.decision?.requiresStepUp && !mfaMethods.includes("passkey")) throw new Error("Set up a passkey in the Safety center before this higher-risk credit action.");
       const transactions = collectUnsignedTransactions(prepared.plan, HOME_CHAIN.id); if (!transactions.length) throw new Error("Aave returned no transaction to sign.");
       const submitted: string[] = []; const client = createPublicClient({ chain: HOME_CHAIN, transport: http() });
       for (const [index, transaction] of transactions.entries()) { const result = await sendTransaction(transaction, { address: wallet.address, uiOptions: { description: `${action === "borrow" ? "Borrow" : "Repay"} ${amount} ${symbol} through Aave on Base.`, buttonText: "Confirm with wallet", isCancellable: true } }); submitted.push(result.hash); if (index < transactions.length - 1) { const receipt = await client.waitForTransactionReceipt({ hash: result.hash, confirmations: 1, timeout: 120_000 }); if (receipt.status !== "success") throw new Error("A prerequisite transaction reverted. The next Aave transaction was not submitted."); } }

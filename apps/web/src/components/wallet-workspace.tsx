@@ -109,8 +109,8 @@ export function WalletWorkspace() {
         const blocked = intent.decision?.findings.find((finding) => finding.level === "block");
         throw new Error(blocked?.message ?? intent.message ?? "Aurel’s transaction policy could not approve this action.");
       }
-      if (intent.decision?.requiresStepUp && !mfaMethods.includes("passkey")) throw new Error("Set up a passkey in the Safety center before this higher-risk transfer.");
       reviewedIntentId = intent.intentId;
+      if (intent.decision?.requiresStepUp && !mfaMethods.includes("passkey")) throw new Error("Set up a passkey in the Safety center before this higher-risk transfer.");
       const provider = await embedded.getEthereumProvider();
       const simulation = asset === "ETH"
         ? { from: address, to: recipient, value: toHex(rawAmount) }

@@ -1,6 +1,6 @@
 "use client";
 
-import { usePrivy, useSendTransaction, useWallets } from "@privy-io/react-auth";
+import { useMfa, usePrivy, useSendTransaction, useWallets } from "@privy-io/react-auth";
 import { ArrowRight, Check, ExternalLink, LoaderCircle, Route, ShieldAlert } from "lucide-react";
 import { useMemo, useState } from "react";
 import { createPublicClient, encodeFunctionData, erc20Abi, formatUnits, http, parseUnits } from "viem";
@@ -24,6 +24,7 @@ export function CrossChainWorkspace() {
   const { wallets } = useWallets();
   const { getAccessToken } = usePrivy();
   const { sendTransaction } = useSendTransaction();
+  const { mfaMethods } = useMfa();
   const wallet = useMemo(() => wallets.find((item) => item.walletClientType === "privy") ?? wallets[0], [wallets]);
   const [fromChainId, setFromChainId] = useState(1);
   const [toChainId, setToChainId] = useState(8453);
@@ -70,9 +71,11 @@ export function CrossChainWorkspace() {
       }
       setStage("Running Aurel policy checks");
       const intentResponse = await fetch("/api/intents/evaluate", { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ type: "bridge", walletAddress: wallet.address, chainId: fromChainId, asset: "USDC", amount, destination: quote.quote.transactionRequest.to, estimatedUsd: Number(amount) }) });
-      const intent = await intentResponse.json() as { intentId?: string; message?: string; decision?: { findings?: Array<{ level: string; message: string }> } };
+      const intent = await intentResponse.json() as { intentId?: string; message?: string; decision?: { requiresStepUp?: boolean; findings?: Array<{ level: string; message: string }> } };
       if (!intentResponse.ok || !intent.intentId) throw new Error(intent.decision?.findings?.find((item) => item.level === "block")?.message ?? intent.message ?? "The route did not pass policy review.");
-      intentId = intent.intentId; setStage("Review the bridge transaction in Privy");
+      intentId = intent.intentId;
+      if (intent.decision?.requiresStepUp && !mfaMethods.includes("passkey")) throw new Error("Set up a passkey in the Safety center before this higher-risk cross-chain transfer.");
+      setStage("Review the bridge transaction in Privy");
       const request = quote.quote.transactionRequest;
       const result = await sendTransaction({ to: request.to as `0x${string}`, data: request.data as `0x${string}`, value: BigInt(request.value || "0"), chainId: fromChainId }, { address: wallet.address, uiOptions: { description: `Route ${amount} USDC from ${networkName(fromChainId)} to ${networkName(toChainId)} through ${quote.quote.tool}.`, buttonText: "Confirm cross-chain transfer", isCancellable: true } });
       setHash(result.hash); setStage("Source transaction submitted");

@@ -1,6 +1,6 @@
 "use client";
 
-import { usePrivy, useSendTransaction, useWallets } from "@privy-io/react-auth";
+import { useMfa, usePrivy, useSendTransaction, useWallets } from "@privy-io/react-auth";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, Check, ExternalLink, LoaderCircle, ShieldCheck, X } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -14,6 +14,7 @@ export function EarnWorkspace() {
   const { wallets } = useWallets();
   const { getAccessToken } = usePrivy();
   const { sendTransaction } = useSendTransaction();
+  const { mfaMethods } = useMfa();
   const wallet = useMemo(() => wallets.find((item) => item.walletClientType === "privy") ?? wallets[0], [wallets]);
   const [selected, setSelected] = useState<AaveBaseReserve | null>(null);
   const [amount, setAmount] = useState("");
@@ -45,9 +46,10 @@ export function EarnWorkspace() {
         method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({ type: "earn_supply", walletAddress: wallet.address, chainId: 8453, asset: selected.symbol, amount, destination: market.data?.market, estimatedUsd: selected.symbol === "USDC" ? Number(amount) : undefined })
       });
-      const intent = await intentResponse.json() as { intentId?: string; message?: string };
+      const intent = await intentResponse.json() as { intentId?: string; message?: string; decision?: { requiresStepUp?: boolean } };
       if (!intentResponse.ok || !intent.intentId) throw new Error(intent.message ?? "The allocation did not pass policy review.");
       intentId = intent.intentId;
+      if (intent.decision?.requiresStepUp && !mfaMethods.includes("passkey")) throw new Error("Set up a passkey in the Safety center before this higher-risk allocation.");
 
       const planResponse = await fetch("/api/defi/aave/action", {
         method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
