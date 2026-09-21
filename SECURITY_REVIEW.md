@@ -19,7 +19,7 @@ Reviewed 21 September 2026. Scope: application authentication, transaction prepa
 
 | Severity | Finding | Required closure |
 |---|---|---|
-| High launch gate | Production Turnstile, WAF/API rate rules, API Shield and operator Access are not active | Configure after custom domain and operator identity are approved; capture evidence |
+| High launch gate | WAF/API rate rules, API Shield and operator Access are not active | Configure after custom domain and operator identity are approved; capture evidence |
 | High launch gate | No independent application/security assessment | Independent review with no unresolved critical/high issues |
 | Medium | External log retention, alert routing and named incident coverage are unset | Configure receiver/export and exercise notification |
 | Medium | Real-wallet acceptance matrix is incomplete | Execute `ACCEPTANCE_TEST_PLAN.md` with designated funded test wallets |

@@ -11,6 +11,7 @@ Aurel is a Cloudflare-native, mainnet-first private financial interface built ov
 - Membership projections, vendor-neutral benefit entitlements, and a read-only AI concierge.
 - Fail-closed tokenized-market eligibility, restricted operations/reconciliation, and an effective-dated trust center.
 - Rate-limited protected APIs, security headers, signed webhooks, replay protection, Queue handoff, and structured Cloudflare observability.
+- Managed Turnstile protection on support intake with server-side action and production-hostname validation.
 - Portfolio, Earn, Borrow, Move, activity, benefits, markets, security, settings, and documentation routes.
 - Credential-gated regulated-provider boundary; Bridge/Rain functions remain unavailable until a program is approved.
 - Normalized identity, wallet, compliance, fiat, card, membership, and chain contracts.

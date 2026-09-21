@@ -43,7 +43,7 @@ This is the go/no-go checklist for a closed mainnet beta. It is deliberately str
 - [x] Version upload, gradual deployment, and rollback procedure documented.
 - [x] Turnstile client and mandatory Siteverify path implemented for support intake.
 - [ ] Custom production domain attached.
-- [ ] Turnstile production widget and secret configured.
+- [x] Turnstile production widget and secret configured with exact action and hostname validation.
 - [ ] WAF managed rules, API rate-limit rules, and API Shield schema validation configured on the custom domain.
 - [ ] Cloudflare Access protects any operator-only hostname.
 - [ ] Log retention/export destination and alert receiver configured.
