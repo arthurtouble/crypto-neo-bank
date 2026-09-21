@@ -10,6 +10,8 @@ This is the go/no-go checklist for a closed mainnet beta. It is deliberately str
 - [x] Connected-wallet Base balance aggregation.
 - [x] Balance privacy control.
 - [x] Traceable human support-case intake.
+- [x] Invite/cohort, geography, per-customer beta cap, feedback, and kill-switch controls.
+- [x] Customer-visible dependency and incident status surface.
 - [ ] Five non-crypto users complete signup, recovery, test funding, and withdrawal without coaching.
 - [ ] Product copy is reviewed for bank, deposit, insurance, yield, reward, and investment claims.
 
@@ -30,6 +32,8 @@ This is the go/no-go checklist for a closed mainnet beta. It is deliberately str
 - [x] Stale, failed, and customer-reported activity reaches a triage queue.
 - [x] Product funnel and settlement health are visible separately from balances.
 - [x] Incident, webhook, Queue, ambiguous-command, and projection-recovery runbooks exist.
+- [x] Operations can issue hashed one-use invitations, publish incidents, inspect cohort telemetry, and disable product capabilities without a deploy.
+- [x] Isolated backup/restore drill verifies schema, beta controls, consent evidence, and restored database integrity.
 - [ ] Named primary and backup incident contacts.
 - [ ] Tested out-of-band customer communication channel.
 - [ ] Provider escalation contacts and severity/response commitments recorded.
@@ -50,6 +54,7 @@ This is the go/no-go checklist for a closed mainnet beta. It is deliberately str
 - [ ] Version affinity rule configured before using split traffic with hashed static assets.
 
 Configuration evidence must be attached after the custom hostname, Turnstile widget, operator identity, alert receiver and log destination are selected. The checked-in OpenAPI contract is `infra/cloudflare/aurel-api.openapi.yaml`; it is a validation input, not proof that API Shield mitigation is enabled.
+The exact activation sequence, initial rate ceilings and evidence fields are in `infra/cloudflare/EDGE_SECURITY_ACTIVATION.md`.
 
 ## Legal and provider gate
 

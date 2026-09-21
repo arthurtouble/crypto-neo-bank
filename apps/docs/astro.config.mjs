@@ -14,7 +14,7 @@ export default defineConfig({
       pagination: true,
       tableOfContents: { minHeadingLevel: 2, maxHeadingLevel: 3 },
       sidebar: [
-        { label: "Start here", items: [{ label: "Welcome", slug: "" }, { label: "Product status", slug: "getting-started/status" }, { label: "Set up Aurel", slug: "getting-started/setup" }] },
+        { label: "Start here", items: [{ label: "Welcome", slug: "" }, { label: "Product status", slug: "getting-started/status" }, { label: "Set up Aurel", slug: "getting-started/setup" }, { label: "Private beta", slug: "getting-started/private-beta" }] },
         { label: "Understand Aurel", items: [
           { label: "Product principles", slug: "concepts/product-principles" },
           { label: "Architecture", slug: "concepts/architecture" },
@@ -42,9 +42,12 @@ export default defineConfig({
           { label: "Report a security issue", slug: "safety/report-a-security-issue" }
         ] },
         { label: "Operations", items: [
+          { label: "Private-beta operations", slug: "operations/private-beta" },
           { label: "Provider events", slug: "operations/provider-events" },
           { label: "Reliability and recovery", slug: "operations/reliability-and-recovery" },
-          { label: "Release process", slug: "operations/release-process" }
+          { label: "Incident response", slug: "operations/incident-response" },
+          { label: "Release process", slug: "operations/release-process" },
+          { label: "Provider diligence", slug: "operations/provider-diligence" }
         ] },
         { label: "Company", items: [
           { label: "Fees and alignment", slug: "company/fees-and-alignment" },

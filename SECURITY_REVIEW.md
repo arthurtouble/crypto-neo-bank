@@ -1,6 +1,6 @@
 # Internal security review
 
-Reviewed 21 September 2026. Scope: application authentication, transaction preparation, provider events, data authority, operational recovery, Cloudflare configuration and release controls. This is an internal engineering review, not the independent review required for public launch.
+Reviewed 22 September 2026. Scope: application authentication, private-beta access, transaction preparation, provider events, data authority, operational recovery, Cloudflare configuration and release controls. This is an internal engineering review, not the independent review required for public launch.
 
 ## Positive controls verified in code
 
@@ -14,6 +14,9 @@ Reviewed 21 September 2026. Scope: application authentication, transaction prepa
 - Queue failures reach a dead-letter queue and a critical issue; scheduled reconciliation runs every five minutes.
 - D1 is not treated as authoritative for customer balances or settlement.
 - Security headers, abuse limits, structured logs, CI, CodeQL, dependency audit and isolated recovery testing exist.
+- Invitation codes are returned only at creation and stored as hashes; country, cohort and transaction-cap policy is enforced server-side.
+- Product capabilities have database-backed server-side kill switches, and the public status response exposes only bounded operational state.
+- The recovery drill performs a real local backup, clean restore, integrity check and retained-consent verification.
 
 ## Open findings
 

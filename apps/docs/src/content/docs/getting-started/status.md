@@ -27,6 +27,8 @@ Use this page to separate working features from planned services. A screen, data
 - Provider-event signature, queue, retry, and dead-letter foundations
 - Scheduled checks for stale transaction and event evidence
 - Read-only concierge boundaries and authenticated support cases
+- Public dependency status and incident-history surface
+- Private-beta invitation, cohort, geography, limit, feedback, and feature-control foundations
 
 ## Available when providers respond
 

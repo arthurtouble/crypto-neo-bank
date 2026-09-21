@@ -22,6 +22,8 @@ This is the execution checklist for the mainnet-first product. “Live” means 
 - [x] Source-chain receipt reconciliation with resumable intent history
 - [x] Human support intake and operations escalation
 - [x] Product funnel and settlement-reliability telemetry
+- [x] Private-beta invitation, cohort, country, transaction-cap, feedback, and feature-control plane
+- [x] Public dependency and incident status surface with scheduled provider probes
 
 ## Product workstreams
 
@@ -42,6 +44,8 @@ This is the execution checklist for the mainnet-first product. “Live” means 
 - [x] Read-only mainnet/LI.FI readiness, production smoke, and isolated D1 recovery automation
 - [x] CodeQL and high-severity dependency audit workflow
 - [x] Partner diligence, responsibility matrix, provider scorecard, acceptance protocol, and closed-beta plan
+- [x] Operator beta console, 30-day business telemetry, invite issuance, incident publication, and feature controls
+- [x] Customer communication templates, incident plan, data-retention schedule, fund-flow map, provider diligence packet, and external review scope
 
 ## Deliberately external
 

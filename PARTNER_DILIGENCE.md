@@ -58,6 +58,10 @@ The partner should quote setup fees, monthly minimum, per-customer KYC, enhanced
 - Provider comparison: `PROVIDER_REQUIREMENTS_MATRIX.md`
 - Beta limits and progression: `CLOSED_BETA_PLAN.md`
 - Acceptance protocol: `ACCEPTANCE_TEST_PLAN.md`
+- Fund and data flows: `FUND_FLOW_AND_PROVIDER_DATA.md`
+- Volume and economics assumptions: `VOLUME_AND_ECONOMICS_INPUTS.md`
+- Data retention: `DATA_RETENTION_SCHEDULE.md`
+- External security review scope: `EXTERNAL_SECURITY_REVIEW_SCOPE.md`
 
 ## Open approval items
 
