@@ -3,7 +3,7 @@ title: Aurel documentation
 description: Understand what Aurel does, how your wallet stays under your control, and which features are live.
 template: splash
 hero:
-  tagline: One clear guide to your wallet, onchain activity, safeguards, and Aurel membership.
+  tagline: Learn how Aurel works, where your money sits, what each provider does, and which features are ready today.
   actions:
     - text: Set up Aurel
       link: /getting-started/setup/
@@ -41,6 +41,50 @@ import { Card, CardGrid } from '@astrojs/starlight/components';
 - Set address, review, and account-lock preferences.
 
 Bank accounts, payment cards, tokenized securities, insurance, and fulfilled travel benefits are not live. [See current product status](/getting-started/status/).
+
+## Explore the system
+
+<CardGrid>
+  <Card title="Architecture and authority" icon="puzzle">
+    See how Aurel, Privy, chains, protocols, routes, and future regulated providers divide responsibility. [Read the architecture](/concepts/architecture/).
+  </Card>
+  <Card title="Transactions and routes" icon="rocket">
+    Follow an action from preparation and policy review through wallet confirmation and settlement. [Understand transaction states](/product/transaction-lifecycle/).
+  </Card>
+  <Card title="Security and recovery" icon="shield-check">
+    Review default controls, the threat model, operational evidence, and recovery boundaries. [Open the security model](/safety/security-model/).
+  </Card>
+  <Card title="Regulated-service plan" icon="building">
+    Understand what a future banking or card partner would own and what remains Aurel's job. [Read about regulated services](/company/regulated-services/).
+  </Card>
+</CardGrid>
+
+## Product guide
+
+- [Wallets, deposits, portfolio values, recovery, and export](/product/wallets-and-assets/)
+- [Direct transfers and policy checks](/product/send-and-route/)
+- [Supported networks, token contracts, and gas](/product/networks-and-assets/)
+- [Cross-chain USDC approvals, routes, and destination delivery](/product/cross-chain-routing/)
+- [Aave supplying, borrowing, repayment, and liquidation risk](/product/earn-and-borrow/)
+- [Membership history, benefit states, and tier economics](/product/membership-and-benefits/)
+- [Tokenized-market listing and customer eligibility](/product/tokenized-markets/)
+- [Concierge, support, complaints, and security reports](/product/concierge-and-support/)
+
+## For security and operations
+
+- [Threat model](/safety/threat-model/)
+- [Data and privacy architecture](/safety/data-and-privacy/)
+- [Provider-event authentication and retry](/operations/provider-events/)
+- [Reliability, reconciliation, and recovery](/operations/reliability-and-recovery/)
+- [Production release process](/operations/release-process/)
+
+## For partners and diligence
+
+- [Provider responsibility map](/company/provider-responsibilities/)
+- [Fees, costs, revenue, and alignment](/company/fees-and-alignment/)
+- [Regulated-service onboarding model](/company/regulated-services/)
+- [Product roadmap and external dependencies](/company/roadmap/)
+- [Legal and policy center](/legal/)
 
 :::caution[Real transactions]
 Aurel operates on public mainnets. A signed transaction can move real assets and may not be reversible.
