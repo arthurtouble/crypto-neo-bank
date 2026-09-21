@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Beaker, CircleHelp, Menu, X } from "lucide-react";
+import { CircleHelp, Menu, X } from "lucide-react";
 import { useState } from "react";
 import { Brand } from "./brand";
 import { icons } from "./icons";
@@ -24,7 +24,6 @@ const navigation = [
 ];
 
 const secondary = [
-  { label: "Demo lab", href: "/app/sandbox", icon: Beaker },
   { label: "Security", href: "/app/security", icon: icons.security },
   { label: "Settings", href: "/app/settings", icon: icons.settings }
 ];
