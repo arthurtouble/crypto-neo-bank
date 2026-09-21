@@ -736,13 +736,13 @@ Production preference, subject to licensing:
 
 - **Primary sans:** Suisse Int’l or Neue Haas Grotesk.
 - **Open-source build default:** Inter Variable.
-- **Editorial/display serif:** Source Serif 4.
+- **Display sans:** Archivo.
 - **Tabular/technical:** IBM Plex Mono.
 
 Rules:
 
 - Use the sans for navigation, controls, balances, and body copy.
-- Use the serif sparingly for brand statements, reports, and editorial education.
+- Use Archivo for concise headlines and Satoshi for the interface. Avoid serif styling as a shortcut to a premium feel.
 - Use tabular numerals for all money, rates, and transaction tables.
 - Never communicate state using color alone.
 - Default body size: 16px; dense financial tables may use 13–14px with strong contrast.

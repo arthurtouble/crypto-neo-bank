@@ -1,23 +1,60 @@
 import Link from "next/link";
-import { ArrowRight, Check, ChevronRight, Globe2, LockKeyhole, ShieldCheck, Sparkles, WalletCards } from "lucide-react";
+import { BadgeCheck, CircleDollarSign, Globe2, KeyRound, Landmark, Layers3, LockKeyhole, Route, ShieldCheck, WalletCards } from "lucide-react";
 import { Brand } from "@/components/brand";
 import { ThemeToggle } from "@/components/theme-toggle";
+
+const docsUrl = "https://aurel-docs.aurel-events.workers.dev";
 
 export default function MarketingPage() {
   return (
     <div className="marketingPage">
-      <header className="marketingHeader"><Brand /><nav><a href="#principles">Principles</a><a href="#product">Product</a><Link href="/docs">Documentation</Link></nav><div className="marketingActions"><ThemeToggle /><Link className="button dark" href="/app">Open Aurel <ArrowRight size={15} /></Link></div></header>
+      <header className="marketingHeader">
+        <Brand />
+        <nav aria-label="Main navigation"><a href="#principles">Why Aurel</a><a href="#product">What you can do</a><a href={docsUrl}>Help</a></nav>
+        <div className="marketingActions"><ThemeToggle /><Link className="button dark" href="/app">Open Aurel</Link></div>
+      </header>
       <main>
         <section className="marketingHero">
-          <div className="heroCopy"><p className="eyebrow">Private digital wealth</p><h1>Your onchain wealth,<br /><em>usable everywhere.</em></h1><p>Receive, grow, and use digital wealth through one clear relationship—while you retain control.</p><div className="heroButtons"><Link className="button dark large" href="/app">Open Aurel <ArrowRight size={16} /></Link><Link className="button textButton" href="/docs">How it works <ChevronRight size={16} /></Link></div><div className="trustLine"><span><ShieldCheck size={15} /> Customer-controlled</span><span><LockKeyhole size={15} /> No house token</span><span><Globe2 size={15} /> Globally minded</span></div></div>
-          <div className="heroVisual"><div className="visualHalo" /><div className="statementCard"><div className="statementHead"><span>AUREL / PRIVATE</span><span>ILLUSTRATIVE INTERFACE</span></div><p>TOTAL RELATIONSHIP VALUE</p><strong>$184,290.42</strong><div className="statementRule" /><div className="statementRows"><span><i className="dot greenDot" />Productive stablecoins <b>61.2%</b></span><span><i className="dot brassDot" />Connected assets <b>23.4%</b></span><span><i className="dot blueDot" />Liquid reserve <b>15.4%</b></span></div><div className="statementFoot"><span>NET YIELD<br /><b>4.72%</b></span><span>SPENDABLE<br /><b>$28,450</b></span></div></div><div className="floatingNote safetyNote"><ShieldCheck size={17} /><span><small>SAFETY POSTURE</small><strong>Balanced</strong></span></div><div className="floatingNote policyNote"><Sparkles size={17} /><span><small>ACTIVE POLICY</small><strong>Maintain $10K reserve</strong></span></div></div>
+          <div className="heroCopy">
+            <p className="eyebrow"><WalletCards size={14} /> Private digital wealth</p>
+            <h1>Your onchain wealth,<br /><em>ready for real life.</em></h1>
+            <p>See, move, and put digital assets to work from one calm, secure place. You stay in control of the wallet.</p>
+            <div className="heroButtons"><Link className="button dark large" href="/app">Open Aurel</Link><a className="button textButton" href={`${docsUrl}/getting-started/setup/`}>How Aurel works</a></div>
+            <div className="trustLine"><span><KeyRound size={15} /> You sign every transaction</span><span><LockKeyhole size={15} /> No Aurel token</span><span><Globe2 size={15} /> Built for global assets</span></div>
+          </div>
+          <div className="heroVisual">
+            <div className="visualHalo" />
+            <div className="statementCard"><div className="statementHead"><span>AUREL / PRIVATE</span><span>ILLUSTRATIVE VIEW</span></div><p>TOTAL ASSETS</p><strong>$184,290.42</strong><div className="statementRule" /><div className="statementRows"><span><i className="dot greenDot" />Earning stablecoins <b>61.2%</b></span><span><i className="dot brassDot" />Connected assets <b>23.4%</b></span><span><i className="dot blueDot" />Ready to use <b>15.4%</b></span></div><div className="statementFoot"><span>ESTIMATED YIELD<br /><b>4.72%</b></span><span>AVAILABLE<br /><b>$28,450</b></span></div></div>
+            <div className="floatingNote safetyNote"><ShieldCheck size={17} /><span><small>SAFETY CHECK</small><strong>Ready</strong></span></div>
+            <div className="floatingNote policyNote"><CircleDollarSign size={17} /><span><small>CASH RESERVE</small><strong>Keep $10K available</strong></span></div>
+          </div>
         </section>
 
-        <section className="principlesSection" id="principles"><p className="eyebrow">Our position</p><div className="principlesIntro"><h2>Independent by design.<br />Aligned by construction.</h2><p>No proprietary token or forced ecosystem. Decisions begin with your liquidity, risk, and objectives.</p></div><div className="principleGrid"><article><span>01</span><h3>Control stays visible</h3><p>See who controls an asset, what permissions exist, and how to exit.</p></article><article><span>02</span><h3>Risk belongs in context</h3><p>Custody, liquidity, counterparties, and net return appear where you decide.</p></article><article><span>03</span><h3>Liquidity has a purpose</h3><p>Keep what you need available. Put the remainder to transparent work.</p></article></div></section>
+        <section className="principlesSection" id="principles">
+          <p className="eyebrow"><BadgeCheck size={14} /> Why Aurel</p>
+          <div className="principlesIntro"><h2>Independent by design.<br />Clear by default.</h2><p>Aurel has no house token and no reason to steer you into one ecosystem. Every choice starts with your needs.</p></div>
+          <div className="principleGrid">
+            <article><span className="principleIcon"><KeyRound size={20} /></span><h3>You keep control</h3><p>See who holds each asset, what you are approving, and how to leave.</p></article>
+            <article><span className="principleIcon"><ShieldCheck size={20} /></span><h3>Risk stays visible</h3><p>Fees, liquidity, dependencies, and ways to lose money appear before you act.</p></article>
+            <article><span className="principleIcon"><Layers3 size={20} /></span><h3>One simple view</h3><p>Bring wallets, stablecoins, DeFi, and future everyday finance into one place.</p></article>
+          </div>
+        </section>
 
-        <section className="productSection" id="product"><div className="sectionCopy"><p className="eyebrow">One relationship</p><h2>Built for the way wealth moves now.</h2><p>Connect wallets, move digital dollars, and allocate capital without learning the infrastructure underneath.</p><ul><li><Check size={15} /> Customer-controlled wallet</li><li><Check size={15} /> Cross-chain stablecoin movement</li><li><Check size={15} /> Explained DeFi access</li><li><Check size={15} /> Banking and card rails planned</li></ul></div><div className="productTiles"><article className="productTile mainTile"><span><WalletCards size={20} /></span><p className="eyebrow">Illustrative holdings</p><h3>Everything you own,<br />understood in one place.</h3><div className="miniAssets"><span><i>U</i> USD Coin <b>$141,290</b></span><span><i>E</i> Ether <b>$34,546</b></span><span><i>W</i> Wrapped Ether <b>$8,454</b></span></div></article><article className="productTile quoteTile"><blockquote>Clarity is the first form of security.</blockquote><p>Custody, liquidity, dependencies, and loss conditions travel with every position.</p></article></div></section>
+        <section className="productSection" id="product">
+          <div className="sectionCopy"><p className="eyebrow"><Route size={14} /> What you can do</p><h2>Move money without learning the machinery.</h2><p>Connect a wallet, understand what you own, and review every action in plain language.</p><ul><li><WalletCards size={16} /> See assets in one view</li><li><Route size={16} /> Move USDC across networks</li><li><CircleDollarSign size={16} /> Access selected DeFi markets</li><li><Landmark size={16} /> Banking and cards are planned</li></ul></div>
+          <div className="productTiles"><article className="productTile mainTile"><span><WalletCards size={20} /></span><p className="eyebrow">Illustrative holdings</p><h3>Everything you own,<br />clear at a glance.</h3><div className="miniAssets"><span><i>U</i> USD Coin <b>$141,290</b></span><span><i>E</i> Ether <b>$34,546</b></span><span><i>W</i> Wrapped Ether <b>$8,454</b></span></div></article><article className="productTile quoteTile"><ShieldCheck size={24} /><blockquote>Know what happens before you sign.</blockquote><p>Aurel shows the control, cost, and risk behind each action.</p></article></div>
+        </section>
       </main>
-      <footer className="marketingFooter"><Brand compact /><p>Wallet and selected protocol features are live on mainnet. Banking, card, insurance, and securities services are not currently offered.</p><div><Link href="/docs">Documentation</Link><a href="/design-system.html">Design system</a><Link href="/app/security">Security</Link></div></footer>
+      <footer className="marketingFooter">
+        <div className="footerLead"><Brand compact /><p>Digital wealth, without a house token or hidden agenda.</p><small>Wallet and selected DeFi features are live on mainnet. Banking, cards, insurance, and securities are not currently offered.</small></div>
+        <div className="footerColumns">
+          <section><h2>Product</h2><Link href="/app">Overview</Link><Link href="/app/assets">Assets</Link><Link href="/app/earn">Earn</Link><Link href="/app/borrow">Borrow</Link><Link href="/app/benefits">Benefits</Link></section>
+          <section><h2>Learn</h2><a href={docsUrl}>Documentation</a><a href={`${docsUrl}/getting-started/setup/`}>Get started</a><a href={`${docsUrl}/getting-started/status/`}>Product status</a><a href={`${docsUrl}/company/fees-and-alignment/`}>Fees and alignment</a></section>
+          <section><h2>Safety</h2><Link href="/app/security">Safety center</Link><a href={`${docsUrl}/safety/security-model/`}>Security model</a><a href={`${docsUrl}/safety/account-controls/`}>Account controls</a><a href={`${docsUrl}/safety/report-a-security-issue/`}>Report an issue</a></section>
+          <section><h2>Legal</h2><a href={`${docsUrl}/legal/terms-of-use/`}>Terms</a><a href={`${docsUrl}/legal/privacy-notice/`}>Privacy</a><a href={`${docsUrl}/legal/risk-disclosure/`}>Risk disclosure</a><a href={`${docsUrl}/legal/acceptable-use/`}>Acceptable use</a><a href={`${docsUrl}/legal/complaints/`}>Complaints</a></section>
+        </div>
+        <div className="footerBottom"><span>© 2026 Aurel</span><span>Pre-launch product</span><div className="footerTheme"><ThemeToggle /> <span>Theme</span></div></div>
+      </footer>
     </div>
   );
 }

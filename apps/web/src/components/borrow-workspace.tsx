@@ -2,7 +2,7 @@
 
 import { useMfa, usePrivy, useSendTransaction, useWallets } from "@privy-io/react-auth";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, ArrowRight, Check, ExternalLink, LoaderCircle, ShieldAlert, X } from "lucide-react";
+import { AlertTriangle, Check, ExternalLink, LoaderCircle, ShieldAlert, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { createPublicClient, http } from "viem";
 import { HOME_CHAIN } from "@/config/chains";
@@ -70,7 +70,7 @@ export function BorrowWorkspace() {
   return <><div className="notice borrowNotice"><ShieldAlert size={18} /><span><strong>Borrow only against collateral you can afford to lose.</strong> Liquidation is automatic at the protocol level. Aurel cannot stop it or restore collateral.</span></div>
     <div className="contentGrid"><section className="panel widePanel"><div className="panelHeading"><div><p className="eyebrow">AAVE V3 · BASE</p><h2>Collateral and debt</h2></div><span className="statusBadge neutral">Live protocol view</span></div>
       <div className="borrowHealth"><div><span>Current health factor</span><strong>{before ?? "No active debt"}</strong><small>Below 1.00 is liquidatable</small></div><div><span>Protocol</span><strong>Aave V3</strong><small>Onchain and noncustodial</small></div><div><span>Position source</span><strong>{position.isPending ? "Reading…" : "Observed"}</strong><small>Refreshed from Aave</small></div></div>
-      <button className="button primary" onClick={() => { setOpen(true); setPrepared(null); setError(null); setHashes([]); }}>Review a borrow or repayment <ArrowRight size={15} /></button>
+      <button className="button primary" onClick={() => { setOpen(true); setPrepared(null); setError(null); setHashes([]); }}>Review borrow or repayment</button>
     </section><aside className="panel connectionPanel"><p className="eyebrow">AVAILABLE MARKETS</p>{market.data?.reserves.map((reserve) => <div className="rateRow" key={reserve.symbol}><span><strong>{reserve.symbol}</strong><small>${(Number(reserve.availableLiquidity.usd) / 1_000_000).toFixed(1)}m liquidity</small></span><b>{reserve.borrowApyPct}%</b></div>)}<p className="riskFineprint">Rates are variable. Available liquidity and protocol parameters can change before execution.</p></aside></div>
     {open && <div className="modalBackdrop" onMouseDown={(event) => event.target === event.currentTarget && setOpen(false)}><section className="financialModal" role="dialog" aria-modal="true"><button className="modalClose" onClick={() => setOpen(false)} aria-label="Close"><X size={18} /></button><form onSubmit={(event) => void prepare(event)}><p className="eyebrow">SIMULATE BEFORE SIGNING</p><h2>{action === "borrow" ? "Borrow" : "Repay"} on Base</h2><p>Aave simulates the resulting position before Aurel presents any transaction for signature.</p>
       <div className="segmentedControl"><button type="button" className={action === "borrow" ? "active" : ""} onClick={() => { setAction("borrow"); setPrepared(null); }}>Borrow</button><button type="button" className={action === "repay" ? "active" : ""} onClick={() => { setAction("repay"); setPrepared(null); }}>Repay</button></div>

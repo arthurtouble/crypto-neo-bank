@@ -11,8 +11,8 @@ test("partner sandbox exercises success and failure workflows", async ({ page })
   await expect(page.locator(".receiptPanel").getByText("The destination could not be verified. No funds moved.")).toBeVisible();
 });
 
-test("public trust center has no serious accessibility violations", async ({ page }) => {
-  await page.goto("/docs");
+test("public landing page has no serious accessibility violations", async ({ page }) => {
+  await page.goto("/");
   const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
   expect(results.violations.filter((violation) => ["serious", "critical"].includes(violation.impact ?? ""))).toEqual([]);
 });
@@ -27,10 +27,10 @@ test("mobile layout does not overflow and retains product entry", async ({ page 
 
 test("theme and private access gate remain usable", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Toggle color theme" }).click();
+  await page.getByRole("button", { name: "Toggle color theme" }).last().click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", /light|dark/);
   await page.goto("/app");
-  await expect(page.getByRole("heading", { name: /wallet only you control/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /wallet you control/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /Continue securely/ })).toBeVisible();
 });
 
@@ -63,12 +63,10 @@ test("unsigned provider events are rejected", async ({ request }) => {
   expect([400, 401, 403]).toContain(response.status());
 });
 
-test("documentation stays within the mobile viewport", async ({ page }, testInfo) => {
-  test.skip(!testInfo.project.name.includes("mobile"), "Mobile-only assertion");
-  await page.goto("/docs");
-  await expect(page.getByRole("heading", { name: /Understand the system/ })).toBeVisible();
-  const dimensions = await page.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, clientWidth: document.documentElement.clientWidth }));
-  expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth + 1);
+test("legacy documentation route points to the dedicated docs site", async ({ request }) => {
+  const response = await request.get("/docs", { maxRedirects: 0 });
+  expect([301, 302, 307, 308]).toContain(response.status());
+  expect(response.headers().location).toBe("https://aurel-docs.aurel-events.workers.dev");
 });
 
 test("design system is accessible and responsive", async ({ page }) => {

@@ -1,7 +1,7 @@
 "use client";
 
 import { usePrivy } from "@privy-io/react-auth";
-import { ArrowRight, LockKeyhole, ShieldCheck, WalletCards } from "lucide-react";
+import { LockKeyhole, ShieldCheck, WalletCards } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 export function ProductAccessGate({ children }: { children: React.ReactNode }) {
@@ -18,10 +18,10 @@ export function ProductAccessGate({ children }: { children: React.ReactNode }) {
     return (
       <section className="accessGate">
         <div className="accessGateMark"><LockKeyhole size={24} /></div>
-        <p className="eyebrow">PRIVATE CLIENT ACCESS</p>
-        <h1>Your financial relationship starts with a wallet only you control.</h1>
-        <p>Sign in to create or connect a Privy-secured wallet. Aurel never receives your recovery secret and cannot move assets without your confirmation.</p>
-        <button className="button primary" onClick={login}>Continue securely <ArrowRight size={16} /></button>
+        <p className="eyebrow">Private access</p>
+        <h1>Start with a wallet you control.</h1>
+        <p>Sign in to create or connect a Privy wallet. Aurel never sees your recovery secret or signs for you.</p>
+        <button className="button primary" onClick={login}>Continue securely</button>
         <div className="accessAssurances">
           <span><ShieldCheck size={15} /> User-confirmed transactions</span>
           <span><WalletCards size={15} /> Exportable wallet</span>
@@ -32,4 +32,3 @@ export function ProductAccessGate({ children }: { children: React.ReactNode }) {
 
   return children;
 }
-

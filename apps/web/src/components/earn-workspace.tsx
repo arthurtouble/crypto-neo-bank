@@ -2,7 +2,7 @@
 
 import { useMfa, usePrivy, useSendTransaction, useWallets } from "@privy-io/react-auth";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, Check, ExternalLink, LoaderCircle, ShieldCheck, X } from "lucide-react";
+import { Check, ExternalLink, LoaderCircle, ShieldCheck, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { createPublicClient, http } from "viem";
 import { HOME_CHAIN } from "@/config/chains";
@@ -80,8 +80,8 @@ export function EarnWorkspace() {
   }
 
   return <>
-    <div className="notice"><ShieldCheck size={18} /><span><strong>Productive by choice.</strong> Live Aave positions are self-custodial and user-signed. Rates vary, smart-contract risk exists, and principal is not guaranteed.</span></div>
-    {market.isPending && <section className="panel walletLoading"><LoaderCircle className="spin" size={20} /><div><strong>Reading Base markets</strong><span>Fetching authoritative Aave liquidity and rates.</span></div></section>}
+    <div className="notice"><ShieldCheck size={18} /><span><strong>You stay in control.</strong> Aave positions use your wallet and your signature. Rates vary, contracts can fail, and principal is not guaranteed.</span></div>
+    {market.isPending && <section className="panel walletLoading"><LoaderCircle className="spin" size={20} /><div><strong>Reading Base markets</strong><span>Loading current Aave liquidity and rates.</span></div></section>}
     {market.error && <div className="sandboxAlert error" role="alert">{market.error.message}</div>}
     <div className="strategyGrid">
       {market.data?.reserves.map((reserve) => <article className="panel strategyCard" key={reserve.symbol}>
@@ -90,7 +90,7 @@ export function EarnWorkspace() {
         <p>Supply {reserve.symbol} directly to the governed Aave Base market. Aurel never takes custody or operates an intermediary vault.</p>
         <div className="strategyMetrics"><div><span>Supply APY</span><strong>{reserve.supplyApyPct}%</strong></div><div><span>Liquidity</span><strong>${(Number(reserve.availableLiquidity.usd) / 1_000_000).toFixed(1)}m</strong></div><div><span>Borrow APY</span><strong>{reserve.borrowApyPct}%</strong></div></div>
         <div className="exposureList"><span><Check size={13} /> Base mainnet</span><span><Check size={13} /> Aave governance</span><span><Check size={13} /> Withdraw subject to liquidity</span></div>
-        <button className="button primary full" disabled={!reserve.canSupply} onClick={() => { setSelected(reserve); setAmount(""); setError(null); setHashes([]); }}>Review allocation <ArrowRight size={15} /></button>
+        <button className="button primary full" disabled={!reserve.canSupply} onClick={() => { setSelected(reserve); setAmount(""); setError(null); setHashes([]); }}>Review allocation</button>
       </article>)}
     </div>
     {market.data && <p className="authorityFootnote">Observed {new Date(market.data.observedAt).toLocaleTimeString()} · Authority: {market.data.authority} · Spot APY is not a forecast.</p>}

@@ -21,7 +21,7 @@ export default function Web3RuntimeProvider({ children }: { children: React.Reac
         supportedChains: [...SUPPORTED_CHAINS],
         appearance: {
           theme: "light",
-          accentColor: "#156957",
+          accentColor: "#123524",
           landingHeader: "Welcome to Aurel",
           loginMessage: "Secure access to your private digital wealth relationship."
         },
@@ -37,4 +37,3 @@ export default function Web3RuntimeProvider({ children }: { children: React.Reac
     </PrivyProvider>
   );
 }
-

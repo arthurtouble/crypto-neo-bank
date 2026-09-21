@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle, ArrowRight, Check, CircleDashed, CreditCard, DatabaseZap, KeyRound, Landmark, LoaderCircle, RefreshCw, ShieldCheck, WalletCards } from "lucide-react";
+import { AlertCircle, Check, CircleDashed, CreditCard, DatabaseZap, KeyRound, Landmark, LoaderCircle, RefreshCw, Send, ShieldCheck, WalletCards } from "lucide-react";
 import { useCallback, useState, useSyncExternalStore } from "react";
 import type { ProductCommand, ProviderCommandReceipt } from "@/lib/providers/contracts";
 import type { DemoScenarioId } from "@/lib/providers/scenarios";
@@ -15,7 +15,7 @@ const commands: Array<{ label: string; detail: string; icon: typeof WalletCards;
   { label: "Start verification", detail: "Bridge compliance adapter", icon: ShieldCheck, build: () => ({ type: "start_compliance", subjectReference: "demo-user-001", country: "PT" }) },
   { label: "Deposit $5,000", detail: "Bridge rail adapter", icon: Landmark, build: () => ({ type: "deposit", subjectReference: "demo-user-001", amount: "5000.00", asset: "USD", rail: "bank" }) },
   { label: "Allocate $2,500", detail: "Privy signing + Aave adapter", icon: DatabaseZap, build: () => ({ type: "allocate", subjectReference: "demo-user-001", amount: "2500.00", asset: "USDC", strategyReference: "aave-v3-base" }) },
-  { label: "Withdraw $1,000", detail: "Policy and signing review", icon: ArrowRight, build: () => ({ type: "withdraw", subjectReference: "demo-user-001", amount: "1000.00", asset: "USDC", destinationReference: "saved:operating-wallet" }) },
+  { label: "Withdraw $1,000", detail: "Policy and signing review", icon: Send, build: () => ({ type: "withdraw", subjectReference: "demo-user-001", amount: "1000.00", asset: "USDC", destinationReference: "saved:operating-wallet" }) },
   { label: "Request card", detail: "Bridge card adapter", icon: CreditCard, build: () => ({ type: "issue_card", subjectReference: "demo-user-001" }) },
   { label: "Enable transfer delay", detail: "Wallet policy adapter", icon: KeyRound, build: () => ({ type: "set_security_policy", subjectReference: "demo-user-001", policy: "transfer_delay", enabled: true }) }
 ];
@@ -106,7 +106,7 @@ export function SandboxLab({ initialSession, initialScenarios }: { initialSessio
             <div className="panelHeading"><div><p className="eyebrow">PROVIDER COMMANDS</p><h2>Exercise a workflow</h2></div></div>
             <p>Commands return provider receipts. This demo never changes an authoritative balance.</p>
             <div className="commandGrid">
-              {commands.map(({ label, detail, icon: Icon, build }) => <button key={label} disabled={!interactive || Boolean(running)} onClick={() => void execute(build(), label)}><Icon size={17} /><span><strong>{label}</strong><small>{detail}</small></span>{running === label ? <LoaderCircle className="spin" size={15} /> : <ArrowRight size={15} />}</button>)}
+              {commands.map(({ label, detail, icon: Icon, build }) => <button key={label} disabled={!interactive || Boolean(running)} onClick={() => void execute(build(), label)}><Icon size={17} /><span><strong>{label}</strong><small>{detail}</small></span>{running === label ? <LoaderCircle className="spin" size={15} /> : null}</button>)}
             </div>
           </section>
         </div>

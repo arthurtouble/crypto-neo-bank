@@ -23,7 +23,7 @@ These are implementation constraints, not mood-board suggestions.
 4. Do not use gradient blobs, glass panels, neon glows, fake metrics, testimonial filler, or rows of identical feature cards.
 5. Avoid symmetry by default. Let content determine width, height, and rhythm.
 6. Use no more than three radius tiers: 5px controls, 8px panels, 12px feature surfaces. A circle is reserved for genuinely circular data or identity.
-7. Serif is an accent, not a shortcut to “premium.” It is reserved for a rare editorial phrase or quotation.
+7. A display font must add hierarchy, not manufacture “premium.” Aurel uses a confident sans face and avoids decorative serif shortcuts.
 8. Product language must describe a real state: “Bridge approval required” is better than “Coming soon.”
 9. Motion must explain entry, exit, focus, or spatial continuity. Never animate a surface just to make it feel alive.
 10. Every screen must include loading, empty, error, disabled, and narrow-screen behavior before it is considered complete.
@@ -33,8 +33,8 @@ These are implementation constraints, not mood-board suggestions.
 
 ## Typography
 
-- **Satoshi Variable** — locally hosted and used for navigation, titles, controls, prose, and product UI.
-- **Newsreader** — selective editorial emphasis on the marketing site. Never use it for dashboard headings, controls, or numerical data.
+- **Satoshi Variable** — locally hosted and used for navigation, controls, prose, and product UI.
+- **Archivo** — used for marketing and product headlines. Its firmer construction adds character without the familiar AI-luxury serif treatment.
 - **Fragment Mono** — balances, wallet addresses, provenance labels, keyboard hints, and system state.
 
 Use sentence case. Avoid centered body copy, all-caps labels, and exaggerated tracking. Numerical columns should use the mono face, tabular figures, and consistent alignment. Two type voices are enough on any one screen.
@@ -84,7 +84,7 @@ Dark mode is a separately composed palette—not an inverted light theme. Black 
 
 Use this brief when generating or reviewing a new Aurel screen:
 
-> Design a production financial interface for Aurel using the existing semantic tokens and type system. Begin with the user’s decision and the information required to make it. Use whitespace and separators before containers. Permit one primary action in each region. Use Satoshi for the interface, Fragment Mono only for data and state, and Newsreader only for rare editorial emphasis. Do not add gradient blobs, glassmorphism, generic feature-card grids, ornamental badges, fake metrics, instructional filler, or promotional claims. Every status must be precise and every interaction must include focus, disabled, error, empty, loading, mobile, dark-mode, and reduced-motion behavior. The result should feel composed by a product designer, not decorated by a template.
+> Design a production financial interface for Aurel using the existing semantic tokens and type system. Begin with the user’s decision and the information required to make it. Use whitespace and separators before containers. Permit one primary action in each region. Use Satoshi for the interface, Archivo for headlines, and Fragment Mono only for exact data and system state. Do not add gradient blobs, glassmorphism, generic feature-card grids, ornamental badges, fake metrics, instructional filler, promotional claims, or arrow icons inside buttons. Every status must be precise and every interaction must include focus, disabled, error, empty, loading, mobile, dark-mode, and reduced-motion behavior. The result should feel composed by a product designer, not decorated by a template.
 
 ## Review checklist
 
