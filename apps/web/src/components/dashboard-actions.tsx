@@ -2,7 +2,9 @@
 
 import * as Dialog from "@radix-ui/react-dialog";
 import { ArrowRight, Building2, Check, Copy, Plus, Send, Wallet, X } from "lucide-react";
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
+
+const subscribeToBrowser = () => () => undefined;
 
 function ModalFrame({ trigger, title, description, children }: { trigger: React.ReactNode; title: string; description: string; children: React.ReactNode }) {
   return (
@@ -21,10 +23,11 @@ function ModalFrame({ trigger, title, description, children }: { trigger: React.
 
 export function DashboardActions() {
   const [fundingRail, setFundingRail] = useState<"bank" | "wallet">("bank");
+  const interactive = useSyncExternalStore(subscribeToBrowser, () => true, () => false);
 
   return (
     <div className="introActions">
-      <ModalFrame trigger={<button className="button secondary"><Send size={15} /> Send</button>} title="Send funds" description="Review the destination and network before continuing.">
+      <ModalFrame trigger={<button className="button secondary" disabled={!interactive}><Send size={15} /> Send</button>} title="Send funds" description="Review the destination and network before continuing.">
         <div className="dialogBody">
           <label className="fieldLabel">Recipient<input placeholder="Wallet address or saved recipient" /></label>
           <div className="amountField"><label>Amount<input inputMode="decimal" placeholder="0.00" /></label><button>USDC <span>⌄</span></button></div>
@@ -34,7 +37,7 @@ export function DashboardActions() {
         <div className="dialogActions"><Dialog.Close className="button secondary">Cancel</Dialog.Close><button className="button primary">Review transfer <ArrowRight size={15} /></button></div>
       </ModalFrame>
 
-      <ModalFrame trigger={<button className="button primary"><Plus size={15} /> Add funds</button>} title="Add funds" description="Choose how you want to fund your Aurel wallet.">
+      <ModalFrame trigger={<button className="button primary" disabled={!interactive}><Plus size={15} /> Add funds</button>} title="Add funds" description="Choose how you want to fund your Aurel wallet.">
         <div className="dialogBody">
           <div className="segmentedControl" aria-label="Funding method">
             <button className={fundingRail === "bank" ? "active" : ""} onClick={() => setFundingRail("bank")}><Building2 size={16} /> Bank transfer</button>
@@ -47,4 +50,3 @@ export function DashboardActions() {
     </div>
   );
 }
-

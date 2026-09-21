@@ -12,8 +12,8 @@ function Metric({ label, value, note }: { label: string; value: string; note: st
 
 function AllocationRing() {
   return (
-    <div className="allocationRing" aria-label="Portfolio allocation: 61.2% productive stablecoins, 23.4% connected assets, 15.4% liquid reserve">
-      <svg viewBox="0 0 120 120" role="img">
+    <div className="allocationRing" role="img" aria-label="Portfolio allocation: 61.2% productive stablecoins, 23.4% connected assets, 15.4% liquid reserve">
+      <svg viewBox="0 0 120 120" aria-hidden="true">
         <circle cx="60" cy="60" r="48" pathLength="100" className="ringBase" />
         <circle cx="60" cy="60" r="48" pathLength="100" className="ringPart green" strokeDasharray="61.2 38.8" strokeDashoffset="0" />
         <circle cx="60" cy="60" r="48" pathLength="100" className="ringPart brass" strokeDasharray="23.4 76.6" strokeDashoffset="-62.7" />
@@ -47,7 +47,7 @@ export function Dashboard() {
 
       <section className="dashboardGrid">
         <article className="panel allocationPanel">
-          <div className="panelHeading"><div><p className="eyebrow">ALLOCATION</p><h2>Where your money is</h2></div><button className="iconButton"><MoreHorizontal size={18} /></button></div>
+          <div className="panelHeading"><div><p className="eyebrow">ALLOCATION</p><h2>Where your money is</h2></div><button className="iconButton" aria-label="Portfolio allocation options"><MoreHorizontal size={18} /></button></div>
           <div className="allocationBody">
             <AllocationRing />
             <div className="allocationList">

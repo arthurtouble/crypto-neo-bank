@@ -10,6 +10,9 @@
     "deploy": "vinext-cloudflare deploy",
     "deploy:dry-run": "vinext-cloudflare deploy --dry-run",
     "cf-types": "wrangler types --env-interface CloudflareEnv",
+    "test": "pnpm test:unit && pnpm test:e2e",
+    "test:unit": "vitest run",
+    "test:e2e": "pnpm build && playwright test",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"
   },
@@ -24,7 +27,9 @@
     "zod": "latest"
   },
   "devDependencies": {
+    "@axe-core/playwright": "latest",
     "@cloudflare/vite-plugin": "latest",
+    "@playwright/test": "latest",
     "@types/node": "latest",
     "@types/react": "latest",
     "@types/react-dom": "latest",
@@ -34,6 +39,7 @@
     "eslint-config-next": "latest",
     "react-server-dom-webpack": "latest",
     "typescript": "^5.9.3",
+    "vitest": "latest",
     "vinext": "latest",
     "vite": "latest",
     "wrangler": "latest"

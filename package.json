@@ -10,6 +10,9 @@
     "deploy:dry-run": "pnpm --filter @aurel/web deploy:dry-run",
     "events:dev": "pnpm --filter @aurel/events dev",
     "events:deploy": "pnpm --filter @aurel/events deploy",
+    "test": "pnpm --filter @aurel/web test",
+    "test:unit": "pnpm --filter @aurel/web test:unit",
+    "test:e2e": "pnpm --filter @aurel/web test:e2e",
     "typecheck": "pnpm --filter @aurel/web typecheck",
     "typecheck:all": "pnpm -r typecheck",
     "lint": "pnpm --filter @aurel/web lint"

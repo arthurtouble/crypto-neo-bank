@@ -37,7 +37,7 @@ export function CommandMenu() {
   return (
     <Dialog.Root open={open} onOpenChange={(value) => { setOpen(value); if (!value) setQuery(""); }}>
       <Dialog.Trigger asChild>
-        <button className="commandSearch" type="button"><Search size={16} /><span>Search Aurel</span><kbd><Command size={11} /> K</kbd></button>
+        <button className="commandSearch" type="button" aria-label="Open search and commands"><Search size={16} /><span>Search Aurel</span><kbd><Command size={11} /> K</kbd></button>
       </Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Overlay className="dialogOverlay" />
@@ -56,4 +56,3 @@ export function CommandMenu() {
     </Dialog.Root>
   );
 }
-

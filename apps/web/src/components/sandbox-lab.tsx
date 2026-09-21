@@ -1,13 +1,14 @@
 "use client";
 
 import { AlertCircle, ArrowRight, Check, CircleDashed, CreditCard, DatabaseZap, KeyRound, Landmark, LoaderCircle, RefreshCw, ShieldCheck, WalletCards } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useState, useSyncExternalStore } from "react";
 import type { ProductCommand, ProviderCommandReceipt } from "@/lib/providers/contracts";
 import type { DemoScenarioId } from "@/lib/providers/scenarios";
 import type { ProductSession } from "@/lib/providers/session";
 
 type ScenarioSummary = { id: DemoScenarioId; name: string; description: string };
 type CommandResponse = { receipt?: ProviderCommandReceipt; message?: string; traceId: string };
+const subscribeToBrowser = () => () => undefined;
 
 const commands: Array<{ label: string; detail: string; icon: typeof WalletCards; build: () => ProductCommand }> = [
   { label: "Create wallet", detail: "Privy adapter", icon: WalletCards, build: () => ({ type: "create_wallet", subjectReference: "demo-user-001" }) },
@@ -27,6 +28,7 @@ export function SandboxLab({ initialSession, initialScenarios }: { initialSessio
   const [error, setError] = useState<string | null>(null);
   const [running, setRunning] = useState<string | null>(null);
   const [history, setHistory] = useState<ProviderCommandReceipt[]>([]);
+  const interactive = useSyncExternalStore(subscribeToBrowser, () => true, () => false);
 
   const loadSession = useCallback(async (scenario: DemoScenarioId) => {
     setLoading(true);
@@ -104,7 +106,7 @@ export function SandboxLab({ initialSession, initialScenarios }: { initialSessio
             <div className="panelHeading"><div><p className="eyebrow">PROVIDER COMMANDS</p><h2>Exercise a workflow</h2></div></div>
             <p>Commands return provider receipts. This demo never changes an authoritative balance.</p>
             <div className="commandGrid">
-              {commands.map(({ label, detail, icon: Icon, build }) => <button key={label} disabled={Boolean(running)} onClick={() => void execute(build(), label)}><Icon size={17} /><span><strong>{label}</strong><small>{detail}</small></span>{running === label ? <LoaderCircle className="spin" size={15} /> : <ArrowRight size={15} />}</button>)}
+              {commands.map(({ label, detail, icon: Icon, build }) => <button key={label} disabled={!interactive || Boolean(running)} onClick={() => void execute(build(), label)}><Icon size={17} /><span><strong>{label}</strong><small>{detail}</small></span>{running === label ? <LoaderCircle className="spin" size={15} /> : <ArrowRight size={15} />}</button>)}
             </div>
           </section>
         </div>

@@ -239,6 +239,10 @@ button { color: inherit; }
   .receiptList > div { grid-template-columns: 1fr; gap: 7px; padding: 13px 0; }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
+}
+
 /* Design system v2 — restrained, adaptive, and information-led */
 :root {
   --canvas: #f5f5f7;
@@ -247,14 +251,14 @@ button { color: inherit; }
   --surface-muted: #eeeef0;
   --surface-inset: #e7e7ea;
   --text: #1d1d1f;
-  --text-secondary: #6e6e73;
-  --text-tertiary: #8e8e93;
+  --text-secondary: #55565b;
+  --text-tertiary: #646469;
   --hairline: rgba(0, 0, 0, .1);
   --hairline-strong: rgba(0, 0, 0, .18);
   --accent: #156957;
   --accent-hover: #0e5647;
   --accent-soft: #e2eee9;
-  --positive: #247653;
+  --positive: #1f6d4a;
   --positive-soft: #e1eee7;
   --warning: #94611f;
   --warning-soft: #f4eadb;
@@ -277,7 +281,7 @@ button { color: inherit; }
   --ink-500: var(--text-tertiary);
   --alpine-900: #0d4e41;
   --alpine-800: var(--accent);
-  --alpine-600: #277b68;
+  --alpine-600: #226d5c;
   --alpine-100: var(--accent-soft);
   --stone-50: var(--canvas);
   --stone-100: var(--surface-muted);
@@ -296,8 +300,8 @@ html[data-theme="dark"] {
   --surface-muted: #2c2c2e;
   --surface-inset: #151517;
   --text: #f5f5f7;
-  --text-secondary: #a1a1a6;
-  --text-tertiary: #77777c;
+  --text-secondary: #b5b5ba;
+  --text-tertiary: #9a9a9f;
   --hairline: rgba(255, 255, 255, .12);
   --hairline-strong: rgba(255, 255, 255, .2);
   --accent: #63b69f;
@@ -395,6 +399,10 @@ html[data-theme="dark"] .themeToggle .moonIcon { display: block; }
 .sidebarFooter > a { color: var(--text-tertiary); }
 .sidebarFooter > button { color: var(--text); border-color: var(--hairline); border-radius: 12px; background: transparent; }
 .sidebarFooter small { color: var(--text-tertiary) !important; }
+.avatar { color: #ffffff; background: #1d6b5a; }
+.conciergeCard > span { color: #76552d; }
+html[data-theme="dark"] .conciergeCard > span { color: #d2a05c; }
+html[data-theme="dark"] .button.primary { color: #ffffff; background: #2d765f; border-color: #2d765f; }
 .productHeader { background: color-mix(in srgb, var(--canvas) 84%, transparent); backdrop-filter: saturate(180%) blur(18px); }
 .commandSearch { min-width: 250px; padding: 8px 10px; border: 0; border-radius: 9px; background: transparent; cursor: pointer; text-align: left; transition: background-color 140ms ease, color 140ms ease; }
 .commandSearch:hover { color: var(--text); background: var(--surface-muted); }

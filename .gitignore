@@ -18,6 +18,9 @@ dist/
 # Test and browser artifacts
 coverage/
 output/playwright/
+output/playwright-tests/
+output/playwright-report/
+output/events-dry-run/
 .playwright-cli/
 playwright-report/
 test-results/

@@ -26,7 +26,28 @@ Aurel is an orchestration and presentation layer, not a bank ledger. Aurel must 
 - **Workers Secrets:** provider and RPC credentials.
 - **WAF, Turnstile, rate limiting, API Shield:** layered protection as the public surface expands.
 
-The initial demo intentionally uses no database.
+The demo UI does not require a database. D1 is attached only for webhook replay protection, consent/preferences, and disposable projection jobs. It never determines whether customer money exists or settled.
+
+## Runtime flow
+
+```mermaid
+flowchart LR
+    UI[Aurel web client] --> WEB[vinext Worker]
+    WEB --> PRIVY[Privy adapter]
+    WEB --> BRIDGE[Bridge or Rain adapter]
+    WEB --> CHAIN[Chains and protocols]
+    PRIVY -->|signed event| HOOK[Webhook route]
+    BRIDGE -->|signed event| HOOK
+    HOOK --> D1[(D1 replay metadata)]
+    HOOK --> QUEUE[Provider-events Queue]
+    QUEUE --> CONSUMER[Event consumer Worker]
+    CONSUMER --> D1
+    CONSUMER -->|refresh request| PRIVY
+    CONSUMER -->|refresh request| BRIDGE
+    CONSUMER -->|re-index| CHAIN
+```
+
+The command path returns provider receipts. The event path refreshes read models. Neither path fabricates settlement from an Aurel database write.
 
 ## Rules for application data
 
@@ -40,4 +61,3 @@ The initial demo intentionally uses no database.
 ## Recovery test
 
 The recurring disaster-recovery exercise is: erase all Aurel read models, reconnect provider references, replay signed provider events, query the authoritative APIs and chains, and rebuild the same customer view. Any feature that cannot pass this test needs an explicit exception and risk review.
-
