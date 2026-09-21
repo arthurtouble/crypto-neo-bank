@@ -4,41 +4,11 @@ import { usePrivy, useSendTransaction, useWallets } from "@privy-io/react-auth";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, Check, ExternalLink, LoaderCircle, ShieldCheck, X } from "lucide-react";
 import { useMemo, useState } from "react";
-import { isAddress } from "viem";
 import { HOME_CHAIN } from "@/config/chains";
 import type { AaveBaseReserve } from "@/lib/defi/aave";
+import { collectUnsignedTransactions } from "@/lib/transactions/plan";
 
 type MarketResponse = { market: string; chainId: number; name: string; reserves: AaveBaseReserve[]; observedAt: string; authority: string };
-type UnsignedPlanTransaction = { to: `0x${string}`; data?: `0x${string}`; value?: bigint; chainId: number };
-
-function collectTransactions(value: unknown): UnsignedPlanTransaction[] {
-  const output: UnsignedPlanTransaction[] = [];
-  const seen = new Set<string>();
-  function visit(node: unknown) {
-    if (!node || typeof node !== "object") return;
-    if (Array.isArray(node)) return node.forEach(visit);
-    const record = node as Record<string, unknown>;
-    if (typeof record.to === "string" && isAddress(record.to) && (record.data === undefined || typeof record.data === "string")) {
-      const key = `${record.to}:${String(record.data ?? "0x")}:${String(record.value ?? "0")}`;
-      if (!seen.has(key)) {
-        seen.add(key);
-        output.push({
-          to: record.to,
-          data: typeof record.data === "string" && record.data.startsWith("0x") ? record.data as `0x${string}` : undefined,
-          value: record.value === undefined ? undefined : BigInt(String(record.value)),
-          chainId: typeof record.chainId === "number" ? record.chainId : HOME_CHAIN.id
-        });
-      }
-      return;
-    }
-    for (const key of ["approval", "transaction", "originalTransaction", "transactions", "plan", "data", "v3"]) {
-      if (key in record) visit(record[key]);
-    }
-  }
-  visit(value);
-  return output.filter((transaction) => transaction.chainId === HOME_CHAIN.id);
-}
-
 export function EarnWorkspace() {
   const { wallets } = useWallets();
   const { getAccessToken } = usePrivy();
@@ -84,7 +54,7 @@ export function EarnWorkspace() {
       });
       const prepared = await planResponse.json() as { plan?: unknown; message?: string };
       if (!planResponse.ok || !prepared.plan) throw new Error(prepared.message ?? "Aave could not prepare this allocation.");
-      const transactions = collectTransactions(prepared.plan);
+      const transactions = collectUnsignedTransactions(prepared.plan, HOME_CHAIN.id);
       if (!transactions.length) throw new Error("Aave returned no executable transaction. The wallet may not have enough of this asset.");
 
       const submitted: string[] = [];

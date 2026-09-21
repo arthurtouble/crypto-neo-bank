@@ -23,7 +23,7 @@ This is the execution checklist for the mainnet-first product. “Live” means 
 - [x] Passkey/MFA, recovery, export, and current-session center
 - [ ] Swap and cross-chain routing adapter with Privy-first and LI.FI fallback
 - [x] Curated Base mainnet Earn market, preparation, and user-signing flow
-- [ ] Aave collateral, borrow, repay, and health-factor flows
+- [x] Aave collateral, borrow, repay, simulation, and health-factor flows
 - [x] Membership qualification and vendor-neutral entitlement engine
 - [ ] Rewards, lounge, eSIM, insurance, and concierge adapters
 - [ ] Read-only AI concierge and draft-intent tools

@@ -3,12 +3,14 @@ import { activity } from "@/data/demo";
 import { WalletWorkspace } from "@/components/wallet-workspace";
 import { EarnWorkspace } from "@/components/earn-workspace";
 import { SecurityCenter } from "@/components/security-center";
+import { BorrowWorkspace } from "@/components/borrow-workspace";
 
-type Section = "assets" | "earn" | "card" | "activity" | "benefits" | "security" | "settings";
+type Section = "assets" | "earn" | "borrow" | "card" | "activity" | "benefits" | "security" | "settings";
 
 const content: Record<Section, { eyebrow: string; title: string; description: string }> = {
   assets: { eyebrow: "YOUR BALANCE SHEET", title: "Assets", description: "One coherent view across Aurel and the wallets you control elsewhere." },
   earn: { eyebrow: "PRODUCTIVE CAPITAL", title: "Earn", description: "Curated, transparent strategies with liquidity and risk explained before you allocate." },
+  borrow: { eyebrow: "COLLATERALIZED LIQUIDITY", title: "Borrow", description: "Protocol-native credit with health factors, liquidation boundaries, and simulation before every signature." },
   card: { eyebrow: "GLOBAL SPEND", title: "Aurel Black", description: "A demonstration card connected to your liquid stablecoin reserve." },
   activity: { eyebrow: "AUDITABLE HISTORY", title: "Activity", description: "Every movement, authorization, fee, and status in one timeline." },
   benefits: { eyebrow: "RELATIONSHIP BENEFITS", title: "Black membership", description: "Practical benefits that become more valuable as your relationship deepens." },
@@ -51,5 +53,5 @@ function Settings() {
 }
 
 export function SectionPage({ section }: { section: Section }) {
-  return <div><Header section={section} />{section === "assets" && <Assets />}{section === "earn" && <Earn />}{section === "card" && <Card />}{section === "activity" && <ActivitySection />}{section === "benefits" && <Benefits />}{section === "security" && <Security />}{section === "settings" && <Settings />}</div>;
+  return <div><Header section={section} />{section === "assets" && <Assets />}{section === "earn" && <Earn />}{section === "borrow" && <BorrowWorkspace />}{section === "card" && <Card />}{section === "activity" && <ActivitySection />}{section === "benefits" && <Benefits />}{section === "security" && <Security />}{section === "settings" && <Settings />}</div>;
 }
