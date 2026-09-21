@@ -5,6 +5,8 @@ ALTER TABLE transaction_intents ADD COLUMN confirmed_at TEXT;
 ALTER TABLE transaction_intents ADD COLUMN failure_reason TEXT;
 ALTER TABLE transaction_intents ADD COLUMN route_reference TEXT;
 ALTER TABLE transaction_intents ADD COLUMN last_checked_at TEXT;
+ALTER TABLE transaction_intents ADD COLUMN request_fingerprint TEXT;
+CREATE INDEX IF NOT EXISTS transaction_intents_fingerprint_idx ON transaction_intents(subject_reference, request_fingerprint, status, release_at);
 
 CREATE TABLE IF NOT EXISTS security_profiles (
   subject_reference TEXT PRIMARY KEY,

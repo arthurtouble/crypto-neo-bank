@@ -76,7 +76,7 @@ export function CrossChainWorkspace() {
       const request = quote.quote.transactionRequest;
       const result = await sendTransaction({ to: request.to as `0x${string}`, data: request.data as `0x${string}`, value: BigInt(request.value || "0"), chainId: fromChainId }, { address: wallet.address, uiOptions: { description: `Route ${amount} USDC from ${networkName(fromChainId)} to ${networkName(toChainId)} through ${quote.quote.tool}.`, buttonText: "Confirm cross-chain transfer", isCancellable: true } });
       setHash(result.hash); setStage("Source transaction submitted");
-      await fetch("/api/intents/status", { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ intentId, status: "submitted", transactionHash: result.hash }) });
+      await fetch("/api/intents/status", { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ intentId, status: "submitted", transactionHash: result.hash, routeReference: quote.quote.id }) });
     } catch (caught) {
       if (intentId && token) await fetch("/api/intents/status", { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ intentId, status: "cancelled" }) }).catch(() => undefined);
       setError(caught instanceof Error ? caught.message : "The route was not submitted."); setStage(null);

@@ -13,7 +13,7 @@ const statusSchema = z.object({
 const transitions: Record<string, string[]> = {
   reviewed: ["submitted", "cancelled", "failed"],
   submitted: ["failed"],
-  blocked: [], cancelled: [], failed: [], confirmed: []
+  cooling: [], blocked: [], cancelled: [], failed: [], confirmed: []
 };
 
 export async function POST(request: Request) {
