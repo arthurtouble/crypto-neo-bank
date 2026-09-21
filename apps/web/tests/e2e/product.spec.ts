@@ -40,3 +40,33 @@ test("security headers are applied", async ({ request }) => {
   expect(response.headers()["content-security-policy"]).toContain("frame-ancestors 'none'");
   expect(response.headers()["content-security-policy"]).not.toContain("'unsafe-eval'");
 });
+
+test("public health exposes dependencies without secrets", async ({ request }) => {
+  const response = await request.get("/api/health");
+  expect(response.ok()).toBeTruthy();
+  const payload = await response.json();
+  expect(payload.status).toBe("ok");
+  expect(payload.dependencies).toMatchObject({ operationalDatabase: "ok" });
+  expect(JSON.stringify(payload)).not.toMatch(/secret|token|password/i);
+});
+
+test("private APIs fail closed without an authenticated subject", async ({ request }) => {
+  for (const path of ["/api/portfolio", "/api/activity", "/api/ops/summary", "/api/security/policy"]) {
+    const response = await request.get(path);
+    const accepted = path === "/api/portfolio" ? [401, 403, 410] : [401, 403];
+    expect(accepted).toContain(response.status());
+  }
+});
+
+test("unsigned provider events are rejected", async ({ request }) => {
+  const response = await request.post("/api/webhooks/provider", { data: { id: "e2e-unsigned", type: "account.updated" } });
+  expect([400, 401, 403]).toContain(response.status());
+});
+
+test("documentation stays within the mobile viewport", async ({ page }, testInfo) => {
+  test.skip(!testInfo.project.name.includes("mobile"), "Mobile-only assertion");
+  await page.goto("/docs");
+  await expect(page.getByRole("heading", { name: /Understand the system/ })).toBeVisible();
+  const dimensions = await page.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, clientWidth: document.documentElement.clientWidth }));
+  expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth + 1);
+});

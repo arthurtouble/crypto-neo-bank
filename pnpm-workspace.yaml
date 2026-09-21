@@ -4,6 +4,9 @@ packages:
 
 confirmModulesPurge: false
 
+overrides:
+  ws: 8.21.0
+
 allowBuilds:
   "@reown/appkit": false
   bufferutil: false

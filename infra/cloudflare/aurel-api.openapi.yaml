@@ -1,0 +1,102 @@
+openapi: 3.0.3
+info:
+  title: Aurel edge API
+  version: 0.1.0
+  description: Validation contract for public and authenticated Aurel Worker endpoints. Authentication and authorization remain enforced by the application.
+servers:
+  - url: https://aurel-financial-os.aurel-events.workers.dev
+paths:
+  /api/health:
+    get:
+      operationId: health
+      responses:
+        "200":
+          description: Service and dependency status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+        "503": { description: A required dependency is unavailable }
+  /api/auth/session:
+    get:
+      operationId: session
+      responses:
+        "200": { description: Authenticated session }
+        "401": { description: Authentication required }
+  /api/portfolio:
+    get:
+      operationId: portfolio
+      responses:
+        "200": { description: Non-authoritative portfolio projection }
+        "401": { description: Authentication required }
+  /api/activity:
+    get:
+      operationId: activity
+      responses:
+        "200": { description: Account activity projection }
+        "401": { description: Authentication required }
+  /api/routing/quote:
+    post:
+      operationId: routingQuote
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [fromChainId, toChainId, fromToken, toToken, amount, fromAddress]
+              properties:
+                fromChainId: { type: integer }
+                toChainId: { type: integer }
+                fromToken: { type: string, maxLength: 64 }
+                toToken: { type: string, maxLength: 64 }
+                amount: { type: string, pattern: "^[0-9]+$", maxLength: 80 }
+                fromAddress: { type: string, pattern: "^0x[a-fA-F0-9]{40}$" }
+      responses:
+        "200": { description: Executable route quotation }
+        "400": { description: Invalid or unsupported route }
+        "401": { description: Authentication required }
+  /api/webhooks/provider:
+    post:
+      operationId: providerWebhook
+      parameters:
+        - in: header
+          name: x-provider-signature
+          required: true
+          schema: { type: string, maxLength: 512 }
+        - in: header
+          name: x-provider-timestamp
+          required: true
+          schema: { type: string, maxLength: 32 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id, type]
+              properties:
+                id: { type: string, maxLength: 160 }
+                type: { type: string, maxLength: 160 }
+              additionalProperties: true
+      responses:
+        "202": { description: Event authenticated and enqueued }
+        "400": { description: Malformed event }
+        "401": { description: Invalid signature }
+        "409": { description: Replayed event }
+components:
+  schemas:
+    Health:
+      type: object
+      required: [status, dependencies, observedAt]
+      properties:
+        status: { type: string, enum: [ok, degraded] }
+        observedAt: { type: string, format: date-time }
+        dependencies:
+          type: object
+          additionalProperties: false
+          properties:
+            database: { type: boolean }
+            queue: { type: boolean }
+            authentication: { type: boolean }
