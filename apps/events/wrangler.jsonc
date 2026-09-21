@@ -20,8 +20,17 @@
         "max_batch_timeout": 5,
         "max_retries": 5,
         "dead_letter_queue": "aurel-provider-events-dlq"
+      },
+      {
+        "queue": "aurel-provider-events-dlq",
+        "max_batch_size": 10,
+        "max_batch_timeout": 5,
+        "max_retries": 2
       }
     ]
+  },
+  "triggers": {
+    "crons": ["*/5 * * * *"]
   },
   "observability": {
     "enabled": true,
