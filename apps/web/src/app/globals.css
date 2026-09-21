@@ -541,6 +541,34 @@ html[data-theme="dark"] .button.primary { color: #ffffff; background: #2d765f; b
 .rateRow b { font-family: var(--font-technical); font-size: 11px; font-weight: 400; }
 .riskFineprint { margin: 14px 0 0; line-height: 1.6; }
 .formWarning { margin: 0 0 10px; padding: 10px 12px; display: flex; align-items: flex-start; gap: 7px; border-radius: 9px; color: var(--warning); background: color-mix(in srgb, var(--warning) 9%, transparent); font-size: 9px; line-height: 1.5; }
+.membershipSummary { margin-bottom: 18px; display: grid; grid-template-columns: 1fr auto minmax(180px, .45fr); align-items: center; gap: 30px; }
+.membershipSummary h2 { margin: 7px 0; font-size: 28px; }
+.membershipSummary p { max-width: 520px; margin: 0; color: var(--text-secondary); font-size: 10px; line-height: 1.6; }
+.membershipScore { display: grid; grid-template-columns: auto auto; align-items: baseline; }
+.membershipScore strong { font-family: var(--font-technical); font-size: 38px; font-weight: 400; }
+.membershipScore span { color: var(--text-tertiary); font-size: 11px; }
+.membershipScore small { grid-column: 1 / -1; color: var(--text-tertiary); font-size: 8px; }
+.nextTier { padding-left: 24px; display: grid; gap: 5px; border-left: 1px solid var(--hairline); }
+.nextTier span, .nextTier small { color: var(--text-tertiary); font-size: 8px; line-height: 1.5; }
+.nextTier strong { font-size: 13px; }
+.conciergeLayout { display: grid; grid-template-columns: minmax(0, 1fr) 290px; gap: 18px; }
+.conciergePanel { padding: 0; overflow: hidden; }
+.conciergeHeader { min-height: 82px; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--hairline); }
+.conciergeHeader h2 { margin: 5px 0 0; font-size: 18px; }
+.conciergeHeader > span { display: flex; align-items: center; gap: 6px; color: var(--positive); font-size: 8px; }
+.conversation { min-height: 390px; max-height: 54vh; padding: 24px; display: flex; flex-direction: column; gap: 18px; overflow-y: auto; }
+.message { display: flex; align-items: flex-start; gap: 10px; }
+.message > span { width: 28px; height: 28px; flex: 0 0 auto; display: grid; place-items: center; border-radius: 50%; background: var(--surface-muted); color: var(--accent); }
+.message.user { flex-direction: row-reverse; }
+.message.user > span { color: var(--text-secondary); }
+.message p { max-width: 78%; margin: 0; padding: 11px 13px; border-radius: 3px 12px 12px 12px; background: var(--surface-muted); font-size: 10px; line-height: 1.65; white-space: pre-wrap; }
+.message.user p { border-radius: 12px 3px 12px 12px; color: white; background: var(--accent); }
+.conciergeComposer { margin: 0 18px 18px; padding: 11px 11px 11px 14px; display: flex; align-items: flex-end; gap: 10px; border: 1px solid var(--hairline-strong); border-radius: 13px; background: var(--surface); }
+.conciergeComposer textarea { min-height: 42px; max-height: 110px; flex: 1; resize: vertical; border: 0; outline: 0; color: var(--text); background: transparent; font: inherit; font-size: 10px; line-height: 1.5; }
+.conciergeComposer button { width: 34px; height: 34px; display: grid; place-items: center; border: 0; border-radius: 50%; color: white; background: var(--accent); cursor: pointer; }
+.conciergeComposer button:disabled { opacity: .4; }
+.conciergePrompts > button { width: 100%; padding: 14px 0; border: 0; border-top: 1px solid var(--hairline); color: var(--text); background: transparent; font-size: 9px; line-height: 1.5; text-align: left; cursor: pointer; }
+.conciergePrompts > button:first-of-type { margin-top: 18px; }
 
 @keyframes access-pulse { 70%, 100% { box-shadow: 0 0 0 12px transparent; } }
 @keyframes financial-modal-in { from { opacity: 0; transform: translateY(9px) scale(.985); } }
@@ -596,6 +624,10 @@ html[data-theme="dark"] .button.primary { color: #ffffff; background: #2d765f; b
   .transactionSummary span + span { border-left: 0; border-top: 1px solid var(--hairline); }
   .borrowHealth { grid-template-columns: 1fr; }
   .borrowHealth > div + div { padding-left: 0; border-left: 0; border-top: 1px solid var(--hairline); }
+  .membershipSummary { grid-template-columns: 1fr auto; }
+  .nextTier { grid-column: 1 / -1; padding: 18px 0 0; border-left: 0; border-top: 1px solid var(--hairline); }
+  .conciergeLayout { grid-template-columns: 1fr; }
+  .message p { max-width: 88%; }
 }
 
 @media (prefers-reduced-motion: reduce) {

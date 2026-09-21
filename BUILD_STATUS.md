@@ -25,8 +25,8 @@ This is the execution checklist for the mainnet-first product. “Live” means 
 - [x] Curated Base mainnet Earn market, preparation, and user-signing flow
 - [x] Aave collateral, borrow, repay, simulation, and health-factor flows
 - [x] Membership qualification and vendor-neutral entitlement engine
-- [ ] Rewards, lounge, eSIM, insurance, and concierge adapters
-- [ ] Read-only AI concierge and draft-intent tools
+- [x] Vendor-neutral rewards, lounge, eSIM, insurance, and concierge entitlement adapters
+- [x] Read-only AI concierge with deterministic transaction separation
 - [ ] Feature-gated tokenized-asset framework
 - [ ] Operations and reconciliation console
 - [ ] Complete trust center and effective-dated disclosures

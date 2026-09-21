@@ -28,6 +28,9 @@
       { "binding": "PROVIDER_EVENTS", "queue": "aurel-provider-events" }
     ]
   },
+  "ai": {
+    "binding": "AI"
+  },
   "observability": {
     "enabled": true,
     "logs": {

@@ -1,11 +1,13 @@
-import { ArrowRight, ChevronRight, LockKeyhole, Plane, ShieldCheck, Smartphone, Sparkles } from "lucide-react";
+import { ChevronRight, LockKeyhole, ShieldCheck, Smartphone } from "lucide-react";
 import { activity } from "@/data/demo";
 import { WalletWorkspace } from "@/components/wallet-workspace";
 import { EarnWorkspace } from "@/components/earn-workspace";
 import { SecurityCenter } from "@/components/security-center";
 import { BorrowWorkspace } from "@/components/borrow-workspace";
+import { MembershipBenefits } from "@/components/membership-benefits";
+import { ConciergeWorkspace } from "@/components/concierge-workspace";
 
-type Section = "assets" | "earn" | "borrow" | "card" | "activity" | "benefits" | "security" | "settings";
+type Section = "assets" | "earn" | "borrow" | "card" | "activity" | "benefits" | "concierge" | "security" | "settings";
 
 const content: Record<Section, { eyebrow: string; title: string; description: string }> = {
   assets: { eyebrow: "YOUR BALANCE SHEET", title: "Assets", description: "One coherent view across Aurel and the wallets you control elsewhere." },
@@ -14,6 +16,7 @@ const content: Record<Section, { eyebrow: string; title: string; description: st
   card: { eyebrow: "GLOBAL SPEND", title: "Aurel Black", description: "A demonstration card connected to your liquid stablecoin reserve." },
   activity: { eyebrow: "AUDITABLE HISTORY", title: "Activity", description: "Every movement, authorization, fee, and status in one timeline." },
   benefits: { eyebrow: "RELATIONSHIP BENEFITS", title: "Black membership", description: "Practical benefits that become more valuable as your relationship deepens." },
+  concierge: { eyebrow: "PRIVATE CLIENT SERVICE", title: "Concierge", description: "Clear answers grounded in product documentation, with no authority to move your assets." },
   security: { eyebrow: "DEFENCE IN DEPTH", title: "Safety center", description: "Control how your account can be accessed and how value can leave it." },
   settings: { eyebrow: "PREFERENCES", title: "Account settings", description: "Manage your profile, notifications, disclosures, and connected providers." }
 };
@@ -40,8 +43,7 @@ function ActivitySection() {
 }
 
 function Benefits() {
-  const benefits = [{ icon: Plane, title: "Airport lounges", note: "4 visits each membership year", state: "Planned" },{ icon: Smartphone, title: "Global eSIM", note: "3 GB annual travel data", state: "Planned" },{ icon: ShieldCheck, title: "Travel protection", note: "Subject to country and policy eligibility", state: "Review" },{ icon: Sparkles, title: "Private concierge", note: "Travel, dining, events, and account assistance", state: "Eligible" }];
-  return <div className="benefitGrid">{benefits.map(({ icon: Icon, title, note, state }) => <article className="panel benefitCard" key={title}><span className="benefitIcon"><Icon size={21} /></span><span className="statusBadge neutral">{state}</span><h3>{title}</h3><p>{note}</p><button>View entitlement <ArrowRight size={15} /></button></article>)}</div>;
+  return <MembershipBenefits />;
 }
 
 function Security() {
@@ -53,5 +55,5 @@ function Settings() {
 }
 
 export function SectionPage({ section }: { section: Section }) {
-  return <div><Header section={section} />{section === "assets" && <Assets />}{section === "earn" && <Earn />}{section === "borrow" && <BorrowWorkspace />}{section === "card" && <Card />}{section === "activity" && <ActivitySection />}{section === "benefits" && <Benefits />}{section === "security" && <Security />}{section === "settings" && <Settings />}</div>;
+  return <div><Header section={section} />{section === "assets" && <Assets />}{section === "earn" && <Earn />}{section === "borrow" && <BorrowWorkspace />}{section === "card" && <Card />}{section === "activity" && <ActivitySection />}{section === "benefits" && <Benefits />}{section === "concierge" && <ConciergeWorkspace />}{section === "security" && <Security />}{section === "settings" && <Settings />}</div>;
 }

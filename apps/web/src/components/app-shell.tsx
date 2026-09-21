@@ -17,7 +17,8 @@ const navigation = [
   { label: "Borrow", href: "/app/borrow", icon: icons.earn },
   { label: "Card", href: "/app/card", icon: icons.card },
   { label: "Activity", href: "/app/activity", icon: icons.activity },
-  { label: "Benefits", href: "/app/benefits", icon: icons.benefits }
+  { label: "Benefits", href: "/app/benefits", icon: icons.benefits },
+  { label: "Concierge", href: "/app/concierge", icon: icons.security }
 ];
 
 const secondary = [
