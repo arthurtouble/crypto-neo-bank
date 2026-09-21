@@ -1,0 +1,52 @@
+@import "@fontsource-variable/archivo";
+
+@font-face {
+  font-family: "Satoshi";
+  src: url("/fonts/Satoshi-Variable.woff2") format("woff2-variations");
+  font-style: normal;
+  font-weight: 300 900;
+  font-display: swap;
+}
+
+:root {
+  --sl-font: "Satoshi", ui-sans-serif, system-ui, sans-serif;
+  --sl-color-accent-low: #dce9df;
+  --sl-color-accent: #123524;
+  --sl-color-accent-high: #092018;
+  --sl-color-white: #171a18;
+  --sl-color-gray-1: #2c312e;
+  --sl-color-gray-2: #4d5550;
+  --sl-color-gray-3: #6c746f;
+  --sl-color-gray-4: #aab0ac;
+  --sl-color-gray-5: #dfe2df;
+  --sl-color-gray-6: #eff1ef;
+  --sl-color-black: #fbfcfa;
+  --sl-content-width: 50rem;
+  --sl-text-5xl: 3.55rem;
+}
+
+:root[data-theme="dark"] {
+  --sl-color-accent-low: #102a1d;
+  --sl-color-accent: #69d298;
+  --sl-color-accent-high: #d8f6e4;
+  --sl-color-white: #f4f7f5;
+  --sl-color-gray-1: #dce2de;
+  --sl-color-gray-2: #b4beb8;
+  --sl-color-gray-3: #8d9992;
+  --sl-color-gray-4: #465149;
+  --sl-color-gray-5: #27312b;
+  --sl-color-gray-6: #18211b;
+  --sl-color-black: #0d120f;
+}
+
+body { letter-spacing: -.008em; }
+h1, h2, h3 { font-family: "Archivo Variable", "Satoshi", ui-sans-serif, system-ui, sans-serif; letter-spacing: -.035em; font-weight: 690; }
+.site-title { letter-spacing: .16em; text-transform: uppercase; font-size: .86rem; }
+.hero h1 { max-width: 13ch; }
+.hero .tagline { max-width: 42rem; font-size: 1.08rem; }
+.card { border-radius: .85rem; box-shadow: none; }
+.sl-link-button { border-radius: .58rem; transition: transform 140ms ease, background-color 140ms ease, box-shadow 140ms ease; }
+.sl-link-button:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(18, 53, 36, .12); }
+.sl-link-button:active { transform: translateY(0) scale(.985); box-shadow: none; }
+.starlight-aside { border-radius: .7rem; }
+@media (prefers-reduced-motion: reduce) { .sl-link-button { transition: none; } }

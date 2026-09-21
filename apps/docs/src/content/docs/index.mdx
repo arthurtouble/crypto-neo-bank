@@ -1,0 +1,47 @@
+---
+title: Aurel documentation
+description: Understand what Aurel does, how your wallet stays under your control, and which features are live.
+template: splash
+hero:
+  tagline: One clear guide to your wallet, onchain activity, safeguards, and Aurel membership.
+  actions:
+    - text: Set up Aurel
+      link: /getting-started/setup/
+      variant: primary
+    - text: See what is live
+      link: /getting-started/status/
+      icon: open-book
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+## Start with the essentials
+
+<CardGrid>
+  <Card title="You control the wallet" icon="key">
+    Aurel prepares actions. Your wallet shows the final request, and you choose whether to sign.
+  </Card>
+  <Card title="Balances come from the source" icon="database">
+    Aurel reads balances from the chain or provider. Our database is never the final record of what you own.
+  </Card>
+  <Card title="No Aurel token" icon="seti:lock">
+    Product choices are not designed to create demand for a house asset.
+  </Card>
+  <Card title="Mainnet means real value" icon="warning">
+    Aurel uses Base mainnet. Check the network, address, asset, and amount before every signature.
+  </Card>
+</CardGrid>
+
+## What you can do
+
+- View Base assets held by your embedded or connected wallet.
+- Send supported assets after a policy and simulation check.
+- Review live Aave markets and prepare supply, withdrawal, borrow, or repay actions.
+- Request a cross-chain USDC route when LI.FI can find one.
+- Set address, review, and account-lock preferences.
+
+Bank accounts, payment cards, tokenized securities, insurance, and fulfilled travel benefits are not live. [See current product status](/getting-started/status/).
+
+:::caution[Real transactions]
+Aurel operates on public mainnets. A signed transaction can move real assets and may not be reversible.
+:::
