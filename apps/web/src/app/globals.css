@@ -221,6 +221,7 @@ button { color: inherit; }
 .receiptPanel .panelHeading > span { color: var(--text-tertiary); font-size: 9px; }
 .emptyState { min-height: 150px; display: grid; place-content: center; justify-items: center; color: var(--text-tertiary); text-align: center; }
 .emptyState strong { margin: 10px 0 5px; color: var(--text); font-size: 11px; }.emptyState span { max-width: 320px; font-size: 9px; line-height: 1.5; }
+.routePanel { margin-top: 22px; }.routeForm { display: grid; grid-template-columns: 1fr 1fr 1.15fr auto; gap: 12px; align-items: end; }.routeForm .button { height: 42px; }.routeQuote { margin-top: 18px; padding: 18px; display: grid; grid-template-columns: repeat(3, 1fr) auto; gap: 18px; align-items: center; border: 1px solid var(--border); border-radius: 12px; background: var(--stone-50); }.routeQuote span,.routeQuote small { display: block; color: var(--ink-500); font-size: 8px; }.routeQuote strong { display: block; margin: 5px 0 3px; font-size: 11px; }.routeQuote .button { white-space: nowrap; }
 .receiptList { margin-top: 18px; }
 .receiptList > div { min-height: 64px; display: grid; grid-template-columns: 95px 1fr minmax(180px,.8fr); align-items: center; gap: 14px; border-top: 1px solid var(--hairline); }
 .receiptList strong,.receiptList small { display: block; }.receiptList strong { font-size: 9px; font-weight: 550; }.receiptList small { margin-top: 4px; color: var(--text-tertiary); font-family: var(--font-technical); font-size: 7px; }
@@ -233,6 +234,7 @@ button { color: inherit; }
   .sandboxGrid { grid-template-columns: 1fr; }
 }
 @media (max-width: 650px) {
+  .routeForm,.routeQuote { grid-template-columns: 1fr; }
   .scenarioStrip { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; }
   .scenarioStrip button { min-width: 190px; scroll-snap-align: start; }
   .sandboxSummary { grid-template-columns: 1fr 1fr; }.sandboxSummary > div { border-right: 0; }

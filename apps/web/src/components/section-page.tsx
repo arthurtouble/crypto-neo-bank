@@ -6,6 +6,7 @@ import { BorrowWorkspace } from "@/components/borrow-workspace";
 import { MembershipBenefits } from "@/components/membership-benefits";
 import { ConciergeWorkspace } from "@/components/concierge-workspace";
 import { ActivityWorkspace } from "@/components/activity-workspace";
+import { CrossChainWorkspace } from "@/components/cross-chain-workspace";
 
 type Section = "assets" | "earn" | "borrow" | "card" | "activity" | "benefits" | "concierge" | "security" | "settings";
 
@@ -27,7 +28,7 @@ function Header({ section }: { section: Section }) {
 }
 
 function Assets() {
-  return <WalletWorkspace />;
+  return <><WalletWorkspace /><CrossChainWorkspace /></>;
 }
 
 function Earn() {
