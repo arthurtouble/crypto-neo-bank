@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Beaker, ChevronDown, CircleHelp, Menu, X } from "lucide-react";
+import { Beaker, CircleHelp, Menu, X } from "lucide-react";
 import { useState } from "react";
 import { Brand } from "./brand";
 import { icons } from "./icons";
 import { CommandMenu } from "./command-menu";
 import { ThemeToggle } from "./theme-toggle";
 import { PrivyAccountButton } from "./privy-account-button";
+import { ClientIdentity } from "./client-identity";
 
 const navigation = [
   { label: "Overview", href: "/app", icon: icons.dashboard },
@@ -55,7 +56,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </nav>
         <div className="sidebarFooter">
           <Link href="/docs"><CircleHelp size={17} /> Documentation</Link>
-          <button><span className="avatar">AM</span><span><strong>Alex Morgan</strong><small>Black member</small></span><ChevronDown size={15} /></button>
+          <ClientIdentity />
         </div>
       </aside>
       {open && <button className="navScrim" aria-label="Close menu" onClick={() => setOpen(false)} />}

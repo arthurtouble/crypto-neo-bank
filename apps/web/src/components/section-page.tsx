@@ -1,11 +1,11 @@
-import { ChevronRight, LockKeyhole, ShieldCheck, Smartphone } from "lucide-react";
-import { activity } from "@/data/demo";
+import { LockKeyhole, ShieldCheck, Smartphone } from "lucide-react";
 import { WalletWorkspace } from "@/components/wallet-workspace";
 import { EarnWorkspace } from "@/components/earn-workspace";
 import { SecurityCenter } from "@/components/security-center";
 import { BorrowWorkspace } from "@/components/borrow-workspace";
 import { MembershipBenefits } from "@/components/membership-benefits";
 import { ConciergeWorkspace } from "@/components/concierge-workspace";
+import { ActivityWorkspace } from "@/components/activity-workspace";
 
 type Section = "assets" | "earn" | "borrow" | "card" | "activity" | "benefits" | "concierge" | "security" | "settings";
 
@@ -13,7 +13,7 @@ const content: Record<Section, { eyebrow: string; title: string; description: st
   assets: { eyebrow: "YOUR BALANCE SHEET", title: "Assets", description: "One coherent view across Aurel and the wallets you control elsewhere." },
   earn: { eyebrow: "PRODUCTIVE CAPITAL", title: "Earn", description: "Curated, transparent strategies with liquidity and risk explained before you allocate." },
   borrow: { eyebrow: "COLLATERALIZED LIQUIDITY", title: "Borrow", description: "Protocol-native credit with health factors, liquidation boundaries, and simulation before every signature." },
-  card: { eyebrow: "GLOBAL SPEND", title: "Aurel Black", description: "A demonstration card connected to your liquid stablecoin reserve." },
+  card: { eyebrow: "GLOBAL SPEND", title: "Aurel Card", description: "A future card program designed around your liquid stablecoin reserve." },
   activity: { eyebrow: "AUDITABLE HISTORY", title: "Activity", description: "Every movement, authorization, fee, and status in one timeline." },
   benefits: { eyebrow: "RELATIONSHIP BENEFITS", title: "Black membership", description: "Practical benefits that become more valuable as your relationship deepens." },
   concierge: { eyebrow: "PRIVATE CLIENT SERVICE", title: "Concierge", description: "Clear answers grounded in product documentation, with no authority to move your assets." },
@@ -35,11 +35,7 @@ function Earn() {
 }
 
 function Card() {
-  return <div className="cardPageGrid"><section className="demoCardLarge"><div className="cardShine" /><div className="membershipTop"><span>AUREL</span><span>BLACK</span></div><div className="cardChip" /><strong className="cardNumber">4829&nbsp;&nbsp;7710&nbsp;&nbsp;3058&nbsp;&nbsp;1842</strong><div className="membershipBottom"><span><small>CARDHOLDER</small>ALEX MORGAN</span><span><small>VALID THRU</small>09/29</span><b>VISA</b></div></section><section className="panel cardControls"><p className="eyebrow">DEMONSTRATION CARD</p><h2>Ready when Bridge approves</h2><p>This card is a functional product simulation. No card has been issued and no real-world authorization can occur.</p><div className="cardControlRow"><span><LockKeyhole size={18} /></span><div><strong>Card status</strong><small>Sandbox only</small></div><span className="statusBadge neutral">Not issued</span></div><div className="cardControlRow"><span><ShieldCheck size={18} /></span><div><strong>Spend controls</strong><small>All regions · $5,000 daily</small></div><ChevronRight size={17} /></div><div className="cardControlRow"><span><Smartphone size={18} /></span><div><strong>Digital wallet</strong><small>Available after production approval</small></div><ChevronRight size={17} /></div></section></div>;
-}
-
-function ActivitySection() {
-  return <section className="panel widePanel"><div className="activityList expanded">{activity.concat([{ title: "Wallet connected", detail: "Ledger external · Read-only", amount: "$43,000.00", status: "Connected", date: "15 Sep, 10:12", tone: "neutral" }]).map((item) => <div className="activityRow" key={`${item.title}-${item.date}`}><span className={`activityIcon ${item.tone}`}>{item.amount.startsWith("+") ? "+" : "↗"}</span><div><strong>{item.title}</strong><small>{item.detail} · {item.date}</small></div><div className="activityAmount"><strong>{item.amount}</strong><small>{item.status}</small></div></div>)}</div></section>;
+  return <div className="cardPageGrid"><section className="demoCardLarge unavailableCard"><div className="cardShine" /><div className="membershipTop"><span>AUREL</span><span>RESERVED</span></div><div className="cardChip" /><strong className="cardNumber">CARD PROGRAM NOT ACTIVE</strong><div className="membershipBottom"><span><small>ISSUING PARTNER</small>TO BE CONTRACTED</span><b>—</b></div></section><section className="panel cardControls"><p className="eyebrow">PROVIDER-GATED</p><h2>No card has been issued</h2><p>Card issuing, cardholder verification, safeguarding, and transaction compliance require an approved regulated program. This surface cannot create or simulate a live card.</p><div className="cardControlRow"><span><LockKeyhole size={18} /></span><div><strong>Card status</strong><small>No production issuing provider</small></div><span className="statusBadge neutral">Unavailable</span></div><div className="cardControlRow"><span><ShieldCheck size={18} /></span><div><strong>Planned controls</strong><small>Freeze, merchant, region, and velocity controls</small></div><span className="statusBadge neutral">Designed</span></div><div className="cardControlRow"><span><Smartphone size={18} /></span><div><strong>Digital wallet</strong><small>Subject to issuer and wallet approval</small></div><span className="statusBadge neutral">Future</span></div></section></div>;
 }
 
 function Benefits() {
@@ -51,9 +47,9 @@ function Security() {
 }
 
 function Settings() {
-  return <section className="panel settingsPanel"><div className="settingRow"><div><strong>Product mode</strong><small>Controls whether regulated integrations are active.</small></div><span className="statusBadge neutral">Demonstration</span></div><div className="settingRow"><div><strong>Base currency</strong><small>Used for portfolio and reporting.</small></div><button>USD <ChevronRight size={15} /></button></div><div className="settingRow"><div><strong>Privacy mode</strong><small>Hide balances when the app opens.</small></div><button>Off <ChevronRight size={15} /></button></div><div className="settingRow"><div><strong>Documents and consents</strong><small>Review agreements and accepted disclosures.</small></div><button>Review <ChevronRight size={15} /></button></div></section>;
+  return <section className="panel settingsPanel"><div className="settingRow"><div><strong>Network mode</strong><small>Transactions use Base mainnet and always require wallet confirmation.</small></div><span className="statusBadge good">Mainnet</span></div><div className="settingRow"><div><strong>Base currency</strong><small>Used for future portfolio reporting.</small></div><span>USD</span></div><div className="settingRow"><div><strong>Privacy mode</strong><small>Balance masking is being prepared for a future release.</small></div><span className="statusBadge neutral">Planned</span></div><div className="settingRow"><div><strong>Documents and consents</strong><small>Product documentation is available from the sidebar.</small></div><span className="statusBadge neutral">Current</span></div></section>;
 }
 
 export function SectionPage({ section }: { section: Section }) {
-  return <div><Header section={section} />{section === "assets" && <Assets />}{section === "earn" && <Earn />}{section === "borrow" && <BorrowWorkspace />}{section === "card" && <Card />}{section === "activity" && <ActivitySection />}{section === "benefits" && <Benefits />}{section === "concierge" && <ConciergeWorkspace />}{section === "security" && <Security />}{section === "settings" && <Settings />}</div>;
+  return <div><Header section={section} />{section === "assets" && <Assets />}{section === "earn" && <Earn />}{section === "borrow" && <BorrowWorkspace />}{section === "card" && <Card />}{section === "activity" && <ActivityWorkspace />}{section === "benefits" && <Benefits />}{section === "concierge" && <ConciergeWorkspace />}{section === "security" && <Security />}{section === "settings" && <Settings />}</div>;
 }
