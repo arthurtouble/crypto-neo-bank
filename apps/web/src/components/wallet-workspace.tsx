@@ -1,10 +1,10 @@
 "use client";
 
-import { useConnectWallet, usePrivy, useSendTransaction, useWallets } from "@privy-io/react-auth";
+import { useConnectWallet, useMfa, usePrivy, useSendTransaction, useWallets } from "@privy-io/react-auth";
 import { Check, Copy, ExternalLink, LoaderCircle, Plus, QrCode, Send, WalletCards, X } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useMemo, useState } from "react";
-import { erc20Abi, formatUnits, isAddress, parseEther, parseUnits, encodeFunctionData } from "viem";
+import { erc20Abi, formatUnits, isAddress, parseEther, parseUnits, encodeFunctionData, toHex } from "viem";
 import { useBalance, useReadContract } from "wagmi";
 import { BASE_ASSETS, HOME_CHAIN } from "@/config/chains";
 
@@ -26,6 +26,7 @@ export function WalletWorkspace() {
   const { wallets, ready } = useWallets();
   const { connectWallet } = useConnectWallet();
   const { sendTransaction } = useSendTransaction();
+  const { mfaMethods } = useMfa();
   const [modal, setModal] = useState<Modal>(null);
   const [asset, setAsset] = useState<AssetSymbol>("USDC");
   const [recipient, setRecipient] = useState("");
@@ -102,12 +103,19 @@ export function WalletWorkspace() {
           estimatedUsd: asset === "USDC" ? Number(amount) : undefined
         })
       });
-      const intent = await intentResponse.json() as { intentId?: string; decision?: { findings: Array<{ level: string; message: string }> }; message?: string };
+      const intent = await intentResponse.json() as { intentId?: string; decision?: { requiresStepUp?: boolean; findings: Array<{ level: string; message: string }> }; message?: string };
       if (!intentResponse.ok || !intent.intentId) {
         const blocked = intent.decision?.findings.find((finding) => finding.level === "block");
         throw new Error(blocked?.message ?? intent.message ?? "Aurel’s transaction policy could not approve this action.");
       }
+      if (intent.decision?.requiresStepUp && !mfaMethods.includes("passkey")) throw new Error("Set up a passkey in the Safety center before this higher-risk transfer.");
       reviewedIntentId = intent.intentId;
+      const provider = await embedded.getEthereumProvider();
+      const simulation = asset === "ETH"
+        ? { from: address, to: recipient, value: toHex(rawAmount) }
+        : { from: address, to: definition.address, value: "0x0", data: transaction.data };
+      await provider.request({ method: "eth_estimateGas", params: [simulation] });
+      if (asset !== "ETH") await provider.request({ method: "eth_call", params: [simulation, "latest"] });
       const result = await sendTransaction(transaction, {
         address,
         uiOptions: {
@@ -190,7 +198,7 @@ export function WalletWorkspace() {
             <label className="fieldLabel">Asset<select value={asset} onChange={(event) => setAsset(event.target.value as AssetSymbol)}>{Object.keys(BASE_ASSETS).map((symbol) => <option key={symbol}>{symbol}</option>)}</select></label>
             <label className="fieldLabel">Amount<input inputMode="decimal" placeholder="0.00" value={amount} onChange={(event) => setAmount(event.target.value)} /></label>
             <label className="fieldLabel">Destination<input autoComplete="off" spellCheck={false} placeholder="0x…" value={recipient} onChange={(event) => setRecipient(event.target.value.trim())} /></label>
-            <div className="transactionSummary"><span>Network<strong>Base mainnet</strong></span><span>Signer<strong>{shortAddress(address)}</strong></span><span>Control<strong>User confirmation</strong></span></div>
+            <div className="transactionSummary"><span>Network<strong>Base mainnet</strong></span><span>Signer<strong>{shortAddress(address)}</strong></span><span>Control<strong>Policy + simulation</strong></span></div>
             {error && <div className="formError" role="alert">{error}</div>}
             {hash && <a className="transactionSuccess" href={`https://basescan.org/tx/${hash}`} target="_blank" rel="noreferrer"><Check size={16} /> Submitted · View on BaseScan <ExternalLink size={14} /></a>}
             <button className="button primary full" disabled={sending || Boolean(hash)}>{sending ? <LoaderCircle className="spin" size={16} /> : <Send size={16} />}{hash ? "Transaction submitted" : sending ? "Awaiting confirmation" : "Review with Privy"}</button>

@@ -36,9 +36,26 @@ describe("transaction policy", () => {
   });
 
   it("warns without blocking when a reserve target would be crossed", () => {
-    const decision = evaluateTransactionPolicy({ ...baseIntent, estimatedUsd: 45_000 });
+    const decision = evaluateTransactionPolicy({ ...baseIntent, type: "earn_supply", estimatedUsd: 45_000 }, { ...defaultTransactionPolicy, dailyLimitUsd: 100_000 });
     expect(decision.permitted).toBe(true);
     expect(decision.findings.some((item) => item.code === "reserve_below_target")).toBe(true);
   });
-});
 
+  it("blocks every outgoing intent while the account is locked", () => {
+    const decision = evaluateTransactionPolicy(baseIntent, { ...defaultTransactionPolicy, accountLocked: true });
+    expect(decision.permitted).toBe(false);
+    expect(decision.findings.some((item) => item.code === "account_locked")).toBe(true);
+  });
+
+  it("requires a cooled saved destination above the configured threshold", () => {
+    const decision = evaluateTransactionPolicy(baseIntent, { ...defaultTransactionPolicy, newAddressThresholdUsd: 500 });
+    expect(decision.permitted).toBe(false);
+    expect(decision.findings.some((item) => item.code === "new_destination_threshold")).toBe(true);
+  });
+
+  it("blocks an intent that exceeds the rolling daily limit", () => {
+    const decision = evaluateTransactionPolicy(baseIntent, { ...defaultTransactionPolicy, spentTodayUsd: 24_500, dailyLimitUsd: 25_000, newAddressThresholdUsd: 5_000 });
+    expect(decision.permitted).toBe(false);
+    expect(decision.findings.some((item) => item.code === "daily_limit_exceeded")).toBe(true);
+  });
+});

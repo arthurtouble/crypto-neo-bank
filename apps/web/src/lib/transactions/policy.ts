@@ -11,8 +11,13 @@ export type TransactionIntentInput = {
 export type TransactionPolicy = {
   supportedChainIds: number[];
   allowlistedDestinations: string[];
+  coolingDestinations: string[];
   enforceAllowlist: boolean;
+  accountLocked: boolean;
   reserveFloorUsd: number;
+  dailyLimitUsd: number;
+  spentTodayUsd: number;
+  newAddressThresholdUsd: number;
   stepUpThresholdUsd: number;
   delayThresholdUsd: number;
   delaySeconds: number;
@@ -30,8 +35,13 @@ export type PolicyDecision = {
 export const defaultTransactionPolicy: TransactionPolicy = {
   supportedChainIds: [8453, 1, 42161, 10, 137],
   allowlistedDestinations: [],
+  coolingDestinations: [],
   enforceAllowlist: false,
+  accountLocked: false,
   reserveFloorUsd: 10_000,
+  dailyLimitUsd: 25_000,
+  spentTodayUsd: 0,
+  newAddressThresholdUsd: 1_000,
   stepUpThresholdUsd: 10_000,
   delayThresholdUsd: 25_000,
   delaySeconds: 86_400
@@ -45,6 +55,11 @@ export function evaluateTransactionPolicy(
   const findings: PolicyFinding[] = [];
   const destination = input.destination.toLowerCase();
   const allowlisted = policy.allowlistedDestinations.map((item) => item.toLowerCase()).includes(destination);
+  const cooling = policy.coolingDestinations.map((item) => item.toLowerCase()).includes(destination);
+
+  if (policy.accountLocked) {
+    findings.push({ code: "account_locked", level: "block", message: "Outgoing transactions are locked in your Safety center." });
+  }
 
   if (!policy.supportedChainIds.includes(input.chainId)) {
     findings.push({ code: "unsupported_chain", level: "block", message: "This network is not enabled for customer-directed transactions." });
@@ -55,9 +70,13 @@ export function evaluateTransactionPolicy(
   if (!input.amount || Number(input.amount) <= 0 || !Number.isFinite(Number(input.amount))) {
     findings.push({ code: "invalid_amount", level: "block", message: "The transaction amount must be greater than zero." });
   }
-  if (policy.enforceAllowlist && !allowlisted) {
+  if (input.type === "transfer" && cooling) {
+    findings.push({ code: "destination_cooling", level: "block", message: "This saved destination is still in its security cooling period." });
+  } else if (input.type === "transfer" && policy.enforceAllowlist && !allowlisted) {
     findings.push({ code: "destination_not_allowed", level: "block", message: "This wallet policy only permits saved destinations." });
-  } else if (!allowlisted) {
+  } else if (input.type === "transfer" && !allowlisted && input.estimatedUsd !== undefined && input.estimatedUsd >= policy.newAddressThresholdUsd) {
+    findings.push({ code: "new_destination_threshold", level: "block", message: "Save this destination and complete its cooling period before sending this amount." });
+  } else if (input.type === "transfer" && !allowlisted) {
     findings.push({ code: "new_destination", level: "warning", message: "This destination is not in the customer’s address book." });
   }
   if (input.estimatedUsd === undefined) {
@@ -65,6 +84,9 @@ export function evaluateTransactionPolicy(
   }
   if (input.estimatedUsd !== undefined && input.availableUsd !== undefined && input.availableUsd - input.estimatedUsd < policy.reserveFloorUsd) {
     findings.push({ code: "reserve_below_target", level: "warning", message: "This action would move the immediately available balance below the configured reserve target." });
+  }
+  if (input.estimatedUsd !== undefined && policy.spentTodayUsd + input.estimatedUsd > policy.dailyLimitUsd) {
+    findings.push({ code: "daily_limit_exceeded", level: "block", message: "This action exceeds your rolling 24-hour transaction limit." });
   }
 
   const requiresStepUp = input.estimatedUsd === undefined || input.estimatedUsd >= policy.stepUpThresholdUsd;
@@ -80,4 +102,3 @@ export function evaluateTransactionPolicy(
     findings
   };
 }
-
