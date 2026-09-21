@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 const chains = [
-  { name: "Base", id: 8453, rpc: "https://mainnet.base.org", contracts: ["0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"] },
+  { name: "Base", id: 8453, rpc: "https://base-rpc.publicnode.com", contracts: ["0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"] },
   { name: "Ethereum", id: 1, rpc: "https://ethereum-rpc.publicnode.com", contracts: ["0xA0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"] },
   { name: "Arbitrum", id: 42161, rpc: "https://arb1.arbitrum.io/rpc", contracts: ["0xaf88d065e77c8cC2239327C5EDb3A432268e5831"] },
   { name: "Optimism", id: 10, rpc: "https://mainnet.optimism.io", contracts: ["0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85"] },

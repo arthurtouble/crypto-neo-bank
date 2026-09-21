@@ -1,25 +1,31 @@
 import { env } from "cloudflare:workers";
 import { AuthenticationError, requireVerifiedSubject } from "@/lib/auth/server";
 
-const RPC_BY_CHAIN: Record<number, string> = {
-  1: "https://ethereum-rpc.publicnode.com",
-  10: "https://mainnet.optimism.io",
-  137: "https://polygon-bor-rpc.publicnode.com",
-  8453: "https://mainnet.base.org",
-  42161: "https://arb1.arbitrum.io/rpc"
+const RPC_BY_CHAIN: Record<number, string[]> = {
+  1: ["https://ethereum-rpc.publicnode.com"],
+  10: ["https://mainnet.optimism.io"],
+  137: ["https://polygon-bor-rpc.publicnode.com"],
+  8453: ["https://base-rpc.publicnode.com", "https://mainnet.base.org"],
+  42161: ["https://arb1.arbitrum.io/rpc"]
 };
 
 type IntentRow = { intent_id: string; chain_id: number; transaction_hash: string; status: string };
 type Receipt = { status?: string; blockNumber?: string };
 
 async function readReceipt(chainId: number, hash: string): Promise<Receipt | null> {
-  const endpoint = RPC_BY_CHAIN[chainId];
-  if (!endpoint) return null;
-  const response = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_getTransactionReceipt", params: [hash] }) });
-  if (!response.ok) throw new Error(`RPC ${chainId} returned ${response.status}.`);
-  const body = await response.json() as { result?: Receipt | null; error?: { message?: string } };
-  if (body.error) throw new Error(body.error.message ?? "Receipt lookup failed.");
-  return body.result ?? null;
+  const endpoints = RPC_BY_CHAIN[chainId];
+  if (!endpoints) return null;
+  let lastError = "No RPC endpoint responded.";
+  for (const endpoint of endpoints) {
+    try {
+      const response = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_getTransactionReceipt", params: [hash] }), signal: AbortSignal.timeout(8_000) });
+      if (!response.ok) { lastError = `RPC ${chainId} returned ${response.status}.`; continue; }
+      const body = await response.json() as { result?: Receipt | null; error?: { message?: string } };
+      if (body.error) { lastError = body.error.message ?? "Receipt lookup failed."; continue; }
+      return body.result ?? null;
+    } catch (error) { lastError = error instanceof Error ? error.message : "Receipt lookup failed."; }
+  }
+  throw new Error(lastError);
 }
 
 export async function POST(request: Request) {

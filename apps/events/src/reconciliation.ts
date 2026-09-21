@@ -86,7 +86,7 @@ type DependencyProbe = { key: string; label: string; url: string; init?: Request
 
 const probes: DependencyProbe[] = [
   {
-    key: "dependency_base", label: "Base mainnet", url: "https://mainnet.base.org",
+    key: "dependency_base", label: "Base mainnet", url: "https://base-rpc.publicnode.com",
     init: { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_blockNumber", params: [] }) },
     validate: async (response) => response.ok && Boolean((await response.json() as { result?: string }).result)
   },
