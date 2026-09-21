@@ -1,0 +1,27 @@
+# Dependencies and build output
+node_modules/
+.pnpm-store/
+.next/
+dist/
+*.tsbuildinfo
+
+# Local Cloudflare state
+.wrangler/
+.dev.vars
+
+# Secrets and local overrides
+.env
+.env.*
+!.env.example
+
+# Test and browser artifacts
+coverage/
+output/playwright/
+.playwright-cli/
+playwright-report/
+test-results/
+
+# OS and editor files
+.DS_Store
+*.swp
+*.swo

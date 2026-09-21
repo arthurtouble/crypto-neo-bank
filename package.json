@@ -1,0 +1,14 @@
+{
+  "name": "aurel-financial-os",
+  "private": true,
+  "packageManager": "pnpm@11.25.0",
+  "scripts": {
+    "dev": "pnpm --filter @aurel/web dev",
+    "build": "pnpm --filter @aurel/web build",
+    "preview": "pnpm --filter @aurel/web preview",
+    "deploy": "pnpm --filter @aurel/web deploy",
+    "deploy:dry-run": "pnpm --filter @aurel/web deploy:dry-run",
+    "typecheck": "pnpm --filter @aurel/web typecheck",
+    "lint": "pnpm --filter @aurel/web lint"
+  }
+}

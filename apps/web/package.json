@@ -1,0 +1,41 @@
+{
+  "name": "@aurel/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vinext dev",
+    "build": "vinext build",
+    "preview": "vinext start",
+    "deploy": "vinext-cloudflare deploy",
+    "deploy:dry-run": "vinext-cloudflare deploy --dry-run",
+    "cf-types": "wrangler types --env-interface CloudflareEnv",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@privy-io/react-auth": "latest",
+    "@radix-ui/react-dialog": "^1.1.15",
+    "lucide-react": "latest",
+    "next": "latest",
+    "pino": "^10.0.0",
+    "react": "latest",
+    "react-dom": "latest",
+    "zod": "latest"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "latest",
+    "@types/node": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "@vinext/cloudflare": "latest",
+    "@vitejs/plugin-rsc": "latest",
+    "eslint": "^9.39.2",
+    "eslint-config-next": "latest",
+    "react-server-dom-webpack": "latest",
+    "typescript": "^5.9.3",
+    "vinext": "latest",
+    "vite": "latest",
+    "wrangler": "latest"
+  }
+}

@@ -1,0 +1,14 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+confirmModulesPurge: false
+
+allowBuilds:
+  "@reown/appkit": false
+  bufferutil: false
+  esbuild: true
+  keccak: false
+  unrs-resolver: true
+  utf-8-validate: false
+  workerd: true
