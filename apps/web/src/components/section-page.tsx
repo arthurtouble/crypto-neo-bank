@@ -1,16 +1,18 @@
 import { LockKeyhole, ShieldCheck, Smartphone } from "lucide-react";
-import { WalletWorkspace } from "@/components/wallet-workspace";
-import { EarnWorkspace } from "@/components/earn-workspace";
-import { SecurityCenter } from "@/components/security-center";
-import { BorrowWorkspace } from "@/components/borrow-workspace";
-import { MembershipBenefits } from "@/components/membership-benefits";
-import { ConciergeWorkspace } from "@/components/concierge-workspace";
-import { ActivityWorkspace } from "@/components/activity-workspace";
-import { CrossChainWorkspace } from "@/components/cross-chain-workspace";
-import { MarketsWorkspace } from "@/components/markets-workspace";
-import { OperationsWorkspace } from "@/components/operations-workspace";
-import { NetworkSupportMatrix } from "@/components/network-support-matrix";
-import { SettingsWorkspace } from "@/components/settings-workspace";
+import dynamic from "next/dynamic";
+
+const WalletWorkspace = dynamic(() => import("./wallet-workspace").then((module) => module.WalletWorkspace));
+const EarnWorkspace = dynamic(() => import("./earn-workspace").then((module) => module.EarnWorkspace));
+const SecurityCenter = dynamic(() => import("./security-center").then((module) => module.SecurityCenter));
+const BorrowWorkspace = dynamic(() => import("./borrow-workspace").then((module) => module.BorrowWorkspace));
+const MembershipBenefits = dynamic(() => import("./membership-benefits").then((module) => module.MembershipBenefits));
+const ConciergeWorkspace = dynamic(() => import("./concierge-workspace").then((module) => module.ConciergeWorkspace));
+const ActivityWorkspace = dynamic(() => import("./activity-workspace").then((module) => module.ActivityWorkspace));
+const CrossChainWorkspace = dynamic(() => import("./cross-chain-workspace").then((module) => module.CrossChainWorkspace));
+const MarketsWorkspace = dynamic(() => import("./markets-workspace").then((module) => module.MarketsWorkspace));
+const OperationsWorkspace = dynamic(() => import("./operations-workspace").then((module) => module.OperationsWorkspace));
+const NetworkSupportMatrix = dynamic(() => import("./network-support-matrix").then((module) => module.NetworkSupportMatrix));
+const SettingsWorkspace = dynamic(() => import("./settings-workspace").then((module) => module.SettingsWorkspace));
 
 type Section = "assets" | "earn" | "borrow" | "markets" | "card" | "activity" | "benefits" | "concierge" | "security" | "settings" | "operations";
 

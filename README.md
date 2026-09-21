@@ -16,7 +16,7 @@ Aurel is a Cloudflare-native, mainnet-first private financial interface built ov
 - Normalized identity, wallet, compliance, fiat, card, membership, and chain contracts.
 - Interactive partner lab at `/app/sandbox` with new, funded, compliance-review, and failed-transfer scenarios.
 - Signed `/api/webhooks/provider` ingress, replay protection, Queue handoff, and retrying event consumer.
-- D1 schema limited to disposable projections, consent, preferences, and idempotency metadata.
+- D1 schema separates rebuildable financial projections from retained Aurel policy, audit, consent, support, and recovery evidence.
 - `/api/health` endpoint exposing deployment mode and authority model.
 - Cloudflare Workers deployment through vinext, with logs and traces configured.
 - No internal authoritative balance or settlement store.
@@ -30,7 +30,7 @@ pnpm install
 pnpm dev
 ```
 
-The app defaults to mainnet-preview mode. Its production Privy app ID is a public build-time fallback; set `NEXT_PUBLIC_PRIVY_APP_ID` to override it for a separate local or preview Privy application. Mainnet writes always require an explicit wallet confirmation.
+Local development is the only development environment and uses isolated Miniflare state. The deployed Worker is production; there is no staging environment. The app defaults to mainnet-preview mode. Its production Privy app ID is a public build-time fallback; set `NEXT_PUBLIC_PRIVY_APP_ID` to override it for a separate local Privy application. Mainnet writes always require an explicit wallet confirmation.
 
 ## Quality checks
 
@@ -63,8 +63,10 @@ pnpm deploy
 pnpm events:deploy
 ```
 
-Do not add provider credentials to `wrangler.jsonc`. Add Bridge, Rain, Privy server, RPC, and webhook secrets with Workers Secrets once those integrations are enabled. Sandbox and production must use separate Cloudflare environments and separate provider programs.
+Do not add provider credentials to `wrangler.jsonc`. Add Bridge, Rain, Privy server, Turnstile, RPC, and webhook secrets with Workers Secrets once those integrations are enabled. Development and production must use separate provider applications or programs.
 
 ## Data rule
 
-An Aurel database may eventually improve speed and operations, but it must remain disposable. It may contain projections, workflow/idempotency state, user preferences, consent receipts, and provider references. It must not become the source of truth for fiat balances, wallet balances, DeFi positions, loans, or card settlement.
+An Aurel database must never become the source of truth for fiat balances, wallet balances, DeFi positions, loans, or card settlement. Financial projections are rebuildable; security policies, customer instructions, consent receipts, cases, and audit evidence are operational records that require retention and recovery even though they do not authorize or prove a balance.
+
+See [LAUNCH_READINESS.md](./LAUNCH_READINESS.md) for the closed-beta gates and [THREAT_MODEL.md](./THREAT_MODEL.md) for the security boundary.

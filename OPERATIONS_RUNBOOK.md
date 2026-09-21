@@ -2,7 +2,7 @@
 
 ## Operating premise
 
-Aurel can lose its D1 data without losing customer funds. Privy, Bridge/Rain, issuers, and public chains remain authoritative. D1 contains operational evidence and replaceable projections only.
+Aurel can lose its D1 data without losing customer funds because Privy, contracted providers, and public chains remain financially authoritative. D1 also contains Aurel-specific security decisions, customer instructions, consent evidence, cases, and audit history. Those records are not a balance ledger, but they are not disposable and must be retained and backed up according to the approved policy.
 
 ## Daily controls
 
@@ -29,14 +29,34 @@ Aurel can lose its D1 data without losing customer funds. Privy, Bridge/Rain, is
 4. Verify `webhook_receipts.processing_status` and the resulting refresh record.
 5. Reconcile the affected external object before marking the incident resolved.
 
-## Projection database loss
+## D1 loss or corruption
 
 1. Create a replacement D1 database and apply every migration.
 2. Reattach the binding to both Workers.
-3. Retrieve customer/provider references from the approved identity mapping source.
+3. Restore the latest verified evidence backup before accepting new customer instructions.
 4. Query provider APIs and chains directly.
 5. Rebuild wallet, fiat, card, position, and membership projections with source metadata.
-6. Re-run reconciliation. Customer balances must match authoritative systems without restoring a D1 backup.
+6. Re-run reconciliation. Customer balances must match authoritative systems independently of the D1 restore.
+7. Treat any gap in consent, security-policy, case, or administrative audit evidence as an incident; do not invent or infer missing acceptance.
+
+## Production release
+
+1. Run `pnpm lint`, `pnpm typecheck:all`, `pnpm test:unit`, `pnpm test:e2e`, and `pnpm deploy:dry-run`.
+2. Apply pending D1 migrations before code that requires the new schema.
+3. Run `pnpm release:upload` to create an undeployed candidate and use its preview URL for smoke tests.
+4. On a custom domain, configure version affinity before splitting traffic so a session receives consistent code and static assets.
+5. Deploy the candidate initially to a small percentage with `wrangler versions deploy <old>@95 <candidate>@5`, observe errors and key journeys, then promote deliberately.
+6. Stop the rollout and use `pnpm release:rollback` if authentication, policy, transaction preparation, asset reads, or support intake regress.
+7. A code rollback does not roll back D1. Database changes must remain backward-compatible through the rollout window.
+
+## Service targets for closed beta
+
+- Application availability target: 99.95%, excluding upstream chain/provider incidents shown as degraded dependencies.
+- Supported route preparation success: at least 98% when a provider route is available.
+- Submitted transaction traceability: 100% have an intent ID and, after signing, a transaction hash.
+- Stale submitted transaction investigation: open an issue after 15 minutes without a source receipt.
+- Urgent security/funds-at-risk case: acknowledge within 15 minutes during published coverage.
+- Normal case: first response within one business day.
 
 ## Command ambiguity
 
@@ -65,4 +85,4 @@ The release drill for 21 September 2026 verified the recovery design without tou
 5. Verified the operations reconciliation surface denies access unless a Privy subject is explicitly allowlisted.
 6. Confirmed no automated test or recovery step signs or broadcasts a value-moving transaction.
 
-Repeat this drill before enabling a regulated provider, after any projection-schema change, and at least quarterly once real customer workflows are active. Record the date, operator, database target, discrepancies, and remediation in the incident system; never place customer secrets or raw KYC evidence in the record.
+Repeat this drill before enabling a regulated provider, after any persistence-schema change, and at least quarterly once real customer workflows are active. Record the date, operator, database target, discrepancies, and remediation in the incident system; never place customer secrets or raw KYC evidence in the record.

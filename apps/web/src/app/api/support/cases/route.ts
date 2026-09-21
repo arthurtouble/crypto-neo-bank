@@ -2,12 +2,14 @@ import { env } from "cloudflare:workers";
 import { z } from "zod";
 import { AuthenticationError, requireVerifiedSubject } from "@/lib/auth/server";
 import { enforceRateLimit, RateLimitError } from "@/lib/security/rate-limit";
+import { verifyTurnstile } from "@/lib/security/turnstile";
 
 const caseSchema = z.object({
   category: z.enum(["transaction", "account", "security", "product", "other"]),
   priority: z.enum(["normal", "urgent"]).default("normal"),
   summary: z.string().trim().min(10).max(1000),
-  intentId: z.string().uuid().optional()
+  intentId: z.string().uuid().optional(),
+  turnstileToken: z.string().max(2048).optional()
 });
 
 export async function GET(request: Request) {
@@ -29,6 +31,8 @@ export async function POST(request: Request) {
     const subject = await requireVerifiedSubject(request);
     await enforceRateLimit(env.PROJECTION_DB, { namespace: "support", subject: subject.subjectReference, limit: 5, windowSeconds: 3600 });
     const input = caseSchema.parse(await request.json());
+    const turnstile = await verifyTurnstile({ token: input.turnstileToken, remoteIp: request.headers.get("CF-Connecting-IP") });
+    if (!turnstile.valid) return Response.json({ error: "bot_verification_failed", message: "Please complete the verification and try again.", traceId }, { status: 403 });
     if (input.intentId) {
       const owned = await env.PROJECTION_DB.prepare("SELECT intent_id FROM transaction_intents WHERE intent_id = ? AND subject_reference = ?").bind(input.intentId, subject.subjectReference).first();
       if (!owned) return Response.json({ error: "intent_not_found", traceId }, { status: 404 });

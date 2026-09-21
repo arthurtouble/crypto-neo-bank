@@ -5,7 +5,7 @@ This is the execution checklist for the mainnet-first product. “Live” means 
 ## Product spine
 
 - [x] Cloudflare Workers and Static Assets deployment
-- [x] Disposable D1 projection database
+- [x] D1 for non-authoritative projections plus retained policy, audit, consent, and support evidence
 - [x] Provider-event Queue and dead-letter Queue
 - [x] Privy authentication UI
 - [x] Server-side Privy access-token verification boundary
@@ -17,6 +17,11 @@ This is the execution checklist for the mainnet-first product. “Live” means 
 - [x] User-confirmed Base ETH/ERC-20 send flow
 - [x] Transaction-intent API, policy evaluation, consent, and submission state
 - [x] Rebuildable provider/onchain portfolio view and authenticated intent activity feed
+- [x] Persistent activation journey and tested chain/asset support matrix
+- [x] Emergency lock, rolling limits, destination allowlist/cooling, and direct-send simulation
+- [x] Source-chain receipt reconciliation with resumable intent history
+- [x] Human support intake and operations escalation
+- [x] Product funnel and settlement-reliability telemetry
 
 ## Product workstreams
 
@@ -31,6 +36,8 @@ This is the execution checklist for the mainnet-first product. “Live” means 
 - [x] Operations and reconciliation console
 - [x] Complete trust center and effective-dated disclosures
 - [x] Production observability, abuse controls, security tests, and recovery exercise
+- [x] Dev/prod environment policy, CI verification, candidate uploads, gradual-release runbook, and rollback path
+- [x] Turnstile client and server validation path (activation requires production widget credentials)
 
 ## Deliberately external
 
@@ -40,3 +47,4 @@ This is the execution checklist for the mainnet-first product. “Live” means 
 - Every mainnet write requires an explicit wallet confirmation; automated tests never broadcast value-moving transactions.
 - Membership qualification is presented as a current-balance projection until sufficient daily observations exist for a 30-day earned tier.
 - External-wallet history beyond Aurel-created intents is read directly from the relevant chain explorer; Aurel does not maintain a proprietary transaction ledger.
+- Custom domain, WAF/API Shield rules, Access policy, log export, and version affinity require the production domain/account configuration.

@@ -8,8 +8,10 @@
     "not_found_handling": "none"
   },
   "vars": {
+    "PRODUCT_ENVIRONMENT": "production",
     "PRODUCT_MODE": "mainnet-preview",
     "NEXT_PUBLIC_PRIVY_APP_ID": "cmub5evr4013l0cjs0w5dijlb",
+    "NEXT_PUBLIC_TURNSTILE_SITE_KEY": "",
     "ADMIN_PRIVY_SUBJECTS": "",
     "PROVIDER_WEBHOOK_TOLERANCE_SECONDS": "300"
   },
