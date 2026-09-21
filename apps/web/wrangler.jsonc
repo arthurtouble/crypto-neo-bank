@@ -8,7 +8,25 @@
     "not_found_handling": "none"
   },
   "vars": {
-    "PRODUCT_MODE": "demo"
+    "PRODUCT_MODE": "demo",
+    "PROVIDER_WEBHOOK_TOLERANCE_SECONDS": "300"
+  },
+  "secrets": {
+    "required": ["PROVIDER_WEBHOOK_SECRET"]
+  },
+  // Replace this placeholder after: wrangler d1 create aurel-projections
+  "d1_databases": [
+    {
+      "binding": "PROJECTION_DB",
+      "database_name": "aurel-projections",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "../../infra/d1/migrations"
+    }
+  ],
+  "queues": {
+    "producers": [
+      { "binding": "PROVIDER_EVENTS", "queue": "aurel-provider-events" }
+    ]
   },
   "observability": {
     "enabled": true,

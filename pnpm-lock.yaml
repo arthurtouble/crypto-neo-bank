@@ -8,6 +8,18 @@ importers:
 
   .: {}
 
+  apps/events:
+    devDependencies:
+      '@types/node':
+        specifier: latest
+        version: 26.6.2
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      wrangler:
+        specifier: latest
+        version: 4.135.0(@types/node@26.6.2)(bufferutil@4.1.0)(utf-8-validate@5.0.10)
+
   apps/web:
     dependencies:
       '@privy-io/react-auth':

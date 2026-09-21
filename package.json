@@ -8,7 +8,10 @@
     "preview": "pnpm --filter @aurel/web preview",
     "deploy": "pnpm --filter @aurel/web deploy",
     "deploy:dry-run": "pnpm --filter @aurel/web deploy:dry-run",
+    "events:dev": "pnpm --filter @aurel/events dev",
+    "events:deploy": "pnpm --filter @aurel/events deploy",
     "typecheck": "pnpm --filter @aurel/web typecheck",
+    "typecheck:all": "pnpm -r typecheck",
     "lint": "pnpm --filter @aurel/web lint"
   }
 }
