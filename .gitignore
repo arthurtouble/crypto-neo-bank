@@ -3,6 +3,7 @@ node_modules/
 .pnpm-store/
 .next/
 .vinext/
+.astro/
 dist/
 *.tsbuildinfo
 
