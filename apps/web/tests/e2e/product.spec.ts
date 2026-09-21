@@ -20,7 +20,7 @@ test("public trust center has no serious accessibility violations", async ({ pag
 test("mobile layout does not overflow and retains product entry", async ({ page }, testInfo) => {
   test.skip(!testInfo.project.name.includes("mobile"), "Mobile-only assertion");
   await page.goto("/");
-  await expect(page.getByRole("link", { name: /Explore the product/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Open Aurel/ }).first()).toBeVisible();
   const dimensions = await page.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, clientWidth: document.documentElement.clientWidth }));
   expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth + 1);
 });
@@ -69,4 +69,13 @@ test("documentation stays within the mobile viewport", async ({ page }, testInfo
   await expect(page.getByRole("heading", { name: /Understand the system/ })).toBeVisible();
   const dimensions = await page.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, clientWidth: document.documentElement.clientWidth }));
   expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth + 1);
+});
+
+test("design system is accessible and responsive", async ({ page }) => {
+  await page.goto("/design-system.html");
+  await expect(page.getByRole("heading", { name: /Quietly certain/ })).toBeVisible();
+  const dimensions = await page.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, clientWidth: document.documentElement.clientWidth }));
+  expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth + 1);
+  const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
+  expect(results.violations.filter((violation) => ["serious", "critical"].includes(violation.impact ?? ""))).toEqual([]);
 });

@@ -1,3 +1,11 @@
+@font-face {
+  font-family: "Satoshi";
+  src: url("/fonts/Satoshi-Variable.woff2") format("woff2-variations");
+  font-style: normal;
+  font-weight: 300 900;
+  font-display: swap;
+}
+
 :root {
   --ink-950: #0b1720;
   --ink-900: #12222c;
@@ -192,6 +200,207 @@ button { color: inherit; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
+}
+
+/* Design system v3 — Aurel's deliberately quiet product language. */
+:root {
+  --canvas: #f3f1ec;
+  --surface: #faf9f6;
+  --surface-raised: #ffffff;
+  --surface-muted: #ebe9e3;
+  --surface-inset: #e3e0d8;
+  --text: #171b19;
+  --text-secondary: #555b57;
+  --text-tertiary: #5c625e;
+  --hairline: rgba(23, 27, 25, .11);
+  --hairline-strong: rgba(23, 27, 25, .22);
+  --accent: #285f50;
+  --accent-hover: #204d42;
+  --accent-soft: #dfe9e3;
+  --positive: #27664c;
+  --positive-soft: #deebe3;
+  --warning: #76501c;
+  --warning-soft: #eee4d3;
+  --danger: #953f3b;
+  --focus: #286f5b;
+  --radius-control: 5px;
+  --radius-panel: 8px;
+  --radius-feature: 12px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+  --font-body: "Satoshi", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-editorial: "Satoshi", system-ui, sans-serif;
+  --font-accent: var(--font-display), "Iowan Old Style", Baskerville, Georgia, serif;
+}
+
+html[data-theme="dark"] {
+  --canvas: #111310;
+  --surface: #181b18;
+  --surface-raised: #20231f;
+  --surface-muted: #272b27;
+  --surface-inset: #0d0f0d;
+  --text: #f2f0ea;
+  --text-secondary: #b7bab4;
+  --text-tertiary: #adb1aa;
+  --hairline: rgba(242, 240, 234, .12);
+  --hairline-strong: rgba(242, 240, 234, .22);
+  --accent: #77b69f;
+  --accent-hover: #8ac5af;
+  --accent-soft: #1d382f;
+}
+
+body {
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.eyebrow {
+  margin-bottom: var(--space-2);
+  color: var(--text-tertiary);
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 560;
+  letter-spacing: .01em;
+  text-transform: none;
+}
+
+.button {
+  min-height: 42px;
+  padding-inline: 16px;
+  border-radius: var(--radius-control);
+  font-size: 13px;
+  font-weight: 620;
+}
+.button:hover { transform: none; }
+.button:active { transform: translateY(1px); }
+.button.textButton { min-height: auto; padding-inline: 2px; border: 0; }
+
+.marketingHeader,
+.marketingHero,
+.productSection { max-width: 1280px; }
+.marketingHeader { height: 76px; padding-inline: 40px; }
+.marketingHeader nav { gap: 26px; font-size: 14px; }
+.brandWord { font-size: 14px; font-weight: 720; letter-spacing: .18em; }
+.brandDescriptor { font-size: 15px; }
+.marketingHero { min-height: 650px; padding: 72px 40px 88px; gap: 8vw; }
+.heroCopy h1 { max-width: 680px; font-size: clamp(52px, 5.5vw, 76px); line-height: 1; }
+.heroCopy h1 em { color: var(--text); }
+.heroCopy > p:not(.eyebrow) { max-width: 520px; font-size: 18px; line-height: 1.55; }
+.trustLine { margin-top: 48px; gap: 26px; font-size: 12px; }
+.statementCard { border-radius: 2px; box-shadow: 0 26px 70px rgba(17, 24, 20, .15); }
+.floatingNote { border-radius: var(--radius-control); }
+.principlesSection { padding-block: 104px; }
+.principleGrid { margin-top: 72px; }
+.principleGrid article { min-height: 220px; }
+.principleGrid h3 { margin-top: 64px; }
+.productSection { padding: 112px 40px; }
+.productTile { border-radius: var(--radius-panel); }
+
+.productShell { grid-template-columns: 248px minmax(0, 1fr); }
+.sidebar { padding: 28px 18px 18px; }
+.environmentLabel {
+  margin: 28px 10px 22px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-tertiary);
+  font-size: 11px;
+}
+.environmentLabel span { width: 6px; height: 6px; border-radius: 50%; background: var(--positive); }
+.groupedNav { gap: 20px; }
+.navGroup { gap: 1px; }
+.navGroup > p {
+  margin: 0 12px 6px;
+  color: var(--text-tertiary);
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 560;
+  letter-spacing: .01em;
+  text-transform: none;
+}
+.sideNav a { min-height: 40px; border-radius: var(--radius-control); font-size: 14px; }
+.sideNav a.active { box-shadow: inset 2px 0 var(--accent); }
+.sideRule { margin-block: 18px; }
+.clientIdentity { border-radius: var(--radius-control); }
+.clientIdentity strong { font-size: 12px; }
+.clientIdentity small { font-size: 11px; }
+.productHeader { height: 64px; padding-inline: 28px; }
+.commandSearch { min-width: 240px; font-size: 13px; }
+.networkStatus { font-family: var(--font-body); font-size: 11px; }
+.privyAccountButton { border-radius: var(--radius-control); font-size: 12px; }
+.productContent { max-width: 1360px; padding: 48px 40px 88px; }
+
+.pageIntro { margin-bottom: 36px; align-items: flex-start; }
+.pageIntro h1 { font-size: clamp(32px, 3vw, 42px); font-weight: 590; }
+.pageIntro > div > p:not(.eyebrow) { max-width: 610px; margin-top: 10px; font-size: 14px; line-height: 1.55; }
+.panel { border-radius: var(--radius-panel); }
+.balanceHero { padding: 34px 38px; border-radius: var(--radius-panel); }
+.heroAmount { font-size: 46px; }
+.panelHeading h2 { font-size: 21px; }
+.panelHeading h3 { font-size: 17px; }
+.statusBadge { border-radius: 3px; font-family: var(--font-body); font-size: 10px; }
+.dashboardGrid { gap: 20px; margin-top: 20px; }
+.allocationPanel,
+.riskPanel,
+.activityPanel {
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--hairline-strong);
+  border-radius: 0;
+}
+.allocationPanel,
+.riskPanel { padding: 26px 0 8px; }
+.activityPanel { padding: 26px 0 0; }
+.rightRail { gap: 20px; }
+.progressPanel { border: 0; border-top: 1px solid var(--hairline-strong); border-radius: 0; background: transparent; }
+.metric > span,
+.metric small,
+.allocationList span,
+.allocationList small,
+.riskItem div > span,
+.riskItem small,
+.activityRow > div:nth-child(2) strong,
+.activityRow small { font-size: 11px; }
+.riskIcon,
+.activityIcon,
+.strategyGlyph,
+.benefitIcon { border-radius: var(--radius-control); }
+.conciergeCard { border-radius: var(--radius-panel); }
+
+.dialogContent,
+.financialModal { border-radius: var(--radius-panel); }
+.dialogClose,
+.modalClose,
+.themeToggle { border-radius: var(--radius-control); }
+.fieldLabel input,
+.amountField input,
+.financialModal .fieldLabel select,
+.walletAddress,
+.transactionSummary,
+.transferMeta,
+.consentCheck { border-radius: var(--radius-control); }
+.segmentedControl { border-radius: 7px; }
+.segmentedControl button { border-radius: 4px; }
+
+@media (max-width: 900px) {
+  .productShell { grid-template-columns: 1fr; }
+  .productContent { padding: 32px 22px 64px; }
+}
+
+@media (max-width: 650px) {
+  .marketingHeader { padding-inline: 20px; }
+  .marketingHero { padding: 52px 20px 68px; }
+  .heroCopy h1 { font-size: 45px; }
+  .productContent { padding-inline: 18px; }
+  .pageIntro { margin-bottom: 28px; }
+  .balanceHero { padding: 26px 22px; }
 }
 
 /* Mainstream account architecture */
@@ -757,6 +966,97 @@ html[data-theme="dark"] .docsStatus.prepared { color: #e0b878; }
   .docsMain aside nav { width: 100%; overflow-x: auto; overscroll-behavior-inline: contain; scrollbar-width: none; }
   .docsMain aside nav::-webkit-scrollbar { display: none; }
 }
+
+/* Final theme layer. Legacy selectors above map existing product surfaces to these tokens. */
+:root {
+  --canvas: #f3f1ec;
+  --surface: #faf9f6;
+  --surface-raised: #ffffff;
+  --surface-muted: #ebe9e3;
+  --surface-inset: #e3e0d8;
+  --text: #171b19;
+  --text-secondary: #555b57;
+  --text-tertiary: #5c625e;
+  --hairline: rgba(23, 27, 25, .11);
+  --hairline-strong: rgba(23, 27, 25, .22);
+  --accent: #285f50;
+  --accent-hover: #204d42;
+  --accent-soft: #dfe9e3;
+  --positive: #27664c;
+  --positive-soft: #deebe3;
+  --warning: #76501c;
+  --warning-soft: #eee4d3;
+  --danger: #953f3b;
+  --focus: #286f5b;
+  --radius-control: 5px;
+  --radius-panel: 8px;
+  --radius-feature: 12px;
+  --font-body: "Satoshi", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-editorial: "Satoshi", system-ui, sans-serif;
+  --font-accent: var(--font-display), "Iowan Old Style", Baskerville, Georgia, serif;
+}
+html[data-theme="dark"] {
+  --canvas: #111310;
+  --surface: #181b18;
+  --surface-raised: #20231f;
+  --surface-muted: #272b27;
+  --surface-inset: #0d0f0d;
+  --text: #f2f0ea;
+  --text-secondary: #b7bab4;
+  --text-tertiary: #adb1aa;
+  --hairline: rgba(242, 240, 234, .12);
+  --hairline-strong: rgba(242, 240, 234, .22);
+  --accent: #77b69f;
+  --accent-hover: #8ac5af;
+  --accent-soft: #1d382f;
+}
+body {
+  --font-body: "Satoshi", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-editorial: "Satoshi", system-ui, sans-serif;
+  --font-accent: var(--font-display), "Iowan Old Style", Baskerville, Georgia, serif;
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.5;
+}
+.eyebrow { margin-bottom: 8px; color: var(--text-tertiary); font-family: var(--font-body); font-size: 12px; font-weight: 560; letter-spacing: .01em; text-transform: none; }
+.button { min-height: 42px; padding-inline: 16px; border-radius: var(--radius-control); font-size: 13px; font-weight: 620; }
+.button:hover { transform: none; }.button:active { transform: translateY(1px); }
+.button.textButton { min-height: auto; padding-inline: 2px; border: 0; }
+.marketingHeader,.marketingHero,.productSection { max-width: 1280px; }
+.marketingHeader { height: 76px; padding-inline: 40px; }
+.marketingHeader nav { gap: 26px; font-size: 14px; }
+.marketingHero { min-height: 650px; padding: 72px 40px 88px; gap: 8vw; }
+.heroCopy h1 { max-width: 680px; font-size: clamp(52px,5.5vw,76px); }
+.heroCopy h1 em { color: var(--text); }
+.heroCopy > p:not(.eyebrow) { max-width: 520px; font-size: 18px; line-height: 1.55; }
+.statementCard { border-radius: 2px; }.floatingNote { border-radius: var(--radius-control); }
+.productSection { padding: 112px 40px; }.productTile { border-radius: var(--radius-panel); }
+.productShell { grid-template-columns: 248px minmax(0,1fr); }
+.environmentLabel { margin: 28px 10px 22px; display: flex; align-items: center; gap: 8px; color: var(--text-tertiary); font-size: 11px; }
+.environmentLabel span { width: 6px; height: 6px; border-radius: 50%; background: var(--positive); }
+.groupedNav { gap: 20px; }.navGroup { gap: 1px; }
+.navGroup > p { margin: 0 12px 6px; color: var(--text-tertiary); font-family: var(--font-body); font-size: 11px; font-weight: 560; letter-spacing: .01em; text-transform: none; }
+.sideNav a { min-height: 40px; border-radius: var(--radius-control); font-size: 14px; }
+.sideNav a.active { box-shadow: inset 2px 0 var(--accent); }
+.clientIdentity,.privyAccountButton { border-radius: var(--radius-control); }
+.clientIdentity strong,.privyAccountButton { font-size: 12px; }.clientIdentity small { font-size: 11px; }
+.productHeader { height: 64px; padding-inline: 28px; }
+.commandSearch { min-width: 240px; font-size: 13px; }.networkStatus { font-family: var(--font-body); font-size: 11px; }
+.productContent { max-width: 1360px; padding: 48px 40px 88px; }
+.pageIntro { margin-bottom: 36px; align-items: flex-start; }
+.pageIntro h1 { font-size: clamp(32px,3vw,42px); }.pageIntro > div > p:not(.eyebrow) { max-width: 610px; margin-top: 10px; font-size: 14px; line-height: 1.55; }
+.panel,.balanceHero { border-radius: var(--radius-panel); }.balanceHero { padding: 34px 38px; }
+.statusBadge { border-radius: 3px; font-family: var(--font-body); font-size: 10px; }
+.dashboardGrid { gap: 20px; margin-top: 20px; }
+.allocationPanel,.riskPanel,.activityPanel { background: transparent; border: 0; border-top: 1px solid var(--hairline-strong); border-radius: 0; }
+.allocationPanel,.riskPanel { padding: 26px 0 8px; }.activityPanel { padding: 26px 0 0; }
+.progressPanel { border: 0; border-top: 1px solid var(--hairline-strong); border-radius: 0; background: transparent; }
+.riskIcon,.activityIcon,.strategyGlyph,.benefitIcon { border-radius: var(--radius-control); }
+.dialogContent,.financialModal { border-radius: var(--radius-panel); }
+.dialogClose,.modalClose,.themeToggle { border-radius: var(--radius-control); }
+.fieldLabel input,.amountField input,.financialModal .fieldLabel select,.walletAddress,.transactionSummary,.transferMeta,.consentCheck { border-radius: var(--radius-control); }
+@media (max-width:900px) { .productShell{grid-template-columns:1fr}.productContent{padding:32px 22px 64px} }
+@media (max-width:650px) { .marketingHeader{padding-inline:20px}.marketingHero{padding:52px 20px 68px}.heroCopy h1{font-size:45px}.productContent{padding-inline:18px}.balanceHero{padding:26px 22px} }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; }

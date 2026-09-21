@@ -11,6 +11,8 @@ The product promise is expressed in the interface:
 - Controlled: important actions have review states, context, and recovery paths.
 - Human: copy is specific, spacing is composed, and not every idea is placed inside a card.
 
+The rendered reference is available at [`/design-system.html`](apps/web/public/design-system.html). It is the visual acceptance page for foundations, controls, tables, navigation, content, motion, light mode, and dark mode.
+
 ## Anti-slop contract
 
 These are implementation constraints, not mood-board suggestions.
@@ -20,19 +22,22 @@ These are implementation constraints, not mood-board suggestions.
 3. Use one primary action per region. Secondary actions should be visibly subordinate.
 4. Do not use gradient blobs, glass panels, neon glows, fake metrics, testimonial filler, or rows of identical feature cards.
 5. Avoid symmetry by default. Let content determine width, height, and rhythm.
-6. Use no more than three radius tiers: 10px controls, 18px panels, 26px feature surfaces.
+6. Use no more than three radius tiers: 5px controls, 8px panels, 12px feature surfaces. A circle is reserved for genuinely circular data or identity.
 7. Serif is an accent, not a shortcut to “premium.” It is reserved for a rare editorial phrase or quotation.
 8. Product language must describe a real state: “Bridge approval required” is better than “Coming soon.”
 9. Motion must explain entry, exit, focus, or spatial continuity. Never animate a surface just to make it feel alive.
 10. Every screen must include loading, empty, error, disabled, and narrow-screen behavior before it is considered complete.
 
+11. Avoid the generated-SaaS signature: centered hero, gradient copy, glass panels, pill controls, repeated three-card grids, generic claims, and decoration that carries no information.
+12. Put important words first. If copy explains where to click or how the interface works, redesign the interaction before adding instructions.
+
 ## Typography
 
-- **Instrument Sans** — navigation, titles, controls, prose, and product UI. It is neutral without feeling generic.
-- **Newsreader** — selective editorial emphasis on the marketing site. Never use it for dashboard headings or numerical data.
+- **Satoshi Variable** — locally hosted and used for navigation, titles, controls, prose, and product UI.
+- **Newsreader** — selective editorial emphasis on the marketing site. Never use it for dashboard headings, controls, or numerical data.
 - **Fragment Mono** — balances, wallet addresses, provenance labels, keyboard hints, and system state.
 
-Use sentence case. Avoid centered body copy, all-caps headings, and exaggerated tracking. Numerical columns should use the mono face and align consistently.
+Use sentence case. Avoid centered body copy, all-caps labels, and exaggerated tracking. Numerical columns should use the mono face, tabular figures, and consistent alignment. Two type voices are enough on any one screen.
 
 ## Color and themes
 
@@ -50,11 +55,21 @@ Dark mode is a separately composed palette—not an inverted light theme. Black 
 
 ## Layout and surface rules
 
+- The spacing scale is 4, 8, 12, 16, 24, 32, 48, and 64px. Deviate only when optical alignment requires it.
 - Prefer whitespace or a hairline separator to another panel.
 - Keep text measure near 60–75 characters for explanatory prose.
 - Dense financial rows should be scannable before they are beautiful.
 - Use broad feature surfaces sparingly; small facts belong in rows, not mini-cards.
 - Preserve a clear reading order on mobile. Never rely on hover to expose an essential action.
+
+## Navigation and content
+
+- Primary destinations are grouped by intent: **Portfolio** (Overview, Assets, Activity), **Invest** (Earn, Borrow, Markets), **Services** (Card, Benefits, Concierge), and **Account** (Security, Settings).
+- Destination labels name the user’s object or task. Avoid conceptual labels such as “Money” when “Assets” is more precise.
+- Page titles say what the page is. The single sentence below describes what can be done there; it does not restate the title.
+- Buttons use a concrete verb and object: “Review transfer,” “Connect wallet,” or “Save address.”
+- Help text appears only for unfamiliar input, consequential constraints, or irreversible risk.
+- Status language is literal: “Live,” “Review needed,” “Unavailable,” and “Projected.”
 
 ## Interaction and motion
 
@@ -69,7 +84,7 @@ Dark mode is a separately composed palette—not an inverted light theme. Black 
 
 Use this brief when generating or reviewing a new Aurel screen:
 
-> Design a production financial interface for Aurel using the existing semantic tokens and type system. Begin with the user’s decision and the information required to make it. Use whitespace and separators before containers. Permit one primary action in each region. Use Instrument Sans for the interface, Fragment Mono only for data and state, and Newsreader only for rare editorial emphasis. Do not add gradient blobs, glassmorphism, generic feature-card grids, ornamental badges, fake metrics, or filler copy. Every status must be precise and every interaction must include focus, disabled, error, empty, loading, mobile, dark-mode, and reduced-motion behavior. The result should feel composed by a product designer, not decorated by a template.
+> Design a production financial interface for Aurel using the existing semantic tokens and type system. Begin with the user’s decision and the information required to make it. Use whitespace and separators before containers. Permit one primary action in each region. Use Satoshi for the interface, Fragment Mono only for data and state, and Newsreader only for rare editorial emphasis. Do not add gradient blobs, glassmorphism, generic feature-card grids, ornamental badges, fake metrics, instructional filler, or promotional claims. Every status must be precise and every interaction must include focus, disabled, error, empty, loading, mobile, dark-mode, and reduced-motion behavior. The result should feel composed by a product designer, not decorated by a template.
 
 ## Review checklist
 
@@ -84,6 +99,8 @@ Use this brief when generating or reviewing a new Aurel screen:
 
 ## References
 
-- [Apple Human Interface Guidelines: Dark Mode](https://developer.apple.com/design/human-interface-guidelines/dark-mode)
+- [Apple Human Interface Guidelines: Typography](https://developer.apple.com/design/human-interface-guidelines/typography)
+- [GOV.UK: Writing for user interfaces](https://www.gov.uk/service-manual/design/writing-for-user-interfaces)
+- [Carbon Design System: Spacing](https://carbondesignsystem.com/elements/spacing/overview/)
 - [Radix UI Dialog accessibility behavior](https://www.radix-ui.com/primitives/docs/components/dialog)
 - [Nielsen Norman Group: Visual Design Principles](https://media.nngroup.com/media/articles/attachments/Principles_Visual_Design-A4.pdf)
