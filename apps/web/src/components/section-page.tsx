@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { ArrowRight, Check, ChevronRight, CircleAlert, Globe2, LockKeyhole, Plane, Plus, ShieldCheck, Smartphone, Sparkles, WalletCards } from "lucide-react";
+import { ArrowRight, Check, ChevronRight, CircleAlert, LockKeyhole, Plane, ShieldCheck, Smartphone, Sparkles } from "lucide-react";
 import { activity, riskItems, strategies } from "@/data/demo";
+import { WalletWorkspace } from "@/components/wallet-workspace";
 
 type Section = "assets" | "earn" | "card" | "activity" | "benefits" | "security" | "settings";
 
@@ -20,7 +21,7 @@ function Header({ section }: { section: Section }) {
 }
 
 function Assets() {
-  return <div className="contentGrid"><div className="panel widePanel"><div className="panelHeading"><div><p className="eyebrow">AUREL WALLET</p><h2>$141,290.42</h2></div><button className="button primary"><Plus size={16} /> Add funds</button></div><div className="assetTable"><div className="tableHead"><span>Asset</span><span>Location</span><span>Price</span><span>Balance</span></div>{[["USD Coin", "USDC", "Aurel · Base", "$1.00", "$141,290.42"],["Ether", "ETH", "Connected · Ethereum", "$4,318.20", "$34,545.60"],["Wrapped Ether", "WETH", "Connected · Base", "$4,315.82", "$8,454.40"]].map((row, index) => <div className="tableRow" key={row[1]}><span className={`assetToken token${index}`}>{row[1].slice(0,1)}</span><span><strong>{row[0]}</strong><small>{row[1]}</small></span><span>{row[2]}</span><span>{row[3]}</span><span><strong>{row[4]}</strong><small>{index === 0 ? "141,290.42 USDC" : index === 1 ? "8.00 ETH" : "1.96 WETH"}</small></span></div>)}</div></div><aside className="panel connectionPanel"><p className="eyebrow">CONNECTED SOURCES</p><h3>2 wallets</h3><div className="walletConnection"><span><WalletCards size={18} /></span><div><strong>Aurel embedded</strong><small>0x91e2…7a10</small></div><i className="onlineDot" /></div><div className="walletConnection"><span><Globe2 size={18} /></span><div><strong>Ledger external</strong><small>0x71a4…9c20</small></div><i className="onlineDot" /></div><button className="button secondary full">Connect another wallet</button></aside></div>;
+  return <WalletWorkspace />;
 }
 
 function Earn() {

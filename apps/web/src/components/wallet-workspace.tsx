@@ -1,0 +1,166 @@
+"use client";
+
+import { useConnectWallet, useSendTransaction, useWallets } from "@privy-io/react-auth";
+import { Check, Copy, ExternalLink, LoaderCircle, Plus, QrCode, Send, WalletCards, X } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
+import { useMemo, useState } from "react";
+import { erc20Abi, formatUnits, isAddress, parseEther, parseUnits, encodeFunctionData } from "viem";
+import { useBalance, useReadContract } from "wagmi";
+import { BASE_ASSETS, HOME_CHAIN } from "@/config/chains";
+
+type AssetSymbol = keyof typeof BASE_ASSETS;
+type Modal = "receive" | "send" | null;
+
+function shortAddress(address: string) {
+  return `${address.slice(0, 6)}…${address.slice(-4)}`;
+}
+
+function amountText(value: bigint | undefined, decimals: number) {
+  if (value === undefined) return "—";
+  const numeric = Number(formatUnits(value, decimals));
+  return numeric.toLocaleString(undefined, { maximumFractionDigits: numeric < 1 ? 6 : 4 });
+}
+
+export function WalletWorkspace() {
+  const { wallets, ready } = useWallets();
+  const { connectWallet } = useConnectWallet();
+  const { sendTransaction } = useSendTransaction();
+  const [modal, setModal] = useState<Modal>(null);
+  const [asset, setAsset] = useState<AssetSymbol>("USDC");
+  const [recipient, setRecipient] = useState("");
+  const [amount, setAmount] = useState("");
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [hash, setHash] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const embedded = useMemo(() => wallets.find((wallet) => wallet.walletClientType === "privy") ?? wallets[0], [wallets]);
+  const address = embedded?.address as `0x${string}` | undefined;
+  const externalWallets = wallets.filter((wallet) => wallet.address !== embedded?.address);
+  const eth = useBalance({ address, chainId: HOME_CHAIN.id, query: { enabled: Boolean(address) } });
+  const usdc = useReadContract({ address: BASE_ASSETS.USDC.address, abi: erc20Abi, functionName: "balanceOf", args: address ? [address] : undefined, chainId: HOME_CHAIN.id, query: { enabled: Boolean(address) } });
+  const weth = useReadContract({ address: BASE_ASSETS.WETH.address, abi: erc20Abi, functionName: "balanceOf", args: address ? [address] : undefined, chainId: HOME_CHAIN.id, query: { enabled: Boolean(address) } });
+
+  const rows = [
+    { ...BASE_ASSETS.USDC, value: usdc.data, source: "Aurel wallet · Base", pending: usdc.isPending },
+    { ...BASE_ASSETS.ETH, value: eth.data?.value, source: "Aurel wallet · Base", pending: eth.isPending },
+    { ...BASE_ASSETS.WETH, value: weth.data, source: "Aurel wallet · Base", pending: weth.isPending }
+  ];
+
+  async function copyAddress() {
+    if (!address) return;
+    await navigator.clipboard.writeText(address);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1400);
+  }
+
+  function openSend(symbol: AssetSymbol = "USDC") {
+    setAsset(symbol);
+    setRecipient("");
+    setAmount("");
+    setError(null);
+    setHash(null);
+    setModal("send");
+  }
+
+  async function submitSend(event: React.FormEvent) {
+    event.preventDefault();
+    setError(null);
+    setHash(null);
+    if (!address) return setError("Your wallet is not ready yet.");
+    if (!isAddress(recipient)) return setError("Enter a valid EVM destination address.");
+    if (!amount || Number(amount) <= 0) return setError("Enter an amount greater than zero.");
+
+    const definition = BASE_ASSETS[asset];
+    const rawAmount = asset === "ETH" ? parseEther(amount) : parseUnits(amount, definition.decimals);
+    const transaction = asset === "ETH"
+      ? { to: recipient as `0x${string}`, value: rawAmount, chainId: HOME_CHAIN.id }
+      : {
+          to: definition.address as `0x${string}`,
+          value: 0n,
+          chainId: HOME_CHAIN.id,
+          data: encodeFunctionData({ abi: erc20Abi, functionName: "transfer", args: [recipient as `0x${string}`, rawAmount] })
+        };
+
+    setSending(true);
+    try {
+      const result = await sendTransaction(transaction, {
+        address,
+        uiOptions: {
+          description: `Send ${amount} ${asset} on Base mainnet to ${shortAddress(recipient)}.`,
+          buttonText: "Confirm transfer",
+          successHeader: "Transfer submitted",
+          isCancellable: true
+        }
+      });
+      setHash(result.hash);
+      await Promise.all([eth.refetch(), usdc.refetch(), weth.refetch()]);
+    } catch (sendError) {
+      setError(sendError instanceof Error ? sendError.message : "The transaction was not submitted.");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  if (!ready || !address) {
+    return <section className="panel walletLoading"><LoaderCircle className="spin" size={20} /><div><strong>Preparing your wallet</strong><span>Privy is creating or restoring your customer-controlled wallet.</span></div></section>;
+  }
+
+  return (
+    <>
+      <div className="contentGrid">
+        <section className="panel widePanel">
+          <div className="panelHeading walletHeading">
+            <div><p className="eyebrow">BASE MAINNET · LIVE</p><h2>Assets you control</h2><p className="sourceCaption">Balances are read directly from Base and are never maintained by Aurel.</p></div>
+            <div className="walletActions"><button className="button secondary" onClick={() => setModal("receive")}><QrCode size={16} /> Receive</button><button className="button primary" onClick={() => openSend()}><Send size={16} /> Send</button></div>
+          </div>
+          <div className="assetTable liveAssetTable">
+            <div className="tableHead"><span>Asset</span><span>Source</span><span>Status</span><span>Balance</span></div>
+            {rows.map((row, index) => (
+              <button className="tableRow assetActionRow" key={row.symbol} onClick={() => openSend(row.symbol)}>
+                <span className={`assetToken token${index}`}>{row.symbol.slice(0, 1)}</span>
+                <span><strong>{row.name}</strong><small>{row.symbol}</small></span>
+                <span>{row.source}</span>
+                <span><i className={row.pending ? "sourceDot pending" : "sourceDot"} /> {row.pending ? "Reading" : "Observed now"}</span>
+                <span><strong>{amountText(row.value, row.decimals)}</strong><small>{row.symbol}</small></span>
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <aside className="panel connectionPanel">
+          <p className="eyebrow">WALLET CONTROL</p>
+          <h3>{shortAddress(address)}</h3>
+          <p>Your embedded wallet is exportable and every transaction requires your confirmation.</p>
+          <div className="walletConnection"><span><WalletCards size={18} /></span><div><strong>Privy embedded</strong><small>{shortAddress(address)} · Base</small></div><i className="onlineDot" /></div>
+          {externalWallets.map((wallet) => <div className="walletConnection" key={wallet.address}><span><ExternalLink size={17} /></span><div><strong>Connected wallet</strong><small>{shortAddress(wallet.address)}</small></div><i className="onlineDot" /></div>)}
+          <button className="button secondary full" onClick={() => connectWallet()}><Plus size={15} /> Connect external wallet</button>
+        </aside>
+      </div>
+
+      {modal && <div className="modalBackdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && setModal(null)}>
+        <section className="financialModal" role="dialog" aria-modal="true" aria-labelledby="wallet-modal-title">
+          <button className="modalClose" onClick={() => setModal(null)} aria-label="Close"><X size={18} /></button>
+          {modal === "receive" ? <>
+            <p className="eyebrow">RECEIVE ONCHAIN</p><h2 id="wallet-modal-title">Your wallet address</h2>
+            <p>Send supported assets on Base, Ethereum, Arbitrum, Optimism, or Polygon. Always confirm the asset and network before transferring.</p>
+            <div className="receiveQr"><QRCodeSVG value={address} size={164} bgColor="transparent" fgColor="currentColor" level="M" /></div>
+            <code className="addressBlock">{address}</code>
+            <button className="button primary full" onClick={() => void copyAddress()}>{copied ? <Check size={16} /> : <Copy size={16} />}{copied ? "Copied" : "Copy address"}</button>
+            <div className="modalRisk">Depositing an unsupported token or using an incompatible network can result in permanent loss. Aurel does not take custody during this transfer.</div>
+          </> : <form onSubmit={(event) => void submitSend(event)}>
+            <p className="eyebrow">USER-SIGNED TRANSFER</p><h2 id="wallet-modal-title">Send from Base</h2>
+            <p>Aurel prepares the transaction. Privy shows the final mainnet confirmation before your wallet signs.</p>
+            <label className="fieldLabel">Asset<select value={asset} onChange={(event) => setAsset(event.target.value as AssetSymbol)}>{Object.keys(BASE_ASSETS).map((symbol) => <option key={symbol}>{symbol}</option>)}</select></label>
+            <label className="fieldLabel">Amount<input inputMode="decimal" placeholder="0.00" value={amount} onChange={(event) => setAmount(event.target.value)} /></label>
+            <label className="fieldLabel">Destination<input autoComplete="off" spellCheck={false} placeholder="0x…" value={recipient} onChange={(event) => setRecipient(event.target.value.trim())} /></label>
+            <div className="transactionSummary"><span>Network<strong>Base mainnet</strong></span><span>Signer<strong>{shortAddress(address)}</strong></span><span>Control<strong>User confirmation</strong></span></div>
+            {error && <div className="formError" role="alert">{error}</div>}
+            {hash && <a className="transactionSuccess" href={`https://basescan.org/tx/${hash}`} target="_blank" rel="noreferrer"><Check size={16} /> Submitted · View on BaseScan <ExternalLink size={14} /></a>}
+            <button className="button primary full" disabled={sending || Boolean(hash)}>{sending ? <LoaderCircle className="spin" size={16} /> : <Send size={16} />}{hash ? "Transaction submitted" : sending ? "Awaiting confirmation" : "Review with Privy"}</button>
+          </form>}
+        </section>
+      </div>}
+    </>
+  );
+}

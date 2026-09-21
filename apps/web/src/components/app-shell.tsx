@@ -36,7 +36,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <Brand compact />
           <button className="mobileClose" onClick={() => setOpen(false)} aria-label="Close navigation"><X size={20} /></button>
         </div>
-        <div className="demoPill"><span /> Demonstration environment</div>
+        <div className="demoPill"><span /> Mainnet read · user-signed</div>
         <nav className="sideNav" aria-label="Primary">
           {navigation.map((item) => {
             const Icon = item.icon;
@@ -61,7 +61,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <header className="productHeader">
           <button className="menuButton" onClick={() => setOpen(true)} aria-label="Open navigation"><Menu size={20} /></button>
           <CommandMenu />
-          <div className="headerRight"><span className="networkStatus"><i /> Base Sepolia</span><ThemeToggle /><PrivyAccountButton /></div>
+          <div className="headerRight"><span className="networkStatus"><i /> Base mainnet</span><ThemeToggle /><PrivyAccountButton /></div>
         </header>
         <main className="productContent">{children}</main>
       </div>
