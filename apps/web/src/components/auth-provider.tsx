@@ -16,7 +16,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <Suspense fallback={children}>
-      <PrivyRuntimeProvider appId={appId}>{children}</PrivyRuntimeProvider>
+      <PrivyRuntimeProvider
+        appId={appId}
+        config={{
+          loginMethods: ["email", "wallet"],
+          appearance: {
+            theme: "light",
+            accentColor: "#156957",
+            landingHeader: "Welcome to Aurel",
+            loginMessage: "Secure access to your private digital wealth relationship."
+          },
+          embeddedWallets: { ethereum: { createOnLogin: "users-without-wallets" } }
+        }}
+      >
+        {children}
+      </PrivyRuntimeProvider>
     </Suspense>
   );
 }

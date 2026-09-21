@@ -408,6 +408,9 @@ html[data-theme="dark"] .button.primary { color: #ffffff; background: #2d765f; b
 .commandSearch:hover { color: var(--text); background: var(--surface-muted); }
 .commandSearch kbd { background: var(--surface); }
 .headerAvatar { background: var(--text); color: var(--canvas); }
+.privyAccountButton { min-height: 34px; padding: 0 12px; display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--hairline); border-radius: 999px; color: var(--text); background: var(--surface); font-size: 10px; font-weight: 600; cursor: pointer; }
+.privyAccountButton:hover { background: var(--surface-muted); }
+.privyAccountButton:disabled { opacity: .55; cursor: wait; }
 
 .pageIntro h1, .panelHeading h2, .panelHeading h3, .connectionPanel h3, .strategyCard h2, .cardControls h2, .benefitCard h3, .docsMain article h1, .docsMain article > h2, .docsCards h3 { font-family: var(--font-body); font-weight: 590; }
 .sideNav a { font-size: 13px; }

@@ -8,7 +8,7 @@
     {
       "binding": "PROJECTION_DB",
       "database_name": "aurel-projections",
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "30075b2d-3f76-442c-a3b6-05cea1032137",
       "migrations_dir": "../../infra/d1/migrations"
     }
   ],

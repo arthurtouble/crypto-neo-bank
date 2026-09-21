@@ -8,6 +8,7 @@ import { Brand } from "./brand";
 import { icons } from "./icons";
 import { CommandMenu } from "./command-menu";
 import { ThemeToggle } from "./theme-toggle";
+import { PrivyAccountButton } from "./privy-account-button";
 
 const navigation = [
   { label: "Overview", href: "/app", icon: icons.dashboard },
@@ -60,7 +61,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <header className="productHeader">
           <button className="menuButton" onClick={() => setOpen(true)} aria-label="Open navigation"><Menu size={20} /></button>
           <CommandMenu />
-          <div className="headerRight"><span className="networkStatus"><i /> Base Sepolia</span><ThemeToggle /><button className="headerAvatar">AM</button></div>
+          <div className="headerRight"><span className="networkStatus"><i /> Base Sepolia</span><ThemeToggle /><PrivyAccountButton /></div>
         </header>
         <main className="productContent">{children}</main>
       </div>
