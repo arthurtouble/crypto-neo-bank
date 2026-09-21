@@ -15,16 +15,16 @@ This is the execution checklist for the mainnet-first product. “Live” means 
 - [x] Live Base ETH, USDC, and WETH balance reads
 - [x] Receive address and QR flow
 - [x] User-confirmed Base ETH/ERC-20 send flow
-- [ ] Transaction-intent API, policy evaluation, consent, and confirmation monitoring
+- [x] Transaction-intent API, policy evaluation, consent, and submission state
 - [ ] Rebuildable multichain portfolio index and activity feed
 
 ## Product workstreams
 
-- [ ] Passkey, MFA, recovery, export, device, and session center
+- [x] Passkey/MFA, recovery, export, and current-session center
 - [ ] Swap and cross-chain routing adapter with Privy-first and LI.FI fallback
-- [ ] Curated Base mainnet Earn strategy
+- [x] Curated Base mainnet Earn market, preparation, and user-signing flow
 - [ ] Aave collateral, borrow, repay, and health-factor flows
-- [ ] Membership qualification and vendor-neutral entitlement engine
+- [x] Membership qualification and vendor-neutral entitlement engine
 - [ ] Rewards, lounge, eSIM, insurance, and concierge adapters
 - [ ] Read-only AI concierge and draft-intent tools
 - [ ] Feature-gated tokenized-asset framework
@@ -38,4 +38,3 @@ This is the execution checklist for the mainnet-first product. “Live” means 
 - Benefit activation requires signed vendor programs.
 - Tokenized securities remain disabled until issuer, venue, jurisdiction, and platform-role review.
 - Every mainnet write requires an explicit wallet confirmation; automated tests never broadcast value-moving transactions.
-
