@@ -8,8 +8,9 @@ import { ConciergeWorkspace } from "@/components/concierge-workspace";
 import { ActivityWorkspace } from "@/components/activity-workspace";
 import { CrossChainWorkspace } from "@/components/cross-chain-workspace";
 import { MarketsWorkspace } from "@/components/markets-workspace";
+import { OperationsWorkspace } from "@/components/operations-workspace";
 
-type Section = "assets" | "earn" | "borrow" | "markets" | "card" | "activity" | "benefits" | "concierge" | "security" | "settings";
+type Section = "assets" | "earn" | "borrow" | "markets" | "card" | "activity" | "benefits" | "concierge" | "security" | "settings" | "operations";
 
 const content: Record<Section, { eyebrow: string; title: string; description: string }> = {
   assets: { eyebrow: "YOUR BALANCE SHEET", title: "Assets", description: "One coherent view across Aurel and the wallets you control elsewhere." },
@@ -21,7 +22,8 @@ const content: Record<Section, { eyebrow: string; title: string; description: st
   benefits: { eyebrow: "RELATIONSHIP BENEFITS", title: "Black membership", description: "Practical benefits that become more valuable as your relationship deepens." },
   concierge: { eyebrow: "PRIVATE CLIENT SERVICE", title: "Concierge", description: "Clear answers grounded in product documentation, with no authority to move your assets." },
   security: { eyebrow: "DEFENCE IN DEPTH", title: "Safety center", description: "Control how your account can be accessed and how value can leave it." },
-  settings: { eyebrow: "PREFERENCES", title: "Account settings", description: "Manage your profile, notifications, disclosures, and connected providers." }
+  settings: { eyebrow: "PREFERENCES", title: "Account settings", description: "Manage your profile, notifications, disclosures, and connected providers." },
+  operations: { eyebrow: "AUTHORIZED OPERATIONS", title: "Operations console", description: "Reconciliation, provider-event health, and exception triage without a shadow asset ledger." }
 };
 
 function Header({ section }: { section: Section }) {
@@ -54,5 +56,5 @@ function Settings() {
 }
 
 export function SectionPage({ section }: { section: Section }) {
-  return <div><Header section={section} />{section === "assets" && <Assets />}{section === "earn" && <Earn />}{section === "borrow" && <BorrowWorkspace />}{section === "markets" && <MarketsWorkspace />}{section === "card" && <Card />}{section === "activity" && <ActivityWorkspace />}{section === "benefits" && <Benefits />}{section === "concierge" && <ConciergeWorkspace />}{section === "security" && <Security />}{section === "settings" && <Settings />}</div>;
+  return <div><Header section={section} />{section === "assets" && <Assets />}{section === "earn" && <Earn />}{section === "borrow" && <BorrowWorkspace />}{section === "markets" && <MarketsWorkspace />}{section === "card" && <Card />}{section === "activity" && <ActivityWorkspace />}{section === "benefits" && <Benefits />}{section === "concierge" && <ConciergeWorkspace />}{section === "security" && <Security />}{section === "settings" && <Settings />}{section === "operations" && <OperationsWorkspace />}</div>;
 }
