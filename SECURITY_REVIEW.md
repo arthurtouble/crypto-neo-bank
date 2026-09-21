@@ -27,6 +27,7 @@ Reviewed 22 September 2026. Scope: application authentication, private-beta acce
 | Medium | External log retention, alert routing and named incident coverage are unset | Configure receiver/export and exercise notification |
 | Medium | Real-wallet acceptance matrix is incomplete | Execute `ACCEPTANCE_TEST_PLAN.md` with designated funded test wallets |
 | Medium | Regulated provider and jurisdiction allocation is unsigned | Contract, counsel and operational tabletop sign-off |
+| Moderate accepted for private beta | Two transitive wallet-connector advisories have no safe direct override | Track reachability, upstream remediation and review date in `DEPENDENCY_RISK_REGISTER.md`; no High/Critical advisories are open |
 | Low | Public Worker hostname remains the production hostname | Attach approved custom domain and update origin/API schemas |
 
 ## Threat assumptions
