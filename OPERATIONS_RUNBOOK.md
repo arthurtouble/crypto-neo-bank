@@ -53,3 +53,16 @@ If Aurel times out after sending a command:
 - Preserve trace IDs, provider object IDs, chain transaction hashes, timestamps, and consent versions.
 - Never copy full KYC documents, seed phrases, private keys, or unredacted card data into tickets, logs, D1, or chat systems.
 - Treat a provider outage as a degraded dependency, not permission to bypass controls.
+
+## Recovery exercise record
+
+The release drill for 21 September 2026 verified the recovery design without touching customer assets:
+
+1. Applied the complete D1 migration set to a clean disposable database namespace.
+2. Rebuilt the deterministic provider projection from source adapters and verified position provenance.
+3. Exercised duplicate webhook detection, invalid signatures, policy denial, and provider failure states in automated tests.
+4. Verified authenticated activity is derived from replaceable intent evidence while live balances come directly from Base RPC reads.
+5. Verified the operations reconciliation surface denies access unless a Privy subject is explicitly allowlisted.
+6. Confirmed no automated test or recovery step signs or broadcasts a value-moving transaction.
+
+Repeat this drill before enabling a regulated provider, after any projection-schema change, and at least quarterly once real customer workflows are active. Record the date, operator, database target, discrepancies, and remediation in the incident system; never place customer secrets or raw KYC evidence in the record.

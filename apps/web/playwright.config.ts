@@ -1,6 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const baseURL = "http://[::1]:4173";
+const baseURL = "http://localhost:4173";
+const serverURL = "http://[::1]:4173";
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -12,7 +13,7 @@ export default defineConfig({
   use: { baseURL, trace: "retain-on-failure", screenshot: "only-on-failure" },
   webServer: {
     command: "pnpm dev --host ::1 --port 4173",
-    url: baseURL,
+    url: serverURL,
     env: { ...process.env, PROVIDER_WEBHOOK_SECRET: "e2e-local-only-secret" },
     reuseExistingServer: !process.env.CI,
     timeout: 120_000

@@ -1,15 +1,20 @@
 # Aurel
 
-Aurel is a Cloudflare-native demonstration of an asset-agnostic private financial interface built over wallets, providers, and public chains. It is intentionally not a bank ledger: provider APIs and chains remain authoritative for customer balances and settlement.
+Aurel is a Cloudflare-native, mainnet-first private financial interface built over user-controlled wallets, providers, and public chains. It is intentionally not a bank ledger: provider APIs and chains remain authoritative for customer balances and settlement.
 
 ## What is implemented
 
-- Premium marketing site and responsive private-banking dashboard.
-- Portfolio, Earn, card, activity, benefits, security, settings, and documentation routes.
-- Credential-gated provider boundary; the demo runs safely without Privy or Bridge credentials.
+- Premium marketing site and responsive private-client workspace.
+- Live Base ETH, USDC, and WETH portfolio reads plus authenticated Aurel intent history.
+- User-confirmed sends, multichain USDC routing, Aave Earn, collateralized borrowing, and repayment preparation.
+- Privy authentication, embedded/external wallet support, MFA/recovery/export surfaces, and server-side token verification.
+- Membership projections, vendor-neutral benefit entitlements, and a read-only AI concierge.
+- Fail-closed tokenized-market eligibility, restricted operations/reconciliation, and an effective-dated trust center.
+- Rate-limited protected APIs, security headers, signed webhooks, replay protection, Queue handoff, and structured Cloudflare observability.
+- Portfolio, Earn, Borrow, Move, activity, benefits, markets, security, settings, and documentation routes.
+- Credential-gated regulated-provider boundary; Bridge/Rain functions remain unavailable until a program is approved.
 - Normalized identity, wallet, compliance, fiat, card, membership, and chain contracts.
 - Interactive partner lab at `/app/sandbox` with new, funded, compliance-review, and failed-transfer scenarios.
-- Rebuildable `/api/portfolio` projection with provenance on every position.
 - Signed `/api/webhooks/provider` ingress, replay protection, Queue handoff, and retrying event consumer.
 - D1 schema limited to disposable projections, consent, preferences, and idempotency metadata.
 - `/api/health` endpoint exposing deployment mode and authority model.
@@ -25,7 +30,7 @@ pnpm install
 pnpm dev
 ```
 
-The app defaults to demonstration mode. Its production Privy app ID is a public build-time fallback; set `NEXT_PUBLIC_PRIVY_APP_ID` to override it for a separate local or preview Privy application.
+The app defaults to mainnet-preview mode. Its production Privy app ID is a public build-time fallback; set `NEXT_PUBLIC_PRIVY_APP_ID` to override it for a separate local or preview Privy application. Mainnet writes always require an explicit wallet confirmation.
 
 ## Quality checks
 
@@ -40,14 +45,14 @@ pnpm deploy:dry-run
 
 ## Cloudflare deployment
 
-The current demonstration environment is deployed to Cloudflare:
+The current mainnet-preview environment is deployed to Cloudflare:
 
 - Web app: <https://aurel-financial-os.aurel-events.workers.dev>
 - Provider-event consumer: <https://aurel-provider-event-consumer.aurel-events.workers.dev>
 - Disposable projections: D1 database `aurel-projections` (EU jurisdiction)
 - Event transport: `aurel-provider-events` with `aurel-provider-events-dlq`
 
-Privy authentication is live in this environment. Portfolio funding, fiat transfers, cards, benefits, and Bridge/Rain operations remain explicit simulations until their respective partner programs and credentials are activated.
+Privy authentication and direct Base reads are live in this environment. Direct DeFi and cross-chain routes are prepared from live mainnet data and require the customer to sign. Fiat transfers, cards, and vendor-funded benefits remain unavailable until their respective partner programs and credentials are activated; the provider lab is clearly separated and illustrative.
 
 Create the D1 database and queues, replace the placeholder D1 IDs in both Wrangler files, apply the migrations, and set the webhook secret before deployment. Exact commands are in `PARTNER_INTEGRATION.md`.
 

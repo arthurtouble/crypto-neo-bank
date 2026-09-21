@@ -8,7 +8,7 @@
     "not_found_handling": "none"
   },
   "vars": {
-    "PRODUCT_MODE": "demo",
+    "PRODUCT_MODE": "mainnet-preview",
     "NEXT_PUBLIC_PRIVY_APP_ID": "cmub5evr4013l0cjs0w5dijlb",
     "ADMIN_PRIVY_SUBJECTS": "",
     "PROVIDER_WEBHOOK_TOLERANCE_SECONDS": "300"

@@ -6,7 +6,7 @@ const Web3RuntimeProvider = lazy(() => import("./web3-runtime-provider"));
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   return (
-    <Suspense fallback={children}>
+    <Suspense fallback={<div className="accessState" role="status"><span className="accessPulse" /><p>Loading secure wallet services…</p></div>}>
       <Web3RuntimeProvider>{children}</Web3RuntimeProvider>
     </Suspense>
   );

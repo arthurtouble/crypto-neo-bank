@@ -1,17 +1,11 @@
-import { createDemoRegistry } from "@/lib/providers/demo";
-import { rebuildPortfolioProjection } from "@/lib/projections/portfolio";
-
-export async function GET() {
-  const providers = createDemoRegistry("funded");
-  const projection = await rebuildPortfolioProjection("demo-client-00184", [
-    providers.fiat,
-    providers.wallet,
-  ]);
-
-  return Response.json(projection, {
+export function GET() {
+  return Response.json({
+    error: "legacy_demo_endpoint_removed",
+    message: "Portfolio data is available only inside an authenticated Aurel session. The product reads balances directly from providers and public chains.",
+  }, {
+    status: 410,
     headers: {
       "Cache-Control": "no-store",
-      "X-Aurel-Data-Authority": "provider-and-chain",
     },
   });
 }

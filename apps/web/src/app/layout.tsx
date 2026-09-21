@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Fragment_Mono, Instrument_Sans, Newsreader } from "next/font/google";
-import { AuthProvider } from "@/components/auth-provider";
 import "./globals.css";
 
 const instrument = Instrument_Sans({ subsets: ["latin"], variable: "--font-sans" });
@@ -17,7 +16,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="en" suppressHydrationWarning>
       <head><script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('aurel-theme');var d=t==='dark'||(!t&&matchMedia('(prefers-color-scheme:dark)').matches)?'dark':'light';document.documentElement.dataset.theme=d;document.documentElement.style.colorScheme=d}catch(e){}})()` }} /></head>
       <body className={`${instrument.variable} ${newsreader.variable} ${mono.variable}`}>
-        <AuthProvider>{children}</AuthProvider>
+        {children}
       </body>
     </html>
   );

@@ -4,6 +4,7 @@ import { usePrivy, useSendTransaction, useWallets } from "@privy-io/react-auth";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, Check, ExternalLink, LoaderCircle, ShieldCheck, X } from "lucide-react";
 import { useMemo, useState } from "react";
+import { createPublicClient, http } from "viem";
 import { HOME_CHAIN } from "@/config/chains";
 import type { AaveBaseReserve } from "@/lib/defi/aave";
 import { collectUnsignedTransactions } from "@/lib/transactions/plan";
@@ -58,9 +59,14 @@ export function EarnWorkspace() {
       if (!transactions.length) throw new Error("Aave returned no executable transaction. The wallet may not have enough of this asset.");
 
       const submitted: string[] = [];
-      for (const transaction of transactions) {
+      const client = createPublicClient({ chain: HOME_CHAIN, transport: http() });
+      for (const [index, transaction] of transactions.entries()) {
         const result = await sendTransaction(transaction, { address: wallet.address, uiOptions: { description: `Aave ${selected.symbol} allocation on Base mainnet.`, buttonText: "Confirm with wallet", isCancellable: true } });
         submitted.push(result.hash);
+        if (index < transactions.length - 1) {
+          const receipt = await client.waitForTransactionReceipt({ hash: result.hash, confirmations: 1, timeout: 120_000 });
+          if (receipt.status !== "success") throw new Error("A prerequisite transaction reverted. The supply transaction was not submitted.");
+        }
       }
       setHashes(submitted);
       await fetch("/api/intents/status", { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ intentId, status: "submitted", transactionHash: submitted.at(-1) }) });

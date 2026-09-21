@@ -17,11 +17,15 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@coinbase/wallet-sdk": "4.3.2",
     "@privy-io/node": "^0.34.0",
     "@privy-io/react-auth": "latest",
     "@privy-io/wagmi": "^4.0.17",
     "@radix-ui/react-dialog": "^1.1.15",
     "@tanstack/react-query": "^5.103.1",
+    "canonicalize": "2.1.0",
+    "eventemitter3": "5.0.4",
+    "fetch-retry": "6.0.0",
     "lucide-react": "latest",
     "next": "latest",
     "pino": "^10.0.0",

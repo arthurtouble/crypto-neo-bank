@@ -2,6 +2,7 @@ import { env } from "cloudflare:workers";
 import { z } from "zod";
 import { AuthenticationError, requireVerifiedSubject } from "@/lib/auth/server";
 import { evaluateTransactionPolicy } from "@/lib/transactions/policy";
+import { enforceRateLimit, RateLimitError } from "@/lib/security/rate-limit";
 
 const intentSchema = z.object({
   type: z.enum(["transfer", "swap", "bridge", "earn_supply", "earn_withdraw", "borrow", "repay"]),
@@ -19,6 +20,7 @@ export async function POST(request: Request) {
   const traceId = crypto.randomUUID();
   try {
     const subject = await requireVerifiedSubject(request);
+    await enforceRateLimit(env.PROJECTION_DB, { namespace: "intent", subject: subject.subjectReference, limit: 30, windowSeconds: 60 });
     const input = intentSchema.parse(await request.json());
     const decision = evaluateTransactionPolicy(input);
     const now = new Date();
@@ -45,9 +47,9 @@ export async function POST(request: Request) {
     return Response.json({ intentId, decision, traceId }, { status: decision.permitted ? 201 : 422, headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     if (error instanceof AuthenticationError) return Response.json({ error: "unauthorized", message: error.message, traceId }, { status: 401 });
+    if (error instanceof RateLimitError) return Response.json({ error: "rate_limited", message: error.message, traceId }, { status: 429, headers: { "Retry-After": String(error.retryAfterSeconds) } });
     if (error instanceof z.ZodError) return Response.json({ error: "invalid_intent", issues: error.issues, traceId }, { status: 400 });
     console.error(JSON.stringify({ level: "error", event: "intent.evaluate.failed", traceId, message: error instanceof Error ? error.message : "unknown" }));
     return Response.json({ error: "intent_unavailable", message: "The transaction could not be reviewed.", traceId }, { status: 503 });
   }
 }
-

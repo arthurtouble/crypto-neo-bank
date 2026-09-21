@@ -11,26 +11,32 @@ test("partner sandbox exercises success and failure workflows", async ({ page })
   await expect(page.locator(".receiptPanel").getByText("The destination could not be verified. No funds moved.")).toBeVisible();
 });
 
-test("core product has no serious accessibility violations", async ({ page }) => {
-  await page.goto("/app");
+test("public trust center has no serious accessibility violations", async ({ page }) => {
+  await page.goto("/docs");
   const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
   expect(results.violations.filter((violation) => ["serious", "critical"].includes(violation.impact ?? ""))).toEqual([]);
 });
 
-test("mobile layout does not overflow and retains primary actions", async ({ page }, testInfo) => {
+test("mobile layout does not overflow and retains product entry", async ({ page }, testInfo) => {
   test.skip(!testInfo.project.name.includes("mobile"), "Mobile-only assertion");
-  await page.goto("/app");
-  await expect(page.getByRole("button", { name: "Add funds" })).toBeVisible();
+  await page.goto("/");
+  await expect(page.getByRole("link", { name: /Explore the product/ })).toBeVisible();
   const dimensions = await page.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, clientWidth: document.documentElement.clientWidth }));
   expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth + 1);
 });
 
-test("theme and dialogs remain usable", async ({ page }) => {
-  await page.goto("/app");
+test("theme and private access gate remain usable", async ({ page }) => {
+  await page.goto("/");
   await page.getByRole("button", { name: "Toggle color theme" }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", /light|dark/);
-  await page.getByRole("button", { name: "Add funds" }).click();
-  await expect(page.getByRole("dialog", { name: "Add funds" })).toBeVisible();
-  await page.keyboard.press("Escape");
-  await expect(page.getByRole("dialog", { name: "Add funds" })).toBeHidden();
+  await page.goto("/app");
+  await expect(page.getByRole("heading", { name: /wallet only you control/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Continue securely/ })).toBeVisible();
+});
+
+test("security headers are applied", async ({ request }) => {
+  const response = await request.get("/");
+  expect(response.headers()["x-content-type-options"]).toBe("nosniff");
+  expect(response.headers()["content-security-policy"]).toContain("frame-ancestors 'none'");
+  expect(response.headers()["content-security-policy"]).not.toContain("'unsafe-eval'");
 });

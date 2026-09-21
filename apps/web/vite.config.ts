@@ -4,7 +4,23 @@ import vinext from "vinext";
 
 export default defineConfig({
   optimizeDeps: {
-    exclude: ["@privy-io/react-auth", "lucide-react"],
+    exclude: ["lucide-react"],
+    include: [
+      "@privy-io/react-auth",
+      "@privy-io/wagmi",
+      "eventemitter3",
+      "canonicalize",
+      "fetch-retry",
+      "pino",
+      "@coinbase/wallet-sdk",
+    ],
+    needsInterop: [
+      "eventemitter3",
+      "canonicalize",
+      "fetch-retry",
+      "pino",
+      "@coinbase/wallet-sdk",
+    ],
   },
   plugins: [
     vinext(),

@@ -4,6 +4,7 @@ import { usePrivy, useSendTransaction, useWallets } from "@privy-io/react-auth";
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, ArrowRight, Check, ExternalLink, LoaderCircle, ShieldAlert, X } from "lucide-react";
 import { useMemo, useState } from "react";
+import { createPublicClient, http } from "viem";
 import { HOME_CHAIN } from "@/config/chains";
 import type { AaveBaseReserve } from "@/lib/defi/aave";
 import { collectUnsignedTransactions, collectWarnings, findStringField } from "@/lib/transactions/plan";
@@ -48,8 +49,8 @@ export function BorrowWorkspace() {
       const intentResponse = await fetch("/api/intents/evaluate", { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ type: action, walletAddress: wallet.address, chainId: 8453, asset: symbol, amount, destination: market.data.market, estimatedUsd: symbol === "USDC" ? Number(amount) : undefined }) });
       const intent = await intentResponse.json() as { intentId?: string; message?: string }; if (!intentResponse.ok || !intent.intentId) throw new Error(intent.message ?? "Policy review failed."); intentId = intent.intentId;
       const transactions = collectUnsignedTransactions(prepared.plan, HOME_CHAIN.id); if (!transactions.length) throw new Error("Aave returned no transaction to sign.");
-      const submitted: string[] = [];
-      for (const transaction of transactions) { const result = await sendTransaction(transaction, { address: wallet.address, uiOptions: { description: `${action === "borrow" ? "Borrow" : "Repay"} ${amount} ${symbol} through Aave on Base.`, buttonText: "Confirm with wallet", isCancellable: true } }); submitted.push(result.hash); }
+      const submitted: string[] = []; const client = createPublicClient({ chain: HOME_CHAIN, transport: http() });
+      for (const [index, transaction] of transactions.entries()) { const result = await sendTransaction(transaction, { address: wallet.address, uiOptions: { description: `${action === "borrow" ? "Borrow" : "Repay"} ${amount} ${symbol} through Aave on Base.`, buttonText: "Confirm with wallet", isCancellable: true } }); submitted.push(result.hash); if (index < transactions.length - 1) { const receipt = await client.waitForTransactionReceipt({ hash: result.hash, confirmations: 1, timeout: 120_000 }); if (receipt.status !== "success") throw new Error("A prerequisite transaction reverted. The next Aave transaction was not submitted."); } }
       setHashes(submitted);
       await fetch("/api/intents/status", { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ intentId, status: "submitted", transactionHash: submitted.at(-1) }) });
       void position.refetch();
@@ -77,4 +78,3 @@ export function BorrowWorkspace() {
     </form></section></div>}
   </>;
 }
-
