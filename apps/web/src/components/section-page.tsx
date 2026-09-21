@@ -10,6 +10,7 @@ import { CrossChainWorkspace } from "@/components/cross-chain-workspace";
 import { MarketsWorkspace } from "@/components/markets-workspace";
 import { OperationsWorkspace } from "@/components/operations-workspace";
 import { NetworkSupportMatrix } from "@/components/network-support-matrix";
+import { SettingsWorkspace } from "@/components/settings-workspace";
 
 type Section = "assets" | "earn" | "borrow" | "markets" | "card" | "activity" | "benefits" | "concierge" | "security" | "settings" | "operations";
 
@@ -52,10 +53,6 @@ function Security() {
   return <SecurityCenter />;
 }
 
-function Settings() {
-  return <section className="panel settingsPanel"><div className="settingRow"><div><strong>Network mode</strong><small>Transactions use Base mainnet and always require wallet confirmation.</small></div><span className="statusBadge good">Mainnet</span></div><div className="settingRow"><div><strong>Base currency</strong><small>Used for future portfolio reporting.</small></div><span>USD</span></div><div className="settingRow"><div><strong>Privacy mode</strong><small>Balance masking is being prepared for a future release.</small></div><span className="statusBadge neutral">Planned</span></div><div className="settingRow"><div><strong>Documents and consents</strong><small>Product documentation is available from the sidebar.</small></div><span className="statusBadge neutral">Current</span></div></section>;
-}
-
 export function SectionPage({ section }: { section: Section }) {
-  return <div><Header section={section} />{section === "assets" && <Assets />}{section === "earn" && <Earn />}{section === "borrow" && <BorrowWorkspace />}{section === "markets" && <MarketsWorkspace />}{section === "card" && <Card />}{section === "activity" && <ActivityWorkspace />}{section === "benefits" && <Benefits />}{section === "concierge" && <ConciergeWorkspace />}{section === "security" && <Security />}{section === "settings" && <Settings />}{section === "operations" && <OperationsWorkspace />}</div>;
+  return <div><Header section={section} />{section === "assets" && <Assets />}{section === "earn" && <Earn />}{section === "borrow" && <BorrowWorkspace />}{section === "markets" && <MarketsWorkspace />}{section === "card" && <Card />}{section === "activity" && <ActivityWorkspace />}{section === "benefits" && <Benefits />}{section === "concierge" && <ConciergeWorkspace />}{section === "security" && <Security />}{section === "settings" && <SettingsWorkspace />}{section === "operations" && <OperationsWorkspace />}</div>;
 }

@@ -7,6 +7,7 @@ import { useMemo, useState } from "react";
 import { erc20Abi, formatUnits, isAddress, parseEther, parseUnits, encodeFunctionData, toHex } from "viem";
 import { useBalance, useReadContract } from "wagmi";
 import { BASE_ASSETS, HOME_CHAIN } from "@/config/chains";
+import { ExternalWalletBalances } from "./external-wallet-balances";
 
 type AssetSymbol = keyof typeof BASE_ASSETS;
 type Modal = "receive" | "send" | null;
@@ -166,7 +167,7 @@ export function WalletWorkspace() {
                 <span><strong>{row.name}</strong><small>{row.symbol}</small></span>
                 <span>{row.source}</span>
                 <span><i className={row.pending ? "sourceDot pending" : "sourceDot"} /> {row.pending ? "Reading" : "Observed now"}</span>
-                <span><strong>{amountText(row.value, row.decimals)}</strong><small>{row.symbol}</small></span>
+                <span className="sensitiveAmount"><strong>{amountText(row.value, row.decimals)}</strong><small>{row.symbol}</small></span>
               </button>
             ))}
           </div>
@@ -181,6 +182,7 @@ export function WalletWorkspace() {
           <button className="button secondary full" onClick={() => connectWallet()}><Plus size={15} /> Connect external wallet</button>
         </aside>
       </div>
+      <ExternalWalletBalances addresses={externalWallets.map((item) => item.address as `0x${string}`)} />
 
       {modal && <div className="modalBackdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && setModal(null)}>
         <section className="financialModal" role="dialog" aria-modal="true" aria-labelledby="wallet-modal-title">
