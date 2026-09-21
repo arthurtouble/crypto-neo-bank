@@ -17,17 +17,17 @@ const SettingsWorkspace = dynamic(() => import("./settings-workspace").then((mod
 type Section = "assets" | "earn" | "borrow" | "markets" | "card" | "activity" | "benefits" | "concierge" | "security" | "settings" | "operations";
 
 const content: Record<Section, { eyebrow: string; title: string; description: string }> = {
-  assets: { eyebrow: "MONEY", title: "Move and manage money", description: "Receive, send, route, and understand your assets from one place." },
-  earn: { eyebrow: "PRODUCTIVE CAPITAL", title: "Earn", description: "Curated, transparent strategies with liquidity and risk explained before you allocate." },
-  borrow: { eyebrow: "COLLATERALIZED LIQUIDITY", title: "Borrow", description: "Protocol-native credit with health factors, liquidation boundaries, and simulation before every signature." },
-  markets: { eyebrow: "TOKENIZED MARKETS", title: "Market access", description: "An eligibility-gated framework for tokenized instruments—not an assumption that every onchain token is freely tradeable." },
-  card: { eyebrow: "GLOBAL SPEND", title: "Aurel Card", description: "A future card program designed around your liquid stablecoin reserve." },
-  activity: { eyebrow: "AUDITABLE HISTORY", title: "Activity", description: "Every movement, authorization, fee, and status in one timeline." },
-  benefits: { eyebrow: "RELATIONSHIP BENEFITS", title: "Black membership", description: "Practical benefits that become more valuable as your relationship deepens." },
-  concierge: { eyebrow: "PRIVATE CLIENT SERVICE", title: "Concierge", description: "Clear answers grounded in product documentation, with no authority to move your assets." },
-  security: { eyebrow: "DEFENCE IN DEPTH", title: "Safety center", description: "Control how your account can be accessed and how value can leave it." },
-  settings: { eyebrow: "PREFERENCES", title: "Account settings", description: "Manage your profile, notifications, disclosures, and connected providers." },
-  operations: { eyebrow: "AUTHORIZED OPERATIONS", title: "Operations console", description: "Reconciliation, provider-event health, and exception triage without a shadow asset ledger." }
+  assets: { eyebrow: "Portfolio", title: "Assets", description: "Receive, send, and understand what you own." },
+  earn: { eyebrow: "Invest", title: "Earn", description: "Compare liquidity and risk before you allocate." },
+  borrow: { eyebrow: "Invest", title: "Borrow", description: "See cost, health, and liquidation risk before you sign." },
+  markets: { eyebrow: "Invest", title: "Markets", description: "Eligible tokenized instruments, with legal and transfer limits made explicit." },
+  card: { eyebrow: "Services", title: "Aurel Card", description: "Spend from a defined liquid reserve." },
+  activity: { eyebrow: "Portfolio", title: "Activity", description: "Movements, approvals, fees, and status in one timeline." },
+  benefits: { eyebrow: "Services", title: "Benefits", description: "Benefits that grow with the depth of your relationship." },
+  concierge: { eyebrow: "Services", title: "Concierge", description: "Answers about Aurel, protocols, and account controls." },
+  security: { eyebrow: "Account", title: "Security", description: "Control account access and how value can leave it." },
+  settings: { eyebrow: "Account", title: "Settings", description: "Profile, notifications, disclosures, and providers." },
+  operations: { eyebrow: "Internal", title: "Operations", description: "Reconciliation, event health, and exception triage." }
 };
 
 function Header({ section }: { section: Section }) {

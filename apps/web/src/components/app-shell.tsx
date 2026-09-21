@@ -12,19 +12,19 @@ import { PrivyAccountButton } from "./privy-account-button";
 import { ClientIdentity } from "./client-identity";
 
 const navigation = [
-  { group: "Money", items: [
+  { group: "Portfolio", items: [
     { label: "Overview", href: "/app", icon: icons.dashboard },
-    { label: "Money", href: "/app/assets", icon: icons.assets },
+    { label: "Assets", href: "/app/assets", icon: icons.assets },
     { label: "Activity", href: "/app/activity", icon: icons.activity }
   ]},
-  { group: "Grow", items: [
+  { group: "Invest", items: [
     { label: "Earn", href: "/app/earn", icon: icons.earn },
     { label: "Borrow", href: "/app/borrow", icon: icons.earn },
     { label: "Markets", href: "/app/markets", icon: icons.assets }
   ]},
-  { group: "Relationship", items: [
+  { group: "Services", items: [
     { label: "Card", href: "/app/card", icon: icons.card },
-    { label: "Membership", href: "/app/benefits", icon: icons.benefits },
+    { label: "Benefits", href: "/app/benefits", icon: icons.benefits },
     { label: "Concierge", href: "/app/concierge", icon: icons.security }
   ]}
 ];
@@ -45,7 +45,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <Brand compact />
           <button className="mobileClose" onClick={() => setOpen(false)} aria-label="Close navigation"><X size={20} /></button>
         </div>
-        <div className="demoPill"><span /> Mainnet read · user-signed</div>
+        <div className="environmentLabel"><span /> Base mainnet</div>
         <nav className="sideNav groupedNav" aria-label="Primary">
           {navigation.map((group) => <div className="navGroup" key={group.group}><p>{group.group}</p>{group.items.map((item) => {
             const Icon = item.icon;
