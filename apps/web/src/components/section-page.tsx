@@ -1,7 +1,8 @@
-import Link from "next/link";
-import { ArrowRight, Check, ChevronRight, CircleAlert, LockKeyhole, Plane, ShieldCheck, Smartphone, Sparkles } from "lucide-react";
-import { activity, riskItems, strategies } from "@/data/demo";
+import { ArrowRight, ChevronRight, LockKeyhole, Plane, ShieldCheck, Smartphone, Sparkles } from "lucide-react";
+import { activity } from "@/data/demo";
 import { WalletWorkspace } from "@/components/wallet-workspace";
+import { EarnWorkspace } from "@/components/earn-workspace";
+import { SecurityCenter } from "@/components/security-center";
 
 type Section = "assets" | "earn" | "card" | "activity" | "benefits" | "security" | "settings";
 
@@ -25,7 +26,7 @@ function Assets() {
 }
 
 function Earn() {
-  return <><div className="notice"><ShieldCheck size={18} /><span><strong>Productive by choice.</strong> Strategies are self-custodial, opt-in, and not bank deposits. Returns can change and principal can be lost.</span></div><div className="strategyGrid">{strategies.map((strategy, index) => <article className={`panel strategyCard ${index ? "disabledStrategy" : ""}`} key={strategy.name}><div className="strategyTop"><span className="strategyGlyph">{index ? "T+" : "A3"}</span><span className={`statusBadge ${index ? "neutral" : "good"}`}><i /> {index ? "Preview" : "Available"}</span></div><p className="eyebrow">{strategy.protocol}</p><h2>{strategy.name}</h2><p>{strategy.description}</p><div className="strategyMetrics"><div><span>Net APY</span><strong>{strategy.apy}</strong></div><div><span>Liquidity</span><strong>{strategy.liquidity}</strong></div><div><span>Risk</span><strong>{strategy.risk}</strong></div></div><div className="exposureList">{strategy.exposure.map(item => <span key={item}><Check size={13} /> {item}</span>)}</div><button className={`button ${index ? "secondary" : "primary"} full`} disabled={Boolean(index)}>{index ? "Not yet available" : "Review strategy"}</button></article>)}</div></>;
+  return <EarnWorkspace />;
 }
 
 function Card() {
@@ -42,7 +43,7 @@ function Benefits() {
 }
 
 function Security() {
-  return <div className="contentGrid"><section className="panel widePanel"><div className="panelHeading"><div><p className="eyebrow">CONTROLS</p><h2>Protection checklist</h2></div><span className="statusBadge good"><i /> Strong</span></div><div className="securityChecklist">{riskItems.slice(0,3).map((item) => <div key={item.title}><span className={item.state}><ShieldCheck size={19} /></span><div><strong>{item.title}</strong><small>{item.note}</small></div><button>Review</button></div>)}<div><span className="warn"><CircleAlert size={19} /></span><div><strong>Large-transfer delay</strong><small>Enable a 24-hour review period above $25,000</small></div><button>Enable</button></div></div></section><aside className="panel connectionPanel"><p className="eyebrow">RECOVERY</p><h3>You remain in control</h3><p>Aurel cannot unilaterally move assets from the default wallet. Configure recovery methods before depositing material value.</p><Link className="textLink" href="/docs">Read the custody model <ArrowRight size={15} /></Link></aside></div>;
+  return <SecurityCenter />;
 }
 
 function Settings() {

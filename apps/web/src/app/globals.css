@@ -513,6 +513,20 @@ html[data-theme="dark"] .button.primary { color: #ffffff; background: #2d765f; b
 .formError, .transactionSuccess { margin: 0 0 14px; padding: 11px 12px; display: flex; align-items: center; gap: 7px; border-radius: 9px; font-size: 9px; line-height: 1.5; }
 .formError { color: var(--danger); background: color-mix(in srgb, var(--danger) 9%, transparent); }
 .transactionSuccess { color: var(--positive); background: var(--positive-soft); }
+.consentCheck { margin: 16px 0; padding: 13px; display: flex; align-items: flex-start; gap: 10px; border: 1px solid var(--hairline); border-radius: 10px; cursor: pointer; }
+.consentCheck input { margin-top: 2px; accent-color: var(--accent); }
+.consentCheck span { display: grid; gap: 4px; }
+.consentCheck strong { font-size: 10px; }
+.consentCheck small { color: var(--text-tertiary); font-size: 9px; line-height: 1.5; }
+.authorityFootnote { margin: 14px 2px 0; color: var(--text-tertiary); font-family: var(--font-technical); font-size: 8px; line-height: 1.6; }
+.securityState { display: flex; align-items: center; gap: 5px; color: var(--positive); font-size: 9px; font-weight: 500; }
+.securityMessage { margin: 16px 0 0; padding: 11px 13px; border-radius: 9px; color: var(--text-secondary); background: var(--surface-muted); font-size: 9px; }
+.securityPrinciple { padding: 14px 0; display: flex; align-items: flex-start; gap: 10px; border-top: 1px solid var(--hairline); }
+.securityPrinciple:first-of-type { margin-top: 20px; }
+.securityPrinciple > svg { color: var(--accent); }
+.securityPrinciple span { display: grid; gap: 4px; }
+.securityPrinciple strong { font-size: 10px; }
+.securityPrinciple small { color: var(--text-tertiary); font-size: 9px; line-height: 1.5; }
 
 @keyframes access-pulse { 70%, 100% { box-shadow: 0 0 0 12px transparent; } }
 @keyframes financial-modal-in { from { opacity: 0; transform: translateY(9px) scale(.985); } }
