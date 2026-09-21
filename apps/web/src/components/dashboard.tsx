@@ -10,6 +10,7 @@ import { useBalance, useReadContract } from "wagmi";
 import { BASE_ASSETS, HOME_CHAIN } from "@/config/chains";
 import { qualifyMembership } from "@/lib/membership/qualification";
 import { DashboardActions } from "./dashboard-actions";
+import { ActivationJourney } from "./activation-journey";
 
 type Intent = { intentId: string; type: string; status: string; transactionHash?: string; createdAt: string; asset?: string; amount?: string };
 type ActivityResponse = { intents: Intent[] };
@@ -46,6 +47,7 @@ export function Dashboard() {
 
   return <div className="dashboardPage">
     <section className="pageIntro"><div><p className="eyebrow">CUSTOMER-CONTROLLED · BASE MAINNET</p><h1>Good to see you, {greeting}.</h1><p>Your overview is rebuilt from your wallet and providers. Aurel is not the ledger of record.</p></div><DashboardActions /></section>
+    <ActivationJourney usdcBalance={usdc.data} />
     <section className="balanceHero panel"><div className="balanceLead"><div className="balanceLabel"><span>Immediately liquid on Base</span><span className="statusBadge good"><i /> Live</span></div><div className="heroAmount">{amount(usdc.data, 6, 2)} <small>USDC</small></div><div className="heroDelta">Observed directly from {address ? short(address) : "your embedded wallet"}</div></div><div className="metricsGrid"><div className="metric"><span>Native gas</span><strong>{eth.data ? Number(formatEther(eth.data.value)).toLocaleString(undefined, { maximumFractionDigits: 5 }) : "—"} ETH</strong><small>Base mainnet</small></div><div className="metric"><span>Wrapped Ether</span><strong>{amount(weth.data, 18)} WETH</strong><small>Base mainnet</small></div><div className="metric"><span>Relationship projection</span><strong>{membership.tier}</strong><small>Based on current eligible USDC</small></div></div></section>
     <section className="dashboardGrid">
       <article className="panel allocationPanel"><div className="panelHeading"><div><p className="eyebrow">AUTHORITATIVE SOURCES</p><h2>Your financial control plane</h2></div><ShieldCheck size={19} /></div><div className="riskList"><div className="riskItem good"><span className="riskIcon"><CheckCircle2 size={18} /></span><div><span>Wallet custody</span><small>Customer-controlled Privy wallet</small></div><strong>Self-custodied</strong></div><div className="riskItem good"><span className="riskIcon"><CheckCircle2 size={18} /></span><div><span>Balances</span><small>Read from Base contracts</small></div><strong>Onchain</strong></div><div className="riskItem good"><span className="riskIcon"><CheckCircle2 size={18} /></span><div><span>DeFi positions</span><small>Aave V3 protocol data</small></div><strong>Provider observed</strong></div></div><Link className="textLink" href="/app/assets">Inspect assets and provenance <ArrowRight size={15} /></Link></article>

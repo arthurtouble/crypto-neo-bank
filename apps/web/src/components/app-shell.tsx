@@ -12,15 +12,21 @@ import { PrivyAccountButton } from "./privy-account-button";
 import { ClientIdentity } from "./client-identity";
 
 const navigation = [
-  { label: "Overview", href: "/app", icon: icons.dashboard },
-  { label: "Assets", href: "/app/assets", icon: icons.assets },
-  { label: "Earn", href: "/app/earn", icon: icons.earn },
-  { label: "Borrow", href: "/app/borrow", icon: icons.earn },
-  { label: "Markets", href: "/app/markets", icon: icons.assets },
-  { label: "Card", href: "/app/card", icon: icons.card },
-  { label: "Activity", href: "/app/activity", icon: icons.activity },
-  { label: "Benefits", href: "/app/benefits", icon: icons.benefits },
-  { label: "Concierge", href: "/app/concierge", icon: icons.security }
+  { group: "Money", items: [
+    { label: "Overview", href: "/app", icon: icons.dashboard },
+    { label: "Money", href: "/app/assets", icon: icons.assets },
+    { label: "Activity", href: "/app/activity", icon: icons.activity }
+  ]},
+  { group: "Grow", items: [
+    { label: "Earn", href: "/app/earn", icon: icons.earn },
+    { label: "Borrow", href: "/app/borrow", icon: icons.earn },
+    { label: "Markets", href: "/app/markets", icon: icons.assets }
+  ]},
+  { group: "Relationship", items: [
+    { label: "Card", href: "/app/card", icon: icons.card },
+    { label: "Membership", href: "/app/benefits", icon: icons.benefits },
+    { label: "Concierge", href: "/app/concierge", icon: icons.security }
+  ]}
 ];
 
 const secondary = [
@@ -40,12 +46,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <button className="mobileClose" onClick={() => setOpen(false)} aria-label="Close navigation"><X size={20} /></button>
         </div>
         <div className="demoPill"><span /> Mainnet read · user-signed</div>
-        <nav className="sideNav" aria-label="Primary">
-          {navigation.map((item) => {
+        <nav className="sideNav groupedNav" aria-label="Primary">
+          {navigation.map((group) => <div className="navGroup" key={group.group}><p>{group.group}</p>{group.items.map((item) => {
             const Icon = item.icon;
             const active = pathname === item.href;
             return <Link key={item.href} href={item.href} className={active ? "active" : ""} onClick={() => setOpen(false)}><Icon size={18} /><span>{item.label}</span></Link>;
-          })}
+          })}</div>)}
         </nav>
         <div className="sideRule" />
         <nav className="sideNav secondaryNav" aria-label="Account">

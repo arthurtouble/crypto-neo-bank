@@ -9,11 +9,12 @@ import { ActivityWorkspace } from "@/components/activity-workspace";
 import { CrossChainWorkspace } from "@/components/cross-chain-workspace";
 import { MarketsWorkspace } from "@/components/markets-workspace";
 import { OperationsWorkspace } from "@/components/operations-workspace";
+import { NetworkSupportMatrix } from "@/components/network-support-matrix";
 
 type Section = "assets" | "earn" | "borrow" | "markets" | "card" | "activity" | "benefits" | "concierge" | "security" | "settings" | "operations";
 
 const content: Record<Section, { eyebrow: string; title: string; description: string }> = {
-  assets: { eyebrow: "YOUR BALANCE SHEET", title: "Assets", description: "One coherent view across Aurel and the wallets you control elsewhere." },
+  assets: { eyebrow: "MONEY", title: "Move and manage money", description: "Receive, send, route, and understand your assets from one place." },
   earn: { eyebrow: "PRODUCTIVE CAPITAL", title: "Earn", description: "Curated, transparent strategies with liquidity and risk explained before you allocate." },
   borrow: { eyebrow: "COLLATERALIZED LIQUIDITY", title: "Borrow", description: "Protocol-native credit with health factors, liquidation boundaries, and simulation before every signature." },
   markets: { eyebrow: "TOKENIZED MARKETS", title: "Market access", description: "An eligibility-gated framework for tokenized instruments—not an assumption that every onchain token is freely tradeable." },
@@ -32,7 +33,7 @@ function Header({ section }: { section: Section }) {
 }
 
 function Assets() {
-  return <><WalletWorkspace /><CrossChainWorkspace /></>;
+  return <><WalletWorkspace /><CrossChainWorkspace /><NetworkSupportMatrix /></>;
 }
 
 function Earn() {
