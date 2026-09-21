@@ -1,10 +1,11 @@
-import { DemoBridgeAdapter, DemoOnchainAdapter } from "@/lib/providers/demo";
+import { createDemoRegistry } from "@/lib/providers/demo";
 import { rebuildPortfolioProjection } from "@/lib/projections/portfolio";
 
 export async function GET() {
+  const providers = createDemoRegistry("funded");
   const projection = await rebuildPortfolioProjection("demo-client-00184", [
-    new DemoBridgeAdapter(),
-    new DemoOnchainAdapter(),
+    providers.fiat,
+    providers.wallet,
   ]);
 
   return Response.json(projection, {
@@ -14,4 +15,3 @@ export async function GET() {
     },
   });
 }
-
