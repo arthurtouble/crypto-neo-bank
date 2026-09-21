@@ -38,6 +38,10 @@ This is the execution checklist for the mainnet-first product. “Live” means 
 - [x] Production observability, abuse controls, security tests, and recovery exercise
 - [x] Dev/prod environment policy, CI verification, candidate uploads, gradual-release runbook, and rollback path
 - [x] Turnstile client and server validation path (activation requires production widget credentials)
+- [x] Five-minute operational reconciliation, explicit dead-letter evidence, and critical event escalation
+- [x] Read-only mainnet/LI.FI readiness, production smoke, and isolated D1 recovery automation
+- [x] CodeQL and high-severity dependency audit workflow
+- [x] Partner diligence, responsibility matrix, provider scorecard, acceptance protocol, and closed-beta plan
 
 ## Deliberately external
 

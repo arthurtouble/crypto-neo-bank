@@ -21,7 +21,7 @@ Aurel is a Cloudflare-native, mainnet-first private financial interface built ov
 - Cloudflare Workers deployment through vinext, with logs and traces configured.
 - No internal authoritative balance or settlement store.
 
-Read [ARCHITECTURE.md](./ARCHITECTURE.md) for source-of-truth rules, [PARTNER_INTEGRATION.md](./PARTNER_INTEGRATION.md) for Privy/Bridge activation, and [OPERATIONS_RUNBOOK.md](./OPERATIONS_RUNBOOK.md) for recovery and incident procedures.
+Read [ARCHITECTURE.md](./ARCHITECTURE.md) for source-of-truth rules, [PARTNER_INTEGRATION.md](./PARTNER_INTEGRATION.md) for Privy/provider activation, [PARTNER_DILIGENCE.md](./PARTNER_DILIGENCE.md) for the provider pack, and [OPERATIONS_RUNBOOK.md](./OPERATIONS_RUNBOOK.md) for recovery and incident procedures.
 
 ## Local development
 
@@ -39,6 +39,9 @@ pnpm typecheck
 pnpm lint
 pnpm test:unit
 pnpm test:e2e
+pnpm test:mainnet-readiness
+pnpm test:production
+pnpm test:recovery
 pnpm build
 pnpm deploy:dry-run
 ```
@@ -69,4 +72,4 @@ Do not add provider credentials to `wrangler.jsonc`. Add Bridge, Rain, Privy ser
 
 An Aurel database must never become the source of truth for fiat balances, wallet balances, DeFi positions, loans, or card settlement. Financial projections are rebuildable; security policies, customer instructions, consent receipts, cases, and audit evidence are operational records that require retention and recovery even though they do not authorize or prove a balance.
 
-See [LAUNCH_READINESS.md](./LAUNCH_READINESS.md) for the closed-beta gates and [THREAT_MODEL.md](./THREAT_MODEL.md) for the security boundary.
+See [LAUNCH_READINESS.md](./LAUNCH_READINESS.md) for the closed-beta gates, [CLOSED_BETA_PLAN.md](./CLOSED_BETA_PLAN.md) for cohort controls, [ACCEPTANCE_TEST_PLAN.md](./ACCEPTANCE_TEST_PLAN.md) for funded-wallet evidence, and [THREAT_MODEL.md](./THREAT_MODEL.md) for the security boundary.

@@ -39,7 +39,7 @@ This is the go/no-go checklist for a closed mainnet beta. It is deliberately str
 
 - [x] Local development uses isolated Miniflare state; production uses the named Worker and production D1/Queues.
 - [x] Logs and traces enabled with structured application events.
-- [x] CI runs lint, types, unit tests, and build.
+- [x] CI runs lint, types, unit/E2E tests, build, recovery drill, CodeQL, and dependency audit.
 - [x] Version upload, gradual deployment, and rollback procedure documented.
 - [x] Turnstile client and mandatory Siteverify path implemented for support intake.
 - [ ] Custom production domain attached.
@@ -49,6 +49,8 @@ This is the go/no-go checklist for a closed mainnet beta. It is deliberately str
 - [ ] Log retention/export destination and alert receiver configured.
 - [ ] Version affinity rule configured before using split traffic with hashed static assets.
 
+Configuration evidence must be attached after the custom hostname, Turnstile widget, operator identity, alert receiver and log destination are selected. The checked-in OpenAPI contract is `infra/cloudflare/aurel-api.openapi.yaml`; it is a validation input, not proof that API Shield mitigation is enabled.
+
 ## Legal and provider gate
 
 - [ ] Launch entity, customer contracting entity, permitted countries, and excluded countries approved by counsel.
@@ -57,6 +59,8 @@ This is the go/no-go checklist for a closed mainnet beta. It is deliberately str
 - [ ] Sanctions/fraud escalation ownership and provider handoff tested.
 - [ ] Marketing and customer support do not imply FDIC insurance, bank deposits, guaranteed APY, or universal asset support.
 
+Decision and evidence templates: `PARTNER_DILIGENCE.md`, `PROVIDER_REQUIREMENTS_MATRIX.md`, `COMPLIANCE_RESPONSIBILITY_MATRIX.md`, `LEGAL_AND_JURISDICTION_DECISIONS.md`, `ACCEPTANCE_TEST_PLAN.md`, and `CLOSED_BETA_PLAN.md`.
+
 ## Proposed beta limits
 
 - Invite-only: 25 internal/friendly users, then 100 external users.
@@ -64,4 +68,3 @@ This is the go/no-go checklist for a closed mainnet beta. It is deliberately str
 - New direct destinations: USD 1,000 threshold and 24-hour cooling period.
 - Bank rails and cards: unavailable until contracted and reconciled end-to-end.
 - Public launch: prohibited until every unchecked security, operations, Cloudflare, and legal gate above has an accountable owner and completion evidence.
-
