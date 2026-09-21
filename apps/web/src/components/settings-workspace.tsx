@@ -3,6 +3,7 @@
 import { Bell, BookOpen, Eye, EyeOff, Globe2 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { FeedbackPanel } from "./feedback-panel";
 
 export function SettingsWorkspace() {
   const [hidden, setHidden] = useState(false);
@@ -24,5 +25,5 @@ export function SettingsWorkspace() {
     <div className="settingRow"><span className="settingIcon"><Globe2 size={17} /></span><div><strong>Display currency</strong><small>Used for reporting and summaries. Assets remain denominated in their native units.</small></div><select value={currency} onChange={(event) => baseCurrency(event.target.value)}><option>USD</option><option>EUR</option><option>GBP</option></select></div>
     <div className="settingRow"><span className="settingIcon"><Bell size={17} /></span><div><strong>Security notices</strong><small>In-product warnings for policy, recovery, and high-risk activity.</small></div><button className="settingsToggle" onClick={() => notices(!securityNotices)}>{securityNotices ? "On" : "Off"}</button></div>
     <div className="settingRow"><span className="settingIcon"><BookOpen size={17} /></span><div><strong>Documents and disclosures</strong><small>Review custody, transaction, protocol, routing, data, and fee boundaries.</small></div><Link href="/docs">Open trust center</Link></div>
-  </section><aside className="panel connectionPanel"><p className="eyebrow">ENVIRONMENT</p><h3>Production mainnet</h3><p>Aurel uses Base mainnet for its home account and only presents user-signed transactions. Development uses isolated local Cloudflare resources.</p><div className="securityPrinciple"><Globe2 size={17} /><span><strong>Base mainnet</strong><small>Chain ID 8453 · real assets and gas</small></span></div></aside></div>;
+  </section><aside className="panel connectionPanel"><p className="eyebrow">ENVIRONMENT</p><h3>Production mainnet</h3><p>Aurel uses Base mainnet for its home account and only presents user-signed transactions. Development uses isolated local Cloudflare resources.</p><div className="securityPrinciple"><Globe2 size={17} /><span><strong>Base mainnet</strong><small>Chain ID 8453 · real assets and gas</small></span></div></aside><FeedbackPanel /></div>;
 }

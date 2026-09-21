@@ -4,6 +4,8 @@ import { AuthenticationError, requireVerifiedSubject } from "@/lib/auth/server";
 import { evaluateTransactionPolicy } from "@/lib/transactions/policy";
 import { enforceRateLimit, RateLimitError } from "@/lib/security/rate-limit";
 import { ensureSubjectProfile } from "@/lib/profile/ensure";
+import { BetaAccessError, requireBetaAccess } from "@/lib/beta/access";
+import { FeatureUnavailableError, requireFeature } from "@/lib/features/flags";
 
 async function fingerprint(value: unknown): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify(value)));
@@ -26,8 +28,10 @@ export async function POST(request: Request) {
   const traceId = crypto.randomUUID();
   try {
     const subject = await requireVerifiedSubject(request);
+    const beta = await requireBetaAccess(env.PROJECTION_DB, subject.subjectReference);
     await enforceRateLimit(env.PROJECTION_DB, { namespace: "intent", subject: subject.subjectReference, limit: 30, windowSeconds: 60 });
     const input = intentSchema.parse(await request.json());
+    await requireFeature(env.PROJECTION_DB, input.type === "bridge" ? "cross_chain" : input.type.startsWith("earn_") || ["borrow", "repay"].includes(input.type) ? "defi_actions" : "direct_transfers");
     const now = new Date();
     await ensureSubjectProfile(env.PROJECTION_DB, subject.subjectReference, now);
     const requestFingerprint = await fingerprint(input);
@@ -51,7 +55,7 @@ export async function POST(request: Request) {
       enforceAllowlist: Boolean(profile?.enforce_address_book),
       accountLocked: Boolean(profile?.account_locked),
       reserveFloorUsd: 10_000,
-      dailyLimitUsd: profile?.daily_limit_usd ?? 25_000,
+      dailyLimitUsd: Math.min(profile?.daily_limit_usd ?? 25_000, beta.transactionLimitUsd),
       spentTodayUsd,
       newAddressThresholdUsd: profile?.new_address_threshold_usd ?? 1_000,
       stepUpThresholdUsd: profile?.step_up_threshold_usd ?? 10_000,
@@ -84,13 +88,18 @@ export async function POST(request: Request) {
         .bind(intentId, subject.subjectReference, walletReference, input.type, input.chainId, JSON.stringify(input), JSON.stringify(decision), input.disclosureVersion, cooling ? "cooling" : decision.permitted ? "reviewed" : "blocked", now.toISOString(), now.toISOString(), cooling && decision.releaseAt ? new Date(new Date(decision.releaseAt).getTime() + 15 * 60_000).toISOString() : new Date(now.getTime() + 15 * 60_000).toISOString(), decision.releaseAt ?? null, requestFingerprint),
       env.PROJECTION_DB.prepare(`INSERT INTO intent_events (event_id, intent_id, subject_reference, event_type, evidence_json, occurred_at)
         VALUES (?, ?, ?, 'policy_evaluated', ?, ?)`)
-        .bind(crypto.randomUUID(), intentId, subject.subjectReference, JSON.stringify({ permitted: decision.permitted, cooling, findings: decision.findings.map((item) => item.code) }), now.toISOString())
+        .bind(crypto.randomUUID(), intentId, subject.subjectReference, JSON.stringify({ permitted: decision.permitted, cooling, findings: decision.findings.map((item) => item.code) }), now.toISOString()),
+      env.PROJECTION_DB.prepare(`INSERT INTO product_events (event_id, subject_reference, session_reference, event_name, surface, properties_json, occurred_at)
+        VALUES (?, ?, ?, 'transaction_prepared', ?, ?, ?)`)
+        .bind(crypto.randomUUID(), subject.subjectReference, subject.sessionReference, `/app/${input.type}`, JSON.stringify({ intentType: input.type, permitted: decision.permitted, cooling }), now.toISOString())
     ]);
 
     return Response.json({ intentId, decision, message: cooling ? `This action is in its security review period until ${decision.releaseAt}. Prepare it again after that time.` : undefined, traceId }, { status: cooling ? 423 : decision.permitted ? 201 : 422, headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     if (error instanceof AuthenticationError) return Response.json({ error: "unauthorized", message: error.message, traceId }, { status: 401 });
     if (error instanceof RateLimitError) return Response.json({ error: "rate_limited", message: error.message, traceId }, { status: 429, headers: { "Retry-After": String(error.retryAfterSeconds) } });
+    if (error instanceof BetaAccessError) return Response.json({ error: error.code, message: error.message, traceId }, { status: 403 });
+    if (error instanceof FeatureUnavailableError) return Response.json({ error: "feature_unavailable", message: error.message, traceId }, { status: 503 });
     if (error instanceof z.ZodError) return Response.json({ error: "invalid_intent", issues: error.issues, traceId }, { status: 400 });
     console.error(JSON.stringify({ level: "error", event: "intent.evaluate.failed", traceId, message: error instanceof Error ? error.message : "unknown" }));
     return Response.json({ error: "intent_unavailable", message: "The transaction could not be reviewed.", traceId }, { status: 503 });

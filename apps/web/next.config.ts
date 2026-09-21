@@ -4,6 +4,9 @@ const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "DENY" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  { key: "X-Permitted-Cross-Domain-Policies", value: "none" },
+  { key: "Origin-Agent-Cluster", value: "?1" },
+  { key: "Cross-Origin-Resource-Policy", value: "same-site" },
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
   // Privy-supported smart wallets use a popup and require access to its opener.
   { key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" },

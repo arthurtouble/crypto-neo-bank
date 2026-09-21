@@ -81,3 +81,53 @@ export async function runScheduledReconciliation(db: D1Database, scheduledTime =
   await db.batch(statements);
   return details;
 }
+
+type DependencyProbe = { key: string; label: string; url: string; init?: RequestInit; validate: (response: Response) => Promise<boolean> };
+
+const probes: DependencyProbe[] = [
+  {
+    key: "dependency_base", label: "Base mainnet", url: "https://mainnet.base.org",
+    init: { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_blockNumber", params: [] }) },
+    validate: async (response) => response.ok && Boolean((await response.json() as { result?: string }).result)
+  },
+  {
+    key: "dependency_lifi", label: "LI.FI routing", url: "https://li.quest/v1/chains",
+    validate: async (response) => response.ok && Array.isArray((await response.json() as { chains?: unknown[] }).chains)
+  },
+  {
+    key: "dependency_aave", label: "Aave data service", url: "https://mcp.aave.com/",
+    init: { method: "POST", headers: { "Content-Type": "application/json", "User-Agent": "Aurel-Status/1.0" }, body: JSON.stringify({ jsonrpc: "2.0", id: "status", method: "tools/list", params: {} }) },
+    validate: async (response) => response.ok && Boolean((await response.json() as { result?: unknown }).result)
+  }
+];
+
+export async function checkDependencies(db: D1Database, checkedAt = new Date()): Promise<Record<string, string>> {
+  const now = checkedAt.toISOString();
+  const results = await Promise.all(probes.map(async (probe) => {
+    const started = Date.now();
+    let status = "operational";
+    let detail = "Available";
+    try {
+      const response = await fetch(probe.url, { ...probe.init, signal: AbortSignal.timeout(8_000) });
+      if (!await probe.validate(response)) { status = "degraded"; detail = `Unexpected response (${response.status})`; }
+    } catch (error) {
+      status = "unavailable";
+      detail = error instanceof Error && error.name === "TimeoutError" ? "Timed out" : "Probe failed";
+    }
+    return { probe, status, detail, latencyMs: Date.now() - started };
+  }));
+
+  const statements: D1PreparedStatement[] = [];
+  for (const result of results) {
+    statements.push(db.prepare(`INSERT INTO operational_checks (check_key, status, details_json, checked_at)
+      VALUES (?, ?, ?, ?) ON CONFLICT(check_key) DO UPDATE SET status = excluded.status, details_json = excluded.details_json, checked_at = excluded.checked_at`)
+      .bind(result.probe.key, result.status, JSON.stringify({ label: result.probe.label, detail: result.detail, latencyMs: result.latencyMs }), now));
+    if (result.status !== "operational") statements.push(issueStatement(db, {
+      subjectReference: null, type: "dependency_unavailable", severity: "high", sourceName: result.probe.label,
+      sourceReference: result.probe.key, summary: `${result.probe.label} is ${result.status}: ${result.detail}.`, now
+    }));
+    else statements.push(db.prepare("UPDATE operational_issues SET status = 'resolved', resolved_at = ? WHERE issue_type = 'dependency_unavailable' AND source_reference = ? AND status != 'resolved'").bind(now, result.probe.key));
+  }
+  await db.batch(statements);
+  return Object.fromEntries(results.map((result) => [result.probe.key, result.status]));
+}

@@ -46,11 +46,15 @@ export async function PATCH(request: Request) {
     const input = updateSchema.parse(await request.json());
     await ensureSubjectProfile(env.PROJECTION_DB, subject.subjectReference);
     const now = new Date().toISOString();
-    await env.PROJECTION_DB.prepare(`UPDATE onboarding_progress SET
+    await env.PROJECTION_DB.batch([env.PROJECTION_DB.prepare(`UPDATE onboarding_progress SET
       network_guide_read_at = CASE WHEN ? = 1 THEN COALESCE(network_guide_read_at, ?) ELSE network_guide_read_at END,
       risk_guide_read_at = CASE WHEN ? = 1 THEN COALESCE(risk_guide_read_at, ?) ELSE risk_guide_read_at END,
       updated_at = ? WHERE subject_reference = ?`)
-      .bind(input.networkGuideRead ? 1 : 0, now, input.riskGuideRead ? 1 : 0, now, now, subject.subjectReference).run();
+      .bind(input.networkGuideRead ? 1 : 0, now, input.riskGuideRead ? 1 : 0, now, now, subject.subjectReference),
+      env.PROJECTION_DB.prepare(`INSERT INTO product_events (event_id, subject_reference, session_reference, event_name, surface, properties_json, occurred_at)
+        VALUES (?, ?, ?, 'activation_viewed', '/app', ?, ?)`)
+        .bind(crypto.randomUUID(), subject.subjectReference, subject.sessionReference, JSON.stringify({ guideAcknowledged: true }), now)
+    ]);
     return Response.json({ updated: true, traceId });
   } catch (error) {
     if (error instanceof AuthenticationError) return Response.json({ error: "unauthorized", message: error.message, traceId }, { status: 401 });

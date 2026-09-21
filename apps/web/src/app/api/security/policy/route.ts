@@ -53,7 +53,12 @@ export async function PATCH(request: Request) {
     const now = new Date().toISOString();
     await env.PROJECTION_DB.prepare(`UPDATE security_profiles SET account_locked = ?, enforce_address_book = ?, daily_limit_usd = ?, new_address_threshold_usd = ?, new_address_delay_seconds = ?, step_up_threshold_usd = ?, updated_at = ? WHERE subject_reference = ?`)
       .bind(next.accountLocked ? 1 : 0, next.enforceAddressBook ? 1 : 0, next.dailyLimitUsd, next.newAddressThresholdUsd, next.newAddressDelaySeconds, next.stepUpThresholdUsd, now, subject.subjectReference).run();
-    await writeAuditEvent(env.PROJECTION_DB, { subjectReference: subject.subjectReference, actorType: "customer", actorReference: subject.subjectReference, action: "security.policy.updated", targetType: "security_profile", targetReference: subject.subjectReference, evidence: { changedFields: Object.keys(input) }, occurredAt: now });
+    await Promise.all([
+      writeAuditEvent(env.PROJECTION_DB, { subjectReference: subject.subjectReference, actorType: "customer", actorReference: subject.subjectReference, action: "security.policy.updated", targetType: "security_profile", targetReference: subject.subjectReference, evidence: { changedFields: Object.keys(input) }, occurredAt: now }),
+      env.PROJECTION_DB.prepare(`INSERT INTO product_events (event_id, subject_reference, session_reference, event_name, surface, properties_json, occurred_at)
+        VALUES (?, ?, ?, 'security_updated', '/app/security', ?, ?)`)
+        .bind(crypto.randomUUID(), subject.subjectReference, subject.sessionReference, JSON.stringify({ changedFields: Object.keys(input) }), now).run()
+    ]);
     return Response.json({ policy: { ...next, newAddressDelayHours: next.newAddressDelaySeconds / 3600, updatedAt: now }, traceId });
   } catch (error) {
     if (error instanceof AuthenticationError) return Response.json({ error: "unauthorized", message: error.message, traceId }, { status: 401 });

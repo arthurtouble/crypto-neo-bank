@@ -17,6 +17,46 @@ paths:
               schema:
                 $ref: "#/components/schemas/Health"
         "503": { description: A required dependency is unavailable }
+  /api/status:
+    get:
+      operationId: publicStatus
+      responses:
+        "200": { description: Bounded public component and incident status }
+        "503": { description: Status evidence is unavailable }
+  /api/beta/access:
+    get:
+      operationId: betaAccess
+      responses:
+        "200": { description: Current subject access state }
+        "401": { description: Authentication required }
+    post:
+      operationId: redeemBetaInvite
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [code, countryCode, acceptTerms]
+              properties:
+                code: { type: string, minLength: 6, maxLength: 80 }
+                countryCode: { type: string, pattern: "^[A-Za-z]{2}$" }
+                acceptTerms: { type: boolean, enum: [true] }
+      responses:
+        "201": { description: Invitation redeemed }
+        "400": { description: Invalid request }
+        "401": { description: Authentication required }
+        "403": { description: Invalid invitation or unavailable country }
+        "429": { description: Redemption rate limit reached }
+  /api/beta/feedback:
+    post:
+      operationId: betaFeedback
+      responses:
+        "201": { description: Feedback accepted }
+        "400": { description: Invalid feedback }
+        "401": { description: Authentication required }
+        "429": { description: Feedback rate limit reached }
   /api/auth/session:
     get:
       operationId: session

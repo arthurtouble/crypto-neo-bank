@@ -14,6 +14,9 @@
     "NEXT_PUBLIC_TURNSTILE_SITE_KEY": "0x4AAAAAAE_LD5ONaf0OITS8",
     "TURNSTILE_HOSTNAMES": "aurel-financial-os.aurel-events.workers.dev",
     "ADMIN_PRIVY_SUBJECTS": "",
+    "BETA_ACCESS_MODE": "preview",
+    "BETA_ALLOWED_COUNTRIES": "",
+    "REQUIRE_CF_ACCESS": "false",
     "PROVIDER_WEBHOOK_TOLERANCE_SECONDS": "300"
   },
   "secrets": {

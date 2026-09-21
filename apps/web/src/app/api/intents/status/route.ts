@@ -33,7 +33,10 @@ export async function POST(request: Request) {
         .bind(input.status, input.transactionHash ?? null, input.routeReference ?? null, input.failureReason ?? null, now, input.intentId, subject.subjectReference),
       env.PROJECTION_DB.prepare(`INSERT INTO intent_events (event_id, intent_id, subject_reference, event_type, evidence_json, occurred_at)
         VALUES (?, ?, ?, ?, ?, ?)`)
-        .bind(crypto.randomUUID(), input.intentId, subject.subjectReference, `intent_${input.status}`, JSON.stringify({ transactionHash: input.transactionHash, routeReference: input.routeReference, failureReason: input.failureReason }), now)
+        .bind(crypto.randomUUID(), input.intentId, subject.subjectReference, `intent_${input.status}`, JSON.stringify({ transactionHash: input.transactionHash, routeReference: input.routeReference, failureReason: input.failureReason }), now),
+      env.PROJECTION_DB.prepare(`INSERT INTO product_events (event_id, subject_reference, session_reference, event_name, surface, properties_json, occurred_at)
+        VALUES (?, ?, ?, ?, '/app/activity', ?, ?)`)
+        .bind(crypto.randomUUID(), subject.subjectReference, subject.sessionReference, input.status === "submitted" ? "transaction_submitted" : "transaction_prepared", JSON.stringify({ intentId: input.intentId, status: input.status }), now)
     ]);
     return Response.json({ updated: true, traceId });
   } catch (error) {

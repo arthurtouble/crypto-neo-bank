@@ -31,7 +31,8 @@ const navigation = [
 
 const secondary = [
   { label: "Security", href: "/app/security", icon: icons.security },
-  { label: "Settings", href: "/app/settings", icon: icons.settings }
+  { label: "Settings", href: "/app/settings", icon: icons.settings },
+  { label: "System status", href: "/app/status", icon: icons.activity }
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {

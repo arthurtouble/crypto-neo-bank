@@ -50,12 +50,28 @@ test("public health exposes dependencies without secrets", async ({ request }) =
   expect(JSON.stringify(payload)).not.toMatch(/secret|token|password/i);
 });
 
+test("public status exposes bounded component state and no secrets", async ({ request }) => {
+  const response = await request.get("/api/status");
+  expect([200, 503]).toContain(response.status());
+  const payload = await response.json();
+  expect(payload).toHaveProperty("components");
+  expect(payload).toHaveProperty("incidents");
+  expect(JSON.stringify(payload)).not.toMatch(/app.secret|private.key|bearer/i);
+});
+
 test("private APIs fail closed without an authenticated subject", async ({ request }) => {
-  for (const path of ["/api/portfolio", "/api/activity", "/api/ops/summary", "/api/security/policy"]) {
+  for (const path of ["/api/portfolio", "/api/activity", "/api/ops/summary", "/api/ops/beta", "/api/ops/features", "/api/ops/analytics", "/api/security/policy", "/api/beta/access"]) {
     const response = await request.get(path);
     const accepted = path === "/api/portfolio" ? [401, 403, 410] : [401, 403];
     expect(accepted).toContain(response.status());
   }
+});
+
+test("feedback and beta redemption fail closed without authentication", async ({ request }) => {
+  const feedback = await request.post("/api/beta/feedback", { data: { surface: "/app", sentiment: "neutral", category: "usability", message: "This is a useful test message." } });
+  expect(feedback.status()).toBe(401);
+  const redeem = await request.post("/api/beta/access", { data: { code: "AUREL-TEST", countryCode: "PT", acceptTerms: true } });
+  expect(redeem.status()).toBe(401);
 });
 
 test("unsigned provider events are rejected", async ({ request }) => {

@@ -189,7 +189,7 @@ export function WalletWorkspace() {
           <button className="modalClose" onClick={() => setModal(null)} aria-label="Close"><X size={18} /></button>
           {modal === "receive" ? <>
             <p className="eyebrow">RECEIVE ONCHAIN</p><h2 id="wallet-modal-title">Your wallet address</h2>
-            <p>Send supported assets on Base, Ethereum, Arbitrum, Optimism, or Polygon. Always confirm the asset and network before transferring.</p>
+            <p>This address works across supported EVM networks. Aurel’s primary portfolio view is Base, so confirm the network and asset before transferring.</p>
             <div className="receiveQr"><QRCodeSVG value={address} size={164} bgColor="transparent" fgColor="currentColor" level="M" /></div>
             <code className="addressBlock">{address}</code>
             <button className="button primary full" onClick={() => void copyAddress()}>{copied ? <Check size={16} /> : <Copy size={16} />}{copied ? "Copied" : "Copy address"}</button>

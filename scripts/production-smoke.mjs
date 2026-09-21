@@ -20,15 +20,19 @@ assert(home.headers.get("x-content-type-options") === "nosniff", "X-Content-Type
 assert(home.headers.get("content-security-policy")?.includes("frame-ancestors 'none'"), "CSP denies framing");
 
 const docs = await request("/docs");
-assert(docs.ok, `documentation responds (${docs.status})`);
-assert((await docs.text()).includes("Security"), "documentation contains the security section");
+assert([301, 302, 307, 308].includes(docs.status), `documentation redirects to dedicated site (${docs.status})`);
+assert(docs.headers.get("location") === "https://aurel-docs.aurel-events.workers.dev", "documentation redirect uses the canonical docs origin");
 
 const health = await request("/api/health");
 const healthBody = await health.json().catch(() => ({}));
 assert(health.ok && healthBody.status === "ok", `health reports ok (${health.status})`);
 assert(healthBody.dependencies?.operationalDatabase === "ok", "health confirms the projection database binding");
 
-for (const path of ["/api/portfolio", "/api/activity", "/api/ops/summary"]) {
+const status = await request("/api/status");
+const statusBody = await status.json().catch(() => ({}));
+assert([200, 503].includes(status.status) && Array.isArray(statusBody.components), `public status returns bounded component state (${status.status})`);
+
+for (const path of ["/api/portfolio", "/api/activity", "/api/ops/summary", "/api/ops/beta", "/api/ops/features", "/api/ops/analytics", "/api/beta/access"]) {
   const response = await request(path);
   const accepted = path === "/api/portfolio" ? [401, 403, 410] : [401, 403];
   assert(accepted.includes(response.status), `${path} rejects or retires an unauthenticated request (${response.status})`);

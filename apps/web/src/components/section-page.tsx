@@ -13,8 +13,9 @@ const MarketsWorkspace = dynamic(() => import("./markets-workspace").then((modul
 const OperationsWorkspace = dynamic(() => import("./operations-workspace").then((module) => module.OperationsWorkspace));
 const NetworkSupportMatrix = dynamic(() => import("./network-support-matrix").then((module) => module.NetworkSupportMatrix));
 const SettingsWorkspace = dynamic(() => import("./settings-workspace").then((module) => module.SettingsWorkspace));
+const SystemStatus = dynamic(() => import("./system-status").then((module) => module.SystemStatus));
 
-type Section = "assets" | "earn" | "borrow" | "markets" | "card" | "activity" | "benefits" | "concierge" | "security" | "settings" | "operations";
+type Section = "assets" | "earn" | "borrow" | "markets" | "card" | "activity" | "benefits" | "concierge" | "security" | "settings" | "status" | "operations";
 
 const content: Record<Section, { eyebrow: string; title: string; description: string }> = {
   assets: { eyebrow: "Portfolio", title: "Assets", description: "Receive, send, and understand what you own." },
@@ -27,6 +28,7 @@ const content: Record<Section, { eyebrow: string; title: string; description: st
   concierge: { eyebrow: "Services", title: "Concierge", description: "Answers about Aurel, protocols, and account controls." },
   security: { eyebrow: "Account", title: "Security", description: "Control account access and how value can leave it." },
   settings: { eyebrow: "Account", title: "Settings", description: "Profile, notifications, disclosures, and providers." },
+  status: { eyebrow: "Aurel", title: "System status", description: "Current availability across Aurel and its core dependencies." },
   operations: { eyebrow: "Internal", title: "Operations", description: "Reconciliation, event health, and exception triage." }
 };
 
@@ -56,5 +58,5 @@ function Security() {
 }
 
 export function SectionPage({ section }: { section: Section }) {
-  return <div><Header section={section} />{section === "assets" && <Assets />}{section === "earn" && <Earn />}{section === "borrow" && <BorrowWorkspace />}{section === "markets" && <MarketsWorkspace />}{section === "card" && <Card />}{section === "activity" && <ActivityWorkspace />}{section === "benefits" && <Benefits />}{section === "concierge" && <ConciergeWorkspace />}{section === "security" && <Security />}{section === "settings" && <SettingsWorkspace />}{section === "operations" && <OperationsWorkspace />}</div>;
+  return <div><Header section={section} />{section === "assets" && <Assets />}{section === "earn" && <Earn />}{section === "borrow" && <BorrowWorkspace />}{section === "markets" && <MarketsWorkspace />}{section === "card" && <Card />}{section === "activity" && <ActivityWorkspace />}{section === "benefits" && <Benefits />}{section === "concierge" && <ConciergeWorkspace />}{section === "security" && <Security />}{section === "settings" && <SettingsWorkspace />}{section === "status" && <SystemStatus />}{section === "operations" && <OperationsWorkspace />}</div>;
 }
