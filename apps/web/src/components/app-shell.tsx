@@ -16,6 +16,7 @@ const navigation = [
   { label: "Assets", href: "/app/assets", icon: icons.assets },
   { label: "Earn", href: "/app/earn", icon: icons.earn },
   { label: "Borrow", href: "/app/borrow", icon: icons.earn },
+  { label: "Markets", href: "/app/markets", icon: icons.assets },
   { label: "Card", href: "/app/card", icon: icons.card },
   { label: "Activity", href: "/app/activity", icon: icons.activity },
   { label: "Benefits", href: "/app/benefits", icon: icons.benefits },

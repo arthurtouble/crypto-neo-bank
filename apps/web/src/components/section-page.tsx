@@ -7,13 +7,15 @@ import { MembershipBenefits } from "@/components/membership-benefits";
 import { ConciergeWorkspace } from "@/components/concierge-workspace";
 import { ActivityWorkspace } from "@/components/activity-workspace";
 import { CrossChainWorkspace } from "@/components/cross-chain-workspace";
+import { MarketsWorkspace } from "@/components/markets-workspace";
 
-type Section = "assets" | "earn" | "borrow" | "card" | "activity" | "benefits" | "concierge" | "security" | "settings";
+type Section = "assets" | "earn" | "borrow" | "markets" | "card" | "activity" | "benefits" | "concierge" | "security" | "settings";
 
 const content: Record<Section, { eyebrow: string; title: string; description: string }> = {
   assets: { eyebrow: "YOUR BALANCE SHEET", title: "Assets", description: "One coherent view across Aurel and the wallets you control elsewhere." },
   earn: { eyebrow: "PRODUCTIVE CAPITAL", title: "Earn", description: "Curated, transparent strategies with liquidity and risk explained before you allocate." },
   borrow: { eyebrow: "COLLATERALIZED LIQUIDITY", title: "Borrow", description: "Protocol-native credit with health factors, liquidation boundaries, and simulation before every signature." },
+  markets: { eyebrow: "TOKENIZED MARKETS", title: "Market access", description: "An eligibility-gated framework for tokenized instruments—not an assumption that every onchain token is freely tradeable." },
   card: { eyebrow: "GLOBAL SPEND", title: "Aurel Card", description: "A future card program designed around your liquid stablecoin reserve." },
   activity: { eyebrow: "AUDITABLE HISTORY", title: "Activity", description: "Every movement, authorization, fee, and status in one timeline." },
   benefits: { eyebrow: "RELATIONSHIP BENEFITS", title: "Black membership", description: "Practical benefits that become more valuable as your relationship deepens." },
@@ -52,5 +54,5 @@ function Settings() {
 }
 
 export function SectionPage({ section }: { section: Section }) {
-  return <div><Header section={section} />{section === "assets" && <Assets />}{section === "earn" && <Earn />}{section === "borrow" && <BorrowWorkspace />}{section === "card" && <Card />}{section === "activity" && <ActivityWorkspace />}{section === "benefits" && <Benefits />}{section === "concierge" && <ConciergeWorkspace />}{section === "security" && <Security />}{section === "settings" && <Settings />}</div>;
+  return <div><Header section={section} />{section === "assets" && <Assets />}{section === "earn" && <Earn />}{section === "borrow" && <BorrowWorkspace />}{section === "markets" && <MarketsWorkspace />}{section === "card" && <Card />}{section === "activity" && <ActivityWorkspace />}{section === "benefits" && <Benefits />}{section === "concierge" && <ConciergeWorkspace />}{section === "security" && <Security />}{section === "settings" && <Settings />}</div>;
 }
