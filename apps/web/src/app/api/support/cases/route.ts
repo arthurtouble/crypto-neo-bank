@@ -31,7 +31,7 @@ export async function POST(request: Request) {
     const subject = await requireVerifiedSubject(request);
     await enforceRateLimit(env.PROJECTION_DB, { namespace: "support", subject: subject.subjectReference, limit: 5, windowSeconds: 3600 });
     const input = caseSchema.parse(await request.json());
-    const turnstile = await verifyTurnstile({ token: input.turnstileToken, remoteIp: request.headers.get("CF-Connecting-IP") });
+    const turnstile = await verifyTurnstile({ token: input.turnstileToken, remoteIp: request.headers.get("CF-Connecting-IP"), expectedAction: "support_case" });
     if (!turnstile.valid) return Response.json({ error: "bot_verification_failed", message: "Please complete the verification and try again.", traceId }, { status: 403 });
     if (input.intentId) {
       const owned = await env.PROJECTION_DB.prepare("SELECT intent_id FROM transaction_intents WHERE intent_id = ? AND subject_reference = ?").bind(input.intentId, subject.subjectReference).first();

@@ -11,12 +11,13 @@
     "PRODUCT_ENVIRONMENT": "production",
     "PRODUCT_MODE": "mainnet-preview",
     "NEXT_PUBLIC_PRIVY_APP_ID": "cmub5evr4013l0cjs0w5dijlb",
-    "NEXT_PUBLIC_TURNSTILE_SITE_KEY": "",
+    "NEXT_PUBLIC_TURNSTILE_SITE_KEY": "0x4AAAAAAE_LD5ONaf0OITS8",
+    "TURNSTILE_HOSTNAMES": "aurel-financial-os.aurel-events.workers.dev",
     "ADMIN_PRIVY_SUBJECTS": "",
     "PROVIDER_WEBHOOK_TOLERANCE_SECONDS": "300"
   },
   "secrets": {
-    "required": ["PROVIDER_WEBHOOK_SECRET", "PRIVY_APP_SECRET"]
+    "required": ["PROVIDER_WEBHOOK_SECRET", "PRIVY_APP_SECRET", "TURNSTILE_SECRET"]
   },
   "d1_databases": [
     {
