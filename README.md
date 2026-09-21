@@ -25,7 +25,7 @@ pnpm install
 pnpm dev
 ```
 
-The app defaults to demonstration mode. Copy `apps/web/.env.example` to `apps/web/.env.local` and set `NEXT_PUBLIC_PRIVY_APP_ID` when a Privy sandbox application is ready.
+The app defaults to demonstration mode. Its production Privy app ID is a public build-time fallback; set `NEXT_PUBLIC_PRIVY_APP_ID` to override it for a separate local or preview Privy application.
 
 ## Quality checks
 
@@ -39,6 +39,15 @@ pnpm deploy:dry-run
 ```
 
 ## Cloudflare deployment
+
+The current demonstration environment is deployed to Cloudflare:
+
+- Web app: <https://aurel-financial-os.aurel-events.workers.dev>
+- Provider-event consumer: <https://aurel-provider-event-consumer.aurel-events.workers.dev>
+- Disposable projections: D1 database `aurel-projections` (EU jurisdiction)
+- Event transport: `aurel-provider-events` with `aurel-provider-events-dlq`
+
+Privy authentication is live in this environment. Portfolio funding, fiat transfers, cards, benefits, and Bridge/Rain operations remain explicit simulations until their respective partner programs and credentials are activated.
 
 Create the D1 database and queues, replace the placeholder D1 IDs in both Wrangler files, apply the migrations, and set the webhook secret before deployment. Exact commands are in `PARTNER_INTEGRATION.md`.
 

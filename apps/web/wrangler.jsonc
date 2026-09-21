@@ -13,7 +13,7 @@
     "PROVIDER_WEBHOOK_TOLERANCE_SECONDS": "300"
   },
   "secrets": {
-    "required": ["PROVIDER_WEBHOOK_SECRET"]
+    "required": ["PROVIDER_WEBHOOK_SECRET", "PRIVY_APP_SECRET"]
   },
   "d1_databases": [
     {

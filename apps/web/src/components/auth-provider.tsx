@@ -1,6 +1,7 @@
 "use client";
 
 import { lazy, Suspense } from "react";
+import { PRIVY_APP_ID } from "@/config/client";
 
 const PrivyRuntimeProvider = lazy(async () => {
   const { PrivyProvider } = await import("@privy-io/react-auth");
@@ -8,16 +9,10 @@ const PrivyRuntimeProvider = lazy(async () => {
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const appId = process.env.NEXT_PUBLIC_PRIVY_APP_ID;
-
-  if (!appId) {
-    return children;
-  }
-
   return (
     <Suspense fallback={children}>
       <PrivyRuntimeProvider
-        appId={appId}
+        appId={PRIVY_APP_ID}
         config={{
           loginMethods: ["email", "wallet"],
           appearance: {
