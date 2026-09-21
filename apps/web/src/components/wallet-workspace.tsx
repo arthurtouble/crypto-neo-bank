@@ -1,6 +1,6 @@
 "use client";
 
-import { useConnectWallet, useSendTransaction, useWallets } from "@privy-io/react-auth";
+import { useConnectWallet, usePrivy, useSendTransaction, useWallets } from "@privy-io/react-auth";
 import { Check, Copy, ExternalLink, LoaderCircle, Plus, QrCode, Send, WalletCards, X } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useMemo, useState } from "react";
@@ -22,6 +22,7 @@ function amountText(value: bigint | undefined, decimals: number) {
 }
 
 export function WalletWorkspace() {
+  const { getAccessToken } = usePrivy();
   const { wallets, ready } = useWallets();
   const { connectWallet } = useConnectWallet();
   const { sendTransaction } = useSendTransaction();
@@ -83,7 +84,30 @@ export function WalletWorkspace() {
         };
 
     setSending(true);
+    let reviewedIntentId: string | undefined;
+    let accessToken: string | null = null;
     try {
+      accessToken = await getAccessToken();
+      if (!accessToken) throw new Error("Your secure session expired. Sign in again before sending.");
+      const intentResponse = await fetch("/api/intents/evaluate", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "transfer",
+          walletAddress: address,
+          chainId: HOME_CHAIN.id,
+          asset,
+          amount,
+          destination: recipient,
+          estimatedUsd: asset === "USDC" ? Number(amount) : undefined
+        })
+      });
+      const intent = await intentResponse.json() as { intentId?: string; decision?: { findings: Array<{ level: string; message: string }> }; message?: string };
+      if (!intentResponse.ok || !intent.intentId) {
+        const blocked = intent.decision?.findings.find((finding) => finding.level === "block");
+        throw new Error(blocked?.message ?? intent.message ?? "Aurel’s transaction policy could not approve this action.");
+      }
+      reviewedIntentId = intent.intentId;
       const result = await sendTransaction(transaction, {
         address,
         uiOptions: {
@@ -94,8 +118,20 @@ export function WalletWorkspace() {
         }
       });
       setHash(result.hash);
+      await fetch("/api/intents/status", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ intentId: intent.intentId, status: "submitted", transactionHash: result.hash })
+      });
       await Promise.all([eth.refetch(), usdc.refetch(), weth.refetch()]);
     } catch (sendError) {
+      if (reviewedIntentId && accessToken) {
+        await fetch("/api/intents/status", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ intentId: reviewedIntentId, status: "cancelled" })
+        }).catch(() => undefined);
+      }
       setError(sendError instanceof Error ? sendError.message : "The transaction was not submitted.");
     } finally {
       setSending(false);
