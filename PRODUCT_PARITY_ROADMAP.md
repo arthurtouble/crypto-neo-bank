@@ -19,14 +19,14 @@ Networks are routing details. Aurel may reveal them when the customer must choos
 
 | Capability | Ether.fi Cash | Plasma One | KAST | Revolut pattern | Aurel status |
 | --- | --- | --- | --- | --- | --- |
-| One portfolio with value history | Portfolio and live borrow state | Stablecoin balance | Store/earn/move/spend account | Balance analytics and insights | **In progress:** live onchain balances and portfolio chart |
-| Add digital assets from multiple networks | Supported token deposits and multichain top-up | Stablecoin transfers | Crypto and stablecoin deposits | Crypto deposit where eligible | **Available for USDC:** automatic route discovery across supported networks; each route is user-approved |
-| Withdraw to another network/address | Token withdrawal with Safe approvals | Wallet withdrawal | Stablecoin withdrawal | Crypto withdrawal where eligible | **Available for USDC:** destination-aware LI.FI routes and direct sends, each explicitly approved |
-| Swap/trade | 100+ tokenized crypto, metals, and stock assets; quote comparison | Stablecoin-focused | Deposit/swap BTC, ETH, SOL to USDC | Crypto, equities, commodities, FX | **Partial:** supported Markets assets now open a preselected Swap flow; USDC cross-network routing and curated multi-route execution are live |
+| One portfolio with value history | Portfolio and live borrow state | Stablecoin balance | Store/earn/move/spend account | Balance analytics and insights | **In progress:** live balances and a coverage-gated history chart; only the latest seven completed UTC days can currently be priced and published |
+| Add digital assets from multiple networks | Supported token deposits and multichain top-up | Stablecoin transfers | Crypto and stablecoin deposits | Crypto deposit where eligible | **Partial:** wallet receive addresses and USDC route previews; no automatic cross-network deposit guarantee |
+| Withdraw to another network/address | Token withdrawal with Safe approvals | Wallet withdrawal | Stablecoin withdrawal | Crypto withdrawal where eligible | **Partial:** direct sends on supported Base assets and destination-aware route previews; cross-network submission is gated |
+| Swap/trade | 100+ tokenized crypto, metals, and stock assets; quote comparison | Stablecoin-focused | Deposit/swap BTC, ETH, SOL to USDC | Crypto, equities, commodities, FX | **Partial:** searchable screened LI.FI catalog and validated quote preview; signing stays disabled until an auditable execution plan and settlement verification are connected |
 | Bank account and transfers | Bank transfer rails | Bridge-powered global account | ACH and Fedwire account details | Local accounts, transfers, direct deposit | **Provider-ready preview:** Bridge adapter boundary and non-authoritative projections |
 | Card | Virtual/physical Visa; Direct Pay and Borrow modes | Virtual/physical card; tier rewards | Global card and auto-conversion | Virtual/disposable/physical cards and controls | **Provider-ready preview:** card surface and controls; issuance remains partner-gated |
-| Earn | Liquid vaults and staking | Opt-in DeFi yield | Risk-adjusted vaults | Savings by jurisdiction | **Live:** governed Aave supply flow with transaction-by-transaction simulation and direct wallet confirmation |
-| Borrow | Collateralized borrowing and card Borrow mode | — | — | Consumer credit by jurisdiction | **Live:** Aave position preview, health factor, transaction-by-transaction simulation, borrow, and repay |
+| Earn | Liquid vaults and staking | Opt-in DeFi yield | Risk-adjusted vaults | Savings by jurisdiction | **Read-only:** Aave position and market data; signing is paused until exact protocol-plan validation is complete |
+| Borrow | Collateralized borrowing and card Borrow mode | — | — | Consumer credit by jurisdiction | **Read-only:** Aave position and health-factor preview; new borrow and repay signing are paused |
 | Rewards and membership | Balance/activity membership tiers and cashback | Tiered cashback and benefits | Cashback and partner collaborations | Paid plans, RevPoints, partner benefits | **Preview:** balance/activity tier model, benefits, referrals, concierge |
 | Card controls | Limits, PIN, freeze, spend priority, disputes | Freeze and account lock | App card controls | Freeze, limits, merchant controls, disposable cards | **Provider-ready:** full control workspace and projection contract; all actions remain setup-gated until issuer connection |
 | Security | Passkeys/Safe owners and explicit signatures | Biometrics and hardware-backed keys | Identity, device security, monitoring | biometrics, limits, scam intervention | **Strong baseline:** Privy authentication, passkeys, policy evaluation, allowlists, recovery, audit trail |
@@ -55,11 +55,11 @@ Use these labels consistently in navigation, quick actions, dialogs, receipts, s
 
 - [x] Secure wallet connection and embedded account.
 - [x] Receive and direct send modals.
-- [x] Explicitly approved USDC routing from supported networks.
+- [ ] Explicitly approved USDC routing from supported networks. Route discovery and quote preview exist; execution remains gated by the transaction-evidence boundary.
 - [x] Unified **Add Money**, **Send**, **Swap**, and **Withdraw** entry points.
-- [x] Destination-aware USDC withdrawals to supported networks.
+- [ ] Destination-aware USDC withdrawals to supported networks. Destination-aware previews exist; cross-network execution remains gated.
 - [x] Portfolio value, period selector, line chart, allocation, and authority state.
-- [x] Live searchable markets list with watchlist, truthful view-only states, and direct Swap entry for exact curated assets.
+- [x] Live searchable markets list with watchlist, truthful view-only states, and direct Swap entry for exact reviewed mappings. A public issuer catalog is separate from regulated eligibility and orders.
 - [x] Consistent Review, Confirm, Submitted, Complete, failure, and receipt states across direct sends, routed Add Money/Withdraw, Earn, Borrow, and Repay, with authenticated source-receipt reconciliation.
 
 ### P1 — daily financial account
@@ -75,9 +75,9 @@ Use these labels consistently in navigation, quick actions, dialogs, receipts, s
 
 ### P2 — wealth and membership
 
-- [ ] Broader swap universe with multi-provider quote comparison. Twelve curated assets, live wallet balance and Max, customer-selected slippage, pre-signature simulation, and LI.FI-routed comparison across available 1inch, KyberSwap, SushiSwap, and Nordstern routes are live; more assets and independent direct-provider fallbacks remain.
+- [ ] Broader swap universe with multi-provider quote comparison. The supported-chain LI.FI catalog is searchable by name, symbol, and contract. Quotes are screened and reviewed, but execution is disabled; independent direct-provider fallbacks and audited route submission remain.
 - [ ] Jurisdiction- and eligibility-aware tokenized market execution.
-- [ ] Consolidated DeFi positions, claimable rewards, cost basis, realized/unrealized return, and tax export. Live Aave positions, source-reported Base rewards, deduplicated protocol activity, and evidence-aware activity/tax-support CSVs are live; reward claims require policy review, simulation, and wallet confirmation. Broader protocols and complete cost-basis/performance accounting remain.
+- [ ] Consolidated DeFi positions, claimable rewards, cost basis, realized/unrealized return, and tax export. Aave reads, source-reported Base rewards, bounded history ingestion, seven-day coverage-gated value publication, and evidence-aware tax-support exports are implemented. Reward claims and other protocol signing remain paused; broader protocols and complete cost-basis/performance accounting remain.
 - [ ] Spend-from-yield and collateral-backed card modes only after provider and legal approval.
 - [ ] Membership rewards ledger backed by the rewards provider, with transparent caps and qualification history.
 - [ ] Joint, family, and business accounts only when ownership and authority are provider-enforced.

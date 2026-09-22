@@ -35,6 +35,8 @@ Portfolio values combine token quantities with price data. A displayed total is 
 
 Unknown or unsupported assets are excluded rather than assigned a guess. A missing price should not be treated as zero value or proof that the token is worthless.
 
+Historical value is shown only for days with complete wallet activity, protocol coverage, and independent price evidence. The current publisher prices at most the latest seven completed UTC days. Longer chart ranges may contain gaps, and Aurel does not calculate an inception return from them. Current balances are not substituted for missing historical days.
+
 ## DeFi positions
 
 Portfolio reads the active wallet's Aave V3 position directly from Aave and Base. It shows the source-reported active-market count, health factor, and net position when those fields are available.
