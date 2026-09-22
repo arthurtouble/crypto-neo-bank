@@ -17,7 +17,7 @@ vi.mock("@tanstack/react-query", () => ({ useQuery: (options: { queryKey: unknow
   return fixture.query;
 } }));
 
-import { PortfolioPerformance, buildPortfolioChartModel, nextPortfolioRange } from "@/components/portfolio-performance";
+import { PortfolioPerformance, buildPortfolioChartModel } from "@/components/portfolio-performance";
 
 const complete = (day: string, netValueUsd: string, twrIndex = "1") => ({ day, netValueUsd, twrIndex, status: "complete" as const, reasons: [] });
 const partial = (day: string, reason: string) => ({ day, netValueUsd: null, twrIndex: null, status: "partial" as const, reasons: [reason] });
@@ -91,11 +91,6 @@ describe("authoritative portfolio chart", () => {
     expect(model.returnPercent).toBeCloseTo(1);
   });
 
-  it("moves keyboard range selection in both directions with wraparound", () => {
-    expect(nextPortfolioRange("1M", "ArrowRight")).toBe("3M");
-    expect(nextPortfolioRange("7D", "ArrowLeft")).toBe("1Y");
-  });
-
   it("renders source loading, coverage reasons, separate Aave legs and external scope", () => {
     fixture.query = { data: undefined, isPending: true, error: null };
     expect(renderToStaticMarkup(React.createElement(PortfolioPerformance))).toContain("Loading verified history");
@@ -106,7 +101,7 @@ describe("authoritative portfolio chart", () => {
     expect(markup).toMatch(/Aave debt <strong class="sensitiveAmount">unavailable/);
     expect(markup).toContain("1 linked external wallet");
     expect(markup).toContain("Return unavailable");
-    expect(markup).toContain("aria-pressed=\"true\"");
+    expect(markup).toContain("Past 7 days");
     expect(fixture.queryKey).toContain("subject-a");
   });
 });

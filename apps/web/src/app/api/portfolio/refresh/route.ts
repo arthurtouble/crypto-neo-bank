@@ -1,6 +1,7 @@
 import { env } from "cloudflare:workers";
 import { z } from "zod";
 import { AuthenticationError, requireVerifiedSubject } from "@/lib/auth/server";
+import { BetaAccessError, requireBetaAccess } from "@/lib/beta/access";
 import { RateLimitError, enforceRateLimit } from "@/lib/security/rate-limit";
 import { resolvePortfolioAccounts } from "@/lib/portfolio/accounts";
 import { BaseChainSource } from "@/lib/portfolio/chain-source";
@@ -22,6 +23,7 @@ export async function POST(request: Request) {
   const traceId = crypto.randomUUID();
   try {
     const subject = await requireVerifiedSubject(request);
+    await requireBetaAccess(env.PROJECTION_DB, subject.subjectReference);
     await enforceRateLimit(env.PROJECTION_DB, { namespace: "portfolio-refresh", subject: subject.subjectReference, limit: 20, windowSeconds: 60 });
     const input = bodySchema.parse(await request.json());
     // This is deliberately fresh; a browser address or old wallet_reference
@@ -35,6 +37,7 @@ export async function POST(request: Request) {
     return reply({ accountId: input.accountId, sourceId: input.sourceId, ...result, traceId }, 200);
   } catch (error) {
     if (error instanceof AuthenticationError) return reply({ error: "unauthorized", traceId }, 401);
+    if (error instanceof BetaAccessError) return reply({ error: error.code, traceId }, 403);
     if (error instanceof RateLimitError) return Response.json({ error: "rate_limited", traceId }, { status: 429, headers: { "Cache-Control": "no-store", "Retry-After": String(error.retryAfterSeconds) } });
     if (error instanceof z.ZodError) return reply({ error: "invalid_refresh", issues: error.issues, traceId }, 400);
     if (error instanceof PortfolioIngestError) return reply({ error: error.code, message: error.message, traceId }, error.code === "invalid_cursor" || error.code === "conflict" || error.code === "reorg" ? 409 : 503);

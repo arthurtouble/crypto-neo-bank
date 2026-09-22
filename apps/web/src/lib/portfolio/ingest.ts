@@ -90,6 +90,9 @@ export async function ingestOnePage(
       cursor = excluded.cursor, covered_from = excluded.covered_from, covered_through = excluded.covered_through,
       last_finalized_block = COALESCE(excluded.last_finalized_block, portfolio_source_checkpoints.last_finalized_block),
       last_finalized_hash = COALESCE(excluded.last_finalized_hash, portfolio_source_checkpoints.last_finalized_hash),
+      -- Checkpoint version is a page revision for publication freshness;
+      -- event ingestion_version is the provider's own evidence version.
+      ingestion_version = portfolio_source_checkpoints.ingestion_version + 1,
       status = CASE WHEN portfolio_source_checkpoints.cursor IS ? AND portfolio_source_checkpoints.covered_through IS ?
         THEN excluded.status ELSE 'conflict' END, reason = NULL, updated_at = excluded.updated_at`)
     .bind(subjectReference, accountId, source.sourceId, nextCursor, from, coveredThrough, finalized?.blockNumber ?? null, finalized?.blockHash ?? null, page.complete ? "complete" : "partial", now.toISOString(), checkpoint?.cursor ?? null, checkpoint?.covered_through ?? null));

@@ -12,8 +12,8 @@ import { materializePortfolioDaily } from "@/lib/portfolio/materialize";
 const raw: HistoricalEvent = { sourceId: "blockscout:8453", sourceName: "Blockscout Pro Base", sourceEventId: "first", ingestionVersion: 1, accountId, assetId: "8453:native", rawDelta: "1000000000000000000", decimals: 18, kind: "contribution", occurredAt: "2026-09-15T12:00:00Z", chainId: 8453, blockNumber: "100", blockHash: `0x${"a".repeat(64)}`, txHash: `0x${"b".repeat(64)}`, logIndex: null, finality: "finalized", completeness: "complete", groupId: null, counterpartyAccountId: null, evidenceJson: "{}" };
 const checkpoints = ["blockscout:8453", "aave:v3:8453"].map((source_id) => ({ account_id: accountId, source_id, cursor: null, covered_from: "2023-01-01T00:00:00.000Z", covered_through: "2026-09-22T00:00:00.000Z", status: "complete", ingestion_version: 1, last_finalized_block: "100", last_finalized_hash: `0x${"a".repeat(64)}` }));
 function database() {
-  const store = { checkpointRows: [...checkpoints] as Record<string, unknown>[], eventRows: [] as Record<string, unknown>[], marker: null as Record<string, unknown> | null, priorPrice: null as Record<string, unknown> | null, batches: [] as Array<Array<{ sql: string; values: unknown[] }>>, calls: [] as Array<{ sql: string; values: unknown[] }> };
-  const db = { prepare(sql: string) { return { sql, values: [] as unknown[], bind(...values: unknown[]) { this.values = values; store.calls.push({ sql, values }); return this; }, async first() { if (sql.includes("portfolio_publications")) return store.marker; if (sql.includes("portfolio_price_observations")) return store.priorPrice; return null; }, async all() { if (sql.includes("portfolio_source_checkpoints")) return { results: store.checkpointRows }; if (sql.includes("portfolio_events")) return { results: store.eventRows }; return { results: [] }; } }; }, async batch(statements: Array<{ sql: string; values: unknown[] }>) { store.batches.push(statements.map((item) => ({ sql: item.sql, values: item.values }))); return statements.map(() => ({ success: true, meta: { changes: 1 }, results: [] })); } };
+  const store = { checkpointRows: [...checkpoints] as Record<string, unknown>[], eventRows: [] as Record<string, unknown>[], marker: null as Record<string, unknown> | null, rebuildHold: null as null | { rebuild_id: string }, dailyCount: 7, priorPrice: null as Record<string, unknown> | null, batches: [] as Array<Array<{ sql: string; values: unknown[] }>>, calls: [] as Array<{ sql: string; values: unknown[] }> };
+  const db = { prepare(sql: string) { return { sql, values: [] as unknown[], bind(...values: unknown[]) { this.values = values; store.calls.push({ sql, values }); return this; }, async first() { if (sql.includes("portfolio_publications")) return store.marker; if (sql.includes("portfolio_rebuild_holds")) return store.rebuildHold; if (sql.includes("COUNT(*)") && sql.includes("portfolio_daily_results")) return { count: store.dailyCount }; if (sql.includes("portfolio_price_observations")) return store.priorPrice; return null; }, async all() { if (sql.includes("portfolio_source_checkpoints")) return { results: store.checkpointRows }; if (sql.includes("portfolio_events")) return { results: store.eventRows }; return { results: [] }; } }; }, async batch(statements: Array<{ sql: string; values: unknown[] }>) { store.batches.push(statements.map((item) => ({ sql: item.sql, values: item.values }))); return statements.map(() => ({ success: true, meta: { changes: 1 }, results: [] })); } };
   return { db: db as unknown as D1Database, store };
 }
 function eventRow(event: HistoricalEvent) { return { source_id: event.sourceId, source_event_id: event.sourceEventId, ingestion_version: event.ingestionVersion, account_id: event.accountId, asset_id: event.assetId, raw_delta: event.rawDelta, decimals: event.decimals, event_kind: event.kind, occurred_at: event.occurredAt, chain_id: event.chainId, block_number: event.blockNumber, block_hash: event.blockHash, tx_hash: event.txHash, log_index: event.logIndex, finality: event.finality, completeness: event.completeness, group_id: event.groupId, counterparty_account_id: event.counterpartyAccountId, evidence_json: event.evidenceJson }; }
@@ -94,6 +94,30 @@ describe("bounded portfolio daily publication", () => {
     expect(changed.calculationVersion).toBe(2);
     expect(store.batches).toHaveLength(2);
     expect(store.batches[1].every((item) => !item.sql.includes("REPLACE INTO") && !item.sql.includes("DELETE FROM portfolio_daily_results"))).toBe(true);
+  });
+
+  it("republishes when a legacy rebuild left the marker but erased its daily rows", async () => {
+    const { db, store } = database();
+    store.eventRows = [eventRow(raw)];
+    const first = await materializePortfolioDaily(db, "subject-a", [accountId], { now });
+    store.marker = { input_digest: first.inputDigest, calculation_version: 1 };
+    store.dailyCount = 0;
+    const second = await materializePortfolioDaily(db, "subject-a", [accountId], { now });
+    expect(second.status).toBe("published");
+    expect(second.calculationVersion).toBe(2);
+    expect(store.batches).toHaveLength(2);
+  });
+
+  it("republishes the same digest under a rebuild hold and releases it in the publication batch", async () => {
+    const { db, store } = database();
+    store.eventRows = [eventRow(raw)];
+    const first = await materializePortfolioDaily(db, "subject-a", [accountId], { now });
+    store.marker = { input_digest: first.inputDigest, calculation_version: 1 };
+    store.rebuildHold = { rebuild_id: "replay-1" };
+    const second = await materializePortfolioDaily(db, "subject-a", [accountId], { now });
+    expect(second.status).toBe("published");
+    expect(second.calculationVersion).toBe(2);
+    expect(store.batches.at(-1)?.some((item) => item.sql.includes("DELETE FROM portfolio_rebuild_holds") && item.values.includes("replay-1"))).toBe(true);
   });
 
   it("rolls back every derived insert when publication CAS loses a concurrent race", async () => {

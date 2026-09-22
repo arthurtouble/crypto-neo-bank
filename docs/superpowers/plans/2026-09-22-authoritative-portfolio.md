@@ -143,6 +143,8 @@ Use decimal strings and `bigint` arithmetic for raw units and explicit decimal s
 
 **Interfaces:** `GET /api/portfolio/history?range=7D|1M|3M|1Y` returns `PortfolioHistory`; `GET /api/portfolio/tax-support?year=YYYY&cursor=...` returns paginated lots/disposals, `nextCursor`, calculation version, source coverage and `reviewRequiredCount`. Subject comes only from bearer token.
 
+**Implementation scope as of 2026-09-22:** The safe initial publisher prices seven completed UTC days. The API and chart expose only `7D`; `1M`, `3M`, and `1Y` remain planned, not available. Extend pricing, bounded replay, and publication together before restoring those choices. Current source checkpoint status and ingestion version must match each published day before a value is shown.
+
 - [ ] **Step 1: Write failing route tests** for unauthorized/foreign subject, invalid range/year/cursor, empty history, complete days, missing-price day, incomplete Aave source, linked external wallet segregation, and non-finalized current events. Assert 200 responses include `Cache-Control: no-store`, per-day reasons, source and calculation versions; empty or incomplete history returns null value/return, never today's balance.
 - [ ] **Step 2: Write failing tax tests** for paginated export with stable cursor, review-required unknown event, a supported FIFO disposal, and a year with incomplete source coverage. Assert CSV formula injection protection remains effective and activity's existing first-50-intents export no longer implies full historical or tax coverage.
 - [ ] **Step 3: Run** `pnpm --filter @aurel/web test:unit -- portfolio-history-route portfolio-tax-route activity-presentation`; expect failures.

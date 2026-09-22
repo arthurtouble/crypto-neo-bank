@@ -97,11 +97,13 @@ export async function POST(request: Request) {
           SUM(CASE WHEN v.valuation_id IS NULL THEN 1 ELSE 0 END) AS missing
         FROM transaction_intents i LEFT JOIN intent_valuations v ON v.rowid =
           (SELECT MAX(v2.rowid) FROM intent_valuations v2 WHERE v2.intent_id = i.intent_id)
-        WHERE i.subject_reference = ? AND i.intent_id != ? AND i.created_at >= ?
+        WHERE i.subject_reference = ? AND i.intent_id != ?
+          AND (i.created_at >= ? OR EXISTS (SELECT 1 FROM intent_prepared_calls recent
+            WHERE recent.intent_id = i.intent_id AND recent.created_at >= ?))
           AND (i.status IN ('submitted', 'confirmed') OR EXISTS (
             SELECT 1 FROM intent_prepared_calls p WHERE p.intent_id = i.intent_id
               AND p.expires_at > ? AND p.verification_state != 'failed'))`)
-        .bind(subject.subjectReference, input.intentId, rollingStart, now)
+        .bind(subject.subjectReference, input.intentId, rollingStart, rollingStart, now)
     ]);
     const profile = securityRows.results[0] as unknown as { account_locked: number; enforce_address_book: number; daily_limit_usd: number; new_address_threshold_usd: number; step_up_threshold_usd: number; new_address_delay_seconds: number } | undefined;
     if (!profile || profile.account_locked) return reply({ error: "account_locked", traceId }, 403);
@@ -155,13 +157,15 @@ export async function POST(request: Request) {
             COALESCE(SUM(CASE WHEN v.valuation_id IS NULL THEN 1 ELSE 0 END), 0) AS missing
           FROM transaction_intents spending LEFT JOIN intent_valuations v ON v.rowid =
             (SELECT MAX(v2.rowid) FROM intent_valuations v2 WHERE v2.intent_id = spending.intent_id)
-          WHERE spending.subject_reference = ? AND spending.intent_id != ? AND spending.created_at >= ?
+          WHERE spending.subject_reference = ? AND spending.intent_id != ?
+            AND (spending.created_at >= ? OR EXISTS (SELECT 1 FROM intent_prepared_calls recent
+              WHERE recent.intent_id = spending.intent_id AND recent.created_at >= ?))
             AND (spending.status IN ('submitted', 'confirmed') OR EXISTS (
               SELECT 1 FROM intent_prepared_calls reserved_call WHERE reserved_call.intent_id = spending.intent_id
                 AND reserved_call.expires_at > ? AND reserved_call.verification_state != 'failed'))
         ) reserved_spend WHERE reserved_spend.missing = 0 AND reserved_spend.cents + ? <= ?)`)
       .bind(input.stepIndex, ownedAddress, call.chainId, call.to.toLowerCase(), call.value, call.dataHash, call.fingerprint, input.semanticAction, input.sourceReference, JSON.stringify(effect), now, input.intentId, subject.subjectReference, now, input.stepIndex, input.stepIndex, input.stepIndex - 1,
-        subject.subjectReference, input.intentId, rollingStart, now, valuedCents, dailyLimitCents).run();
+        subject.subjectReference, input.intentId, rollingStart, rollingStart, now, valuedCents, dailyLimitCents).run();
     if (result.meta.changes !== 1) return reply({ error: "prepare_conflict", traceId }, 409);
     await env.PROJECTION_DB.prepare(`INSERT INTO intent_events (event_id, intent_id, subject_reference, event_type, evidence_json, occurred_at)
       VALUES (?, ?, ?, 'call_prepared', ?, ?)`).bind(crypto.randomUUID(), input.intentId, subject.subjectReference, JSON.stringify({ stepIndex: input.stepIndex, fingerprint: call.fingerprint, semanticAction: input.semanticAction }), now).run();

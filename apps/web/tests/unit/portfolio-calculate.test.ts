@@ -84,6 +84,18 @@ describe("covered historical portfolio values", () => {
     expect(result.disposals[0]).toMatchObject({ rawUnits: "150000000", proceedsUsd: "180", basisUsd: "145", gainUsd: "35", classification: "supported" });
   });
 
+  it("does not let an unrelated missing daily close erase documented tax basis", () => {
+    const acquisition = event(days[0], "acquisition", "100000000", "contribution");
+    acquisition.evidenceJson = '{"taxSupport":{"acquisitionCostUsd":"100","evidenceReference":"provider:acquisition"}}';
+    const sale = event(days[2], "sale", "-50000000", "swap");
+    sale.evidenceJson = '{"taxSupport":{"disposalProceedsUsd":"80","evidenceReference":"provider:sale"}}';
+    const coverage = days.map((day) => day === days[1] ? { ...cover(day), priceStatus: "partial" as const, reason: "missing_price" } : cover(day));
+    const result = calculatePortfolioDays({ events: [acquisition, sale], prices: [price(days[0], "1"), price(days[2], "1")], coverage, calculationVersion: 2 });
+    expect(result.points[1].status).toBe("partial");
+    expect(result.lots[0]).toMatchObject({ classification: "supported", basisUsd: "50" });
+    expect(result.disposals[0]).toMatchObject({ classification: "supported", basisUsd: "50", proceedsUsd: "80", gainUsd: "30" });
+  });
+
   it("moves basis between owned accounts without reporting a disposal", () => {
     const B = "8453:0x00000000000000000000000000000000000000b2" as AccountId;
     const initial = event(days[0], "initial", "100000000", "contribution");

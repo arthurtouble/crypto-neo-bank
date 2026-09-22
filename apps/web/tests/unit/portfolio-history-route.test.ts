@@ -2,9 +2,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const wallet = "8453:0x1111111111111111111111111111111111111111";
 const external = "8453:0x2222222222222222222222222222222222222222";
-const state = vi.hoisted(() => ({ authorized: true, accounts: [] as Array<{ accountId: string; origin: string }>, rows: [] as Record<string, unknown>[], checkpoints: [] as Record<string, unknown>[], nonfinal: [] as Record<string, unknown>[], calls: [] as Array<{ sql: string; values: unknown[] }>, aaveUnavailable: false, markerVersion: 1 as number | null }));
-vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: { prepare(sql: string) { const query = { values: [] as unknown[], bind(...values: unknown[]) { this.values = values; state.calls.push({ sql, values }); return this; }, async first() { if (sql.includes("portfolio_publications")) return { calculation_version: state.markerVersion }; return { version: state.rows.length ? Math.max(...state.rows.map((row) => Number(row.calculation_version))) : null }; }, async all() { if (sql.includes("portfolio_daily_results")) return { results: state.rows.filter((row) => row.calculation_version === this.values[1]) }; if (sql.includes("portfolio_source_checkpoints")) return { results: state.checkpoints }; if (sql.includes("portfolio_events")) return { results: state.nonfinal }; return { results: [] }; } }; return query; } } } }));
+const state = vi.hoisted(() => ({ authorized: true, betaAllowed: true, rebuildHeld: false, accounts: [] as Array<{ accountId: string; origin: string }>, rows: [] as Record<string, unknown>[], checkpoints: [] as Record<string, unknown>[], nonfinal: [] as Record<string, unknown>[], calls: [] as Array<{ sql: string; values: unknown[] }>, aaveUnavailable: false, markerVersion: 1 as number | null }));
+vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: { prepare(sql: string) { const query = { values: [] as unknown[], bind(...values: unknown[]) { this.values = values; state.calls.push({ sql, values }); return this; }, async first() { if (sql.includes("portfolio_publications")) return state.rebuildHeld ? null : { calculation_version: state.markerVersion }; return { version: state.rows.length ? Math.max(...state.rows.map((row) => Number(row.calculation_version))) : null }; }, async all() { if (sql.includes("portfolio_daily_results")) return { results: state.rows.filter((row) => row.calculation_version === this.values[1]) }; if (sql.includes("portfolio_source_checkpoints")) return { results: state.checkpoints }; if (sql.includes("portfolio_events")) return { results: state.nonfinal }; return { results: [] }; } }; return query; } } } }));
 vi.mock("@/lib/auth/server", () => { class AuthenticationError extends Error {} return { AuthenticationError, requireVerifiedSubject: async () => { if (!state.authorized) throw new AuthenticationError(); return { subjectReference: "subject-a" }; } }; });
+vi.mock("@/lib/beta/access", () => { class BetaAccessError extends Error { code = "beta_access_required"; } return { BetaAccessError, requireBetaAccess: async () => { if (!state.betaAllowed) throw new BetaAccessError(); } }; });
 vi.mock("@/lib/security/rate-limit", () => ({ RateLimitError: class extends Error {}, enforceRateLimit: async () => undefined }));
 vi.mock("@/lib/portfolio/accounts", () => ({ resolvePortfolioAccounts: async () => state.accounts }));
 vi.mock("@/lib/portfolio/aave-source", () => ({ readCurrentAaveLegs: async () => state.aaveUnavailable ? { legs: [], status: "unavailable", reason: "offline" } : { legs: [], status: "complete", reason: null } }));
@@ -15,7 +16,7 @@ type HistoryBody = { points: Array<{ day: string; netValueUsd: string | null; tw
 async function readBody(response: Response): Promise<HistoryBody> { return response.json() as Promise<HistoryBody>; }
 function request(range = "7D") { return new Request(`https://aurel.test/api/portfolio/history?range=${range}`); }
 function lastCompletedDay() { const now = new Date(); return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) - 86_400_000).toISOString().slice(0, 10); }
-beforeEach(() => { state.authorized = true; state.accounts = [{ accountId: wallet, origin: "embedded" }]; state.rows = []; state.checkpoints = []; state.nonfinal = []; state.calls = []; state.aaveUnavailable = false; state.markerVersion = 1; });
+beforeEach(() => { state.authorized = true; state.betaAllowed = true; state.rebuildHeld = false; state.accounts = [{ accountId: wallet, origin: "embedded" }]; state.rows = []; state.checkpoints = []; state.nonfinal = []; state.calls = []; state.aaveUnavailable = false; state.markerVersion = 1; });
 
 describe("portfolio history read boundary", () => {
   it("ends seven-day history on the last completed UTC day", async () => {
@@ -29,6 +30,13 @@ describe("portfolio history read boundary", () => {
     expect((await GET(request())).status).toBe(401);
     state.authorized = true;
     expect((await GET(request("ALL"))).status).toBe(400);
+    expect((await GET(request("1M"))).status).toBe(400);
+  });
+
+  it("enforces beta access before reading portfolio accounts", async () => {
+    state.betaAllowed = false;
+    expect((await GET(request())).status).toBe(403);
+    expect(state.calls).toEqual([]);
   });
 
   it("returns null-valued gap days and fresh Aave unavailability, never today's modeled balance", async () => {
@@ -52,7 +60,7 @@ describe("portfolio history read boundary", () => {
   it("serves complete days but nulls a missing-price day and segregates linked external wallets", async () => {
     const today = lastCompletedDay();
     state.accounts.push({ accountId: external, origin: "linked_external" });
-    state.rows = [{ day: today, calculation_version: 1, net_value_usd: "100", twr_index: "1", coverage_status: "complete", coverage_json: JSON.stringify([wallet, external].flatMap((accountId) => ["blockscout:8453", "aave:v3:8453"].map((sourceId) => ({ day: today, accountId, sourceId, eventStatus: "complete", priceStatus: "complete", reason: null })))) }];
+    state.rows = [{ day: today, calculation_version: 1, net_value_usd: "100", twr_index: "1", coverage_status: "complete", coverage_json: JSON.stringify([wallet, external].flatMap((accountId) => ["blockscout:8453", "aave:v3:8453"].map((sourceId) => ({ day: today, accountId, sourceId, ingestionVersion: 1, eventStatus: "complete", priceStatus: "complete", reason: null })))) }];
     state.checkpoints = [wallet, external].flatMap((account_id) => ["blockscout:8453", "aave:v3:8453"].map((source_id) => ({ account_id, source_id, covered_from: "2023-01-01T00:00:00Z", covered_through: "2099-01-01T00:00:00Z", status: "complete", ingestion_version: 1 })));
     const response = await GET(request());
     const body = await readBody(response);
@@ -71,7 +79,7 @@ describe("portfolio history read boundary", () => {
 
   it("does not expose a complete value if Aave coverage or finality is unresolved", async () => {
     const today = lastCompletedDay();
-    state.rows = [{ day: today, calculation_version: 1, net_value_usd: "100", twr_index: "1", coverage_status: "complete", coverage_json: JSON.stringify([{ day: today, accountId: wallet, sourceId: "blockscout:8453", eventStatus: "complete", priceStatus: "complete", reason: null }]) }];
+    state.rows = [{ day: today, calculation_version: 1, net_value_usd: "100", twr_index: "1", coverage_status: "complete", coverage_json: JSON.stringify([{ day: today, accountId: wallet, sourceId: "blockscout:8453", ingestionVersion: 1, eventStatus: "complete", priceStatus: "complete", reason: null }]) }];
     state.checkpoints = [{ account_id: wallet, source_id: "blockscout:8453", covered_from: "2023-01-01T00:00:00Z", covered_through: "2099-01-01T00:00:00Z", status: "complete", ingestion_version: 1 }];
     const missingAave = await readBody(await GET(request()));
     expect(missingAave.points.at(-1)?.reasons).toContain("missing_source_coverage");
@@ -82,9 +90,22 @@ describe("portfolio history read boundary", () => {
     expect(pending.points.at(-1)?.netValueUsd).toBeNull();
   });
 
+  it("hides a published value when a source checkpoint becomes partial", async () => {
+    const day = lastCompletedDay();
+    state.rows = [{ day, calculation_version: 1, net_value_usd: "100", twr_index: "1", coverage_status: "complete", coverage_json: JSON.stringify(["blockscout:8453", "aave:v3:8453"].map((sourceId) => ({ day, accountId: wallet, sourceId, ingestionVersion: 1, eventStatus: "complete", priceStatus: "complete", reason: null }))) }];
+    state.checkpoints = ["blockscout:8453", "aave:v3:8453"].map((source_id) => ({ account_id: wallet, source_id, covered_from: "2023-01-01T00:00:00.000Z", covered_through: "2099-01-01T00:00:00.000Z", status: source_id === "blockscout:8453" ? "partial" : "complete", ingestion_version: 2 }));
+    const body = await readBody(await GET(request()));
+    expect(body.points.at(-1)).toMatchObject({ netValueUsd: null, status: "partial" });
+    expect(body.points.at(-1)?.reasons).toContain("missing_source_coverage");
+    state.checkpoints[0].status = "complete";
+    const advanced = await readBody(await GET(request()));
+    expect(advanced.points.at(-1)?.netValueUsd).toBeNull();
+    expect(advanced.points.at(-1)?.reasons).toContain("missing_source_coverage");
+  });
+
   it("hides an aggregate value computed with a wallet that is no longer linked", async () => {
     const today = lastCompletedDay();
-    state.rows = [{ day: today, calculation_version: 1, net_value_usd: "999", twr_index: "1", coverage_status: "complete", coverage_json: JSON.stringify([wallet, external].flatMap((accountId) => ["blockscout:8453", "aave:v3:8453"].map((sourceId) => ({ day: today, accountId, sourceId, eventStatus: "complete", priceStatus: "complete", reason: null })))) }];
+    state.rows = [{ day: today, calculation_version: 1, net_value_usd: "999", twr_index: "1", coverage_status: "complete", coverage_json: JSON.stringify([wallet, external].flatMap((accountId) => ["blockscout:8453", "aave:v3:8453"].map((sourceId) => ({ day: today, accountId, sourceId, ingestionVersion: 1, eventStatus: "complete", priceStatus: "complete", reason: null })))) }];
     state.checkpoints = ["blockscout:8453", "aave:v3:8453"].map((source_id) => ({ account_id: wallet, source_id, covered_from: "2023-01-01T00:00:00Z", covered_through: "2099-01-01T00:00:00Z", status: "complete", ingestion_version: 1 }));
     const body = await readBody(await GET(request()));
     expect(body.points.at(-1)?.reasons).toContain("account_scope_changed");
@@ -93,7 +114,7 @@ describe("portfolio history read boundary", () => {
 
   it("rejects duplicated or malformed source coverage instead of selecting a favorable row", async () => {
     const today = lastCompletedDay();
-    const complete = ["blockscout:8453", "aave:v3:8453"].map((sourceId) => ({ day: today, accountId: wallet, sourceId, eventStatus: "complete", priceStatus: "complete", reason: null }));
+    const complete = ["blockscout:8453", "aave:v3:8453"].map((sourceId) => ({ day: today, accountId: wallet, sourceId, ingestionVersion: 1, eventStatus: "complete", priceStatus: "complete", reason: null }));
     state.rows = [{ day: today, calculation_version: 1, net_value_usd: "100", twr_index: "1", coverage_status: "complete", coverage_json: JSON.stringify([...complete, { ...complete[0], eventStatus: "partial", reason: "late_page" }]) }];
     state.checkpoints = ["blockscout:8453", "aave:v3:8453"].map((source_id) => ({ account_id: wallet, source_id, covered_from: "2023-01-01T00:00:00Z", covered_through: "2099-01-01T00:00:00Z", status: "complete", ingestion_version: 1 }));
     const body = await readBody(await GET(request()));
@@ -103,7 +124,7 @@ describe("portfolio history read boundary", () => {
 
   it("fails closed if finality evidence exceeds the bounded scan", async () => {
     const today = lastCompletedDay();
-    state.rows = [{ day: today, calculation_version: 1, net_value_usd: "100", twr_index: "1", coverage_status: "complete", coverage_json: JSON.stringify(["blockscout:8453", "aave:v3:8453"].map((sourceId) => ({ day: today, accountId: wallet, sourceId, eventStatus: "complete", priceStatus: "complete", reason: null }))) }];
+    state.rows = [{ day: today, calculation_version: 1, net_value_usd: "100", twr_index: "1", coverage_status: "complete", coverage_json: JSON.stringify(["blockscout:8453", "aave:v3:8453"].map((sourceId) => ({ day: today, accountId: wallet, sourceId, ingestionVersion: 1, eventStatus: "complete", priceStatus: "complete", reason: null }))) }];
     state.checkpoints = ["blockscout:8453", "aave:v3:8453"].map((source_id) => ({ account_id: wallet, source_id, covered_from: "2023-01-01T00:00:00Z", covered_through: "2099-01-01T00:00:00Z", status: "complete", ingestion_version: 1 }));
     state.nonfinal = Array.from({ length: 1001 }, (_, index) => ({ account_id: wallet, source_id: `unknown-${index}`, day: today }));
     const body = await readBody(await GET(request()));
@@ -113,7 +134,7 @@ describe("portfolio history read boundary", () => {
 
   it("holds a day incomplete for any non-finalized event on a linked account", async () => {
     const today = lastCompletedDay();
-    state.rows = [{ day: today, calculation_version: 1, net_value_usd: "100", twr_index: "1", coverage_status: "complete", coverage_json: JSON.stringify(["blockscout:8453", "aave:v3:8453"].map((sourceId) => ({ day: today, accountId: wallet, sourceId, eventStatus: "complete", priceStatus: "complete", reason: null }))) }];
+    state.rows = [{ day: today, calculation_version: 1, net_value_usd: "100", twr_index: "1", coverage_status: "complete", coverage_json: JSON.stringify(["blockscout:8453", "aave:v3:8453"].map((sourceId) => ({ day: today, accountId: wallet, sourceId, ingestionVersion: 1, eventStatus: "complete", priceStatus: "complete", reason: null }))) }];
     state.checkpoints = ["blockscout:8453", "aave:v3:8453"].map((source_id) => ({ account_id: wallet, source_id, covered_from: "2023-01-01T00:00:00Z", covered_through: "2099-01-01T00:00:00Z", status: "complete", ingestion_version: 1 }));
     state.nonfinal = [{ account_id: wallet, source_id: "other-source", day: today }];
     const body = await readBody(await GET(request()));
@@ -123,11 +144,19 @@ describe("portfolio history read boundary", () => {
 
   it("hides a higher orphan calculation version that has no publication marker", async () => {
     const today = lastCompletedDay();
-    const coverage = JSON.stringify(["blockscout:8453", "aave:v3:8453"].map((sourceId) => ({ day: today, accountId: wallet, sourceId, eventStatus: "complete", priceStatus: "complete", reason: null })));
+    const coverage = JSON.stringify(["blockscout:8453", "aave:v3:8453"].map((sourceId) => ({ day: today, accountId: wallet, sourceId, ingestionVersion: 1, eventStatus: "complete", priceStatus: "complete", reason: null })));
     state.rows = [1, 2].map((calculation_version) => ({ day: today, calculation_version, net_value_usd: calculation_version === 1 ? "100" : "999", twr_index: "1", coverage_status: "complete", coverage_json: coverage }));
     state.checkpoints = ["blockscout:8453", "aave:v3:8453"].map((source_id) => ({ account_id: wallet, source_id, covered_from: "2023-01-01T00:00:00Z", covered_through: "2099-01-01T00:00:00Z", status: "complete", ingestion_version: 1 }));
     const body = await readBody(await GET(request()));
     expect(body.calculationVersion).toBe(1);
     expect(body.points.at(-1)?.netValueUsd).toBe("100");
+  });
+
+  it("hides the prior publication throughout a source replay hold", async () => {
+    state.rebuildHeld = true;
+    const body = await readBody(await GET(request()));
+    expect(body.calculationVersion).toBe(0);
+    expect(body.points.every((point) => point.netValueUsd === null)).toBe(true);
+    expect(state.calls.some((call) => call.sql.includes("portfolio_rebuild_holds"))).toBe(true);
   });
 });

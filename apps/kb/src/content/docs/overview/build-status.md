@@ -60,4 +60,8 @@ This is the execution checklist for the mainnet-first product. “Live” means 
 - Every mainnet write requires an explicit wallet confirmation; automated tests never broadcast value-moving transactions.
 - Membership qualification is presented as a current-balance projection until sufficient daily observations exist for a 30-day earned tier.
 - External-wallet history beyond Aurel-created intents is read directly from the relevant chain explorer; Aurel does not maintain a proprietary transaction ledger.
+- Verified portfolio performance currently publishes only the last seven completed UTC days. Longer chart ranges are hidden until the price publisher can cover them reliably; incomplete source or price days appear as gaps. Older documented transactions can inform tax-support lots, but an unpriced daily close does not supply a tax basis.
+- Portfolio source replays hold back prior chart and tax publications until a fresh version commits. If an explorer or protocol checkpoint advances, stale valuations and tax rows are hidden rather than carried forward.
+- A source checkpoint's ingestion version advances with each page. Event ingestion versions belong to the upstream source; they are different counters and must not be joined as if equivalent.
+- The LI.FI swap catalog and quotes are read-only preparation. Swap execution and approvals remain disabled until transaction-specific step-up and call verification are complete. Aave action signing and regulated securities orders remain gated.
 - Custom domain, WAF/API Shield rules, Access policy, log export, and version affinity require the production domain/account configuration.

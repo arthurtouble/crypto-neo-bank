@@ -1,13 +1,13 @@
-/** All tables here are rebuildable analytics, never a payment or balance ledger. */
+/** Clear source ingestion for a replay without tearing down the last published
+ * analytics version. A hold hides it until a fresh atomic publication commits. */
 export async function rebuildPortfolioAnalytics(db: D1Database, subjectReference: string): Promise<void> {
   if (!subjectReference) throw new Error("Subject is required for analytics rebuild.");
   await db.batch([
-    db.prepare("DELETE FROM portfolio_disposals WHERE subject_reference = ?").bind(subjectReference),
-    db.prepare("DELETE FROM portfolio_lots WHERE subject_reference = ?").bind(subjectReference),
-    db.prepare("DELETE FROM portfolio_daily_results WHERE subject_reference = ?").bind(subjectReference),
-    db.prepare("DELETE FROM portfolio_daily_quantities WHERE subject_reference = ?").bind(subjectReference),
     db.prepare("DELETE FROM portfolio_source_checkpoints WHERE subject_reference = ?").bind(subjectReference),
-    db.prepare("DELETE FROM portfolio_events WHERE subject_reference = ?").bind(subjectReference)
+    db.prepare("DELETE FROM portfolio_events WHERE subject_reference = ?").bind(subjectReference),
+    db.prepare(`INSERT INTO portfolio_rebuild_holds (subject_reference, rebuild_id, started_at)
+      VALUES (?, ?, ?) ON CONFLICT(subject_reference) DO UPDATE SET rebuild_id = excluded.rebuild_id, started_at = excluded.started_at`)
+      .bind(subjectReference, crypto.randomUUID(), new Date().toISOString())
   ]);
 }
 

@@ -3,15 +3,9 @@
 import { usePrivy } from "@privy-io/react-auth";
 import { useQuery } from "@tanstack/react-query";
 import { LoaderCircle } from "lucide-react";
-import { useId, useMemo, useState } from "react";
+import { useId, useMemo } from "react";
 import type { PortfolioHistory } from "@/lib/portfolio/types";
 
-type Range = "7D" | "1M" | "3M" | "1Y";
-const ranges: Range[] = ["7D", "1M", "3M", "1Y"];
-export function nextPortfolioRange(current: Range, key: "ArrowRight" | "ArrowLeft"): Range {
-  const index = ranges.indexOf(current);
-  return ranges[(index + (key === "ArrowRight" ? 1 : ranges.length - 1)) % ranges.length];
-}
 const DAY_MS = 86_400_000;
 const CHART_WIDTH = 720;
 const CHART_HEIGHT = 190;
@@ -118,7 +112,7 @@ export function buildPortfolioChartModel(history: PortfolioHistory): PortfolioCh
 
 export function PortfolioPerformance() {
   const { user, getAccessToken } = usePrivy();
-  const [range, setRange] = useState<Range>("1M");
+  const range = "7D";
   const gradientId = useId().replaceAll(":", "");
   const history = useQuery<PortfolioHistory>({
     queryKey: ["portfolio-history", user?.id, range],
@@ -138,7 +132,7 @@ export function PortfolioPerformance() {
 
   return <section className="panel portfolioPerformance" aria-label="Verified portfolio history">
     <div className="portfolioChartHeader"><div><span>Historical portfolio value</span><strong className="sensitiveAmount">{model?.displayValue === null || model === null ? "Unavailable" : currency(model.displayValue)}</strong><small>{model?.displayValue !== null && model?.lastDay ? `Complete through ${dateLabel(model.lastDay)}` : "Current day is incomplete or unavailable"}</small><small>{model?.returnPercent === null || model === null ? "Return unavailable" : `${model.returnPercent >= 0 ? "+" : ""}${model.returnPercent.toFixed(2)}% time-weighted return for ${range}`}</small></div>
-      <div className="chartRanges" role="group" aria-label="Portfolio history range">{ranges.map((item) => <button key={item} type="button" className={range === item ? "active" : ""} aria-pressed={range === item} onClick={() => setRange(item)} onKeyDown={(event) => { if (event.key === "ArrowRight" || event.key === "ArrowLeft") { event.preventDefault(); const next = nextPortfolioRange(item, event.key); setRange(next); event.currentTarget.parentElement?.querySelectorAll("button")?.[ranges.indexOf(next)]?.focus(); } }}>{item}</button>)}</div>
+      <div className="chartRanges" aria-label="Portfolio history period">Past 7 days</div>
     </div>
     <div className="portfolioChart">
       {!user ? <div className="chartState">Sign in to view verified history.</div> : history.isPending ? <div className="chartState"><LoaderCircle className="spin" size={18} /> Loading verified history</div> : history.error ? <div className="chartState">Verified history is temporarily unavailable.</div> : !model?.runs.length ? <div className="chartState">No complete historical value is available for this range.</div> : <svg viewBox="0 0 720 200" role="img" aria-label={`${model.completeDays} complete days and ${model.gaps.length} coverage gaps for ${range}`} preserveAspectRatio="none"><defs><linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="var(--accent)" stopOpacity=".22"/><stop offset="100%" stopColor="var(--accent)" stopOpacity="0"/></linearGradient></defs>{model.runs.map((run, index) => <g key={index}>{run.areaPath && <path className="chartArea" d={run.areaPath} fill={`url(#${gradientId})`} />}<path className="chartLine" d={run.linePath} />{run.points.length === 1 && <circle className="chartPoint" cx={run.points[0].x} cy={run.points[0].y} r="3" />}</g>)}{model.gaps.map((gap) => <line className="chartGapMarker" key={gap.day} x1={gap.x} x2={gap.x} y1="4" y2="194" />)}</svg>}

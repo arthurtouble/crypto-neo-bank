@@ -56,15 +56,18 @@ export async function materializePortfolioDaily(db: D1Database, subjectReference
   const through = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString();
   const days = dayList(through);
   const recent = days.slice(-PUBLISH_DAYS);
+  const accountPlaceholders = accounts.map(() => "?").join(",");
   const marker = await db.prepare("SELECT input_digest, calculation_version FROM portfolio_publications WHERE subject_reference = ?")
     .bind(subjectReference).first<Marker>();
+  const rebuildHold = await db.prepare("SELECT rebuild_id FROM portfolio_rebuild_holds WHERE subject_reference = ?")
+    .bind(subjectReference).first<{ rebuild_id: string }>();
   const [checkpointResult, eventResult] = await Promise.all([
     db.prepare(`SELECT account_id, source_id, cursor, covered_from, covered_through, status, ingestion_version, last_finalized_block, last_finalized_hash
       FROM portfolio_source_checkpoints WHERE subject_reference = ?`).bind(subjectReference).all<Checkpoint>(),
     db.prepare(`SELECT source_id, source_event_id, ingestion_version, account_id, asset_id, raw_delta, decimals, event_kind, occurred_at, chain_id,
       block_number, block_hash, tx_hash, log_index, finality, completeness, group_id, counterparty_account_id, evidence_json
-      FROM portfolio_events WHERE subject_reference = ? AND occurred_at >= ? AND occurred_at < ? ORDER BY occurred_at, source_id, source_event_id LIMIT 1001`)
-      .bind(subjectReference, HISTORY_FROM, through).all<EventRow>()
+      FROM portfolio_events WHERE subject_reference = ? AND account_id IN (${accountPlaceholders}) AND occurred_at >= ? AND occurred_at < ? ORDER BY occurred_at, source_id, source_event_id LIMIT 1001`)
+      .bind(subjectReference, ...accounts, HISTORY_FROM, through).all<EventRow>()
   ]);
   const checkpointMap = new Map(checkpointResult.results.map((row) => [`${row.account_id}|${row.source_id}`, row]));
   for (const account of accounts) for (const sourceId of REQUIRED_SOURCES) {
@@ -121,7 +124,8 @@ export async function materializePortfolioDaily(db: D1Database, subjectReference
     let missingPrice = [...balances.values()].some((balance) => balance.raw !== 0n && priceCounts.get(`${balance.assetId}|${day}`) !== 1);
     if (dayEvents.some((event) => (event.kind === "contribution" || event.kind === "withdrawal") && priceCounts.get(`${event.assetId}|${day}`) !== 1)) missingPrice = true;
     for (const accountId of accounts) for (const sourceId of REQUIRED_SOURCES) coverage.push({ day, accountId,
-      sourceId, eventStatus: protocolSeen && sourceId === "aave:v3:8453" ? "partial" : "complete", priceStatus: missingPrice ? "partial" : "complete",
+      sourceId, ingestionVersion: checkpointMap.get(`${accountId}|${sourceId}`)!.ingestion_version,
+      eventStatus: protocolSeen && sourceId === "aave:v3:8453" ? "partial" : "complete", priceStatus: missingPrice ? "partial" : "complete",
       reason: protocolSeen && sourceId === "aave:v3:8453" ? "protocol_position_history_unavailable" : missingPrice ? "missing_price" : null });
     if (recent.includes(day)) snapshots.set(day, [...balances.values()].filter((balance) => balance.raw !== 0n));
   }
@@ -130,7 +134,13 @@ export async function materializePortfolioDaily(db: D1Database, subjectReference
     checkpoints: accounts.flatMap((account) => REQUIRED_SOURCES.map((sourceId) => checkpointMap.get(`${account}|${sourceId}`))),
     events: rawEvents, prices: validPrices.map((price) => ({ assetId: price.assetId, day: price.day, usd: price.usd,
       sourceId: price.sourceId, methodology: price.methodology, version: price.version })) });
-  if (marker?.input_digest === inputDigest) return { status: "unchanged", calculationVersion: marker.calculation_version, inputDigest, days: recent.length, returnWindow: RETURN_WINDOW };
+  if (marker?.input_digest === inputDigest && !rebuildHold) {
+    const existing = await db.prepare(`SELECT COUNT(*) AS count FROM portfolio_daily_results
+      WHERE subject_reference = ? AND calculation_version = ? AND day BETWEEN ? AND ?`)
+      .bind(subjectReference, marker.calculation_version, recent[0], recent.at(-1)).first<{ count: number }>();
+    if (existing?.count === recent.length)
+      return { status: "unchanged", calculationVersion: marker.calculation_version, inputDigest, days: recent.length, returnWindow: RETURN_WINDOW };
+  }
   const calculationVersion = (marker?.calculation_version ?? 0) + 1;
   const calculation = calculatePortfolioDays({ events, prices: validPrices, coverage, calculationVersion });
   const recentPoints = calculation.points.filter((point) => recent.includes(point.day));
@@ -160,6 +170,8 @@ export async function materializePortfolioDaily(db: D1Database, subjectReference
     (subject_reference, account_id, asset_id, source_event_id, leg_index, calculation_version, disposed_at, raw_units, proceeds_usd, basis_usd, gain_usd, classification, evidence_json)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
     .bind(subjectReference, item.accountId, item.assetId, item.sourceEventId, item.legIndex, calculationVersion, item.disposedAt, item.rawUnits, item.proceedsUsd, item.basisUsd, item.gainUsd, item.classification, item.evidenceJson));
+  if (rebuildHold) statements.push(db.prepare("DELETE FROM portfolio_rebuild_holds WHERE subject_reference = ? AND rebuild_id = ?")
+    .bind(subjectReference, rebuildHold.rebuild_id));
   statements.push(db.prepare(`INSERT INTO portfolio_publications
     (subject_reference, input_digest, calculation_version, day_from, day_through, status, published_at)
     VALUES (?, ?, ?, ?, ?, 'published', ?)

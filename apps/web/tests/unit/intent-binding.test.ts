@@ -237,18 +237,18 @@ describe("intent preparation route", () => {
     expect(bound).toHaveLength(0);
     const future = new Date(Date.now() + 60_000).toISOString();
     const current = state.intent!.intent_id as string;
-    const schema = `
+    const schema = (oldPeerIntent: boolean) => `
       CREATE TABLE transaction_intents (intent_id TEXT PRIMARY KEY, subject_reference TEXT, status TEXT, expires_at TEXT, created_at TEXT);
       CREATE TABLE security_profiles (subject_reference TEXT, account_locked INTEGER);
       CREATE TABLE intent_valuations (valuation_id TEXT, intent_id TEXT, usd_cents TEXT);
       CREATE TABLE intent_prepared_calls (intent_id TEXT, step_index INTEGER, subject_reference TEXT, wallet_address TEXT, chain_id INTEGER, target_address TEXT, native_value TEXT, calldata_hash TEXT, call_fingerprint TEXT, semantic_action TEXT, source_reference TEXT, expires_at TEXT, expected_effect_json TEXT, verification_state TEXT, created_at TEXT);
       INSERT INTO transaction_intents VALUES ('${current}', 'subject-a', 'reviewed', '${future}', datetime('now'));
-      INSERT INTO transaction_intents VALUES ('peer', 'subject-a', 'reviewed', '${future}', datetime('now'));
+      INSERT INTO transaction_intents VALUES ('peer', 'subject-a', 'reviewed', '${future}', datetime('now'${oldPeerIntent ? ",'-2 days'" : ""}));
       INSERT INTO security_profiles VALUES ('subject-a', 0);
       INSERT INTO intent_prepared_calls VALUES ('peer', 0, 'subject-a', '${sender.toLowerCase()}', 8453, '${recipient.toLowerCase()}', '100', 'hash', 'fingerprint', 'native_transfer', 'review', '${future}', '{}', 'prepared', datetime('now'));
     `;
-    const run = (reservedCents: number) => spawnSync("sqlite3", [":memory:"], {
-      input: `${schema} INSERT INTO intent_valuations VALUES ('peer-value','peer','${reservedCents}'); ${sql}; SELECT COUNT(*) FROM intent_prepared_calls WHERE intent_id='${current}';`, encoding: "utf8"
+    const run = (reservedCents: number, oldPeerIntent = false) => spawnSync("sqlite3", [":memory:"], {
+      input: `${schema(oldPeerIntent)} INSERT INTO intent_valuations VALUES ('peer-value','peer','${reservedCents}'); ${sql}; SELECT COUNT(*) FROM intent_prepared_calls WHERE intent_id='${current}';`, encoding: "utf8"
     });
     const within = run(2_499_999);
     expect(within.status, within.stderr).toBe(0);
@@ -256,6 +256,9 @@ describe("intent preparation route", () => {
     const over = run(2_500_000);
     expect(over.status, over.stderr).toBe(0);
     expect(over.stdout.trim()).toBe("0");
+    const cooledIntent = run(2_500_000, true);
+    expect(cooledIntent.status, cooledIntent.stderr).toBe(0);
+    expect(cooledIntent.stdout.trim()).toBe("0");
   });
 
   it("does not prepare another subject's intent", async () => {

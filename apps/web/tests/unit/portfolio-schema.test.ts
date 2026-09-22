@@ -4,6 +4,8 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const migration = () => readFileSync(resolve(process.cwd(), "../../infra/d1/migrations/0017_portfolio_analytics.sql"), "utf8");
+const publicationMigrations = () => readFileSync(resolve(process.cwd(), "../../infra/d1/migrations/0019_portfolio_publications.sql"), "utf8")
+  + readFileSync(resolve(process.cwd(), "../../infra/d1/migrations/0020_portfolio_rebuild_holds.sql"), "utf8");
 
 function sqlite(statements: string): string {
   return execFileSync("sqlite3", [":memory:"], { input: statements, encoding: "utf8" }).trim();
@@ -16,6 +18,12 @@ describe("disposable portfolio analytics schema", () => {
       "portfolio_daily_quantities", "portfolio_daily_results", "portfolio_disposals", "portfolio_events",
       "portfolio_lots", "portfolio_price_observations", "portfolio_source_checkpoints"
     ]);
+  });
+
+  it("keeps publication and replay holds in rebuildable analytics, separate from financial authority", () => {
+    const names = sqlite(`${migration()}\n${publicationMigrations()}\nSELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'portfolio_%' ORDER BY name;`);
+    expect(names.split("\n")).toContain("portfolio_publications");
+    expect(names.split("\n")).toContain("portfolio_rebuild_holds");
   });
 
   it("can be removed without deleting durable controls, intent, consent, or audit evidence", () => {

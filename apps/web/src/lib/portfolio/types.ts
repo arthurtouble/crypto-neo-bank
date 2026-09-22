@@ -49,6 +49,8 @@ export type DayCoverage = {
   day: string;
   accountId: AccountId;
   sourceId: string;
+  /** Source checkpoint version used to calculate this published day. */
+  ingestionVersion?: number;
   eventStatus: Completeness;
   priceStatus: Completeness;
   reason: string | null;

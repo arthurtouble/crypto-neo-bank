@@ -59,7 +59,9 @@ function calculateBasis(events: HistoricalEvent[], coverage: DayCoverage[], calc
       && candidate.assetId === outgoing.assetId && BigInt(candidate.rawDelta) === -BigInt(outgoing.rawDelta));
     if (incoming) { transferPairs.set(outgoing, incoming); pairedIncoming.add(incoming); }
   }
-  const incompleteAccounts = new Set(coverage.filter((row) => row.eventStatus !== "complete" || row.priceStatus !== "complete")
+  // Documented transaction consideration is independent of daily-close
+  // valuation. An unpriced chart day must not erase otherwise evidenced FIFO.
+  const incompleteAccounts = new Set(coverage.filter((row) => row.eventStatus !== "complete")
     .map((row) => row.accountId));
   for (const event of events) {
     if (event.finality !== "finalized" || event.completeness !== "complete" || event.kind === "unknown"

@@ -59,13 +59,22 @@ describe("bounded portfolio ingestion", () => {
     expect(state.checkpoint).toBeNull();
   });
 
-  it("wipes only subject analytics and invalidates derived days on reorg", async () => {
+  it("clears only source ingestion while retaining published rows until replay", async () => {
     const { db, state } = fakeDb();
     await rebuildPortfolioAnalytics(db, "subject-a");
-    expect(state.queries.filter((sql) => sql.startsWith("DELETE"))).toHaveLength(6);
+    expect(state.queries.filter((sql) => sql.startsWith("DELETE"))).toHaveLength(2);
+    expect(state.queries.some((sql) => sql.includes("DELETE FROM portfolio_daily_results"))).toBe(false);
+    expect(state.queries.some((sql) => sql.includes("INSERT INTO portfolio_rebuild_holds"))).toBe(true);
     expect(state.queries.some((sql) => sql.includes("transaction_intents"))).toBe(false);
     await invalidateFromBlock(db, "subject-a", 8453, "100");
     expect(state.queries.some((sql) => sql.includes("portfolio_daily_results"))).toBe(true);
+  });
+
+  it("advances the checkpoint version whenever a source page can change its publication", async () => {
+    const { db, state } = fakeDb();
+    const source: HistoricalEventSource = { sourceId: "blockscout:8453", page: async () => ({ events: [event], nextCursor: null, coveredThrough: "2026-09-22T11:55:00.000Z", complete: true, sourceId: "blockscout:8453" }) };
+    await ingestOnePage(db, "subject-a", accountId, source, null, { now: new Date("2026-09-22T12:00:00Z") });
+    expect(state.queries.some((sql) => sql.includes("ingestion_version = portfolio_source_checkpoints.ingestion_version + 1"))).toBe(true);
   });
 
   it("rewinds from the earlier block when an observed event moves in a reorg", async () => {
