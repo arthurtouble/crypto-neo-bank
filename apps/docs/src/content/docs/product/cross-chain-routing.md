@@ -3,7 +3,7 @@ title: Cross-chain routes
 description: How Aurel moves USD Coin between your connected accounts without making you manage networks.
 ---
 
-Aurel Exchange looks across your connected accounts, finds an eligible USD Coin balance, and prepares a route into your Aurel Account. You enter the amount; Aurel handles source-network selection in the background.
+Aurel Move Money looks across your connected accounts, finds an eligible USD Coin balance, and prepares a route into your Aurel Account. You enter the amount; Aurel handles account and network selection in the background. The same workspace can prepare a withdrawal from your Aurel Account to a supported network and address.
 
 The current routing adapter uses LI.FI. The product is provider-neutral so a contracted Socket route or another approved provider can be added without changing the customer flow.
 
@@ -11,26 +11,27 @@ The current routing adapter uses LI.FI. The product is provider-neutral so a con
 
 A route quote normally includes the source and destination networks, input and expected output, estimated gas, fees, price impact, timing estimate, approval requirements, and transaction data.
 
-Aurel checks the returned chain, token contracts, wallet addresses, amount, approval target, and transaction target against the customer's request and the product allowlist. The wallet still presents the final transactions for customer confirmation.
+Aurel checks the returned chain, token contracts, wallet addresses, amount, and transaction network against the customer's request and the product allowlist. Quotes expire after one minute. Aurel checks the selected balance again and simulates the approval and route before asking the wallet to present either transaction.
 
-## Approval first
+## Safety checks before approval
 
-An ERC-20 route may need permission to spend the source token. Aurel prepares an exact-amount approval where supported instead of defaulting to an unlimited allowance.
+Before an approval, Aurel evaluates the transfer against the account's transaction controls and step-up rules. An ERC-20 route may then need permission to spend the source token. Aurel prepares an exact-amount approval where supported instead of defaulting to an unlimited allowance.
 
-The approval is a separate onchain transaction. It must be signed, submitted, and confirmed before the route transaction is useful. If the quote expires while the approval is settling, Aurel should request a fresh route instead of reusing stale transaction data.
+The approval is a separate onchain transaction. It must be signed, submitted, and confirmed before the route transaction is useful. Aurel will not begin with an expired quote. If the quote expires while approval settles, Aurel keeps the completed approval but requires a new route quote before the transfer can continue.
 
 An exact approval reduces exposure but does not make the route risk-free. The approved contract and the protocols it calls still matter.
 
 ## Route lifecycle
 
-1. Enter the USD Coin amount in Exchange.
-2. Aurel checks connected accounts and requests a live route.
-3. Review the amount you send, minimum received, and expected arrival.
-4. Sign an exact approval if one is required.
-5. Wait for the approval receipt and refresh the route if necessary.
-6. Sign the route transaction.
-7. Track the source transaction and the route reference.
-8. Wait for destination delivery or an explicit exception state.
+1. Open **Move Money** and choose **Add Money** or **Withdraw**.
+2. Enter the USD Coin amount and, for a withdrawal, the destination.
+3. Aurel checks every connected account on supported networks and requests a live route.
+4. Review the amount you send, minimum received, and expected arrival.
+5. Aurel rechecks the source balance, applies transaction controls, and simulates the instruction.
+6. Sign an exact approval if one is required and wait for its receipt.
+7. Sign the route transaction.
+8. Track the source transaction and the route reference.
+9. Wait for destination delivery or an explicit exception state.
 
 ## Source confirmation is not destination delivery
 

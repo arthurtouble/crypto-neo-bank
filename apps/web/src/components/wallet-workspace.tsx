@@ -221,7 +221,7 @@ export function WalletWorkspace() {
             <div className="receiveQr"><QRCodeSVG value={address} size={164} bgColor="transparent" fgColor="currentColor" level="M" /></div>
             <code className="addressBlock">{address}</code>
             <button className="button primary full" onClick={() => void copyAddress()}>{copied ? <Check size={16} /> : <Copy size={16} />}{copied ? "Copied" : "Copy address"}</button>
-            {receiveChainId !== HOME_CHAIN.id && <button className="button secondary full" onClick={() => { setModal(null); router.push("/app/exchange"); }}>Move Into Aurel Balance</button>}
+            {receiveChainId !== HOME_CHAIN.id && <button className="button secondary full" onClick={() => { setModal(null); router.push("/app/transfers?digital=add#digital-money"); }}>Move Into Aurel Balance</button>}
             <div className="modalRisk">Only send USDC on {SUPPORTED_CHAINS.find((chain) => chain.id === receiveChainId)?.name}. Funds sent elsewhere may not appear.</div>
             {receiveChainId !== HOME_CHAIN.id && <p className="authorityFootnote">Your USDC remains on the selected network until you review and approve a route into your Aurel balance.</p>}
           </> : <form onSubmit={(event) => void submitSend(event)}>

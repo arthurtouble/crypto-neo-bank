@@ -15,11 +15,17 @@ const tokenSchema = z.object({ symbol: z.string(), decimals: z.number(), chainId
 const quoteSchema = z.object({
   id: z.string(), tool: z.string(),
   action: z.object({ fromChainId: z.number(), toChainId: z.number(), fromToken: tokenSchema, toToken: tokenSchema }),
-  estimate: z.object({ fromAmount: z.string(), toAmount: z.string(), toAmountMin: z.string(), executionDuration: z.number().optional(), approvalAddress: z.string().optional(), feeCosts: z.array(z.unknown()).optional(), gasCosts: z.array(z.unknown()).optional() }),
+  estimate: z.object({ fromAmount: z.string(), toAmount: z.string(), toAmountMin: z.string(), executionDuration: z.number().optional(), approvalAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/).optional(), feeCosts: z.array(z.unknown()).optional(), gasCosts: z.array(z.unknown()).optional() }),
   transactionRequest: z.object({ to: z.string().regex(/^0x[a-fA-F0-9]{40}$/), data: z.string().regex(/^0x[a-fA-F0-9]*$/), value: z.string(), chainId: z.number().optional() })
 });
 
 export type LifiQuote = z.infer<typeof quoteSchema>;
+export const ROUTE_QUOTE_TTL_MS = 60_000;
+
+export function routeQuoteIsFresh(expiresAt: string, now = Date.now()) {
+  const expiry = Date.parse(expiresAt);
+  return Number.isFinite(expiry) && expiry > now;
+}
 
 export async function getUsdcRoute(input: z.infer<typeof routeRequestSchema>) {
   const parsed = routeRequestSchema.parse(input);
@@ -34,7 +40,16 @@ export async function getUsdcRoute(input: z.infer<typeof routeRequestSchema>) {
   }
   const quote = quoteSchema.parse(await response.json());
   if (quote.action.fromChainId !== parsed.fromChainId || quote.action.toChainId !== parsed.toChainId) throw new Error("The route did not match the requested networks.");
+  if (quote.action.fromToken.chainId !== parsed.fromChainId || quote.action.toToken.chainId !== parsed.toChainId) throw new Error("The route tokens were bound to unexpected networks.");
   if (quote.action.fromToken.address.toLowerCase() !== from.address.toLowerCase() || quote.action.toToken.address.toLowerCase() !== to.address.toLowerCase()) throw new Error("The route did not match the requested assets.");
+  if (quote.estimate.fromAmount !== rawAmount) throw new Error("The route did not match the requested amount.");
   if (quote.transactionRequest.chainId && quote.transactionRequest.chainId !== parsed.fromChainId) throw new Error("The route transaction is bound to an unexpected network.");
-  return { quote, requestedAmount: parsed.amount, observedAt: new Date().toISOString(), authority: "LI.FI live quote; settlement by selected bridge contracts" as const };
+  const observedAt = new Date();
+  return {
+    quote,
+    requestedAmount: parsed.amount,
+    observedAt: observedAt.toISOString(),
+    expiresAt: new Date(observedAt.getTime() + ROUTE_QUOTE_TTL_MS).toISOString(),
+    authority: "LI.FI live quote; settlement by selected bridge contracts" as const
+  };
 }

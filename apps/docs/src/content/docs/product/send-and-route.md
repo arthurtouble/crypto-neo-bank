@@ -24,13 +24,13 @@ For a supported direct transfer, Aurel evaluates the account lock, network, asse
 
 A transaction sent to a valid but unintended address is usually irreversible.
 
-## Exchange
+## Add Money and Withdraw
 
-Aurel searches connected accounts for enough USD Coin and requests a route into your Aurel Account. You do not need to choose a network. Aurel checks that the returned source, destination, assets, and target match the prepared instruction. If a token approval is needed, Aurel requests the exact amount instead of an unlimited approval by default.
+In Move Money, Aurel searches connected accounts for enough USD Coin and requests a route into your Aurel Account. You do not need to choose a source network. Withdraw uses the same workspace when you need to send USD Coin to another supported network. Aurel checks that the returned source, destination, assets, and target match the prepared instruction. If a token approval is needed, Aurel requests the exact amount instead of an unlimited approval by default.
 
 Routes add dependencies that direct transfers do not have, including bridge contracts, relayers, liquidity, finality, and the destination chain.
 
-The approval and route can be separate transactions. Aurel waits for the exact approval receipt before presenting the route transaction. If the quote is no longer current, a new route should be prepared.
+The approval and route can be separate transactions. Aurel applies transaction controls before the approval, simulates both instructions, and waits for the exact approval receipt before presenting the route transaction. Expired quotes cannot be submitted.
 
 See [Cross-chain routes](/product/cross-chain-routing/) for the complete lifecycle and delayed-route guidance.
 

@@ -3,11 +3,12 @@
 import { usePrivy } from "@privy-io/react-auth";
 import { useQuery } from "@tanstack/react-query";
 import { Building2, Check, Clock3, Copy, Landmark, LoaderCircle, Send, WalletCards, X } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import type { MoneyAccount } from "@/lib/providers/service-catalog";
 import { RecipientScheduleWorkspace } from "./recipient-schedule-workspace";
 import { BillsWorkspace } from "./bills-workspace";
+import { CrossChainWorkspace } from "./cross-chain-workspace";
 import { IncomePlanWorkspace } from "./income-plan-workspace";
 
 type Flow = "details" | "deposit" | "withdrawal" | null;
@@ -15,8 +16,10 @@ type AccountResponse = { account: MoneyAccount; nextAction: { label: string } };
 
 export function MoneyWorkspace() {
   const { user, getAccessToken } = usePrivy();
-  const router = useRouter();
+  const searchParams = useSearchParams();
   const [flow, setFlow] = useState<Flow>(null);
+  const [digitalDirection, setDigitalDirection] = useState<"add" | "withdraw">("add");
+  const [digitalFocusNonce, setDigitalFocusNonce] = useState(0);
   const [rail, setRail] = useState("wire");
   const [amount, setAmount] = useState("");
   const [copied, setCopied] = useState(false);
@@ -34,14 +37,22 @@ export function MoneyWorkspace() {
   const active = account.data?.account.state === "active";
   const capabilities = account.data?.account.capabilities ?? [];
   function open(next: Flow) { setFlow(next); setAmount(""); setReviewed(false); }
+  function openDigital(next: "add" | "withdraw") {
+    setDigitalDirection(next);
+    setDigitalFocusNonce((value) => value + 1);
+    window.requestAnimationFrame(() => document.getElementById("digital-money")?.scrollIntoView({ behavior: "smooth", block: "start" }));
+  }
   function copy(value: string) { void navigator.clipboard.writeText(value); setCopied(true); window.setTimeout(() => setCopied(false), 1200); }
+  const requestedDirection = searchParams.get("digital");
+  const visibleDigitalDirection = digitalFocusNonce === 0 && (requestedDirection === "add" || requestedDirection === "withdraw") ? requestedDirection : digitalDirection;
 
   return <>
     <section className="moneyHero panel"><div><span className="moneyCurrency">USD</span><h2>Bank Transfers</h2><p>Move dollars by bank transfer or wire.</p></div><div className="walletActions"><button className="button secondary" onClick={() => open("details")}><Landmark size={16} /> Account Details</button><button className="button primary" onClick={() => open("withdrawal")}><Send size={16} /> Send Money</button></div></section>
     <div className="moneyGrid">
-      <section className="panel transferPanel"><div className="panelHeading"><h2>Add Money</h2></div><div className="transferChoices"><button onClick={() => open("details")}><span><Landmark size={18} /></span><div><strong>Bank Transfer</strong><small>Use your personal account details</small></div><em>{active ? "View" : "Set Up"}</em></button><button onClick={() => open("deposit")}><span><Building2 size={18} /></span><div><strong>Wire Transfer</strong><small>For domestic and international wires</small></div><em>Start</em></button><button onClick={() => router.push("/app/assets")}><span><WalletCards size={18} /></span><div><strong>Digital Assets</strong><small>Add USDC from a wallet</small></div><em>Open</em></button></div></section>
-      <section className="panel transferPanel"><div className="panelHeading"><h2>Send Money</h2></div><div className="transferChoices"><button onClick={() => open("withdrawal")}><span><Landmark size={18} /></span><div><strong>To a Bank</strong><small>ACH, wire, or instant transfer</small></div><em>Start</em></button><button onClick={() => router.push("/app/assets")}><span><Send size={18} /></span><div><strong>Digital Assets</strong><small>Send to an address</small></div><em>Open</em></button></div></section>
+      <section className="panel transferPanel"><div className="panelHeading"><h2>Add Money</h2></div><div className="transferChoices"><button onClick={() => open("details")}><span><Landmark size={18} /></span><div><strong>Bank Transfer</strong><small>Use your personal account details</small></div><em>{active ? "View" : "Set Up"}</em></button><button onClick={() => open("deposit")}><span><Building2 size={18} /></span><div><strong>Wire Transfer</strong><small>For domestic and international wires</small></div><em>Start</em></button><button onClick={() => openDigital("add")}><span><WalletCards size={18} /></span><div><strong>From a Wallet</strong><small>Add USD Coin from a connected account</small></div><em>Start</em></button></div></section>
+      <section className="panel transferPanel"><div className="panelHeading"><h2>Send Money</h2></div><div className="transferChoices"><button onClick={() => open("withdrawal")}><span><Landmark size={18} /></span><div><strong>To a Bank</strong><small>ACH, wire, or instant transfer</small></div><em>Start</em></button><button onClick={() => openDigital("withdraw")}><span><Send size={18} /></span><div><strong>To a Wallet</strong><small>Withdraw USD Coin to another network</small></div><em>Start</em></button></div></section>
     </div>
+    <CrossChainWorkspace key={`${visibleDigitalDirection}-${digitalFocusNonce}`} initialDirection={visibleDigitalDirection} />
     <section className="panel railsPanel"><div className="panelHeading"><h2>Transfer Options</h2></div>{account.isPending ? <div className="emptyState"><LoaderCircle className="spin" size={17} /> Loading…</div> : <div className="railRows">{capabilities.map((item) => <div key={item.key}><span className={item.state === "available" ? "ready" : "pending"}>{item.state === "available" ? <Check size={13} /> : <Clock3 size={13} />}</span><strong>{item.label}</strong><small>{item.timing}</small><b>{item.state === "available" ? "Available" : "Setup Required"}</b></div>)}</div>}</section>
     <IncomePlanWorkspace bankAccountActive={active} onBankSetup={() => open("details")} />
     <RecipientScheduleWorkspace />

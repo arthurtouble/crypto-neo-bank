@@ -3,15 +3,15 @@ title: Networks and assets
 description: The chains, tokens, contract addresses, and availability rules Aurel supports.
 ---
 
-Aurel hides network plumbing during ordinary use. The current Aurel Account settles on Base, while Exchange can find eligible USD Coin held in a connected account and route it in automatically.
+Aurel hides network plumbing during ordinary use. Move Money can find eligible USD Coin held in a connected account and prepare the route into your Aurel Account.
 
-An address that looks the same on two networks does not make the balances interchangeable. Do not make a direct deposit from another network. Use **Exchange** so Aurel can prepare the correct route, or follow the exact account details shown in Receive.
+An address that looks the same on two networks does not make the balances interchangeable. Do not make a direct deposit from another network. Use **Move Money** so Aurel can prepare the correct route, or follow the exact account details shown in Receive.
 
 ## Current network scope
 
 | Network | Chain ID | Gas asset | Current scope |
 | --- | ---: | --- | --- |
-| Base | 8453 | ETH | Home portfolio, direct sends, Aave V3, and routed native USDC |
+| Base | 8453 | ETH | Aurel Account, direct sends, Aave V3, and routed native USDC |
 | Ethereum | 1 | ETH | Routed native USDC |
 | Arbitrum | 42161 | ETH | Routed native USDC |
 | Optimism | 10 | ETH | Routed native USDC |
