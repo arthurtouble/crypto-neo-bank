@@ -56,5 +56,6 @@ describe("intent status query", () => {
     expect(response.headers.get("Cache-Control")).toBe("no-store");
     expect(await response.json()).toMatchObject({ intentId, type: "swap", status: "submitted" });
     expect(fixture.query).toMatch(/intent_type\s+AS\s+type/i);
+    expect(fixture.query).toMatch(/WHERE intent_id = \? AND subject_reference = \?/i);
   });
 });

@@ -6,6 +6,7 @@ import { enforceRateLimit, RateLimitError } from "@/lib/security/rate-limit";
 import { ensureSubjectProfile } from "@/lib/profile/ensure";
 import { BetaAccessError, requireBetaAccess } from "@/lib/beta/access";
 import { FeatureUnavailableError, requireFeature } from "@/lib/features/flags";
+import { WalletOwnershipError, requireLinkedEvmWallet } from "@/lib/auth/wallet";
 
 async function fingerprint(value: unknown): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify(value)));
@@ -31,6 +32,7 @@ export async function POST(request: Request) {
     const beta = await requireBetaAccess(env.PROJECTION_DB, subject.subjectReference);
     await enforceRateLimit(env.PROJECTION_DB, { namespace: "intent", subject: subject.subjectReference, limit: 30, windowSeconds: 60 });
     const input = intentSchema.parse(await request.json());
+    const ownedWalletAddress = await requireLinkedEvmWallet(subject.subjectReference, input.walletAddress);
     await requireFeature(env.PROJECTION_DB, input.type === "bridge" ? "cross_chain" : input.type.startsWith("earn_") || ["borrow", "repay"].includes(input.type) ? "defi_actions" : "direct_transfers");
     const now = new Date();
     await ensureSubjectProfile(env.PROJECTION_DB, subject.subjectReference, now);
@@ -63,7 +65,7 @@ export async function POST(request: Request) {
       delaySeconds: profile?.new_address_delay_seconds ?? 86_400
     }, now);
     const intentId = crypto.randomUUID();
-    const walletReference = `wallet:${input.walletAddress.toLowerCase()}`;
+    const walletReference = `wallet:${ownedWalletAddress}`;
 
     if (matured && decision.permitted) {
       const expiresAt = new Date(now.getTime() + 15 * 60_000).toISOString();
@@ -81,7 +83,7 @@ export async function POST(request: Request) {
         (wallet_reference, subject_reference, provider, provider_wallet_reference, address, chain_family, control_model, observed_at)
         VALUES (?, ?, 'privy', NULL, ?, 'evm', 'user-controlled', ?)
         ON CONFLICT(subject_reference, address) DO UPDATE SET observed_at = excluded.observed_at`)
-        .bind(walletReference, subject.subjectReference, input.walletAddress.toLowerCase(), now.toISOString()),
+        .bind(walletReference, subject.subjectReference, ownedWalletAddress, now.toISOString()),
       env.PROJECTION_DB.prepare(`INSERT INTO transaction_intents
         (intent_id, subject_reference, wallet_reference, intent_type, chain_id, request_json, policy_result_json, disclosure_version, status, created_at, updated_at, expires_at, release_at, request_fingerprint)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
@@ -99,6 +101,7 @@ export async function POST(request: Request) {
     if (error instanceof AuthenticationError) return Response.json({ error: "unauthorized", message: error.message, traceId }, { status: 401 });
     if (error instanceof RateLimitError) return Response.json({ error: "rate_limited", message: error.message, traceId }, { status: 429, headers: { "Retry-After": String(error.retryAfterSeconds) } });
     if (error instanceof BetaAccessError) return Response.json({ error: error.code, message: error.message, traceId }, { status: 403 });
+    if (error instanceof WalletOwnershipError) return Response.json({ error: "wallet_not_linked", message: error.message, traceId }, { status: 403, headers: { "Cache-Control": "no-store" } });
     if (error instanceof FeatureUnavailableError) return Response.json({ error: "feature_unavailable", message: error.message, traceId }, { status: 503 });
     if (error instanceof z.ZodError) return Response.json({ error: "invalid_intent", issues: error.issues, traceId }, { status: 400 });
     console.error(JSON.stringify({ level: "error", event: "intent.evaluate.failed", traceId, message: error instanceof Error ? error.message : "unknown" }));
