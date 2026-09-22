@@ -35,6 +35,12 @@ Portfolio values combine token quantities with price data. A displayed total is 
 
 Unknown or unsupported assets are excluded rather than assigned a guess. A missing price should not be treated as zero value or proof that the token is worthless.
 
+## DeFi positions
+
+Portfolio reads the active wallet's Aave V3 position directly from Aave and Base. It shows the source-reported active-market count, health factor, and net position when those fields are available.
+
+Rewards remain marked unavailable when the position source does not report them. Aurel does not infer claimable rewards, yield earned, cost basis, or tax values from a current balance.
+
 ## Wallet recovery
 
 Recovery and export follow Privy’s customer controls. Aurel support will never ask for a seed phrase, private key, recovery secret, or one-time code.

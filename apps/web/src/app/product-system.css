@@ -272,6 +272,36 @@
 .receiptDetails { margin-bottom: 20px; display: grid; text-align: left; border-top: 1px solid var(--border); }
 .receiptDetails > span { min-height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 20px; border-bottom: 1px solid var(--border); color: var(--muted); font-size: var(--type-label); }
 .receiptDetails strong { color: var(--text); font-size: var(--type-label); text-align: right; }
+.receiptTimeline { margin: 0 0 20px; display: grid; text-align: left; }
+.receiptTimeline h3 { margin: 0 0 10px; font-size: var(--type-body); }
+.receiptTimeline > div { position: relative; min-height: 48px; display: grid; grid-template-columns: 18px 1fr; gap: 10px; }
+.receiptTimeline > div:not(:last-child)::after { content: ""; position: absolute; left: 5px; top: 14px; bottom: 0; width: 1px; background: var(--border); }
+.receiptTimeline i { position: relative; z-index: 1; width: 11px; height: 11px; margin-top: 3px; border: 2px solid var(--surface-raised); border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.receiptTimeline strong, .receiptTimeline small { display: block; }
+.receiptTimeline strong { font-size: var(--type-label); }
+.receiptTimeline small { margin-top: 3px; color: var(--muted); font-size: var(--type-caption); }
+
+.billsWorkspace { margin-top: 16px; padding: 28px; }
+.billRows { margin-top: 14px; display: grid; }
+.billRows > div { min-height: 68px; display: grid; grid-template-columns: 34px minmax(0, 1fr) minmax(100px, auto) 34px; align-items: center; gap: 12px; border-top: 1px solid var(--border); }
+.billIcon { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 50%; background: var(--accent-soft); color: var(--accent); }
+.billRows strong, .billRows small { display: block; }
+.billRows strong { font-size: var(--type-row-title); }
+.billRows small { margin-top: 3px; color: var(--muted); font-size: var(--type-caption); text-transform: capitalize; }
+.billRows b { font-size: var(--type-body-small); text-align: right; }
+.billRows em { font-size: var(--type-caption); font-style: normal; text-transform: capitalize; }
+.billRows button { width: 30px; height: 30px; display: grid; place-items: center; border: 0; border-radius: 50%; background: transparent; color: var(--muted); cursor: pointer; }
+.billRows button:hover { background: var(--surface-subtle); color: var(--text); }
+
+.defiPositions { margin-top: 16px; padding: 28px; }
+.defiMetrics { margin-top: 18px; display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--border); border-radius: var(--radius-panel); overflow: hidden; }
+.defiMetrics > span { min-height: 108px; padding: 20px; display: grid; grid-template-columns: 20px 1fr; align-content: center; column-gap: 8px; border-right: 1px solid var(--border); }
+.defiMetrics > span:last-child { border-right: 0; }
+.defiMetrics svg { grid-row: 1 / 3; color: var(--accent); }
+.defiMetrics small { color: var(--muted); font-size: var(--type-caption); }
+.defiMetrics strong { margin-top: 5px; font-size: 18px; }
+.defiPositionFooter { min-height: 54px; display: flex; align-items: center; justify-content: space-between; gap: 16px; color: var(--muted); font-size: var(--type-label); border-bottom: 1px solid var(--border); }
+.emptyActions { display: flex; gap: 8px; margin-top: 8px; }
 
 /* Assets, exchange, earn, borrow, and markets */
 .productShell .tableHead {
@@ -537,6 +567,11 @@
   .activityButton { grid-template-columns: 34px minmax(0, 1fr) auto; gap: 9px; }
   .activityButton small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .formSplit { grid-template-columns: 1fr; gap: 0; }
+  .billsWorkspace, .defiPositions { padding: 22px 18px; }
+  .defiMetrics { grid-template-columns: 1fr; }
+  .defiMetrics > span { min-height: 76px; border-right: 0; border-bottom: 1px solid var(--border); }
+  .defiMetrics > span:last-child { border-bottom: 0; }
+  .defiPositionFooter { align-items: flex-start; flex-direction: column; padding: 14px 0; gap: 6px; }
   .insightMetrics { grid-template-columns: 1fr 1fr; }
   .insightMetrics article:nth-child(2) { border-right: 0; }
   .insightMetrics article:nth-child(-n+2) { border-bottom: 1px solid var(--border); }
@@ -555,6 +590,9 @@
   .aurelCard { padding: 23px; }
   .cardWorkspace { grid-template-columns: minmax(0, 1fr); }
   .cardSetup { grid-template-columns: 32px minmax(0, 1fr); }
+  .billRows > div { grid-template-columns: 34px minmax(0, 1fr) auto; }
+  .billRows button, .billRows em { grid-column: 3; grid-row: 1 / span 2; }
+  .billRows b { grid-column: 2; text-align: left; color: var(--muted); font-size: var(--type-caption); }
 }
 
 @media (prefers-reduced-motion: reduce) {

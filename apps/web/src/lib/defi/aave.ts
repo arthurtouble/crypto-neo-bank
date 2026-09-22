@@ -57,7 +57,46 @@ export async function getAaveBasePosition(user: string) {
     callAaveTool<unknown>("get_user_positions", { user, version: "v3", chainId: 8453 }),
     callAaveTool<unknown>("get_user_summary", { user, version: "v3", chainId: 8453 })
   ]);
-  return { positions, summary, observedAt: new Date().toISOString(), authority: "Aave Protocol API and Base contracts" as const };
+  return { positions, summary, overview: normalizeAavePosition(positions, summary), observedAt: new Date().toISOString(), authority: "Aave Protocol API and Base contracts" as const };
+}
+
+function recordAt(value: unknown, path: string[]): Record<string, unknown> | undefined {
+  let current: unknown = value;
+  for (const key of path) {
+    if (!current || typeof current !== "object" || Array.isArray(current)) return undefined;
+    current = (current as Record<string, unknown>)[key];
+  }
+  return current && typeof current === "object" && !Array.isArray(current) ? current as Record<string, unknown> : undefined;
+}
+
+function firstScalar(value: unknown, names: Set<string>): string | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  if (Array.isArray(value)) {
+    for (const item of value) { const found = firstScalar(item, names); if (found !== undefined) return found; }
+    return undefined;
+  }
+  for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+    if (names.has(key) && (typeof child === "string" || typeof child === "number")) return String(child);
+  }
+  for (const child of Object.values(value as Record<string, unknown>)) { const found = firstScalar(child, names); if (found !== undefined) return found; }
+  return undefined;
+}
+
+export function normalizeAavePosition(positions: unknown, summary: unknown) {
+  const positionRoot = recordAt(positions, ["data", "v3"]);
+  const summaryRoot = recordAt(summary, ["data", "v3"]);
+  const supplies = Array.isArray(positionRoot?.supplies) ? positionRoot.supplies : [];
+  const borrows = Array.isArray(positionRoot?.borrows) ? positionRoot.borrows : [];
+  const markets = Array.isArray(summaryRoot?.markets) ? summaryRoot.markets : [];
+  const marketsWithPosition = typeof summaryRoot?.marketsWithPosition === "number" ? summaryRoot.marketsWithPosition : markets.length;
+  return {
+    marketsWithPosition,
+    supplyGroups: supplies.length,
+    borrowGroups: borrows.length,
+    healthFactor: firstScalar(summaryRoot, new Set(["healthFactor", "health_factor"])),
+    netWorthUsd: firstScalar(summaryRoot, new Set(["netWorthUSD", "netWorthUsd", "net_worth_usd"])),
+    rewardsStatus: "not_reported" as const
+  };
 }
 
 export type AaveAction = "supply" | "borrow" | "withdraw" | "repay";
@@ -78,4 +117,3 @@ export async function prepareAaveBaseAction(input: { action: AaveAction; sender:
   const plan = await callAaveTool<unknown>("prepare_action", args);
   return { preview, plan, preparedAt: new Date().toISOString(), authority: "Aave Protocol API" as const };
 }
-

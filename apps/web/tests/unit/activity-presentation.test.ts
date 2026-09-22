@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { activityCategory, activityCsv, activityLabel, activityStatus } from "@/lib/activity/presentation";
+import { activityCategory, activityCsv, activityEventLabel, activityLabel, activityStatus } from "@/lib/activity/presentation";
 
 describe("activity presentation", () => {
   it("uses familiar customer-facing labels", () => {
@@ -7,6 +7,7 @@ describe("activity presentation", () => {
     expect(activityLabel("earn_supply")).toBe("Added to Earn");
     expect(activityStatus("submitted")).toBe("Pending");
     expect(activityCategory("bridge")).toBe("Swaps");
+    expect(activityEventLabel("intent_confirmed")).toBe("Confirmed on network");
   });
 
   it("creates an escaped audit CSV", () => {

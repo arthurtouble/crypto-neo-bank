@@ -30,9 +30,18 @@ export function activityStatus(status: string) {
   return status.replaceAll("_", " ");
 }
 
+export function activityEventLabel(type: string) {
+  if (type === "policy_evaluated") return "Security review completed";
+  if (type === "cooling_completed") return "Security delay completed";
+  if (type === "intent_submitted") return "Submitted to network";
+  if (type === "intent_confirmed") return "Confirmed on network";
+  if (type === "intent_cancelled") return "Cancelled before submission";
+  if (type === "intent_failed") return "Transaction failed";
+  return type.replace(/^intent_/, "").replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
 export function activityCsv(rows: Array<{ createdAt: string; label: string; category: string; status: string; amount?: string; asset?: string; destination?: string; transactionHash?: string }>) {
   const escape = (value: string | undefined) => `"${String(value ?? "").replaceAll('"', '""')}"`;
   const header = ["Date", "Description", "Category", "Status", "Amount", "Asset", "Destination", "Transaction Hash"];
   return [header.map(escape).join(","), ...rows.map((row) => [row.createdAt, row.label, row.category, row.status, row.amount, row.asset, row.destination, row.transactionHash].map(escape).join(","))].join("\n");
 }
-

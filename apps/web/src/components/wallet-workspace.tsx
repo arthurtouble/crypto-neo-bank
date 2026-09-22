@@ -10,6 +10,7 @@ import { erc20Abi, formatUnits, isAddress, parseEther, parseUnits, encodeFunctio
 import { useBalance, useReadContract } from "wagmi";
 import { BASE_ASSETS, HOME_CHAIN, SUPPORTED_CHAINS } from "@/config/chains";
 import { ExternalWalletBalances } from "./external-wallet-balances";
+import { DefiPositions } from "./defi-positions";
 
 type AssetSymbol = keyof typeof BASE_ASSETS;
 type Modal = "receive" | "send" | null;
@@ -197,6 +198,7 @@ export function WalletWorkspace() {
         </aside>
       </div>
       <ExternalWalletBalances addresses={externalWallets.map((item) => item.address as `0x${string}`)} />
+      <DefiPositions address={address} />
 
       {modal && <div className="modalBackdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && setModal(null)}>
         <section className="financialModal" role="dialog" aria-modal="true" aria-labelledby="wallet-modal-title">

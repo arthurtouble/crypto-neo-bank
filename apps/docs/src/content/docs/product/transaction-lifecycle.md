@@ -29,6 +29,8 @@ Activity is an evidence trail, not just a list of successful payments. Aurel rec
 
 States do not move arbitrarily. For example, a cooling instruction must be reviewed before submission, and a submitted instruction needs receipt evidence before Aurel calls it confirmed.
 
+Open an item in Activity to see its recorded timeline. It can include security review, completion of a security delay, network submission, and final confirmation or failure. Timeline entries come from append-only intent events; the blockchain or provider still controls settlement truth.
+
 ## Instruction fingerprints
 
 A high-value action that completes its cooling period is not released as a blank approval. Aurel compares the network, asset, amount, destination, and relevant call data with the original instruction. If a material field changes, the previous review does not apply.
@@ -56,4 +58,3 @@ Before retrying any uncertain transaction, check the wallet activity and authori
 ## What Aurel cannot reverse
 
 Public-chain transactions are generally irreversible after settlement. Aurel cannot recall funds sent to the wrong address, undo a protocol liquidation, or cancel a confirmed route. Product controls are designed to reduce preventable mistakes before signing.
-

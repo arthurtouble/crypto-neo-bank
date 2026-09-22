@@ -67,7 +67,7 @@ Use these labels consistently in navigation, quick actions, dialogs, receipts, s
 - [ ] Recipient directory shared by bank and wallet sends. Wallet recipients are live; bank recipients await provider projections.
 - [x] Saved wallet recipients, recent destinations, and verified-address indicators.
 - [ ] Scheduled and recurring transfers. Approval-required plans are live; automatic/provider-managed execution remains gated.
-- [ ] Bills and subscriptions view.
+- [ ] Bills and subscriptions view. Reminder planning and provider-observed subscription projections are live; provider-authorized autopay remains gated.
 - [ ] Categories, merchant enrichment, search, filters, and statement export. Aurel activity categories, search, filters, CSV export, and period insights are live; merchant enrichment and issuer statements remain provider-gated.
 - [ ] Pockets/goals backed by provider or onchain subaccounts, never a local ledger. Planning-only goals are live and deliberately show no current balance until an authoritative source is linked.
 - [ ] Card funding priority, freeze, per-card limits, PIN, replacement, disputes, and statements through issuer APIs. The complete provider-ready UI and card projection contract are live; mutations remain issuer-gated.
@@ -77,7 +77,7 @@ Use these labels consistently in navigation, quick actions, dialogs, receipts, s
 
 - [ ] Broader swap universe with multi-provider quote comparison.
 - [ ] Jurisdiction- and eligibility-aware tokenized market execution.
-- [ ] Consolidated DeFi positions, claimable rewards, cost basis, realized/unrealized return, and tax export.
+- [ ] Consolidated DeFi positions, claimable rewards, cost basis, realized/unrealized return, and tax export. Live Aave position summary is now shown in Portfolio; broader protocols, rewards, performance accounting, and tax export remain.
 - [ ] Spend-from-yield and collateral-backed card modes only after provider and legal approval.
 - [ ] Membership rewards ledger backed by the rewards provider, with transparent caps and qualification history.
 - [ ] Joint, family, and business accounts only when ownership and authority are provider-enforced.
