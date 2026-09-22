@@ -32,6 +32,7 @@ describe("LI.FI route input", () => {
   it("accepts a provider response only when its authoritative fields match the request", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify(baseQuote), { status: 200 })));
     const result = await getUsdcRoute({ fromChainId: 1, toChainId: 8453, amount: "10", fromAddress: address });
+    expect(result.quote).not.toHaveProperty("transactionRequest");
     expect(result.quote.id).toBe("route-1");
     expect(routeQuoteIsFresh(result.expiresAt)).toBe(true);
   });

@@ -280,6 +280,15 @@ describe("intent preparation route", () => {
     expect((await request(payload)).status).toBe(403);
     expect(state.prepared.size).toBe(0);
   });
+
+  it("blocks a high-value prepare until step-up has server-verifiable attestation", async () => {
+    state.valuationCents = "1000001";
+    state.addressBook = [{ address: recipient, available_at: new Date(Date.now() - 60_000).toISOString() }];
+    const response = await request(payload);
+    expect(response.status).toBe(403);
+    expect(await response.json()).toMatchObject({ error: "step_up_unavailable" });
+    expect(state.prepared.size).toBe(0);
+  });
 });
 
 describe("reported transaction binding", () => {

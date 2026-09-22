@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { lifecycleCopy, lifecycleStep, normalizeIntentStatus, terminalIntentStatuses } from "@/lib/transactions/lifecycle";
+import { lifecycleCopy, lifecycleStep, normalizeIntentStatus, normalizeVerifiedIntentStatus, terminalIntentStatuses } from "@/lib/transactions/lifecycle";
 
 describe("transaction lifecycle presentation", () => {
   it("maps authoritative intent states without upgrading pending work", () => {
@@ -7,6 +7,12 @@ describe("transaction lifecycle presentation", () => {
     expect(normalizeIntentStatus("confirmed")).toBe("confirmed");
     expect(normalizeIntentStatus("blocked")).toBe("failed");
     expect(normalizeIntentStatus("reviewed")).toBeNull();
+  });
+
+  it("never presents a historical receipt-only row as independently confirmed", () => {
+    expect(normalizeVerifiedIntentStatus("confirmed", "unverified_legacy")).toBe("submitted");
+    expect(normalizeVerifiedIntentStatus("confirmed", "pending")).toBe("submitted");
+    expect(normalizeVerifiedIntentStatus("confirmed", "confirmed")).toBe("confirmed");
   });
 
   it("keeps progress ordered and names actions in familiar language", () => {

@@ -45,8 +45,13 @@ export async function getUsdcRoute(input: z.infer<typeof routeRequestSchema>) {
   if (quote.estimate.fromAmount !== rawAmount) throw new Error("The route did not match the requested amount.");
   if (quote.transactionRequest.chainId && quote.transactionRequest.chainId !== parsed.fromChainId) throw new Error("The route transaction is bound to an unexpected network.");
   const observedAt = new Date();
+  // This endpoint is a route preview. Never return provider calldata or a
+  // signing target to the browser while routed execution is disabled.
+  const preview = { id: quote.id, tool: quote.tool, action: quote.action,
+    estimate: { fromAmount: quote.estimate.fromAmount, toAmount: quote.estimate.toAmount,
+      toAmountMin: quote.estimate.toAmountMin, executionDuration: quote.estimate.executionDuration } };
   return {
-    quote,
+    quote: preview,
     requestedAmount: parsed.amount,
     observedAt: observedAt.toISOString(),
     expiresAt: new Date(observedAt.getTime() + ROUTE_QUOTE_TTL_MS).toISOString(),

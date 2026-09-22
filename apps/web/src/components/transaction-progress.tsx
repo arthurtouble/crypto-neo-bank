@@ -4,9 +4,9 @@ import { usePrivy } from "@privy-io/react-auth";
 import { Check, CircleAlert, ExternalLink, LoaderCircle, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { SUPPORTED_CHAINS } from "@/config/chains";
-import { lifecycleCopy, lifecycleStep, normalizeIntentStatus, terminalIntentStatuses, type TransactionLifecycleStatus } from "@/lib/transactions/lifecycle";
+import { lifecycleCopy, lifecycleStep, normalizeVerifiedIntentStatus, terminalIntentStatuses, type TransactionLifecycleStatus } from "@/lib/transactions/lifecycle";
 
-type IntentState = { status: string; failureReason?: string | null };
+type IntentState = { status: string; verificationState?: string; failureReason?: string | null };
 type ObservedState = { intentId: string; status: TransactionLifecycleStatus; failureReason: string | null };
 
 type Props = {
@@ -52,10 +52,10 @@ export function TransactionProgress({ action, status, stage, error, intentId, ha
         const response = await fetch(`/api/intents/status?intentId=${encodeURIComponent(intentId)}`, { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" });
         if (!response.ok) return;
         const body = await response.json() as IntentState;
-        const next = normalizeIntentStatus(body.status);
-        if (next) setObserved({ intentId, status: next, failureReason: body.failureReason ?? null });
-        if (body.status === "confirmed" && !notified) { notified = true; onConfirmedRef.current?.(); }
-        if (!terminalIntentStatuses.has(body.status) && !stopped) timer = window.setTimeout(check, 5_000);
+        const next = normalizeVerifiedIntentStatus(body.status, body.verificationState);
+        if (next) setObserved({ intentId, status: next, failureReason: body.status === "confirmed" && body.verificationState !== "confirmed" ? "This historical confirmation lacks independently verified transaction evidence." : body.failureReason ?? null });
+        if (next === "confirmed" && !notified) { notified = true; onConfirmedRef.current?.(); }
+        if ((!next || !terminalIntentStatuses.has(next)) && !stopped) timer = window.setTimeout(check, 5_000);
       } catch {
         if (!stopped) timer = window.setTimeout(check, 8_000);
       }

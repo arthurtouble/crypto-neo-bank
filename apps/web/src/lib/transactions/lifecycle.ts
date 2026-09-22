@@ -16,6 +16,12 @@ export function normalizeIntentStatus(status: string | null | undefined): Transa
   return null;
 }
 
+/** A historical status alone is not independent settlement evidence. */
+export function normalizeVerifiedIntentStatus(status: string | null | undefined, verificationState: string | null | undefined): TransactionLifecycleStatus | null {
+  if (status === "confirmed" && verificationState !== "confirmed") return "submitted";
+  return normalizeIntentStatus(status);
+}
+
 export function lifecycleStep(status: TransactionLifecycleStatus) {
   if (status === "reviewing") return 0;
   if (status === "awaiting_confirmation") return 1;

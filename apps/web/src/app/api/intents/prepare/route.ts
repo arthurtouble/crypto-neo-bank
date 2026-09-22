@@ -122,6 +122,10 @@ export async function POST(request: Request) {
       delaySeconds: profile.new_address_delay_seconds
     }, currentTime, valuation.usdCents);
     if (!decision.permitted) return reply({ error: "policy_not_permitted", findings: decision.findings.filter((finding) => finding.level === "block"), traceId }, 403);
+    // Enrollment or a browser-side MFA modal is not server-verifiable proof that
+    // this exact reviewed action passed step-up. Hold these calls until such an
+    // attestation is bound to the intent.
+    if (decision.requiresStepUp) return reply({ error: "step_up_unavailable", traceId }, 403);
     const ownedAddress = await requireLinkedEvmWallet(subject.subjectReference, input.call.from);
     if (intent.wallet_reference !== `wallet:${ownedAddress}` || input.call.chainId !== intent.chain_id) return reply({ error: "call_not_reviewed", traceId }, 409);
     const effect = validatePreparedAction({ ...input, intentType: intent.intent_type, reviewedDestination: reviewed.destination, reviewedAsset: reviewed.asset, reviewedAmount: reviewed.amount });

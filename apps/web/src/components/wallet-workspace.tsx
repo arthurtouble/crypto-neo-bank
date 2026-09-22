@@ -1,6 +1,6 @@
 "use client";
 
-import { useConnectWallet, useMfa, usePrivy, useSendTransaction, useWallets } from "@privy-io/react-auth";
+import { useConnectWallet, usePrivy, useSendTransaction, useWallets } from "@privy-io/react-auth";
 import { useQuery } from "@tanstack/react-query";
 import { Check, Copy, ExternalLink, LoaderCircle, Plus, QrCode, Send, WalletCards, X } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
@@ -13,6 +13,7 @@ import { ExternalWalletBalances } from "./external-wallet-balances";
 import { DefiPositions } from "./defi-positions";
 import { TransactionProgress } from "./transaction-progress";
 import type { TransactionLifecycleStatus } from "@/lib/transactions/lifecycle";
+import { submitPreparedTransfer } from "@/lib/transactions/prepare-client";
 
 type AssetSymbol = keyof typeof BASE_ASSETS;
 type Modal = "receive" | "send" | null;
@@ -35,7 +36,6 @@ export function WalletWorkspace() {
   const { wallets, ready } = useWallets();
   const { connectWallet } = useConnectWallet();
   const { sendTransaction } = useSendTransaction();
-  const { mfaMethods } = useMfa();
   const requestedRecipient = searchParams.get("sendTo") ?? "";
   const requestedAsset = searchParams.get("asset");
   const initialAsset = requestedAsset && requestedAsset in BASE_ASSETS ? requestedAsset as AssetSymbol : "USDC";
@@ -139,31 +139,42 @@ export function WalletWorkspace() {
       }
       reviewedIntentId = intent.intentId;
       setIntentId(intent.intentId);
-      if (intent.decision?.requiresStepUp && !mfaMethods.includes("passkey")) throw new Error("Set up a passkey in the Safety center before this higher-risk transfer.");
-      const provider = await embedded.getEthereumProvider();
-      const simulation = asset === "ETH"
-        ? { from: address, to: recipient, value: toHex(rawAmount) }
-        : { from: address, to: definition.address, value: "0x0", data: transaction.data };
-      await provider.request({ method: "eth_estimateGas", params: [simulation] });
-      if (asset !== "ETH") await provider.request({ method: "eth_call", params: [simulation, "latest"] });
-      setFlowStatus("awaiting_confirmation");
-      const result = await sendTransaction(transaction, {
-        address,
-        uiOptions: {
-          description: `Send ${amount} ${asset} from your Aurel Account to ${shortAddress(recipient)}.`,
-          buttonText: "Confirm transfer",
-          successHeader: "Transfer submitted",
-          isCancellable: true
+      if (intent.decision?.requiresStepUp) throw new Error("This higher-risk transfer is unavailable until Aurel can verify step-up for this exact action.");
+      const result = await submitPreparedTransfer({
+        accessToken, intentId: intent.intentId,
+        step: {
+          call: { chainId: HOME_CHAIN.id, from: address, to: transaction.to, value: asset === "ETH" ? rawAmount : 0n, data: asset === "ETH" ? "0x" : transaction.data ?? "0x" },
+          semanticAction: asset === "ETH" ? "native_transfer" : "erc20_transfer",
+          sourceReference: "direct-transfer-review",
+          expectedEffect: asset === "ETH"
+            ? { type: "native_transfer", recipient, amountRaw: rawAmount.toString() }
+            : { type: "erc20_transfer", token: definition.address, recipient, amountRaw: rawAmount.toString() }
+        },
+        simulate: async () => {
+          const provider = await embedded.getEthereumProvider();
+          const simulation = asset === "ETH"
+            ? { from: address, to: recipient, value: toHex(rawAmount) }
+            : { from: address, to: definition.address, value: "0x0", data: transaction.data };
+          await provider.request({ method: "eth_estimateGas", params: [simulation] });
+          if (asset !== "ETH") await provider.request({ method: "eth_call", params: [simulation, "latest"] });
+        },
+        send: async () => {
+          setFlowStatus("awaiting_confirmation");
+          return sendTransaction(transaction, {
+            address,
+            uiOptions: {
+              description: `Send ${amount} ${asset} from your Aurel Account to ${shortAddress(recipient)}.`,
+              buttonText: "Confirm transfer",
+              successHeader: "Transfer submitted",
+              isCancellable: true
+            }
+          });
         }
       });
       setHash(result.hash);
       setFlowStatus("submitted");
-      await fetch("/api/intents/status", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ intentId: intent.intentId, status: "submitted", transactionHash: result.hash })
-      });
-      await Promise.all([eth.refetch(), usdc.refetch(), weth.refetch()]);
+      if (!result.reportRecorded) setError("The transfer was broadcast, but Aurel could not record its hash yet. Do not send it again; contact support with the transaction link.");
+      await Promise.allSettled([eth.refetch(), usdc.refetch(), weth.refetch()]);
     } catch (sendError) {
       if (reviewedIntentId && accessToken) {
         await fetch("/api/intents/status", {

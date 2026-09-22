@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { PreparedCallInput } from "./evidence";
+import { normalizePreparedCall, type PreparedCallInput } from "./evidence";
 
 export type PreparedStepInput = {
   call: PreparedCallInput;
@@ -47,4 +47,37 @@ export async function prepareIntentSteps(
     prepared.push({ stepIndex, fingerprint: result.fingerprint });
   }
   return prepared;
+}
+
+type TransferSubmission = {
+  accessToken: string;
+  intentId: string;
+  step: PreparedStepInput;
+  simulate: () => Promise<unknown>;
+  send: () => Promise<{ hash: string }>;
+  fetcher?: typeof fetch;
+};
+
+/** Broadcast only after simulation and exact server preparation. */
+export async function submitPreparedTransfer(input: TransferSubmission): Promise<{ hash: string; stepIndex: 0; reportRecorded: boolean }> {
+  if (!["native_transfer", "erc20_transfer"].includes(input.step.semanticAction)) throw new Error("This transaction cannot be prepared as a direct transfer.");
+  await input.simulate();
+  const [prepared] = await prepareIntentSteps(input.accessToken, input.intentId, [input.step], input.fetcher);
+  if (prepared?.stepIndex !== 0) throw new Error("The prepared transfer step is invalid.");
+  const expected = await normalizePreparedCall(input.step.call);
+  if (prepared.fingerprint.toLowerCase() !== expected.fingerprint.toLowerCase()) throw new Error("The prepared transaction did not match this exact call.");
+  const { hash } = await input.send();
+  let reportRecorded = false;
+  try {
+    if (/^0x[a-fA-F0-9]{64}$/.test(hash)) {
+      const response = await (input.fetcher ?? fetch)("/api/intents/status", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${input.accessToken}`, "Content-Type": "application/json" },
+        cache: "no-store",
+        body: JSON.stringify({ intentId: input.intentId, stepIndex: prepared.stepIndex, status: "submitted", transactionHash: hash })
+      });
+      reportRecorded = response.ok;
+    }
+  } catch { /* A broadcast hash must not be discarded or represented as a failed send. */ }
+  return { hash, stepIndex: 0, reportRecorded };
 }
