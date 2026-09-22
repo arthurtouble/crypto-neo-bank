@@ -39,7 +39,9 @@ Unknown or unsupported assets are excluded rather than assigned a guess. A missi
 
 Portfolio reads the active wallet's Aave V3 position directly from Aave and Base. It shows the source-reported active-market count, health factor, and net position when those fields are available.
 
-Rewards remain marked unavailable when the position source does not report them. Aurel does not infer claimable rewards, yield earned, cost basis, or tax values from a current balance.
+Aurel also reads Base claimable rewards from Aave's rewards interface. When Aave returns a claim transaction, the Portfolio shows each reward and its source-reported USD value. Claiming requires Aurel policy review, a successful transaction simulation, and an explicit wallet confirmation. The app never treats an unavailable rewards response as a zero balance.
+
+A current position still does not establish yield earned, cost basis, or a tax value. Aurel leaves those figures unavailable until complete authoritative history can support them.
 
 ## Wallet recovery
 

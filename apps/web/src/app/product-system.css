@@ -324,6 +324,19 @@
 .defiMetrics small { color: var(--muted); font-size: var(--type-caption); }
 .defiMetrics strong { margin-top: 5px; font-size: 18px; }
 .defiPositionFooter { min-height: 54px; display: flex; align-items: center; justify-content: space-between; gap: 16px; color: var(--muted); font-size: var(--type-label); border-bottom: 1px solid var(--border); }
+.defiPositionFooter a { color: var(--accent); font-weight: 650; text-decoration: none; }
+.defiPositionFooter a:hover { text-decoration: underline; }
+.defiRewards { margin-top: 18px; padding: 18px; border: 1px solid var(--border); border-radius: var(--radius-panel); background: var(--surface-subtle); }
+.defiRewardsHeading { min-height: 34px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.defiRewardsHeading > span { display: inline-flex; align-items: center; gap: 8px; }
+.defiRewardsHeading svg { color: var(--accent); }
+.defiRewardsHeading strong { font-size: var(--type-row-title); }
+.defiRewardRows { margin: 10px 0 14px; border-top: 1px solid var(--border); }
+.defiRewardRows > div { min-height: 58px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid var(--border); }
+.defiRewardRows span { display: grid; gap: 3px; }
+.defiRewardRows span:last-child { text-align: right; }
+.defiRewardRows strong { font-size: var(--type-body-small); }
+.defiRewardRows small { color: var(--muted); font-size: var(--type-caption); }
 .emptyActions { display: flex; gap: 8px; margin-top: 8px; }
 
 /* Assets, exchange, earn, borrow, and markets */
@@ -372,9 +385,17 @@
 .swapAssetBlock input { width: 100%; min-width: 0; border: 0; padding: 0; color: var(--text); background: transparent; font-family: "Archivo Variable", "Satoshi", system-ui, sans-serif; font-size: clamp(27px, 3vw, 36px); font-weight: 620; letter-spacing: -.035em; outline: none; }
 .swapAssetBlock > strong { font-family: "Archivo Variable", "Satoshi", system-ui, sans-serif; font-size: clamp(27px, 3vw, 36px); letter-spacing: -.035em; }
 .swapAssetBlock > small { color: var(--muted); font-size: var(--type-caption); }
+.swapBalance { min-height: 22px; display: flex; align-items: center; justify-content: space-between; gap: 10px; color: var(--muted); font-size: var(--type-caption); }
+.swapBalance button { padding: 3px 7px; color: var(--accent); border: 0; border-radius: 7px; background: var(--accent-soft); font: inherit; font-weight: 700; cursor: pointer; }
+.swapBalance button:hover { color: white; background: var(--accent); }
 .swapReverse { width: 42px; height: 42px; z-index: 1; display: grid; place-items: center; color: var(--text); border: 1px solid var(--border); border-radius: 50%; background: var(--surface); box-shadow: var(--shadow-control); transition: transform var(--motion-fast), color var(--motion-fast), border-color var(--motion-fast); }
 .swapReverse:hover { color: var(--accent); border-color: var(--accent); transform: rotate(180deg); }
 .swapForm > .button { grid-column: 1 / -1; min-height: 48px; margin-top: 4px; }
+.swapSettings { min-height: 44px; margin-top: 8px; display: flex; align-items: center; justify-content: flex-end; gap: 12px; color: var(--muted); font-size: var(--type-caption); }
+.swapSettings > div { display: inline-flex; padding: 3px; gap: 2px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-subtle); }
+.swapSettings button { min-width: 48px; min-height: 28px; padding: 0 9px; color: var(--muted); border: 0; border-radius: 7px; background: transparent; font: inherit; font-weight: 650; cursor: pointer; }
+.swapSettings button:hover { color: var(--text); }
+.swapSettings button.active { color: white; background: var(--accent); }
 .swapQuotes { margin-top: 20px; padding: 18px; border: 1px solid var(--border); border-radius: var(--radius-panel); background: var(--surface-subtle); }
 .swapQuotesHeader { min-height: 32px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .swapQuotesHeader h3 { margin: 0; font-size: var(--type-row-title); }

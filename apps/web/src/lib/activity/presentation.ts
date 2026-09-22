@@ -5,6 +5,7 @@ const labels: Record<string, string> = {
   bridge: "Moved between networks",
   earn_supply: "Added to Earn",
   earn_withdraw: "Withdrawn from Earn",
+  earn_claim: "Claimed rewards",
   borrow: "Borrowed",
   repay: "Repaid"
 };

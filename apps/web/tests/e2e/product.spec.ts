@@ -70,6 +70,8 @@ test("private APIs fail closed without an authenticated subject", async ({ reque
 test("feedback and beta redemption fail closed without authentication", async ({ request }) => {
   const quote = await request.post("/api/swap/quote", { data: { fromAssetId: "USDC", toAssetId: "ETH", amount: "1", fromAddress: "0x000000000000000000000000000000000000dEaD" } });
   expect(quote.status()).toBe(401);
+  const rewards = await request.post("/api/defi/aave/rewards", { data: { sender: "0x000000000000000000000000000000000000dEaD" } });
+  expect(rewards.status()).toBe(401);
   const feedback = await request.post("/api/beta/feedback", { data: { surface: "/app", sentiment: "neutral", category: "usability", message: "This is a useful test message." } });
   expect(feedback.status()).toBe(401);
   const redeem = await request.post("/api/beta/access", { data: { code: "AUREL-TEST", countryCode: "PT", acceptTerms: true } });

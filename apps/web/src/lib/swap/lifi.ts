@@ -6,7 +6,8 @@ export const swapQuoteRequestSchema = z.object({
   fromAssetId: z.enum(SWAP_ASSET_IDS),
   toAssetId: z.enum(SWAP_ASSET_IDS),
   amount: z.string().regex(/^\d+(\.\d{1,18})?$/),
-  fromAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/)
+  fromAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
+  slippageBps: z.number().int().min(10).max(100).default(50)
 }).refine((value) => value.fromAssetId !== value.toAssetId, { message: "Choose two different assets." });
 
 const tokenSchema = z.object({ symbol: z.string(), decimals: z.number(), chainId: z.number(), address: z.string() });
@@ -54,7 +55,7 @@ export async function getSwapQuotes(input: z.infer<typeof swapQuoteRequestSchema
   const query = new URLSearchParams({
     fromChain: String(SWAP_CHAIN_ID), toChain: String(SWAP_CHAIN_ID), fromToken: from.address, toToken: to.address,
     fromAddress: parsed.fromAddress, toAddress: parsed.fromAddress, fromAmount: rawAmount.toString(), order: "CHEAPEST",
-    slippage: "0.005", integrator: "aurel", allowDestinationCall: "false", maxPriceImpact: "0.03"
+    slippage: String(parsed.slippageBps / 10_000), integrator: "aurel", allowDestinationCall: "false", maxPriceImpact: "0.03"
   });
   const settled = await Promise.allSettled(providers.map((provider) => providerQuote(provider, query)));
   const observedAt = new Date();
@@ -76,7 +77,7 @@ export async function getSwapQuotes(input: z.infer<typeof swapQuoteRequestSchema
       toAmountMin: formatUnits(BigInt(quote.estimate.toAmountMin), to.decimals),
       fromAmountUsd: Number.isFinite(fromUsd) ? fromUsd : undefined,
       toAmountUsd: Number.isFinite(toUsd) ? toUsd : undefined,
-      valueLossPercent,
+      valueDifferencePercent: valueLossPercent,
       networkFeeUsd: usdCosts(quote.estimate.gasCosts),
       approvalAddress: quote.estimate.approvalAddress,
       transactionRequest: quote.transactionRequest

@@ -53,11 +53,17 @@ export async function getAaveBaseMarkets(user?: string) {
 }
 
 export async function getAaveBasePosition(user: string) {
-  const [positions, summary] = await Promise.all([
+  const [positions, summary, rewards] = await Promise.all([
     callAaveTool<unknown>("get_user_positions", { user, version: "v3", chainId: 8453 }),
-    callAaveTool<unknown>("get_user_summary", { user, version: "v3", chainId: 8453 })
+    callAaveTool<unknown>("get_user_summary", { user, version: "v3", chainId: 8453 }),
+    callAaveTool<unknown>("get_user_rewards", { user, version: "v3" }).catch(() => null)
   ]);
-  return { positions, summary, overview: normalizeAavePosition(positions, summary), observedAt: new Date().toISOString(), authority: "Aave Protocol API and Base contracts" as const };
+  return {
+    overview: normalizeAavePosition(positions, summary),
+    rewards: normalizeAaveBaseRewards(rewards),
+    observedAt: new Date().toISOString(),
+    authority: "Aave Protocol API and Base contracts" as const
+  };
 }
 
 function recordAt(value: unknown, path: string[]): Record<string, unknown> | undefined {
@@ -94,9 +100,80 @@ export function normalizeAavePosition(positions: unknown, summary: unknown) {
     supplyGroups: supplies.length,
     borrowGroups: borrows.length,
     healthFactor: firstScalar(summaryRoot, new Set(["healthFactor", "health_factor"])),
-    netWorthUsd: firstScalar(summaryRoot, new Set(["netWorthUSD", "netWorthUsd", "net_worth_usd"])),
-    rewardsStatus: "not_reported" as const
+    netWorthUsd: firstScalar(summaryRoot, new Set(["netWorthUSD", "netWorthUsd", "net_worth_usd"]))
   };
+}
+
+export type AaveReward = {
+  symbol: string;
+  name: string;
+  amount: string;
+  usd: string;
+  tokenAddress: string;
+};
+
+export type AaveBaseRewards = {
+  items: AaveReward[];
+  totalUsd: string;
+  partial: boolean;
+  claimAvailable: boolean;
+  sourceStatus: "available" | "none" | "unavailable";
+};
+
+function rewardRows(value: unknown) {
+  const root = recordAt(value, ["data", "v3"]);
+  const rewards = Array.isArray(root?.rewards) ? root.rewards : [];
+  return { root, rewards: rewards.filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object" && !Array.isArray(item)) };
+}
+
+export function normalizeAaveBaseRewards(value: unknown): AaveBaseRewards {
+  if (value === null || value === undefined) return { items: [], totalUsd: "0", partial: false, claimAvailable: false, sourceStatus: "unavailable" };
+  const { root, rewards } = rewardRows(value);
+  const base = rewards.find((item) => Number(item.chainId ?? item.chain) === 8453);
+  const claimable = Array.isArray(base?.claimable) ? base.claimable : [];
+  const items = claimable.flatMap((item): AaveReward[] => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return [];
+    const record = item as Record<string, unknown>;
+    const amount = record.amount && typeof record.amount === "object" && !Array.isArray(record.amount) ? record.amount as Record<string, unknown> : undefined;
+    const decimal = amount?.amount && typeof amount.amount === "object" && !Array.isArray(amount.amount) ? amount.amount as Record<string, unknown> : undefined;
+    const currency = record.currency && typeof record.currency === "object" && !Array.isArray(record.currency) ? record.currency as Record<string, unknown> : undefined;
+    if (!currency || typeof currency.symbol !== "string" || typeof currency.address !== "string" || typeof decimal?.value !== "string") return [];
+    return [{
+      symbol: currency.symbol,
+      name: typeof currency.name === "string" ? currency.name : currency.symbol,
+      amount: decimal.value,
+      usd: typeof amount?.usd === "string" ? amount.usd : "0",
+      tokenAddress: currency.address
+    }];
+  });
+  const totalUsd = items.reduce((sum, item) => sum + (Number(item.usd) || 0), 0);
+  const transaction = base?.transaction && typeof base.transaction === "object" && !Array.isArray(base.transaction) ? base.transaction as Record<string, unknown> : undefined;
+  return {
+    items,
+    totalUsd: totalUsd.toFixed(8).replace(/\.?0+$/, "") || "0",
+    partial: Boolean(root?.partial),
+    claimAvailable: items.length > 0 && Boolean(transaction),
+    sourceStatus: items.length > 0 ? "available" : "none"
+  };
+}
+
+const rewardTransactionSchema = z.object({
+  to: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
+  from: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
+  data: z.string().regex(/^0x[a-fA-F0-9]+$/),
+  value: z.literal("0"),
+  chainId: z.literal(8453)
+});
+
+export async function getAaveBaseRewardClaimPlan(user: string) {
+  const result = await callAaveTool<unknown>("get_user_rewards", { user, version: "v3" });
+  const normalized = normalizeAaveBaseRewards(result);
+  const { rewards } = rewardRows(result);
+  const base = rewards.find((item) => Number(item.chainId ?? item.chain) === 8453);
+  const transaction = rewardTransactionSchema.parse(base?.transaction);
+  if (transaction.from.toLowerCase() !== user.toLowerCase()) throw new Error("Aave returned a reward transaction for another wallet.");
+  if (!normalized.claimAvailable) throw new Error("No claimable Base rewards are currently available.");
+  return { rewards: normalized, transaction, preparedAt: new Date().toISOString(), authority: "Aave Protocol API" as const };
 }
 
 export type AaveAction = "supply" | "borrow" | "withdraw" | "repay";
