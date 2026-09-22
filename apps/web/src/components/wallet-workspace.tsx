@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Check, Copy, ExternalLink, LoaderCircle, Plus, QrCode, Send, WalletCards, X } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { erc20Abi, formatUnits, isAddress, parseEther, parseUnits, encodeFunctionData, toHex } from "viem";
 import { useBalance, useReadContract } from "wagmi";
 import { BASE_ASSETS, HOME_CHAIN, SUPPORTED_CHAINS } from "@/config/chains";
@@ -30,14 +30,18 @@ function amountText(value: bigint | undefined, decimals: number) {
 
 export function WalletWorkspace() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { getAccessToken } = usePrivy();
   const { wallets, ready } = useWallets();
   const { connectWallet } = useConnectWallet();
   const { sendTransaction } = useSendTransaction();
   const { mfaMethods } = useMfa();
-  const [modal, setModal] = useState<Modal>(null);
-  const [asset, setAsset] = useState<AssetSymbol>("USDC");
-  const [recipient, setRecipient] = useState("");
+  const requestedRecipient = searchParams.get("sendTo") ?? "";
+  const requestedAsset = searchParams.get("asset");
+  const initialAsset = requestedAsset && requestedAsset in BASE_ASSETS ? requestedAsset as AssetSymbol : "USDC";
+  const [modal, setModal] = useState<Modal>(isAddress(requestedRecipient) ? "send" : null);
+  const [asset, setAsset] = useState<AssetSymbol>(initialAsset);
+  const [recipient, setRecipient] = useState(isAddress(requestedRecipient) ? requestedRecipient : "");
   const [amount, setAmount] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -146,7 +150,7 @@ export function WalletWorkspace() {
       const result = await sendTransaction(transaction, {
         address,
         uiOptions: {
-          description: `Send ${amount} ${asset} on Base mainnet to ${shortAddress(recipient)}.`,
+          description: `Send ${amount} ${asset} from your Aurel Account to ${shortAddress(recipient)}.`,
           buttonText: "Confirm transfer",
           successHeader: "Transfer submitted",
           isCancellable: true
@@ -225,7 +229,7 @@ export function WalletWorkspace() {
             <div className="modalRisk">Only send USDC on {SUPPORTED_CHAINS.find((chain) => chain.id === receiveChainId)?.name}. Funds sent elsewhere may not appear.</div>
             {receiveChainId !== HOME_CHAIN.id && <p className="authorityFootnote">Your USDC remains on the selected network until you review and approve a route into your Aurel balance.</p>}
           </> : <form onSubmit={(event) => void submitSend(event)}>
-            <h2 id="wallet-modal-title">Send Digital Assets</h2>
+            <h2 id="wallet-modal-title">Send</h2>
             <label className="fieldLabel">Asset<select value={asset} onChange={(event) => setAsset(event.target.value as AssetSymbol)}>{Object.keys(BASE_ASSETS).map((symbol) => <option key={symbol}>{symbol}</option>)}</select></label>
             <label className="fieldLabel">Amount<input inputMode="decimal" placeholder="0.00" value={amount} onChange={(event) => setAmount(event.target.value)} /></label>
             {savedRecipients.length > 0 && <label className="fieldLabel">Saved Recipient<select value={savedRecipients.some((item) => item.destination === recipient) ? recipient : ""} onChange={(event) => setRecipient(event.target.value)}><option value="">Enter another address</option>{savedRecipients.map((item) => <option key={item.id} value={item.destination}>{item.name} · {item.detail}</option>)}</select></label>}

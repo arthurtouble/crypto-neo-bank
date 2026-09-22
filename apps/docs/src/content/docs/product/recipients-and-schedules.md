@@ -7,9 +7,9 @@ description: Save destinations safely and plan future transfers without giving u
 
 Recipients keep frequently used destinations in one place.
 
-Wallet recipients follow the security delay configured for your account. A newly saved address is marked **Cooling** until that delay ends. Once available, it appears as a verified saved recipient in Send and scheduling flows.
+Wallet recipients follow the security delay configured for your account. A newly saved address is marked **Cooling** until that delay ends. Once available, the recipient offers separate **Send** and **Schedule** actions. Send opens a prefilled review flow; it does not submit a transaction.
 
-Recent addresses may appear before you save them. Recent does not mean verified.
+Recent addresses may appear before you save them. Recent does not mean verified. Choosing **Save** starts the normal cooling period; it does not promote the address directly to verified status.
 
 Bank recipients will appear after bank transfers are enabled and the banking provider has created or verified them. Aurel does not invent bank-recipient status or store bank credentials as its own record.
 
@@ -28,7 +28,7 @@ You can pause or resume an Aurel transfer plan from Move Money. Pausing the plan
 ## Safety rules
 
 - Saving a recipient does not authorize a payment.
+- Opening a prefilled Send flow does not bypass transaction review or wallet confirmation.
 - A cooling recipient cannot be used for a scheduled plan.
 - Current authentication and transaction controls are evaluated at execution time.
 - Provider and blockchain records remain the final source for settlement.
-

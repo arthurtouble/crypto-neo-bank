@@ -64,7 +64,7 @@ Use these labels consistently in navigation, quick actions, dialogs, receipts, s
 
 ### P1 — daily financial account
 
-- [ ] Recipient directory shared by bank and wallet sends. Wallet recipients are live; bank recipients await provider projections.
+- [ ] Recipient directory shared by bank and wallet sends. Wallet recipients now support contact-first Send, Schedule, recent-address capture, and cooling enforcement; bank-recipient execution awaits provider projections.
 - [x] Saved wallet recipients, recent destinations, and verified-address indicators.
 - [ ] Scheduled and recurring transfers. Approval-required plans are live; automatic/provider-managed execution remains gated.
 - [ ] Bills and subscriptions view. Reminder planning and provider-observed subscription projections are live; provider-authorized autopay remains gated.

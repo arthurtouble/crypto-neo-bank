@@ -2,7 +2,8 @@
 
 import { usePrivy } from "@privy-io/react-auth";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarClock, Check, Clock3, LoaderCircle, Pause, Play, Plus, ShieldCheck, UserRound, X } from "lucide-react";
+import { CalendarClock, Check, Clock3, LoaderCircle, Pause, Play, Plus, Send, ShieldCheck, UserRound, X } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
 type Recipient = { id: string; kind: "wallet" | "bank"; name: string; destination: string; detail: string; verified: boolean; recent?: boolean; availableAt?: string; lastUsedAt?: string | null };
@@ -15,6 +16,7 @@ function scheduleLabel(value: Schedule["scheduleType"]) {
 
 export function RecipientScheduleWorkspace() {
   const { user, getAccessToken } = usePrivy();
+  const router = useRouter();
   const client = useQueryClient();
   const [modal, setModal] = useState<Modal>(null);
   const [name, setName] = useState("");
@@ -58,12 +60,15 @@ export function RecipientScheduleWorkspace() {
   });
 
   function open(next: Modal) { setMessage(null); setModal(next); if (next === "schedule" && !recipientId) setRecipientId(availableRecipients[0]?.id ?? ""); }
+  function saveRecent(item: Recipient) { setName(""); setAddress(item.destination); open("recipient"); }
+  function sendTo(item: Recipient) { router.push(`/app/assets?sendTo=${encodeURIComponent(item.destination)}&asset=USDC`); }
+  function scheduleFor(item: Recipient) { setRecipientId(item.id); open("schedule"); }
 
   return <>
     <div className="dailyMoneyGrid">
       <section className="panel dailyMoneyPanel">
         <div className="panelHeading"><div><h2>Recipients</h2></div><button className="button quiet small" onClick={() => open("recipient")}><Plus size={14} /> Add</button></div>
-        {recipients.isPending ? <div className="compactState"><LoaderCircle className="spin" size={16} /> Loading recipients…</div> : recipients.isError ? <div className="formError">Recipients are unavailable.</div> : recipients.data.recipients.length === 0 ? <div className="emptyState compact"><UserRound size={22} /><strong>No recipients yet</strong><span>Save a wallet address before scheduling transfers.</span></div> : <div className="recipientList">{recipients.data.recipients.slice(0, 5).map((item) => <button key={item.id} onClick={() => { if (item.verified && !item.recent) { setRecipientId(item.id); open("schedule"); } }}><span className="recipientAvatar">{item.name.slice(0, 1).toUpperCase()}</span><span><strong>{item.name}</strong><small>{item.detail}</small></span><em className={item.verified ? "verified" : "cooling"}>{item.verified ? <><ShieldCheck size={12} /> Verified</> : item.recent ? "Recent" : <><Clock3 size={12} /> Cooling</>}</em></button>)}</div>}
+        {recipients.isPending ? <div className="compactState"><LoaderCircle className="spin" size={16} /> Loading recipients…</div> : recipients.isError ? <div className="formError">Recipients are unavailable.</div> : recipients.data.recipients.length === 0 ? <div className="emptyState compact"><UserRound size={22} /><strong>No recipients yet</strong><span>Save a wallet address before scheduling transfers.</span></div> : <div className="recipientList">{recipients.data.recipients.slice(0, 5).map((item) => <div className="recipientRow" key={item.id}><span className="recipientAvatar">{item.name.slice(0, 1).toUpperCase()}</span><span className="recipientIdentity"><strong>{item.name}</strong><small>{item.detail}</small></span><span className="recipientActions"><em className={item.verified ? "verified" : "cooling"}>{item.verified ? <><ShieldCheck size={12} /> Verified</> : item.recent ? "Recent" : <><Clock3 size={12} /> Cooling</>}</em>{item.kind === "wallet" && item.verified && !item.recent ? <><button type="button" aria-label={`Send to ${item.name}`} onClick={() => sendTo(item)}><Send size={14} /> Send</button><button type="button" aria-label={`Schedule transfer to ${item.name}`} onClick={() => scheduleFor(item)}><CalendarClock size={14} /> Schedule</button></> : item.kind === "wallet" && item.recent ? <button type="button" aria-label={`Save ${item.detail}`} onClick={() => saveRecent(item)}><Plus size={14} /> Save</button> : null}</span></div>)}</div>}
       </section>
       <section className="panel dailyMoneyPanel">
         <div className="panelHeading"><div><h2>Scheduled Transfers</h2></div><button className="button quiet small" onClick={() => open("schedule")} disabled={availableRecipients.length === 0}><Plus size={14} /> Schedule</button></div>
