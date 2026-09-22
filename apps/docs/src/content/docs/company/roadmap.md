@@ -15,6 +15,7 @@ The current product includes:
 - supported transaction preparation and customer confirmation;
 - account lock, destination rules, cooling, limits, and step-up controls;
 - LI.FI route discovery and validation for allowlisted USDC paths;
+- live market discovery that opens supported assets in a preselected Swap flow without starting a quote;
 - activity evidence, receipt checks, provider-event infrastructure, and operations views;
 - membership and benefit data models;
 - a searchable documentation, safety, and legal center.
@@ -64,4 +65,3 @@ The web application comes first. A mobile app should follow stable product flows
 Each feature stays **unavailable** until the underlying capability exists, moves to **preview** when the product foundation can be evaluated without creating a customer entitlement, and becomes **live** only after its technical, operational, provider, legal, and support gates pass.
 
 See [Product status](/getting-started/status/) for the current state rather than relying on this forward-looking roadmap.
-

@@ -9,7 +9,7 @@ Aurel lets you exchange a curated set of digital assets from one familiar **Swap
 
 The initial curated list includes ETH, USDC, WETH, cbBTC, WBTC, cbETH, wstETH, EURC, DAI, USDS, LINK, and AAVE. This is an allowlist, not every token returned by a public token directory. Aurel checks the asset address, decimal precision, settlement network, and transaction target before returning a quote.
 
-Market data and swap availability are separate. Seeing an asset in **Markets** does not mean it is eligible for execution.
+Market data and swap availability are separate. A market receives a **Swap** action only when its exact symbol is in Aurel's curated registry. Choosing that action opens Swap with the asset selected and USDC as the default payment asset. It does not request a quote or move money. Unsupported markets remain clearly marked **View Only**.
 
 ## Comparing quotes
 

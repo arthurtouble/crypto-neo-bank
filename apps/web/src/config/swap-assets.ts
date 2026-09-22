@@ -19,3 +19,21 @@ export type SwapAsset = (typeof SWAP_ASSETS)[SwapAssetId];
 
 export const NATIVE_ASSET_ADDRESS = SWAP_ASSETS.ETH.address;
 export const SWAP_CHAIN_ID = 8453;
+
+function isSwapAssetId(value: string | null | undefined): value is SwapAssetId {
+  return Boolean(value && Object.prototype.hasOwnProperty.call(SWAP_ASSETS, value));
+}
+
+export function marketSwapAssetId(market: { symbol: string; name: string }): SwapAssetId | null {
+  const symbol = market.symbol.toUpperCase();
+  return isSwapAssetId(symbol) ? symbol : null;
+}
+
+export function resolveSwapSelection(parameters: { from?: string | null; to?: string | null }): { fromAssetId: SwapAssetId; toAssetId: SwapAssetId } {
+  const requestedFrom = isSwapAssetId(parameters.from) ? parameters.from : null;
+  const requestedTo = isSwapAssetId(parameters.to) ? parameters.to : null;
+  const toAssetId = requestedTo ?? (requestedFrom === "ETH" ? "USDC" : "ETH");
+  let fromAssetId = requestedFrom ?? (toAssetId === "USDC" ? "ETH" : "USDC");
+  if (fromAssetId === toAssetId) fromAssetId = toAssetId === "USDC" ? "ETH" : "USDC";
+  return { fromAssetId, toAssetId };
+}

@@ -161,6 +161,7 @@
 .marketDetailIdentity small { color: var(--muted); font-size: var(--type-caption); font-weight: 650; }
 .marketDetailPrice { display: block; font-family: "Archivo Variable", "Satoshi", system-ui, sans-serif; font-size: 36px; letter-spacing: -.035em; }
 .marketDetailModal > .button { margin-top: 10px; }
+.marketViewOnly { margin-top: 14px; }
 .srOnly { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 
 /* Transfers: options, capabilities, and account details */

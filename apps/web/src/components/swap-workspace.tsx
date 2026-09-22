@@ -2,11 +2,12 @@
 
 import { useMfa, usePrivy, useSendTransaction, useWallets } from "@privy-io/react-auth";
 import { ArrowDownUp, Check, LoaderCircle, ShieldAlert } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { createPublicClient, encodeFunctionData, erc20Abi, formatUnits, getAddress, http, parseUnits } from "viem";
 import { useBalance, useReadContract } from "wagmi";
 import { HOME_CHAIN } from "@/config/chains";
-import { NATIVE_ASSET_ADDRESS, SWAP_ASSETS, type SwapAssetId } from "@/config/swap-assets";
+import { NATIVE_ASSET_ADDRESS, resolveSwapSelection, SWAP_ASSETS, type SwapAssetId } from "@/config/swap-assets";
 import type { TransactionLifecycleStatus } from "@/lib/transactions/lifecycle";
 import { TransactionProgress } from "./transaction-progress";
 
@@ -33,13 +34,15 @@ const compact = new Intl.NumberFormat(undefined, { maximumFractionDigits: 8 });
 const money = new Intl.NumberFormat(undefined, { style: "currency", currency: "USD", maximumFractionDigits: 2 });
 
 export function SwapWorkspace() {
+  const searchParams = useSearchParams();
   const { wallets } = useWallets();
   const { getAccessToken } = usePrivy();
   const { sendTransaction } = useSendTransaction();
   const { mfaMethods } = useMfa();
   const wallet = useMemo(() => wallets.find((item) => item.walletClientType === "privy") ?? wallets[0], [wallets]);
-  const [fromAssetId, setFromAssetId] = useState<SwapAssetId>("USDC");
-  const [toAssetId, setToAssetId] = useState<SwapAssetId>("ETH");
+  const initialSelection = useMemo(() => resolveSwapSelection({ from: searchParams.get("from"), to: searchParams.get("to") }), [searchParams]);
+  const [fromAssetId, setFromAssetId] = useState<SwapAssetId>(initialSelection.fromAssetId);
+  const [toAssetId, setToAssetId] = useState<SwapAssetId>(initialSelection.toAssetId);
   const [amount, setAmount] = useState("");
   const [slippageBps, setSlippageBps] = useState(50);
   const [result, setResult] = useState<QuoteResponse | null>(null);

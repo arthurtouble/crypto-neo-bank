@@ -22,7 +22,7 @@ Networks are routing details. Aurel may reveal them when the customer must choos
 | One portfolio with value history | Portfolio and live borrow state | Stablecoin balance | Store/earn/move/spend account | Balance analytics and insights | **In progress:** live onchain balances and portfolio chart |
 | Add digital assets from multiple networks | Supported token deposits and multichain top-up | Stablecoin transfers | Crypto and stablecoin deposits | Crypto deposit where eligible | **Available for USDC:** automatic route discovery across supported networks; each route is user-approved |
 | Withdraw to another network/address | Token withdrawal with Safe approvals | Wallet withdrawal | Stablecoin withdrawal | Crypto withdrawal where eligible | **Available for USDC:** destination-aware LI.FI routes and direct sends, each explicitly approved |
-| Swap/trade | 100+ tokenized crypto, metals, and stock assets; quote comparison | Stablecoin-focused | Deposit/swap BTC, ETH, SOL to USDC | Crypto, equities, commodities, FX | **Partial:** USDC cross-network routing; live market discovery now precedes broader asset execution |
+| Swap/trade | 100+ tokenized crypto, metals, and stock assets; quote comparison | Stablecoin-focused | Deposit/swap BTC, ETH, SOL to USDC | Crypto, equities, commodities, FX | **Partial:** supported Markets assets now open a preselected Swap flow; USDC cross-network routing and curated multi-route execution are live |
 | Bank account and transfers | Bank transfer rails | Bridge-powered global account | ACH and Fedwire account details | Local accounts, transfers, direct deposit | **Provider-ready preview:** Bridge adapter boundary and non-authoritative projections |
 | Card | Virtual/physical Visa; Direct Pay and Borrow modes | Virtual/physical card; tier rewards | Global card and auto-conversion | Virtual/disposable/physical cards and controls | **Provider-ready preview:** card surface and controls; issuance remains partner-gated |
 | Earn | Liquid vaults and staking | Opt-in DeFi yield | Risk-adjusted vaults | Savings by jurisdiction | **Live:** governed Aave supply flow with transaction-by-transaction simulation and direct wallet confirmation |
@@ -59,7 +59,7 @@ Use these labels consistently in navigation, quick actions, dialogs, receipts, s
 - [x] Unified **Add Money**, **Send**, **Swap**, and **Withdraw** entry points.
 - [x] Destination-aware USDC withdrawals to supported networks.
 - [x] Portfolio value, period selector, line chart, allocation, and authority state.
-- [x] Live searchable markets list with watchlist and clear execution availability.
+- [x] Live searchable markets list with watchlist, truthful view-only states, and direct Swap entry for exact curated assets.
 - [x] Consistent Review, Confirm, Submitted, Complete, failure, and receipt states across direct sends, routed Add Money/Withdraw, Earn, Borrow, and Repay, with authenticated source-receipt reconciliation.
 
 ### P1 — daily financial account
