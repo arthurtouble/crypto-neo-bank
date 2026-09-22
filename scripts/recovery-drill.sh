@@ -30,6 +30,14 @@ if [[ "$(sqlite3 "$restore_db" 'PRAGMA integrity_check;')" != "ok" ]]; then
   echo "Recovery drill failed: restored database did not pass SQLite integrity checks" >&2
   exit 1
 fi
+# Historical analytics are deliberately disposable. Rebuild their schema in
+# the isolated restore and prove this cannot delete the durable evidence below.
+sqlite3 "$restore_db" "DROP TABLE portfolio_disposals; DROP TABLE portfolio_lots; DROP TABLE portfolio_daily_results; DROP TABLE portfolio_daily_quantities; DROP TABLE portfolio_price_observations; DROP TABLE portfolio_source_checkpoints; DROP TABLE portfolio_events;"
+sqlite3 "$restore_db" < "$repo_root/infra/d1/migrations/0017_portfolio_analytics.sql"
+if [[ "$(sqlite3 "$restore_db" "SELECT count(*) FROM sqlite_master WHERE type='table' AND name LIKE 'portfolio_%';")" != "7" ]]; then
+  echo "Recovery drill failed: portfolio analytics schema was not rebuilt" >&2
+  exit 1
+fi
 tables="$(pnpm exec wrangler d1 execute aurel-projections --local --persist-to "$restore_dir" --command "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('webhook_receipts','operational_issues','operational_checks','beta_access','feature_flags','customer_feedback','incident_updates') ORDER BY name;")"
 
 for table in beta_access customer_feedback feature_flags incident_updates operational_checks operational_issues webhook_receipts; do
