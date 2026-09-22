@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { formatUnits, parseUnits } from "viem";
+import { formatUnits, isAddress, parseUnits } from "viem";
 import { SWAP_ASSET_IDS, SWAP_ASSETS, SWAP_CHAIN_ID } from "@/config/swap-assets";
 
 export const swapQuoteRequestSchema = z.object({
@@ -59,29 +59,40 @@ export async function getSwapQuotes(input: z.infer<typeof swapQuoteRequestSchema
   });
   const settled = await Promise.allSettled(providers.map((provider) => providerQuote(provider, query)));
   const observedAt = new Date();
-  const quotes = settled.flatMap((result) => result.status === "fulfilled" && result.value ? [result.value] : []).map(({ providerName, quote }) => {
+  const quotes = settled.flatMap((result) => result.status === "fulfilled" && result.value ? [result.value] : []).flatMap(({ providerName, quote }) => {
+    try {
     if (quote.action.fromChainId !== SWAP_CHAIN_ID || quote.action.toChainId !== SWAP_CHAIN_ID) throw new Error("A quote used an unexpected network.");
     if (quote.action.fromToken.address.toLowerCase() !== from.address.toLowerCase() || quote.action.toToken.address.toLowerCase() !== to.address.toLowerCase()) throw new Error("A quote used unexpected assets.");
+    if (quote.action.fromToken.chainId !== SWAP_CHAIN_ID || quote.action.toToken.chainId !== SWAP_CHAIN_ID || quote.action.fromToken.decimals !== from.decimals || quote.action.toToken.decimals !== to.decimals) throw new Error("A quote used unexpected token metadata.");
+    const quotedInput = BigInt(quote.estimate.fromAmount);
+    const quotedOutput = BigInt(quote.estimate.toAmount);
+    const quotedMinimum = BigInt(quote.estimate.toAmountMin);
+    if (quotedInput !== rawAmount || quotedOutput <= 0n || quotedMinimum <= 0n || quotedMinimum > quotedOutput) throw new Error("A quote changed the amount or minimum received.");
+    if (quote.estimate.approvalAddress && !isAddress(quote.estimate.approvalAddress)) throw new Error("A quote used an invalid approval target.");
+    if (!/^\d+$/.test(quote.transactionRequest.value)) throw new Error("A quote used an invalid transaction value.");
     if (quote.transactionRequest.chainId && quote.transactionRequest.chainId !== SWAP_CHAIN_ID) throw new Error("A quote transaction used an unexpected network.");
     const fromUsd = Number(quote.estimate.fromAmountUSD);
     const toUsd = Number(quote.estimate.toAmountUSD);
     const valueLossPercent = fromUsd > 0 && Number.isFinite(toUsd) ? Math.max(0, ((fromUsd - toUsd) / fromUsd) * 100) : undefined;
-    return {
+    return [{
       quoteId: quote.id,
       provider: quote.tool,
       providerName,
       fromAssetId: parsed.fromAssetId,
       toAssetId: parsed.toAssetId,
       fromAmount: parsed.amount,
-      toAmount: formatUnits(BigInt(quote.estimate.toAmount), to.decimals),
-      toAmountMin: formatUnits(BigInt(quote.estimate.toAmountMin), to.decimals),
+      toAmount: formatUnits(quotedOutput, to.decimals),
+      toAmountMin: formatUnits(quotedMinimum, to.decimals),
       fromAmountUsd: Number.isFinite(fromUsd) ? fromUsd : undefined,
       toAmountUsd: Number.isFinite(toUsd) ? toUsd : undefined,
       valueDifferencePercent: valueLossPercent,
       networkFeeUsd: usdCosts(quote.estimate.gasCosts),
       approvalAddress: quote.estimate.approvalAddress,
       transactionRequest: quote.transactionRequest
-    };
+    }];
+    } catch {
+      return [];
+    }
   }).sort((a, b) => Number(b.toAmountMin) - Number(a.toAmountMin));
   if (!quotes.length) throw new Error("No validated quote is currently available for this pair.");
   return {
