@@ -73,7 +73,7 @@ export class BaseChainSource implements HistoricalEventSource {
       let payload: RecordValue | null;
       try { payload = record(await boundedJson(await fetcher(url.toString(), { headers: { Authorization: `Bearer ${this.options.apiKey}`, Accept: "application/json" }, signal: AbortSignal.timeout(8_000) }))); }
       catch { valid = false; continue; }
-      if (!payload || payload.partial === true || !Array.isArray(payload.items) || !("next_page_params" in payload) || (payload.next_page_params !== null && !record(payload.next_page_params))) { valid = false; continue; }
+      if (!payload || payload.partial === true || !Array.isArray(payload.items) || !("next_page_params" in payload) || (payload.next_page_params !== null && !record(payload.next_page_params)) || (stream === "internal-transactions" && record(payload.meta)?.status !== 1)) { valid = false; continue; }
       if (payload.items.length > input.limit) { valid = false; continue; }
       const continuation = payload.next_page_params === null ? null : payload.next_page_params as Record<string, string | number>;
       if (continuation && (!Object.keys(continuation).length || JSON.stringify(continuation) === JSON.stringify(pages[stream]))) { valid = false; continue; }
