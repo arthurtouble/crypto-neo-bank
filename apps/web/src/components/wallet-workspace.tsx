@@ -7,7 +7,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { erc20Abi, formatUnits, isAddress, parseEther, parseUnits, encodeFunctionData, toHex } from "viem";
 import { useBalance, useReadContract } from "wagmi";
-import { BASE_ASSETS, HOME_CHAIN } from "@/config/chains";
+import { BASE_ASSETS, HOME_CHAIN, SUPPORTED_CHAINS } from "@/config/chains";
 import { ExternalWalletBalances } from "./external-wallet-balances";
 
 type AssetSymbol = keyof typeof BASE_ASSETS;
@@ -38,6 +38,7 @@ export function WalletWorkspace() {
   const [error, setError] = useState<string | null>(null);
   const [hash, setHash] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [receiveChainId, setReceiveChainId] = useState<number>(HOME_CHAIN.id);
 
   const embedded = useMemo(() => wallets.find((wallet) => wallet.walletClientType === "privy") ?? wallets[0], [wallets]);
   const address = embedded?.address as `0x${string}` | undefined;
@@ -188,14 +189,15 @@ export function WalletWorkspace() {
         <section className="financialModal" role="dialog" aria-modal="true" aria-labelledby="wallet-modal-title">
           <button className="modalClose" onClick={() => setModal(null)} aria-label="Close"><X size={18} /></button>
           {modal === "receive" ? <>
-            <h2 id="wallet-modal-title">Receive Digital Assets</h2>
-            <p>Use this address only for assets sent on the Aurel account network.</p>
+            <h2 id="wallet-modal-title">Add USD Coin</h2>
+            <p>Choose where you are sending from, then copy your address.</p>
+            <label className="fieldLabel">Sending From<select value={receiveChainId} onChange={(event) => setReceiveChainId(Number(event.target.value))}>{SUPPORTED_CHAINS.map((chain) => <option value={chain.id} key={chain.id}>{chain.name}</option>)}</select></label>
             <div className="receiveQr"><QRCodeSVG value={address} size={164} bgColor="transparent" fgColor="currentColor" level="M" /></div>
             <code className="addressBlock">{address}</code>
             <button className="button primary full" onClick={() => void copyAddress()}>{copied ? <Check size={16} /> : <Copy size={16} />}{copied ? "Copied" : "Copy address"}</button>
-            <button className="button secondary full" onClick={() => { setModal(null); router.push("/app/exchange"); }}>Swap From Another Account</button>
-            <div className="modalRisk">Only send assets using the account details shown below.</div>
-            <details className="technicalDetails"><summary>Technical Details</summary><span>Network: Base mainnet · Address format: EVM</span></details>
+            {receiveChainId !== HOME_CHAIN.id && <button className="button secondary full" onClick={() => { setModal(null); router.push("/app/exchange"); }}>Move Into Aurel Balance</button>}
+            <div className="modalRisk">Only send USDC on {SUPPORTED_CHAINS.find((chain) => chain.id === receiveChainId)?.name}. Funds sent elsewhere may not appear.</div>
+            {receiveChainId !== HOME_CHAIN.id && <p className="authorityFootnote">Your USDC remains on the selected network until you review and approve a route into your Aurel balance.</p>}
           </> : <form onSubmit={(event) => void submitSend(event)}>
             <h2 id="wallet-modal-title">Send Digital Assets</h2>
             <label className="fieldLabel">Asset<select value={asset} onChange={(event) => setAsset(event.target.value as AssetSymbol)}>{Object.keys(BASE_ASSETS).map((symbol) => <option key={symbol}>{symbol}</option>)}</select></label>

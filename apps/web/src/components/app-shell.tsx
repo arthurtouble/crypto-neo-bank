@@ -14,12 +14,12 @@ import { ClientIdentity } from "./client-identity";
 const navigation = [
   { group: "Portfolio", items: [
     { label: "Overview", href: "/app", icon: icons.dashboard },
-    { label: "Transfers", href: "/app/transfers", icon: icons.card },
-    { label: "Assets", href: "/app/assets", icon: icons.assets },
+    { label: "Move Money", href: "/app/transfers", icon: icons.card },
+    { label: "Portfolio", href: "/app/assets", icon: icons.assets },
     { label: "Activity", href: "/app/activity", icon: icons.activity }
   ]},
   { group: "Invest", items: [
-    { label: "Exchange", href: "/app/exchange", icon: icons.activity },
+    { label: "Swap", href: "/app/exchange", icon: icons.activity },
     { label: "Earn", href: "/app/earn", icon: icons.earn },
     { label: "Borrow", href: "/app/borrow", icon: icons.earn },
     { label: "Markets", href: "/app/markets", icon: icons.assets }

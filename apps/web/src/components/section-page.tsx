@@ -18,9 +18,9 @@ const SystemStatus = dynamic(() => import("./system-status").then((module) => mo
 type Section = "transfers" | "assets" | "exchange" | "earn" | "borrow" | "markets" | "card" | "activity" | "benefits" | "concierge" | "security" | "settings" | "status" | "operations";
 
 const content: Record<Section, { eyebrow: string; title: string; description: string }> = {
-  transfers: { eyebrow: "", title: "Transfers", description: "" },
-  assets: { eyebrow: "Portfolio", title: "Assets", description: "Receive, send, and understand what you own." },
-  exchange: { eyebrow: "Invest", title: "Exchange", description: "Swap assets without managing networks." },
+  transfers: { eyebrow: "", title: "Move Money", description: "" },
+  assets: { eyebrow: "Portfolio", title: "Portfolio", description: "Receive, send, and understand what you own." },
+  exchange: { eyebrow: "Invest", title: "Swap", description: "Swap assets without managing networks." },
   earn: { eyebrow: "Invest", title: "Earn", description: "Compare liquidity and risk before you allocate." },
   borrow: { eyebrow: "Invest", title: "Borrow", description: "See cost, health, and liquidation risk before you sign." },
   markets: { eyebrow: "Invest", title: "Markets", description: "Tokenized markets will appear here after legal, provider, and country review." },

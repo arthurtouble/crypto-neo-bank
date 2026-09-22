@@ -2,11 +2,12 @@
 
 import { Ban, CheckCircle2, FileCheck2, Landmark, LockKeyhole, Scale } from "lucide-react";
 import { evaluateProductEligibility, marketCapabilities } from "@/lib/markets/eligibility";
+import { MarketExplorer } from "./market-explorer";
 
 const categoryIcon = { treasury: Landmark, public_equity: Scale, private_market: LockKeyhole };
 
 export function MarketsWorkspace() {
-  return <><div className="notice marketNotice"><Ban size={18} /><span><strong>Trading is not available.</strong> A token and a liquid pool are not enough. Aurel must confirm the product, provider, country rules, and customer eligibility first.</span></div><div className="marketGrid">{marketCapabilities.map((product) => {
+  return <><MarketExplorer /><div className="notice marketNotice"><Ban size={18} /><span><strong>Some assets are view-only.</strong> Availability depends on the asset, route, country, and account eligibility.</span></div><div className="marketGrid">{marketCapabilities.map((product) => {
     const Icon = categoryIcon[product.category];
     const eligibility = evaluateProductEligibility(product, { identityVerified: false, acceptedDocumentUrls: [] });
     return <article className="panel marketCard" key={product.key}><div className="marketCardTop"><span className="benefitIcon"><Icon size={21} /></span><span className="statusBadge neutral">Not available</span></div><h2>{product.name}</h2><p>{product.description}</p><div className="marketGates">{eligibility.gates.slice(0, 5).map((gate) => <div key={gate.gate}><span>{gate.passed ? <CheckCircle2 size={14} /> : <LockKeyhole size={14} />}</span><div><strong>{gate.gate.replaceAll("_", " ")}</strong><small>{gate.reason}</small></div></div>)}</div><button className="button secondary full" disabled><FileCheck2 size={15} /> Review required</button></article>;

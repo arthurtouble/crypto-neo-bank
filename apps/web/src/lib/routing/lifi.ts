@@ -6,7 +6,8 @@ export const routeRequestSchema = z.object({
   fromChainId: z.coerce.number().int(),
   toChainId: z.coerce.number().int(),
   amount: z.string().regex(/^\d+(\.\d{1,6})?$/),
-  fromAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/)
+  fromAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
+  toAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/).optional()
 }).refine((value) => value.fromChainId !== value.toChainId, { message: "Choose two different networks." })
   .refine((value) => value.fromChainId in USDC_BY_CHAIN && value.toChainId in USDC_BY_CHAIN, { message: "This network pair is not supported." });
 
@@ -25,7 +26,7 @@ export async function getUsdcRoute(input: z.infer<typeof routeRequestSchema>) {
   const from = USDC_BY_CHAIN[parsed.fromChainId as keyof typeof USDC_BY_CHAIN];
   const to = USDC_BY_CHAIN[parsed.toChainId as keyof typeof USDC_BY_CHAIN];
   const rawAmount = parseUnits(parsed.amount, 6).toString();
-  const query = new URLSearchParams({ fromChain: String(parsed.fromChainId), toChain: String(parsed.toChainId), fromToken: from.address, toToken: to.address, fromAddress: parsed.fromAddress, toAddress: parsed.fromAddress, fromAmount: rawAmount, order: "CHEAPEST", slippage: "0.005", integrator: "aurel", allowDestinationCall: "false", maxPriceImpact: "0.02" });
+  const query = new URLSearchParams({ fromChain: String(parsed.fromChainId), toChain: String(parsed.toChainId), fromToken: from.address, toToken: to.address, fromAddress: parsed.fromAddress, toAddress: parsed.toAddress ?? parsed.fromAddress, fromAmount: rawAmount, order: "CHEAPEST", slippage: "0.005", integrator: "aurel", allowDestinationCall: "false", maxPriceImpact: "0.02" });
   const response = await fetch(`https://li.quest/v1/quote?${query}`, { headers: process.env.LIFI_API_KEY ? { "x-lifi-api-key": process.env.LIFI_API_KEY } : undefined, signal: AbortSignal.timeout(15_000) });
   if (!response.ok) {
     const body = await response.json().catch(() => null) as { message?: string } | null;

@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { Landmark, Plus, Send } from "lucide-react";
+import { ArrowDownToLine, ArrowUpFromLine, Plus, Repeat2 } from "lucide-react";
 
 export function DashboardActions() {
-  return <div className="introActions"><Link className="button secondary" href="/app/transfers"><Landmark size={15} /> Transfer</Link><Link className="button secondary" href="/app/assets"><Send size={15} /> Send</Link><Link className="button primary" href="/app/assets"><Plus size={15} /> Receive</Link></div>;
+  return <div className="introActions"><Link className="button primary" href="/app/transfers"><Plus size={15} /> Add Money</Link><Link className="button secondary" href="/app/assets"><ArrowUpFromLine size={15} /> Send</Link><Link className="button secondary" href="/app/exchange"><Repeat2 size={15} /> Swap</Link><Link className="button secondary" href="/app/transfers"><ArrowDownToLine size={15} /> Withdraw</Link></div>;
 }

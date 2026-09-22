@@ -11,6 +11,7 @@ import { BASE_ASSETS, HOME_CHAIN } from "@/config/chains";
 import { qualifyMembership } from "@/lib/membership/qualification";
 import { DashboardActions } from "./dashboard-actions";
 import { ActivationJourney } from "./activation-journey";
+import { PortfolioPerformance } from "./portfolio-performance";
 
 type Intent = { intentId: string; type: string; status: string; transactionHash?: string; createdAt: string; asset?: string; amount?: string };
 type ActivityResponse = { intents: Intent[] };
@@ -31,6 +32,7 @@ export function Dashboard() {
   const usdc = useReadContract({ address: BASE_ASSETS.USDC.address, abi: erc20Abi, functionName: "balanceOf", args: address ? [address] : undefined, chainId: HOME_CHAIN.id, query: { enabled: Boolean(address) } });
   const weth = useReadContract({ address: BASE_ASSETS.WETH.address, abi: erc20Abi, functionName: "balanceOf", args: address ? [address] : undefined, chainId: HOME_CHAIN.id, query: { enabled: Boolean(address) } });
   const usdcValue = usdc.data ? Number(formatUnits(usdc.data, 6)) : 0;
+  const etherValue = (eth.data ? Number(formatEther(eth.data.value)) : 0) + (weth.data ? Number(formatUnits(weth.data, 18)) : 0);
   const membership = qualifyMembership({ thirtyDayAverageUsd: usdcValue, monthlyActivityUsd: 0 });
   const activity = useQuery<ActivityResponse>({
     queryKey: ["activity", user?.id],
@@ -48,6 +50,7 @@ export function Dashboard() {
   return <div className="dashboardPage">
     <section className="pageIntro"><div><h1>Good to see you, {greeting}.</h1></div><DashboardActions /></section>
     <ActivationJourney usdcBalance={usdc.data} />
+    <PortfolioPerformance stableBalance={usdcValue} etherBalance={etherValue} />
     <section className="balanceHero panel"><div className="balanceLead"><div className="balanceLabel"><span>Available Balance</span><span className="statusBadge good"><i /> Current</span></div><div className="heroAmount sensitiveAmount">{amount(usdc.data, 6, 2)} <small>USDC</small></div><div className="heroDelta">Aurel Account · {address ? short(address) : "Loading"}</div></div><div className="metricsGrid"><div className="metric"><span>Ether</span><strong className="sensitiveAmount">{eth.data ? Number(formatEther(eth.data.value)).toLocaleString(undefined, { maximumFractionDigits: 5 }) : "—"} ETH</strong></div><div className="metric"><span>Wrapped Ether</span><strong className="sensitiveAmount">{amount(weth.data, 18)} WETH</strong></div><div className="metric"><span>Membership</span><strong>{membership.tier}</strong></div></div></section>
     <section className="dashboardGrid">
       <article className="panel allocationPanel"><div className="panelHeading"><div><h2>Your Accounts</h2></div><ShieldCheck size={19} /></div><div className="riskList"><div className="riskItem good"><span className="riskIcon"><CheckCircle2 size={18} /></span><div><span>Aurel Account</span><small>Ready</small></div><strong>You Control</strong></div><div className="riskItem good"><span className="riskIcon"><CheckCircle2 size={18} /></span><div><span>Bank Transfers</span><small>Account setup required</small></div><strong>Set Up</strong></div><div className="riskItem good"><span className="riskIcon"><CheckCircle2 size={18} /></span><div><span>Investments</span><small>Selected markets</small></div><strong>Explore</strong></div></div><Link className="textLink" href="/app/assets">View Assets <ArrowRight size={15} /></Link></article>
