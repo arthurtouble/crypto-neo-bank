@@ -56,10 +56,10 @@ Use these labels consistently in navigation, quick actions, dialogs, receipts, s
 - [x] Secure wallet connection and embedded account.
 - [x] Receive and direct send modals.
 - [x] Explicitly approved USDC routing from supported networks.
-- [ ] Unified **Add Money**, **Send**, **Swap**, and **Withdraw** entry points.
-- [ ] Destination-aware USDC withdrawals to supported networks.
-- [ ] Portfolio value, period selector, line chart, allocation, and authority state.
-- [ ] Live searchable markets list with watchlist and clear execution availability.
+- [x] Unified **Add Money**, **Send**, **Swap**, and **Withdraw** entry points.
+- [x] Destination-aware USDC withdrawals to supported networks.
+- [x] Portfolio value, period selector, line chart, allocation, and authority state.
+- [x] Live searchable markets list with watchlist and clear execution availability.
 - [ ] Consistent pending, success, failure, and receipt states across every money flow.
 
 ### P1 — daily financial account
