@@ -46,6 +46,8 @@ For a material data or event-processing incident:
 
 Operations should never invent a confirmed state to make the interface look complete.
 
+Portfolio source replays put historical chart and tax views on hold. The last calculated rows are retained for recovery, but they are not presented as current until fresh source checkpoints and a new calculation are published together. If that publication cannot complete, those views remain unavailable rather than falling back to old numbers.
+
 ## Scheduled checks
 
 A five-minute scheduled process can identify submitted transactions that remain unresolved, reviewed actions that have expired, and provider events that failed or stopped progressing. The schedule creates detection opportunities; it does not guarantee that every upstream problem is known within five minutes.
@@ -63,4 +65,3 @@ A backup is not evidence of recoverability until it has been restored in an isol
 ## Customer communication
 
 During an incident, Aurel should say which features are affected, what customers should avoid repeating, whether underlying assets remain accessible, and when the next useful update is expected. Communication should separate known facts from investigation.
-
