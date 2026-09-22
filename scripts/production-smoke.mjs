@@ -38,6 +38,27 @@ for (const path of ["/api/portfolio", "/api/activity", "/api/ops/summary", "/api
   assert(accepted.includes(response.status), `${path} rejects or retires an unauthenticated request (${response.status})`);
 }
 
+// Enable only for a parity release. The current production Worker may still be
+// serving the previous build while this branch is under review.
+if (process.env.AUREL_EXPECT_PARITY === "1") {
+  for (const path of ["/api/portfolio/history?range=7D", "/api/portfolio/tax-support?year=2026", "/api/swap/assets?q=USD"]) {
+    const response = await request(path);
+    assert([401, 403].includes(response.status), `${path} rejects unauthenticated account reads (${response.status})`);
+    assert(response.headers.get("cache-control")?.includes("no-store"), `${path} does not cache account responses`);
+  }
+  for (const path of ["/api/portfolio/refresh", "/api/swap/quote", "/api/intents/prepare"]) {
+    const response = await request(path, { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
+    assert([401, 403].includes(response.status), `${path} rejects unauthenticated actions (${response.status})`);
+    assert(response.headers.get("cache-control")?.includes("no-store"), `${path} does not cache action responses`);
+  }
+  const instruments = await request("/api/markets/instruments?q=__aurel_nonexistent_instrument__");
+  assert([200, 503].includes(instruments.status), `regulated instrument discovery is read-only (${instruments.status})`);
+  if (instruments.ok) {
+    const body = await instruments.json().catch(() => ({}));
+    assert(!("canTrade" in body) && !("order" in body), "instrument discovery grants no trading authority");
+  }
+}
+
 const webhook = await request("/api/webhooks/provider", {
   method: "POST",
   headers: { "content-type": "application/json" },
