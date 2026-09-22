@@ -62,4 +62,55 @@ describe("covered historical portfolio values", () => {
     const result = calculatePortfolioDays({ events: [event(days[0], "deposit", "100000000", "contribution")], prices: [price(days[0], "1"), price(days[0], "1.01")], coverage: [cover(days[0])], calculationVersion: 1 });
     expect(result.points[0]).toMatchObject({ netValueUsd: null, reasons: expect.arrayContaining(["missing_price"]) });
   });
+
+  it("keeps an undocumented deposit and withdrawal out of supported tax gains", () => {
+    const result = calculatePortfolioDays({
+      events: [event(days[0], "deposit", "100000000", "contribution"), event(days[2], "withdraw", "-50000000", "withdrawal")],
+      prices: days.map((day) => price(day, "1")), coverage: days.map((day) => cover(day)), calculationVersion: 2
+    });
+    expect(result.lots[0]).toMatchObject({ rawAcquired: "100000000", rawRemaining: "50000000", basisUsd: null, classification: "review_required", calculationVersion: 2 });
+    expect(result.disposals[0]).toMatchObject({ rawUnits: "50000000", proceedsUsd: null, basisUsd: null, gainUsd: null, classification: "review_required" });
+  });
+
+  it("uses documented consideration for FIFO support and never daily closes as proceeds", () => {
+    const first = event(days[0], "first", "100000000", "contribution");
+    first.evidenceJson = '{"taxSupport":{"acquisitionCostUsd":"90","evidenceReference":"provider:1"}}';
+    const second = event(days[1], "second", "100000000", "contribution");
+    second.evidenceJson = '{"taxSupport":{"acquisitionCostUsd":"110","evidenceReference":"provider:2"}}';
+    const sale = event(days[2], "sale", "-150000000", "swap");
+    sale.evidenceJson = '{"taxSupport":{"disposalProceedsUsd":"180","evidenceReference":"provider:3"}}';
+    const result = calculatePortfolioDays({ events: [first, second, sale], prices: days.map((day) => price(day, "1")), coverage: days.map((day) => cover(day)), calculationVersion: 2 });
+    expect(result.lots.map((lot) => lot.rawRemaining)).toEqual(["0", "50000000"]);
+    expect(result.disposals[0]).toMatchObject({ rawUnits: "150000000", proceedsUsd: "180", basisUsd: "145", gainUsd: "35", classification: "supported" });
+  });
+
+  it("moves basis between owned accounts without reporting a disposal", () => {
+    const B = "8453:0x00000000000000000000000000000000000000b2" as AccountId;
+    const initial = event(days[0], "initial", "100000000", "contribution");
+    initial.evidenceJson = '{"taxSupport":{"acquisitionCostUsd":"100","evidenceReference":"provider:1"}}';
+    const outgoing = event(days[1], "move-out", "-40000000", "internal_transfer");
+    outgoing.groupId = "move";
+    outgoing.counterpartyAccountId = B;
+    const incoming = event(days[1], "move-in", "40000000", "internal_transfer");
+    incoming.groupId = "move";
+    incoming.accountId = B;
+    incoming.counterpartyAccountId = A;
+    incoming.occurredAt = `${days[1]}T09:59:59.000Z`;
+    const result = calculatePortfolioDays({ events: [initial, outgoing, incoming], prices: days.map((day) => price(day, "1")),
+      coverage: days.flatMap((day) => [cover(day), { ...cover(day), accountId: B }]), calculationVersion: 2 });
+    expect(result.disposals).toEqual([]);
+    expect(result.lots.filter((lot) => lot.accountId === A)[0]).toMatchObject({ rawRemaining: "60000000" });
+    expect(result.lots.filter((lot) => lot.accountId === B)[0]).toMatchObject({ rawRemaining: "40000000", basisUsd: "40", classification: "supported" });
+  });
+
+  it("does not promote gains when source coverage or event classification is incomplete", () => {
+    const acquisition = event(days[0], "acquire", "100000000", "contribution");
+    acquisition.evidenceJson = '{"taxSupport":{"acquisitionCostUsd":"100","evidenceReference":"provider:1"}}';
+    const unknown = event(days[1], "unknown", "10000000", "unknown");
+    const sale = event(days[2], "sale", "-50000000", "swap");
+    sale.evidenceJson = '{"taxSupport":{"disposalProceedsUsd":"80","evidenceReference":"provider:2"}}';
+    const result = calculatePortfolioDays({ events: [acquisition, unknown, sale], prices: days.map((day) => price(day, "1")),
+      coverage: [cover(days[0]), cover(days[1], "partial"), cover(days[2])], calculationVersion: 2 });
+    expect(result.disposals[0]).toMatchObject({ classification: "review_required", gainUsd: null });
+  });
 });

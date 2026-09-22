@@ -60,6 +60,33 @@ export type HistoryPoint = {
   status: Completeness;
   reasons: string[];
 };
+export type BasisClassification = "supported" | "review_required";
+export type BasisLot = {
+  accountId: AccountId;
+  assetId: AssetId;
+  sourceEventId: string;
+  calculationVersion: number;
+  acquiredAt: string;
+  rawAcquired: string;
+  rawRemaining: string;
+  basisUsd: string | null;
+  classification: BasisClassification;
+  evidenceJson: string;
+};
+export type BasisDisposal = {
+  accountId: AccountId;
+  assetId: AssetId;
+  sourceEventId: string;
+  legIndex: number;
+  calculationVersion: number;
+  disposedAt: string;
+  rawUnits: string;
+  proceedsUsd: string | null;
+  basisUsd: string | null;
+  gainUsd: string | null;
+  classification: BasisClassification;
+  evidenceJson: string;
+};
 export type PortfolioHistory = {
   calculationVersion: number;
   points: HistoryPoint[];

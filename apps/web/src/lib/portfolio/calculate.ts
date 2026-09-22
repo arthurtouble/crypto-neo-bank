@@ -1,4 +1,4 @@
-import type { DayCoverage, HistoricalEvent, HistoryPoint, PriceObservation } from "./types";
+import type { BasisDisposal, BasisLot, DayCoverage, HistoricalEvent, HistoryPoint, PriceObservation } from "./types";
 
 const SCALE = 10n ** 18n;
 const signedInteger = /^-?(?:0|[1-9]\d*)$/;
@@ -25,13 +25,135 @@ function sourceRole(event: HistoricalEvent): string | null {
   } catch { return null; }
 }
 
+type MutableLot = BasisLot & { remaining: bigint; remainingBasis: bigint | null };
+
+function documentedMoney(event: HistoricalEvent, field: "acquisitionCostUsd" | "disposalProceedsUsd"): bigint | null {
+  try {
+    const evidence = JSON.parse(event.evidenceJson) as { taxSupport?: Record<string, unknown> };
+    const tax = evidence.taxSupport;
+    if (!tax || typeof tax.evidenceReference !== "string" || !tax.evidenceReference.trim() || typeof tax[field] !== "string") return null;
+    const value = tax[field];
+    if (!decimal.test(value)) return null;
+    const [whole, fraction = ""] = value.split(".");
+    return BigInt(whole) * SCALE + BigInt(fraction.padEnd(18, "0"));
+  } catch { return null; }
+}
+
+function calculateBasis(events: HistoricalEvent[], coverage: DayCoverage[], calculationVersion: number): { lots: BasisLot[]; disposals: BasisDisposal[] } {
+  const byAssetAccount = new Map<string, MutableLot[]>();
+  const disposals: BasisDisposal[] = [];
+  const finalized = events.filter((event) => event.finality === "finalized" && event.completeness === "complete" && signedInteger.test(event.rawDelta)
+    && event.decimals >= 0 && event.decimals <= 36 && sourceRole(event) !== "position_receipt" && sourceRole(event) !== "liability")
+    .sort((a, b) => a.occurredAt.localeCompare(b.occurredAt)
+      || (a.groupId && a.groupId === b.groupId && a.kind === "internal_transfer" && b.kind === "internal_transfer"
+        ? (BigInt(a.rawDelta) < 0n ? -1 : 1) : 0)
+      || a.sourceId.localeCompare(b.sourceId) || a.sourceEventId.localeCompare(b.sourceEventId));
+  const transferPairs = new Map<HistoricalEvent, HistoricalEvent>();
+  const pairedIncoming = new Set<HistoricalEvent>();
+  for (const outgoing of finalized) {
+    if (outgoing.kind !== "internal_transfer" || BigInt(outgoing.rawDelta) >= 0n || !outgoing.groupId) continue;
+    const incoming = finalized.find((candidate) => candidate !== outgoing && !pairedIncoming.has(candidate)
+      && candidate.kind === "internal_transfer" && candidate.groupId === outgoing.groupId
+      && candidate.accountId === outgoing.counterpartyAccountId && candidate.counterpartyAccountId === outgoing.accountId
+      && candidate.assetId === outgoing.assetId && BigInt(candidate.rawDelta) === -BigInt(outgoing.rawDelta));
+    if (incoming) { transferPairs.set(outgoing, incoming); pairedIncoming.add(incoming); }
+  }
+  const incompleteAccounts = new Set(coverage.filter((row) => row.eventStatus !== "complete" || row.priceStatus !== "complete")
+    .map((row) => row.accountId));
+  for (const event of events) {
+    if (event.finality !== "finalized" || event.completeness !== "complete" || event.kind === "unknown"
+      || !coverage.some((row) => row.accountId === event.accountId && row.day === event.occurredAt.slice(0, 10) && row.eventStatus === "complete")) {
+      incompleteAccounts.add(event.accountId);
+    }
+  }
+  const accountKey = (event: HistoricalEvent) => `${event.accountId}|${event.assetId}`;
+  const sourceKey = (event: HistoricalEvent) => `${event.sourceId}:${event.sourceEventId}`;
+  const takeLots = (event: HistoricalEvent, quantity: bigint) => {
+    let needed = quantity;
+    const pieces: Array<{ units: bigint; basis: bigint | null; source: MutableLot }> = [];
+    for (const lot of byAssetAccount.get(accountKey(event)) ?? []) {
+      if (needed === 0n) break;
+      const taken = needed < lot.remaining ? needed : lot.remaining;
+      if (taken <= 0n) continue;
+      const basis = lot.remainingBasis === null ? null : lot.remainingBasis * taken / lot.remaining;
+      lot.remaining -= taken;
+      if (basis !== null) lot.remainingBasis! -= basis;
+      lot.rawRemaining = lot.remaining.toString();
+      lot.basisUsd = lot.remainingBasis === null ? null : formatScaled(lot.remainingBasis);
+      pieces.push({ units: taken, basis, source: lot });
+      needed -= taken;
+    }
+    return { pieces, missing: needed };
+  };
+  for (const event of finalized) {
+    if (pairedIncoming.has(event)) continue;
+    const delta = BigInt(event.rawDelta);
+    if (delta === 0n) continue;
+    if (delta > 0n) {
+      const basis = !incompleteAccounts.has(event.accountId) && (event.kind === "contribution" || event.kind === "swap")
+        ? documentedMoney(event, "acquisitionCostUsd") : null;
+      const lot: MutableLot = {
+        accountId: event.accountId, assetId: event.assetId, sourceEventId: sourceKey(event), calculationVersion,
+        acquiredAt: event.occurredAt, rawAcquired: delta.toString(), rawRemaining: delta.toString(),
+        basisUsd: basis === null ? null : formatScaled(basis), classification: basis === null ? "review_required" : "supported",
+        evidenceJson: event.evidenceJson, remaining: delta, remainingBasis: basis
+      };
+      byAssetAccount.set(accountKey(event), [...(byAssetAccount.get(accountKey(event)) ?? []), lot]);
+      continue;
+    }
+    const quantity = -delta;
+    const { pieces, missing } = takeLots(event, quantity);
+    if (event.kind === "internal_transfer") {
+      const incoming = transferPairs.get(event);
+      if (incoming) {
+        for (const [index, piece] of pieces.entries()) {
+          const moved: MutableLot = {
+            accountId: incoming.accountId, assetId: event.assetId,
+            sourceEventId: `${sourceKey(incoming)}:basis-${index}`, calculationVersion,
+            acquiredAt: piece.source.acquiredAt, rawAcquired: piece.units.toString(), rawRemaining: piece.units.toString(),
+            basisUsd: piece.basis === null ? null : formatScaled(piece.basis),
+            classification: piece.basis === null ? "review_required" : "supported",
+            evidenceJson: incoming.evidenceJson, remaining: piece.units, remainingBasis: piece.basis
+          };
+          byAssetAccount.set(accountKey(incoming), [...(byAssetAccount.get(accountKey(incoming)) ?? []), moved]);
+        }
+        if (missing > 0n) {
+          const unresolved: MutableLot = {
+            accountId: incoming.accountId, assetId: incoming.assetId, sourceEventId: `${sourceKey(incoming)}:unresolved`,
+            calculationVersion, acquiredAt: incoming.occurredAt, rawAcquired: missing.toString(), rawRemaining: missing.toString(),
+            basisUsd: null, classification: "review_required", evidenceJson: incoming.evidenceJson, remaining: missing, remainingBasis: null
+          };
+          byAssetAccount.set(accountKey(incoming), [...(byAssetAccount.get(accountKey(incoming)) ?? []), unresolved]);
+        }
+        continue;
+      }
+    }
+    const basis = missing === 0n && pieces.every((piece) => piece.basis !== null)
+      ? pieces.reduce((sum, piece) => sum + piece.basis!, 0n) : null;
+    const proceeds = documentedMoney(event, "disposalProceedsUsd");
+    const supported = basis !== null && proceeds !== null && event.kind !== "internal_transfer" && event.kind !== "unknown"
+      && !incompleteAccounts.has(event.accountId);
+    disposals.push({ accountId: event.accountId, assetId: event.assetId, sourceEventId: sourceKey(event), legIndex: 0,
+      calculationVersion, disposedAt: event.occurredAt, rawUnits: quantity.toString(),
+      proceedsUsd: proceeds === null ? null : formatScaled(proceeds), basisUsd: basis === null ? null : formatScaled(basis),
+      gainUsd: supported ? formatScaled(proceeds - basis) : null, classification: supported ? "supported" : "review_required",
+      evidenceJson: event.evidenceJson });
+  }
+  const lots: BasisLot[] = [...byAssetAccount.values()].flat().map((lot) => ({
+    accountId: lot.accountId, assetId: lot.assetId, sourceEventId: lot.sourceEventId, calculationVersion: lot.calculationVersion,
+    acquiredAt: lot.acquiredAt, rawAcquired: lot.rawAcquired, rawRemaining: lot.rawRemaining,
+    basisUsd: lot.basisUsd, classification: lot.classification, evidenceJson: lot.evidenceJson
+  }));
+  return { lots, disposals };
+}
+
 /** Builds only days for which every included source and held asset is covered. */
 export function calculatePortfolioDays(input: {
   events: HistoricalEvent[];
   prices: PriceObservation[];
   coverage: DayCoverage[];
   calculationVersion: number;
-}): { points: HistoryPoint[] } {
+}): { points: HistoryPoint[]; lots: BasisLot[]; disposals: BasisDisposal[] } {
   if (!Number.isSafeInteger(input.calculationVersion) || input.calculationVersion < 1) throw new Error("Invalid portfolio calculation version.");
   const days = [...new Set(input.coverage.map((row) => row.day))].sort();
   const accounts = new Set(input.events.map((event) => event.accountId));
@@ -100,5 +222,5 @@ export function calculatePortfolioDays(input: {
     everComplete = true;
     previousValue = value;
   }
-  return { points };
+  return { points, ...calculateBasis(input.events, input.coverage, input.calculationVersion) };
 }
