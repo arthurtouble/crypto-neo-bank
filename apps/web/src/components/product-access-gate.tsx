@@ -20,7 +20,7 @@ export function ProductAccessGate({ children }: { children: React.ReactNode }) {
         <div className="accessGateMark"><LockKeyhole size={24} /></div>
         <p className="eyebrow">Private access</p>
         <h1>Start with a wallet you control.</h1>
-        <p>Sign in to create or connect a Privy wallet. Aurel never sees your recovery secret or signs for you.</p>
+        <p>Sign in to open your secure account.</p>
         <button className="button primary" onClick={login}>Continue securely</button>
         <div className="accessAssurances">
           <span><ShieldCheck size={15} /> User-confirmed transactions</span>

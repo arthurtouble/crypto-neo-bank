@@ -4,8 +4,8 @@ import "./globals.css";
 import "./identity.css";
 
 export const metadata: Metadata = {
-  title: "Aurel — Onchain wealth, usable everywhere",
-  description: "A secure financial operating system for onchain wealth."
+  title: "Aurel — Your financial life, in one place",
+  description: "A secure account for money, digital assets, investing, and everyday benefits."
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

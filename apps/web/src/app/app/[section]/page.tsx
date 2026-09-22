@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { SectionPage } from "@/components/section-page";
 
-const sections = ["assets", "earn", "borrow", "markets", "card", "activity", "benefits", "concierge", "security", "settings", "status", "operations"] as const;
+const sections = ["transfers", "assets", "earn", "borrow", "markets", "card", "activity", "benefits", "concierge", "security", "settings", "status", "operations"] as const;
 type Section = (typeof sections)[number];
 
 export function generateStaticParams() {

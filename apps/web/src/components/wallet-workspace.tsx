@@ -45,9 +45,9 @@ export function WalletWorkspace() {
   const weth = useReadContract({ address: BASE_ASSETS.WETH.address, abi: erc20Abi, functionName: "balanceOf", args: address ? [address] : undefined, chainId: HOME_CHAIN.id, query: { enabled: Boolean(address) } });
 
   const rows = [
-    { ...BASE_ASSETS.USDC, value: usdc.data, source: "Aurel wallet · Base", pending: usdc.isPending },
-    { ...BASE_ASSETS.ETH, value: eth.data?.value, source: "Aurel wallet · Base", pending: eth.isPending },
-    { ...BASE_ASSETS.WETH, value: weth.data, source: "Aurel wallet · Base", pending: weth.isPending }
+    { ...BASE_ASSETS.USDC, value: usdc.data, source: "Aurel Account", pending: usdc.isPending },
+    { ...BASE_ASSETS.ETH, value: eth.data?.value, source: "Aurel Account", pending: eth.isPending },
+    { ...BASE_ASSETS.WETH, value: weth.data, source: "Aurel Account", pending: weth.isPending }
   ];
 
   async function copyAddress() {
@@ -148,7 +148,7 @@ export function WalletWorkspace() {
   }
 
   if (!ready || !address) {
-    return <section className="panel walletLoading"><LoaderCircle className="spin" size={20} /><div><strong>Preparing your wallet</strong><span>Privy is creating or restoring your customer-controlled wallet.</span></div></section>;
+    return <section className="panel walletLoading"><LoaderCircle className="spin" size={20} /><div><strong>Preparing your account</strong></div></section>;
   }
 
   return (
@@ -156,7 +156,7 @@ export function WalletWorkspace() {
       <div className="contentGrid">
         <section className="panel widePanel">
           <div className="panelHeading walletHeading">
-            <div><p className="eyebrow">BASE MAINNET · LIVE</p><h2>Assets you control</h2><p className="sourceCaption">Balances are read directly from Base and are never maintained by Aurel.</p></div>
+            <div><h2>Your Assets</h2></div>
             <div className="walletActions"><button className="button secondary" onClick={() => setModal("receive")}><QrCode size={16} /> Receive</button><button className="button primary" onClick={() => openSend()}><Send size={16} /> Send</button></div>
           </div>
           <div className="assetTable liveAssetTable">
@@ -174,10 +174,8 @@ export function WalletWorkspace() {
         </section>
 
         <aside className="panel connectionPanel">
-          <p className="eyebrow">WALLET CONTROL</p>
-          <h3>{shortAddress(address)}</h3>
-          <p>Your embedded wallet is exportable and every transaction requires your confirmation.</p>
-          <div className="walletConnection"><span><WalletCards size={18} /></span><div><strong>Privy embedded</strong><small>{shortAddress(address)} · Base</small></div><i className="onlineDot" /></div>
+          <h3>Your Account</h3>
+          <div className="walletConnection"><span><WalletCards size={18} /></span><div><strong>Aurel Wallet</strong><small>{shortAddress(address)}</small></div><i className="onlineDot" /></div>
           {externalWallets.map((wallet) => <div className="walletConnection" key={wallet.address}><span><ExternalLink size={17} /></span><div><strong>Connected wallet</strong><small>{shortAddress(wallet.address)}</small></div><i className="onlineDot" /></div>)}
           <button className="button secondary full" onClick={() => connectWallet()}><Plus size={15} /> Connect external wallet</button>
         </aside>
@@ -188,22 +186,22 @@ export function WalletWorkspace() {
         <section className="financialModal" role="dialog" aria-modal="true" aria-labelledby="wallet-modal-title">
           <button className="modalClose" onClick={() => setModal(null)} aria-label="Close"><X size={18} /></button>
           {modal === "receive" ? <>
-            <p className="eyebrow">RECEIVE ONCHAIN</p><h2 id="wallet-modal-title">Your wallet address</h2>
-            <p>This address works across supported EVM networks. Aurel’s primary portfolio view is Base, so confirm the network and asset before transferring.</p>
+            <h2 id="wallet-modal-title">Receive Digital Assets</h2>
+            <p>Use this address only for assets sent on the Aurel account network.</p>
             <div className="receiveQr"><QRCodeSVG value={address} size={164} bgColor="transparent" fgColor="currentColor" level="M" /></div>
             <code className="addressBlock">{address}</code>
             <button className="button primary full" onClick={() => void copyAddress()}>{copied ? <Check size={16} /> : <Copy size={16} />}{copied ? "Copied" : "Copy address"}</button>
-            <div className="modalRisk">Depositing an unsupported token or using an incompatible network can result in permanent loss. Aurel does not take custody during this transfer.</div>
+            <div className="modalRisk">Transfers from another network are not routed automatically. Use “Move Between Networks” on the Assets page instead.</div>
+            <details className="technicalDetails"><summary>Technical Details</summary><span>Network: Base mainnet · Address format: EVM</span></details>
           </> : <form onSubmit={(event) => void submitSend(event)}>
-            <p className="eyebrow">USER-SIGNED TRANSFER</p><h2 id="wallet-modal-title">Send from Base</h2>
-            <p>Aurel prepares the transaction. Privy shows the final mainnet confirmation before your wallet signs.</p>
+            <h2 id="wallet-modal-title">Send Digital Assets</h2>
             <label className="fieldLabel">Asset<select value={asset} onChange={(event) => setAsset(event.target.value as AssetSymbol)}>{Object.keys(BASE_ASSETS).map((symbol) => <option key={symbol}>{symbol}</option>)}</select></label>
             <label className="fieldLabel">Amount<input inputMode="decimal" placeholder="0.00" value={amount} onChange={(event) => setAmount(event.target.value)} /></label>
             <label className="fieldLabel">Destination<input autoComplete="off" spellCheck={false} placeholder="0x…" value={recipient} onChange={(event) => setRecipient(event.target.value.trim())} /></label>
-            <div className="transactionSummary"><span>Network<strong>Base mainnet</strong></span><span>Signer<strong>{shortAddress(address)}</strong></span><span>Control<strong>Policy + simulation</strong></span></div>
+            <div className="transactionSummary"><span>From<strong>Aurel Account</strong></span><span>Account<strong>{shortAddress(address)}</strong></span><span>Review<strong>You Confirm</strong></span></div>
             {error && <div className="formError" role="alert">{error}</div>}
-            {hash && <a className="transactionSuccess" href={`https://basescan.org/tx/${hash}`} target="_blank" rel="noreferrer"><Check size={16} /> Submitted · View on BaseScan <ExternalLink size={14} /></a>}
-            <button className="button primary full" disabled={sending || Boolean(hash)}>{sending ? <LoaderCircle className="spin" size={16} /> : <Send size={16} />}{hash ? "Transaction submitted" : sending ? "Awaiting confirmation" : "Review with Privy"}</button>
+            {hash && <a className="transactionSuccess" href={`https://basescan.org/tx/${hash}`} target="_blank" rel="noreferrer"><Check size={16} /> Transfer Submitted <ExternalLink size={14} /></a>}
+            <button className="button primary full" disabled={sending || Boolean(hash)}>{sending ? <LoaderCircle className="spin" size={16} /> : <Send size={16} />}{hash ? "Transfer Submitted" : sending ? "Awaiting Confirmation" : "Review Transfer"}</button>
           </form>}
         </section>
       </div>}

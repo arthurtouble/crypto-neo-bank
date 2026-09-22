@@ -14,6 +14,7 @@ import { ClientIdentity } from "./client-identity";
 const navigation = [
   { group: "Portfolio", items: [
     { label: "Overview", href: "/app", icon: icons.dashboard },
+    { label: "Transfers", href: "/app/transfers", icon: icons.card },
     { label: "Assets", href: "/app/assets", icon: icons.assets },
     { label: "Activity", href: "/app/activity", icon: icons.activity }
   ]},
@@ -46,7 +47,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <Brand compact />
           <button className="mobileClose" onClick={() => setOpen(false)} aria-label="Close navigation"><X size={20} /></button>
         </div>
-        <div className="environmentLabel"><span /> Base mainnet</div>
+        <div className="environmentLabel"><span /> Account Protected</div>
         <nav className="sideNav groupedNav" aria-label="Primary">
           {navigation.map((group) => <div className="navGroup" key={group.group}><p>{group.group}</p>{group.items.map((item) => {
             const Icon = item.icon;
@@ -71,7 +72,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <header className="productHeader">
           <button className="menuButton" onClick={() => setOpen(true)} aria-label="Open navigation"><Menu size={20} /></button>
           <CommandMenu />
-          <div className="headerRight"><span className="networkStatus"><i /> Base mainnet</span><ThemeToggle /><PrivyAccountButton /></div>
+          <div className="headerRight"><span className="networkStatus"><i /> Secure Connection</span><ThemeToggle /><PrivyAccountButton /></div>
         </header>
         <main className="productContent">{children}</main>
       </div>

@@ -25,14 +25,14 @@ export function SecurityCenter() {
   }
 
   const controls = [
-    { icon: Fingerprint, title: "Passkey protection", note: passkeyReady ? "Enabled for sensitive wallet actions" : "Required before material-value actions", state: passkeyReady ? "Enabled" : "Set up", action: () => showMfaEnrollmentModal() },
-    { icon: KeyRound, title: "User-controlled recovery", note: "Configure a recovery method independent of Aurel", state: "Review", action: () => run("Recovery setup", () => setWalletRecovery()) },
-    { icon: Download, title: "Wallet export", note: "Privy displays the secret in an isolated interface Aurel cannot read", state: "Available", action: () => wallet ? run("Wallet export", () => exportWallet({ address: wallet.address })) : undefined },
-    { icon: MonitorSmartphone, title: "Current session", note: `${user?.email?.address ?? user?.id ?? "Authenticated user"} · this browser`, state: "Active", action: undefined }
+    { icon: Fingerprint, title: "Passkey Protection", note: passkeyReady ? "Enabled" : "Required for larger transfers", state: passkeyReady ? "Enabled" : "Set Up", action: () => showMfaEnrollmentModal() },
+    { icon: KeyRound, title: "Account Recovery", note: "Review your recovery method", state: "Review", action: () => run("Recovery setup", () => setWalletRecovery()) },
+    { icon: Download, title: "Wallet Export", note: "Export your wallet securely", state: "Available", action: () => wallet ? run("Wallet export", () => exportWallet({ address: wallet.address })) : undefined },
+    { icon: MonitorSmartphone, title: "Current Session", note: `${user?.email?.address ?? user?.id ?? "Signed in"} · this browser`, state: "Active", action: undefined }
   ];
 
-  return <><div className="contentGrid"><section className="panel widePanel"><div className="panelHeading"><div><p className="eyebrow">PRIVY SECURITY</p><h2>Account protection</h2></div><span className={`statusBadge ${passkeyReady ? "good" : "neutral"}`}><i /> {passkeyReady ? "Strong" : "Action required"}</span></div>
+  return <><div className="contentGrid"><section className="panel widePanel"><div className="panelHeading"><div><h2>Account Protection</h2></div><span className={`statusBadge ${passkeyReady ? "good" : "neutral"}`}><i /> {passkeyReady ? "Strong" : "Action Required"}</span></div>
     <div className="securityChecklist">{controls.map(({ icon: Icon, title, note, state, action }) => <div key={title}><span className={state === "Enabled" || state === "Active" ? "good" : "warn"}><Icon size={19} /></span><div><strong>{title}</strong><small>{note}</small></div>{action ? <button disabled={Boolean(working)} onClick={action}>{working && title.startsWith(working.split(" ")[0]) ? <LoaderCircle className="spin" size={14} /> : state}</button> : <b className="securityState"><Check size={14} /> {state}</b>}</div>)}</div>
     {message && <div className="securityMessage" role="status">{message}</div>}
-  </section><aside className="panel connectionPanel"><p className="eyebrow">CONTROL MODEL</p><h3>You remain the final signer</h3><p>Aurel can prepare and explain transactions, but the default wallet requires your explicit confirmation. Aurel does not receive the recovery secret displayed by Privy.</p><div className="securityPrinciple"><ShieldCheck size={17} /><span><strong>No delegated signer</strong><small>Automated asset movement is disabled.</small></span></div><div className="securityPrinciple"><KeyRound size={17} /><span><strong>Export path</strong><small>Your wallet is not locked to Aurel.</small></span></div></aside></div><SecurityPolicyControls /></>;
+  </section><aside className="panel connectionPanel"><h3>You Stay in Control</h3><div className="securityPrinciple"><ShieldCheck size={17} /><span><strong>You Approve Transfers</strong></span></div><div className="securityPrinciple"><KeyRound size={17} /><span><strong>Wallet Export Available</strong></span></div></aside></div><SecurityPolicyControls /></>;
 }

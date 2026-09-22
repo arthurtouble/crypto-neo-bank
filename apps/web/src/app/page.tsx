@@ -17,8 +17,8 @@ export default function MarketingPage() {
         <section className="marketingHero">
           <div className="heroCopy">
             <p className="eyebrow"><WalletCards size={14} /> Private digital wealth</p>
-            <h1>Your onchain wealth,<br /><em>ready for real life.</em></h1>
-            <p>See, move, and put digital assets to work from one calm, secure place. You stay in control of the wallet.</p>
+            <h1>Your money,<br /><em>all in one place.</em></h1>
+            <p>Save, spend, invest, and move money from one secure account.</p>
             <div className="heroButtons"><Link className="button dark large" href="/app">Open Aurel</Link><a className="button textButton" href={`${docsUrl}/getting-started/setup/`}>How Aurel works</a></div>
             <div className="trustLine"><span><KeyRound size={15} /> You sign every transaction</span><span><LockKeyhole size={15} /> No Aurel token</span><span><Globe2 size={15} /> Built for global assets</span></div>
           </div>
@@ -41,12 +41,12 @@ export default function MarketingPage() {
         </section>
 
         <section className="productSection" id="product">
-          <div className="sectionCopy"><p className="eyebrow"><Route size={14} /> What you can do</p><h2>Move money without learning the machinery.</h2><p>Connect a wallet, understand what you own, and review every action in plain language.</p><ul><li><WalletCards size={16} /> See assets in one view</li><li><Route size={16} /> Move USDC across networks</li><li><CircleDollarSign size={16} /> Access selected DeFi markets</li><li><Landmark size={16} /> Banking and cards are planned</li></ul></div>
+          <div className="sectionCopy"><p className="eyebrow"><Route size={14} /> One Account</p><h2>Money without the machinery.</h2><p>A clear view of your money, with every action reviewed before it happens.</p><ul><li><WalletCards size={16} /> See everything in one place</li><li><Route size={16} /> Send and receive digital dollars</li><li><CircleDollarSign size={16} /> Access selected markets</li><li><Landmark size={16} /> Set up bank transfers and cards</li></ul></div>
           <div className="productTiles"><article className="productTile mainTile"><span><WalletCards size={20} /></span><p className="eyebrow">Illustrative holdings</p><h3>Everything you own,<br />clear at a glance.</h3><div className="miniAssets"><span><i>U</i> USD Coin <b>$141,290</b></span><span><i>E</i> Ether <b>$34,546</b></span><span><i>W</i> Wrapped Ether <b>$8,454</b></span></div></article><article className="productTile quoteTile"><ShieldCheck size={24} /><blockquote>Know what happens before you sign.</blockquote><p>Aurel shows the control, cost, and risk behind each action.</p></article></div>
         </section>
       </main>
       <footer className="marketingFooter">
-        <div className="footerLead"><Brand compact /><p>Digital wealth, without a house token or hidden agenda.</p><small>Wallet and selected DeFi features are live on mainnet. Banking, cards, insurance, and securities are not currently offered.</small></div>
+        <div className="footerLead"><Brand compact /><p>Independent by design. No house token.</p><small>Availability depends on account eligibility, location, and service activation.</small></div>
         <div className="footerColumns">
           <section><h2>Product</h2><Link href="/app">Overview</Link><Link href="/app/assets">Assets</Link><Link href="/app/earn">Earn</Link><Link href="/app/borrow">Borrow</Link><Link href="/app/benefits">Benefits</Link></section>
           <section><h2>Learn</h2><a href={docsUrl}>Documentation</a><a href={`${docsUrl}/getting-started/setup/`}>Get started</a><a href={`${docsUrl}/getting-started/status/`}>Product status</a><a href={`${docsUrl}/company/fees-and-alignment/`}>Fees and alignment</a></section>
