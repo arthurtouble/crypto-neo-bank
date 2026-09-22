@@ -453,7 +453,7 @@ body {
 .technicalDetails { margin-top: 13px; color: var(--text-tertiary); font-size: 8px; }.technicalDetails summary { cursor: pointer; }.technicalDetails span { display: block; margin-top: 8px; }
 .membershipKicker { color: var(--text-tertiary); font-size: 9px; }.benefitModal .benefitIcon { margin-bottom: 16px; }
 .conciergeServices { margin-bottom: 16px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }.conciergeServices > button { min-height: 105px; padding: 20px; display: grid; grid-template-columns: 28px 1fr; align-content: center; column-gap: 10px; border: 1px solid var(--hairline); color: var(--text); text-align: left; cursor: pointer; }.conciergeServices svg { grid-row: 1 / 3; color: var(--accent); }.conciergeServices strong { font-size: 10px; }.conciergeServices small { margin-top: 4px; color: var(--text-tertiary); font-size: 8px; }.requestTextarea { min-height: 110px; padding: 12px; resize: vertical; border: 1px solid var(--hairline-strong); border-radius: var(--radius-control); color: var(--text); background: var(--surface); font: inherit; font-size: 10px; }
-.securityPolicyPanel,.addressBookPanel { padding: 25px; }.settingsGrid { grid-template-columns: minmax(0, 780px); }.settingRow { min-height: 62px; }
+.securityPolicyPanel,.addressBookPanel,.membershipSummary,.conciergePrompts,.routePanel { padding: 25px; }.settingsGrid { grid-template-columns: minmax(0, 780px); }.settingRow { min-height: 62px; }
 .cardControlRow button.statusBadge { border: 0; cursor: pointer; }
 
 @media (max-width: 720px) {
