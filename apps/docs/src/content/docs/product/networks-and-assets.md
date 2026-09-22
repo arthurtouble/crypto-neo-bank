@@ -3,7 +3,9 @@ title: Networks and assets
 description: The chains, tokens, contract addresses, and availability rules Aurel supports.
 ---
 
-Base mainnet is Aurel's home network. Other networks are available only for specific routed USDC transfers. Support is explicit: the interface does not treat every EVM chain or every token with a familiar name as interchangeable.
+Aurel hides network plumbing during ordinary use, but it must show the network when a digital-asset transfer depends on it. The current Aurel Account settles on Base. Other networks are available only through a quoted route.
+
+An address that looks the same on two networks does not make the balances interchangeable. A direct transfer from Ethereum to the Aurel Account is **not** automatically moved to Base. Use **Move Between Networks** when the source asset is on another network.
 
 ## Current network scope
 
@@ -56,4 +58,3 @@ Sending an unsupported token or using an incompatible network can make recovery 
 ## Adding support
 
 Adding an asset is more than adding an icon. Aurel reviews the contract, decimals, issuer or protocol, liquidity, price source, transfer behavior, network dependencies, and customer disclosures. Tokenized securities require a separate eligibility and distribution review described in [Tokenized markets](/product/tokenized-markets/).
-

@@ -22,6 +22,7 @@ export default defineConfig({
           { label: "Providers and responsibilities", slug: "company/provider-responsibilities" }
         ] },
         { label: "Accounts and money", items: [
+          { label: "Bank transfers", slug: "product/bank-transfers" },
           { label: "Wallets and assets", slug: "product/wallets-and-assets" },
           { label: "Send money", slug: "product/send-and-route" },
           { label: "Networks and assets", slug: "product/networks-and-assets" },
