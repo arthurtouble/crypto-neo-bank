@@ -22,7 +22,20 @@ Aurel is a Cloudflare-native, mainnet-first private financial interface built ov
 - Cloudflare Workers deployment through vinext, with logs and traces configured.
 - No internal authoritative balance or settlement store.
 
-Read [ARCHITECTURE.md](./ARCHITECTURE.md) for source-of-truth rules, [PARTNER_INTEGRATION.md](./PARTNER_INTEGRATION.md) for Privy/provider activation, [PARTNER_DILIGENCE.md](./PARTNER_DILIGENCE.md) for the provider pack, and [OPERATIONS_RUNBOOK.md](./OPERATIONS_RUNBOOK.md) for recovery and incident procedures.
+Read the internal [architecture](./apps/kb/src/content/docs/architecture/architecture.md) for source-of-truth rules, [partner integration](./apps/kb/src/content/docs/architecture/partner-integration.md) for Privy/provider activation, [partner diligence](./apps/kb/src/content/docs/compliance/partner-diligence.md) for the provider pack, and the [operations runbook](./apps/kb/src/content/docs/operations/operations-runbook.md) for recovery and incident procedures.
+
+## Documentation
+
+- `apps/docs` is the public customer documentation.
+- `apps/kb` is the internal knowledge base for product, architecture, operations, security, compliance, providers, and growth.
+- The internal site must remain behind Cloudflare Access. `robots.txt` and page metadata are indexing safeguards, not authorization.
+
+```bash
+pnpm docs:dev
+pnpm kb:dev
+pnpm docs:build
+pnpm kb:build
+```
 
 ## Local development
 
@@ -58,7 +71,7 @@ The current mainnet-preview environment is deployed to Cloudflare:
 
 Privy authentication and direct Base reads are live in this environment. Direct DeFi and cross-chain routes are prepared from live mainnet data and require the customer to sign. Fiat transfers, cards, and vendor-funded benefits remain unavailable until their respective partner programs and credentials are activated; the provider lab is clearly separated and illustrative.
 
-Create the D1 database and queues, replace the placeholder D1 IDs in both Wrangler files, apply the migrations, and set the webhook secret before deployment. Exact commands are in `PARTNER_INTEGRATION.md`.
+Create the D1 database and queues, replace the placeholder D1 IDs in both Wrangler files, apply the migrations, and set the webhook secret before deployment. Exact commands are in the internal [partner integration guide](./apps/kb/src/content/docs/architecture/partner-integration.md).
 
 The web Worker configuration is in `apps/web/wrangler.jsonc`; the Queue consumer is in `apps/events/wrangler.jsonc`.
 
@@ -73,4 +86,4 @@ Do not add provider credentials to `wrangler.jsonc`. Add Bridge, Rain, Privy ser
 
 An Aurel database must never become the source of truth for fiat balances, wallet balances, DeFi positions, loans, or card settlement. Financial projections are rebuildable; security policies, customer instructions, consent receipts, cases, and audit evidence are operational records that require retention and recovery even though they do not authorize or prove a balance.
 
-See [LAUNCH_READINESS.md](./LAUNCH_READINESS.md) for the closed-beta gates, [CLOSED_BETA_PLAN.md](./CLOSED_BETA_PLAN.md) for cohort controls, [ACCEPTANCE_TEST_PLAN.md](./ACCEPTANCE_TEST_PLAN.md) for funded-wallet evidence, and [THREAT_MODEL.md](./THREAT_MODEL.md) for the security boundary.
+See [launch readiness](./apps/kb/src/content/docs/overview/launch-readiness.md) for the closed-beta gates, the [closed-beta plan](./apps/kb/src/content/docs/operations/closed-beta-plan.md) for cohort controls, the [acceptance test plan](./apps/kb/src/content/docs/operations/acceptance-test-plan.md) for funded-wallet evidence, and the [threat model](./apps/kb/src/content/docs/security/threat-model.md) for the security boundary.

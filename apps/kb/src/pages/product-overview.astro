@@ -1,0 +1,400 @@
+---
+import "@fontsource-variable/archivo";
+
+const features = [
+  { area: "Home", status: "live", title: "Relationship dashboard", description: "A single view of liquid, productive, connected, and borrowed positions with current actions and activation guidance.", source: "Chain, provider, and Aurel projections" },
+  { area: "Assets", status: "live", title: "Wallet and portfolio view", description: "Reads Base ETH, USDC, WETH, connected wallets, and supported DeFi positions without creating an Aurel balance ledger.", source: "Base RPC and protocol contracts" },
+  { area: "Receive", status: "live", title: "Wallet funding", description: "Shows the customer's address and QR code so assets arrive directly in a customer-controlled wallet.", source: "Privy wallet and Base" },
+  { area: "Send", status: "live", title: "Policy-reviewed transfer", description: "Builds, simulates, checks, and presents a Base transfer for the customer to sign. Receipts determine confirmation.", source: "Aurel policy, wallet signer, Base receipt" },
+  { area: "Move", status: "live", title: "Cross-chain USDC routing", description: "Quotes a supported LI.FI route, checks exact approvals and policy, and lets the customer sign the source-chain transaction.", source: "LI.FI and source/destination chains" },
+  { area: "Earn", status: "live", title: "Curated Aave allocation", description: "Shows an approved Base market, risks, liquidity, and expected position change before a customer signs supply or withdrawal actions.", source: "Aave contracts and Base" },
+  { area: "Borrow", status: "live", title: "Collateralized borrowing", description: "Prepares collateral, borrow, and repay actions while exposing health factor, liquidation dependencies, and resulting position state.", source: "Aave contracts and Base" },
+  { area: "Activity", status: "live", title: "Evidence-backed history", description: "Tracks Aurel-created instructions from preparation through cooling, signing, submission, confirmation, failure, or cancellation.", source: "Aurel evidence plus chain receipts" },
+  { area: "Security", status: "live", title: "Account controls", description: "MFA and recovery visibility, emergency lock, rolling limits, allowlisted destinations, cooling periods, and session controls.", source: "Privy plus Aurel policy records" },
+  { area: "Support", status: "live", title: "Human case management", description: "Creates traceable support and urgent security cases with bot protection and an operations escalation queue.", source: "Aurel operational records" },
+  { area: "Concierge", status: "prepared", title: "Read-only assistance", description: "Explains product state and gathers service requests while remaining separated from deterministic transaction authorization.", source: "Aurel AI and support boundary" },
+  { area: "Membership", status: "prepared", title: "Relationship tiers", description: "Projects qualification from subscription, time-weighted productive balances, or sustainable activity and maps it to entitlements.", source: "Aurel policy and benefit adapters" },
+  { area: "Benefits", status: "external", title: "Rewards and premium services", description: "Prepared adapters for rewards, lounge access, eSIM, insurance, concierge, and family benefits; activation needs vendor contracts.", source: "External benefit providers" },
+  { area: "Money", status: "external", title: "Fiat accounts and transfers", description: "Provider-neutral flows exist, but named accounts, KYC, fiat conversion, and transfer execution remain disabled pending program approval.", source: "Bridge or approved alternative" },
+  { area: "Cards", status: "external", title: "Global spending", description: "Card states and entitlements are modeled, but issuing, authorization, disputes, settlement, and mobile wallets require an approved program.", source: "Bridge or Rain and issuer processor" },
+  { area: "Markets", status: "external", title: "Tokenized assets", description: "Fail-closed eligibility and product surfaces are prepared; execution stays disabled until issuer, venue, role, and jurisdiction review.", source: "Approved issuer and venue" },
+  { area: "Operations", status: "live", title: "Beta and reliability control", description: "Operators manage invitations, cohorts, feature switches, incidents, reconciliation, provider events, and customer feedback.", source: "D1 operational evidence and Cloudflare Access" },
+  { area: "Sandbox", status: "live", title: "Provider scenario lab", description: "Exercises new, funded, compliance-review, and failed-transfer states without representing demo values as customer money.", source: "Deterministic demo provider" }
+];
+
+const providers = [
+  { name: "Privy", role: "Identity and wallet infrastructure", state: "Active", details: "Authentication, embedded/external wallets, signing, MFA, recovery, export, verified access tokens." },
+  { name: "Base", role: "Primary settlement network", state: "Active", details: "Home chain for wallet balances, USDC transfers, direct writes, Aave markets, and source receipts." },
+  { name: "Aave", role: "DeFi liquidity protocol", state: "Active", details: "Curated Earn, collateral, borrow, repay, rates, and health-factor state on Base." },
+  { name: "LI.FI", role: "Cross-chain route provider", state: "Active", details: "Read-only route quotes and transaction preparation across explicitly supported networks." },
+  { name: "Bridge", role: "Regulated money movement", state: "Pending program", details: "Planned KYC/KYB, virtual accounts, fiat/stablecoin conversion, transfers, and potentially cards." },
+  { name: "Rain", role: "Card/payment fallback", state: "Pending program", details: "Alternative card issuing and payment program where the primary provider cannot cover the product." },
+  { name: "Benefit vendors", role: "Membership fulfillment", state: "Pending contracts", details: "Merchant-funded rewards, lounges, eSIM, insurance, concierge, and premium experiences." },
+  { name: "Cloudflare", role: "Application platform and protection", state: "Active", details: "Workers, Static Assets, D1, Queues, Turnstile, observability, and planned production Access/WAF controls." }
+];
+
+const tiers = [
+  ["Essential", "Free", "Core wallet, portfolio, transfer eligibility, basic support"],
+  ["Plus", "$20/month or qualifying relationship", "Physical-card eligibility, enhanced support, basic travel bundle, better limits"],
+  ["Black", "$100/month or qualifying relationship", "Premium card eligibility, lounge allocation, travel protection, advanced policies"],
+  ["Private", "$300/month or invite", "Concierge, family/entity controls, security review, custom reporting"]
+];
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow, noarchive, nosnippet" />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="theme-color" content="#10251b" />
+    <title>Aurel product map</title>
+    <style>
+      :root {
+        --ink: #14231b;
+        --muted: #5e6c64;
+        --paper: #f4f3ed;
+        --panel: #fffef9;
+        --line: #d8ded8;
+        --green: #173f2c;
+        --green-2: #2f6a4d;
+        --green-soft: #dce9df;
+        --brass: #a47f35;
+        --brass-soft: #f1e7ce;
+        --blue: #376b8c;
+        --blue-soft: #dce9ef;
+        --red: #8b4338;
+        --red-soft: #f1dfdc;
+        --shadow: 0 18px 50px rgba(28, 47, 36, .08);
+      }
+      * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
+      body { margin: 0; overflow-x: hidden; background: var(--paper); color: var(--ink); font-family: "Archivo Variable", ui-sans-serif, system-ui, sans-serif; line-height: 1.5; }
+      a { color: inherit; }
+      .shell { max-width: 1440px; margin: 0 auto; padding: 22px; }
+      .masthead { background: var(--green); color: #f7f5ec; border-radius: 24px; padding: 32px 36px; box-shadow: var(--shadow); }
+      .topline, .legend, .section-head, .status-row, .rail, .tier { display: flex; align-items: center; }
+      .topline { justify-content: space-between; gap: 20px; }
+      .brand { letter-spacing: .16em; text-transform: uppercase; font-size: 13px; font-weight: 600; }
+      .back { color: #dce9df; text-decoration: none; font-size: 13px; }
+      .back:hover { text-decoration: underline; }
+      .hero { display: grid; grid-template-columns: 1.1fr .9fr; align-items: end; gap: 44px; padding-top: 68px; }
+      h1, h2, h3, p { margin-top: 0; }
+      h1 { margin-bottom: 20px; max-width: 880px; font-size: clamp(44px, 7vw, 94px); line-height: .93; letter-spacing: -.06em; font-weight: 590; }
+      .dek { max-width: 720px; margin-bottom: 0; color: #d5e0d8; font-size: 18px; }
+      .hero-aside { border-left: 1px solid rgba(255,255,255,.2); padding-left: 28px; }
+      .hero-aside strong { display: block; margin-bottom: 8px; color: #fff; font-size: 13px; text-transform: uppercase; letter-spacing: .12em; }
+      .hero-aside p { color: #d5e0d8; font-size: 14px; }
+      .legend { flex-wrap: wrap; gap: 8px; margin-top: 22px; }
+      .pill { display: inline-flex; align-items: center; gap: 7px; border-radius: 999px; padding: 6px 10px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+      .pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+      .live { color: #255c41; background: var(--green-soft); }
+      .prepared { color: #785d24; background: var(--brass-soft); }
+      .external { color: #285b78; background: var(--blue-soft); }
+      .restricted { color: #77382f; background: var(--red-soft); }
+      .toc { position: sticky; top: 0; z-index: 20; display: flex; gap: 4px; overflow-x: auto; margin: 16px 0 40px; padding: 8px; border: 1px solid var(--line); border-radius: 14px; background: rgba(244,243,237,.94); backdrop-filter: blur(16px); }
+      .toc a { flex: 0 0 auto; padding: 8px 11px; border-radius: 8px; color: var(--muted); text-decoration: none; font-size: 12px; }
+      .toc a:hover { color: var(--ink); background: var(--panel); }
+      section { scroll-margin-top: 76px; margin: 0 0 76px; }
+      .section-head { justify-content: space-between; gap: 24px; margin-bottom: 24px; border-bottom: 1px solid var(--line); padding-bottom: 14px; }
+      .kicker { margin-bottom: 5px; color: var(--green-2); font-size: 12px; text-transform: uppercase; letter-spacing: .14em; font-weight: 650; }
+      h2 { margin-bottom: 0; font-size: clamp(28px, 4vw, 48px); line-height: 1; letter-spacing: -.045em; font-weight: 570; }
+      .section-note { max-width: 520px; margin: 0; color: var(--muted); font-size: 14px; }
+      .summary-grid { display: grid; grid-template-columns: 1.15fr .85fr; gap: 18px; }
+      .card { border: 1px solid var(--line); border-radius: 18px; background: var(--panel); padding: 24px; box-shadow: 0 10px 30px rgba(28,47,36,.035); }
+      .promise { min-height: 250px; display: flex; flex-direction: column; justify-content: space-between; background: linear-gradient(135deg, #fffef9 0%, #e8efe9 100%); }
+      .promise blockquote { margin: 0; max-width: 750px; font-size: clamp(30px, 4.3vw, 57px); line-height: 1.04; letter-spacing: -.045em; font-weight: 520; }
+      .promise footer { color: var(--green-2); font-size: 13px; font-weight: 600; }
+      .principles { display: grid; gap: 10px; }
+      .principle { padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+      .principle:last-child { border: 0; padding-bottom: 0; }
+      .principle strong { display: block; margin-bottom: 3px; }
+      .principle span { color: var(--muted); font-size: 13px; }
+      .loop { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; margin-top: 18px; border: 1px solid var(--line); border-radius: 18px; overflow: hidden; background: var(--panel); }
+      .loop-step { position: relative; min-height: 150px; padding: 22px; border-right: 1px solid var(--line); }
+      .loop-step:last-child { border-right: 0; }
+      .loop-step:not(:last-child)::after { content: "→"; position: absolute; right: -12px; top: 50%; z-index: 2; display: grid; width: 24px; height: 24px; place-items: center; transform: translateY(-50%); border-radius: 50%; background: var(--green); color: white; font-size: 14px; }
+      .loop-step b { display: block; margin-bottom: 12px; color: var(--green-2); font-size: 12px; letter-spacing: .1em; }
+      .loop-step h3 { margin-bottom: 7px; font-size: 21px; font-weight: 570; }
+      .loop-step p { margin: 0; color: var(--muted); font-size: 13px; }
+      .architecture { border-radius: 22px; background: #0f2017; color: #eef5ef; padding: 26px; overflow: hidden; }
+      .arch-grid { display: grid; grid-template-columns: .7fr 1fr 1.25fr 1fr; gap: 22px; align-items: stretch; }
+      .arch-column { display: flex; flex-direction: column; gap: 10px; }
+      .arch-label { color: #8eaa99; font-size: 11px; text-transform: uppercase; letter-spacing: .14em; }
+      .node { flex: 1; border: 1px solid rgba(255,255,255,.14); border-radius: 12px; padding: 15px; background: rgba(255,255,255,.05); }
+      .node.core { background: rgba(105, 210, 152, .11); border-color: rgba(105, 210, 152, .35); }
+      .node.future { background: rgba(214, 185, 120, .09); border-color: rgba(214, 185, 120, .3); }
+      .node h3 { margin-bottom: 4px; font-size: 15px; font-weight: 570; }
+      .node p { margin: 0; color: #aebfb5; font-size: 12px; }
+      .arch-column + .arch-column { position: relative; }
+      .arch-column + .arch-column::before { content: "→"; position: absolute; left: -18px; top: 50%; color: #779182; transform: translate(-50%, -50%); }
+      .authority-callout { margin-top: 18px; padding: 14px 16px; border-left: 3px solid #69d298; background: rgba(105, 210, 152, .08); color: #cde3d5; font-size: 13px; }
+      .feature-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+      .feature { min-height: 235px; display: flex; flex-direction: column; }
+      .status-row { justify-content: space-between; gap: 12px; }
+      .area { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .12em; font-weight: 650; }
+      .feature h3 { margin: 26px 0 8px; font-size: 21px; line-height: 1.1; font-weight: 570; }
+      .feature p { margin-bottom: 18px; color: var(--muted); font-size: 13px; }
+      .feature .source { margin-top: auto; border-top: 1px solid var(--line); padding-top: 12px; color: var(--green-2); font-size: 11px; }
+      .journey { display: grid; grid-template-columns: 175px 1fr; gap: 12px 22px; }
+      .lane-label { padding: 14px 0; color: var(--muted); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .09em; }
+      .rail { position: relative; gap: 8px; padding: 8px 0; }
+      .rail::before { content: ""; position: absolute; left: 22px; right: 22px; top: 50%; height: 1px; background: var(--line); }
+      .stop { position: relative; z-index: 1; flex: 1; min-height: 72px; display: grid; place-items: center; padding: 10px; border: 1px solid var(--line); border-radius: 11px; background: var(--panel); text-align: center; font-size: 12px; font-weight: 550; }
+      .stop.green { border-color: #9db8a6; background: #edf4ef; }
+      .stop.brass { border-color: #cfbd90; background: #f8f1df; }
+      .flow-stack { display: grid; gap: 12px; }
+      .flow { display: grid; grid-template-columns: 180px repeat(5, 1fr); align-items: stretch; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; background: var(--panel); }
+      .flow-title { padding: 18px; background: var(--green); color: white; }
+      .flow-title strong { display: block; margin-bottom: 5px; }
+      .flow-title span { color: #b9cabe; font-size: 11px; }
+      .flow-node { position: relative; padding: 18px 13px; border-right: 1px solid var(--line); font-size: 12px; }
+      .flow-node:last-child { border: 0; }
+      .flow-node:not(:last-child)::after { content: "›"; position: absolute; right: -7px; top: 50%; z-index: 2; display: grid; width: 14px; height: 22px; place-items: center; transform: translateY(-50%); background: var(--panel); color: var(--green-2); font-size: 20px; }
+      .flow-node b { display: block; margin-bottom: 5px; color: var(--green-2); }
+      .flow-node span { color: var(--muted); }
+      .matrix { width: 100%; border-collapse: collapse; border-top: 1px solid var(--ink); }
+      .matrix th, .matrix td { padding: 13px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; font-size: 13px; }
+      .matrix th { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
+      .matrix td:first-child { font-weight: 600; }
+      .matrix .truth { color: var(--green-2); font-weight: 600; }
+      .provider-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+      .provider { min-height: 225px; }
+      .provider .state { display: inline-block; margin-bottom: 26px; color: var(--green-2); font-size: 11px; font-weight: 650; text-transform: uppercase; letter-spacing: .08em; }
+      .provider h3 { margin-bottom: 4px; font-size: 22px; font-weight: 580; }
+      .provider .role { color: var(--brass); font-size: 12px; font-weight: 600; }
+      .provider p { margin: 16px 0 0; color: var(--muted); font-size: 13px; }
+      .security-layers { display: grid; gap: 9px; }
+      .layer { display: grid; grid-template-columns: 150px 1fr 210px; gap: 18px; align-items: center; min-height: 86px; padding: 14px 18px; border-radius: 14px; background: var(--panel); border: 1px solid var(--line); }
+      .layer strong { color: var(--green-2); }
+      .layer p, .layer span { margin: 0; color: var(--muted); font-size: 13px; }
+      .layer span { text-align: right; }
+      .membership { display: grid; grid-template-columns: .8fr 1.2fr; gap: 18px; }
+      .tier-list { border: 1px solid var(--line); border-radius: 18px; overflow: hidden; background: var(--panel); }
+      .tier { gap: 14px; padding: 17px; border-bottom: 1px solid var(--line); }
+      .tier:last-child { border: 0; }
+      .tier-name { width: 76px; font-weight: 650; }
+      .tier-meta { flex: 1; }
+      .tier-meta strong { display: block; font-size: 13px; }
+      .tier-meta span { color: var(--muted); font-size: 12px; }
+      .qualification { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 18px; }
+      .qualifier { padding: 16px; border-radius: 12px; background: #edf2ed; }
+      .qualifier b { display: block; margin-bottom: 4px; }
+      .qualifier span { color: var(--muted); font-size: 12px; }
+      .ops-loop { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+      .ops-step { min-height: 145px; padding: 18px; border-radius: 14px; background: var(--panel); border: 1px solid var(--line); }
+      .ops-step b { color: var(--green-2); font-size: 12px; }
+      .ops-step h3 { margin: 16px 0 7px; font-size: 17px; }
+      .ops-step p { margin: 0; color: var(--muted); font-size: 12px; }
+      .now-next { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+      .checklist { margin: 18px 0 0; padding: 0; list-style: none; }
+      .checklist li { position: relative; padding: 11px 0 11px 25px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+      .checklist li::before { content: ""; position: absolute; left: 2px; top: 17px; width: 9px; height: 9px; border-radius: 50%; background: var(--green-2); }
+      .checklist.open li::before { background: var(--brass); }
+      .footer { margin-top: 80px; padding: 28px 0 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+      .footer strong { color: var(--ink); }
+      @media (max-width: 1050px) {
+        .hero, .summary-grid, .membership { grid-template-columns: 1fr; }
+        .hero-aside { border-left: 0; border-top: 1px solid rgba(255,255,255,.2); padding: 20px 0 0; }
+        .feature-grid, .provider-grid { grid-template-columns: repeat(2, 1fr); }
+        .arch-grid { grid-template-columns: 1fr 1fr; }
+        .arch-column + .arch-column::before { display: none; }
+        .flow { grid-template-columns: 160px repeat(5, minmax(130px, 1fr)); overflow-x: auto; }
+        .ops-loop { grid-template-columns: repeat(3, 1fr); }
+      }
+      @media (max-width: 720px) {
+        .shell { padding: 10px; }
+        .masthead { border-radius: 16px; padding: 22px; }
+        .hero { padding-top: 48px; }
+        .section-head { align-items: flex-start; flex-direction: column; }
+        .loop, .feature-grid, .provider-grid, .arch-grid, .now-next, .ops-loop { grid-template-columns: 1fr; }
+        .loop-step { border-right: 0; border-bottom: 1px solid var(--line); }
+        .loop-step:last-child { border-bottom: 0; }
+        .loop-step:not(:last-child)::after { content: "↓"; right: 50%; top: auto; bottom: -12px; transform: translateX(50%); }
+        .journey { grid-template-columns: 1fr; gap: 2px; }
+        .lane-label { padding-bottom: 0; }
+        .rail { overflow-x: auto; align-items: stretch; }
+        .stop { flex: 0 0 125px; }
+        .flow { grid-template-columns: 145px repeat(5, 140px); }
+        .layer { grid-template-columns: 1fr; gap: 6px; }
+        .layer span { text-align: left; }
+        .qualification { grid-template-columns: 1fr; }
+      }
+      @media print {
+        .toc, .back { display: none; }
+        .shell { max-width: none; padding: 0; }
+        .masthead, .architecture { print-color-adjust: exact; }
+        section { break-inside: avoid; margin-bottom: 36px; }
+        .card { box-shadow: none; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <header class="masthead">
+        <div class="topline">
+          <div class="brand">Aurel / product map</div>
+          <a class="back" href="/">Internal knowledge base ↗</a>
+        </div>
+        <div class="hero">
+          <div>
+            <h1>The financial operating system for onchain wealth.</h1>
+            <p class="dek">A 10–15 minute map of the customer experience, product surfaces, transaction flows, providers, data authority, security controls, operations, and launch state.</p>
+          </div>
+          <div class="hero-aside">
+            <strong>The product in one sentence</strong>
+            <p>Aurel helps a customer see, protect, receive, move, allocate, borrow against, and eventually spend onchain wealth from one coherent interface—while the customer signs and the chain or regulated provider remains authoritative.</p>
+            <div class="legend" aria-label="Feature status legend">
+              <span class="pill live">Live</span>
+              <span class="pill prepared">Prepared</span>
+              <span class="pill external">External activation</span>
+              <span class="pill restricted">Restricted</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <nav class="toc" aria-label="Product overview sections">
+        <a href="#product">Product</a><a href="#architecture">Architecture</a><a href="#features">Features</a><a href="#journey">Journey</a><a href="#flows">Flows</a><a href="#authority">Authority</a><a href="#providers">Providers</a><a href="#security">Security</a><a href="#membership">Membership</a><a href="#operations">Operations</a><a href="#launch">Launch state</a>
+      </nav>
+
+      <section id="product">
+        <div class="section-head"><div><p class="kicker">01 / Product thesis</p><h2>One interface. Honest boundaries.</h2></div><p class="section-note">Aurel is an orchestration and presentation layer over customer-controlled wallets, providers, protocols, and public chains. It is deliberately not a bank ledger, exchange, or hidden custodian.</p></div>
+        <div class="summary-grid">
+          <article class="card promise"><blockquote>“Your onchain wealth, usable everywhere.”</blockquote><footer>Progressive trust: observe first, test with a small amount, consolidate only after confidence is earned.</footer></article>
+          <aside class="card principles">
+            <div class="principle"><strong>Independent</strong><span>No house token and no forced ecosystem allegiance.</span></div>
+            <div class="principle"><strong>Customer controlled</strong><span>Aurel prepares; the customer's wallet signs.</span></div>
+            <div class="principle"><strong>Risk visible</strong><span>Custody, cost, liquidity, dependencies, and failure modes appear before action.</span></div>
+            <div class="principle"><strong>Source honest</strong><span>Chains and providers decide balances and settlement—not an Aurel database row.</span></div>
+            <div class="principle"><strong>Premium restraint</strong><span>Clarity, support, and reliable execution instead of gamification or token incentives.</span></div>
+          </aside>
+        </div>
+        <div class="loop" aria-label="Core customer loop">
+          <div class="loop-step"><b>01</b><h3>Receive</h3><p>Wallet address today; regulated fiat and stablecoin accounts after provider activation.</p></div>
+          <div class="loop-step"><b>02</b><h3>Hold and see</h3><p>Aggregate customer-controlled and connected positions into one source-labelled balance sheet.</p></div>
+          <div class="loop-step"><b>03</b><h3>Allocate</h3><p>Keep a liquid reserve and opt selected balances into curated productive strategies.</p></div>
+          <div class="loop-step"><b>04</b><h3>Use and move</h3><p>Send, bridge, borrow, withdraw, and eventually spend through approved providers.</p></div>
+        </div>
+      </section>
+
+      <section id="architecture">
+        <div class="section-head"><div><p class="kicker">02 / System map</p><h2>How everything connects.</h2></div><p class="section-note">The product separates experience, policy, signing, and financial truth so a polished interface never fabricates ownership or settlement.</p></div>
+        <div class="architecture">
+          <div class="arch-grid">
+            <div class="arch-column"><span class="arch-label">Customer</span><div class="node"><h3>Web workspace</h3><p>Intent, review, consent, feedback, support, and signing journey.</p></div><div class="node"><h3>External wallets</h3><p>Optional connected balances and customer-controlled signing.</p></div></div>
+            <div class="arch-column"><span class="arch-label">Identity and control</span><div class="node core"><h3>Privy</h3><p>Authentication, embedded wallet, sessions, MFA, recovery, and signing.</p></div><div class="node core"><h3>Aurel policy</h3><p>Limits, allowlists, cooling, feature eligibility, simulation, and consent.</p></div></div>
+            <div class="arch-column"><span class="arch-label">Aurel platform</span><div class="node core"><h3>Cloudflare Worker</h3><p>Next/vinext UI, protected APIs, provider adapters, health, status, and operations.</p></div><div class="node"><h3>D1 projections and evidence</h3><p>Rebuildable views plus retained policy, audit, consent, support, invitation, and recovery records.</p></div><div class="node"><h3>Queues and event consumer</h3><p>Signed webhook ingestion, replay protection, retries, normalized events, and reconciliation.</p></div></div>
+            <div class="arch-column"><span class="arch-label">Financial sources</span><div class="node"><h3>Base + Aave</h3><p>Wallet balances, DeFi positions, market state, transactions, and receipts.</p></div><div class="node"><h3>LI.FI + other chains</h3><p>Cross-chain quotes, source execution, and destination observation.</p></div><div class="node future"><h3>Bridge / Rain / vendors</h3><p>KYC, fiat accounts, transfers, cards, disputes, benefits, and provider reports after activation.</p></div></div>
+          </div>
+          <div class="authority-callout"><strong>Non-negotiable invariant:</strong> writing to Aurel's database cannot create money, change a customer balance, or prove settlement. A provider response or chain receipt is required.</div>
+        </div>
+      </section>
+
+      <section id="features">
+        <div class="section-head"><div><p class="kicker">03 / Product surfaces</p><h2>Complete feature inventory.</h2></div><p class="section-note">“Live” means an implemented workflow backed by an authoritative source. “Prepared” has a model and surface but needs operating validation. “External activation” needs a contract, credentials, jurisdiction, and reconciliation.</p></div>
+        <div class="feature-grid">
+          {features.map((feature) => <article class="card feature">
+            <div class="status-row"><span class="area">{feature.area}</span><span class:list={["pill", feature.status]}>{feature.status === "external" ? "External activation" : feature.status[0].toUpperCase() + feature.status.slice(1)}</span></div>
+            <h3>{feature.title}</h3><p>{feature.description}</p><div class="source">Authority: {feature.source}</div>
+          </article>)}
+        </div>
+      </section>
+
+      <section id="journey">
+        <div class="section-head"><div><p class="kicker">04 / Customer lifecycle</p><h2>From interest to trusted relationship.</h2></div><p class="section-note">Access expands only when product, safety, operations, geography, and provider evidence support it.</p></div>
+        <div class="journey">
+          <div class="lane-label">Acquire</div><div class="rail"><div class="stop">Education or referral</div><div class="stop">Qualified application</div><div class="stop brass">Country and cohort review</div><div class="stop">One-use invitation</div></div>
+          <div class="lane-label">Activate</div><div class="rail"><div class="stop">Privy sign-in</div><div class="stop">Terms and beta access</div><div class="stop green">Passkey and recovery</div><div class="stop">Wallet ready</div><div class="stop">Live balance</div></div>
+          <div class="lane-label">First value</div><div class="rail"><div class="stop">Receive or connect</div><div class="stop">Review risk</div><div class="stop green">Prepare action</div><div class="stop">Customer signs</div><div class="stop green">Receipt confirmed</div></div>
+          <div class="lane-label">Retain and expand</div><div class="rail"><div class="stop">Repeat workflow</div><div class="stop">Set policies</div><div class="stop">Qualify membership</div><div class="stop">Add family/company</div><div class="stop brass">Invite trusted peer</div></div>
+        </div>
+      </section>
+
+      <section id="flows">
+        <div class="section-head"><div><p class="kicker">05 / Transaction flows</p><h2>What happens when a customer acts.</h2></div><p class="section-note">Every money-moving path separates preparation from authorization and settlement. Provider-gated paths stay disabled until their external control chain is proven.</p></div>
+        <div class="flow-stack">
+          <div class="flow"><div class="flow-title"><strong>Direct send</strong><span>Base ETH / ERC-20</span></div><div class="flow-node"><b>Input</b><span>Asset, amount, destination</span></div><div class="flow-node"><b>Policy</b><span>Support, limit, allowlist, cooling</span></div><div class="flow-node"><b>Simulate</b><span>Gas estimate and execution call</span></div><div class="flow-node"><b>Sign</b><span>Wallet presents exact transaction</span></div><div class="flow-node"><b>Reconcile</b><span>Source receipt confirms or fails</span></div></div>
+          <div class="flow"><div class="flow-title"><strong>Cross-chain move</strong><span>Supported USDC routes</span></div><div class="flow-node"><b>Quote</b><span>LI.FI route and expected output</span></div><div class="flow-node"><b>Validate</b><span>Chains, contracts, expiry, policy</span></div><div class="flow-node"><b>Approve</b><span>Exact token allowance if required</span></div><div class="flow-node"><b>Sign source</b><span>Customer starts the route</span></div><div class="flow-node"><b>Observe</b><span>Source receipt, then destination state</span></div></div>
+          <div class="flow"><div class="flow-title"><strong>Earn</strong><span>Curated Aave market</span></div><div class="flow-node"><b>Read market</b><span>Rate, liquidity, protocol state</span></div><div class="flow-node"><b>Explain</b><span>Risk, custody, exit, net outcome</span></div><div class="flow-node"><b>Prepare</b><span>Supply or withdrawal call</span></div><div class="flow-node"><b>Sign</b><span>Customer approves exact action</span></div><div class="flow-node"><b>Refresh</b><span>Onchain position is reread</span></div></div>
+          <div class="flow"><div class="flow-title"><strong>Borrow / repay</strong><span>Aave collateralized debt</span></div><div class="flow-node"><b>Read position</b><span>Collateral, debt, health factor</span></div><div class="flow-node"><b>Model change</b><span>Resulting leverage and liquidation risk</span></div><div class="flow-node"><b>Policy</b><span>Supported asset and limits</span></div><div class="flow-node"><b>Sign</b><span>Collateral, borrow, or repay call</span></div><div class="flow-node"><b>Reconcile</b><span>Receipt and new protocol position</span></div></div>
+          <div class="flow"><div class="flow-title"><strong>Fiat and cards</strong><span>Provider activation required</span></div><div class="flow-node"><b>Eligibility</b><span>Country, KYC/KYB, program rules</span></div><div class="flow-node"><b>Provider command</b><span>Account, transfer, card request</span></div><div class="flow-node"><b>External event</b><span>Signed provider webhook</span></div><div class="flow-node"><b>Queue</b><span>Replay-safe asynchronous handling</span></div><div class="flow-node"><b>Reconcile</b><span>Provider object/report remains truth</span></div></div>
+        </div>
+      </section>
+
+      <section id="authority">
+        <div class="section-head"><div><p class="kicker">06 / Sources of truth</p><h2>Who is authoritative for what.</h2></div><p class="section-note">Aurel stores only what it needs to orchestrate, explain, support, audit, and recover the experience.</p></div>
+        <table class="matrix">
+          <thead><tr><th>Domain</th><th>Authoritative source</th><th>What Aurel stores</th><th>What proves completion</th></tr></thead>
+          <tbody>
+            <tr><td>Identity and signer</td><td class="truth">Privy and configured wallet</td><td>Verified subject, wallet references, session and policy evidence</td><td>Verified token and wallet signature</td></tr>
+            <tr><td>Wallet balances</td><td class="truth">Public chain</td><td>Timestamped, rebuildable projection</td><td>Contract/native balance at an observed block</td></tr>
+            <tr><td>DeFi positions and debt</td><td class="truth">Protocol contracts</td><td>Normalized position view and Aurel-created intent history</td><td>Protocol state plus successful chain receipt</td></tr>
+            <tr><td>Cross-chain route</td><td class="truth">Source and destination chains</td><td>Quote, reviewed instruction, source hash, observation state</td><td>Source receipt and destination observation</td></tr>
+            <tr><td>Fiat, KYC, transfers</td><td class="truth">Regulated provider</td><td>Provider references, workflow state, last observed status</td><td>Provider object and reconciliation report</td></tr>
+            <tr><td>Cards</td><td class="truth">Issuer / processor</td><td>Redacted card reference and pending projection</td><td>Provider authorization and settlement records</td></tr>
+            <tr><td>Membership</td><td class="truth">Aurel policy + benefit vendor</td><td>Qualification observations and entitlement references</td><td>Versioned policy result and vendor fulfillment</td></tr>
+            <tr><td>Support, consent, policy</td><td class="truth">Aurel operational evidence</td><td>Retained case, instruction, consent, audit, and recovery records</td><td>Versioned record and audit history</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="providers">
+        <div class="section-head"><div><p class="kicker">07 / Provider map</p><h2>Each partner has one clear job.</h2></div><p class="section-note">Adapters stay vendor-neutral where the product may need alternatives. Customer-facing copy names the actual provider when that affects custody, rights, risk, or support.</p></div>
+        <div class="provider-grid">
+          {providers.map((provider) => <article class="card provider"><span class="state">{provider.state}</span><h3>{provider.name}</h3><div class="role">{provider.role}</div><p>{provider.details}</p></article>)}
+        </div>
+      </section>
+
+      <section id="security">
+        <div class="section-head"><div><p class="kicker">08 / Security model</p><h2>Defense across the whole journey.</h2></div><p class="section-note">Safety is a product surface and an operating discipline—not a claim that eliminates smart-contract, issuer, chain, provider, device, or user risk.</p></div>
+        <div class="security-layers">
+          <div class="layer"><strong>Identity</strong><p>Verified Privy access tokens, passkeys/MFA, recovery and export visibility, session center, step-up for sensitive actions.</p><span>Authority: Privy</span></div>
+          <div class="layer"><strong>Customer policy</strong><p>Emergency lock, rolling limits, destination allowlists, new-destination cooling, feature and geography controls.</p><span>Authority: Aurel policy</span></div>
+          <div class="layer"><strong>Transaction review</strong><p>Supported chains/assets/contracts, exact amounts and approvals, quote freshness, disclosures, and pre-signing simulation.</p><span>Before the wallet opens</span></div>
+          <div class="layer"><strong>Authorization</strong><p>Every mainnet write requires the customer to review and sign the final wallet request.</p><span>Aurel cannot sign alone</span></div>
+          <div class="layer"><strong>Settlement evidence</strong><p>Submitted actions remain pending until chain receipts or provider state support a final status.</p><span>No database-made settlement</span></div>
+          <div class="layer"><strong>Edge and abuse</strong><p>Security headers, rate limits, Turnstile, signed webhooks, replay protection, Queues, logs, traces, and planned WAF/API Shield.</p><span>Cloudflare platform</span></div>
+          <div class="layer"><strong>Operational response</strong><p>Reconciliation, stale-transaction triage, incident publication, kill switches, support escalation, backup and recovery exercises.</p><span>Named owners required</span></div>
+        </div>
+      </section>
+
+      <section id="membership">
+        <div class="section-head"><div><p class="kicker">09 / Business model</p><h2>Membership follows relationship value.</h2></div><p class="section-note">Customers qualify through a transparent subscription, time-weighted productive balance, or sustainable activity. Benefits must fit actual contribution margin.</p></div>
+        <div class="membership">
+          <div class="tier-list">
+            {tiers.map((tier) => <div class="tier"><div class="tier-name">{tier[0]}</div><div class="tier-meta"><strong>{tier[1]}</strong><span>{tier[2]}</span></div></div>)}
+          </div>
+          <article class="card">
+            <h3>How qualification works</h3>
+            <p style="color:var(--muted);font-size:13px">No large opening balance is required. Recognition is earned over time, and expensive benefits are not funded by external balances that create no revenue.</p>
+            <div class="qualification"><div class="qualifier"><b>Pay</b><span>Simple disclosed subscription.</span></div><div class="qualifier"><b>Hold</b><span>30- or 90-day productive balance.</span></div><div class="qualifier"><b>Use</b><span>Sustainable revenue-generating activity.</span></div></div>
+            <ul class="checklist"><li>Subscription, service fees, interchange share, and merchant-funded offers are modeled separately.</li><li>No proprietary loyalty token or hidden yield spread.</li><li>Rewards are capped, understandable, and contribution-funded.</li><li>Family, company, and private workflows create durable service value.</li></ul>
+          </article>
+        </div>
+      </section>
+
+      <section id="operations">
+        <div class="section-head"><div><p class="kicker">10 / Operating system</p><h2>The product is continuously observed.</h2></div><p class="section-note">The operations console is deny-all unless an explicit Privy subject is allowed and production Cloudflare Access is configured.</p></div>
+        <div class="ops-loop">
+          <article class="ops-step"><b>01</b><h3>Ingest</h3><p>Signed provider events and customer instructions enter replay-safe queues and evidence stores.</p></article>
+          <article class="ops-step"><b>02</b><h3>Observe</h3><p>Scheduled probes and receipt checks compare projections with chains and provider state.</p></article>
+          <article class="ops-step"><b>03</b><h3>Triage</h3><p>Stale, failed, mismatched, urgent, and dead-letter conditions become assigned issues.</p></article>
+          <article class="ops-step"><b>04</b><h3>Control</h3><p>Operators pause features, accounts, cohorts, or routes without relying on interface copy.</p></article>
+          <article class="ops-step"><b>05</b><h3>Recover</h3><p>Runbooks, provider escalation, customer communication, rollback, replay, and rebuild close the loop.</p></article>
+        </div>
+      </section>
+
+      <section id="launch">
+        <div class="section-head"><div><p class="kicker">11 / Launch posture</p><h2>Strong beta spine; broad launch gated.</h2></div><p class="section-note">The app is suitable for controlled engineering and invitation-based testing. A polished interface is not evidence that every financial service is legally or operationally ready.</p></div>
+        <div class="now-next">
+          <article class="card"><span class="pill live">Implemented</span><ul class="checklist"><li>Base wallet reads, receive, send, LI.FI routes, Aave Earn and Borrow.</li><li>Privy authentication, wallets, MFA/recovery/export and server verification.</li><li>Policy controls, simulations, intent evidence, receipts, reconciliation and support.</li><li>Beta invitations, country/cohort limits, feedback, feature switches and incidents.</li><li>Trust center, disclosures, dependency/security review, runbooks and recovery drill.</li></ul></article>
+          <article class="card"><span class="pill prepared">Must close before expansion</span><ul class="checklist open"><li>Approved launch entity, contracting entity, initial countries, and excluded countries.</li><li>Signed provider program and responsibility matrix for KYC, fiat, cards, disputes, and sanctions.</li><li>Independent security review with no critical/high unresolved findings.</li><li>Funded acceptance matrix, LI.FI delay recovery, named incident owners, and support coverage.</li><li>Custom domain, Cloudflare Access, WAF/API Shield, log export, alert receiver, and release affinity.</li><li>Legal review of bank, deposit, insurance, yield, reward, advice, and marketing language.</li></ul></article>
+        </div>
+      </section>
+
+      <footer class="footer"><strong>Aurel internal product map</strong> · Generated from the current implementation, architecture, launch, security, provider, operations, and growth specifications. Use the detailed knowledge-base pages for executable procedures and evidence.</footer>
+    </main>
+  </body>
+</html>

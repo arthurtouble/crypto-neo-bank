@@ -45,6 +45,28 @@ importers:
         specifier: latest
         version: 4.135.0(@types/node@26.6.2)(bufferutil@4.1.0)(utf-8-validate@5.0.10)
 
+  apps/kb:
+    dependencies:
+      '@astrojs/starlight':
+        specifier: latest
+        version: 0.42.2(astro@7.3.3(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(@types/node@26.6.2)(idb-keyval@6.3.0)(terser@5.51.2)(yaml@2.9.1))(supports-color@10.2.2)(typescript@5.9.3)
+      '@fontsource-variable/archivo':
+        specifier: latest
+        version: 5.3.0
+      astro:
+        specifier: latest
+        version: 7.3.3(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(@types/node@26.6.2)(idb-keyval@6.3.0)(terser@5.51.2)(yaml@2.9.1)
+    devDependencies:
+      '@astrojs/check':
+        specifier: latest
+        version: 0.9.10(@emnapi/runtime@1.11.3)(prettier@3.9.8)(typescript@5.9.3)
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      wrangler:
+        specifier: latest
+        version: 4.135.0(@types/node@26.6.2)(bufferutil@4.1.0)(utf-8-validate@5.0.10)
+
   apps/web:
     dependencies:
       '@coinbase/wallet-sdk':
