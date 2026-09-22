@@ -113,4 +113,17 @@ describe("covered historical portfolio values", () => {
       coverage: [cover(days[0]), cover(days[1], "partial"), cover(days[2])], calculationVersion: 2 });
     expect(result.disposals[0]).toMatchObject({ classification: "review_required", gainUsd: null });
   });
+
+  it("never treats Aave activity as a liquid balance or invents returns from unknown flows", () => {
+    const deposit = event(days[0], "deposit", "100000000", "contribution");
+    const aave = event(days[1], "aave-borrow", "-20000000", "borrow");
+    aave.sourceId = "aave:v3:8453";
+    aave.evidenceJson = '{"role":"protocol_activity"}';
+    const result = calculatePortfolioDays({ events: [deposit, aave], prices: days.map((day) => price(day, "1")), coverage: days.map((day) => cover(day)), calculationVersion: 2 });
+    expect(result.points[1]).toMatchObject({ netValueUsd: null, twrIndex: null, reasons: expect.arrayContaining(["protocol_position_history_unavailable"]) });
+    const unknown = event(days[1], "unknown-flow", "20000000", "unknown");
+    const other = calculatePortfolioDays({ events: [deposit, unknown], prices: days.map((day) => price(day, "1")), coverage: days.map((day) => cover(day)), calculationVersion: 2 });
+    expect(other.points[1].netValueUsd).toBe("120");
+    expect(other.points[1].twrIndex).toBeNull();
+  });
 });

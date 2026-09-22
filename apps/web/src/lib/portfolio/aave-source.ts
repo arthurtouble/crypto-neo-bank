@@ -89,7 +89,7 @@ export class BaseAaveSource implements HistoricalEventSource {
       catch { return partial(events); }
       const finalized = proof.blockHash?.toLowerCase() === blockHash && proof.finalized && proof.receiptSuccess;
       if (!finalized) return partial(events);
-      events.push({ sourceId: SOURCE_ID, sourceName: "Aave V3 Base", sourceEventId: id, ingestionVersion: 1, accountId: input.accountId, assetId: reserve.assetId, rawDelta: kind === "redeem" || kind === "borrow" ? `-${amount}` : amount, decimals: reserve.decimals, kind, occurredAt, chainId: 8453, blockNumber, blockHash, txHash, logIndex: logIndex as number, finality: "finalized", completeness: "complete", groupId: txHash, counterpartyAccountId: null, evidenceJson: JSON.stringify({ market: AAVE_BASE_V3_MARKET, type: row.__typename }) });
+      events.push({ sourceId: SOURCE_ID, sourceName: "Aave V3 Base", sourceEventId: id, ingestionVersion: 1, accountId: input.accountId, assetId: reserve.assetId, rawDelta: kind === "redeem" || kind === "borrow" ? `-${amount}` : amount, decimals: reserve.decimals, kind, occurredAt, chainId: 8453, blockNumber, blockHash, txHash, logIndex: logIndex as number, finality: "finalized", completeness: "complete", groupId: txHash, counterpartyAccountId: null, evidenceJson: JSON.stringify({ market: AAVE_BASE_V3_MARKET, type: row.__typename, role: "protocol_activity" }) });
     }
     const complete = !info.hasNextPage;
     return { events, nextCursor: complete ? null : info.next as string, coveredThrough: complete ? input.through : input.from, complete, sourceId: SOURCE_ID };

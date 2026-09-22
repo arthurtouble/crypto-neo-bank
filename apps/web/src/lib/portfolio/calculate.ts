@@ -43,7 +43,8 @@ function calculateBasis(events: HistoricalEvent[], coverage: DayCoverage[], calc
   const byAssetAccount = new Map<string, MutableLot[]>();
   const disposals: BasisDisposal[] = [];
   const finalized = events.filter((event) => event.finality === "finalized" && event.completeness === "complete" && signedInteger.test(event.rawDelta)
-    && event.decimals >= 0 && event.decimals <= 36 && sourceRole(event) !== "position_receipt" && sourceRole(event) !== "liability")
+    && event.decimals >= 0 && event.decimals <= 36 && sourceRole(event) !== "position_receipt" && sourceRole(event) !== "liability"
+    && sourceRole(event) !== "protocol_activity")
     .sort((a, b) => a.occurredAt.localeCompare(b.occurredAt)
       || (a.groupId && a.groupId === b.groupId && a.kind === "internal_transfer" && b.kind === "internal_transfer"
         ? (BigInt(a.rawDelta) < 0n ? -1 : 1) : 0)
@@ -170,6 +171,8 @@ export function calculatePortfolioDays(input: {
   let twr: bigint | null = null;
   let everComplete = false;
   let eventContinuityLost = false;
+  let protocolHistoryIncomplete = false;
+  let returnContinuityLost = false;
   const points: HistoryPoint[] = [];
   for (const day of days) {
     const reasons: string[] = [];
@@ -189,6 +192,8 @@ export function calculatePortfolioDays(input: {
         continue;
       }
       if (sourceRole(event) === "position_receipt") continue;
+      if (sourceRole(event) === "protocol_activity") { protocolHistoryIncomplete = true; continue; }
+      if (event.kind === "unknown") returnContinuityLost = true;
       const key = `${event.accountId}|${event.assetId}`;
       const existing = balances.get(key);
       if (existing && existing.decimals !== event.decimals) { reasons.push("conflicting_decimals"); eventContinuityLost = true; continue; }
@@ -200,6 +205,7 @@ export function calculatePortfolioDays(input: {
       }
     }
     if (eventContinuityLost) reasons.push("incomplete_event_history");
+    if (protocolHistoryIncomplete) reasons.push("protocol_position_history_unavailable");
     let value = 0n;
     for (const balance of balances.values()) {
       if (balance.raw === 0n) continue;
@@ -213,12 +219,14 @@ export function calculatePortfolioDays(input: {
       twr = null;
       continue;
     }
-    if (!everComplete && value > 0n) twr = SCALE;
+    if (returnContinuityLost) twr = null;
+    else if (!everComplete && value > 0n) twr = SCALE;
     else if (previousValue !== null && previousValue > 0n && twr !== null) {
       const flowAdjusted = value - flowUsd;
       twr = flowAdjusted >= 0n ? twr * flowAdjusted / previousValue : null;
     } else twr = null;
-    points.push({ day, netValueUsd: formatScaled(value), twrIndex: twr === null ? null : formatScaled(twr), status: "complete", reasons: [] });
+    points.push({ day, netValueUsd: formatScaled(value), twrIndex: twr === null ? null : formatScaled(twr), status: "complete",
+      reasons: returnContinuityLost ? ["return_unavailable_unclassified_flow"] : [] });
     everComplete = true;
     previousValue = value;
   }
