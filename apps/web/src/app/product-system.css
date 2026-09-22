@@ -333,6 +333,69 @@
 .productShell .conciergeComposer textarea,
 .productShell .conciergePrompts > button { font-size: var(--type-body-small); }
 
+/* Insights, goals, and issuer-backed card controls */
+.insightsWorkspace { display: grid; gap: 12px; }
+.insightsSummary, .goalsPanel { padding: 28px; }
+.insightMetrics { margin: 22px 0 30px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid var(--border); border-radius: var(--radius-panel); overflow: hidden; }
+.insightMetrics article { min-height: 108px; padding: 20px; display: grid; align-content: space-between; gap: 14px; border-right: 1px solid var(--border); background: var(--surface); }
+.insightMetrics article:last-child { border-right: 0; }
+.insightMetrics span { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: var(--type-label); font-weight: 620; }
+.insightMetrics strong { font-family: "Archivo Variable", "Satoshi", system-ui, sans-serif; font-size: 24px; letter-spacing: -.025em; }
+.insightCategories { display: grid; gap: 10px; }
+.insightCategories h3 { margin: 0 0 6px; font-size: 17px; }
+.insightCategory { min-height: 42px; display: grid; grid-template-columns: 130px minmax(120px, 1fr) 90px; align-items: center; gap: 14px; }
+.insightCategory > span, .insightCategory > strong { font-size: var(--type-body-small); }
+.insightCategory > strong { text-align: right; }
+.insightCategory > div { height: 7px; overflow: hidden; border-radius: 99px; background: var(--surface-subtle); }
+.insightCategory i { display: block; height: 100%; border-radius: inherit; background: var(--accent); }
+
+.goalGrid { margin-top: 18px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.goalCard { min-height: 230px; padding: 20px; display: grid; grid-template-columns: 38px minmax(0, 1fr); align-content: start; gap: 14px; border: 1px solid var(--border); border-radius: var(--radius-panel); background: var(--surface); }
+.goalIcon { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 50%; background: var(--accent-soft); color: var(--accent); }
+.goalCard > div { min-width: 0; }
+.goalCard > div strong, .goalCard > div small { display: flex; align-items: center; gap: 5px; }
+.goalCard > div strong { font-size: var(--type-row-title); }
+.goalCard > div small { margin-top: 4px; color: var(--muted); font-size: var(--type-caption); }
+.goalCard > b, .goalCard > p, .goalCard > button { grid-column: 1 / -1; }
+.goalCard > b { margin-top: 12px; font-family: "Archivo Variable", "Satoshi", system-ui, sans-serif; font-size: 24px; letter-spacing: -.025em; }
+.goalCard > p { margin: -7px 0 4px; color: var(--muted); font-size: var(--type-label); }
+.goalCard > button { justify-self: start; }
+.goalsEmpty { min-height: 300px; }
+.goalsEmpty .button { margin-top: 8px; }
+.optionalLabel { color: var(--muted); font-weight: 500; }
+.financialModal form { display: grid; gap: 15px; }
+
+.cardWorkspace { max-width: 1060px; display: grid; grid-template-columns: minmax(360px, .95fr) minmax(360px, 1.05fr); gap: 18px; align-items: start; }
+.aurelCard { position: relative; aspect-ratio: 1.586; min-width: 0; overflow: hidden; padding: 30px; display: flex; flex-direction: column; justify-content: space-between; color: white; border-radius: 16px; box-shadow: 0 25px 65px rgba(11, 23, 32, .22); }
+.aurelCard.issued { background: linear-gradient(140deg, #1a4935, #07110f 72%); }
+.aurelCard.unissued { background: linear-gradient(140deg, #31463c, #111a16 72%); }
+.aurelCard .cardShine { pointer-events: none; }
+.cardPreviewIcon { position: relative; z-index: 1; margin-top: auto; margin-bottom: 16px; color: rgba(255,255,255,.65); }
+.aurelCard .cardNumber { font-size: var(--type-row-title); }
+.aurelCard .membershipBottom { min-height: 20px; align-items: flex-end; }
+.aurelCard .membershipBottom b { font-size: var(--type-body-small); }
+.cardOverview, .cardControlPanel { padding: 28px; }
+.cardSetup { min-height: 180px; display: grid; grid-template-columns: 36px minmax(0, 1fr); align-content: center; gap: 14px; }
+.cardSetup > svg { color: var(--accent); }
+.cardSetup strong, .cardSetup small { display: block; }
+.cardSetup strong { font-size: var(--type-row-title); }
+.cardSetup small { margin-top: 5px; color: var(--muted); font-size: var(--type-label); }
+.cardSetup .button { grid-column: 2; justify-self: start; }
+.cardLimitGrid { min-height: 180px; display: grid; grid-template-columns: 1fr 1fr; align-content: center; gap: 1px; }
+.cardLimitGrid span { padding: 20px; display: grid; gap: 7px; color: var(--muted); font-size: var(--type-label); border-left: 1px solid var(--border); }
+.cardLimitGrid strong { color: var(--text); font-size: var(--type-row-title); }
+.cardControlPanel { grid-column: 1 / -1; }
+.cardControlList { margin-top: 16px; display: grid; grid-template-columns: 1fr 1fr; column-gap: 22px; }
+.cardControlList button { min-height: 66px; display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; align-items: center; gap: 12px; border: 0; border-top: 1px solid var(--border); background: transparent; color: var(--text); text-align: left; }
+.cardControlList button:not(:disabled) { cursor: pointer; }
+.cardControlList button:not(:disabled):hover { color: var(--accent); background: color-mix(in srgb, var(--accent) 4%, transparent); }
+.cardControlList button:disabled { color: var(--muted); }
+.cardControlList button > span { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 50%; background: var(--surface-subtle); }
+.cardControlList strong { font-size: var(--type-row-title); }
+.cardControlList em { font-size: var(--type-caption); font-style: normal; font-weight: 650; }
+.cardAuthority { grid-column: 1 / -1; margin: -6px 2px 0; }
+.cardWorkspaceLoading { min-height: 260px; display: flex; align-items: center; justify-content: center; gap: 9px; }
+
 /* Security, settings, status, and setup */
 .productShell .securityChecklist > div,
 .productShell .settingRow { min-height: var(--row-standard); }
@@ -474,6 +537,24 @@
   .activityButton { grid-template-columns: 34px minmax(0, 1fr) auto; gap: 9px; }
   .activityButton small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .formSplit { grid-template-columns: 1fr; gap: 0; }
+  .insightMetrics { grid-template-columns: 1fr 1fr; }
+  .insightMetrics article:nth-child(2) { border-right: 0; }
+  .insightMetrics article:nth-child(-n+2) { border-bottom: 1px solid var(--border); }
+  .goalGrid { grid-template-columns: 1fr; }
+  .cardWorkspace { grid-template-columns: 1fr; }
+  .cardControlPanel, .cardAuthority { grid-column: auto; }
+  .cardControlList { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 520px) {
+  .insightsSummary, .goalsPanel, .cardOverview, .cardControlPanel { padding: 22px 18px; }
+  .insightMetrics { grid-template-columns: 1fr; }
+  .insightMetrics article { min-height: 86px; border-right: 0; border-bottom: 1px solid var(--border); }
+  .insightMetrics article:last-child { border-bottom: 0; }
+  .insightCategory { grid-template-columns: 96px minmax(70px, 1fr) 74px; gap: 9px; }
+  .aurelCard { padding: 23px; }
+  .cardWorkspace { grid-template-columns: minmax(0, 1fr); }
+  .cardSetup { grid-template-columns: 32px minmax(0, 1fr); }
 }
 
 @media (prefers-reduced-motion: reduce) {

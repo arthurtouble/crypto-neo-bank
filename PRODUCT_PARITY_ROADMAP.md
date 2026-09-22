@@ -28,7 +28,7 @@ Networks are routing details. Aurel may reveal them when the customer must choos
 | Earn | Liquid vaults and staking | Opt-in DeFi yield | Risk-adjusted vaults | Savings by jurisdiction | **Live:** governed Aave supply flow with direct wallet confirmation |
 | Borrow | Collateralized borrowing and card Borrow mode | — | — | Consumer credit by jurisdiction | **Live:** Aave simulation, health factor, borrow, and repay |
 | Rewards and membership | Balance/activity membership tiers and cashback | Tiered cashback and benefits | Cashback and partner collaborations | Paid plans, RevPoints, partner benefits | **Preview:** balance/activity tier model, benefits, referrals, concierge |
-| Card controls | Limits, PIN, freeze, spend priority, disputes | Freeze and account lock | App card controls | Freeze, limits, merchant controls, disposable cards | **Partial:** security policy controls exist; full issuer-backed controls require a card partner |
+| Card controls | Limits, PIN, freeze, spend priority, disputes | Freeze and account lock | App card controls | Freeze, limits, merchant controls, disposable cards | **Provider-ready:** full control workspace and projection contract; all actions remain setup-gated until issuer connection |
 | Security | Passkeys/Safe owners and explicit signatures | Biometrics and hardware-backed keys | Identity, device security, monitoring | biometrics, limits, scam intervention | **Strong baseline:** Privy authentication, passkeys, policy evaluation, allowlists, recovery, audit trail |
 | Joint/shared money | — | P2P transfer | Business/team movement | Joint accounts, Pockets, subscriptions | **Partial:** approval-required schedules and recipient directory; shared ownership, pockets, and provider-executed bills remain gaps |
 
@@ -68,9 +68,9 @@ Use these labels consistently in navigation, quick actions, dialogs, receipts, s
 - [x] Saved wallet recipients, recent destinations, and verified-address indicators.
 - [ ] Scheduled and recurring transfers. Approval-required plans are live; automatic/provider-managed execution remains gated.
 - [ ] Bills and subscriptions view.
-- [ ] Categories, merchant enrichment, search, filters, and statement export.
-- [ ] Pockets/goals backed by provider or onchain subaccounts, never a local ledger.
-- [ ] Card funding priority, freeze, per-card limits, PIN, replacement, disputes, and statements through issuer APIs.
+- [ ] Categories, merchant enrichment, search, filters, and statement export. Aurel activity categories, search, filters, CSV export, and period insights are live; merchant enrichment and issuer statements remain provider-gated.
+- [ ] Pockets/goals backed by provider or onchain subaccounts, never a local ledger. Planning-only goals are live and deliberately show no current balance until an authoritative source is linked.
+- [ ] Card funding priority, freeze, per-card limits, PIN, replacement, disputes, and statements through issuer APIs. The complete provider-ready UI and card projection contract are live; mutations remain issuer-gated.
 - [ ] Salary/direct-deposit setup and automatic allocation rules once fiat rails are live.
 
 ### P2 — wealth and membership

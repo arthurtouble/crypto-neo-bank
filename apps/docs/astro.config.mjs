@@ -26,6 +26,8 @@ export default defineConfig({
           { label: "Wallets and assets", slug: "product/wallets-and-assets" },
           { label: "Send money", slug: "product/send-and-route" },
           { label: "Recipients and schedules", slug: "product/recipients-and-schedules" },
+          { label: "Insights and goals", slug: "product/insights-and-goals" },
+          { label: "Cards and controls", slug: "product/cards-and-controls" },
           { label: "Networks and assets", slug: "product/networks-and-assets" },
           { label: "Cross-chain routes", slug: "product/cross-chain-routing" },
           { label: "Activity and transaction states", slug: "product/transaction-lifecycle" }

@@ -16,7 +16,9 @@ const navigation = [
     { label: "Overview", href: "/app", icon: icons.dashboard },
     { label: "Move Money", href: "/app/transfers", icon: icons.card },
     { label: "Portfolio", href: "/app/assets", icon: icons.assets },
-    { label: "Activity", href: "/app/activity", icon: icons.activity }
+    { label: "Activity", href: "/app/activity", icon: icons.activity },
+    { label: "Insights", href: "/app/insights", icon: icons.earn },
+    { label: "Goals", href: "/app/goals", icon: icons.benefits }
   ]},
   { group: "Invest", items: [
     { label: "Swap", href: "/app/exchange", icon: icons.activity },
