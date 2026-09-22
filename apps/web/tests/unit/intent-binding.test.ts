@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { spawnSync } from "node:child_process";
 
 const state = vi.hoisted(() => ({
   subject: "subject-a",
@@ -9,6 +10,8 @@ const state = vi.hoisted(() => ({
   dailyLimitUsd: 25_000,
   spentTodayUsd: 0,
   spentMissing: false,
+  atomicReservationExceeded: false,
+  lastInsert: null as null | { query: string; args: unknown[] },
   valuationFails: false,
   valuationCents: "1",
   valuations: [] as Array<unknown>,
@@ -40,7 +43,9 @@ vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
         async run() {
           if (query.includes("INSERT INTO intent_valuations")) { state.valuations.push(args); return { meta: { changes: 1 } }; }
           if (query.includes("INSERT INTO intent_prepared_calls")) {
+            state.lastInsert = { query, args };
             const step = Number(args[0]);
+            if (state.atomicReservationExceeded && query.includes("reserved_spend")) return { meta: { changes: 0 } };
             if (state.intent?.status !== "reviewed" || state.accountLocked || state.prepared.has(step) || (step > 0 && state.prepared.get(step - 1)?.verification_state !== "confirmed")) return { meta: { changes: 0 } };
             state.prepared.set(step, { intent_id: args[12], step_index: step, subject_reference: args[13], wallet_address: args[1], chain_id: args[2], target_address: args[3], native_value: args[4], calldata_hash: args[5], call_fingerprint: args[6], semantic_action: args[7], source_reference: args[8], expected_effect_json: args[9], expires_at: state.intent.expires_at, verification_state: "prepared", reported_hash: null });
             return { meta: { changes: 1 } };
@@ -201,7 +206,7 @@ describe("intent preparation route", () => {
   async function request(body: unknown) { return prepare(new Request("https://aurel.test/api/intents/prepare", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })); }
 
   beforeEach(() => {
-    state.subject = "subject-a"; state.walletLinked = true; state.betaAllowed = true; state.featureAllowed = true; state.accountLocked = false; state.dailyLimitUsd = 25_000; state.spentTodayUsd = 0; state.spentMissing = false; state.valuationFails = false; state.valuationCents = "1"; state.valuations.length = 0; state.addressBook = []; state.intentUpdateAllowed = true; state.prepared.clear(); state.events.length = 0; state.issues.length = 0;
+    state.subject = "subject-a"; state.walletLinked = true; state.betaAllowed = true; state.featureAllowed = true; state.accountLocked = false; state.dailyLimitUsd = 25_000; state.spentTodayUsd = 0; state.spentMissing = false; state.atomicReservationExceeded = false; state.lastInsert = null; state.valuationFails = false; state.valuationCents = "1"; state.valuations.length = 0; state.addressBook = []; state.intentUpdateAllowed = true; state.prepared.clear(); state.events.length = 0; state.issues.length = 0;
     state.intent = { intent_id: intentId, subject_reference: "subject-a", intent_type: "transfer", chain_id: 8453, wallet_reference: `wallet:${sender.toLowerCase()}`, request_json: JSON.stringify({ type: "transfer", chainId: 8453, destination: recipient, asset: "ETH", amount: "0.0000000000000001", estimatedUsd: 20 }), policy_result_json: JSON.stringify({ permitted: true }), status: "reviewed", expires_at: new Date(Date.now() + 60_000).toISOString() };
   });
 
@@ -212,6 +217,45 @@ describe("intent preparation route", () => {
     expect(state.prepared.get(0)).toMatchObject({ chain_id: 8453, native_value: "100", semantic_action: "native_transfer" });
     expect(state.valuations).toHaveLength(1);
     expect((await request(payload)).status).toBe(409);
+  });
+
+  it("refuses preparation when another request reserves the remaining daily limit before the atomic write", async () => {
+    state.atomicReservationExceeded = true;
+    expect((await request(payload)).status).toBe(409);
+    expect(state.prepared.size).toBe(0);
+  });
+
+  it("enforces the reservation cap in SQLite's conditional INSERT, including another prepared intent", async () => {
+    expect((await request(payload)).status).toBe(201);
+    const captured = state.lastInsert;
+    expect(captured).not.toBeNull();
+    const bound = [...captured!.args];
+    const sql = captured!.query.replace(/\?/g, () => {
+      const value = bound.shift();
+      return typeof value === "number" ? String(value) : `'${String(value).replaceAll("'", "''")}'`;
+    });
+    expect(bound).toHaveLength(0);
+    const future = new Date(Date.now() + 60_000).toISOString();
+    const current = state.intent!.intent_id as string;
+    const schema = `
+      CREATE TABLE transaction_intents (intent_id TEXT PRIMARY KEY, subject_reference TEXT, status TEXT, expires_at TEXT, created_at TEXT);
+      CREATE TABLE security_profiles (subject_reference TEXT, account_locked INTEGER);
+      CREATE TABLE intent_valuations (valuation_id TEXT, intent_id TEXT, usd_cents TEXT);
+      CREATE TABLE intent_prepared_calls (intent_id TEXT, step_index INTEGER, subject_reference TEXT, wallet_address TEXT, chain_id INTEGER, target_address TEXT, native_value TEXT, calldata_hash TEXT, call_fingerprint TEXT, semantic_action TEXT, source_reference TEXT, expires_at TEXT, expected_effect_json TEXT, verification_state TEXT, created_at TEXT);
+      INSERT INTO transaction_intents VALUES ('${current}', 'subject-a', 'reviewed', '${future}', datetime('now'));
+      INSERT INTO transaction_intents VALUES ('peer', 'subject-a', 'reviewed', '${future}', datetime('now'));
+      INSERT INTO security_profiles VALUES ('subject-a', 0);
+      INSERT INTO intent_prepared_calls VALUES ('peer', 0, 'subject-a', '${sender.toLowerCase()}', 8453, '${recipient.toLowerCase()}', '100', 'hash', 'fingerprint', 'native_transfer', 'review', '${future}', '{}', 'prepared', datetime('now'));
+    `;
+    const run = (reservedCents: number) => spawnSync("sqlite3", [":memory:"], {
+      input: `${schema} INSERT INTO intent_valuations VALUES ('peer-value','peer','${reservedCents}'); ${sql}; SELECT COUNT(*) FROM intent_prepared_calls WHERE intent_id='${current}';`, encoding: "utf8"
+    });
+    const within = run(2_499_999);
+    expect(within.status, within.stderr).toBe(0);
+    expect(within.stdout.trim()).toBe("1");
+    const over = run(2_500_000);
+    expect(over.status, over.stderr).toBe(0);
+    expect(over.stdout.trim()).toBe("0");
   });
 
   it("does not prepare another subject's intent", async () => {
