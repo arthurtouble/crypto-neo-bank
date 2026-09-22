@@ -1,5 +1,23 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
+import { readFileSync } from "node:fs";
+
+test("financial modals stay fixed to a long mobile viewport", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const productStyles = readFileSync("src/app/globals.css", "utf8");
+  await page.setContent(`<meta name="viewport" content="width=device-width, initial-scale=1"><style>${productStyles}</style><main class="productContent"><div style="height: 6000px"><div class="modalBackdrop"><section class="financialModal" role="dialog"><h2>Review</h2></section></div></div></main>`);
+  await page.waitForTimeout(500);
+  const geometry = await page.locator(".modalBackdrop").evaluate((backdrop) => {
+    const dialog = backdrop.querySelector("[role=dialog]")!;
+    const backdropRect = backdrop.getBoundingClientRect();
+    const dialogRect = dialog.getBoundingClientRect();
+    return { backdropTop: backdropRect.top, backdropHeight: backdropRect.height, dialogTop: dialogRect.top, dialogBottom: dialogRect.bottom };
+  });
+  expect(geometry.backdropTop).toBe(0);
+  expect(geometry.backdropHeight).toBe(844);
+  expect(geometry.dialogTop).toBeGreaterThanOrEqual(0);
+  expect(geometry.dialogBottom).toBeLessThanOrEqual(844);
+});
 
 test("partner sandbox exercises success and failure workflows", async ({ page }) => {
   test.setTimeout(60_000);
