@@ -11,13 +11,13 @@ No single control can prevent every loss. Aurel uses layers, and each layer has 
 
 Privy handles sign-in and wallet infrastructure. Protected Aurel APIs verify the Privy access token on the server. They do not trust an identity supplied by the browser.
 
-Higher-risk preparation requires passkey enrollment in the Aurel experience. Authentication proves access to an account; it does not prove that every transaction the customer approves is safe.
+Authentication proves access to an account; it does not prove that every transaction is safe. Aurel currently holds actions above the step-up threshold until it can verify approval for that exact instruction on the server. Passkey enrollment alone is not sufficient evidence.
 
 ## Preparation
 
 Aurel checks the account lock, supported chain and asset, destination rules, cooling period, amount limits, review threshold, step-up requirement, and required disclosures.
 
-Unknown transaction values do not silently pass as small transactions. When Aurel cannot establish the USD value needed for a threshold decision, the safer step-up path applies.
+Unknown transaction values do not silently pass as small transactions. If Aurel cannot establish a fresh, independent USD value for a transfer, preparation stops.
 
 ## Signing
 
@@ -34,8 +34,8 @@ The chain or provider decides whether an action settles. Aurel records transacti
 | Emergency account lock | Off | Blocks new transaction intents prepared through Aurel when enabled |
 | Saved destinations only | Off | Optionally restricts direct transfers to cooled address-book entries |
 | New-address cooling | 24 hours | Delays transfers of $1,000 or more to a newly saved destination |
-| Rolling transaction limit | $25,000 / 24 hours | Compares the next action with recent submitted and confirmed volume |
-| Step-up threshold | $10,000 | Requires passkey enrollment before higher-risk preparation |
+| Rolling transaction limit | $25,000 / 24 hours | Includes recent submitted, confirmed, and still-active prepared transfers; a final database guard prevents concurrent preparations from exceeding it |
+| Step-up threshold | $10,000 | Holds higher-risk preparation until transaction-specific approval can be verified server-side |
 | High-value review | $25,000 / 24 hours | Places the instruction in cooling and later revalidates the same details |
 | Reviewed-intent expiry | 15 minutes | Requires prompt submission after review |
 | Reserve-floor warning | $10,000 | Warns when visible liquid reserves may fall below the preference; it is not a hard hold |

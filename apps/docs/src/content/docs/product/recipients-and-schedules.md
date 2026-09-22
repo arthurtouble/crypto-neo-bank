@@ -15,15 +15,15 @@ Bank recipients will appear after bank transfers are enabled and the banking pro
 
 ## Scheduled transfers
 
-Aurel currently supports approval-required transfer plans. You can choose a saved recipient, an amount, an asset, a first date, and a one-time, weekly, or monthly frequency.
+Aurel supports approval-required transfer plans. Choose a saved wallet recipient, amount, asset, first review time, and one-time, weekly, or monthly frequency. The time follows your selected local timezone; daylight-saving changes keep the same local hour where possible.
 
-A plan does not move money automatically. You still review and approve each transfer. This keeps wallet control with you and ensures current security checks run before value moves.
+When a review is due, it appears in **Due for review**. Opening it prefills the recipient and asset, but leaves the amount blank. You enter the amount and complete a fresh security review, simulation, and wallet confirmation before anything moves. A due reminder is not a payment instruction or proof of settlement.
 
 Provider-managed bank schedules will only become available after the banking provider is active. Their status will come from that provider.
 
 ## Pause or resume
 
-You can pause or resume an Aurel transfer plan from Move Money. Pausing the plan does not reverse a transfer that was already signed or submitted.
+You can pause, resume, or cancel an Aurel transfer plan from Move Money. Pausing or cancelling dismisses unreviewed reminders; resuming schedules the next future review rather than replaying missed dates. None of these actions reverses a transfer already signed or submitted.
 
 ## Safety rules
 
