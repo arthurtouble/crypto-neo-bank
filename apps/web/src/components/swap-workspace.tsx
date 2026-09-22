@@ -1,155 +1,116 @@
 "use client";
 
-import { useMfa, usePrivy, useSendTransaction, useWallets } from "@privy-io/react-auth";
-import { ArrowDownUp, Check, LoaderCircle, ShieldAlert } from "lucide-react";
+import { usePrivy, useWallets } from "@privy-io/react-auth";
+import { useQuery } from "@tanstack/react-query";
+import { ArrowDownUp, LoaderCircle } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
-import { createPublicClient, encodeFunctionData, erc20Abi, formatUnits, getAddress, http, parseUnits } from "viem";
+import { useEffect, useMemo, useState } from "react";
 import { useBalance, useReadContract } from "wagmi";
-import { HOME_CHAIN } from "@/config/chains";
-import { NATIVE_ASSET_ADDRESS, resolveSwapSelection, SWAP_ASSETS, type SwapAssetId } from "@/config/swap-assets";
-import type { TransactionLifecycleStatus } from "@/lib/transactions/lifecycle";
-import { TransactionProgress } from "./transaction-progress";
+import { erc20Abi, formatUnits, parseUnits } from "viem";
+import { SUPPORTED_CHAINS } from "@/config/chains";
+import type { AssetId, CatalogAsset } from "@/lib/swap/assets";
+import type { ValidatedSwapQuote } from "@/lib/swap/quotes";
+import { assetNetwork } from "@/lib/swap/picker-model";
+import { displayRawAmount, makeSwapReviewKey, quoteIsFresh } from "@/lib/swap/review-model";
+import { parseSwapDeepLink } from "@/lib/markets/swap-links";
+import { SwapAssetPicker } from "./swap-asset-picker";
 
-type SwapQuote = {
-  quoteId: string;
-  provider: string;
-  providerName: string;
-  fromAssetId: SwapAssetId;
-  toAssetId: SwapAssetId;
-  fromAmount: string;
-  toAmount: string;
-  toAmountMin: string;
-  fromAmountUsd?: number;
-  toAmountUsd?: number;
-  valueDifferencePercent?: number;
-  networkFeeUsd: number;
-  approvalAddress?: string;
-  transactionRequest: { to: string; data: string; value: string; chainId?: number };
-};
-type QuoteResponse = { quotes: SwapQuote[]; observedAt: string; expiresAt: string; comparedProviders: number };
+type QuoteResponse = { quotes: ValidatedSwapQuote[]; observedAt: string; authority: string; error?: string; message?: string };
 
-const assets = Object.values(SWAP_ASSETS);
-const compact = new Intl.NumberFormat(undefined, { maximumFractionDigits: 8 });
-const money = new Intl.NumberFormat(undefined, { style: "currency", currency: "USD", maximumFractionDigits: 2 });
+async function readAsset(id: AssetId, getAccessToken: () => Promise<string | null>): Promise<CatalogAsset | null> {
+  const token = await getAccessToken();
+  if (!token) throw new Error("Your secure session expired.");
+  const response = await fetch(`/api/swap/assets?import=${encodeURIComponent(id)}`, { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" });
+  if (response.status === 404) return null;
+  if (!response.ok) throw new Error("Asset details are unavailable.");
+  return (await response.json() as { asset: CatalogAsset }).asset;
+}
 
 export function SwapWorkspace() {
-  const searchParams = useSearchParams();
-  const { wallets } = useWallets();
+  const params = useSearchParams();
+  const initial = useMemo(() => parseSwapDeepLink({ from: params.get("from"), to: params.get("to") }), [params]);
   const { getAccessToken } = usePrivy();
-  const { sendTransaction } = useSendTransaction();
-  const { mfaMethods } = useMfa();
+  const { wallets } = useWallets();
   const wallet = useMemo(() => wallets.find((item) => item.walletClientType === "privy") ?? wallets[0], [wallets]);
-  const initialSelection = useMemo(() => resolveSwapSelection({ from: searchParams.get("from"), to: searchParams.get("to") }), [searchParams]);
-  const [fromAssetId, setFromAssetId] = useState<SwapAssetId>(initialSelection.fromAssetId);
-  const [toAssetId, setToAssetId] = useState<SwapAssetId>(initialSelection.toAssetId);
+  const [fromAssetId, setFromAssetId] = useState<AssetId>(initial.fromAssetId);
+  const [toAssetId, setToAssetId] = useState<AssetId>(initial.toAssetId);
   const [amount, setAmount] = useState("");
   const [slippageBps, setSlippageBps] = useState(50);
-  const [result, setResult] = useState<QuoteResponse | null>(null);
+  const [acknowledged, setAcknowledged] = useState(false);
+  const [result, setResult] = useState<{ key: string; data: QuoteResponse } | null>(null);
   const [selectedQuoteId, setSelectedQuoteId] = useState<string | null>(null);
-  const [working, setWorking] = useState(false);
-  const [stage, setStage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [hash, setHash] = useState<string | null>(null);
-  const [intentId, setIntentId] = useState<string | null>(null);
-  const [flowStatus, setFlowStatus] = useState<TransactionLifecycleStatus | null>(null);
-  const selected = result?.quotes.find((item) => item.quoteId === selectedQuoteId) ?? result?.quotes[0] ?? null;
-  const fromAsset = SWAP_ASSETS[fromAssetId];
-  const toAsset = SWAP_ASSETS[toAssetId];
-  const walletAddress = wallet?.address as `0x${string}` | undefined;
-  const nativeBalance = useBalance({ address: walletAddress, chainId: HOME_CHAIN.id, query: { enabled: Boolean(walletAddress && fromAsset.address === NATIVE_ASSET_ADDRESS) } });
-  const tokenBalance = useReadContract({ address: fromAsset.address === NATIVE_ASSET_ADDRESS ? undefined : getAddress(fromAsset.address), abi: erc20Abi, functionName: "balanceOf", args: walletAddress ? [walletAddress] : undefined, chainId: HOME_CHAIN.id, query: { enabled: Boolean(walletAddress && fromAsset.address !== NATIVE_ASSET_ADDRESS) } });
-  const availableRaw = fromAsset.address === NATIVE_ASSET_ADDRESS ? nativeBalance.data?.value : tokenBalance.data;
-  const available = availableRaw === undefined ? null : formatUnits(availableRaw, fromAsset.decimals);
+  const [working, setWorking] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 5_000); return () => window.clearInterval(timer); }, []);
 
-  function resetQuote() {
-    setResult(null); setSelectedQuoteId(null); setHash(null); setIntentId(null); setFlowStatus(null); setError(null);
-  }
+  const fromAsset = useQuery({ queryKey: ["swap-asset", fromAssetId], queryFn: () => readAsset(fromAssetId, getAccessToken), staleTime: 30_000 });
+  const toAsset = useQuery({ queryKey: ["swap-asset", toAssetId], queryFn: () => readAsset(toAssetId, getAccessToken), staleTime: 30_000 });
+  const source = fromAsset.data;
+  const destination = toAsset.data;
+  const address = wallet?.address as `0x${string}` | undefined;
+  const sourceChainId = SUPPORTED_CHAINS.find((chain) => chain.id === source?.chainId)?.id;
+  const nativeBalance = useBalance({ address, chainId: sourceChainId,
+    query: { enabled: Boolean(address && source && source.address === null) } });
+  const tokenBalance = useReadContract({ address: source?.address as `0x${string}` | undefined,
+    abi: erc20Abi, functionName: "balanceOf", args: address ? [address] : undefined, chainId: sourceChainId,
+    query: { enabled: Boolean(address && source?.address) } });
+  const availableRaw = source?.address === null ? nativeBalance.data?.value : tokenBalance.data;
+  const reviewKey = makeSwapReviewKey({ fromAssetId, toAssetId, amount, walletAddress: address ?? "", slippageBps });
+  const liveResult = result?.key === reviewKey ? result.data : null;
+  const quote = liveResult?.quotes.find((item) => item.quoteId === selectedQuoteId) ?? liveResult?.quotes[0] ?? null;
+  const freshQuote = quote && quoteIsFresh(quote.expiresAt, now) ? quote : null;
+  const unverified = [source, destination].filter((asset): asset is CatalogAsset => Boolean(asset && asset.verification === "unverified"));
+
+  function clearReview() { setResult(null); setSelectedQuoteId(null); setError(null); }
 
   function reverse() {
-    const previousFrom = fromAssetId;
-    setFromAssetId(toAssetId);
-    setToAssetId(previousFrom);
-    setAmount("");
-    resetQuote();
-  }
-
-  async function balanceOf(assetId: SwapAssetId) {
-    if (!wallet) return 0n;
-    const client = createPublicClient({ chain: HOME_CHAIN, transport: http() });
-    const asset = SWAP_ASSETS[assetId];
-    if (asset.address === NATIVE_ASSET_ADDRESS) return client.getBalance({ address: getAddress(wallet.address) });
-    return client.readContract({ address: getAddress(asset.address), abi: erc20Abi, functionName: "balanceOf", args: [getAddress(wallet.address)] });
+    setFromAssetId(toAssetId); setToAssetId(fromAssetId); setAmount(""); setAcknowledged(false); clearReview();
   }
 
   async function review(event: React.FormEvent) {
-    event.preventDefault(); setWorking(true); setStage("Comparing live quotes"); resetQuote();
+    event.preventDefault(); clearReview(); setWorking(true);
     try {
+      if (!source || !destination || !address) throw new Error("Choose two available assets and connect your wallet.");
+      if (source.id === destination.id) throw new Error("Choose two different assets.");
+      if (unverified.length && !acknowledged) throw new Error("Confirm the unverified contract address first.");
+      if (!/^\d+(?:\.\d+)?$/.test(amount) || (amount.split(".")[1]?.length ?? 0) > source.decimals || parseUnits(amount, source.decimals) <= 0n) throw new Error("Enter a valid amount.");
       const token = await getAccessToken();
-      if (!token || !wallet) throw new Error("Your secure session expired.");
-      const raw = parseUnits(amount, fromAsset.decimals);
-      if (raw <= 0n) throw new Error("Enter an amount greater than zero.");
-      if (await balanceOf(fromAssetId) < raw) throw new Error(`You do not have enough ${fromAsset.symbol}.`);
-      const response = await fetch("/api/swap/quote", { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ fromAssetId, toAssetId, amount, fromAddress: wallet.address, slippageBps }) });
-      const body = await response.json() as QuoteResponse & { message?: string };
-      if (!response.ok) throw new Error(body.message ?? "No live quote is currently available.");
-      setResult(body); setSelectedQuoteId(body.quotes[0]?.quoteId ?? null); setStage(null);
-    } catch (caught) { setError(caught instanceof Error ? caught.message : "No live quote is currently available."); setStage(null); }
+      if (!token) throw new Error("Your secure session expired.");
+      const requestKey = makeSwapReviewKey({ fromAssetId, toAssetId, amount, walletAddress: address, slippageBps });
+      const response = await fetch("/api/swap/quote", { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, cache: "no-store",
+        body: JSON.stringify({ fromAssetId, toAssetId, amount, fromAddress: address, slippageBps, unverifiedAcknowledgements: unverified.map((asset) => asset.id) }) });
+      const body = await response.json() as QuoteResponse;
+      if (!response.ok) throw new Error(body.message ?? "No live route is available right now.");
+      if (!body.quotes.length) throw new Error("No live route is available right now.");
+      setResult({ key: requestKey, data: body });
+      setSelectedQuoteId(body.quotes[0].quoteId);
+    } catch (caught) { setError(caught instanceof Error ? caught.message : "Routes are unavailable. Try again."); }
     finally { setWorking(false); }
   }
 
-  async function execute() {
-    if (!selected || !result || !wallet) return;
-    setWorking(true); setError(null); setHash(null); setIntentId(null); setFlowStatus("reviewing");
-    let token: string | null = null; let pendingIntent: string | undefined;
-    try {
-      token = await getAccessToken();
-      if (!token) throw new Error("Your secure session expired.");
-      if (Date.now() >= new Date(result.expiresAt).getTime()) { setResult(null); throw new Error("This quote expired. Review fresh quotes before continuing."); }
-      const raw = parseUnits(amount, fromAsset.decimals);
-      if (await balanceOf(fromAssetId) < raw) throw new Error(`Your ${fromAsset.symbol} balance changed. Review the swap again.`);
-      const client = createPublicClient({ chain: HOME_CHAIN, transport: http() });
-      if (fromAsset.address !== NATIVE_ASSET_ADDRESS && selected.approvalAddress) {
-        const approvalTarget = getAddress(selected.approvalAddress);
-        const allowance = await client.readContract({ address: getAddress(fromAsset.address), abi: erc20Abi, functionName: "allowance", args: [getAddress(wallet.address), approvalTarget] });
-        if (allowance < raw) {
-          setStage("Review the approval"); setFlowStatus("awaiting_confirmation");
-          const approval = await sendTransaction({ to: getAddress(fromAsset.address), chainId: HOME_CHAIN.id, value: 0n, data: encodeFunctionData({ abi: erc20Abi, functionName: "approve", args: [approvalTarget, raw] }) }, { address: wallet.address, uiOptions: { description: `Approve exactly ${amount} ${fromAsset.symbol} for this swap.`, buttonText: "Approve swap", isCancellable: true } });
-          setStage("Confirming approval"); setFlowStatus("reviewing");
-          const receipt = await client.waitForTransactionReceipt({ hash: approval.hash, confirmations: 1, timeout: 120_000 });
-          if (receipt.status !== "success") throw new Error("The approval did not complete. No swap was submitted.");
-        }
-      }
-      setStage("Running safety checks");
-      const intentResponse = await fetch("/api/intents/evaluate", { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ type: "swap", walletAddress: wallet.address, chainId: HOME_CHAIN.id, asset: fromAsset.symbol, amount, destination: selected.transactionRequest.to, estimatedUsd: selected.fromAmountUsd }) });
-      const intent = await intentResponse.json() as { intentId?: string; message?: string; decision?: { requiresStepUp?: boolean; findings?: Array<{ level: string; message: string }> } };
-      if (!intentResponse.ok || !intent.intentId) throw new Error(intent.decision?.findings?.find((item) => item.level === "block")?.message ?? intent.message ?? "The swap did not pass safety review.");
-      pendingIntent = intent.intentId; setIntentId(intent.intentId);
-      if (intent.decision?.requiresStepUp && !mfaMethods.includes("passkey")) throw new Error("Set up a passkey in Security before this swap.");
-      setStage("Confirm in your wallet"); setFlowStatus("awaiting_confirmation");
-      const transaction = selected.transactionRequest;
-      await client.call({ account: getAddress(wallet.address), to: getAddress(transaction.to), data: transaction.data as `0x${string}`, value: BigInt(transaction.value || "0") });
-      const submitted = await sendTransaction({ to: getAddress(transaction.to), data: transaction.data as `0x${string}`, value: BigInt(transaction.value || "0"), chainId: HOME_CHAIN.id }, { address: wallet.address, uiOptions: { description: `Swap ${amount} ${fromAsset.symbol} for at least ${compact.format(Number(selected.toAmountMin))} ${toAsset.symbol}.`, buttonText: "Confirm swap", isCancellable: true } });
-      setHash(submitted.hash); setStage(null); setFlowStatus("submitted");
-      await fetch("/api/intents/status", { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ intentId: intent.intentId, status: "submitted", transactionHash: submitted.hash, routeReference: selected.quoteId }) });
-    } catch (caught) {
-      if (pendingIntent && token) await fetch("/api/intents/status", { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ intentId: pendingIntent, status: "cancelled" }) }).catch(() => undefined);
-      setError(caught instanceof Error ? caught.message : "The swap was not submitted."); setStage(null); setFlowStatus("failed");
-    } finally { setWorking(false); }
-  }
-
   return <section className="panel swapPanel">
-    <div className="panelHeading"><div><h2>Swap Assets</h2><p>Compare live prices and choose a route.</p></div><span className="statusBadge good">Live Quotes</span></div>
+    <div className="panelHeading"><div><h2>Swap</h2><p>Choose what to exchange.</p></div></div>
     <form className="swapForm" onSubmit={(event) => void review(event)}>
-      <article className="swapAssetBlock"><label>You Pay<select value={fromAssetId} onChange={(event) => { const next = event.target.value as SwapAssetId; setFromAssetId(next); if (next === toAssetId) setToAssetId(fromAssetId); resetQuote(); }}>{assets.map((asset) => <option key={asset.id} value={asset.id}>{asset.symbol} · {asset.name}</option>)}</select></label><input aria-label="Amount to swap" inputMode="decimal" value={amount} onChange={(event) => { setAmount(event.target.value); resetQuote(); }} placeholder="0.00" /><div className="swapBalance"><span>{available === null ? "Reading balance" : `${compact.format(Number(available))} ${fromAsset.symbol} available`}</span>{available !== null && fromAsset.address !== NATIVE_ASSET_ADDRESS && <button type="button" onClick={() => { setAmount(available); resetQuote(); }}>Max</button>}</div></article>
+      <article className="swapAssetBlock"><div className="swapAssetLabel"><span>You Pay</span><SwapAssetPicker value={fromAssetId} excludedId={toAssetId} label="You Pay" onSelect={(id) => { setFromAssetId(id); setAcknowledged(false); clearReview(); }} /></div>
+        <input aria-label="Amount to swap" inputMode="decimal" value={amount} onChange={(event) => { setAmount(event.target.value); clearReview(); }} placeholder="0.00" />
+        <div className="swapBalance">{availableRaw !== undefined && source ? `${formatUnits(availableRaw, source.decimals)} ${source.symbol} available` : nativeBalance.isPending || tokenBalance.isPending ? "Reading balance" : "Balance unavailable"}</div>
+      </article>
       <button className="swapReverse" type="button" onClick={reverse} aria-label="Reverse assets"><ArrowDownUp size={17} /></button>
-      <article className="swapAssetBlock receive"><label>You Receive<select value={toAssetId} onChange={(event) => { const next = event.target.value as SwapAssetId; setToAssetId(next); if (next === fromAssetId) setFromAssetId(toAssetId); resetQuote(); }}>{assets.map((asset) => <option key={asset.id} value={asset.id}>{asset.symbol} · {asset.name}</option>)}</select></label><strong>{selected ? compact.format(Number(selected.toAmountMin)) : "—"}</strong><small>{selected ? "Minimum received" : toAsset.name}</small></article>
-      <button className="button secondary full" disabled={working || !amount}>{working && !result ? <LoaderCircle className="spin" size={15} /> : null}{working && !result ? stage : "Review Quotes"}</button>
+      <article className="swapAssetBlock receive"><div className="swapAssetLabel"><span>You Receive</span><SwapAssetPicker value={toAssetId} excludedId={fromAssetId} label="You Receive" onSelect={(id) => { setToAssetId(id); setAcknowledged(false); clearReview(); }} /></div>
+        <strong>{freshQuote && destination ? displayRawAmount(freshQuote.toAmountMinRaw, destination.decimals) : "—"}</strong>
+        <small>{freshQuote ? "Minimum received" : "Choose an amount"}</small>
+      </article>
+      <button className="button primary full swapReviewButton" type="submit" disabled={working || !source || !destination || !address}>{working ? <LoaderCircle className="spin" size={16} /> : null}{working ? "Finding Routes" : "Review Routes"}</button>
     </form>
-    <div className="swapSettings"><span>Max Slippage</span><div>{[10, 50, 100].map((value) => <button type="button" key={value} className={slippageBps === value ? "active" : ""} aria-pressed={slippageBps === value} onClick={() => { setSlippageBps(value); resetQuote(); }}>{value / 100}%</button>)}</div></div>
-    {result && <section className="swapQuotes" aria-label="Available swap quotes"><div className="swapQuotesHeader"><h3>Available Quotes</h3><span>{result.quotes.length} of {result.comparedProviders} available</span></div>{result.quotes.map((quote, index) => <button type="button" className={`swapQuoteRow ${selected?.quoteId === quote.quoteId ? "selected" : ""}`} key={quote.quoteId} onClick={() => setSelectedQuoteId(quote.quoteId)}><span className="swapQuoteCheck">{selected?.quoteId === quote.quoteId ? <Check size={14} /> : null}</span><span><strong>{quote.providerName}</strong><small>{index === 0 ? "Best value" : "Live route"}</small></span><span><strong>{compact.format(Number(quote.toAmountMin))} {toAsset.symbol}</strong><small>{quote.networkFeeUsd > 0 ? `${money.format(quote.networkFeeUsd)} estimated network fee` : "Network fee unavailable"}</small></span></button>)}<div className="swapReview"><span>You Pay<strong>{amount} {fromAsset.symbol}</strong></span><span>Minimum Received<strong>{compact.format(Number(selected?.toAmountMin ?? 0))} {toAsset.symbol}</strong></span><span>Value Difference<strong>{selected?.valueDifferencePercent == null ? "Unavailable" : `${selected.valueDifferencePercent.toFixed(2)}%`}</strong></span></div><button className="button primary full" disabled={working || Boolean(hash)} onClick={() => void execute()}>{working ? <LoaderCircle className="spin" size={15} /> : null}{working ? stage : "Confirm Swap"}</button></section>}
-    {flowStatus && <TransactionProgress action="Swap" status={flowStatus} stage={stage} error={error} intentId={intentId} hashes={hash ? [hash] : []} chainId={HOME_CHAIN.id} submittedDetail="Your portfolio will update after the swap settles." />}
-    {!flowStatus && error && <div className="formError" role="alert"><ShieldAlert size={15} /> {error}</div>}
-    <p className="authorityFootnote">Quotes expire quickly. You review the route and approve every transaction before assets move.</p>
+    <div className="swapSettings"><span>Max Slippage</span><div>{[10, 50, 100].map((value) => <button type="button" key={value} className={slippageBps === value ? "active" : ""} aria-pressed={slippageBps === value} onClick={() => { setSlippageBps(value); clearReview(); }}>{value / 100}%</button>)}</div></div>
+    {unverified.length > 0 && <label className="swapRiskCheck"><input type="checkbox" checked={acknowledged} onChange={(event) => { setAcknowledged(event.target.checked); clearReview(); }} /><span>I checked the contract {unverified.length > 1 ? "addresses" : "address"} for {unverified.map((asset) => `${asset.symbol} on ${assetNetwork(asset.chainId)}`).join(" and ")}.</span></label>}
+    {error && <p className="formError" role="alert">{error}</p>}
+    {liveResult && <section className="swapQuotes" aria-label="Available swap routes"><div className="swapQuotesHeader"><h3>Available Routes</h3><span>{liveResult.quotes.length} found</span></div>
+      {liveResult.quotes.map((route) => <button type="button" className={`swapQuoteRow ${quote?.quoteId === route.quoteId ? "selected" : ""}`} key={route.planReference} onClick={() => setSelectedQuoteId(route.quoteId)}><span><strong>{route.provider.replace(/^lifi:/, "")}</strong><small>{route.routeKind === "cross_chain" ? "Across networks" : "Same network"}</small></span><span><strong>{destination ? displayRawAmount(route.toAmountMinRaw, destination.decimals) : "—"} {destination?.symbol}</strong><small>{route.networkFeeUsd === null ? "Network fee unavailable" : `≈ $${route.networkFeeUsd.toFixed(2)} network fee`}</small></span></button>)}
+      {freshQuote && <div className="swapReview"><span>You Pay<strong>{amount} {source?.symbol}</strong></span><span>Minimum Received<strong>{destination ? displayRawAmount(freshQuote.toAmountMinRaw, destination.decimals) : "—"} {destination?.symbol}</strong></span><span>Price Impact<strong>{freshQuote.priceImpactPercent === null ? "Unavailable" : `${freshQuote.priceImpactPercent.toFixed(2)}%`}</strong></span></div>}
+      {quote && !freshQuote && <p className="formWarning">This quote expired. Review routes again.</p>}
+      <p className="swapExecutionGate">Trading is unavailable until the route can be independently verified. No wallet approval will be requested.</p>
+    </section>}
   </section>;
 }
