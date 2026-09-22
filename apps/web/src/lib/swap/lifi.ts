@@ -1,105 +1,280 @@
+import { getAddress, hexToBytes, parseUnits } from "viem";
 import { z } from "zod";
-import { formatUnits, isAddress, parseUnits } from "viem";
-import { SWAP_ASSET_IDS, SWAP_ASSETS, SWAP_CHAIN_ID } from "@/config/swap-assets";
+import { assetId, catalogAssetSchema, parseAssetId, type CatalogAsset } from "@/lib/swap/assets";
+import {
+  requireExactUnverifiedAcknowledgements, SwapQuoteError, type QuoteAdapter, type SwapQuoteInput, type ValidatedSwapQuote
+} from "@/lib/swap/quotes";
 
-export const swapQuoteRequestSchema = z.object({
-  fromAssetId: z.enum(SWAP_ASSET_IDS),
-  toAssetId: z.enum(SWAP_ASSET_IDS),
-  amount: z.string().regex(/^\d+(\.\d{1,18})?$/),
-  fromAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
-  slippageBps: z.number().int().min(10).max(100).default(50)
-}).refine((value) => value.fromAssetId !== value.toAssetId, { message: "Choose two different assets." });
+const QUOTE_TTL_MS = 45_000;
+const MAX_QUOTE_RESPONSE_BYTES = 1_000_000;
+const NATIVE_SENTINEL = "0x0000000000000000000000000000000000000000";
+const NATIVE_SENTINELS = new Set([NATIVE_SENTINEL, "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"]);
+const MAX_UINT256 = (1n << 256n) - 1n;
 
-const tokenSchema = z.object({ symbol: z.string(), decimals: z.number(), chainId: z.number(), address: z.string() });
+const tokenSchema = z.object({
+  symbol: z.string(), decimals: z.number().int(), chainId: z.number().int(), address: z.string()
+});
 const costSchema = z.object({ amountUSD: z.string().optional() }).passthrough();
-const quoteSchema = z.object({
-  id: z.string(), tool: z.string(),
-  action: z.object({ fromChainId: z.number(), toChainId: z.number(), fromToken: tokenSchema, toToken: tokenSchema }),
+const providerQuoteSchema = z.object({
+  id: z.string().min(1).max(200),
+  tool: z.string().min(1).max(80),
+  action: z.object({ fromChainId: z.number().int(), toChainId: z.number().int(), fromToken: tokenSchema, toToken: tokenSchema }),
   estimate: z.object({
-    fromAmount: z.string(), toAmount: z.string(), toAmountMin: z.string(), executionDuration: z.number().optional(), approvalAddress: z.string().optional(),
-    fromAmountUSD: z.string().optional(), toAmountUSD: z.string().optional(), feeCosts: z.array(costSchema).optional(), gasCosts: z.array(costSchema).optional()
+    fromAmount: z.string().regex(/^\d+$/),
+    toAmount: z.string().regex(/^\d+$/),
+    toAmountMin: z.string().regex(/^\d+$/),
+    approvalAddress: z.string().optional(),
+    fromAmountUSD: z.string().optional(),
+    toAmountUSD: z.string().optional(),
+    gasCosts: z.array(costSchema).optional(),
+    feeCosts: z.array(costSchema).optional()
   }),
-  transactionRequest: z.object({ to: z.string().regex(/^0x[a-fA-F0-9]{40}$/), data: z.string().regex(/^0x[a-fA-F0-9]*$/), value: z.string(), chainId: z.number().optional() })
+  transactionRequest: z.object({
+    to: z.string(), data: z.string(), value: z.string(), chainId: z.number().int()
+  }),
+  expiresAt: z.string().datetime().optional()
 });
 
-const providers = [
-  { key: "nordstern", name: "Nordstern" },
-  { key: "kyberswap", name: "KyberSwap" },
-  { key: "1inch", name: "1inch" },
-  { key: "sushiswap", name: "SushiSwap" }
-] as const;
+export type LifiRoutePolicy = {
+  allowedTools: ReadonlySet<string>;
+  allowedExchanges?: ReadonlySet<string>;
+  allowedTargets: ReadonlySet<string>;
+  allowedApprovalTargets: ReadonlySet<string>;
+};
 
-function usdCosts(items: Array<{ amountUSD?: string }> | undefined) {
-  return (items ?? []).reduce((sum, item) => sum + (Number(item.amountUSD) || 0), 0);
+type Dependencies = {
+  fetcher?: typeof fetch;
+  now?: () => number;
+  policy?: LifiRoutePolicy;
+};
+
+function configuredSet(name: string): ReadonlySet<string> {
+  return new Set((process.env[name] ?? "").split(",").map((value) => value.trim().toLowerCase()).filter(Boolean));
 }
 
-async function providerQuote(provider: (typeof providers)[number], query: URLSearchParams) {
-  const providerQuery = new URLSearchParams(query);
-  providerQuery.set("allowExchanges", provider.key);
-  const response = await fetch(`https://li.quest/v1/quote?${providerQuery}`, {
-    headers: process.env.LIFI_API_KEY ? { "x-lifi-api-key": process.env.LIFI_API_KEY } : undefined,
-    signal: AbortSignal.timeout(12_000)
-  });
-  if (!response.ok) return null;
-  const quote = quoteSchema.parse(await response.json());
-  if (quote.tool !== provider.key) return null;
-  return { providerName: provider.name, quote };
-}
-
-export async function getSwapQuotes(input: z.infer<typeof swapQuoteRequestSchema>) {
-  const parsed = swapQuoteRequestSchema.parse(input);
-  const from = SWAP_ASSETS[parsed.fromAssetId];
-  const to = SWAP_ASSETS[parsed.toAssetId];
-  const rawAmount = parseUnits(parsed.amount, from.decimals);
-  if (rawAmount <= 0n) throw new Error("Enter an amount greater than zero.");
-  const query = new URLSearchParams({
-    fromChain: String(SWAP_CHAIN_ID), toChain: String(SWAP_CHAIN_ID), fromToken: from.address, toToken: to.address,
-    fromAddress: parsed.fromAddress, toAddress: parsed.fromAddress, fromAmount: rawAmount.toString(), order: "CHEAPEST",
-    slippage: String(parsed.slippageBps / 10_000), integrator: "aurel", allowDestinationCall: "false", maxPriceImpact: "0.03"
-  });
-  const settled = await Promise.allSettled(providers.map((provider) => providerQuote(provider, query)));
-  const observedAt = new Date();
-  const quotes = settled.flatMap((result) => result.status === "fulfilled" && result.value ? [result.value] : []).flatMap(({ providerName, quote }) => {
-    try {
-    if (quote.action.fromChainId !== SWAP_CHAIN_ID || quote.action.toChainId !== SWAP_CHAIN_ID) throw new Error("A quote used an unexpected network.");
-    if (quote.action.fromToken.address.toLowerCase() !== from.address.toLowerCase() || quote.action.toToken.address.toLowerCase() !== to.address.toLowerCase()) throw new Error("A quote used unexpected assets.");
-    if (quote.action.fromToken.chainId !== SWAP_CHAIN_ID || quote.action.toToken.chainId !== SWAP_CHAIN_ID || quote.action.fromToken.decimals !== from.decimals || quote.action.toToken.decimals !== to.decimals) throw new Error("A quote used unexpected token metadata.");
-    const quotedInput = BigInt(quote.estimate.fromAmount);
-    const quotedOutput = BigInt(quote.estimate.toAmount);
-    const quotedMinimum = BigInt(quote.estimate.toAmountMin);
-    if (quotedInput !== rawAmount || quotedOutput <= 0n || quotedMinimum <= 0n || quotedMinimum > quotedOutput) throw new Error("A quote changed the amount or minimum received.");
-    if (quote.estimate.approvalAddress && !isAddress(quote.estimate.approvalAddress)) throw new Error("A quote used an invalid approval target.");
-    if (!/^\d+$/.test(quote.transactionRequest.value)) throw new Error("A quote used an invalid transaction value.");
-    if (quote.transactionRequest.chainId && quote.transactionRequest.chainId !== SWAP_CHAIN_ID) throw new Error("A quote transaction used an unexpected network.");
-    const fromUsd = Number(quote.estimate.fromAmountUSD);
-    const toUsd = Number(quote.estimate.toAmountUSD);
-    const valueLossPercent = fromUsd > 0 && Number.isFinite(toUsd) ? Math.max(0, ((fromUsd - toUsd) / fromUsd) * 100) : undefined;
-    return [{
-      quoteId: quote.id,
-      provider: quote.tool,
-      providerName,
-      fromAssetId: parsed.fromAssetId,
-      toAssetId: parsed.toAssetId,
-      fromAmount: parsed.amount,
-      toAmount: formatUnits(quotedOutput, to.decimals),
-      toAmountMin: formatUnits(quotedMinimum, to.decimals),
-      fromAmountUsd: Number.isFinite(fromUsd) ? fromUsd : undefined,
-      toAmountUsd: Number.isFinite(toUsd) ? toUsd : undefined,
-      valueDifferencePercent: valueLossPercent,
-      networkFeeUsd: usdCosts(quote.estimate.gasCosts),
-      approvalAddress: quote.estimate.approvalAddress,
-      transactionRequest: quote.transactionRequest
-    }];
-    } catch {
-      return [];
-    }
-  }).sort((a, b) => Number(b.toAmountMin) - Number(a.toAmountMin));
-  if (!quotes.length) throw new Error("No validated quote is currently available for this pair.");
+function configuredPolicy(): LifiRoutePolicy {
+  const allowedTools = configuredSet("AUREL_LIFI_ALLOWED_TOOLS");
   return {
-    quotes,
-    observedAt: observedAt.toISOString(),
-    expiresAt: new Date(observedAt.getTime() + 45_000).toISOString(),
-    comparedProviders: providers.length,
-    authority: "Live LI.FI-routed quotes; settlement by the selected exchange contracts" as const
+    allowedTools,
+    allowedExchanges: allowedTools,
+    allowedTargets: configuredSet("AUREL_SWAP_ALLOWED_TARGETS"),
+    allowedApprovalTargets: configuredSet("AUREL_SWAP_ALLOWED_SPENDERS")
   };
+}
+
+async function readBoundedJson(response: Response): Promise<unknown> {
+  const declaredLength = Number(response.headers.get("content-length") ?? 0);
+  if (!Number.isFinite(declaredLength) || declaredLength < 0 || declaredLength > MAX_QUOTE_RESPONSE_BYTES || !response.body) {
+    await response.body?.cancel().catch(() => undefined);
+    throw new SwapQuoteError("quote_unavailable", "The quote provider returned an invalid response.");
+  }
+  const reader = response.body.getReader();
+  try {
+    const chunks: Uint8Array[] = [];
+    let total = 0;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > MAX_QUOTE_RESPONSE_BYTES) {
+        await reader.cancel();
+        throw new Error("oversized");
+      }
+      chunks.push(value);
+    }
+    const bytes = new Uint8Array(total);
+    let offset = 0;
+    for (const chunk of chunks) {
+      bytes.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
+    return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)) as unknown;
+  } catch {
+    await reader.cancel().catch(() => undefined);
+    throw new SwapQuoteError("quote_unavailable", "The quote provider returned an invalid response.");
+  }
+}
+
+function providerAddress(asset: CatalogAsset): string {
+  return asset.address ?? NATIVE_SENTINEL;
+}
+
+function matchesProviderToken(token: z.infer<typeof tokenSchema>, asset: CatalogAsset): boolean {
+  try {
+    const normalizedAddress = NATIVE_SENTINELS.has(token.address.toLowerCase()) ? null : token.address;
+    return token.chainId === asset.chainId && token.decimals === asset.decimals && assetId(token.chainId, normalizedAddress) === asset.id;
+  } catch {
+    return false;
+  }
+}
+
+function optionalUsdTotal(costs: Array<{ amountUSD?: string }> | undefined): number | null {
+  if (!costs?.length) return null;
+  let total = 0;
+  for (const cost of costs) {
+    if (cost.amountUSD === undefined) return null;
+    const value = Number(cost.amountUSD);
+    if (!Number.isFinite(value) || value < 0) return null;
+    total += value;
+  }
+  return total;
+}
+
+function observedPriceImpact(fromUsdValue: string | undefined, toUsdValue: string | undefined): number | null {
+  if (fromUsdValue === undefined || toUsdValue === undefined) return null;
+  const fromUsd = Number(fromUsdValue);
+  const toUsd = Number(toUsdValue);
+  if (!Number.isFinite(fromUsd) || !Number.isFinite(toUsd) || fromUsd <= 0 || toUsd < 0) return null;
+  return Math.round(Math.max(0, ((fromUsd - toUsd) / fromUsd) * 100) * 1_000_000) / 1_000_000;
+}
+
+function boundedExpiry(providerExpiry: string | undefined, now: number): string | null {
+  const localExpiry = now + QUOTE_TTL_MS;
+  if (!providerExpiry) return new Date(localExpiry).toISOString();
+  const parsed = Date.parse(providerExpiry);
+  if (!Number.isFinite(parsed) || parsed <= now) return null;
+  return new Date(Math.min(parsed, localExpiry)).toISOString();
+}
+
+async function sha256(value: string): Promise<`0x${string}`> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  return `0x${Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("")}`;
+}
+
+async function validateQuote(
+  value: unknown,
+  input: SwapQuoteInput,
+  assets: { from: CatalogAsset; to: CatalogAsset },
+  rawAmount: bigint,
+  now: number,
+  policy: LifiRoutePolicy
+): Promise<ValidatedSwapQuote | null> {
+  const parsed = providerQuoteSchema.safeParse(value);
+  if (!parsed.success) return null;
+  const quote = parsed.data;
+  if (!policy.allowedTools.has(quote.tool.toLowerCase())) return null;
+  if (quote.action.fromChainId !== assets.from.chainId || quote.action.toChainId !== assets.to.chainId) return null;
+  if (!matchesProviderToken(quote.action.fromToken, assets.from) || !matchesProviderToken(quote.action.toToken, assets.to)) return null;
+
+  const fromAmount = BigInt(quote.estimate.fromAmount);
+  const toAmount = BigInt(quote.estimate.toAmount);
+  const toAmountMin = BigInt(quote.estimate.toAmountMin);
+  if (fromAmount !== rawAmount || toAmount <= 0n || toAmountMin <= 0n || toAmountMin > toAmount) return null;
+
+  let target: string;
+  try { target = getAddress(quote.transactionRequest.to).toLowerCase(); } catch { return null; }
+  if (!policy.allowedTargets.has(target)) return null;
+  if (quote.transactionRequest.chainId !== assets.from.chainId) return null;
+  if (!/^0x(?:[a-fA-F0-9]{2})+$/.test(quote.transactionRequest.data)) return null;
+  try { hexToBytes(quote.transactionRequest.data as `0x${string}`); } catch { return null; }
+  if (!/^\d+$/.test(quote.transactionRequest.value)) return null;
+  const transactionValue = BigInt(quote.transactionRequest.value);
+  if (transactionValue > MAX_UINT256 || transactionValue !== (assets.from.address === null ? rawAmount : 0n)) return null;
+
+  let approvalTarget: string | null = null;
+  if (quote.estimate.approvalAddress !== undefined) {
+    if (assets.from.address === null) return null;
+    try { approvalTarget = getAddress(quote.estimate.approvalAddress); } catch { return null; }
+    if (!policy.allowedApprovalTargets.has(approvalTarget.toLowerCase())) return null;
+  }
+
+  const expiresAt = boundedExpiry(quote.expiresAt, now);
+  if (!expiresAt) return null;
+  const priceImpactPercent = observedPriceImpact(quote.estimate.fromAmountUSD, quote.estimate.toAmountUSD);
+  const unverified = assets.from.verification === "unverified" || assets.to.verification === "unverified";
+  if ((unverified && priceImpactPercent === null) || (priceImpactPercent !== null && priceImpactPercent > (unverified ? 1 : 3))) return null;
+
+  const planHash = await sha256(JSON.stringify([
+    quote.tool, quote.id, input.fromAssetId, input.toAssetId, fromAmount.toString(), toAmount.toString(), toAmountMin.toString(),
+    input.fromAddress.toLowerCase(), assets.from.chainId, target, transactionValue.toString(), quote.transactionRequest.data.toLowerCase(),
+    approvalTarget?.toLowerCase() ?? null, expiresAt
+  ]));
+  return {
+    provider: `lifi:${quote.tool}`,
+    quoteId: quote.id,
+    fromAssetId: input.fromAssetId,
+    toAssetId: input.toAssetId,
+    fromChainId: assets.from.chainId,
+    toChainId: assets.to.chainId,
+    fromAmountRaw: fromAmount.toString(),
+    toAmountRaw: toAmount.toString(),
+    toAmountMinRaw: toAmountMin.toString(),
+    expiresAt,
+    networkFeeUsd: optionalUsdTotal(quote.estimate.gasCosts),
+    priceImpactPercent,
+    approvalTarget,
+    planReference: `lifi:${quote.id}:${planHash}`,
+    routeKind: assets.from.chainId === assets.to.chainId ? "same_chain" : "cross_chain"
+  };
+}
+
+class LifiQuoteAdapter implements QuoteAdapter {
+  constructor(private readonly dependencies: Required<Dependencies>) {}
+
+  async quote(input: SwapQuoteInput, assets: { from: CatalogAsset; to: CatalogAsset }): Promise<ValidatedSwapQuote[]> {
+    if (!parseAssetId(input.fromAssetId) || !parseAssetId(input.toAssetId)) {
+      throw new SwapQuoteError("unsupported_chain", "This asset chain is not supported.");
+    }
+    const from = catalogAssetSchema.safeParse(assets.from);
+    const to = catalogAssetSchema.safeParse(assets.to);
+    if (!from.success || !to.success || from.data.eligibility !== "eligible" || to.data.eligibility !== "eligible"
+      || from.data.id !== input.fromAssetId || to.data.id !== input.toAssetId) {
+      throw new SwapQuoteError("asset_unavailable", "One of these assets is not currently available for quotes.");
+    }
+    requireExactUnverifiedAcknowledgements(input, { from: from.data, to: to.data });
+    let rawAmount: bigint;
+    if ((input.amount.split(".")[1]?.length ?? 0) > from.data.decimals) {
+      throw new SwapQuoteError("asset_unavailable", "The amount precision is not supported by the source asset.");
+    }
+    try { rawAmount = parseUnits(input.amount, from.data.decimals); } catch {
+      throw new SwapQuoteError("asset_unavailable", "The amount precision is not supported by the source asset.");
+    }
+    if (rawAmount <= 0n) throw new SwapQuoteError("asset_unavailable", "Enter an amount greater than zero.");
+    const unverified = from.data.verification === "unverified" || to.data.verification === "unverified";
+    if (unverified && input.slippageBps > 50) throw new SwapQuoteError("asset_unavailable", "Unverified assets require slippage of 0.5% or less.");
+
+    const query = new URLSearchParams({
+      fromChain: String(from.data.chainId), toChain: String(to.data.chainId),
+      fromToken: providerAddress(from.data), toToken: providerAddress(to.data),
+      fromAddress: input.fromAddress, toAddress: input.fromAddress, fromAmount: rawAmount.toString(),
+      order: "CHEAPEST", slippage: String(input.slippageBps / 10_000), integrator: "aurel",
+      allowDestinationCall: "false", maxPriceImpact: String((unverified ? 1 : 3) / 100)
+    });
+    const allowedExchanges = this.dependencies.policy.allowedExchanges ?? this.dependencies.policy.allowedTools;
+    if (allowedExchanges.size === 0) {
+      throw new SwapQuoteError("no_live_route", "No validated live route is currently available.");
+    }
+    for (const exchange of [...allowedExchanges].map((value) => value.toLowerCase()).sort()) {
+      query.append("allowExchanges", exchange);
+    }
+    let response: Response;
+    try {
+      response = await this.dependencies.fetcher(`https://li.quest/v1/quote?${query}`, {
+        headers: process.env.LIFI_API_KEY ? { "x-lifi-api-key": process.env.LIFI_API_KEY } : undefined,
+        signal: AbortSignal.timeout(12_000)
+      });
+    } catch {
+      throw new SwapQuoteError("quote_unavailable", "The quote provider is temporarily unavailable.");
+    }
+    if (!response.ok) {
+      await response.body?.cancel().catch(() => undefined);
+      throw new SwapQuoteError("no_live_route", "No validated live route is currently available.");
+    }
+    const body = await readBoundedJson(response);
+    const quote = await validateQuote(body, input, { from: from.data, to: to.data }, rawAmount, this.dependencies.now(), this.dependencies.policy);
+    if (!quote) throw new SwapQuoteError("no_live_route", "No validated live route is currently available.");
+    return [quote];
+  }
+}
+
+export function createLifiQuoteAdapter(dependencies: Dependencies = {}): QuoteAdapter {
+  return new LifiQuoteAdapter({
+    fetcher: dependencies.fetcher ?? fetch,
+    now: dependencies.now ?? Date.now,
+    policy: dependencies.policy ?? configuredPolicy()
+  });
+}
+
+export function getSwapQuotes(input: SwapQuoteInput, assets: { from: CatalogAsset; to: CatalogAsset }): Promise<ValidatedSwapQuote[]> {
+  return createLifiQuoteAdapter().quote(input, assets);
 }

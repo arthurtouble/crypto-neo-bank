@@ -22,8 +22,13 @@ vi.mock("@/lib/auth/wallet", () => {
   class WalletOwnershipError extends Error {}
   return { WalletOwnershipError, requireLinkedEvmWallet: async () => { throw new WalletOwnershipError("Unlinked wallet"); } };
 });
+vi.mock("@/lib/swap/quotes", () => ({
+  swapQuoteRequestSchema: { parse: (input: unknown) => input }
+}));
+vi.mock("@/lib/swap/catalog", () => ({
+  resolveCatalogAsset: async () => ({ id: "8453:native", chainId: 8453, verification: "verified", eligibility: "eligible" })
+}));
 vi.mock("@/lib/swap/lifi", () => ({
-  swapQuoteRequestSchema: { parse: (input: unknown) => input },
   getSwapQuotes: async () => { fixture.quoteCalls++; return { quotes: [] }; }
 }));
 
