@@ -39,7 +39,10 @@ function number(value: string | undefined) {
   return parsed;
 }
 
-export async function getMarkets(page: number, perPage = 50): Promise<MarketRow[]> {
+export async function getMarketsPage(page: number, perPage = 50, search = ""): Promise<{ markets: MarketRow[]; total: number }> {
+  const safePage = z.number().int().min(1).max(1_000).parse(page);
+  const safePageSize = z.number().int().min(1).max(100).parse(perPage);
+  const term = z.string().trim().max(80).parse(search).toLocaleLowerCase();
   const response = await fetch(`${api}/Ticker?assetVersion=1`, { headers, signal: AbortSignal.timeout(12_000) });
   if (!response.ok) throw new Error(`Market data provider returned ${response.status}.`);
   const payload = tickerResponseSchema.parse(await response.json());
@@ -64,8 +67,13 @@ export async function getMarkets(page: number, perPage = 50): Promise<MarketRow[
       last_updated: new Date().toISOString()
     } satisfies MarketRow;
   }).sort((a, b) => b.total_volume - a.total_volume).map((market, index) => ({ ...market, market_cap_rank: index + 1 }));
-  const start = (page - 1) * perPage;
-  return markets.slice(start, start + perPage);
+  const filtered = term ? markets.filter((market) => `${market.name} ${market.symbol} ${market.id}`.toLocaleLowerCase().includes(term)) : markets;
+  const start = (safePage - 1) * safePageSize;
+  return { markets: filtered.slice(start, start + safePageSize), total: filtered.length };
+}
+
+export async function getMarkets(page: number, perPage = 50): Promise<MarketRow[]> {
+  return (await getMarketsPage(page, perPage)).markets;
 }
 
 export async function getMarketHistory(id: string, days: number): Promise<MarketHistory> {

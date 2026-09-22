@@ -58,8 +58,8 @@ Use these labels consistently in navigation, quick actions, dialogs, receipts, s
 - [ ] Explicitly approved USDC routing from supported networks. Route discovery and quote preview exist; execution remains gated by the transaction-evidence boundary.
 - [x] Unified **Add Money**, **Send**, **Swap**, and **Withdraw** entry points.
 - [ ] Destination-aware USDC withdrawals to supported networks. Destination-aware previews exist; cross-network execution remains gated.
-- [x] Portfolio value, period selector, line chart, allocation, and authority state.
-- [x] Live searchable markets list with watchlist, truthful view-only states, and direct Swap entry for exact reviewed mappings. A public issuer catalog is separate from regulated eligibility and orders.
+- [ ] Portfolio value, period selector, line chart, allocation, and authority state. The coverage-gated line chart currently exposes only the latest seven completed UTC days; longer ranges require a wider independently priced publication window. Current allocation and balances remain separately sourced.
+- [x] Live markets list with source-wide server search, watchlist, truthful view-only states, and direct Swap entry for exact reviewed mappings. A public issuer catalog is separate from regulated eligibility and orders.
 - [x] Consistent Review, Confirm, Submitted, Complete, failure, and receipt states across direct sends, routed Add Money/Withdraw, Earn, Borrow, and Repay, with authenticated source-receipt reconciliation.
 
 ### P1 — daily financial account

@@ -11,6 +11,8 @@ Select **You Pay** or **You Receive**, then search by name, symbol, or contract 
 
 Markets prices and Swap routes come from different sources. A market opens Swap only when Aurel has mapped that market to a specific contract and confirmed that the asset remains visible. A price on Markets is not an executable quote.
 
+Markets search checks the full USD market list returned by its price source before paging results; it is not limited to the page already on screen. This list and the LI.FI Swap catalog are different universes, so appearing in Markets does not guarantee a route.
+
 ## Review a route
 
 Enter the amount, choose a slippage limit, and select **Review Routes**. When a validated route is available, Aurel shows the minimum received, network fee when reported, price impact when available, and whether the route crosses networks. Quotes expire quickly; an expired quote needs a new review. A missing fee or price-impact estimate is shown as unavailable, not zero.

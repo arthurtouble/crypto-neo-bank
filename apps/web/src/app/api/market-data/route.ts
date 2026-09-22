@@ -1,4 +1,4 @@
-import { getMarketHistory, getMarkets } from "@/lib/markets/data";
+import { getMarketHistory, getMarketsPage } from "@/lib/markets/data";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -12,9 +12,13 @@ export async function GET(request: Request) {
         headers: { "Cache-Control": "public, max-age=120, s-maxage=300, stale-while-revalidate=1800", "X-Aurel-Data-Authority": "kraken" }
       });
     }
-    const page = Math.min(5, Math.max(1, Number(url.searchParams.get("page") ?? "1")));
-    const markets = await getMarkets(page);
-    return Response.json({ markets, page, observedAt: new Date().toISOString(), authority: "Kraken public market data" }, {
+    const pageText = url.searchParams.get("page") ?? "1";
+    const search = url.searchParams.get("search") ?? "";
+    if (!/^[1-9]\d{0,2}$/.test(pageText) || search.length > 80 || [...url.searchParams.keys()].some((key) => key !== "page" && key !== "search" && key !== "view"))
+      return Response.json({ error: "invalid_market_request" }, { status: 400, headers: { "Cache-Control": "no-store" } });
+    const page = Number(pageText);
+    const result = await getMarketsPage(page, 50, search);
+    return Response.json({ markets: result.markets, page, total: result.total, observedAt: new Date().toISOString(), authority: "Kraken public market data" }, {
       headers: { "Cache-Control": "public, max-age=30, s-maxage=60, stale-while-revalidate=300", "X-Aurel-Data-Authority": "kraken" }
     });
   } catch (error) {
