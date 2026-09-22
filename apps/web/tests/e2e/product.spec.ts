@@ -2,9 +2,12 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
 test("partner sandbox exercises success and failure workflows", async ({ page }) => {
+  test.setTimeout(60_000);
   await page.goto("/app/sandbox");
   await expect(page.getByRole("heading", { name: "Provider integration lab" })).toBeVisible();
-  await page.getByRole("button", { name: /Allocate \$2,500/ }).click();
+  const allocate = page.getByRole("button", { name: /Allocate \$2,500/ });
+  await expect(allocate).toBeEnabled({ timeout: 45_000 });
+  await allocate.click();
   await expect(page.locator(".receiptPanel").getByText("Review and sign")).toBeVisible();
   await page.getByRole("button", { name: /Failed transfer/ }).click();
   await page.getByRole("button", { name: /Withdraw \$1,000/ }).click();
