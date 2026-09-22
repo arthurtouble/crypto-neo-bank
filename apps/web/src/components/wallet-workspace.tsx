@@ -4,6 +4,7 @@ import { useConnectWallet, useMfa, usePrivy, useSendTransaction, useWallets } fr
 import { Check, Copy, ExternalLink, LoaderCircle, Plus, QrCode, Send, WalletCards, X } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { erc20Abi, formatUnits, isAddress, parseEther, parseUnits, encodeFunctionData, toHex } from "viem";
 import { useBalance, useReadContract } from "wagmi";
 import { BASE_ASSETS, HOME_CHAIN } from "@/config/chains";
@@ -23,6 +24,7 @@ function amountText(value: bigint | undefined, decimals: number) {
 }
 
 export function WalletWorkspace() {
+  const router = useRouter();
   const { getAccessToken } = usePrivy();
   const { wallets, ready } = useWallets();
   const { connectWallet } = useConnectWallet();
@@ -191,7 +193,8 @@ export function WalletWorkspace() {
             <div className="receiveQr"><QRCodeSVG value={address} size={164} bgColor="transparent" fgColor="currentColor" level="M" /></div>
             <code className="addressBlock">{address}</code>
             <button className="button primary full" onClick={() => void copyAddress()}>{copied ? <Check size={16} /> : <Copy size={16} />}{copied ? "Copied" : "Copy address"}</button>
-            <div className="modalRisk">Transfers from another network are not routed automatically. Use “Move Between Networks” on the Assets page instead.</div>
+            <button className="button secondary full" onClick={() => { setModal(null); router.push("/app/exchange"); }}>Swap From Another Account</button>
+            <div className="modalRisk">Only send assets using the account details shown below.</div>
             <details className="technicalDetails"><summary>Technical Details</summary><span>Network: Base mainnet · Address format: EVM</span></details>
           </> : <form onSubmit={(event) => void submitSend(event)}>
             <h2 id="wallet-modal-title">Send Digital Assets</h2>

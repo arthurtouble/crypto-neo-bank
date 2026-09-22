@@ -24,9 +24,9 @@ For a supported direct transfer, Aurel evaluates the account lock, network, asse
 
 A transaction sent to a valid but unintended address is usually irreversible.
 
-## Cross-chain USDC
+## Exchange
 
-LI.FI supplies route quotes. Aurel checks that the returned networks, assets, and target match your request. If a token approval is needed, Aurel requests the exact amount instead of an unlimited approval by default.
+Aurel searches connected accounts for enough USD Coin and requests a route into your Aurel Account. You do not need to choose a network. Aurel checks that the returned source, destination, assets, and target match the prepared instruction. If a token approval is needed, Aurel requests the exact amount instead of an unlimited approval by default.
 
 Routes add dependencies that direct transfers do not have, including bridge contracts, relayers, liquidity, finality, and the destination chain.
 

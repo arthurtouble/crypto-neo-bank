@@ -1,9 +1,11 @@
 ---
 title: Cross-chain routes
-description: How Aurel discovers, checks, signs, and follows a USDC route across networks.
+description: How Aurel moves USD Coin between your connected accounts without making you manage networks.
 ---
 
-Aurel uses LI.FI to discover routes for native USDC across supported EVM networks. A route can combine bridges, exchanges, relayers, and destination contracts. It is more complex than a direct transfer on one chain.
+Aurel Exchange looks across your connected accounts, finds an eligible USD Coin balance, and prepares a route into your Aurel Account. You enter the amount; Aurel handles source-network selection in the background.
+
+The current routing adapter uses LI.FI. The product is provider-neutral so a contracted Socket route or another approved provider can be added without changing the customer flow.
 
 ## What a quote contains
 
@@ -21,9 +23,9 @@ An exact approval reduces exposure but does not make the route risk-free. The ap
 
 ## Route lifecycle
 
-1. Choose the source network, destination network, and amount.
-2. Request a live route.
-3. Review expected output, costs, route steps, and warnings.
+1. Enter the USD Coin amount in Exchange.
+2. Aurel checks connected accounts and requests a live route.
+3. Review the amount you send, minimum received, and expected arrival.
 4. Sign an exact approval if one is required.
 5. Wait for the approval receipt and refresh the route if necessary.
 6. Sign the route transaction.
@@ -44,7 +46,7 @@ Bridges and relayers may need additional confirmations. Destination execution ca
 - **Bridge risk:** funds depend on bridge design, validators, messaging, and liquidity.
 - **Relayer risk:** delivery can be delayed even after source confirmation.
 - **Finality risk:** a chain reorganization can affect a recent transaction.
-- **Wrong-network risk:** the destination asset arrives on the selected destination chain, not automatically where it is most useful.
+- **Account-selection risk:** Aurel selects an eligible source automatically, but you should still review the wallet prompt before signing.
 
 ## When to use a direct transfer
 
@@ -53,4 +55,3 @@ If sender and recipient can use the same supported network, a direct transfer is
 ## Failed or delayed routes
 
 Do not immediately repeat a route because the destination balance has not updated. Repeating it can create a second transfer. Check the activity record, source explorer, route status, destination explorer, and wallet address first. If the route remains unresolved, open a support case with the route reference and transaction hash. Never share a private key or recovery phrase.
-

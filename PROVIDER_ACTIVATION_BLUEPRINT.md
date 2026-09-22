@@ -14,7 +14,7 @@ Preview mode may show complete workflows and eligibility gates, but never fabric
 | --- | --- | --- | --- | --- |
 | USD accounts, ACH, wire, FedNow, on/off-ramp | Bridge | Rain or Noah, subject to country and product scope | Transfers, account details, recipients, transfer review | Platform approval, customer mapping, KYC link, API key, webhooks |
 | Wallet login and signing | Privy | — | Aurel Account, receive, send, recovery, export | Already integrated; production configuration and monitoring |
-| Cross-network USDC | LI.FI | Provider-native routing when contracted | Move Between Networks | Already integrated; route monitoring and supported-pair policy |
+| Cross-network USDC | LI.FI | Socket or provider-native routing when contracted | Exchange with automatic source selection | LI.FI integrated; Socket requires production access, adapter work, route monitoring, and supported-pair policy |
 | Card issuing | Bridge card program / issuing partner | Rain | Card, controls, wallet provisioning | Issuer approval, cardholder KYC, program terms, disputes, auth webhooks |
 | Merchant rewards | Kard | Card-network rewards provider | Offers, reward history, activation | Program agreement, customer enrolment, transaction-match webhook |
 | Lifestyle concierge | Ten Lifestyle Group | Regional concierge partner | Travel, dining, event requests | Service agreement, member provisioning, request/status API or hosted module |

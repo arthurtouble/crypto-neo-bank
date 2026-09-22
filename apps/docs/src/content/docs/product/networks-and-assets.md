@@ -3,9 +3,9 @@ title: Networks and assets
 description: The chains, tokens, contract addresses, and availability rules Aurel supports.
 ---
 
-Aurel hides network plumbing during ordinary use, but it must show the network when a digital-asset transfer depends on it. The current Aurel Account settles on Base. Other networks are available only through a quoted route.
+Aurel hides network plumbing during ordinary use. The current Aurel Account settles on Base, while Exchange can find eligible USD Coin held in a connected account and route it in automatically.
 
-An address that looks the same on two networks does not make the balances interchangeable. A direct transfer from Ethereum to the Aurel Account is **not** automatically moved to Base. Use **Move Between Networks** when the source asset is on another network.
+An address that looks the same on two networks does not make the balances interchangeable. Do not make a direct deposit from another network. Use **Exchange** so Aurel can prepare the correct route, or follow the exact account details shown in Receive.
 
 ## Current network scope
 
