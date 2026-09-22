@@ -1,6 +1,6 @@
 export async function writeAuditEvent(database: D1Database, input: {
   subjectReference?: string;
-  actorType: "customer" | "administrator" | "system";
+  actorType: "customer" | "administrator" | "operator" | "system";
   actorReference: string;
   action: string;
   targetType: string;

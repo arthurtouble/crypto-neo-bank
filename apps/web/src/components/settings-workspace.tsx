@@ -4,6 +4,7 @@ import { Bell, BookOpen, Eye, EyeOff, Globe2 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { FeedbackPanel } from "./feedback-panel";
+import { DataRightsPanel } from "./data-rights-panel";
 
 export function SettingsWorkspace() {
   const [hidden, setHidden] = useState(false);
@@ -25,5 +26,5 @@ export function SettingsWorkspace() {
     <div className="settingRow"><span className="settingIcon"><Globe2 size={17} /></span><div><strong>Display Currency</strong></div><select value={currency} onChange={(event) => baseCurrency(event.target.value)}><option>USD</option><option>EUR</option><option>GBP</option></select></div>
     <div className="settingRow"><span className="settingIcon"><Bell size={17} /></span><div><strong>Security Notices</strong></div><button className="settingsToggle" onClick={() => notices(!securityNotices)}>{securityNotices ? "On" : "Off"}</button></div>
     <div className="settingRow"><span className="settingIcon"><BookOpen size={17} /></span><div><strong>Documents & Disclosures</strong></div><Link href="/docs">Open</Link></div>
-  </section><FeedbackPanel /></div>;
+  </section><DataRightsPanel /><FeedbackPanel /></div>;
 }

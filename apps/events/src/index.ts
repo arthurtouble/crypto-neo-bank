@@ -5,6 +5,7 @@ type ProviderEventMessage = {
 };
 
 import { checkDependencies, recordDeadLetter, runScheduledReconciliation } from "./reconciliation";
+import { materializeGrowthMilestones } from "./growth";
 
 async function processMessage(env: Cloudflare.Env, message: Message<ProviderEventMessage>): Promise<void> {
   const { event } = message.body;
@@ -57,11 +58,12 @@ export default {
   },
   async scheduled(controller, env): Promise<void> {
     try {
-      const [details, dependencies] = await Promise.all([
+      const [details, dependencies, growth] = await Promise.all([
         runScheduledReconciliation(env.PROJECTION_DB, controller.scheduledTime),
-        checkDependencies(env.PROJECTION_DB, new Date(controller.scheduledTime))
+        checkDependencies(env.PROJECTION_DB, new Date(controller.scheduledTime)),
+        materializeGrowthMilestones(env.PROJECTION_DB, controller.scheduledTime)
       ]);
-      console.log(JSON.stringify({ level: "info", event: "operations.reconciliation.completed", scheduledTime: controller.scheduledTime, ...details, dependencies }));
+      console.log(JSON.stringify({ level: "info", event: "operations.reconciliation.completed", scheduledTime: controller.scheduledTime, ...details, dependencies, growth }));
     } catch (error) {
       console.error(JSON.stringify({ level: "error", event: "operations.reconciliation.failed", scheduledTime: controller.scheduledTime, message: error instanceof Error ? error.message : "unknown" }));
       throw error;

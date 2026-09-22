@@ -60,6 +60,8 @@ export async function redeemBetaInvite(database: D1Database, input: { subjectRef
       code_hash: string; cohort: string; max_redemptions: number; redemption_count: number; allowed_countries_json: string; expires_at: string | null;
     }>();
   if (!invite || invite.redemption_count >= invite.max_redemptions || (invite.expires_at && invite.expires_at <= now)) throw new BetaAccessError("invite_required", "This invitation is invalid, expired, or fully used.");
+  const growthLink = await database.prepare("SELECT referrer_subject_reference FROM growth_invite_links WHERE invite_hash = ? AND invitation_type = 'customer_referral'").bind(codeHash).first<{ referrer_subject_reference: string | null }>();
+  if (growthLink?.referrer_subject_reference === input.subjectReference) throw new BetaAccessError("invite_required", "You cannot redeem your own referral.");
   const countries = JSON.parse(invite.allowed_countries_json) as string[];
   if (countries.length && !countries.includes(countryCode)) throw new BetaAccessError("country_unavailable", "This invitation is not available in the selected country.");
   const [claimed] = await database.batch([
