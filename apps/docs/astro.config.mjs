@@ -35,6 +35,7 @@ export default defineConfig({
           { label: "Activity and transaction states", slug: "product/transaction-lifecycle" }
         ] },
         { label: "Build wealth", items: [
+          { label: "Swaps and live quotes", slug: "product/swaps" },
           { label: "Earn and borrow", slug: "product/earn-and-borrow" },
           { label: "Tokenized markets", slug: "product/tokenized-markets" },
           { label: "Membership and benefits", slug: "product/membership-and-benefits" },

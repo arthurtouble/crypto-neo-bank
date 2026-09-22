@@ -363,6 +363,48 @@
 .productShell .frameworkSteps span,
 .productShell .frameworkSteps strong { font-size: var(--type-caption); }
 
+.swapPanel { max-width: 880px; padding: 28px; }
+.swapForm { margin-top: 22px; display: grid; grid-template-columns: minmax(0, 1fr) 42px minmax(0, 1fr); align-items: center; gap: 10px; }
+.swapAssetBlock { min-height: 142px; padding: 18px; display: grid; align-content: space-between; gap: 14px; border: 1px solid var(--border); border-radius: var(--radius-panel); background: var(--surface); }
+.swapAssetBlock.receive { background: var(--surface-subtle); }
+.swapAssetBlock label { display: grid; gap: 8px; color: var(--muted); font-size: var(--type-label); font-weight: 650; }
+.swapAssetBlock select { width: 100%; min-width: 0; border: 0; padding: 0; color: var(--text); background: transparent; font: inherit; font-size: var(--type-body-small); }
+.swapAssetBlock input { width: 100%; min-width: 0; border: 0; padding: 0; color: var(--text); background: transparent; font-family: "Archivo Variable", "Satoshi", system-ui, sans-serif; font-size: clamp(27px, 3vw, 36px); font-weight: 620; letter-spacing: -.035em; outline: none; }
+.swapAssetBlock > strong { font-family: "Archivo Variable", "Satoshi", system-ui, sans-serif; font-size: clamp(27px, 3vw, 36px); letter-spacing: -.035em; }
+.swapAssetBlock > small { color: var(--muted); font-size: var(--type-caption); }
+.swapReverse { width: 42px; height: 42px; z-index: 1; display: grid; place-items: center; color: var(--text); border: 1px solid var(--border); border-radius: 50%; background: var(--surface); box-shadow: var(--shadow-control); transition: transform var(--motion-fast), color var(--motion-fast), border-color var(--motion-fast); }
+.swapReverse:hover { color: var(--accent); border-color: var(--accent); transform: rotate(180deg); }
+.swapForm > .button { grid-column: 1 / -1; min-height: 48px; margin-top: 4px; }
+.swapQuotes { margin-top: 20px; padding: 18px; border: 1px solid var(--border); border-radius: var(--radius-panel); background: var(--surface-subtle); }
+.swapQuotesHeader { min-height: 32px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.swapQuotesHeader h3 { margin: 0; font-size: var(--type-row-title); }
+.swapQuotesHeader > span { color: var(--muted); font-size: var(--type-caption); }
+.swapQuoteRow { width: 100%; min-height: 70px; padding: 12px 10px; display: grid; grid-template-columns: 28px minmax(0, 1fr) minmax(180px, auto); align-items: center; gap: 10px; text-align: left; color: var(--text); border: 0; border-top: 1px solid var(--border); background: transparent; transition: background var(--motion-fast); }
+.swapQuoteRow:first-of-type { margin-top: 8px; }
+.swapQuoteRow:hover, .swapQuoteRow.selected { background: color-mix(in srgb, var(--accent) 7%, transparent); }
+.swapQuoteRow > span:not(.swapQuoteCheck) { display: grid; gap: 4px; }
+.swapQuoteRow > span:last-child { text-align: right; }
+.swapQuoteRow strong { font-size: var(--type-body-small); }
+.swapQuoteRow small { color: var(--muted); font-size: var(--type-caption); }
+.swapQuoteCheck { width: 20px; height: 20px; display: grid; place-items: center; color: white; border: 1px solid var(--border); border-radius: 50%; }
+.swapQuoteRow.selected .swapQuoteCheck { border-color: var(--accent); background: var(--accent); }
+.swapReview { margin: 14px 0; display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--border); border-radius: var(--radius-control); overflow: hidden; background: var(--surface); }
+.swapReview span { min-height: 68px; padding: 14px; display: grid; align-content: center; gap: 5px; color: var(--muted); font-size: var(--type-caption); border-right: 1px solid var(--border); }
+.swapReview span:last-child { border-right: 0; }
+.swapReview strong { color: var(--text); font-size: var(--type-label); }
+
+@media (max-width: 720px) {
+  .swapPanel { padding: 20px; }
+  .swapForm { grid-template-columns: 1fr; }
+  .swapReverse { justify-self: center; margin: -18px 0; transform: rotate(0deg); }
+  .swapReverse:hover { transform: rotate(180deg); }
+  .swapQuoteRow { grid-template-columns: 26px minmax(0, 1fr); }
+  .swapQuoteRow > span:last-child { grid-column: 2; text-align: left; }
+  .swapReview { grid-template-columns: 1fr; }
+  .swapReview span { min-height: 58px; border-right: 0; border-bottom: 1px solid var(--border); }
+  .swapReview span:last-child { border-bottom: 0; }
+}
+
 /* Cards, benefits, and concierge */
 .productShell .membershipTop,
 .productShell .membershipBottom,

@@ -8,7 +8,7 @@ const BorrowWorkspace = dynamic(() => import("./borrow-workspace").then((module)
 const MembershipBenefits = dynamic(() => import("./membership-benefits").then((module) => module.MembershipBenefits));
 const ConciergeWorkspace = dynamic(() => import("./concierge-workspace").then((module) => module.ConciergeWorkspace));
 const ActivityWorkspace = dynamic(() => import("./activity-workspace").then((module) => module.ActivityWorkspace));
-const CrossChainWorkspace = dynamic(() => import("./cross-chain-workspace").then((module) => module.CrossChainWorkspace));
+const SwapWorkspace = dynamic(() => import("./swap-workspace").then((module) => module.SwapWorkspace));
 const MarketsWorkspace = dynamic(() => import("./markets-workspace").then((module) => module.MarketsWorkspace));
 const OperationsWorkspace = dynamic(() => import("./operations-workspace").then((module) => module.OperationsWorkspace));
 const SettingsWorkspace = dynamic(() => import("./settings-workspace").then((module) => module.SettingsWorkspace));
@@ -60,5 +60,5 @@ function Security() {
 }
 
 export function SectionPage({ section }: { section: Section }) {
-  return <div><Header section={section} />{section === "transfers" && <MoneyWorkspace />}{section === "assets" && <Assets />}{section === "exchange" && <CrossChainWorkspace />}{section === "earn" && <Earn />}{section === "borrow" && <BorrowWorkspace />}{section === "markets" && <MarketsWorkspace />}{section === "card" && <CardWorkspace />}{section === "activity" && <ActivityWorkspace />}{section === "insights" && <InsightsWorkspace />}{section === "goals" && <GoalsWorkspace />}{section === "benefits" && <Benefits />}{section === "concierge" && <ConciergeWorkspace />}{section === "security" && <Security />}{section === "settings" && <SettingsWorkspace />}{section === "status" && <SystemStatus />}{section === "operations" && <OperationsWorkspace />}</div>;
+  return <div><Header section={section} />{section === "transfers" && <MoneyWorkspace />}{section === "assets" && <Assets />}{section === "exchange" && <SwapWorkspace />}{section === "earn" && <Earn />}{section === "borrow" && <BorrowWorkspace />}{section === "markets" && <MarketsWorkspace />}{section === "card" && <CardWorkspace />}{section === "activity" && <ActivityWorkspace />}{section === "insights" && <InsightsWorkspace />}{section === "goals" && <GoalsWorkspace />}{section === "benefits" && <Benefits />}{section === "concierge" && <ConciergeWorkspace />}{section === "security" && <Security />}{section === "settings" && <SettingsWorkspace />}{section === "status" && <SystemStatus />}{section === "operations" && <OperationsWorkspace />}</div>;
 }
