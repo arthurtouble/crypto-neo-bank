@@ -1,11 +1,12 @@
 "use client";
 
 import { Check, LoaderCircle } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { GrowthTracker } from "./growth-tracker";
 import { TurnstileField } from "./turnstile-field";
 
 type Attribution = { anonymousSessionId: string; utmSource?: string; utmMedium?: string; utmCampaign?: string; utmContent?: string; utmTerm?: string; referrerHost?: string; landingPath: string; partnerCode?: string; contentId?: string; referralCode?: string };
+const subscribeToHydration = () => () => undefined;
 
 function readAttribution(): Attribution {
   const saved = sessionStorage.getItem("aurel-growth-attribution");
@@ -32,7 +33,7 @@ function readAttribution(): Attribution {
 
 export function PrivateAccessApplication() {
   const [step, setStep] = useState(1);
-  const [ready, setReady] = useState(false);
+  const ready = useSyncExternalStore(subscribeToHydration, () => true, () => false);
   const [working, setWorking] = useState(false);
   const [complete, setComplete] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,7 +42,6 @@ export function PrivateAccessApplication() {
   const heading = useRef<HTMLHeadingElement>(null);
   const errorSummary = useRef<HTMLDivElement>(null);
   const saved = useRef<Record<string, FormDataEntryValue | FormDataEntryValue[]>>({});
-  useEffect(() => { setReady(true); }, []);
   useEffect(() => { heading.current?.focus(); }, [step]);
   useEffect(() => { if (error) errorSummary.current?.focus(); }, [error]);
 
