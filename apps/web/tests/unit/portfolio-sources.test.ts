@@ -91,4 +91,27 @@ describe("Base Aave source", () => {
     expect(result.complete).toBe(true);
     expect(result.events[0]).toMatchObject({ kind: "borrow", rawDelta: "-3000000", finality: "finalized" });
   });
+
+  it("uses distinct source event identities for two linked wallets in one transaction", async () => {
+    const call = vi.fn(async () => ({ data: { v3: { items: [{ txHash, timestamp: "2026-09-20T12:00:00Z", reserve: { underlyingToken: reserve, decimals: 6 }, amount: "3", market, __typename: "Borrow", logIndex: 1, blockNumber: 100, blockHash }], pageInfo: { hasNextPage: false } } } }));
+    const source = new BaseAaveSource({ call, verify: vi.fn(async () => ({ blockHash, receiptSuccess: true, finalized: true })) });
+    const first = await source.page(request);
+    const second = await source.page({ ...request, accountId: "8453:0x2222222222222222222222222222222222222222" });
+    expect(first.events[0].sourceEventId).not.toBe(second.events[0].sourceEventId);
+  });
+
+  it("excludes activity outside the requested coverage window", async () => {
+    const activity = (timestamp: string, logIndex: number) => ({ txHash, timestamp, reserve: { underlyingToken: reserve, decimals: 6 }, amount: "3", market, __typename: "Borrow", logIndex, blockNumber: 100, blockHash });
+    const verify = vi.fn(async () => ({ blockHash, receiptSuccess: true, finalized: true }));
+    const source = new BaseAaveSource({
+      call: vi.fn(async () => ({ data: { v3: { items: [
+        activity("2026-09-19T12:00:00Z", 1), activity("2026-09-20T12:00:00Z", 2), activity("2026-09-21T12:00:00Z", 3)
+      ], pageInfo: { hasNextPage: false } } } })), verify
+    });
+    const result = await source.page(request);
+    expect(result.complete).toBe(true);
+    expect(result.events).toHaveLength(1);
+    expect(result.events[0].logIndex).toBe(2);
+    expect(verify).toHaveBeenCalledTimes(1);
+  });
 });

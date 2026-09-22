@@ -72,6 +72,8 @@ export class BaseAaveSource implements HistoricalEventSource {
       const row = record(item);
       const txHash = typeof row?.txHash === "string" && /^0x[a-f0-9]{64}$/i.test(row.txHash) ? row.txHash.toLowerCase() : null;
       const occurredAt = iso(row?.timestamp);
+      if (!occurredAt) return partial(events);
+      if (occurredAt < input.from || occurredAt >= input.through) continue;
       const reserve = reserveOf(row?.reserve);
       const amount = reserve ? rawAmount(row?.amount, reserve.decimals) : null;
       const type = typeof row?.__typename === "string" ? row.__typename.toLowerCase() : "";
@@ -79,7 +81,7 @@ export class BaseAaveSource implements HistoricalEventSource {
       const logIndex = row?.logIndex;
       const blockHash = typeof row?.blockHash === "string" && /^0x[a-f0-9]{64}$/i.test(row.blockHash) ? row.blockHash.toLowerCase() : null;
       const blockNumber = typeof row?.blockNumber === "number" && Number.isSafeInteger(row.blockNumber) ? String(row.blockNumber) : null;
-      const id = `${txHash}:${logIndex}`;
+      const id = `${input.accountId}:${txHash}:${logIndex}`;
       if (!row || !txHash || !occurredAt || !reserve || amount === null || !governed(row.market) || !Number.isInteger(logIndex) || !blockHash || !blockNumber || seen.has(id) || kind === "unknown") return partial(events);
       seen.add(id);
       let proof: Awaited<ReturnType<Verify>>;
