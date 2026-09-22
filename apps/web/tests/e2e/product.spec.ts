@@ -19,6 +19,23 @@ test("financial modals stay fixed to a long mobile viewport", async ({ page }) =
   expect(geometry.dialogBottom).toBeLessThanOrEqual(844);
 });
 
+test("portfolio history gap layout stays readable in desktop and mobile themes with reduced motion", async ({ page }) => {
+  const styles = `${readFileSync("src/app/globals.css", "utf8")}\n${readFileSync("src/app/product-system.css", "utf8")}`;
+  for (const width of [1280, 390]) for (const theme of ["light", "dark"] as const) {
+    await page.setViewportSize({ width, height: 844 });
+    await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
+    await page.setContent(`<meta name="viewport" content="width=device-width, initial-scale=1"><style>${styles}</style><div class="productShell" data-theme="${theme}"><main class="productContent"><section class="panel portfolioPerformance" aria-label="Verified portfolio history"><div class="portfolioChartHeader"><div><span>Historical portfolio value</span><strong class="sensitiveAmount">Unavailable</strong><small>Current day is incomplete</small><small>Return unavailable</small></div><div class="chartRanges" role="group" aria-label="Portfolio history range"><button aria-pressed="false">7D</button><button class="active" aria-pressed="true">1M</button><button aria-pressed="false">3M</button><button aria-pressed="false">1Y</button></div></div><div class="portfolioChart"><svg viewBox="0 0 720 200" aria-label="2 complete days and 1 coverage gap"><path class="chartLine" d="M0,80 L100,70"></path><line class="chartGapMarker" x1="360" x2="360" y1="4" y2="194"></line><path class="chartLine" d="M600,50 L720,40"></path></svg></div><div class="chartFoot"><span>Sep 17</span><small>Last complete Sep 21</small><span>Sep 21</span></div><div class="portfolioCoverage"><p>2 complete days; 1 gap.</p><ul><li><strong>Sep 19</strong>: ETH price missing</li></ul></div><div class="portfolioAave"><span>Aave supply <strong class="sensitiveAmount">unavailable</strong></span><span>Aave debt <strong class="sensitiveAmount">unavailable</strong></span></div></section></main></div>`);
+    await page.locator("html").evaluate((element, selectedTheme) => element.setAttribute("data-theme", selectedTheme), theme);
+    await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+    await expect(page.getByText("ETH price missing")).toBeVisible();
+    await expect(page.locator(".chartGapMarker")).toHaveCount(1);
+    await page.getByRole("button", { name: "1M" }).focus();
+    await expect(page.getByRole("button", { name: "1M" })).toBeFocused();
+    const dimensions = await page.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, clientWidth: document.documentElement.clientWidth }));
+    expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth + 1);
+  }
+});
+
 test("partner sandbox exercises success and failure workflows", async ({ page }) => {
   test.setTimeout(60_000);
   await page.goto("/app/sandbox");
@@ -81,7 +98,7 @@ test("public status exposes bounded component state and no secrets", async ({ re
 });
 
 test("private APIs fail closed without an authenticated subject", async ({ request }) => {
-  for (const path of ["/api/portfolio", "/api/activity", "/api/insights", "/api/goals", "/api/bills", "/api/cards", "/api/income-plan", "/api/intents/status?intentId=00000000-0000-4000-8000-000000000000", "/api/money/account", "/api/recipients", "/api/transfer-schedules", "/api/ops/summary", "/api/ops/beta", "/api/ops/features", "/api/ops/analytics", "/api/security/policy", "/api/beta/access"]) {
+  for (const path of ["/api/portfolio", "/api/portfolio/history?range=7D", "/api/activity", "/api/insights", "/api/goals", "/api/bills", "/api/cards", "/api/income-plan", "/api/intents/status?intentId=00000000-0000-4000-8000-000000000000", "/api/money/account", "/api/recipients", "/api/transfer-schedules", "/api/ops/summary", "/api/ops/beta", "/api/ops/features", "/api/ops/analytics", "/api/security/policy", "/api/beta/access"]) {
     const response = await request.get(path);
     const accepted = path === "/api/portfolio" ? [401, 403, 410] : [401, 403];
     expect(accepted).toContain(response.status());
