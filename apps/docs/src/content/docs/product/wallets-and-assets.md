@@ -9,7 +9,7 @@ sidebar:
 
 Privy provides Aurel’s sign-in and embedded-wallet infrastructure. You can also connect an external EVM wallet. Aurel does not hold a private key that can move your assets on its own.
 
-When you take an action, Aurel prepares and checks the transaction. Your wallet then shows the final request. You can sign or cancel it.
+For an available action, Aurel prepares and checks the transaction before your wallet shows the final request. You can sign or cancel it. Preview-only features never request a signature.
 
 An embedded wallet is not an Aurel company wallet. Wallet creation, signing, recovery, and export follow the configured Privy model. Aurel receives the public wallet reference and verified customer identity needed to provide the product.
 
@@ -39,7 +39,7 @@ Unknown or unsupported assets are excluded rather than assigned a guess. A missi
 
 Portfolio reads the active wallet's Aave V3 position directly from Aave and Base. It shows the source-reported active-market count, health factor, and net position when those fields are available.
 
-Aurel also reads Base claimable rewards from Aave's rewards interface. When Aave returns a claim transaction, the Portfolio shows each reward and its source-reported USD value. Claiming requires Aurel policy review, a successful transaction simulation, and an explicit wallet confirmation. The app never treats an unavailable rewards response as a zero balance.
+Aurel also reads claimable rewards from Aave's rewards interface when available. Portfolio shows the source-reported reward and USD estimate without treating an unavailable response as a zero balance. Claiming in Aurel is currently unavailable; a displayed reward is not a completed payment.
 
 A current position still does not establish yield earned, cost basis, or a tax value. Aurel leaves those figures unavailable until complete authoritative history can support them.
 

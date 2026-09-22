@@ -18,11 +18,11 @@ Use this page to separate working features from planned services. A screen, data
 - Privy sign-in and customer-controlled embedded wallets
 - External EVM wallet connection
 - Native ETH, USDC, and WETH balance reads on Base
-- Supported direct transfers with policy checks and wallet confirmation
+- Supported Base direct transfers when fresh value and transaction checks pass
 - Aave V3 market and position reads
-- Aave supply, withdraw, borrow, and repay preparation
+- Aave supply, withdraw, borrow, and repay position previews
 - Security preferences, saved addresses, and account lock
-- Activity records and source-chain receipt checks
+- Activity records and independently checked effects for newly prepared transfers; older records remain marked unverified
 - Turnstile-protected support intake
 - Provider-event signature, queue, retry, and dead-letter foundations
 - Scheduled checks for stale transaction and event evidence
@@ -30,12 +30,13 @@ Use this page to separate working features from planned services. A screen, data
 - Public dependency status and incident-history surface
 - Private-beta invitation, cohort, geography, limit, feedback, and feature-control foundations
 
-## Available when providers respond
+## Route discovery
 
-- Cross-chain USDC quotes and execution through LI.FI
-- Routes on Base, Ethereum, Arbitrum, Optimism, and Polygon
+- Searchable assets on Base, Ethereum, Arbitrum, Optimism, and Polygon
+- LI.FI Swap route review only when Aurel's reviewed-tool and target controls permit it
+- Cross-chain USD Coin route discovery when LI.FI responds
 
-A quote can expire. A source-chain confirmation does not by itself prove that the destination transfer is complete.
+A quote can expire. Swap and cross-chain execution are paused until the exact provider plan can pass Aurel's preparation and settlement checks. A source-chain confirmation does not by itself prove destination delivery.
 
 ## Preview only
 
@@ -57,10 +58,11 @@ Aurel does not currently offer bank accounts, fiat transfers, payment cards, ins
 | --- | --- | --- |
 | Authentication and wallets | Live | Privy login, embedded or external EVM wallet, recovery/export path, customer confirmation |
 | Base portfolio | Live | Native ETH, USDC, and WETH reads; provider and chain availability still apply |
-| Base direct transfers | Live | Supported assets with product-policy evaluation and wallet signature |
-| Aave V3 | Live | Base market and position reads plus customer-signed supply, withdraw, borrow, and repay plans |
-| Cross-chain USDC | Live when quoted | LI.FI routes across five allowlisted EVM networks; destination delivery remains separate from source confirmation |
-| Security and evidence | Live | Account lock, address book, cooling, limits, step-up, intent history, receipt checks |
+| Base direct transfers | Limited | Supported assets with fresh server-side valuation and prepared-call verification; higher-value actions needing step-up stay paused until proof can be verified |
+| Aave V3 | Read-only | Base market and position reads; new customer-signed actions paused pending an audited execution plan |
+| Swap | Route review only | Search and validated LI.FI quote metadata; wallet execution disabled until the reviewed plan can be prepared and verified |
+| Cross-chain USDC | Route review only | LI.FI routes may be displayed, but new customer-signed execution is paused |
+| Security and evidence | Live | Account lock, address book, cooling, limits, intent history, prepared-call checks; legacy receipt-only records stay unverified |
 | Support | Live | Authenticated, rate-limited cases; response targets are not contractual SLAs |
 | Membership | Preview | Tier projection and vendor-neutral entitlement model; no third-party fulfilment |
 | Tokenized markets | Preview, access closed | Review and eligibility model exists; no trading access |
@@ -77,4 +79,4 @@ Aurel does not currently offer bank accounts, fiat transfers, payment cards, ins
 
 A feature becomes live only when its technical path, security controls, operational ownership, terms, documentation, provider approval, and support route are complete. Marketing readiness alone does not change the label.
 
-Last reviewed: 21 September 2026.
+Last reviewed: 22 September 2026.

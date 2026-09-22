@@ -1,37 +1,35 @@
 ---
 title: Cross-chain routes
-description: How Aurel moves USD Coin between your connected accounts without making you manage networks.
+description: How to read route previews and what must happen before cross-chain transfers resume.
 ---
 
-Aurel Move Money looks across your connected accounts, finds an eligible USD Coin balance, and prepares a route into your Aurel Account. You enter the amount; Aurel handles account and network selection in the background. The same workspace can prepare a withdrawal from your Aurel Account to a supported network and address.
+Aurel Move Money can look across connected accounts for USD Coin and show possible routes. Cross-chain execution is paused. A route preview does not move money, and the current screen will not request a wallet signature for it.
 
 The current routing adapter uses LI.FI. The product is provider-neutral so a contracted Socket route or another approved provider can be added without changing the customer flow.
 
 ## What a quote contains
 
-A route quote normally includes the source and destination networks, input and expected output, estimated gas, fees, price impact, timing estimate, approval requirements, and transaction data.
+A route quote may include the source and destination networks, input and expected output, estimated gas, fees, price impact, timing estimate, and approval requirements. These are estimates, not a completed transfer.
 
-Aurel checks the returned chain, token contracts, wallet addresses, amount, and transaction network against the customer's request and the product allowlist. Quotes expire after one minute. Aurel checks the selected balance again and simulates the approval and route before asking the wallet to present either transaction.
+Aurel checks route fields against the customer's request and product rules. Quotes expire quickly. Execution remains paused until the exact approval and route calls can be held server-side, independently rechecked, and prepared one step at a time.
 
 ## Safety checks before approval
 
-Before an approval, Aurel evaluates the transfer against the account's transaction controls and step-up rules. An ERC-20 route may then need permission to spend the source token. Aurel prepares an exact-amount approval where supported instead of defaulting to an unlimited allowance.
+Before any future approval, Aurel must evaluate the transfer against the account's transaction controls and step-up rules. An ERC-20 route may then need permission to spend the source token. Any approval should be limited to the reviewed amount and spender where supported.
 
-The approval is a separate onchain transaction. It must be signed, submitted, and confirmed before the route transaction is useful. Aurel will not begin with an expired quote. If the quote expires while approval settles, Aurel keeps the completed approval but requires a new route quote before the transfer can continue.
+The approval is a separate onchain transaction. It must be independently confirmed before the route transaction is useful. If a quote expires while approval settles, the customer needs a new route review. An approval can remain outstanding even when a later route is not sent.
 
 An exact approval reduces exposure but does not make the route risk-free. The approved contract and the protocols it calls still matter.
 
-## Route lifecycle
+## Required route lifecycle before activation
 
-1. Open **Move Money** and choose **Add Money** or **Withdraw**.
-2. Enter the USD Coin amount and, for a withdrawal, the destination.
-3. Aurel checks every connected account on supported networks and requests a live route.
-4. Review the amount you send, minimum received, and expected arrival.
-5. Aurel rechecks the source balance, applies transaction controls, and simulates the instruction.
-6. Sign an exact approval if one is required and wait for its receipt.
-7. Sign the route transaction.
-8. Track the source transaction and the route reference.
-9. Wait for destination delivery or an explicit exception state.
+1. Aurel checks the owned source wallet, amount, destination, route, and current limits.
+2. Any required step-up is verified, and the exact approval is prepared and simulated.
+3. The customer signs the approval; Aurel verifies its effect and finality.
+4. Aurel obtains a fresh route, prepares and simulates the exact transaction, then asks for a separate signature.
+5. Aurel verifies the source transaction and tracks destination delivery independently.
+
+This sequence describes the activation gate. It is not a claim that customer-signed cross-chain transfers are currently available.
 
 ## Source confirmation is not destination delivery
 
@@ -47,7 +45,7 @@ Bridges and relayers may need additional confirmations. Destination execution ca
 - **Bridge risk:** funds depend on bridge design, validators, messaging, and liquidity.
 - **Relayer risk:** delivery can be delayed even after source confirmation.
 - **Finality risk:** a chain reorganization can affect a recent transaction.
-- **Account-selection risk:** Aurel selects an eligible source automatically, but you should still review the wallet prompt before signing.
+- **Account-selection risk:** A route preview can identify a source account, but it must be checked again before signing becomes available.
 
 ## When to use a direct transfer
 

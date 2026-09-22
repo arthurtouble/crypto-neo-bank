@@ -10,12 +10,12 @@ Activity is an evidence trail, not just a list of successful payments. Aurel rec
 1. **Request.** The customer enters the action, amount, network, destination, or protocol position.
 2. **Prepare.** Aurel or the integrated protocol produces an unsigned transaction plan.
 3. **Validate.** The server checks product policy, supported contracts, account controls, and required disclosures.
-4. **Simulate.** Supported direct sends use gas estimation and an execution call. Protocol screens preview the expected position change.
+4. **Simulate.** Supported direct sends use gas estimation and a read-only execution call. Protocol screens may preview a position, but protocol signing is not currently enabled.
 5. **Confirm.** The wallet presents the final transaction. The customer signs or cancels.
 6. **Submit.** A transaction hash exists and the source network has received the transaction.
 7. **Observe.** Aurel checks the source receipt and, where relevant, the provider or destination state.
 
-The action screen now uses the same four visible checkpoints everywhere: **Review**, **Confirm**, **Submitted**, and **Complete**. Send, Add Money, Withdraw, Earn, Borrow, and Repay all use this language. The progress panel can be closed after submission; the request remains visible in Activity.
+Supported direct sends use **Review**, **Confirm**, **Submitted**, and **Complete**. Other actions may show a preview or route review, but they do not reach a signing step while their execution integration is disabled. The progress panel can be closed after submission; the request remains visible in Activity.
 
 ## State meanings
 
@@ -25,17 +25,17 @@ The action screen now uses the same four visible checkpoints everywhere: **Revie
 | **Cooling** | A new-destination or high-value waiting period is active. |
 | **Reviewed** | The hold elapsed and the same instruction was revalidated. This release expires after 15 minutes. |
 | **Submitted** | The customer signed and a transaction hash exists. Settlement is still pending. |
-| **Confirmed** | The supported source-chain receipt reports successful execution. |
+| **Confirmed** | The supported source-chain receipt is final enough under product policy and its observed calls and effects match the prepared instruction. |
 | **Failed** | Preparation, submission, provider handling, or the source receipt failed. |
 | **Cancelled** | The instruction was cancelled before settlement. |
 
-“Submitted” and “Complete” are deliberately different. A transaction hash proves that a request was submitted, not that it settled. While the action screen is open, Aurel asks its authenticated status endpoint to reconcile the source-chain receipt and upgrades the visible state only after receipt evidence exists.
+“Submitted” and “Complete” are deliberately different. A transaction hash proves only that a request was submitted. For supported new transfers, Aurel compares the final receipt, calls, and effects with the prepared instruction before marking it complete. A receipt alone is not enough. Older records that lack this binding remain unverified even if a source receipt reports success.
 
-States do not move arbitrarily. For example, a cooling instruction must be reviewed before submission, and a submitted instruction needs receipt evidence before Aurel calls it confirmed.
+States do not move arbitrarily. For example, a cooling instruction must be reviewed before submission, and a submitted instruction needs matched settlement evidence before Aurel calls it confirmed. A chain reorganization can invalidate earlier evidence, so Aurel keeps checking until the required finality threshold is reached.
 
 Open an item in Activity to see its recorded timeline. It can include security review, completion of a security delay, network submission, and final confirmation or failure. Timeline entries come from append-only intent events; the blockchain or provider still controls settlement truth.
 
-For Aave on Base, Activity also reads current protocol history from Aave's official activity source. Aurel removes a duplicate when the same transaction and action already have an Aurel receipt. The source remains visible on each record so an Aurel workflow entry is never presented as if it were a protocol observation.
+For Aave, Activity can also read protocol history from an external source. The source remains visible on each record so an Aurel workflow entry is never presented as if it were a protocol observation. External history is not proof that Aurel initiated or verified the action.
 
 ## Exports and coverage
 
@@ -64,7 +64,7 @@ For a protocol action, previewed health factors and rates are decision support. 
 
 Aurel checks supported submitted transactions using source-chain JSON-RPC. The activity record can include the transaction hash, source block, receipt result, last-check time, and available route or provider reference.
 
-For a cross-network transfer, source-chain confirmation does not prove that funds have arrived on the destination network. The action screen therefore says that arrival still depends on the route, and Activity preserves the route reference when one is available.
+For a cross-network transfer, source-chain confirmation does not prove that funds arrived on the destination network. Route execution remains disabled until Aurel can verify both the planned route and its destination result; quote review is not a transfer.
 
 A submitted transaction unresolved for more than 15 minutes becomes an operations exception. That threshold starts investigation; it does not mean the transaction has failed or that Aurel guarantees resolution within 15 minutes.
 

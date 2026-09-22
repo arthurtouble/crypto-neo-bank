@@ -5,7 +5,7 @@ sidebar:
   order: 3
 ---
 
-Aurel connects to Aave V3 on Base. Rates and positions come from Aave data. Transactions go to Aave contracts and require your wallet signature.
+Aurel shows Aave V3 markets and positions using protocol data. Supplying, withdrawing, borrowing, repaying, and claiming rewards are currently read-only in Aurel. We will enable signing only after the transaction plan, contract checks, account controls, and settlement verification have been independently tested. Until then, Aurel will not ask you to sign an Aave transaction.
 
 ## Earn
 
@@ -19,13 +19,13 @@ Borrowing creates debt against collateral. Prices, rates, and your health factor
 
 Portfolio checks Aave's rewards interface for claimable rewards on the supported settlement network. A displayed reward amount and USD value come from Aave at the observation time; Aurel does not calculate or promise them.
 
-Choosing **Claim Rewards** asks Aave for a fresh unsigned claim transaction. Aurel verifies the wallet and network, applies outgoing-action policy, simulates the transaction, and then opens the wallet confirmation. Aurel cannot claim in the background and does not mark a claim complete until the network confirms it.
+Claiming rewards is not available in Aurel yet. A displayed amount is an observation, not a payment or a promise that it can be claimed here.
 
 Some Aave reward programmes span networks or use external incentive systems. Aurel only displays the supported network result in this workspace. A missing or unavailable source is not shown as an earned amount.
 
-## Before you sign
+## Before using a protocol
 
-Review the asset, amount, network, contract, expected change, health factor, approval amount, and gas cost. Immediately before each wallet prompt, Aurel runs the prepared transaction as a read-only network call. A failed simulation stops the flow before signature. Keep enough ETH on Base for future transactions.
+Review the asset, amount, contract, expected change, health factor, approval amount, and network fee in your wallet before using a protocol. Keep enough native currency for future transactions. Aurel's position preview is informational; it is not a transaction simulation or a guarantee of execution.
 
 Smart contracts, oracles, governance, liquidity, stablecoins, and Base can fail or behave unexpectedly. A preview helps you make a decision; it is not a promise of the outcome.
 

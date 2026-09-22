@@ -7,7 +7,7 @@ sidebar:
 
 ## Direct transfers
 
-Aurel checks the supported network, asset, destination, amount, account settings, and review rules before asking your wallet to sign. A Base transfer also runs a gas estimate and execution check where the network supports it.
+Aurel checks the supported network, asset, destination, amount, account settings, and review rules before asking your wallet to sign. A supported Base transfer is prepared as an exact call and checked against the transaction the network sees. Higher-value actions that need step-up remain paused until Aurel can verify the step-up server-side.
 
 Saving an address does not prove that you control it. Check the full address independently.
 
@@ -26,11 +26,11 @@ A transaction sent to a valid but unintended address is usually irreversible.
 
 ## Add Money and Withdraw
 
-In Move Money, Aurel searches connected accounts for enough USD Coin and requests a route into your Aurel Account. You do not need to choose a source network. Withdraw uses the same workspace when you need to send USD Coin to another supported network. Aurel checks that the returned source, destination, assets, and target match the prepared instruction. If a token approval is needed, Aurel requests the exact amount instead of an unlimited approval by default.
+Move Money can search connected accounts and show a potential USD Coin route. Cross-network execution is currently paused. A route preview is not a prepared transfer, and it will not ask for a wallet signature while the exact approval and route plan cannot pass Aurel's checks.
 
 Routes add dependencies that direct transfers do not have, including bridge contracts, relayers, liquidity, finality, and the destination chain.
 
-The approval and route can be separate transactions. Aurel applies transaction controls before the approval, simulates both instructions, and waits for the exact approval receipt before presenting the route transaction. Expired quotes cannot be submitted.
+When execution becomes available, approvals and routes will be separate transactions. Each step must be freshly reviewed, simulated, and independently confirmed in order. An expired quote will need a new review.
 
 See [Cross-chain routes](/product/cross-chain-routing/) for the complete lifecycle and delayed-route guidance.
 
@@ -38,7 +38,7 @@ See [Cross-chain routes](/product/cross-chain-routing/) for the complete lifecyc
 
 - **Reviewed** means Aurel’s checks passed. It does not mean the transaction was signed.
 - **Submitted** means a transaction hash exists.
-- **Confirmed** means Aurel observed a successful source-chain receipt.
+- **Confirmed** for a newly prepared transfer means Aurel matched the transaction and expected effect, checked the receipt against the canonical block, and waited for its finality threshold. Older receipt-only records are marked unverified.
 - Destination delivery may still need separate confirmation for a cross-chain route.
 
 Quotes, gas, price impact, and timing can change before you sign.

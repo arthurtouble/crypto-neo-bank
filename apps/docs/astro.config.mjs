@@ -35,7 +35,7 @@ export default defineConfig({
           { label: "Activity and transaction states", slug: "product/transaction-lifecycle" }
         ] },
         { label: "Build wealth", items: [
-          { label: "Swaps and live quotes", slug: "product/swaps" },
+          { label: "Swap", slug: "product/swaps" },
           { label: "Earn and borrow", slug: "product/earn-and-borrow" },
           { label: "Tokenized markets", slug: "product/tokenized-markets" },
           { label: "Membership and benefits", slug: "product/membership-and-benefits" },
@@ -44,6 +44,7 @@ export default defineConfig({
         { label: "Safety", items: [
           { label: "Security model", slug: "safety/security-model" },
           { label: "Account controls", slug: "safety/account-controls" },
+          { label: "Transaction verification", slug: "safety/transaction-verification" },
           { label: "Threat model", slug: "safety/threat-model" },
           { label: "Data and privacy", slug: "safety/data-and-privacy" },
           { label: "Report a security issue", slug: "safety/report-a-security-issue" }

@@ -1,43 +1,28 @@
 ---
-title: Swaps and live quotes
-description: How Aurel compares executable swap routes, handles approvals, and keeps the final decision with you.
+title: Swap
+description: Find assets, compare live routes, and understand what is available before moving money.
 ---
 
-Aurel lets you exchange a curated set of digital assets from one familiar **Swap** screen. The app compares live executable quotes and keeps networks and router contracts out of the main flow unless you open the technical details.
+Swap lets you search supported digital assets by name or contract address. The search includes Base, Ethereum, Arbitrum, Optimism, and Polygon. If two assets share a name, their network and contract address help you tell them apart. Search results are not an endorsement or permission to trade.
 
-## Supported assets
+## Find an asset
 
-The initial curated list includes ETH, USDC, WETH, cbBTC, WBTC, cbETH, wstETH, EURC, DAI, USDS, LINK, and AAVE. This is an allowlist, not every token returned by a public token directory. Aurel checks the asset address, decimal precision, settlement network, and transaction target before returning a quote.
+Select **You Pay** or **You Receive**, then search by name, symbol, or contract address. A verified label means Aurel has reviewed that exact contract. Other contracts are marked **Unverified** and require an explicit address check before a quote request. An asset can disappear from search or quoting if its source data is unavailable or its status changes.
 
-Market data and swap availability are separate. A market receives a **Swap** action only when its exact symbol is in Aurel's curated registry. Choosing that action opens Swap with the asset selected and USDC as the default payment asset. It does not request a quote or move money. Unsupported markets remain clearly marked **View Only**.
+Markets prices and Swap routes come from different sources. A market opens Swap only when Aurel has mapped that market to a specific contract and confirmed that the asset remains visible. A price on Markets is not an executable quote.
 
-## Comparing quotes
+## Review a route
 
-When you choose **Review Quotes**, Aurel requests provider-specific routes through LI.FI and shows only the routes that are executable at that moment. The result can include 1inch, KyberSwap, SushiSwap, and Nordstern. Unavailable routes are omitted rather than replaced with an estimate.
+Enter the amount, choose a slippage limit, and select **Review Routes**. When a validated route is available, Aurel shows the minimum received, network fee when reported, price impact when available, and whether the route crosses networks. Quotes expire quickly; an expired quote needs a new review. A missing fee or price-impact estimate is shown as unavailable, not zero.
 
-You can choose a maximum slippage of 0.1%, 0.5%, or 1% before requesting quotes. Aurel sends that limit with the quote request and shows the resulting minimum received. The source-asset balance is read from the wallet; **Max** is available for tokens, while native ETH keeps the amount manual so the wallet can retain gas.
+LI.FI currently supplies route data. Aurel checks the requested assets, amount, wallet, networks, transaction target, approval spender, and expiry against its own controls. It returns quote details to the app without exposing a raw provider transaction for the browser to sign. Only configured, reviewed route tools and targets may pass that check.
 
-Each row shows:
+## Trading availability
 
-- the route provider;
-- the minimum amount you should receive after slippage;
-- a network-fee estimate when the route reports one; and
-- whether the route currently offers the best output.
+Asset search and route review do not themselves enable trading. Swap execution remains unavailable until Aurel can hold and recheck the exact transaction plan, apply trusted value limits and any required step-up, simulate each call, prepare approvals in order, and verify the resulting transactions and settlement. The Swap screen will not request a wallet signature while this gate is closed.
 
-Quotes expire after 45 seconds. A stale quote cannot be submitted; you must compare again.
+Cross-network delivery needs separate destination evidence. A successful source transaction alone does not prove that the received asset arrived.
 
-## Approval and confirmation
+## What can change
 
-An ERC-20 asset may require a token approval before the swap. Aurel requests approval for the exact amount of the current swap, not an unlimited amount. The approval and the swap are separate wallet confirmations.
-
-Before the swap request reaches the wallet, Aurel applies the same account-lock, rolling-limit, step-up, and large-action review policy used by other outgoing actions. The wallet then shows the final request. Cancelling either confirmation leaves the swap unsubmitted.
-
-Immediately before opening the final confirmation, Aurel simulates the selected transaction against current chain state. A failed simulation stops the flow. A successful simulation reduces avoidable failures but is not a guarantee that settlement will succeed.
-
-## Source of truth
-
-The live quote provider is authoritative for the route at quote time. The selected contracts and the settlement chain are authoritative for execution and final balances. Aurel records workflow status and reconciliation evidence, but its operational database is not a ledger and cannot create a balance or complete a swap.
-
-## Important risks
-
-Prices, liquidity, fees, and price impact can change quickly. A displayed minimum includes the route's slippage setting, but it does not eliminate smart-contract, market, asset, wallet, or settlement risk. Review the asset pair, amount, minimum received, provider, and wallet request before confirming.
+Liquidity, price, fees, token behavior, and route availability can change between review and execution. A route may include independent contracts and services. Check the asset contract and amount carefully; a matching name or logo is not proof of safety. Aurel's database records review and verification evidence, but balances and settlement remain with wallets, networks, and contracted providers.
