@@ -10,6 +10,8 @@
   "vars": {
     "PRODUCT_ENVIRONMENT": "production",
     "PRODUCT_MODE": "mainnet-preview",
+    "BRIDGE_MODE": "preview",
+    "BRIDGE_API_BASE_URL": "https://api.bridge.xyz/v0",
     "NEXT_PUBLIC_PRIVY_APP_ID": "cmub5evr4013l0cjs0w5dijlb",
     "NEXT_PUBLIC_TURNSTILE_SITE_KEY": "0x4AAAAAAE_LD5ONaf0OITS8",
     "TURNSTILE_HOSTNAMES": "aurel-financial-os.aurel-events.workers.dev",
