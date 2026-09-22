@@ -2,7 +2,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const fixture = vi.hoisted(() => ({
   query: "",
-  subjectReference: "subject-a"
+  subjectReference: "subject-a",
+  status: "submitted",
+  verificationState: "pending"
 }));
 
 vi.mock("cloudflare:workers", () => ({
@@ -20,7 +22,8 @@ vi.mock("cloudflare:workers", () => ({
                 if (subjectReference !== fixture.subjectReference) return null;
                 return {
                   intent_id: intentId,
-                  status: "submitted",
+                  status: fixture.status,
+                  verification_state: fixture.verificationState,
                   type: "swap",
                   chain_id: 8453,
                   transaction_hash: null,
@@ -48,7 +51,7 @@ import { GET } from "@/app/api/intents/status/route";
 const intentId = "00000000-0000-4000-8000-000000000001";
 
 describe("intent status query", () => {
-  beforeEach(() => { fixture.query = ""; fixture.subjectReference = "subject-a"; });
+  beforeEach(() => { fixture.query = ""; fixture.subjectReference = "subject-a"; fixture.status = "submitted"; fixture.verificationState = "pending"; });
 
   it("reads the migrated intent_type column and keeps the public type field", async () => {
     const response = await GET(new Request(`https://aurel.test/api/intents/status?intentId=${intentId}`));
@@ -57,5 +60,13 @@ describe("intent status query", () => {
     expect(await response.json()).toMatchObject({ intentId, type: "swap", status: "submitted" });
     expect(fixture.query).toMatch(/intent_type\s+AS\s+type/i);
     expect(fixture.query).toMatch(/WHERE intent_id = \? AND subject_reference = \?/i);
+  });
+
+  it("marks historical receipt-only confirmations as unverified legacy evidence", async () => {
+    fixture.status = "confirmed";
+    fixture.verificationState = "unverified_legacy";
+    const response = await GET(new Request(`https://aurel.test/api/intents/status?intentId=${intentId}`));
+    expect(await response.json()).toMatchObject({ status: "confirmed", verificationState: "unverified_legacy" });
+    expect(fixture.query).toMatch(/FROM intent_prepared_calls p/i);
   });
 });
