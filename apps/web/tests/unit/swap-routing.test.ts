@@ -23,6 +23,7 @@ function lifiQuote() {
     id: "quote-1", tool: "1inch",
     action: {
       fromChainId: 8453, toChainId: 8453,
+      fromAmount: "1000000", fromAddress: wallet, toAddress: wallet, slippage: 0.005,
       fromToken: { symbol: "USDC", decimals: 6, chainId: 8453, address: baseUsdc.address! },
       toToken: { symbol: "ETH", decimals: 18, chainId: 8453, address: "0x0000000000000000000000000000000000000000" }
     },
@@ -148,6 +149,10 @@ describe("provider-neutral LI.FI quotes", () => {
   it.each([
     ["source identity", (quote: ProviderQuote) => { quote.action.fromToken.address = "0x4444444444444444444444444444444444444444"; }],
     ["input amount", (quote: ProviderQuote) => { quote.estimate.fromAmount = "2000000"; }],
+    ["action input amount", (quote: ProviderQuote) => { quote.action.fromAmount = "2000000"; }],
+    ["source wallet", (quote: ProviderQuote) => { quote.action.fromAddress = "0x4444444444444444444444444444444444444444"; }],
+    ["destination wallet", (quote: ProviderQuote) => { quote.action.toAddress = "0x4444444444444444444444444444444444444444"; }],
+    ["slippage", (quote: ProviderQuote) => { quote.action.slippage = 0.05; }],
     ["source transaction chain", (quote: ProviderQuote) => { quote.transactionRequest.chainId = 1; }],
     ["output", (quote: ProviderQuote) => { quote.estimate.toAmount = "0"; }],
     ["minimum", (quote: ProviderQuote) => { quote.estimate.toAmountMin = "400000000000000"; }],
@@ -193,7 +198,11 @@ describe("provider-neutral LI.FI quotes", () => {
 
   it("binds the immutable plan reference to the owned source wallet", async () => {
     const first = await adapter(lifiQuote()).quote({ fromAssetId: baseUsdc.id, toAssetId: baseEth.id, amount: "1", fromAddress: wallet, slippageBps: 50 }, { from: baseUsdc, to: baseEth });
-    const second = await adapter(lifiQuote()).quote({ fromAssetId: baseUsdc.id, toAssetId: baseEth.id, amount: "1", fromAddress: "0x5555555555555555555555555555555555555555", slippageBps: 50 }, { from: baseUsdc, to: baseEth });
+    const otherWallet = "0x5555555555555555555555555555555555555555";
+    const otherQuote = lifiQuote();
+    otherQuote.action.fromAddress = otherWallet;
+    otherQuote.action.toAddress = otherWallet;
+    const second = await adapter(otherQuote).quote({ fromAssetId: baseUsdc.id, toAssetId: baseEth.id, amount: "1", fromAddress: otherWallet, slippageBps: 50 }, { from: baseUsdc, to: baseEth });
     expect(first[0].planReference).not.toBe(second[0].planReference);
   });
 });

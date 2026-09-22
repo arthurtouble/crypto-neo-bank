@@ -18,7 +18,11 @@ const costSchema = z.object({ amountUSD: z.string().optional() }).passthrough();
 const providerQuoteSchema = z.object({
   id: z.string().min(1).max(200),
   tool: z.string().min(1).max(80),
-  action: z.object({ fromChainId: z.number().int(), toChainId: z.number().int(), fromToken: tokenSchema, toToken: tokenSchema }),
+  action: z.object({
+    fromChainId: z.number().int(), toChainId: z.number().int(), fromToken: tokenSchema, toToken: tokenSchema,
+    fromAmount: z.string().regex(/^\d+$/), fromAddress: z.string(), toAddress: z.string(),
+    slippage: z.number().finite().min(0).max(1)
+  }),
   estimate: z.object({
     fromAmount: z.string().regex(/^\d+$/),
     toAmount: z.string().regex(/^\d+$/),
@@ -155,6 +159,11 @@ async function validateQuote(
   if (!policy.allowedTools.has(quote.tool.toLowerCase())) return null;
   if (quote.action.fromChainId !== assets.from.chainId || quote.action.toChainId !== assets.to.chainId) return null;
   if (!matchesProviderToken(quote.action.fromToken, assets.from) || !matchesProviderToken(quote.action.toToken, assets.to)) return null;
+  if (BigInt(quote.action.fromAmount) !== rawAmount || quote.action.slippage > input.slippageBps / 10_000 + Number.EPSILON) return null;
+  try {
+    if (getAddress(quote.action.fromAddress) !== getAddress(input.fromAddress)
+      || getAddress(quote.action.toAddress) !== getAddress(input.fromAddress)) return null;
+  } catch { return null; }
 
   const fromAmount = BigInt(quote.estimate.fromAmount);
   const toAmount = BigInt(quote.estimate.toAmount);
@@ -186,7 +195,8 @@ async function validateQuote(
 
   const planHash = await sha256(JSON.stringify([
     quote.tool, quote.id, input.fromAssetId, input.toAssetId, fromAmount.toString(), toAmount.toString(), toAmountMin.toString(),
-    input.fromAddress.toLowerCase(), assets.from.chainId, target, transactionValue.toString(), quote.transactionRequest.data.toLowerCase(),
+    input.fromAddress.toLowerCase(), quote.action.toAddress.toLowerCase(), quote.action.slippage,
+    assets.from.chainId, target, transactionValue.toString(), quote.transactionRequest.data.toLowerCase(),
     approvalTarget?.toLowerCase() ?? null, expiresAt
   ]));
   return {
