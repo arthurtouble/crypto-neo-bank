@@ -25,6 +25,7 @@ export default defineConfig({
           { label: "Bank transfers", slug: "product/bank-transfers" },
           { label: "Wallets and assets", slug: "product/wallets-and-assets" },
           { label: "Send money", slug: "product/send-and-route" },
+          { label: "Recipients and schedules", slug: "product/recipients-and-schedules" },
           { label: "Networks and assets", slug: "product/networks-and-assets" },
           { label: "Cross-chain routes", slug: "product/cross-chain-routing" },
           { label: "Activity and transaction states", slug: "product/transaction-lifecycle" }

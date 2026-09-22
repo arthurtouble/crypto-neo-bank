@@ -24,6 +24,7 @@ export default defineConfig({
         { label: "Product and design", items: [
           { label: "Design system", slug: "product/design-system" },
           { label: "Content standard", slug: "product/content-style-guide" },
+          { label: "Daily money flows", slug: "product/daily-money-flows" },
           { label: "Volume and economics", slug: "product/volume-and-economics-inputs" }
         ] },
         { label: "Architecture and providers", items: [

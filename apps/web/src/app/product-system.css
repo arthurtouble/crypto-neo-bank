@@ -225,6 +225,54 @@
   font-size: var(--type-label);
 }
 
+.dailyMoneyGrid { margin-top: 16px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.dailyMoneyPanel { min-width: 0; padding: 28px; }
+.dailyMoneyPanel .panelHeading { margin-bottom: 12px; }
+.compactState { min-height: 92px; display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--muted); font-size: var(--type-body-small); }
+.emptyState.compact { min-height: 142px; }
+.recipientList, .scheduleList { display: grid; }
+.recipientList > button { width: 100%; min-height: 66px; display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; align-items: center; gap: 12px; border: 0; border-top: 1px solid var(--border); background: transparent; color: var(--text); text-align: left; cursor: pointer; }
+.recipientList > button:hover { background: color-mix(in srgb, var(--accent) 4%, transparent); }
+.recipientAvatar { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font-size: var(--type-label); font-weight: 700; }
+.recipientList strong, .recipientList small, .scheduleList strong, .scheduleList small { display: block; }
+.recipientList strong, .scheduleList strong { font-size: var(--type-row-title); }
+.recipientList small, .scheduleList small { margin-top: 3px; color: var(--muted); font-size: var(--type-caption); }
+.recipientList em { display: inline-flex; align-items: center; gap: 4px; font-size: var(--type-caption); font-style: normal; font-weight: 650; }
+.recipientList em.verified { color: var(--success); }
+.recipientList em.cooling { color: var(--muted); }
+.scheduleList > div { min-height: 66px; display: grid; grid-template-columns: minmax(0, 1fr) auto 30px; align-items: center; gap: 12px; border-top: 1px solid var(--border); }
+.scheduleList b { font-size: var(--type-body-small); }
+.scheduleList button { width: 30px; height: 30px; display: grid; place-items: center; border: 0; border-radius: 50%; background: transparent; color: var(--muted); cursor: pointer; }
+.scheduleList button:hover { background: var(--surface-subtle); color: var(--text); }
+.billsPanel { margin-top: 16px; padding: 22px 28px; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.billsPanel > div { display: flex; align-items: center; gap: 13px; }
+.billsPanel strong, .billsPanel small { display: block; }
+.billsPanel strong { font-size: var(--type-row-title); }
+.billsPanel small { margin-top: 3px; color: var(--muted); font-size: var(--type-label); }
+.formSplit { display: grid; grid-template-columns: 1fr 120px; gap: 12px; }
+
+.activityWorkspace { padding: 28px; }
+.activityFilters { margin: 18px 0 4px; display: grid; grid-template-columns: minmax(220px, 1fr) 160px 170px; gap: 10px; }
+.activityFilters label { min-width: 0; }
+.activityFilters select, .activitySearch { width: 100%; min-height: 42px; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--surface); color: var(--text); font: 500 var(--type-body-small)/1 var(--font-body); }
+.activityFilters select { padding: 0 34px 0 12px; }
+.activitySearch { display: flex; align-items: center; gap: 8px; padding: 0 12px; color: var(--muted); }
+.activitySearch:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 12%, transparent); }
+.activitySearch input { width: 100%; border: 0; outline: 0; background: transparent; color: var(--text); font: inherit; }
+.activityButton { width: 100%; padding: 0; border: 0; border-top: 1px solid var(--border); background: transparent; color: var(--text); text-align: left; cursor: pointer; }
+.activityButton:hover { background: color-mix(in srgb, var(--accent) 4%, transparent); }
+.activityButton > span:nth-child(2) { min-width: 0; }
+.activityIcon.good { color: var(--success); background: color-mix(in srgb, var(--success) 12%, transparent); }
+.activityIcon.bad { color: var(--danger); background: color-mix(in srgb, var(--danger) 10%, transparent); }
+.receiptModal { text-align: center; }
+.receiptStatus { width: 44px; height: 44px; margin: 2px auto 14px; display: grid; place-items: center; border-radius: 50%; background: var(--accent-soft); color: var(--accent); }
+.receiptStatus.confirmed { background: color-mix(in srgb, var(--success) 12%, transparent); color: var(--success); }
+.receiptStatus.failed, .receiptStatus.blocked { background: color-mix(in srgb, var(--danger) 10%, transparent); color: var(--danger); }
+.receiptAmount { display: block; margin: 0 0 22px; font-family: "Archivo Variable", "Satoshi", system-ui, sans-serif; font-size: 28px; letter-spacing: -.03em; }
+.receiptDetails { margin-bottom: 20px; display: grid; text-align: left; border-top: 1px solid var(--border); }
+.receiptDetails > span { min-height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 20px; border-bottom: 1px solid var(--border); color: var(--muted); font-size: var(--type-label); }
+.receiptDetails strong { color: var(--text); font-size: var(--type-label); text-align: right; }
+
 /* Assets, exchange, earn, borrow, and markets */
 .productShell .tableHead {
   font-family: var(--font-body);
@@ -417,6 +465,15 @@
   .marketExplorer { padding: 22px 18px; }
   .marketExplorerHeader { align-items: stretch; flex-direction: column; }
   .marketSearch { width: 100%; }
+  .dailyMoneyGrid { grid-template-columns: 1fr; }
+  .dailyMoneyPanel, .activityWorkspace { padding: 22px 18px; }
+  .billsPanel { align-items: flex-start; padding: 20px 18px; }
+  .billsPanel small { max-width: 210px; }
+  .activityFilters { grid-template-columns: 1fr 1fr; }
+  .activitySearch { grid-column: 1 / -1; }
+  .activityButton { grid-template-columns: 34px minmax(0, 1fr) auto; gap: 9px; }
+  .activityButton small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .formSplit { grid-template-columns: 1fr; gap: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {

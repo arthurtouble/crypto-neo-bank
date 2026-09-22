@@ -1,6 +1,7 @@
 "use client";
 
 import { useConnectWallet, useMfa, usePrivy, useSendTransaction, useWallets } from "@privy-io/react-auth";
+import { useQuery } from "@tanstack/react-query";
 import { Check, Copy, ExternalLink, LoaderCircle, Plus, QrCode, Send, WalletCards, X } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useMemo, useState } from "react";
@@ -12,6 +13,7 @@ import { ExternalWalletBalances } from "./external-wallet-balances";
 
 type AssetSymbol = keyof typeof BASE_ASSETS;
 type Modal = "receive" | "send" | null;
+type Recipient = { id: string; kind: "wallet" | "bank"; name: string; destination: string; detail: string; verified: boolean; recent?: boolean };
 
 function shortAddress(address: string) {
   return `${address.slice(0, 6)}…${address.slice(-4)}`;
@@ -46,6 +48,17 @@ export function WalletWorkspace() {
   const eth = useBalance({ address, chainId: HOME_CHAIN.id, query: { enabled: Boolean(address) } });
   const usdc = useReadContract({ address: BASE_ASSETS.USDC.address, abi: erc20Abi, functionName: "balanceOf", args: address ? [address] : undefined, chainId: HOME_CHAIN.id, query: { enabled: Boolean(address) } });
   const weth = useReadContract({ address: BASE_ASSETS.WETH.address, abi: erc20Abi, functionName: "balanceOf", args: address ? [address] : undefined, chainId: HOME_CHAIN.id, query: { enabled: Boolean(address) } });
+  const recipients = useQuery<{ recipients: Recipient[] }>({
+    queryKey: ["recipients", address],
+    queryFn: async () => {
+      const token = await getAccessToken();
+      const response = await fetch("/api/recipients", { headers: token ? { Authorization: `Bearer ${token}` } : undefined, cache: "no-store" });
+      if (!response.ok) throw new Error("Recipients are unavailable.");
+      return response.json();
+    },
+    enabled: Boolean(address && modal === "send")
+  });
+  const savedRecipients = recipients.data?.recipients.filter((item) => item.kind === "wallet" && item.verified && !item.recent) ?? [];
 
   const rows = [
     { ...BASE_ASSETS.USDC, value: usdc.data, source: "Aurel Account", pending: usdc.isPending },
@@ -202,6 +215,7 @@ export function WalletWorkspace() {
             <h2 id="wallet-modal-title">Send Digital Assets</h2>
             <label className="fieldLabel">Asset<select value={asset} onChange={(event) => setAsset(event.target.value as AssetSymbol)}>{Object.keys(BASE_ASSETS).map((symbol) => <option key={symbol}>{symbol}</option>)}</select></label>
             <label className="fieldLabel">Amount<input inputMode="decimal" placeholder="0.00" value={amount} onChange={(event) => setAmount(event.target.value)} /></label>
+            {savedRecipients.length > 0 && <label className="fieldLabel">Saved Recipient<select value={savedRecipients.some((item) => item.destination === recipient) ? recipient : ""} onChange={(event) => setRecipient(event.target.value)}><option value="">Enter another address</option>{savedRecipients.map((item) => <option key={item.id} value={item.destination}>{item.name} · {item.detail}</option>)}</select></label>}
             <label className="fieldLabel">Destination<input autoComplete="off" spellCheck={false} placeholder="0x…" value={recipient} onChange={(event) => setRecipient(event.target.value.trim())} /></label>
             <div className="transactionSummary"><span>From<strong>Aurel Account</strong></span><span>Account<strong>{shortAddress(address)}</strong></span><span>Review<strong>You Confirm</strong></span></div>
             {error && <div className="formError" role="alert">{error}</div>}

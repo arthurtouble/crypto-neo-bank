@@ -30,7 +30,7 @@ Networks are routing details. Aurel may reveal them when the customer must choos
 | Rewards and membership | Balance/activity membership tiers and cashback | Tiered cashback and benefits | Cashback and partner collaborations | Paid plans, RevPoints, partner benefits | **Preview:** balance/activity tier model, benefits, referrals, concierge |
 | Card controls | Limits, PIN, freeze, spend priority, disputes | Freeze and account lock | App card controls | Freeze, limits, merchant controls, disposable cards | **Partial:** security policy controls exist; full issuer-backed controls require a card partner |
 | Security | Passkeys/Safe owners and explicit signatures | Biometrics and hardware-backed keys | Identity, device security, monitoring | biometrics, limits, scam intervention | **Strong baseline:** Privy authentication, passkeys, policy evaluation, allowlists, recovery, audit trail |
-| Joint/shared money | — | P2P transfer | Business/team movement | Joint accounts, Pockets, subscriptions | **Gap:** shared accounts, budgets, bills, and recurring payments |
+| Joint/shared money | — | P2P transfer | Business/team movement | Joint accounts, Pockets, subscriptions | **Partial:** approval-required schedules and recipient directory; shared ownership, pockets, and provider-executed bills remain gaps |
 
 Sources: [Ether.fi Help Center](https://help.ether.fi/en/), [Ether.fi swaps](https://help.ether.fi/en/articles/776157-how-swaps-work-on-ether-fi), [Plasma One](https://www.plasma.to/insights/introducing-plasma-one-the-one-app-for-your-money), [KAST](https://www.kast.xyz/), [Revolut 2025 annual report](https://assets.revolut.com/pdf/annualreport2025.pdf), and current Aurel code and provider contracts.
 
@@ -64,9 +64,9 @@ Use these labels consistently in navigation, quick actions, dialogs, receipts, s
 
 ### P1 — daily financial account
 
-- [ ] Recipient directory shared by bank and wallet sends.
-- [ ] Saved beneficiaries, recent recipients, and verified-address indicators.
-- [ ] Scheduled and recurring transfers.
+- [ ] Recipient directory shared by bank and wallet sends. Wallet recipients are live; bank recipients await provider projections.
+- [x] Saved wallet recipients, recent destinations, and verified-address indicators.
+- [ ] Scheduled and recurring transfers. Approval-required plans are live; automatic/provider-managed execution remains gated.
 - [ ] Bills and subscriptions view.
 - [ ] Categories, merchant enrichment, search, filters, and statement export.
 - [ ] Pockets/goals backed by provider or onchain subaccounts, never a local ledger.

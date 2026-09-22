@@ -18,8 +18,10 @@ This is the execution checklist for the mainnet-first product. “Live” means 
 - [x] Live Base ETH, USDC, and WETH balance reads
 - [x] Receive address and QR flow
 - [x] User-confirmed Base ETH/ERC-20 send flow
+- [x] Unified saved and recent recipient directory without bypassing address-book cooling
+- [x] Approval-required one-time and recurring transfer plans with pause/resume controls
 - [x] Transaction-intent API, policy evaluation, consent, and submission state
-- [x] Rebuildable provider/onchain portfolio view and authenticated intent activity feed
+- [x] Rebuildable provider/onchain portfolio view and searchable activity feed with receipts and CSV export
 - [x] Persistent activation journey and tested chain/asset support matrix
 - [x] Emergency lock, rolling limits, destination allowlist/cooling, and direct-send simulation
 - [x] Source-chain receipt reconciliation with resumable intent history
