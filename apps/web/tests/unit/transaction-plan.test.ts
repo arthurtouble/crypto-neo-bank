@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { collectUnsignedTransactions, collectWarnings, findStringField } from "@/lib/transactions/plan";
+import { collectUnsignedTransactions, collectWarnings, findStringField, toSimulationRequest } from "@/lib/transactions/plan";
 
 describe("unsigned protocol plans", () => {
   it("keeps approval before the original action and rejects another chain", () => {
@@ -12,5 +12,13 @@ describe("unsigned protocol plans", () => {
     expect(findStringField(preview, ["healthFactorAfter"])).toBe("1.62");
     expect(collectWarnings(preview)).toContain("Liquidation buffer is narrower.");
   });
-});
 
+  it("builds a wallet-scoped call request before signature", () => {
+    expect(toSimulationRequest({ to: "0x2222222222222222222222222222222222222222", data: "0x1234", chainId: 8453 }, "0x1111111111111111111111111111111111111111")).toEqual({
+      account: "0x1111111111111111111111111111111111111111",
+      to: "0x2222222222222222222222222222222222222222",
+      data: "0x1234",
+      value: 0n
+    });
+  });
+});

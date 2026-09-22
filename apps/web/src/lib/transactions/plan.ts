@@ -1,6 +1,17 @@
-import { isAddress } from "viem";
+import { getAddress, isAddress, type Address, type Hex } from "viem";
 
 export type UnsignedPlanTransaction = { to: `0x${string}`; data?: `0x${string}`; value?: bigint; chainId: number };
+
+export type SimulationRequest = { account: Address; to: Address; data?: Hex; value: bigint };
+
+export function toSimulationRequest(transaction: UnsignedPlanTransaction, account: string): SimulationRequest {
+  return {
+    account: getAddress(account),
+    to: getAddress(transaction.to),
+    data: transaction.data,
+    value: transaction.value ?? 0n
+  };
+}
 
 export function collectUnsignedTransactions(value: unknown, expectedChainId: number): UnsignedPlanTransaction[] {
   const output: UnsignedPlanTransaction[] = [];
@@ -51,4 +62,3 @@ export function collectWarnings(value: unknown): string[] {
   }) : [];
   return [...own, ...Object.entries(record).filter(([key]) => key !== "warnings").flatMap(([, child]) => collectWarnings(child))];
 }
-

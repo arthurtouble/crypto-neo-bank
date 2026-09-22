@@ -25,7 +25,7 @@ Some Aave reward programmes span networks or use external incentive systems. Aur
 
 ## Before you sign
 
-Review the asset, amount, network, contract, expected change, health factor, approval amount, and gas cost. Keep enough ETH on Base for future transactions.
+Review the asset, amount, network, contract, expected change, health factor, approval amount, and gas cost. Immediately before each wallet prompt, Aurel runs the prepared transaction as a read-only network call. A failed simulation stops the flow before signature. Keep enough ETH on Base for future transactions.
 
 Smart contracts, oracles, governance, liquidity, stablecoins, and Base can fail or behave unexpectedly. A preview helps you make a decision; it is not a promise of the outcome.
 

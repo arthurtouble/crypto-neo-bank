@@ -7,7 +7,7 @@ import { useMemo, useState } from "react";
 import { createPublicClient, http } from "viem";
 import { HOME_CHAIN } from "@/config/chains";
 import type { AaveBaseReserve } from "@/lib/defi/aave";
-import { collectUnsignedTransactions, collectWarnings, findStringField } from "@/lib/transactions/plan";
+import { collectUnsignedTransactions, collectWarnings, findStringField, toSimulationRequest } from "@/lib/transactions/plan";
 import type { TransactionLifecycleStatus } from "@/lib/transactions/lifecycle";
 import { TransactionProgress } from "./transaction-progress";
 
@@ -59,7 +59,7 @@ export function BorrowWorkspace() {
       if (intent.decision?.requiresStepUp && !mfaMethods.includes("passkey")) throw new Error("Set up a passkey in the Safety center before this higher-risk credit action.");
       const transactions = collectUnsignedTransactions(prepared.plan, HOME_CHAIN.id); if (!transactions.length) throw new Error("Aave returned no transaction to sign.");
       const submitted: string[] = []; const client = createPublicClient({ chain: HOME_CHAIN, transport: http() });
-      for (const [index, transaction] of transactions.entries()) { setFlowStatus("awaiting_confirmation"); const result = await sendTransaction(transaction, { address: wallet.address, uiOptions: { description: `${action === "borrow" ? "Borrow" : "Repay"} ${amount} ${symbol} through Aave on Base.`, buttonText: "Confirm with wallet", isCancellable: true } }); submitted.push(result.hash); if (index < transactions.length - 1) { setFlowStatus("reviewing"); const receipt = await client.waitForTransactionReceipt({ hash: result.hash, confirmations: 1, timeout: 120_000 }); if (receipt.status !== "success") throw new Error("A prerequisite transaction reverted. The next Aave transaction was not submitted."); } }
+      for (const [index, transaction] of transactions.entries()) { const simulation = toSimulationRequest(transaction, wallet.address); try { await client.estimateGas(simulation); await client.call(simulation); } catch { throw new Error("This transaction no longer passes the network safety check. Review your position and try again."); } setFlowStatus("awaiting_confirmation"); const result = await sendTransaction(transaction, { address: wallet.address, uiOptions: { description: `${action === "borrow" ? "Borrow" : "Repay"} ${amount} ${symbol} through Aave on Base.`, buttonText: "Confirm with wallet", isCancellable: true } }); submitted.push(result.hash); if (index < transactions.length - 1) { setFlowStatus("reviewing"); const receipt = await client.waitForTransactionReceipt({ hash: result.hash, confirmations: 1, timeout: 120_000 }); if (receipt.status !== "success") throw new Error("A prerequisite transaction reverted. The next Aave transaction was not submitted."); } }
       setHashes(submitted);
       setFlowStatus("submitted");
       await fetch("/api/intents/status", { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ intentId, status: "submitted", transactionHash: submitted.at(-1) }) });

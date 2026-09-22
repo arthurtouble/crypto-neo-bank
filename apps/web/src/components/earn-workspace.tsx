@@ -7,7 +7,7 @@ import { useMemo, useState } from "react";
 import { createPublicClient, http } from "viem";
 import { HOME_CHAIN } from "@/config/chains";
 import type { AaveBaseReserve } from "@/lib/defi/aave";
-import { collectUnsignedTransactions } from "@/lib/transactions/plan";
+import { collectUnsignedTransactions, toSimulationRequest } from "@/lib/transactions/plan";
 import type { TransactionLifecycleStatus } from "@/lib/transactions/lifecycle";
 import { TransactionProgress } from "./transaction-progress";
 
@@ -68,6 +68,13 @@ export function EarnWorkspace() {
       const submitted: string[] = [];
       const client = createPublicClient({ chain: HOME_CHAIN, transport: http() });
       for (const [index, transaction] of transactions.entries()) {
+        try {
+          const simulation = toSimulationRequest(transaction, wallet.address);
+          await client.estimateGas(simulation);
+          await client.call(simulation);
+        } catch {
+          throw new Error("This transaction no longer passes the network safety check. Review your balance and try again.");
+        }
         setFlowStatus("awaiting_confirmation");
         const result = await sendTransaction(transaction, { address: wallet.address, uiOptions: { description: `Aave ${selected.symbol} allocation on Base mainnet.`, buttonText: "Confirm with wallet", isCancellable: true } });
         submitted.push(result.hash);
