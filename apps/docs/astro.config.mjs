@@ -27,6 +27,7 @@ export default defineConfig({
           { label: "Send money", slug: "product/send-and-route" },
           { label: "Recipients and schedules", slug: "product/recipients-and-schedules" },
           { label: "Bills and subscriptions", slug: "product/bills-and-subscriptions" },
+          { label: "Direct deposit and Payday Plans", slug: "product/direct-deposit-and-payday" },
           { label: "Insights and goals", slug: "product/insights-and-goals" },
           { label: "Cards and controls", slug: "product/cards-and-controls" },
           { label: "Networks and assets", slug: "product/networks-and-assets" },

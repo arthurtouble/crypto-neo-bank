@@ -71,7 +71,7 @@ Use these labels consistently in navigation, quick actions, dialogs, receipts, s
 - [ ] Categories, merchant enrichment, search, filters, and statement export. Aurel activity categories, search, filters, CSV export, and period insights are live; merchant enrichment and issuer statements remain provider-gated.
 - [ ] Pockets/goals backed by provider or onchain subaccounts, never a local ledger. Planning-only goals are live and deliberately show no current balance until an authoritative source is linked.
 - [ ] Card funding priority, freeze, per-card limits, PIN, replacement, disputes, and statements through issuer APIs. The complete provider-ready UI and card projection contract are live; mutations remain issuer-gated.
-- [ ] Salary/direct-deposit setup and automatic allocation rules once fiat rails are live.
+- [ ] Salary/direct-deposit setup and automatic allocation rules. Provider-ready Direct Deposit and planning-only Payday Plans are live; account issuance, income recognition, and execution remain provider-gated.
 
 ### P2 — wealth and membership
 

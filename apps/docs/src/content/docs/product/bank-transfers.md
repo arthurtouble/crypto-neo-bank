@@ -17,6 +17,8 @@ An active account receives reusable payment instructions. The sender must use th
 
 Do not send money to placeholder or preview details. Aurel shows real instructions only after provider activation.
 
+Once active, the same provider-issued details can be used for eligible payroll deposits. Aurel does not promise early availability; posting time depends on when the employer, payroll processor, and banking provider submit and release the payment. See [Direct Deposit and Payday Plans](/product/direct-deposit-and-payday/).
+
 ## Send to a bank
 
 The app collects the transfer type, amount, recipient, and purpose before showing a final review. A submitted request can still be held, returned, or rejected by a bank or provider. Estimated delivery time is not a guarantee.
