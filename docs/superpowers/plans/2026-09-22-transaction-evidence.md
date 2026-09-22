@@ -146,6 +146,17 @@
 - [ ] **Step 3: Verify app and docs builds, full unit and E2E suites, recovery drill, and production smoke after deployment.** Inspect mobile and desktop in the embedded browser. Do not perform a financial QA transaction.
 - [ ] **Step 4: Commit only the documentation and smoke files.** Use message `docs: explain verified transaction evidence`.
 
+### Task 8: Make Value-Based Controls Server-Authoritative
+
+**Finding:** `POST /api/intents/evaluate` currently accepts `estimatedUsd` and `availableUsd` from the browser. A customer can understate value to bypass the daily limit, new-address threshold, large-transfer delay, and step-up requirement. This must be corrected before any financial execution is enabled on this branch.
+
+**Files:** Create `apps/web/src/lib/transactions/valuation.ts` and focused tests; modify `apps/web/src/app/api/intents/evaluate/route.ts`, `apps/web/src/lib/transactions/policy.ts`, and affected callers/tests.
+
+- [ ] **Step 1: Write failing tests.** A client reports `estimatedUsd: 0` for a large USDC/ETH/WETH transfer, Swap, or Aave action; the server must compute or obtain a current independently sourced upper-bound valuation. Price/source outage and unsupported asset must block value-sensitive execution, never turn controls into warnings. Test stale prices, decimal precision, and cross-chain token identity.
+- [ ] **Step 2: Implement trusted valuation.** Resolve the reviewed asset by canonical chain/contract, parse amount with trusted decimals, and obtain a bounded-freshness price from an independent market source or validated provider quote. For a stablecoin, use a conservative value for risk limits and label depeg uncertainty. Do not use browser `estimatedUsd` or `availableUsd` as policy authority; remaining balance controls require independently read wallet/provider balances or stay unavailable.
+- [ ] **Step 3: Bind policy evidence.** Persist raw units, price source, observed-at, computed USD value, freshness, and policy version with the reviewed intent. Revalidate at preparation when the policy validity window has elapsed or a prerequisite approval has changed exposure. Derive rolling spend from verified, bound intents rather than client-provided JSON fields.
+- [ ] **Step 4: Verify.** Run focused tests, all unit tests, typecheck, lint, desktop/mobile E2E, and a read-only production valuation smoke. Do not sign a QA transaction. Commit only these files.
+
 ## Dependency order
 
-Tasks 1 and 2 can be developed independently. Task 3 depends on Task 2. Task 4 depends on Task 3. Task 5 depends on Tasks 3 and 4. Task 6 may develop its pure validators alongside Tasks 3 and 4 but UI integration depends on Task 5. Task 7 follows all code changes. The separate asset, portfolio, and wealth plans depend on this foundation where they submit transactions.
+Tasks 1 and 2 can be developed independently. Task 3 depends on Task 2. Task 4 depends on Task 3. Task 5 depends on Tasks 3 and 4. Task 6 may develop its pure validators alongside Tasks 3 and 4 but UI integration depends on Task 5. Task 8 can develop its pure valuation module alongside Tasks 3–6 but must gate production execution. Task 7 follows all code changes, including Task 8. The separate asset, portfolio, and wealth plans depend on this foundation where they submit transactions.
