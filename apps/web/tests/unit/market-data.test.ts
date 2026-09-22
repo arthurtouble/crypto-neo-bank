@@ -5,15 +5,16 @@ afterEach(() => vi.unstubAllGlobals());
 
 describe("market data authority", () => {
   it("validates market rows before presenting them", async () => {
-    const fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify([{ id: "ethereum", symbol: "eth", name: "Ethereum", image: "https://example.com/eth.png", current_price: 2500, market_cap: 300_000_000_000, market_cap_rank: 2, total_volume: 10_000_000, price_change_percentage_24h: 1.2, sparkline_in_7d: { price: [2400, 2500] }, last_updated: "2026-09-22T00:00:00Z" }])))
+    const fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify({ error: [], result: { "ETH/USD": { c: ["2500", "1"], v: ["100", "200"], h: ["2550", "2600"], l: ["2450", "2400"], o: "2475" } } })))
     vi.stubGlobal("fetch", fetch);
     const rows = await getMarkets(1);
-    expect(rows[0]?.id).toBe("ethereum");
-    expect(String(fetch.mock.calls[0]?.[0])).toContain("include_rehypothecated=true");
+    expect(rows[0]?.id).toBe("eth-usd");
+    expect(rows[0]?.total_volume).toBe(500_000);
+    expect(String(fetch.mock.calls[0]?.[0])).toContain("api.kraken.com/0/public/Ticker");
   });
 
   it("rejects malformed provider history", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ prices: [["bad", 2500]] }))));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ error: [], result: { "ETH/USD": [[1, "1", "2", "1", "bad", "1", "1", 1]], last: 1 } }))));
     await expect(getMarketHistory("ethereum", 30)).rejects.toThrow();
   });
 
