@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const wallet = "8453:0x1111111111111111111111111111111111111111";
-const state = vi.hoisted(() => ({ authorized: true, accounts: [] as string[], rows: [] as Record<string, unknown>[], checkpoints: [] as Record<string, unknown>[], calls: [] as Array<{ sql: string; values: unknown[] }> }));
-vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: { prepare(sql: string) { return { values: [] as unknown[], bind(...values: unknown[]) { this.values = values; state.calls.push({ sql, values }); return this; }, async first() { if (sql.includes("MAX(calculation_version)")) return { version: 1 }; if (sql.includes("COUNT")) return { count: state.rows.filter((row) => row.classification === "review_required" && this.values.includes(row.account_id)).length }; return null; }, async all() {
+const state = vi.hoisted(() => ({ authorized: true, accounts: [] as string[], rows: [] as Record<string, unknown>[], checkpoints: [] as Record<string, unknown>[], calls: [] as Array<{ sql: string; values: unknown[] }>, markerVersion: 1 as number | null, latestVersion: 1 }));
+vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: { prepare(sql: string) { return { values: [] as unknown[], bind(...values: unknown[]) { this.values = values; state.calls.push({ sql, values }); return this; }, async first() { if (sql.includes("portfolio_publications")) return { calculation_version: state.markerVersion }; if (sql.includes("MAX(calculation_version)")) return { version: state.latestVersion }; if (sql.includes("COUNT")) return { count: state.rows.filter((row) => row.classification === "review_required" && row.calculation_version === this.values[1] && this.values.includes(row.account_id)).length }; return null; }, async all() {
   if (sql.includes("portfolio_source_checkpoints")) return { results: state.checkpoints };
   if (sql.includes("ORDER BY occurred_at")) {
     const [limit, offset] = this.values.slice(-2) as number[];
-    const filtered = state.rows.filter((row) => this.values.includes(row.account_id)).sort((a, b) => String(a.occurred_at).localeCompare(String(b.occurred_at)) || String(a.source_event_id).localeCompare(String(b.source_event_id)));
+    const filtered = state.rows.filter((row) => row.calculation_version === this.values[1] && this.values.includes(row.account_id)).sort((a, b) => String(a.occurred_at).localeCompare(String(b.occurred_at)) || String(a.source_event_id).localeCompare(String(b.source_event_id)));
     return { results: filtered.slice(offset, offset + limit) };
   }
   return { results: state.rows };
@@ -19,7 +19,7 @@ import { GET } from "@/app/api/portfolio/tax-support/route";
 type TaxBody = { calculationVersion: number; coverage: { status: string }; reviewRequiredCount: number; rows: Array<{ kind: string; basisUsd: string | null; gainUsd: string | null; classification: string }>; notice: string; nextCursor: string | null };
 async function readBody(response: Response): Promise<TaxBody> { return response.json() as Promise<TaxBody>; }
 function request(query = "year=2025") { return new Request(`https://aurel.test/api/portfolio/tax-support?${query}`); }
-beforeEach(() => { state.authorized = true; state.accounts = [wallet]; state.rows = []; state.checkpoints = []; state.calls = []; });
+beforeEach(() => { state.authorized = true; state.accounts = [wallet]; state.rows = []; state.checkpoints = []; state.calls = []; state.markerVersion = 1; state.latestVersion = 1; });
 
 describe("portfolio tax-support read boundary", () => {
   it("requires auth and rejects invalid years or cursors", async () => {
@@ -73,5 +73,13 @@ describe("portfolio tax-support read boundary", () => {
     ];
     const body = await readBody(await GET(request()));
     expect(body.coverage.status).toBe("partial");
+  });
+
+  it("exports only the marker-published version, hiding an orphan higher version", async () => {
+    state.latestVersion = 2;
+    state.rows = [1, 2].map((calculation_version) => ({ kind: "disposal", account_id: wallet, asset_id: "8453:native", source_event_id: `sale-${calculation_version}`, leg_index: 0, occurred_at: "2025-04-01T00:00:00Z", calculation_version, raw_units: "1", proceeds_usd: "2", basis_usd: "1", gain_usd: "1", classification: "supported", evidence_json: "{}" }));
+    const body = await readBody(await GET(request()));
+    expect(body.calculationVersion).toBe(1);
+    expect(body.rows).toHaveLength(1);
   });
 });

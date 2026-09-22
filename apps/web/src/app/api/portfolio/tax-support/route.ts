@@ -32,11 +32,9 @@ export async function GET(request: Request) {
     const accountFilter = accountIds.map(() => "?").join(",");
     const from = `${year}-01-01T00:00:00Z`;
     const through = `${year + 1}-01-01T00:00:00Z`;
-    const latest = accountIds.length ? await env.PROJECTION_DB.prepare(`SELECT MAX(v) AS version FROM (
-      SELECT MAX(calculation_version) AS v FROM portfolio_lots WHERE subject_reference = ? AND account_id IN (${accountFilter})
-      UNION ALL SELECT MAX(calculation_version) AS v FROM portfolio_disposals WHERE subject_reference = ? AND account_id IN (${accountFilter}))`)
-      .bind(subject.subjectReference, ...accountIds, subject.subjectReference, ...accountIds).first<{ version: number | null }>() : null;
-    const calculationVersion = accountIds.length ? latest?.version ?? 0 : 0;
+    const publication = await env.PROJECTION_DB.prepare("SELECT calculation_version FROM portfolio_publications WHERE subject_reference = ? AND status = 'published'")
+      .bind(subject.subjectReference).first<{ calculation_version: number }>();
+    const calculationVersion = accountIds.length ? publication?.calculation_version ?? 0 : 0;
     if (cursor && (cursor.year !== year || cursor.version !== calculationVersion)) return response({ error: "invalid_cursor", traceId }, 400);
     const offset = cursor?.offset ?? 0;
     const [result, count, checkpoints] = await Promise.all([

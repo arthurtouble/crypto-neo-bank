@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const wallet = "8453:0x1111111111111111111111111111111111111111";
 const external = "8453:0x2222222222222222222222222222222222222222";
-const state = vi.hoisted(() => ({ authorized: true, accounts: [] as Array<{ accountId: string; origin: string }>, rows: [] as Record<string, unknown>[], checkpoints: [] as Record<string, unknown>[], nonfinal: [] as Record<string, unknown>[], calls: [] as Array<{ sql: string; values: unknown[] }>, aaveUnavailable: false }));
-vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: { prepare(sql: string) { const query = { values: [] as unknown[], bind(...values: unknown[]) { this.values = values; state.calls.push({ sql, values }); return this; }, async first() { return { version: state.rows.length ? 1 : null }; }, async all() { if (sql.includes("portfolio_daily_results")) return { results: state.rows }; if (sql.includes("portfolio_source_checkpoints")) return { results: state.checkpoints }; if (sql.includes("portfolio_events")) return { results: state.nonfinal }; return { results: [] }; } }; return query; } } } }));
+const state = vi.hoisted(() => ({ authorized: true, accounts: [] as Array<{ accountId: string; origin: string }>, rows: [] as Record<string, unknown>[], checkpoints: [] as Record<string, unknown>[], nonfinal: [] as Record<string, unknown>[], calls: [] as Array<{ sql: string; values: unknown[] }>, aaveUnavailable: false, markerVersion: 1 as number | null }));
+vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: { prepare(sql: string) { const query = { values: [] as unknown[], bind(...values: unknown[]) { this.values = values; state.calls.push({ sql, values }); return this; }, async first() { if (sql.includes("portfolio_publications")) return { calculation_version: state.markerVersion }; return { version: state.rows.length ? Math.max(...state.rows.map((row) => Number(row.calculation_version))) : null }; }, async all() { if (sql.includes("portfolio_daily_results")) return { results: state.rows.filter((row) => row.calculation_version === this.values[1]) }; if (sql.includes("portfolio_source_checkpoints")) return { results: state.checkpoints }; if (sql.includes("portfolio_events")) return { results: state.nonfinal }; return { results: [] }; } }; return query; } } } }));
 vi.mock("@/lib/auth/server", () => { class AuthenticationError extends Error {} return { AuthenticationError, requireVerifiedSubject: async () => { if (!state.authorized) throw new AuthenticationError(); return { subjectReference: "subject-a" }; } }; });
 vi.mock("@/lib/security/rate-limit", () => ({ RateLimitError: class extends Error {}, enforceRateLimit: async () => undefined }));
 vi.mock("@/lib/portfolio/accounts", () => ({ resolvePortfolioAccounts: async () => state.accounts }));
@@ -14,7 +14,7 @@ import { GET } from "@/app/api/portfolio/history/route";
 type HistoryBody = { points: Array<{ day: string; netValueUsd: string | null; twrIndex: string | null; status: string; reasons: string[] }>; currentAave: { status: string }; externalWallets: string[]; calculationVersion: number };
 async function readBody(response: Response): Promise<HistoryBody> { return response.json() as Promise<HistoryBody>; }
 function request(range = "7D") { return new Request(`https://aurel.test/api/portfolio/history?range=${range}`); }
-beforeEach(() => { state.authorized = true; state.accounts = [{ accountId: wallet, origin: "embedded" }]; state.rows = []; state.checkpoints = []; state.nonfinal = []; state.calls = []; state.aaveUnavailable = false; });
+beforeEach(() => { state.authorized = true; state.accounts = [{ accountId: wallet, origin: "embedded" }]; state.rows = []; state.checkpoints = []; state.nonfinal = []; state.calls = []; state.aaveUnavailable = false; state.markerVersion = 1; });
 
 describe("portfolio history read boundary", () => {
   it("rejects unauthenticated and invalid ranges", async () => {
@@ -112,5 +112,15 @@ describe("portfolio history read boundary", () => {
     const body = await readBody(await GET(request()));
     expect(body.points.at(-1)?.reasons).toContain("unfinalized_event");
     expect(body.points.at(-1)?.netValueUsd).toBeNull();
+  });
+
+  it("hides a higher orphan calculation version that has no publication marker", async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    const coverage = JSON.stringify(["blockscout:8453", "aave:v3:8453"].map((sourceId) => ({ day: today, accountId: wallet, sourceId, eventStatus: "complete", priceStatus: "complete", reason: null })));
+    state.rows = [1, 2].map((calculation_version) => ({ day: today, calculation_version, net_value_usd: calculation_version === 1 ? "100" : "999", twr_index: "1", coverage_status: "complete", coverage_json: coverage }));
+    state.checkpoints = ["blockscout:8453", "aave:v3:8453"].map((source_id) => ({ account_id: wallet, source_id, covered_from: "2023-01-01T00:00:00Z", covered_through: "2099-01-01T00:00:00Z", status: "complete", ingestion_version: 1 }));
+    const body = await readBody(await GET(request()));
+    expect(body.calculationVersion).toBe(1);
+    expect(body.points.at(-1)?.netValueUsd).toBe("100");
   });
 });

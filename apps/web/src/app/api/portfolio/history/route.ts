@@ -35,9 +35,9 @@ export async function GET(request: Request) {
     const days = dayRange(RANGE_DAYS[range as keyof typeof RANGE_DAYS]);
     const accounts = await resolvePortfolioAccounts(subject.subjectReference);
     const allowed = new Set<string>(accounts.map((item) => item.accountId));
-    const version = await env.PROJECTION_DB.prepare("SELECT MAX(calculation_version) AS version FROM portfolio_daily_results WHERE subject_reference = ?")
-      .bind(subject.subjectReference).first<{ version: number | null }>();
-    const calculationVersion = version?.version ?? 0;
+    const publication = await env.PROJECTION_DB.prepare("SELECT calculation_version FROM portfolio_publications WHERE subject_reference = ? AND status = 'published'")
+      .bind(subject.subjectReference).first<{ calculation_version: number }>();
+    const calculationVersion = publication?.calculation_version ?? 0;
     const [daily, checkpoints, nonfinal] = await Promise.all([
       calculationVersion ? env.PROJECTION_DB.prepare(`SELECT day, calculation_version, net_value_usd, twr_index, coverage_status, coverage_json
         FROM portfolio_daily_results WHERE subject_reference = ? AND calculation_version = ? AND day BETWEEN ? AND ? ORDER BY day ASC LIMIT 365`)
@@ -94,7 +94,7 @@ export async function GET(request: Request) {
     const aaveStatus: Completeness = !accounts.length || aave.some((item) => item.status === "unavailable") ? "unavailable" : aave.some((item) => item.status !== "complete" || item.legs.length > 0) ? "partial" : "complete";
     const history: PortfolioHistory = { calculationVersion, points, coverage, externalWallets: accounts.filter((item) => item.origin === "linked_external").map((item) => item.accountId),
       currentAave: { suppliedUsd: aaveStatus === "complete" ? "0" : null, debtUsd: aaveStatus === "complete" ? "0" : null, status: aaveStatus }, observedAt: new Date().toISOString() };
-    return response({ ...history, sourceVersions: Object.fromEntries([...byCheckpoint].map(([key, item]) => [key, item.ingestion_version])),
+    return response({ ...history, returnWindow: { pricedDays: 7, scope: "recent_completed_utc_days", inceptionReturnAvailable: false }, sourceVersions: Object.fromEntries([...byCheckpoint].map(([key, item]) => [key, item.ingestion_version])),
       currentAave: { ...history.currentAave, legs: aave.flatMap((item) => item.legs.map((leg) => ({ accountId: item.accountId as AccountId, ...leg }))), observedAt: new Date().toISOString(), reason: aaveStatus === "partial" ? "missing_current_price" : aaveStatus === "unavailable" ? "aave_unavailable" : null }, traceId });
   } catch (error) {
     if (error instanceof AuthenticationError) return response({ error: "unauthorized", traceId }, 401);
