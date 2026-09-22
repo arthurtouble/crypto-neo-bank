@@ -19,6 +19,8 @@ Depending on the feature, Aurel may use:
 - security preferences, saved-address labels, review thresholds, and audit events;
 - transaction requests, policy results, status history, and provider receipts;
 - support messages, consent records, and complaint records;
+- private-access application details, broad workflow and asset-range selections, application decisions, invitation linkage, and research summaries;
+- first-party campaign attribution submitted with an application, including source labels and the referring hostname without its path or query;
 - device, browser, security, rate-limit, and diagnostic data; and
 - limited product analytics from an allowlist of event names.
 
@@ -26,7 +28,7 @@ Future regulated providers may collect identity documents, screening results, so
 
 ## Why we use it
 
-We expect to use data to provide and secure the service, authenticate users, apply requested safety settings, prepare and trace actions, prevent abuse, answer support cases, meet legal duties, manage providers, investigate incidents, and improve the product.
+We expect to use data to review private-access applications, operate cohorts and invitations, provide and secure the service, authenticate users, apply requested safety settings, prepare and trace actions, prevent abuse, answer support cases, meet legal duties, manage providers, investigate incidents, and improve the product. Optional marketing is used only after a separate choice and can be withdrawn.
 
 The final notice will map each purpose to the lawful basis that applies in each launch country, such as performing a contract, complying with law, legitimate interests, or consent.
 
@@ -46,15 +48,15 @@ Providers may process data outside your country. Before launch, Aurel must ident
 
 ## Retention
 
-Aurel will keep data only for a defined business or legal need. Security settings must survive a session. Transaction evidence, consent, complaints, and provider events may require longer retention for investigations and legal duties. Final periods must be added to a retention schedule before launch.
+Aurel will keep data only for a defined business or legal need. Application and campaign data is kept according to the approved growth-retention schedule, then deleted or aggregated. Security settings must survive a session. Transaction evidence, invitation evidence, consent, complaints, and provider events may require longer retention for investigations and legal duties. A deletion request for growth data does not delete public blockchain history, provider records, product access, or evidence Aurel must legally retain.
 
 ## Your rights
 
-Depending on where you live, you may have rights to access, correct, delete, restrict, object to, or receive a copy of personal data; withdraw consent; and complain to a regulator. Some rights have legal limits, especially for public blockchain records and records Aurel must retain.
+Depending on where you live, you may have rights to access, correct, delete, restrict, object to, or receive a copy of personal data; withdraw consent; and complain to a regulator. Authenticated customers can request a growth-data export or deletion in Settings and can turn off product updates there. Some rights have legal limits, especially for public blockchain records and records Aurel must retain.
 
 ## Automated decisions
 
-Aurel applies rules to supported assets, destinations, limits, cooling periods, and review requirements. Before launch, any decision with legal or similarly significant effects must be identified, explained, and paired with required review rights.
+Aurel applies rules to supported assets, destinations, limits, cooling periods, and review requirements. Private-access applications are reviewed by people and are not automatically accepted or declined from asset range, country, or wallet activity alone. Before launch, any decision with legal or similarly significant effects must be identified, explained, and paired with required review rights.
 
 ## Security
 

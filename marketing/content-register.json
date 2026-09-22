@@ -1,0 +1,24 @@
+[
+  {
+    "id": "landing-private-access-v1",
+    "file": "apps/web/src/app/page.tsx",
+    "owner": "product",
+    "audience": "PT private-access prospects",
+    "countries": ["PT"],
+    "disclosure": "Availability depends on account eligibility, location, and service activation.",
+    "claimIds": ["customer-signs-every-transaction-v1", "no-house-token-v1"],
+    "reviewStatus": "approved",
+    "reviewAt": "2026-12-22T00:00:00.000Z"
+  },
+  {
+    "id": "product-tour-v1",
+    "file": "apps/web/src/components/public-product-tour.tsx",
+    "owner": "product",
+    "audience": "PT private-access prospects",
+    "countries": ["PT"],
+    "disclosure": "Planned and provider-gated capabilities are labelled in the tour.",
+    "claimIds": ["customer-approves-every-transaction-v1"],
+    "reviewStatus": "approved",
+    "reviewAt": "2026-12-22T00:00:00.000Z"
+  }
+]

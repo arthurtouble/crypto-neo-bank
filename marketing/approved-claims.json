@@ -1,0 +1,38 @@
+[
+  {
+    "id": "customer-signs-every-transaction-v1",
+    "copy": "You sign every transaction",
+    "evidence": ["apps/web/src/components/wallet-workspace.tsx", "apps/web/src/components/cross-chain-workspace.tsx"],
+    "surfaces": ["landing", "tour"],
+    "countries": ["PT"],
+    "requiredDisclosure": "Availability depends on account eligibility, location, and service activation.",
+    "approvedBy": "product-owner",
+    "approvedAt": "2026-09-22T00:00:00.000Z",
+    "reviewAt": "2026-12-22T00:00:00.000Z",
+    "status": "approved"
+  },
+  {
+    "id": "no-house-token-v1",
+    "copy": "No Aurel token",
+    "evidence": ["README.md"],
+    "surfaces": ["landing", "tour"],
+    "countries": ["PT"],
+    "requiredDisclosure": null,
+    "approvedBy": "product-owner",
+    "approvedAt": "2026-09-22T00:00:00.000Z",
+    "reviewAt": "2026-12-22T00:00:00.000Z",
+    "status": "approved"
+  },
+  {
+    "id": "customer-approves-every-transaction-v1",
+    "copy": "You still approve every transaction",
+    "evidence": ["apps/web/src/components/wallet-workspace.tsx", "apps/web/src/components/cross-chain-workspace.tsx"],
+    "surfaces": ["tour"],
+    "countries": ["PT"],
+    "requiredDisclosure": "Availability depends on account eligibility, location, and service activation.",
+    "approvedBy": "product-owner",
+    "approvedAt": "2026-09-22T00:00:00.000Z",
+    "reviewAt": "2026-12-22T00:00:00.000Z",
+    "status": "approved"
+  }
+]

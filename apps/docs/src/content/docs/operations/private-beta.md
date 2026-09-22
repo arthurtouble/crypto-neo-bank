@@ -11,6 +11,14 @@ An operator creates a labeled invitation for a named cohort, redemption count, o
 
 Redemption creates a subject-scoped access record containing cohort, country, status, terms version, accepted time, activation time, and transaction cap. An access record can be suspended without changing wallet ownership.
 
+Private-access applications are a separate qualification layer. Lists show only redacted email labels. Opening the detail view decrypts contact email for an authorized operator and writes audit evidence. Qualification never creates access; an operator must still issue the one-use invitation through the existing invitation authority.
+
+## Growth operations
+
+The operations workspace includes the application inbox, country/job/source/age filters, application details, attribution, audit history, reason-coded state changes, assignment, and single invitation issuance. It also shows explicit funnel denominators, small-cohort suppression, support volume, and failed/stale transaction guardrails.
+
+Campaigns and experiments begin as drafts. Experiments are limited to approved presentation and guidance changes; they cannot alter legal disclosures, access eligibility, transaction limits, authentication, recovery, security, or signing. Referral invitations stay disabled until the referred application completes the normal review.
+
 ## Feature kill switches
 
 Feature flags are read by server APIs before transaction or concierge work begins. Changes create operator audit evidence. Current flags cover direct transfers, cross-chain routing, DeFi actions, concierge, membership preview, tokenized markets, fiat accounts, and cards.
@@ -41,4 +49,3 @@ Disable the affected feature for signer ambiguity, changed destination or amount
 ## Access activation
 
 Before setting `BETA_ACCESS_MODE=invite`, finalize the allowed-country configuration, effective terms version, operator allowlist, Cloudflare Access policy, support coverage, and a tested invitation. Changing the mode without those controls will correctly deny customers who lack an active invitation.
-
