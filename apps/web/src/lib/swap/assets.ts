@@ -1,6 +1,6 @@
 import { isAddress } from "viem";
 import { z } from "zod";
-import { SUPPORTED_CHAINS } from "@/config/chains";
+import { SUPPORTED_CHAINS } from "@/config/supported-chains";
 
 export type AssetId = string;
 

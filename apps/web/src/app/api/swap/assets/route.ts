@@ -1,7 +1,7 @@
 import { env } from "cloudflare:workers";
 import { AuthenticationError, requireVerifiedSubject } from "@/lib/auth/server";
 import { BetaAccessError, requireBetaAccess } from "@/lib/beta/access";
-import { SUPPORTED_CHAINS } from "@/config/chains";
+import { SUPPORTED_CHAINS } from "@/config/supported-chains";
 import { enforceRateLimit, RateLimitError } from "@/lib/security/rate-limit";
 import { parseAssetId } from "@/lib/swap/assets";
 import { CatalogUnavailableError, getCatalogPage, resolveCatalogAsset } from "@/lib/swap/catalog";

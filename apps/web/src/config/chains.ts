@@ -1,9 +1,10 @@
 import { createConfig } from "@privy-io/wagmi";
 import { http } from "wagmi";
-import { arbitrum, base, mainnet, optimism, polygon } from "wagmi/chains";
+import { arbitrum, base, mainnet, optimism, polygon } from "viem/chains";
+import { SUPPORTED_CHAINS } from "@/config/supported-chains";
 
 export const HOME_CHAIN = base;
-export const SUPPORTED_CHAINS = [base, mainnet, arbitrum, optimism, polygon] as const;
+export { SUPPORTED_CHAINS };
 
 export const web3Config = createConfig({
   chains: SUPPORTED_CHAINS,
