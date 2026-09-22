@@ -21,7 +21,7 @@ function validCoverage(value: unknown, day: string, accounts: Set<string>): DayC
 function dayRange(count: number): string[] {
   const today = new Date();
   const midnight = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
-  return Array.from({ length: count }, (_, index) => new Date(midnight - (count - index - 1) * 86_400_000).toISOString().slice(0, 10));
+  return Array.from({ length: count }, (_, index) => new Date(midnight - (count - index) * 86_400_000).toISOString().slice(0, 10));
 }
 
 export async function GET(request: Request) {

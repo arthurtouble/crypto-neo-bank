@@ -60,11 +60,9 @@ export function buildPortfolioChartModel(history: PortfolioHistory): PortfolioCh
     pointByDay.set(point.day, point);
   }
   const pointDays = [...pointByDay.keys()].sort();
-  const observedDay = history.observedAt.slice(0, 10);
   const first = pointDays[0] ? dayNumber(pointDays[0]) : null;
   const latestPointDay = pointDays.at(-1);
-  const endCandidate = dayNumber(observedDay);
-  const last = latestPointDay ? Math.max(dayNumber(latestPointDay)!, endCandidate ?? 0) : null;
+  const last = latestPointDay ? dayNumber(latestPointDay) : null;
   if (first === null || last === null || last < first || (last - first) / DAY_MS > 366) {
     return { runs: [], gaps: [], displayValue: null, latestComplete: null, returnPercent: null, firstDay: null, lastDay: null, completeDays: 0 };
   }

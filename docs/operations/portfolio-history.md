@@ -19,6 +19,8 @@ An operations refresh should enumerate the current linked-account set, then adva
 
 Derived daily values may be published only after source pages and price observations cover the exact interval. The read API must recheck the current linked-account set and source checkpoints; it must return a null point and reason when a daily result is absent or its evidence no longer passes these checks. A newly linked account needs its own backfill before it can be included in a complete aggregate. An unlinked account must disappear from the next read.
 
+`POST /api/portfolio/materialize` rechecks Privy account scope and publishes only the latest seven completed UTC days. Its bounded replay starts on 2023-01-01, accepts at most four Base accounts and 1,000 raw events, and refuses incomplete checkpoints or a truncated scan. The publication marker and derived rows commit in one D1 batch; history and tax reads select the marker's version rather than an uncommitted higher version. A request with unchanged inputs is idempotent. The current price adapter covers the recent seven-day window, so older ranges and inception return remain unavailable rather than being extrapolated. This endpoint is rate-limited and does not ingest missing source pages automatically.
+
 ## Reorganization response
 
 If the indexer block hash differs from canonical RPC evidence, mark affected raw events `reorged`, rewind the source checkpoint, and delete derived quantities, daily results, lots, and disposals from the affected day forward. Keep prior price observations, durable transaction instructions, customer security settings, consent, and audit records. Replay source pages and recalculate after finality. Do not keep displaying a previously complete point as complete during replay.

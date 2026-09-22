@@ -82,6 +82,15 @@ describe("authoritative portfolio chart", () => {
     expect(buildPortfolioChartModel(history([complete("2026-09-19", "100", "1"), complete("2026-09-20", "101", "not-a-value")])).returnPercent).toBeNull();
   });
 
+  it("does not manufacture a current-day gap after the last completed UTC day", () => {
+    const result = history([complete("2026-09-20", "100", "1"), complete("2026-09-21", "101", "1.01")]);
+    result.observedAt = "2026-09-22T12:00:00.000Z";
+    const model = buildPortfolioChartModel(result);
+    expect(model.lastDay).toBe("2026-09-21");
+    expect(model.gaps).toHaveLength(0);
+    expect(model.returnPercent).toBeCloseTo(1);
+  });
+
   it("moves keyboard range selection in both directions with wraparound", () => {
     expect(nextPortfolioRange("1M", "ArrowRight")).toBe("3M");
     expect(nextPortfolioRange("7D", "ArrowLeft")).toBe("1Y");
