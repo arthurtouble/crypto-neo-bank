@@ -15,6 +15,7 @@ describe("activity presentation", () => {
     expect(output).toContain('"Sent, once"');
     expect(output).toContain('"\'=HYPERLINK(""bad"")"');
     expect(output.split("\n")).toHaveLength(2);
+    expect(output).toContain("Current displayed activity page; Aurel intents capped at latest 50; not complete historical or tax coverage");
   });
 
   it("keeps tax support evidence explicit without inventing cost basis", () => {
@@ -22,5 +23,6 @@ describe("activity presentation", () => {
     expect(output).toContain('"Review required"');
     expect(output).toContain('"Unavailable"');
     expect(output).toContain('"Aave Protocol API and Base"');
+    expect(output).toContain("Current displayed activity page; Aurel intents capped at latest 50; not complete historical or tax coverage");
   });
 });

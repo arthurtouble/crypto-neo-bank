@@ -46,6 +46,7 @@ export function activityEventLabel(type: string) {
 }
 
 type ActivityExportRow = { createdAt: string; label: string; category: string; status: string; amount?: string; asset?: string; destination?: string; transactionHash?: string; chainId?: number; estimatedUsd?: number; source?: string; authority?: string };
+const activityExportScope = "Current displayed activity page; Aurel intents capped at latest 50; not complete historical or tax coverage";
 
 function csvCell(value: string | number | undefined) {
   const raw = String(value ?? "");
@@ -54,14 +55,14 @@ function csvCell(value: string | number | undefined) {
 }
 
 export function activityCsv(rows: ActivityExportRow[]) {
-  const header = ["Date", "Description", "Category", "Status", "Amount", "Asset", "Destination", "Transaction Hash", "Chain ID", "Source"];
-  return [header.map(csvCell).join(","), ...rows.map((row) => [row.createdAt, row.label, row.category, row.status, row.amount, row.asset, row.destination, row.transactionHash, row.chainId, row.source].map(csvCell).join(","))].join("\n");
+  const header = ["Date", "Description", "Category", "Status", "Amount", "Asset", "Destination", "Transaction Hash", "Chain ID", "Source", "Export scope"];
+  return [header.map(csvCell).join(","), ...rows.map((row) => [row.createdAt, row.label, row.category, row.status, row.amount, row.asset, row.destination, row.transactionHash, row.chainId, row.source, activityExportScope].map(csvCell).join(","))].join("\n");
 }
 
 export function taxSupportCsv(rows: ActivityExportRow[]) {
-  const header = ["Date", "Description", "Category", "Status", "Amount", "Asset", "Estimated USD", "Transaction Hash", "Chain ID", "Evidence Source", "Authority", "Tax Classification", "Cost Basis"];
+  const header = ["Date", "Description", "Category", "Status", "Amount", "Asset", "Estimated USD", "Transaction Hash", "Chain ID", "Evidence Source", "Authority", "Tax Classification", "Cost Basis", "Export scope"];
   return [
     header.map(csvCell).join(","),
-    ...rows.map((row) => [row.createdAt, row.label, row.category, row.status, row.amount, row.asset, row.estimatedUsd, row.transactionHash, row.chainId, row.source, row.authority, "Review required", "Unavailable"].map(csvCell).join(","))
+    ...rows.map((row) => [row.createdAt, row.label, row.category, row.status, row.amount, row.asset, row.estimatedUsd, row.transactionHash, row.chainId, row.source, row.authority, "Review required", "Unavailable", activityExportScope].map(csvCell).join(","))
   ].join("\n");
 }
