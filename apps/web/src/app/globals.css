@@ -1215,6 +1215,10 @@ body {
 .connectionPanel h3 { font-size: 17px; }
 .walletConnection strong { font-size: 13px; }
 .walletConnection small { font-size: 11px; }
+.externalWalletPanel .sourceCaption { font-size: 11px; line-height: 1.55; }
+.externalWalletRow { min-height: 74px; }
+.externalWalletRow strong { font-size: 13px; }
+.externalWalletRow small { font-size: 11px; }
 
 .exchangePanel { width: min(920px, 100%); margin-top: 0; padding: 30px; }
 .exchangePanel .panelHeading { margin-bottom: 24px; }
