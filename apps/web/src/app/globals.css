@@ -1203,6 +1203,45 @@ body {
 @media (max-width:900px) { .productShell{grid-template-columns:1fr}.productContent{padding:32px 22px 64px} }
 @media (max-width:650px) { .marketingHeader{padding-inline:20px}.marketingHero{padding:52px 20px 68px}.heroCopy h1{font-size:45px}.productContent{padding-inline:18px}.balanceHero{padding:26px 22px} }
 
+/* Product data uses a readable 11/14px compact scale instead of caption sizing. */
+.liveAssetTable { margin-top: 28px; }
+.liveAssetTable .tableHead { padding: 0 8px 12px 50px; font-family: var(--font-body); font-size: 11px; font-weight: 600; letter-spacing: .02em; text-transform: none; }
+.liveAssetTable .tableRow { min-height: 78px; padding-inline: 8px; font-size: 13px; }
+.liveAssetTable .tableRow strong { font-size: 14px; font-weight: 600; }
+.liveAssetTable .tableRow small { margin-top: 5px; font-size: 11px; }
+.liveAssetTable .assetToken { width: 36px; height: 36px; font-size: 12px; font-weight: 650; }
+.liveAssetTable .sourceDot { width: 7px; height: 7px; }
+.walletHeading h2 { font-size: 24px; }
+.connectionPanel h3 { font-size: 17px; }
+.walletConnection strong { font-size: 13px; }
+.walletConnection small { font-size: 11px; }
+
+.exchangePanel { width: min(920px, 100%); margin-top: 0; padding: 30px; }
+.exchangePanel .panelHeading { margin-bottom: 24px; }
+.exchangePanel .panelHeading h2 { font-size: 24px; }
+.exchangePanel .panelHeading p { margin: 7px 0 0; color: var(--text-secondary); font-size: 13px; }
+.exchangeForm { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: end; }
+.exchangeAsset { min-height: 88px; padding: 16px 18px; display: grid; grid-template-columns: 1fr auto; align-content: center; gap: 5px 14px; border: 1px solid var(--hairline-strong); border-radius: var(--radius-control); background: var(--surface-muted); }
+.exchangeAsset span { grid-column: 1 / -1; color: var(--text-tertiary); font-size: 11px; font-weight: 600; }
+.exchangeAsset strong { font-size: 16px; }
+.exchangeAsset small { align-self: center; color: var(--text-secondary); font-size: 12px; }
+.exchangeAsset.destination { background: color-mix(in srgb, var(--accent) 5%, var(--surface)); }
+.exchangeAmount { font-size: 11px; }
+.exchangeAmount input { min-height: 52px; font-family: var(--font-technical); font-size: 20px; }
+.exchangeForm > .button { min-height: 52px; }
+.exchangePanel .routeQuote { background: var(--surface-muted); border-color: var(--hairline-strong); }
+.exchangePanel .routeQuote span,.exchangePanel .routeQuote small { font-size: 11px; }
+.exchangePanel .routeQuote strong { font-size: 14px; }
+.exchangePanel .technicalDetails,.exchangePanel .authorityFootnote { font-size: 10px; }
+
+@media (max-width:650px) {
+  .liveAssetTable .tableRow { grid-template-columns: 40px 1fr auto; min-height: 74px; padding: 12px 4px; }
+  .liveAssetTable .tableRow strong { font-size: 14px; }
+  .liveAssetTable .tableRow small { font-size: 11px; }
+  .exchangePanel { padding: 22px; }
+  .exchangeForm,.exchangePanel .routeQuote { grid-template-columns: 1fr; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
 }
