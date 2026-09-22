@@ -7,6 +7,7 @@ import { ensureSubjectProfile } from "@/lib/profile/ensure";
 import { BetaAccessError, requireBetaAccess } from "@/lib/beta/access";
 import { FeatureUnavailableError, requireFeature } from "@/lib/features/flags";
 import { WalletOwnershipError, requireLinkedEvmWallet } from "@/lib/auth/wallet";
+import { ValuationError, valueTransfer } from "@/lib/transactions/valuation";
 
 async function fingerprint(value: unknown): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify(value)));
@@ -17,11 +18,11 @@ const intentSchema = z.object({
   type: z.enum(["transfer", "swap", "bridge", "earn_supply", "earn_withdraw", "earn_claim", "borrow", "repay"]),
   walletAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
   chainId: z.number().int().positive(),
-  asset: z.string().min(1).max(20),
+  asset: z.string().min(1).max(80),
   amount: z.string().regex(/^\d+(\.\d+)?$/),
   destination: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
-  estimatedUsd: z.number().nonnegative().optional(),
-  availableUsd: z.number().nonnegative().optional(),
+  // The default Zod object strips legacy browser estimates. They must never
+  // enter the fingerprint, stored request, or policy decision.
   disclosureVersion: z.string().min(1).max(80).default("transaction-risk-2026-09")
 });
 
@@ -36,6 +37,7 @@ export async function POST(request: Request) {
     await requireFeature(env.PROJECTION_DB, input.type === "swap" ? "swaps" : input.type === "bridge" ? "cross_chain" : input.type.startsWith("earn_") || ["borrow", "repay"].includes(input.type) ? "defi_actions" : "direct_transfers");
     const now = new Date();
     await ensureSubjectProfile(env.PROJECTION_DB, subject.subjectReference, now);
+    const valuation = await valueTransfer(input, { now });
     const requestFingerprint = await fingerprint(input);
     const matured = await env.PROJECTION_DB.prepare(`SELECT intent_id FROM transaction_intents
       WHERE subject_reference = ? AND request_fingerprint = ? AND status = 'cooling' AND release_at <= ?
@@ -43,13 +45,19 @@ export async function POST(request: Request) {
     const [securityProfile, addressRows, spentRow] = await env.PROJECTION_DB.batch([
       env.PROJECTION_DB.prepare("SELECT account_locked, enforce_address_book, daily_limit_usd, new_address_threshold_usd, step_up_threshold_usd, new_address_delay_seconds FROM security_profiles WHERE subject_reference = ?").bind(subject.subjectReference),
       env.PROJECTION_DB.prepare("SELECT address, available_at FROM address_book_entries WHERE subject_reference = ? AND chain_family = 'evm'").bind(subject.subjectReference),
-      env.PROJECTION_DB.prepare(`SELECT COALESCE(SUM(CAST(json_extract(request_json, '$.estimatedUsd') AS REAL)), 0) AS spent
-        FROM transaction_intents WHERE subject_reference = ? AND status IN ('submitted', 'confirmed') AND created_at >= ?`)
+      env.PROJECTION_DB.prepare(`SELECT COALESCE(SUM(CAST(v.usd_cents AS INTEGER)), 0) AS spent_cents,
+          SUM(CASE WHEN v.valuation_id IS NULL THEN 1 ELSE 0 END) AS missing
+        FROM transaction_intents i LEFT JOIN intent_valuations v ON v.rowid =
+          (SELECT MAX(v2.rowid) FROM intent_valuations v2 WHERE v2.intent_id = i.intent_id)
+        WHERE i.subject_reference = ? AND i.status IN ('submitted', 'confirmed') AND i.created_at >= ?`)
         .bind(subject.subjectReference, new Date(now.getTime() - 86_400_000).toISOString())
     ]);
     const profile = securityProfile.results[0] as unknown as { account_locked: number; enforce_address_book: number; daily_limit_usd: number; new_address_threshold_usd: number; step_up_threshold_usd: number; new_address_delay_seconds: number } | undefined;
     const saved = addressRows.results as unknown as Array<{ address: string; available_at: string }>;
-    const spentTodayUsd = Number((spentRow.results[0] as unknown as { spent: number } | undefined)?.spent ?? 0);
+    const spending = spentRow.results[0] as unknown as { spent_cents: number; missing: number } | undefined;
+    const spentCents = spending?.spent_cents ?? 0;
+    const spentValueUnavailable = Boolean(spending?.missing) || !Number.isSafeInteger(spentCents) || spentCents < 0;
+    const spentTodayUsd = spentValueUnavailable ? 0 : spentCents / 100;
     const decision = evaluateTransactionPolicy(input, {
       supportedChainIds: [8453, 1, 42161, 10, 137],
       allowlistedDestinations: saved.filter((item) => new Date(item.available_at) <= now).map((item) => item.address),
@@ -63,7 +71,11 @@ export async function POST(request: Request) {
       stepUpThresholdUsd: profile?.step_up_threshold_usd ?? 10_000,
       delayThresholdUsd: matured ? Number.MAX_SAFE_INTEGER : 25_000,
       delaySeconds: profile?.new_address_delay_seconds ?? 86_400
-    }, now);
+    }, now, valuation.usdCents);
+    if (spentValueUnavailable) {
+      decision.findings.push({ code: "spent_value_unavailable", level: "block", message: "Recent submitted activity lacks verified USD value; this action cannot be reviewed safely." });
+      decision.permitted = false;
+    }
     const intentId = crypto.randomUUID();
     const walletReference = `wallet:${ownedWalletAddress}`;
 
@@ -71,6 +83,9 @@ export async function POST(request: Request) {
       const expiresAt = new Date(now.getTime() + 15 * 60_000).toISOString();
       await env.PROJECTION_DB.batch([
         env.PROJECTION_DB.prepare("UPDATE transaction_intents SET status = 'reviewed', updated_at = ?, expires_at = ? WHERE intent_id = ? AND subject_reference = ? AND status = 'cooling'").bind(now.toISOString(), expiresAt, matured.intent_id, subject.subjectReference),
+        env.PROJECTION_DB.prepare(`INSERT INTO intent_valuations
+          (valuation_id, intent_id, asset_id, raw_units, decimals, price_usd, market_price_usd, price_source, price_observed_at, valued_at, usd_cents, policy_version, depeg_uncertainty)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(crypto.randomUUID(), matured.intent_id, valuation.assetId, valuation.rawUnits, valuation.decimals, valuation.priceUsd, valuation.marketPriceUsd, valuation.priceSource, valuation.priceObservedAt, valuation.valuedAt, valuation.usdCents, valuation.policyVersion, Number(valuation.depegUncertainty)),
         env.PROJECTION_DB.prepare(`INSERT INTO intent_events (event_id, intent_id, subject_reference, event_type, evidence_json, occurred_at) VALUES (?, ?, ?, 'cooling_completed', '{}', ?)`)
           .bind(crypto.randomUUID(), matured.intent_id, subject.subjectReference, now.toISOString())
       ]);
@@ -88,6 +103,9 @@ export async function POST(request: Request) {
         (intent_id, subject_reference, wallet_reference, intent_type, chain_id, request_json, policy_result_json, disclosure_version, status, created_at, updated_at, expires_at, release_at, request_fingerprint)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
         .bind(intentId, subject.subjectReference, walletReference, input.type, input.chainId, JSON.stringify(input), JSON.stringify(decision), input.disclosureVersion, cooling ? "cooling" : decision.permitted ? "reviewed" : "blocked", now.toISOString(), now.toISOString(), cooling && decision.releaseAt ? new Date(new Date(decision.releaseAt).getTime() + 15 * 60_000).toISOString() : new Date(now.getTime() + 15 * 60_000).toISOString(), decision.releaseAt ?? null, requestFingerprint),
+      env.PROJECTION_DB.prepare(`INSERT INTO intent_valuations
+        (valuation_id, intent_id, asset_id, raw_units, decimals, price_usd, market_price_usd, price_source, price_observed_at, valued_at, usd_cents, policy_version, depeg_uncertainty)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(crypto.randomUUID(), intentId, valuation.assetId, valuation.rawUnits, valuation.decimals, valuation.priceUsd, valuation.marketPriceUsd, valuation.priceSource, valuation.priceObservedAt, valuation.valuedAt, valuation.usdCents, valuation.policyVersion, Number(valuation.depegUncertainty)),
       env.PROJECTION_DB.prepare(`INSERT INTO intent_events (event_id, intent_id, subject_reference, event_type, evidence_json, occurred_at)
         VALUES (?, ?, ?, 'policy_evaluated', ?, ?)`)
         .bind(crypto.randomUUID(), intentId, subject.subjectReference, JSON.stringify({ permitted: decision.permitted, cooling, findings: decision.findings.map((item) => item.code) }), now.toISOString()),
@@ -103,6 +121,7 @@ export async function POST(request: Request) {
     if (error instanceof BetaAccessError) return Response.json({ error: error.code, message: error.message, traceId }, { status: 403 });
     if (error instanceof WalletOwnershipError) return Response.json({ error: "wallet_not_linked", message: error.message, traceId }, { status: 403, headers: { "Cache-Control": "no-store" } });
     if (error instanceof FeatureUnavailableError) return Response.json({ error: "feature_unavailable", message: error.message, traceId }, { status: 503 });
+    if (error instanceof ValuationError) return Response.json({ error: "valuation_unavailable", message: error.message, traceId }, { status: /Unsupported|Invalid amount/.test(error.message) ? 422 : 503, headers: { "Cache-Control": "no-store" } });
     if (error instanceof z.ZodError) return Response.json({ error: "invalid_intent", issues: error.issues, traceId }, { status: 400 });
     console.error(JSON.stringify({ level: "error", event: "intent.evaluate.failed", traceId, message: error instanceof Error ? error.message : "unknown" }));
     return Response.json({ error: "intent_unavailable", message: "The transaction could not be reviewed.", traceId }, { status: 503 });

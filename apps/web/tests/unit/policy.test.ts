@@ -13,49 +13,62 @@ const baseIntent = {
 
 describe("transaction policy", () => {
   it("always requires customer wallet confirmation", () => {
-    expect(evaluateTransactionPolicy(baseIntent).requiresWalletConfirmation).toBe(true);
+    expect(evaluateTransactionPolicy(baseIntent, defaultTransactionPolicy, new Date(), "100000").requiresWalletConfirmation).toBe(true);
   });
 
   it("blocks unsupported chains", () => {
-    const decision = evaluateTransactionPolicy({ ...baseIntent, chainId: 999999 });
+    const decision = evaluateTransactionPolicy({ ...baseIntent, chainId: 999999 }, defaultTransactionPolicy, new Date(), "100000");
     expect(decision.permitted).toBe(false);
     expect(decision.findings.some((item) => item.code === "unsupported_chain")).toBe(true);
   });
 
   it("enforces an enabled destination allowlist", () => {
-    const decision = evaluateTransactionPolicy(baseIntent, { ...defaultTransactionPolicy, enforceAllowlist: true });
+    const decision = evaluateTransactionPolicy(baseIntent, { ...defaultTransactionPolicy, enforceAllowlist: true }, new Date(), "100000");
     expect(decision.permitted).toBe(false);
     expect(decision.findings.some((item) => item.code === "destination_not_allowed")).toBe(true);
   });
 
   it("requires step-up and delays large transfers", () => {
     const now = new Date("2026-09-21T12:00:00.000Z");
-    const decision = evaluateTransactionPolicy({ ...baseIntent, amount: "30000", estimatedUsd: 30_000 }, defaultTransactionPolicy, now);
+    const decision = evaluateTransactionPolicy({ ...baseIntent, amount: "30000", estimatedUsd: 30_000 }, defaultTransactionPolicy, now, "3000000");
     expect(decision.requiresStepUp).toBe(true);
     expect(decision.releaseAt).toBe("2026-09-22T12:00:00.000Z");
   });
 
   it("warns without blocking when a reserve target would be crossed", () => {
     const decision = evaluateTransactionPolicy({ ...baseIntent, type: "earn_supply", estimatedUsd: 45_000 }, { ...defaultTransactionPolicy, dailyLimitUsd: 100_000 });
-    expect(decision.permitted).toBe(true);
-    expect(decision.findings.some((item) => item.code === "reserve_below_target")).toBe(true);
+    expect(decision.permitted).toBe(false);
+    expect(decision.findings.some((item) => item.code === "value_unavailable")).toBe(true);
   });
 
   it("blocks every outgoing intent while the account is locked", () => {
-    const decision = evaluateTransactionPolicy(baseIntent, { ...defaultTransactionPolicy, accountLocked: true });
+    const decision = evaluateTransactionPolicy(baseIntent, { ...defaultTransactionPolicy, accountLocked: true }, new Date(), "100000");
     expect(decision.permitted).toBe(false);
     expect(decision.findings.some((item) => item.code === "account_locked")).toBe(true);
   });
 
   it("requires a cooled saved destination above the configured threshold", () => {
-    const decision = evaluateTransactionPolicy(baseIntent, { ...defaultTransactionPolicy, newAddressThresholdUsd: 500 });
+    const decision = evaluateTransactionPolicy(baseIntent, { ...defaultTransactionPolicy, newAddressThresholdUsd: 500 }, new Date(), "100000");
     expect(decision.permitted).toBe(false);
     expect(decision.findings.some((item) => item.code === "new_destination_threshold")).toBe(true);
   });
 
   it("blocks an intent that exceeds the rolling daily limit", () => {
-    const decision = evaluateTransactionPolicy(baseIntent, { ...defaultTransactionPolicy, spentTodayUsd: 24_500, dailyLimitUsd: 25_000, newAddressThresholdUsd: 5_000 });
+    const decision = evaluateTransactionPolicy(baseIntent, { ...defaultTransactionPolicy, spentTodayUsd: 24_500, dailyLimitUsd: 25_000, newAddressThresholdUsd: 5_000 }, new Date(), "100000");
     expect(decision.permitted).toBe(false);
     expect(decision.findings.some((item) => item.code === "daily_limit_exceeded")).toBe(true);
+  });
+
+  it("never treats browser estimates as trusted value", () => {
+    const decision = evaluateTransactionPolicy({ ...baseIntent, amount: "30000", estimatedUsd: 0, availableUsd: 999999 });
+    expect(decision.permitted).toBe(false);
+    expect(decision.findings.some((item) => item.code === "value_unavailable")).toBe(true);
+  });
+
+  it("applies limits, step-up and delay using trusted cents despite a zero browser estimate", () => {
+    const decision = evaluateTransactionPolicy({ ...baseIntent, amount: "30000", estimatedUsd: 0 }, { ...defaultTransactionPolicy, dailyLimitUsd: 100_000, newAddressThresholdUsd: 100_000 }, new Date("2026-09-21T12:00:00Z"), "3000000");
+    expect(decision.permitted).toBe(true);
+    expect(decision.requiresStepUp).toBe(true);
+    expect(decision.releaseAt).toBe("2026-09-22T12:00:00.000Z");
   });
 });

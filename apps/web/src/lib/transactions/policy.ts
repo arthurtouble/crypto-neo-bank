@@ -50,9 +50,13 @@ export const defaultTransactionPolicy: TransactionPolicy = {
 export function evaluateTransactionPolicy(
   input: TransactionIntentInput,
   policy: TransactionPolicy = defaultTransactionPolicy,
-  now = new Date()
+  now = new Date(),
+  trustedUsdCents?: string
 ): PolicyDecision {
   const findings: PolicyFinding[] = [];
+  const valueCents = trustedUsdCents && /^\d+$/.test(trustedUsdCents) ? BigInt(trustedUsdCents) : undefined;
+  const validValue = valueCents !== undefined && valueCents > 0n && valueCents <= BigInt(Number.MAX_SAFE_INTEGER);
+  const reaches = (thresholdUsd: number) => validValue && valueCents >= BigInt(Math.ceil(thresholdUsd * 100));
   const destination = input.destination.toLowerCase();
   const allowlisted = policy.allowlistedDestinations.map((item) => item.toLowerCase()).includes(destination);
   const cooling = policy.coolingDestinations.map((item) => item.toLowerCase()).includes(destination);
@@ -74,23 +78,23 @@ export function evaluateTransactionPolicy(
     findings.push({ code: "destination_cooling", level: "block", message: "This saved destination is still in its security cooling period." });
   } else if (input.type === "transfer" && policy.enforceAllowlist && !allowlisted) {
     findings.push({ code: "destination_not_allowed", level: "block", message: "This wallet policy only permits saved destinations." });
-  } else if (input.type === "transfer" && !allowlisted && input.estimatedUsd !== undefined && input.estimatedUsd >= policy.newAddressThresholdUsd) {
+  } else if (input.type === "transfer" && !allowlisted && reaches(policy.newAddressThresholdUsd)) {
     findings.push({ code: "new_destination_threshold", level: "block", message: "Save this destination and complete its cooling period before sending this amount." });
   } else if (input.type === "transfer" && !allowlisted) {
     findings.push({ code: "new_destination", level: "warning", message: "This destination is not in the customer’s address book." });
   }
-  if (input.estimatedUsd === undefined) {
-    findings.push({ code: "value_unavailable", level: "warning", message: "USD value is unavailable; value-based controls cannot be evaluated." });
+  if (!validValue) {
+    findings.push({ code: "value_unavailable", level: "block", message: "An independent USD valuation is required before this action can be reviewed." });
   }
-  if (input.estimatedUsd !== undefined && input.availableUsd !== undefined && input.availableUsd - input.estimatedUsd < policy.reserveFloorUsd) {
-    findings.push({ code: "reserve_below_target", level: "warning", message: "This action would move the immediately available balance below the configured reserve target." });
-  }
-  if (input.estimatedUsd !== undefined && policy.spentTodayUsd + input.estimatedUsd > policy.dailyLimitUsd) {
+  // A browser-provided availableUsd is not a verified balance, so reserve
+  // compliance cannot be claimed from it.
+  findings.push({ code: "reserve_unavailable", level: "information", message: "Reserve impact is unavailable until an independent balance is verified." });
+  if (validValue && BigInt(Math.ceil(policy.spentTodayUsd * 100)) + valueCents > BigInt(Math.floor(policy.dailyLimitUsd * 100))) {
     findings.push({ code: "daily_limit_exceeded", level: "block", message: "This action exceeds your rolling 24-hour transaction limit." });
   }
 
-  const requiresStepUp = input.estimatedUsd === undefined || input.estimatedUsd >= policy.stepUpThresholdUsd;
-  const delayed = input.estimatedUsd !== undefined && input.estimatedUsd >= policy.delayThresholdUsd;
+  const requiresStepUp = !validValue || Boolean(reaches(policy.stepUpThresholdUsd));
+  const delayed = Boolean(reaches(policy.delayThresholdUsd));
   const releaseAt = delayed ? new Date(now.getTime() + policy.delaySeconds * 1000).toISOString() : undefined;
   if (delayed) findings.push({ code: "large_transfer_delay", level: "information", message: "The configured large-transfer review period applies before submission." });
 
