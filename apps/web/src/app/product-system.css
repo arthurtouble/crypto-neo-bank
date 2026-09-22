@@ -1,0 +1,364 @@
+/*
+ * Aurel product design-system contract.
+ *
+ * This file is loaded after legacy and identity styles so semantic type roles
+ * remain authoritative. Keep page-specific layout in globals.css; keep the
+ * readable product scale, control states, and shared rhythm here.
+ */
+
+:root {
+  --type-caption: 11px;
+  --type-label: 12px;
+  --type-body-small: 13px;
+  --type-body: 14px;
+  --type-row-title: 14px;
+  --type-control: 13px;
+  --type-panel-title: 21px;
+  --leading-caption: 1.45;
+  --leading-body: 1.55;
+  --row-compact: 64px;
+  --row-standard: 76px;
+}
+
+/* Product-wide foundations */
+.productShell {
+  font-size: var(--type-body);
+  line-height: var(--leading-body);
+}
+
+.productShell .pageIntro h1 {
+  font-family: "Archivo Variable", "Satoshi", system-ui, sans-serif;
+  font-size: clamp(34px, 3vw, 42px);
+  font-weight: 620;
+  line-height: 1.08;
+  letter-spacing: -.04em;
+}
+
+.productShell .eyebrow,
+.productShell .sourceCaption,
+.productShell small {
+  font-size: var(--type-caption);
+  line-height: var(--leading-caption);
+}
+
+.productShell .eyebrow {
+  font-family: var(--font-body);
+  font-weight: 650;
+  letter-spacing: .055em;
+}
+
+.productShell .panelHeading h2 { font-size: var(--type-panel-title); }
+.productShell .panelHeading h3 { font-size: 17px; }
+.productShell .panelHeading > a { font-size: var(--type-label); }
+.productShell .button { font-size: var(--type-control); }
+.productShell .statusBadge {
+  min-height: 24px;
+  padding-inline: 8px;
+  font-size: var(--type-caption);
+  font-weight: 620;
+}
+
+.productShell .fieldLabel,
+.productShell .amountField label,
+.productShell .exchangeAmount {
+  font-size: var(--type-label);
+}
+
+.productShell .fieldLabel input,
+.productShell .fieldLabel select,
+.productShell .requestTextarea {
+  min-height: 44px;
+  font-size: var(--type-body);
+}
+
+.productShell .formError,
+.productShell .formSuccess,
+.productShell .formWarning,
+.productShell .securityMessage,
+.productShell .dialogNotice,
+.productShell .notice {
+  font-size: var(--type-label) !important;
+  line-height: var(--leading-body);
+}
+
+/* Overview and portfolio data */
+.productShell .balanceLabel,
+.productShell .heroDelta,
+.productShell .metric > span,
+.productShell .metric small,
+.productShell .allocationRing span,
+.productShell .allocationList span,
+.productShell .allocationList small,
+.productShell .incomeStrip,
+.productShell .riskItem div > span,
+.productShell .riskItem small,
+.productShell .riskItem > strong,
+.productShell .progressPanel p,
+.productShell .progressPanel a,
+.productShell .progressPanel .panelHeading > span,
+.productShell .conciergeCard > span,
+.productShell .conciergeCard p,
+.productShell .conciergeCard button {
+  font-size: var(--type-label);
+}
+
+.productShell .heroAmount small { font-size: var(--type-caption); }
+.productShell .metric strong { font-size: 18px; }
+.productShell .activityRow { min-height: var(--row-standard); }
+.productShell .activityRow > div:nth-child(2) strong,
+.productShell .activityAmount strong { font-size: var(--type-row-title); }
+.productShell .activityRow small { font-size: var(--type-caption); }
+
+/* Transfers: options, capabilities, and account details */
+.productShell .moneyHero { padding: 30px 32px; }
+.productShell .moneyHero h2 { font-size: 24px; }
+.productShell .moneyHero p { font-size: var(--type-body-small); }
+.productShell .moneyCurrency {
+  width: 44px;
+  height: 44px;
+  font-size: var(--type-caption);
+  font-weight: 650;
+}
+
+.productShell .transferPanel,
+.productShell .railsPanel { padding: 28px; }
+.productShell .transferChoices > button {
+  min-height: var(--row-standard);
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  gap: 14px;
+  transition: color 140ms ease, background-color 140ms ease;
+}
+.productShell .transferChoices > button:hover {
+  background: color-mix(in srgb, var(--accent) 5%, transparent);
+}
+.productShell .transferChoices > button > span {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-control);
+}
+.productShell .transferChoices strong {
+  font-size: var(--type-row-title);
+  font-weight: 620;
+}
+.productShell .transferChoices small {
+  margin-top: 4px;
+  font-size: var(--type-label);
+}
+.productShell .transferChoices em {
+  font-size: var(--type-label);
+  font-weight: 650;
+}
+
+.productShell .railRows > div {
+  min-height: var(--row-compact);
+  grid-template-columns: 28px minmax(130px, 1fr) minmax(120px, 1fr) auto;
+  gap: 14px;
+}
+.productShell .railRows > div > span { width: 26px; height: 26px; }
+.productShell .railRows strong {
+  font-size: var(--type-body-small);
+  font-weight: 620;
+}
+.productShell .railRows small,
+.productShell .railRows b {
+  font-size: var(--type-caption);
+  line-height: var(--leading-caption);
+}
+.productShell .bankDetails > span,
+.productShell .bankDetails strong,
+.productShell .setupPrompt p,
+.productShell .technicalDetails {
+  font-size: var(--type-label);
+}
+
+/* Assets, exchange, earn, borrow, and markets */
+.productShell .tableHead {
+  font-family: var(--font-body);
+  font-size: var(--type-caption);
+  font-weight: 650;
+  letter-spacing: .02em;
+  text-transform: none;
+}
+.productShell .tableRow {
+  min-height: var(--row-standard);
+  font-size: var(--type-body-small);
+}
+.productShell .tableRow strong { font-size: var(--type-row-title); }
+.productShell .tableRow small { font-size: var(--type-caption); }
+.productShell .connectionPanel > p:not(.eyebrow) { font-size: var(--type-body-small); }
+.productShell .walletConnection { min-height: var(--row-compact); }
+.productShell .walletConnection strong { font-size: var(--type-body-small); }
+.productShell .walletConnection small { font-size: var(--type-caption); }
+.productShell .strategyCard > p:not(.eyebrow) { font-size: var(--type-body-small); }
+.productShell .strategyMetrics span,
+.productShell .exposureList span { font-size: var(--type-caption); }
+.productShell .strategyMetrics strong { font-size: var(--type-body-small); }
+.productShell .routeQuote span,
+.productShell .routeQuote small,
+.productShell .borrowHealth span,
+.productShell .borrowHealth small,
+.productShell .rateRow small,
+.productShell .riskFineprint,
+.productShell .authorityFootnote { font-size: var(--type-caption); }
+.productShell .routeQuote strong,
+.productShell .rateRow strong { font-size: var(--type-body-small); }
+.productShell .marketCard > p { font-size: var(--type-body-small); }
+.productShell .marketGates strong { font-size: var(--type-label); }
+.productShell .marketGates small,
+.productShell .frameworkSteps span,
+.productShell .frameworkSteps strong { font-size: var(--type-caption); }
+
+/* Cards, benefits, and concierge */
+.productShell .membershipTop,
+.productShell .membershipBottom,
+.productShell .membershipCard small,
+.productShell .membershipCard strong { font-size: var(--type-caption); }
+.productShell .demoCardLarge .membershipBottom small { font-size: var(--type-caption); }
+.productShell .cardControlRow { min-height: var(--row-standard); }
+.productShell .cardControlRow strong { font-size: var(--type-row-title); }
+.productShell .cardControlRow small { font-size: var(--type-label); }
+.productShell .benefitCard p { font-size: var(--type-body-small); }
+.productShell .benefitCard button,
+.productShell .membershipKicker,
+.productShell .membershipSummary p,
+.productShell .membershipScore small,
+.productShell .nextTier span,
+.productShell .nextTier small { font-size: var(--type-label); }
+.productShell .conciergeServices strong { font-size: var(--type-row-title); }
+.productShell .conciergeServices small { font-size: var(--type-label); }
+.productShell .conciergeHeader > span,
+.productShell .message p,
+.productShell .conciergeComposer textarea,
+.productShell .conciergePrompts > button { font-size: var(--type-body-small); }
+
+/* Security, settings, status, and setup */
+.productShell .securityChecklist > div,
+.productShell .settingRow { min-height: var(--row-standard); }
+.productShell .securityChecklist strong,
+.productShell .settingRow strong,
+.productShell .securityPrinciple strong,
+.productShell .componentStatusRow strong { font-size: var(--type-row-title); }
+.productShell .securityChecklist small,
+.productShell .settingRow small,
+.productShell .securityPrinciple small,
+.productShell .componentStatusRow small { font-size: var(--type-label); }
+.productShell .securityChecklist button,
+.productShell .securityState,
+.productShell .settingRow button,
+.productShell .settingRow a,
+.productShell .settingsToggle,
+.productShell .settingRow select { font-size: var(--type-label); }
+.productShell .addressList strong { font-size: var(--type-body-small); }
+.productShell .addressList small,
+.productShell .addressList > div > span,
+.productShell .emptyAddress { font-size: var(--type-caption); }
+.productShell .activationHeader p:not(.eyebrow) { font-size: var(--type-body-small); }
+.productShell .activationTasks strong { font-size: var(--type-body-small); }
+.productShell .activationTasks small,
+.productShell .activationTasks a b,
+.productShell .activationAcknowledge { font-size: var(--type-caption); }
+.productShell .supportRows > div,
+.productShell .supportRows strong { font-size: var(--type-body-small); }
+.productShell .supportRows .supportHead,
+.productShell .supportRows small { font-size: var(--type-caption); }
+
+/* Operator and sandbox surfaces use the same readable floor. */
+.productShell .scenarioStrip strong,
+.productShell .scenarioStrip small,
+.productShell .sandboxSummary span,
+.productShell .sandboxSummary small,
+.productShell .journeyList strong,
+.productShell .journeyList small,
+.productShell .journeyList b,
+.productShell .requiredActions,
+.productShell .requiredActions strong,
+.productShell .commandPanel > p,
+.productShell .commandGrid strong,
+.productShell .commandGrid small,
+.productShell .receiptPanel .panelHeading > span,
+.productShell .receiptList strong,
+.productShell .receiptList small,
+.productShell .receiptState,
+.productShell .opsMetrics span,
+.productShell .opsMetrics small,
+.productShell .opsIssueList strong,
+.productShell .opsIssueList small,
+.productShell .opsIssueList b,
+.productShell .opsActions button { font-size: var(--type-caption); }
+.productShell .emptyState span { font-size: var(--type-label); }
+
+/* Portalled dialogs and command menu sit outside .productShell. */
+.financialModal .fieldLabel,
+.dialogContent .fieldLabel { font-size: var(--type-label); }
+.financialModal .fieldLabel input,
+.financialModal .fieldLabel select,
+.dialogContent .fieldLabel input,
+.dialogContent .fieldLabel select { font-size: var(--type-body); }
+.financialModal > p,
+.financialModal form > p:not(.eyebrow),
+.financialModal .setupPrompt p,
+.financialModal .bankDetails > span,
+.financialModal .bankDetails strong,
+.financialModal .technicalDetails,
+.dialogContent .transferMeta span,
+.dialogContent .transferMeta strong,
+.dialogContent .fundingDetails dt,
+.dialogContent .fundingDetails dd,
+.dialogContent .fundingDetails > small,
+.dialogContent .addressBlock,
+.dialogContent .modalRisk,
+.dialogContent .transactionSummary span,
+.dialogContent .transactionSummary strong,
+.dialogContent .consentCheck strong,
+.dialogContent .consentCheck small,
+.dialogContent .authorityFootnote {
+  font-size: var(--type-label);
+  line-height: var(--leading-body);
+}
+.commandResults > p,
+.commandResults small,
+.commandFooter { font-size: var(--type-caption); }
+.commandResults strong { font-size: var(--type-body-small); }
+
+@media (max-width: 720px) {
+  .productShell .productHeader {
+    padding-inline: 16px;
+    gap: 10px;
+  }
+  .productShell .commandSearch {
+    width: 36px;
+    min-width: 36px;
+    padding: 0;
+    justify-content: center;
+  }
+  .productShell .commandSearch kbd { display: none; }
+  .productShell .headerRight {
+    min-width: 0;
+    margin-left: auto;
+    gap: 8px;
+  }
+  .productShell .privyAccountButton {
+    width: 36px;
+    min-width: 36px;
+    min-height: 36px;
+    padding: 0;
+    justify-content: center;
+  }
+  .productShell .privyAccountButton span { display: none; }
+  .productShell .productContent { padding-inline: 18px; }
+  .productShell .moneyHero { padding: 24px; }
+  .productShell .transferPanel,
+  .productShell .railsPanel { padding: 22px; }
+  .productShell .railRows > div {
+    min-height: var(--row-standard);
+    grid-template-columns: 28px minmax(0, 1fr) auto;
+  }
+  .productShell .railRows small { display: block; grid-column: 2; }
+  .productShell .railRows b { grid-column: 3; grid-row: 1 / span 2; text-align: right; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .productShell *,
+  .productShell *::before,
+  .productShell *::after { transition-duration: .01ms !important; }
+}

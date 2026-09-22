@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "@fontsource-variable/archivo";
 import "./globals.css";
 import "./identity.css";
+import "./product-system.css";
 
 export const metadata: Metadata = {
   title: "Aurel — Your financial life, in one place",
