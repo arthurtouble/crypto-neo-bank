@@ -33,7 +33,7 @@ export async function POST(request: Request) {
     await enforceRateLimit(env.PROJECTION_DB, { namespace: "intent", subject: subject.subjectReference, limit: 30, windowSeconds: 60 });
     const input = intentSchema.parse(await request.json());
     const ownedWalletAddress = await requireLinkedEvmWallet(subject.subjectReference, input.walletAddress);
-    await requireFeature(env.PROJECTION_DB, input.type === "bridge" ? "cross_chain" : input.type.startsWith("earn_") || ["borrow", "repay"].includes(input.type) ? "defi_actions" : "direct_transfers");
+    await requireFeature(env.PROJECTION_DB, input.type === "swap" ? "swaps" : input.type === "bridge" ? "cross_chain" : input.type.startsWith("earn_") || ["borrow", "repay"].includes(input.type) ? "defi_actions" : "direct_transfers");
     const now = new Date();
     await ensureSubjectProfile(env.PROJECTION_DB, subject.subjectReference, now);
     const requestFingerprint = await fingerprint(input);

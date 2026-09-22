@@ -12,7 +12,7 @@ export async function POST(request: Request) {
   try {
     const subject = await requireVerifiedSubject(request);
     await requireBetaAccess(env.PROJECTION_DB, subject.subjectReference);
-    await requireFeature(env.PROJECTION_DB, "direct_transfers");
+    await requireFeature(env.PROJECTION_DB, "swaps");
     await enforceRateLimit(env.PROJECTION_DB, { namespace: "swap_quote", subject: subject.subjectReference, limit: 20, windowSeconds: 600 });
     const input = swapQuoteRequestSchema.parse(await request.json());
     const fromAddress = await requireLinkedEvmWallet(subject.subjectReference, input.fromAddress);

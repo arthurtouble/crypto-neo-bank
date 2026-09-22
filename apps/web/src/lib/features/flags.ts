@@ -1,8 +1,9 @@
-export const featureKeys = ["direct_transfers", "cross_chain", "defi_actions", "concierge", "membership_preview", "tokenized_markets", "fiat_accounts", "payment_cards"] as const;
+export const featureKeys = ["direct_transfers", "swaps", "cross_chain", "defi_actions", "concierge", "membership_preview", "tokenized_markets", "fiat_accounts", "payment_cards"] as const;
 export type FeatureKey = (typeof featureKeys)[number];
 
 const safeDefaults: Record<FeatureKey, boolean> = {
   direct_transfers: true,
+  swaps: false,
   cross_chain: true,
   defi_actions: true,
   concierge: true,
@@ -24,4 +25,3 @@ export async function featureEnabled(database: D1Database, key: FeatureKey): Pro
 export async function requireFeature(database: D1Database, key: FeatureKey): Promise<void> {
   if (!await featureEnabled(database, key)) throw new FeatureUnavailableError(key);
 }
-
