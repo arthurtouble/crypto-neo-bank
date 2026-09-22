@@ -77,7 +77,7 @@ Use these labels consistently in navigation, quick actions, dialogs, receipts, s
 
 - [ ] Broader swap universe with multi-provider quote comparison. Twelve curated assets, live wallet balance and Max, customer-selected slippage, pre-signature simulation, and LI.FI-routed comparison across available 1inch, KyberSwap, SushiSwap, and Nordstern routes are live; more assets and independent direct-provider fallbacks remain.
 - [ ] Jurisdiction- and eligibility-aware tokenized market execution.
-- [ ] Consolidated DeFi positions, claimable rewards, cost basis, realized/unrealized return, and tax export. Live Aave positions and source-reported Base rewards are shown in Portfolio, and reward claims require policy review, simulation, and wallet confirmation; broader protocols, performance accounting, and tax export remain.
+- [ ] Consolidated DeFi positions, claimable rewards, cost basis, realized/unrealized return, and tax export. Live Aave positions, source-reported Base rewards, deduplicated protocol activity, and evidence-aware activity/tax-support CSVs are live; reward claims require policy review, simulation, and wallet confirmation. Broader protocols and complete cost-basis/performance accounting remain.
 - [ ] Spend-from-yield and collateral-backed card modes only after provider and legal approval.
 - [ ] Membership rewards ledger backed by the rewards provider, with transparent caps and qualification history.
 - [ ] Joint, family, and business accounts only when ownership and authority are provider-enforced.

@@ -7,7 +7,11 @@ const labels: Record<string, string> = {
   earn_withdraw: "Withdrawn from Earn",
   earn_claim: "Claimed rewards",
   borrow: "Borrowed",
-  repay: "Repaid"
+  repay: "Repaid",
+  liquidation: "Collateral liquidated",
+  collateral_enabled: "Enabled collateral",
+  collateral_disabled: "Disabled collateral",
+  defi_activity: "DeFi activity"
 };
 
 export function activityLabel(type: string) {
@@ -17,8 +21,8 @@ export function activityLabel(type: string) {
 export function activityCategory(type: string): ActivityCategory {
   if (type === "transfer") return "Transfers";
   if (type === "bridge") return "Swaps";
-  if (type.startsWith("earn_")) return "Earn";
-  if (type === "borrow" || type === "repay") return "Borrow";
+  if (type.startsWith("earn_") || type.startsWith("collateral_")) return "Earn";
+  if (type === "borrow" || type === "repay" || type === "liquidation") return "Borrow";
   return "Other";
 }
 
@@ -41,8 +45,23 @@ export function activityEventLabel(type: string) {
   return type.replace(/^intent_/, "").replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-export function activityCsv(rows: Array<{ createdAt: string; label: string; category: string; status: string; amount?: string; asset?: string; destination?: string; transactionHash?: string }>) {
-  const escape = (value: string | undefined) => `"${String(value ?? "").replaceAll('"', '""')}"`;
-  const header = ["Date", "Description", "Category", "Status", "Amount", "Asset", "Destination", "Transaction Hash"];
-  return [header.map(escape).join(","), ...rows.map((row) => [row.createdAt, row.label, row.category, row.status, row.amount, row.asset, row.destination, row.transactionHash].map(escape).join(","))].join("\n");
+type ActivityExportRow = { createdAt: string; label: string; category: string; status: string; amount?: string; asset?: string; destination?: string; transactionHash?: string; chainId?: number; estimatedUsd?: number; source?: string; authority?: string };
+
+function csvCell(value: string | number | undefined) {
+  const raw = String(value ?? "");
+  const safe = /^[=+\-@]/.test(raw) ? `'${raw}` : raw;
+  return `"${safe.replaceAll('"', '""')}"`;
+}
+
+export function activityCsv(rows: ActivityExportRow[]) {
+  const header = ["Date", "Description", "Category", "Status", "Amount", "Asset", "Destination", "Transaction Hash", "Chain ID", "Source"];
+  return [header.map(csvCell).join(","), ...rows.map((row) => [row.createdAt, row.label, row.category, row.status, row.amount, row.asset, row.destination, row.transactionHash, row.chainId, row.source].map(csvCell).join(","))].join("\n");
+}
+
+export function taxSupportCsv(rows: ActivityExportRow[]) {
+  const header = ["Date", "Description", "Category", "Status", "Amount", "Asset", "Estimated USD", "Transaction Hash", "Chain ID", "Evidence Source", "Authority", "Tax Classification", "Cost Basis"];
+  return [
+    header.map(csvCell).join(","),
+    ...rows.map((row) => [row.createdAt, row.label, row.category, row.status, row.amount, row.asset, row.estimatedUsd, row.transactionHash, row.chainId, row.source, row.authority, "Review required", "Unavailable"].map(csvCell).join(","))
+  ].join("\n");
 }

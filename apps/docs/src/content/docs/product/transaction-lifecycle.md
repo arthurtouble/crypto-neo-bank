@@ -35,6 +35,19 @@ States do not move arbitrarily. For example, a cooling instruction must be revie
 
 Open an item in Activity to see its recorded timeline. It can include security review, completion of a security delay, network submission, and final confirmation or failure. Timeline entries come from append-only intent events; the blockchain or provider still controls settlement truth.
 
+For Aave on Base, Activity also reads current protocol history from Aave's official activity source. Aurel removes a duplicate when the same transaction and action already have an Aurel receipt. The source remains visible on each record so an Aurel workflow entry is never presented as if it were a protocol observation.
+
+## Exports and coverage
+
+The Export dialog describes the records in the current filtered view before creating a file. It shows how many rows have network receipts, how many came directly from the protocol source, and how many carry a source-reported or action-time USD estimate.
+
+- **Activity CSV** includes dates, amounts, statuses, sources and transaction hashes.
+- **Tax Support CSV** adds evidence authority and explicit placeholders for tax classification and cost basis.
+
+Aurel does not infer a purchase price, disposal method, jurisdictional tax treatment, gain or loss when the evidence is incomplete. Missing cost basis stays **Unavailable**, and tax classification stays **Review required**. The file is supporting evidence, not a bank statement, tax return or tax advice.
+
+Aave activity is paginated and can be temporarily unavailable. The export warns when the current protocol response is partial or missing instead of silently presenting the file as complete.
+
 ## Instruction fingerprints
 
 A high-value action that completes its cooling period is not released as a blank approval. Aurel compares the network, asset, amount, destination, and relevant call data with the original instruction. If a material field changes, the previous review does not apply.

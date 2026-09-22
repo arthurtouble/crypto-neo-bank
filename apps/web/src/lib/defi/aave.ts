@@ -66,6 +66,94 @@ export async function getAaveBasePosition(user: string) {
   };
 }
 
+export type AaveBaseActivityItem = {
+  id: string;
+  type: "earn_supply" | "earn_withdraw" | "borrow" | "repay" | "liquidation" | "collateral_enabled" | "collateral_disabled" | "defi_activity";
+  status: "confirmed";
+  transactionHash: string;
+  createdAt: string;
+  chainId: 8453;
+  asset?: string;
+  amount?: string;
+  estimatedUsd?: number;
+  destination: "Aave V3";
+  source: "Aave V3";
+  sourceKind: "chain";
+  authority: "Aave Protocol API and Base";
+  events: Array<{ type: "intent_confirmed"; occurredAt: string }>;
+};
+
+export type AaveBaseActivity = {
+  items: AaveBaseActivityItem[];
+  partial: boolean;
+  nextCursor?: string;
+  sourceStatus: "available" | "none" | "unavailable";
+};
+
+function activityType(typeName: string, enabled?: boolean): AaveBaseActivityItem["type"] {
+  const normalized = typeName.toLowerCase();
+  if (normalized.includes("collateral")) return enabled === false ? "collateral_disabled" : "collateral_enabled";
+  if (normalized.includes("liquidation")) return "liquidation";
+  if (normalized.includes("repay")) return "repay";
+  if (normalized.includes("borrow")) return "borrow";
+  if (normalized.includes("withdraw") || normalized.includes("redeem")) return "earn_withdraw";
+  if (normalized.includes("supply") || normalized.includes("deposit")) return "earn_supply";
+  return "defi_activity";
+}
+
+function amountValue(value: unknown): string | undefined {
+  if (typeof value === "string" || typeof value === "number") return String(value);
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  return firstScalar(value, new Set(["value", "amount"]));
+}
+
+export function normalizeAaveBaseActivity(value: unknown): AaveBaseActivity {
+  if (value === null || value === undefined) return { items: [], partial: false, sourceStatus: "unavailable" };
+  const root = recordAt(value, ["data", "v3"]);
+  const rawItems = Array.isArray(root?.items) ? root.items : [];
+  const items = rawItems.flatMap((item): AaveBaseActivityItem[] => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return [];
+    const record = item as Record<string, unknown>;
+    const transactionHash = typeof record.txHash === "string" && /^0x[a-fA-F0-9]{64}$/.test(record.txHash) ? record.txHash : undefined;
+    const createdAt = typeof record.timestamp === "string" && Number.isFinite(Date.parse(record.timestamp)) ? new Date(record.timestamp).toISOString() : undefined;
+    if (!transactionHash || !createdAt) return [];
+    const reserve = record.reserve && typeof record.reserve === "object" && !Array.isArray(record.reserve) ? record.reserve as Record<string, unknown> : undefined;
+    const amount = amountValue(record.amount);
+    const priceUsd = amountValue(record.assetPriceUSD ?? record.assetPriceUsd);
+    const estimatedUsd = amount && priceUsd && Number.isFinite(Number(amount)) && Number.isFinite(Number(priceUsd)) ? Number(amount) * Number(priceUsd) : undefined;
+    const typeName = typeof record.__typename === "string" ? record.__typename : "AaveActivity";
+    const type = activityType(typeName, typeof record.enabled === "boolean" ? record.enabled : undefined);
+    return [{
+      id: `aave:${transactionHash}:${type}`,
+      type,
+      status: "confirmed",
+      transactionHash,
+      createdAt,
+      chainId: 8453,
+      asset: typeof reserve?.symbol === "string" ? reserve.symbol : undefined,
+      amount,
+      estimatedUsd: estimatedUsd !== undefined && Number.isFinite(estimatedUsd) ? estimatedUsd : undefined,
+      destination: "Aave V3",
+      source: "Aave V3",
+      sourceKind: "chain",
+      authority: "Aave Protocol API and Base",
+      events: [{ type: "intent_confirmed", occurredAt: createdAt }]
+    }];
+  });
+  const pageInfo = root?.pageInfo && typeof root.pageInfo === "object" && !Array.isArray(root.pageInfo) ? root.pageInfo as Record<string, unknown> : undefined;
+  return {
+    items,
+    partial: Boolean(root?.partial) || typeof pageInfo?.next === "string",
+    nextCursor: typeof pageInfo?.next === "string" ? pageInfo.next : undefined,
+    sourceStatus: items.length ? "available" : "none"
+  };
+}
+
+export async function getAaveBaseActivity(user: string) {
+  const result = await callAaveTool<unknown>("get_user_activity", { user, version: "v3", chainId: 8453 });
+  return normalizeAaveBaseActivity(result);
+}
+
 function recordAt(value: unknown, path: string[]): Record<string, unknown> | undefined {
   let current: unknown = value;
   for (const key of path) {

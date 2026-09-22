@@ -280,6 +280,19 @@
 .receiptTimeline strong, .receiptTimeline small { display: block; }
 .receiptTimeline strong { font-size: var(--type-label); }
 .receiptTimeline small { margin-top: 3px; color: var(--muted); font-size: var(--type-caption); }
+.exportModal > p:not(.eyebrow) { margin: -4px 0 20px; color: var(--muted); }
+.exportCoverage { display: grid; grid-template-columns: repeat(3, 1fr); margin: 0 0 18px; border: 1px solid var(--border); border-radius: var(--radius-control); overflow: hidden; }
+.exportCoverage span { min-width: 0; padding: 14px 12px; display: grid; gap: 3px; text-align: center; }
+.exportCoverage span + span { border-left: 1px solid var(--border); }
+.exportCoverage strong { font-family: "Archivo Variable", "Satoshi", system-ui, sans-serif; font-size: var(--type-heading-small); }
+.exportCoverage small { color: var(--muted); font-size: var(--type-caption); }
+.exportChoices { display: grid; gap: 10px; margin-bottom: 16px; }
+.exportChoice { width: 100%; min-height: 70px; padding: 14px 16px; display: grid; grid-template-columns: 24px 1fr; align-items: center; gap: 12px; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--surface); color: var(--text); text-align: left; transition: border-color var(--motion-fast), background var(--motion-fast), transform var(--motion-fast); }
+.exportChoice:hover { border-color: var(--accent); background: var(--accent-soft); transform: translateY(-1px); }
+.exportChoice:active { transform: translateY(0); }
+.exportChoice span, .exportChoice strong, .exportChoice small { display: block; }
+.exportChoice strong { font-size: var(--type-body); }
+.exportChoice small { margin-top: 4px; color: var(--muted); font-size: var(--type-caption); }
 
 /* Transaction lifecycle */
 .transactionProgress { margin: 2px 0 15px; padding: 15px; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--surface-subtle); }
@@ -681,6 +694,8 @@
   .billsPanel { align-items: flex-start; padding: 20px 18px; }
   .billsPanel small { max-width: 210px; }
   .activityFilters { grid-template-columns: 1fr 1fr; }
+  .exportCoverage { grid-template-columns: 1fr; }
+  .exportCoverage span + span { border-left: 0; border-top: 1px solid var(--border); }
   .activitySearch { grid-column: 1 / -1; }
   .activityButton { grid-template-columns: 34px minmax(0, 1fr) auto; gap: 9px; }
   .activityButton small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
