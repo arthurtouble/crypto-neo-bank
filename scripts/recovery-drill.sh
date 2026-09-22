@@ -32,9 +32,10 @@ if [[ "$(sqlite3 "$restore_db" 'PRAGMA integrity_check;')" != "ok" ]]; then
 fi
 # Historical analytics are deliberately disposable. Rebuild their schema in
 # the isolated restore and prove this cannot delete the durable evidence below.
-sqlite3 "$restore_db" "DROP TABLE portfolio_disposals; DROP TABLE portfolio_lots; DROP TABLE portfolio_daily_results; DROP TABLE portfolio_daily_quantities; DROP TABLE portfolio_price_observations; DROP TABLE portfolio_source_checkpoints; DROP TABLE portfolio_events;"
+sqlite3 "$restore_db" "DROP TABLE portfolio_publications; DROP TABLE portfolio_disposals; DROP TABLE portfolio_lots; DROP TABLE portfolio_daily_results; DROP TABLE portfolio_daily_quantities; DROP TABLE portfolio_price_observations; DROP TABLE portfolio_source_checkpoints; DROP TABLE portfolio_events;"
 sqlite3 "$restore_db" < "$repo_root/infra/d1/migrations/0017_portfolio_analytics.sql"
-if [[ "$(sqlite3 "$restore_db" "SELECT count(*) FROM sqlite_master WHERE type='table' AND name LIKE 'portfolio_%';")" != "7" ]]; then
+sqlite3 "$restore_db" < "$repo_root/infra/d1/migrations/0019_portfolio_publications.sql"
+if [[ "$(sqlite3 "$restore_db" "SELECT count(*) FROM sqlite_master WHERE type='table' AND name LIKE 'portfolio_%';")" != "8" ]]; then
   echo "Recovery drill failed: portfolio analytics schema was not rebuilt" >&2
   exit 1
 fi
