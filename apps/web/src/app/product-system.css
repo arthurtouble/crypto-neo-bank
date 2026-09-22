@@ -394,6 +394,41 @@
 .productShell .frameworkSteps strong { font-size: var(--type-caption); }
 
 .swapPanel { max-width: 880px; padding: 28px; }
+.swapPickerTrigger { min-height: 46px; max-width: 100%; padding: 0 13px; display: inline-flex; align-items: center; gap: 9px; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--surface); color: var(--text); font: 650 var(--type-body)/1.2 var(--font-body); cursor: pointer; transition: border-color var(--motion-fast), background var(--motion-fast), transform var(--motion-fast); }
+.swapPickerTrigger:hover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 4%, var(--surface)); }
+.swapPickerTrigger:active { transform: scale(.985); }
+.swapPickerTrigger:focus-visible, .swapPickerClose:focus-visible, .swapPickerOption:focus-visible, .swapPickerMore:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 40%, transparent); outline-offset: 2px; }
+.swapPickerNetwork { color: var(--muted); font-size: var(--type-label); font-weight: 500; }
+.swapPickerOverlay { position: fixed; z-index: 89; inset: 0; background: rgb(8 13 12 / .55); backdrop-filter: blur(6px); }
+.swapPickerDialog { position: fixed; z-index: 90; top: 50%; left: 50%; width: min(520px, calc(100vw - 32px)); max-height: min(720px, calc(100dvh - 32px)); display: flex; flex-direction: column; padding: 22px; transform: translate(-50%, -50%); border: 1px solid var(--border); border-radius: 18px; background: var(--surface-raised); box-shadow: 0 28px 90px rgb(0 0 0 / .25); color: var(--text); font-family: var(--font-body); }
+.swapPickerHeading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 17px; }
+.swapPickerHeading h2 { margin: 0; font-family: "Archivo Variable", "Satoshi", system-ui, sans-serif; font-size: 22px; font-weight: 660; letter-spacing: -.025em; }
+.swapPickerClose { width: 34px; height: 34px; display: grid; place-items: center; border: 0; border-radius: 50%; background: var(--surface-muted); color: var(--muted); cursor: pointer; }
+.swapPickerClose:hover { color: var(--text); background: color-mix(in srgb, var(--accent) 9%, var(--surface-muted)); }
+.swapPickerSearch { min-height: 48px; display: flex; align-items: center; gap: 10px; padding: 0 14px; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--surface); color: var(--muted); }
+.swapPickerSearch:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 13%, transparent); }
+.swapPickerSearch input { min-width: 0; flex: 1; border: 0; outline: 0; background: transparent; color: var(--text); font: 500 15px/1.2 var(--font-body); }
+.swapPickerResults { min-height: 180px; margin-top: 12px; overflow-y: auto; overscroll-behavior: contain; }
+.swapPickerState { min-height: 160px; display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--muted); font-size: var(--type-body); }
+.swapPickerState button { border: 0; background: none; color: var(--accent); font: inherit; font-weight: 650; cursor: pointer; }
+.swapPickerOption { width: 100%; min-height: 70px; display: flex; align-items: center; gap: 12px; padding: 10px 11px; border: 0; border-radius: 10px; background: transparent; color: var(--text); font: inherit; text-align: left; cursor: pointer; transition: background var(--motion-fast); }
+.swapPickerOption:hover, .swapPickerOption.active { background: color-mix(in srgb, var(--accent) 7%, var(--surface)); }
+.swapPickerOption:disabled { opacity: .45; cursor: not-allowed; }
+.swapPickerGlyph { width: 38px; height: 38px; flex: 0 0 auto; display: grid; place-items: center; border-radius: 50%; background: color-mix(in srgb, var(--accent) 11%, var(--surface-muted)); color: var(--accent); font-size: 16px; font-weight: 700; }
+.swapPickerIdentity { min-width: 0; flex: 1; display: grid; gap: 3px; }
+.swapPickerIdentity strong { display: flex; align-items: baseline; gap: 8px; font-size: 15px; font-weight: 670; }
+.swapPickerIdentity small { overflow: hidden; color: var(--muted); font-size: 13px; font-weight: 450; text-overflow: ellipsis; white-space: nowrap; }
+.swapPickerIdentity > span { overflow: hidden; color: var(--muted); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.swapPickerTrust { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); font-size: 12px; white-space: nowrap; }
+.swapPickerMore { width: 100%; min-height: 42px; margin-top: 8px; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--surface); color: var(--accent); font: 650 13px var(--font-body); cursor: pointer; }
+.swapPickerMore:hover { background: color-mix(in srgb, var(--accent) 5%, var(--surface)); }
+.swapPickerRisk { display: grid; gap: 15px; }
+.swapPickerRisk strong { font-size: 16px; }
+.swapPickerRisk code { padding: 12px; overflow-wrap: anywhere; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--surface-muted); color: var(--text); font-size: 12px; }
+.swapPickerRisk p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.5; }
+.swapPickerActions { display: flex; justify-content: flex-end; gap: 9px; }
+@media (max-width: 560px) { .swapPickerDialog { top: auto; bottom: 0; left: 0; width: 100%; max-height: calc(100dvh - 16px); padding: 20px 16px max(20px, env(safe-area-inset-bottom)); transform: none; border-radius: 18px 18px 0 0; } .swapPickerTrust { font-size: 11px; } }
+@media (prefers-reduced-motion: reduce) { .swapPickerTrigger, .swapPickerOption, .swapPickerMore { transition: none; } }
 .swapForm { margin-top: 22px; display: grid; grid-template-columns: minmax(0, 1fr) 42px minmax(0, 1fr); align-items: center; gap: 10px; }
 .swapAssetBlock { min-height: 142px; padding: 18px; display: grid; align-content: space-between; gap: 14px; border: 1px solid var(--border); border-radius: var(--radius-panel); background: var(--surface); }
 .swapAssetBlock.receive { background: var(--surface-subtle); }
