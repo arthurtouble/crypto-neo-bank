@@ -15,6 +15,8 @@ Activity is an evidence trail, not just a list of successful payments. Aurel rec
 6. **Submit.** A transaction hash exists and the source network has received the transaction.
 7. **Observe.** Aurel checks the source receipt and, where relevant, the provider or destination state.
 
+The action screen now uses the same four visible checkpoints everywhere: **Review**, **Confirm**, **Submitted**, and **Complete**. Send, Add Money, Withdraw, Earn, Borrow, and Repay all use this language. The progress panel can be closed after submission; the request remains visible in Activity.
+
 ## State meanings
 
 | State | Meaning |
@@ -26,6 +28,8 @@ Activity is an evidence trail, not just a list of successful payments. Aurel rec
 | **Confirmed** | The supported source-chain receipt reports successful execution. |
 | **Failed** | Preparation, submission, provider handling, or the source receipt failed. |
 | **Cancelled** | The instruction was cancelled before settlement. |
+
+“Submitted” and “Complete” are deliberately different. A transaction hash proves that a request was submitted, not that it settled. While the action screen is open, Aurel asks its authenticated status endpoint to reconcile the source-chain receipt and upgrades the visible state only after receipt evidence exists.
 
 States do not move arbitrarily. For example, a cooling instruction must be reviewed before submission, and a submitted instruction needs receipt evidence before Aurel calls it confirmed.
 
@@ -46,6 +50,8 @@ For a protocol action, previewed health factors and rates are decision support. 
 ## Receipt checks
 
 Aurel checks supported submitted transactions using source-chain JSON-RPC. The activity record can include the transaction hash, source block, receipt result, last-check time, and available route or provider reference.
+
+For a cross-network transfer, source-chain confirmation does not prove that funds have arrived on the destination network. The action screen therefore says that arrival still depends on the route, and Activity preserves the route reference when one is available.
 
 A submitted transaction unresolved for more than 15 minutes becomes an operations exception. That threshold starts investigation; it does not mean the transaction has failed or that Aurel guarantees resolution within 15 minutes.
 

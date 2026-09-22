@@ -11,6 +11,8 @@ import { useBalance, useReadContract } from "wagmi";
 import { BASE_ASSETS, HOME_CHAIN, SUPPORTED_CHAINS } from "@/config/chains";
 import { ExternalWalletBalances } from "./external-wallet-balances";
 import { DefiPositions } from "./defi-positions";
+import { TransactionProgress } from "./transaction-progress";
+import type { TransactionLifecycleStatus } from "@/lib/transactions/lifecycle";
 
 type AssetSymbol = keyof typeof BASE_ASSETS;
 type Modal = "receive" | "send" | null;
@@ -40,6 +42,8 @@ export function WalletWorkspace() {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hash, setHash] = useState<string | null>(null);
+  const [intentId, setIntentId] = useState<string | null>(null);
+  const [flowStatus, setFlowStatus] = useState<TransactionLifecycleStatus | null>(null);
   const [copied, setCopied] = useState(false);
   const [receiveChainId, setReceiveChainId] = useState<number>(HOME_CHAIN.id);
 
@@ -80,6 +84,8 @@ export function WalletWorkspace() {
     setAmount("");
     setError(null);
     setHash(null);
+    setIntentId(null);
+    setFlowStatus(null);
     setModal("send");
   }
 
@@ -103,6 +109,7 @@ export function WalletWorkspace() {
         };
 
     setSending(true);
+    setFlowStatus("reviewing");
     let reviewedIntentId: string | undefined;
     let accessToken: string | null = null;
     try {
@@ -127,6 +134,7 @@ export function WalletWorkspace() {
         throw new Error(blocked?.message ?? intent.message ?? "Aurel’s transaction policy could not approve this action.");
       }
       reviewedIntentId = intent.intentId;
+      setIntentId(intent.intentId);
       if (intent.decision?.requiresStepUp && !mfaMethods.includes("passkey")) throw new Error("Set up a passkey in the Safety center before this higher-risk transfer.");
       const provider = await embedded.getEthereumProvider();
       const simulation = asset === "ETH"
@@ -134,6 +142,7 @@ export function WalletWorkspace() {
         : { from: address, to: definition.address, value: "0x0", data: transaction.data };
       await provider.request({ method: "eth_estimateGas", params: [simulation] });
       if (asset !== "ETH") await provider.request({ method: "eth_call", params: [simulation, "latest"] });
+      setFlowStatus("awaiting_confirmation");
       const result = await sendTransaction(transaction, {
         address,
         uiOptions: {
@@ -144,6 +153,7 @@ export function WalletWorkspace() {
         }
       });
       setHash(result.hash);
+      setFlowStatus("submitted");
       await fetch("/api/intents/status", {
         method: "POST",
         headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
@@ -159,6 +169,7 @@ export function WalletWorkspace() {
         }).catch(() => undefined);
       }
       setError(sendError instanceof Error ? sendError.message : "The transaction was not submitted.");
+      setFlowStatus("failed");
     } finally {
       setSending(false);
     }
@@ -220,8 +231,7 @@ export function WalletWorkspace() {
             {savedRecipients.length > 0 && <label className="fieldLabel">Saved Recipient<select value={savedRecipients.some((item) => item.destination === recipient) ? recipient : ""} onChange={(event) => setRecipient(event.target.value)}><option value="">Enter another address</option>{savedRecipients.map((item) => <option key={item.id} value={item.destination}>{item.name} · {item.detail}</option>)}</select></label>}
             <label className="fieldLabel">Destination<input autoComplete="off" spellCheck={false} placeholder="0x…" value={recipient} onChange={(event) => setRecipient(event.target.value.trim())} /></label>
             <div className="transactionSummary"><span>From<strong>Aurel Account</strong></span><span>Account<strong>{shortAddress(address)}</strong></span><span>Review<strong>You Confirm</strong></span></div>
-            {error && <div className="formError" role="alert">{error}</div>}
-            {hash && <a className="transactionSuccess" href={`https://basescan.org/tx/${hash}`} target="_blank" rel="noreferrer"><Check size={16} /> Transfer Submitted <ExternalLink size={14} /></a>}
+            {flowStatus && <TransactionProgress action="Transfer" status={flowStatus} error={error} intentId={intentId} hashes={hash ? [hash] : []} chainId={HOME_CHAIN.id} onConfirmed={() => { void Promise.all([eth.refetch(), usdc.refetch(), weth.refetch()]); }} />}
             <button className="button primary full" disabled={sending || Boolean(hash)}>{sending ? <LoaderCircle className="spin" size={16} /> : <Send size={16} />}{hash ? "Transfer Submitted" : sending ? "Awaiting Confirmation" : "Review Transfer"}</button>
           </form>}
         </section>

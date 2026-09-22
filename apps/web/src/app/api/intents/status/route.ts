@@ -16,6 +16,25 @@ const transitions: Record<string, string[]> = {
   cooling: [], blocked: [], cancelled: [], failed: [], confirmed: []
 };
 
+export async function GET(request: Request) {
+  const traceId = crypto.randomUUID();
+  try {
+    const subject = await requireVerifiedSubject(request);
+    const intentId = z.string().uuid().parse(new URL(request.url).searchParams.get("intentId"));
+    const intent = await env.PROJECTION_DB.prepare(`SELECT intent_id, status, type, chain_id, transaction_hash, route_reference,
+      failure_reason, updated_at, confirmed_at FROM transaction_intents WHERE intent_id = ? AND subject_reference = ?`)
+      .bind(intentId, subject.subjectReference)
+      .first<{ intent_id: string; status: string; type: string; chain_id: number; transaction_hash: string | null; route_reference: string | null; failure_reason: string | null; updated_at: string; confirmed_at: string | null }>();
+    if (!intent) return Response.json({ error: "intent_not_found", traceId }, { status: 404, headers: { "Cache-Control": "no-store" } });
+    return Response.json({ intentId: intent.intent_id, status: intent.status, type: intent.type, chainId: intent.chain_id, transactionHash: intent.transaction_hash, routeReference: intent.route_reference, failureReason: intent.failure_reason, updatedAt: intent.updated_at, confirmedAt: intent.confirmed_at, traceId }, { headers: { "Cache-Control": "no-store" } });
+  } catch (error) {
+    if (error instanceof AuthenticationError) return Response.json({ error: "unauthorized", message: error.message, traceId }, { status: 401 });
+    if (error instanceof z.ZodError) return Response.json({ error: "invalid_intent", issues: error.issues, traceId }, { status: 400 });
+    console.error(JSON.stringify({ level: "error", event: "intent.status.read_failed", traceId, message: error instanceof Error ? error.message : "unknown" }));
+    return Response.json({ error: "status_unavailable", traceId }, { status: 503 });
+  }
+}
+
 export async function POST(request: Request) {
   const traceId = crypto.randomUUID();
   try {

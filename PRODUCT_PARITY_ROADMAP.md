@@ -60,7 +60,7 @@ Use these labels consistently in navigation, quick actions, dialogs, receipts, s
 - [x] Destination-aware USDC withdrawals to supported networks.
 - [x] Portfolio value, period selector, line chart, allocation, and authority state.
 - [x] Live searchable markets list with watchlist and clear execution availability.
-- [ ] Consistent pending, success, failure, and receipt states across every money flow.
+- [x] Consistent Review, Confirm, Submitted, Complete, failure, and receipt states across direct sends, routed Add Money/Withdraw, Earn, Borrow, and Repay, with authenticated source-receipt reconciliation.
 
 ### P1 — daily financial account
 
