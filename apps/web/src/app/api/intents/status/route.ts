@@ -12,13 +12,19 @@ const statusSchema = z.object({
   status: z.enum(["submitted", "cancelled", "failed"]),
   stepIndex: z.number().int().min(0).max(7).optional(),
   transactionHash: z.string().regex(/^0x[a-fA-F0-9]{64}$/).optional(),
-  routeReference: z.string().max(200).optional(),
   failureReason: z.string().max(500).optional()
-}).refine((value) => value.status !== "submitted" || Boolean(value.transactionHash && value.stepIndex !== undefined), { message: "Submitted transactions require a prepared step and hash." });
+}).strict().superRefine((value, context) => {
+  if (value.status === "submitted" && (!value.transactionHash || value.stepIndex === undefined)) {
+    context.addIssue({ code: "custom", message: "Submitted transactions require a prepared step and hash." });
+  }
+  if (value.status !== "submitted" && (value.transactionHash || value.stepIndex !== undefined)) {
+    context.addIssue({ code: "custom", message: "Only a submitted transaction may report a step and hash." });
+  }
+});
 
 const transitions: Record<string, string[]> = {
   reviewed: ["submitted", "cancelled", "failed"],
-  submitted: ["failed"],
+  submitted: [],
   cooling: [], blocked: [], cancelled: [], failed: [], confirmed: []
 };
 
@@ -100,22 +106,29 @@ export async function POST(request: Request) {
         .bind(observation.blockHash, now, input.intentId, stepIndex, hash).run();
       if (bound.meta.changes !== 1) return reply({ error: "binding_conflict", traceId }, 409);
       const submitted = await env.PROJECTION_DB.prepare(`UPDATE transaction_intents SET status = 'submitted', transaction_hash = ?, route_reference = ?, updated_at = ?
-        WHERE intent_id = ? AND subject_reference = ? AND status IN ('reviewed', 'submitted')`).bind(hash.toLowerCase(), input.routeReference ?? prepared.source_reference, now, input.intentId, subject.subjectReference).run();
+        WHERE intent_id = ? AND subject_reference = ? AND status IN ('reviewed', 'submitted')`).bind(hash.toLowerCase(), prepared.source_reference, now, input.intentId, subject.subjectReference).run();
       if (submitted.meta.changes !== 1) return reply({ error: "binding_conflict", traceId }, 409);
       await env.PROJECTION_DB.prepare(`INSERT INTO intent_events (event_id, intent_id, subject_reference, event_type, evidence_json, occurred_at)
         VALUES (?, ?, ?, 'transaction_identity_matched', ?, ?)`).bind(crypto.randomUUID(), input.intentId, subject.subjectReference, JSON.stringify({ stepIndex, transactionHash: hash.toLowerCase(), fingerprint: prepared.call_fingerprint }), now).run();
       return reply({ updated: true, intentId: input.intentId, stepIndex, verificationState: "reported", traceId });
     }
     if (!(transitions[current.status] ?? []).includes(input.status)) return reply({ error: "invalid_transition", message: `A ${current.status} intent cannot become ${input.status}.`, traceId }, 409);
+    const reported = await env.PROJECTION_DB.prepare(`SELECT 1 AS reported FROM intent_prepared_calls
+      WHERE intent_id = ? AND subject_reference = ? AND reported_hash IS NOT NULL LIMIT 1`)
+      .bind(input.intentId, subject.subjectReference).first<{ reported: number }>();
+    if (reported) return reply({ error: "transaction_pending", traceId }, 409);
     const now = new Date().toISOString();
+    const changed = await env.PROJECTION_DB.prepare(`UPDATE transaction_intents
+      SET status = ?, failure_reason = ?, updated_at = ?
+      WHERE intent_id = ? AND subject_reference = ? AND status = 'reviewed'
+        AND transaction_hash IS NULL
+        AND NOT EXISTS (SELECT 1 FROM intent_prepared_calls p WHERE p.intent_id = transaction_intents.intent_id AND p.reported_hash IS NOT NULL)`)
+      .bind(input.status, input.failureReason ?? null, now, input.intentId, subject.subjectReference).run();
+    if (changed.meta.changes !== 1) return reply({ error: "transaction_pending", traceId }, 409);
     await env.PROJECTION_DB.batch([
-      env.PROJECTION_DB.prepare(`UPDATE transaction_intents
-        SET status = ?, transaction_hash = COALESCE(?, transaction_hash), route_reference = COALESCE(?, route_reference), failure_reason = ?, updated_at = ?
-        WHERE intent_id = ? AND subject_reference = ?`)
-        .bind(input.status, input.transactionHash ?? null, input.routeReference ?? null, input.failureReason ?? null, now, input.intentId, subject.subjectReference),
       env.PROJECTION_DB.prepare(`INSERT INTO intent_events (event_id, intent_id, subject_reference, event_type, evidence_json, occurred_at)
         VALUES (?, ?, ?, ?, ?, ?)`)
-        .bind(crypto.randomUUID(), input.intentId, subject.subjectReference, `intent_${input.status}`, JSON.stringify({ transactionHash: input.transactionHash, routeReference: input.routeReference, failureReason: input.failureReason }), now),
+        .bind(crypto.randomUUID(), input.intentId, subject.subjectReference, `intent_${input.status}`, JSON.stringify({ failureReason: input.failureReason }), now),
       env.PROJECTION_DB.prepare(`INSERT INTO product_events (event_id, subject_reference, session_reference, event_name, surface, properties_json, occurred_at)
         VALUES (?, ?, ?, ?, '/app/activity', ?, ?)`)
         .bind(crypto.randomUUID(), subject.subjectReference, subject.sessionReference, "transaction_prepared", JSON.stringify({ intentId: input.intentId, status: input.status }), now)

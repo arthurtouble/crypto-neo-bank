@@ -22,10 +22,10 @@ vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
           if (query.includes("FROM transaction_intents")) {
             const db = new DatabaseSync(":memory:");
             try {
-              db.exec("CREATE TABLE transaction_intents (intent_id TEXT, subject_reference TEXT, chain_id INTEGER, transaction_hash TEXT, status TEXT, updated_at TEXT); CREATE TABLE intent_prepared_calls (intent_id TEXT, reported_hash TEXT, updated_at TEXT)");
-              const insertIntent = db.prepare("INSERT INTO transaction_intents VALUES (?, ?, ?, ?, ?, ?)");
+              db.exec("CREATE TABLE transaction_intents (intent_id TEXT, subject_reference TEXT, chain_id INTEGER, transaction_hash TEXT, status TEXT, updated_at TEXT, intent_type TEXT); CREATE TABLE intent_prepared_calls (intent_id TEXT, reported_hash TEXT, updated_at TEXT)");
+              const insertIntent = db.prepare("INSERT INTO transaction_intents VALUES (?, ?, ?, ?, ?, ?, ?)");
               const insertStep = db.prepare("INSERT INTO intent_prepared_calls VALUES (?, ?, ?)");
-              for (const intent of routeState.intents) insertIntent.run(String(intent.intent_id), String(intent.subject_reference), Number(intent.chain_id), intent.transaction_hash == null ? null : String(intent.transaction_hash), String(intent.status), String(intent.updated_at ?? "2026-09-01T00:00:00.000Z"));
+              for (const intent of routeState.intents) insertIntent.run(String(intent.intent_id), String(intent.subject_reference), Number(intent.chain_id), intent.transaction_hash == null ? null : String(intent.transaction_hash), String(intent.status), String(intent.updated_at ?? "2026-09-01T00:00:00.000Z"), String(intent.intent_type ?? "transfer"));
               for (const step of routeState.steps) insertStep.run(String(step.intent_id), step.reported_hash == null ? null : String(step.reported_hash), String(step.updated_at ?? "2026-09-01T00:00:00.000Z"));
               return { results: db.prepare(query).all(String(args[0])).map((row) => ({ ...row })) };
             } finally { db.close(); }
@@ -137,7 +137,7 @@ describe("intent reconciliation route", () => {
   const request = () => reconcile(new Request("https://aurel.test/api/intents/reconcile", { method: "POST" }));
   beforeEach(() => {
     routeState.subject = "subject-a"; routeState.issues.length = 0; routeState.events.length = 0; routeState.observations = {};
-    routeState.intents = [{ intent_id: intentId, subject_reference: "subject-a", chain_id: 8453, transaction_hash: hash, status: "submitted" }];
+    routeState.intents = [{ intent_id: intentId, subject_reference: "subject-a", chain_id: 8453, transaction_hash: hash, status: "submitted", intent_type: "transfer" }];
     routeState.steps = [{ intent_id: intentId, step_index: 0, subject_reference: "subject-a", wallet_address: sender.toLowerCase(), chain_id: 8453, target_address: recipient.toLowerCase(), native_value: "100", calldata_hash: nativePrepared.calldataHash, semantic_action: "native_transfer", expected_effect_json: JSON.stringify(nativePrepared.expectedEffect), reported_hash: hash, observed_block_hash: null, verification_state: "reported" }];
     routeState.observation = nativeObservation;
   });
@@ -155,6 +155,17 @@ describe("intent reconciliation route", () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({ results: [{ intentId, status: "confirmed" }] });
     expect(routeState.intents[0].status).toBe("confirmed");
+  });
+
+  it("never marks a swap or bridge complete from source-chain evidence alone", async () => {
+    for (const type of ["swap", "bridge"]) {
+      routeState.intents[0].intent_type = type;
+      const response = await request();
+      expect(response.status).toBe(200);
+      expect(await response.json()).toMatchObject({ results: [{ intentId, status: "submitted", verificationState: "source_confirmed_pending_settlement" }] });
+      expect(routeState.intents[0].status).toBe("submitted");
+      expect(routeState.events).not.toContain("settlement_confirmed");
+    }
   });
 
   it("revisits a reported hash saved before RPC indexed it", async () => {

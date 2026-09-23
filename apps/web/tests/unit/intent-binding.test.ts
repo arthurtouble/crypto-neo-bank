@@ -33,6 +33,9 @@ vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
       return {
         query,
         async first() {
+          if (query.includes("SELECT 1 AS reported FROM intent_prepared_calls")) {
+            return [...state.prepared.values()].some((step) => step.intent_id === args[0] && step.subject_reference === args[1] && step.reported_hash) ? { reported: 1 } : null;
+          }
           if (query.includes("FROM intent_prepared_calls")) {
             if (state.intent?.intent_id !== args[0] || state.intent?.subject_reference !== args[2]) return null;
             return state.prepared.get(Number(args[1])) ?? null;
@@ -61,7 +64,16 @@ vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
             row.verification_state = query.includes("verification_state = 'inconsistent'") ? "inconsistent" : query.includes("verification_state = 'reported'") ? "reported" : "pending";
             return { meta: { changes: 1 } };
           }
-          if (query.includes("UPDATE transaction_intents")) { if (!state.intentUpdateAllowed) return { meta: { changes: 0 } }; if (state.intent) state.intent.status = "submitted"; return { meta: { changes: 1 } }; }
+          if (query.includes("UPDATE transaction_intents")) {
+            if (!state.intentUpdateAllowed) return { meta: { changes: 0 } };
+            if (query.includes("NOT EXISTS (SELECT 1 FROM intent_prepared_calls")) {
+              if (state.intent?.status !== "reviewed" || state.intent.transaction_hash || [...state.prepared.values()].some((step) => step.reported_hash)) return { meta: { changes: 0 } };
+              state.intent.status = args[0];
+              return { meta: { changes: 1 } };
+            }
+            if (state.intent) state.intent.status = "submitted";
+            return { meta: { changes: 1 } };
+          }
           return { meta: { changes: 1 } };
         }
       };
@@ -453,5 +465,35 @@ describe("reported transaction binding", () => {
     const response = await report();
     expect(response.status).toBe(409);
     expect(state.intent?.status).toBe("reviewed");
+  });
+
+  it("does not accept a browser-declared failure after a transaction is submitted", async () => {
+    state.intent!.intent_type = "swap";
+    state.intent!.status = "submitted";
+    const response = await reportStatus(new Request("https://aurel.test/api/intents/status", { method: "POST", body: JSON.stringify({ intentId, status: "failed", failureReason: "I changed my mind" }) }));
+    expect(response.status).toBe(409);
+    expect(state.intent!.status).toBe("submitted");
+  });
+
+  it("does not cancel or fail a reviewed intent with an unindexed reported hash", async () => {
+    state.prepared.get(0)!.reported_hash = txHash;
+    state.prepared.get(0)!.verification_state = "pending";
+    for (const status of ["cancelled", "failed"]) {
+      const response = await reportStatus(new Request("https://aurel.test/api/intents/status", { method: "POST", body: JSON.stringify({ intentId, status }) }));
+      expect(response.status).toBe(409);
+      expect(state.intent!.status).toBe("reviewed");
+    }
+  });
+
+  it("still lets the customer cancel an unsent reviewed intent", async () => {
+    const response = await reportStatus(new Request("https://aurel.test/api/intents/status", { method: "POST", body: JSON.stringify({ intentId, status: "cancelled" }) }));
+    expect(response.status).toBe(200);
+    expect(state.intent!.status).toBe("cancelled");
+  });
+
+  it("rejects a fabricated hash on a cancellation", async () => {
+    const response = await reportStatus(new Request("https://aurel.test/api/intents/status", { method: "POST", body: JSON.stringify({ intentId, status: "cancelled", transactionHash: txHash }) }));
+    expect(response.status).toBe(400);
+    expect(state.intent!.status).toBe("reviewed");
   });
 });

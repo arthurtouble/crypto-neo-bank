@@ -3,7 +3,7 @@ import { AuthenticationError, requireVerifiedSubject } from "@/lib/auth/server";
 import { observeTransaction } from "@/lib/transactions/chain-observation";
 import { verifyExpectedEffect, type PreparedEffectEvidence } from "@/lib/transactions/effects";
 
-type Intent = { intent_id: string; subject_reference: string; chain_id: number; transaction_hash: string | null; status: string };
+type Intent = { intent_id: string; subject_reference: string; chain_id: number; transaction_hash: string | null; status: string; intent_type: string };
 type Step = { intent_id: string; step_index: number; wallet_address: string; chain_id: number; target_address: string; native_value: string; calldata_hash: string; semantic_action: string; expected_effect_json: string; reported_hash: string | null; observed_block_hash: string | null; verification_state: string; updated_at: string };
 
 function reply(body: Record<string, unknown>, status: number) {
@@ -13,7 +13,7 @@ function reply(body: Record<string, unknown>, status: number) {
 export async function POST(request: Request) {
   try {
     const subject = await requireVerifiedSubject(request);
-    const intents = await env.PROJECTION_DB.prepare(`SELECT intent_id, subject_reference, chain_id, transaction_hash, status
+    const intents = await env.PROJECTION_DB.prepare(`SELECT intent_id, subject_reference, chain_id, transaction_hash, status, intent_type
       FROM transaction_intents WHERE subject_reference = ? AND (
         (status IN ('submitted', 'confirmed') AND transaction_hash IS NOT NULL)
         OR (status = 'reviewed' AND EXISTS (SELECT 1 FROM intent_prepared_calls reported
@@ -79,9 +79,11 @@ export async function POST(request: Request) {
           allConfirmed = false;
           if (lastReported && matchedHashes.has(lastReported.toLowerCase())) verificationState = "inconsistent";
         }
-        if (allConfirmed) {
+        // The generic effect verifier covers direct transfers only. A swap or
+        // bridge additionally needs route-specific destination settlement.
+        if (allConfirmed && intent.intent_type === "transfer") {
           const changed = await env.PROJECTION_DB.prepare(`UPDATE transaction_intents SET status = 'confirmed', confirmed_at = ?, updated_at = ?
-            WHERE intent_id = ? AND status IN ('submitted', 'confirmed')
+            WHERE intent_id = ? AND intent_type = 'transfer' AND status IN ('submitted', 'confirmed')
             AND EXISTS (SELECT 1 FROM intent_prepared_calls p WHERE p.intent_id = transaction_intents.intent_id)
             AND NOT EXISTS (SELECT 1 FROM intent_prepared_calls p WHERE p.intent_id = transaction_intents.intent_id AND p.verification_state != 'confirmed')`)
             .bind(new Date().toISOString(), new Date().toISOString(), intent.intent_id).run();
@@ -93,12 +95,13 @@ export async function POST(request: Request) {
             intent.status = "confirmed";
           } else allConfirmed = false;
         }
-        if (!allConfirmed && intent.status === "confirmed") {
+        if (allConfirmed && intent.intent_type !== "transfer") verificationState = "source_confirmed_pending_settlement";
+        if ((!allConfirmed || intent.intent_type !== "transfer") && intent.status === "confirmed") {
           const downgraded = await env.PROJECTION_DB.prepare(`UPDATE transaction_intents SET status = 'submitted', confirmed_at = NULL, updated_at = ? WHERE intent_id = ? AND status = 'confirmed'`)
             .bind(new Date().toISOString(), intent.intent_id).run();
           if (downgraded.meta.changes === 1) intent.status = "submitted";
         }
-        results.push({ intentId: intent.intent_id, status: allConfirmed ? "confirmed" : intent.status, verificationState });
+        results.push({ intentId: intent.intent_id, status: allConfirmed && intent.intent_type === "transfer" ? "confirmed" : intent.status, verificationState });
       } catch (error) {
         console.error(JSON.stringify({ level: "error", event: "intent.reconcile.failed", intentId: intent.intent_id, message: error instanceof Error ? error.message : "unknown" }));
         const lastCheck = steps.results.reduce((latest, step) => step.reported_hash ? Math.max(latest, Date.parse(step.updated_at) || 0) : latest, 0);
