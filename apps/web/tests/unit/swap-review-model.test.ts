@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { makeSwapReviewKey, quoteIsFresh, displayRawAmount } from "@/lib/swap/review-model";
+import { makeSwapReviewKey, quoteIsFresh, displayRawAmount, formatEstimatedFeeUsd } from "@/lib/swap/review-model";
 
 describe("Swap review state", () => {
   const baseline = { fromAssetId: "8453:native", toAssetId: "1:native", amount: "1.2", walletAddress: "0x000000000000000000000000000000000000dEaD", slippageBps: 50 };
@@ -23,5 +23,12 @@ describe("Swap review state", () => {
   it("keeps raw amount display exact without floating-point conversion", () => {
     expect(displayRawAmount("123456789123456789", 18)).toBe("0.123456789123456789");
     expect(displayRawAmount("123456789", 6)).toBe("123.456789");
+  });
+
+  it("does not show a positive sub-cent estimated fee as zero", () => {
+    expect(formatEstimatedFeeUsd(0.0025)).toBe("<$0.01");
+    expect(formatEstimatedFeeUsd(0)).toBe("$0.00");
+    expect(formatEstimatedFeeUsd(0.25)).toBe("$0.25");
+    expect(formatEstimatedFeeUsd(null)).toBe("Unavailable");
   });
 });

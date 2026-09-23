@@ -11,7 +11,7 @@ import { SUPPORTED_CHAINS } from "@/config/chains";
 import type { AssetId, CatalogAsset } from "@/lib/swap/assets";
 import type { ValidatedSwapQuote } from "@/lib/swap/quotes";
 import { assetNetwork } from "@/lib/swap/picker-model";
-import { displayRawAmount, makeSwapReviewKey, quoteIsFresh } from "@/lib/swap/review-model";
+import { displayRawAmount, formatEstimatedFeeUsd, makeSwapReviewKey, quoteIsFresh } from "@/lib/swap/review-model";
 import { parseSwapDeepLink } from "@/lib/markets/swap-links";
 import { SwapAssetPicker } from "./swap-asset-picker";
 import { SwapReminderPanel } from "./swap-reminder-panel";
@@ -109,8 +109,8 @@ export function SwapWorkspace() {
     {unverified.length > 0 && <label className="swapRiskCheck"><input type="checkbox" checked={acknowledged} onChange={(event) => { setAcknowledged(event.target.checked); clearReview(); }} /><span>I checked the contract {unverified.length > 1 ? "addresses" : "address"} for {unverified.map((asset) => `${asset.symbol} on ${assetNetwork(asset.chainId)}`).join(" and ")}.</span></label>}
     {error && <p className="formError" role="alert">{error}</p>}
     {liveResult && <section className="swapQuotes" aria-label="Available swap routes"><div className="swapQuotesHeader"><h3>Available Routes</h3><span>{liveResult.quotes.length} found</span></div>
-      {liveResult.quotes.map((route) => <button type="button" className={`swapQuoteRow ${quote?.quoteId === route.quoteId ? "selected" : ""}`} key={route.planReference} onClick={() => setSelectedQuoteId(route.quoteId)}><span><strong>{route.provider.replace(/^lifi:/, "")}</strong><small>{route.routeKind === "cross_chain" ? "Across networks" : "Same network"}</small></span><span><strong>{destination ? displayRawAmount(route.toAmountMinRaw, destination.decimals) : "—"} {destination?.symbol}</strong><small>{route.totalFeeUsd === null ? "Total fees unavailable" : `≈ $${route.totalFeeUsd.toFixed(2)} estimated fees`}</small></span></button>)}
-      {freshQuote && <div className="swapReview"><span>You Pay<strong>{amount} {source?.symbol}</strong></span><span>Minimum Received<strong>{destination ? displayRawAmount(freshQuote.toAmountMinRaw, destination.decimals) : "—"} {destination?.symbol}</strong></span><span>Estimated Fees<strong>{freshQuote.totalFeeUsd === null ? "Unavailable" : `≈ $${freshQuote.totalFeeUsd.toFixed(2)}`}</strong></span><span>Price Impact<strong>{freshQuote.priceImpactPercent === null ? "Unavailable" : `${freshQuote.priceImpactPercent.toFixed(2)}%`}</strong></span></div>}
+      {liveResult.quotes.map((route) => <button type="button" className={`swapQuoteRow ${quote?.quoteId === route.quoteId ? "selected" : ""}`} key={route.planReference} onClick={() => setSelectedQuoteId(route.quoteId)}><span><strong>{route.provider.replace(/^lifi:/, "")}</strong><small>{route.routeKind === "cross_chain" ? "Across networks" : "Same network"}</small></span><span><strong>{destination ? displayRawAmount(route.toAmountMinRaw, destination.decimals) : "—"} {destination?.symbol}</strong><small>{route.totalFeeUsd === null ? "Total fees unavailable" : `${formatEstimatedFeeUsd(route.totalFeeUsd)} estimated fees`}</small></span></button>)}
+      {freshQuote && <div className="swapReview"><span>You Pay<strong>{amount} {source?.symbol}</strong></span><span>Minimum Received<strong>{destination ? displayRawAmount(freshQuote.toAmountMinRaw, destination.decimals) : "—"} {destination?.symbol}</strong></span><span>Estimated Fees<strong>{formatEstimatedFeeUsd(freshQuote.totalFeeUsd)}</strong></span><span>Price Impact<strong>{freshQuote.priceImpactPercent === null ? "Unavailable" : `${freshQuote.priceImpactPercent.toFixed(2)}%`}</strong></span></div>}
       {quote && !freshQuote && <p className="formWarning">This quote expired. Review routes again.</p>}
       <p className="swapExecutionGate">Trading is unavailable until the route can be independently verified. No wallet approval will be requested.</p>
     </section>}
