@@ -18,7 +18,10 @@ export async function POST(request: Request) {
         (status IN ('submitted', 'confirmed') AND transaction_hash IS NOT NULL)
         OR (status = 'reviewed' AND EXISTS (SELECT 1 FROM intent_prepared_calls reported
           WHERE reported.intent_id = transaction_intents.intent_id AND reported.reported_hash IS NOT NULL))
-      ) ORDER BY updated_at DESC LIMIT 20`).bind(subject.subjectReference).all<Intent>();
+      ) ORDER BY
+        CASE WHEN EXISTS (SELECT 1 FROM intent_prepared_calls p WHERE p.intent_id = transaction_intents.intent_id AND p.reported_hash IS NOT NULL) THEN 0 ELSE 1 END,
+        COALESCE((SELECT MAX(p.updated_at) FROM intent_prepared_calls p WHERE p.intent_id = transaction_intents.intent_id AND p.reported_hash IS NOT NULL), transaction_intents.updated_at) ASC,
+        transaction_intents.intent_id ASC LIMIT 20`).bind(subject.subjectReference).all<Intent>();
     const results: Array<Record<string, unknown>> = [];
     for (const intent of intents.results) {
       const steps = await env.PROJECTION_DB.prepare(`SELECT intent_id, step_index, wallet_address, chain_id, target_address, native_value,
@@ -61,11 +64,12 @@ export async function POST(request: Request) {
           }
         }
         const lastReported = [...steps.results].reverse().find((step) => step.reported_hash)?.reported_hash;
-        if (intent.status === "reviewed" && lastReported && matchedHashes.has(lastReported.toLowerCase())) {
+        if (lastReported && matchedHashes.has(lastReported.toLowerCase()) && lastReported.toLowerCase() !== intent.transaction_hash?.toLowerCase() && ["reviewed", "submitted"].includes(intent.status)) {
           const bound = await env.PROJECTION_DB.prepare(`UPDATE transaction_intents SET status = 'submitted', transaction_hash = ?, updated_at = ?
-            WHERE intent_id = ? AND subject_reference = ? AND status = 'reviewed' AND transaction_hash IS NULL
+            WHERE intent_id = ? AND subject_reference = ? AND ((status = 'reviewed' AND transaction_hash IS NULL)
+              OR (status = 'submitted' AND lower(transaction_hash) = lower(?)))
             AND EXISTS (SELECT 1 FROM intent_prepared_calls p WHERE p.intent_id = transaction_intents.intent_id AND lower(p.reported_hash) = lower(?))`)
-            .bind(lastReported.toLowerCase(), new Date().toISOString(), intent.intent_id, subject.subjectReference, lastReported).run();
+            .bind(lastReported.toLowerCase(), new Date().toISOString(), intent.intent_id, subject.subjectReference, intent.transaction_hash, lastReported).run();
           if (bound.meta.changes === 1) {
             intent.status = "submitted";
             intent.transaction_hash = lastReported.toLowerCase();
@@ -73,7 +77,7 @@ export async function POST(request: Request) {
         }
         if (!intent.transaction_hash || lastReported?.toLowerCase() !== intent.transaction_hash.toLowerCase()) {
           allConfirmed = false;
-          if (intent.transaction_hash) verificationState = "inconsistent";
+          if (lastReported && matchedHashes.has(lastReported.toLowerCase())) verificationState = "inconsistent";
         }
         if (allConfirmed) {
           const changed = await env.PROJECTION_DB.prepare(`UPDATE transaction_intents SET status = 'confirmed', confirmed_at = ?, updated_at = ?
@@ -86,17 +90,22 @@ export async function POST(request: Request) {
             if (intent.status !== "confirmed") await env.PROJECTION_DB.prepare(`INSERT INTO intent_events (event_id, intent_id, subject_reference, event_type, evidence_json, occurred_at)
               VALUES (?, ?, ?, 'settlement_confirmed', ?, ?)`).bind(crypto.randomUUID(), intent.intent_id, subject.subjectReference,
                 JSON.stringify({ preparedSteps: steps.results.length }), new Date().toISOString()).run();
+            intent.status = "confirmed";
           } else allConfirmed = false;
         }
         if (!allConfirmed && intent.status === "confirmed") {
-          await env.PROJECTION_DB.prepare(`UPDATE transaction_intents SET status = 'submitted', confirmed_at = NULL, updated_at = ? WHERE intent_id = ? AND status = 'confirmed'`)
+          const downgraded = await env.PROJECTION_DB.prepare(`UPDATE transaction_intents SET status = 'submitted', confirmed_at = NULL, updated_at = ? WHERE intent_id = ? AND status = 'confirmed'`)
             .bind(new Date().toISOString(), intent.intent_id).run();
+          if (downgraded.meta.changes === 1) intent.status = "submitted";
         }
         results.push({ intentId: intent.intent_id, status: allConfirmed ? "confirmed" : intent.status, verificationState });
       } catch (error) {
-        if (intent.status === "confirmed") await env.PROJECTION_DB.prepare(`UPDATE transaction_intents SET status = 'submitted', confirmed_at = NULL, updated_at = ? WHERE intent_id = ? AND status = 'confirmed'`)
-          .bind(new Date().toISOString(), intent.intent_id).run();
-        results.push({ intentId: intent.intent_id, status: "submitted", verificationState: "check_failed" });
+        if (intent.status === "confirmed") {
+          const downgraded = await env.PROJECTION_DB.prepare(`UPDATE transaction_intents SET status = 'submitted', confirmed_at = NULL, updated_at = ? WHERE intent_id = ? AND status = 'confirmed'`)
+            .bind(new Date().toISOString(), intent.intent_id).run();
+          if (downgraded.meta.changes === 1) intent.status = "submitted";
+        }
+        results.push({ intentId: intent.intent_id, status: intent.status, verificationState: "check_failed" });
         console.error(JSON.stringify({ level: "error", event: "intent.reconcile.failed", intentId: intent.intent_id, message: error instanceof Error ? error.message : "unknown" }));
       }
     }

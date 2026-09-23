@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { DatabaseSync } from "node:sqlite";
 import { encodeEventTopics, erc20Abi } from "viem";
 import { verifyExpectedEffect } from "@/lib/transactions/effects";
 import type { ChainObservation } from "@/lib/transactions/chain-observation";
@@ -8,6 +9,7 @@ const routeState = vi.hoisted(() => ({
   intents: [] as Array<Record<string, unknown>>,
   steps: [] as Array<Record<string, unknown>>,
   observation: null as unknown,
+  observations: {} as Record<string, unknown>,
   issues: [] as string[],
   events: [] as string[]
 }));
@@ -17,14 +19,24 @@ vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
     return { bind(...args: unknown[]) {
       return {
         async all() {
-          if (query.includes("FROM transaction_intents")) return { results: routeState.intents.filter((intent) => intent.subject_reference === args[0] && (["submitted", "confirmed"].includes(String(intent.status)) && intent.transaction_hash || query.includes("status = 'reviewed'") && intent.status === "reviewed" && routeState.steps.some((step) => step.intent_id === intent.intent_id && step.reported_hash))) };
-          if (query.includes("FROM intent_prepared_calls")) return { results: routeState.steps.filter((step) => step.intent_id === args[0]) };
+          if (query.includes("FROM transaction_intents")) {
+            const db = new DatabaseSync(":memory:");
+            try {
+              db.exec("CREATE TABLE transaction_intents (intent_id TEXT, subject_reference TEXT, chain_id INTEGER, transaction_hash TEXT, status TEXT, updated_at TEXT); CREATE TABLE intent_prepared_calls (intent_id TEXT, reported_hash TEXT, updated_at TEXT)");
+              const insertIntent = db.prepare("INSERT INTO transaction_intents VALUES (?, ?, ?, ?, ?, ?)");
+              const insertStep = db.prepare("INSERT INTO intent_prepared_calls VALUES (?, ?, ?)");
+              for (const intent of routeState.intents) insertIntent.run(String(intent.intent_id), String(intent.subject_reference), Number(intent.chain_id), intent.transaction_hash == null ? null : String(intent.transaction_hash), String(intent.status), String(intent.updated_at ?? "2026-09-01T00:00:00.000Z"));
+              for (const step of routeState.steps) insertStep.run(String(step.intent_id), step.reported_hash == null ? null : String(step.reported_hash), String(step.updated_at ?? "2026-09-01T00:00:00.000Z"));
+              return { results: db.prepare(query).all(String(args[0])).map((row) => ({ ...row })) };
+            } finally { db.close(); }
+          }
+          if (query.includes("FROM intent_prepared_calls")) return { results: routeState.steps.filter((step) => step.intent_id === args[0]).map((step) => ({ ...step })) };
           return { results: [] };
         },
         async run() {
           if (query.includes("UPDATE intent_prepared_calls")) {
             const step = routeState.steps.find((item) => item.intent_id === args.at(-2) && item.step_index === args.at(-1));
-            if (step) step.verification_state = args[0];
+            if (step) { step.verification_state = args[0]; step.updated_at = args[2]; }
             return { meta: { changes: step ? 1 : 0 } };
           }
           if (query.includes("UPDATE transaction_intents")) {
@@ -34,7 +46,7 @@ vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
               intent.status = "confirmed";
             }
             if (intent && query.includes("SET status = 'submitted'")) {
-              if (query.includes("transaction_hash = ?") && (intent.status !== "reviewed" || intent.transaction_hash)) return { meta: { changes: 0 } };
+              if (query.includes("transaction_hash = ?") && !(intent.status === "reviewed" && !intent.transaction_hash || intent.status === "submitted" && String(intent.transaction_hash).toLowerCase() === String(args[4]).toLowerCase())) return { meta: { changes: 0 } };
               intent.status = "submitted";
               if (query.includes("transaction_hash = ?")) intent.transaction_hash = args[0];
             }
@@ -49,7 +61,11 @@ vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
   }
 } } }));
 vi.mock("@/lib/auth/server", () => ({ AuthenticationError: class AuthenticationError extends Error {}, requireVerifiedSubject: async () => ({ subjectReference: routeState.subject }) }));
-vi.mock("@/lib/transactions/chain-observation", async (importOriginal) => ({ ...await importOriginal<typeof import("@/lib/transactions/chain-observation")>(), observeTransaction: async () => routeState.observation }));
+vi.mock("@/lib/transactions/chain-observation", async (importOriginal) => ({ ...await importOriginal<typeof import("@/lib/transactions/chain-observation")>(), observeTransaction: async (_chainId: number, transactionHash: string) => {
+  const observation = routeState.observations[transactionHash] ?? routeState.observation;
+  if (observation instanceof Error) throw observation;
+  return observation;
+} }));
 
 import { POST as reconcile } from "@/app/api/intents/reconcile/route";
 
@@ -115,7 +131,7 @@ describe("intent reconciliation route", () => {
   const intentId = "00000000-0000-4000-8000-000000000001";
   const request = () => reconcile(new Request("https://aurel.test/api/intents/reconcile", { method: "POST" }));
   beforeEach(() => {
-    routeState.subject = "subject-a"; routeState.issues.length = 0; routeState.events.length = 0;
+    routeState.subject = "subject-a"; routeState.issues.length = 0; routeState.events.length = 0; routeState.observations = {};
     routeState.intents = [{ intent_id: intentId, subject_reference: "subject-a", chain_id: 8453, transaction_hash: hash, status: "submitted" }];
     routeState.steps = [{ intent_id: intentId, step_index: 0, subject_reference: "subject-a", wallet_address: sender.toLowerCase(), chain_id: 8453, target_address: recipient.toLowerCase(), native_value: "100", calldata_hash: nativePrepared.calldataHash, semantic_action: "native_transfer", expected_effect_json: JSON.stringify(nativePrepared.expectedEffect), reported_hash: hash, observed_block_hash: null, verification_state: "reported" }];
     routeState.observation = nativeObservation;
@@ -177,6 +193,61 @@ describe("intent reconciliation route", () => {
     expect(routeState.intents[0].status).toBe("submitted");
   });
 
+  it("advances a submitted multi-step intent to the later exact hash", async () => {
+    const laterHash = `0x${"c".repeat(64)}`;
+    routeState.steps.push({ ...routeState.steps[0], step_index: 1, reported_hash: laterHash, verification_state: "pending" });
+    routeState.observations[laterHash] = { status: "pending" };
+    const first = await request();
+    expect(await first.json()).toMatchObject({ results: [{ intentId, status: "submitted", verificationState: "pending" }] });
+    expect(routeState.intents[0].transaction_hash).toBe(hash);
+    routeState.observations[laterHash] = { ...nativeObservation, receipt: null };
+    const second = await request();
+    expect(await second.json()).toMatchObject({ results: [{ intentId, status: "submitted", verificationState: "pending" }] });
+    expect(routeState.intents[0].transaction_hash).toBe(laterHash);
+    routeState.observations[laterHash] = { ...nativeObservation, receipt: { ...nativeObservation.receipt!, transactionHash: laterHash } };
+    const third = await request();
+    expect(await third.json()).toMatchObject({ results: [{ intentId, status: "confirmed", verificationState: "confirmed" }] });
+  });
+
+  it("keeps the earlier hash when the later step does not match its prepared call", async () => {
+    const laterHash = `0x${"c".repeat(64)}`;
+    routeState.steps.push({ ...routeState.steps[0], step_index: 1, reported_hash: laterHash, verification_state: "pending" });
+    routeState.observations[laterHash] = { ...nativeObservation, call: { ...nativeObservation.call, from: token }, receipt: { ...nativeObservation.receipt!, transactionHash: laterHash } };
+    const response = await request();
+    expect(await response.json()).toMatchObject({ results: [{ intentId, status: "submitted", verificationState: "inconsistent" }] });
+    expect(routeState.intents[0].transaction_hash).toBe(hash);
+  });
+
+  it("retries an older reviewed hash despite 20 newer confirmed intents", async () => {
+    const reviewed = { ...routeState.intents[0], status: "reviewed", transaction_hash: null, updated_at: "2026-09-01T00:00:00.000Z" };
+    const reviewedStep = { ...routeState.steps[0], updated_at: "2026-09-01T00:00:00.000Z" };
+    const confirmed = Array.from({ length: 20 }, (_, index) => ({ ...routeState.intents[0], intent_id: `00000000-0000-4000-8000-${(index + 2).toString(16).padStart(12, "0")}`, status: "confirmed", updated_at: "2026-09-22T00:00:00.000Z" }));
+    routeState.intents = [reviewed, ...confirmed];
+    routeState.steps = [reviewedStep, ...confirmed.map((intent) => ({ ...reviewedStep, intent_id: intent.intent_id, updated_at: "2026-09-22T00:00:00.000Z" }))];
+    routeState.observation = { status: "pending" };
+    const response = await request();
+    const body = await response.json() as { results: Array<{ intentId: string }> };
+    expect(body.results).toHaveLength(20);
+    expect(body.results.some((result) => result.intentId === intentId)).toBe(true);
+    expect(routeState.intents[0].status).toBe("reviewed");
+  });
+
+  it("retries all 25 pending reported hashes across successive batches", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-09-23T10:00:00.000Z"));
+    try {
+      routeState.intents = Array.from({ length: 25 }, (_, index) => ({ intent_id: `00000000-0000-4000-8000-${(index + 1).toString(16).padStart(12, "0")}`, subject_reference: "subject-a", chain_id: 8453, transaction_hash: null, status: "reviewed", updated_at: `2026-09-${String(index + 1).padStart(2, "0")}T00:00:00.000Z` }));
+      routeState.steps = routeState.intents.map((intent, index) => ({ ...routeState.steps[0], intent_id: intent.intent_id, reported_hash: `0x${(index + 1).toString(16).padStart(64, "0")}`, verification_state: "pending", updated_at: "2026-09-01T00:00:00.000Z" }));
+      routeState.observation = { status: "pending" };
+      const first = await (await request()).json() as { results: Array<{ intentId: string; status: string }> };
+      vi.setSystemTime(new Date("2026-09-23T10:00:01.000Z"));
+      const second = await (await request()).json() as { results: Array<{ intentId: string; status: string }> };
+      expect(first.results).toHaveLength(20);
+      expect(new Set([...first.results, ...second.results].map((result) => result.intentId)).size).toBe(25);
+      expect(routeState.intents.every((intent) => intent.status === "reviewed" && intent.transaction_hash === null)).toBe(true);
+    } finally { vi.useRealTimers(); }
+  });
+
   it("does not confirm a receipt missing the expected effect", async () => {
     routeState.steps[0].expected_effect_json = JSON.stringify({ type: "erc20_transfer", token, recipient, amountRaw: "100" });
     const response = await request();
@@ -205,5 +276,13 @@ describe("intent reconciliation route", () => {
     const response = await request();
     expect(await response.json()).toMatchObject({ results: [{ intentId, status: "submitted", verificationState: "reorged" }] });
     expect(routeState.intents[0].status).toBe("submitted");
+  });
+
+  it("reports a reviewed intent as reviewed when its chain check throws", async () => {
+    routeState.intents[0].status = "reviewed";
+    routeState.intents[0].transaction_hash = null;
+    routeState.observations[hash] = new Error("RPC unavailable");
+    const response = await request();
+    expect(await response.json()).toMatchObject({ results: [{ intentId, status: "reviewed", verificationState: "check_failed" }] });
   });
 });
