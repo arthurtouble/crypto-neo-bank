@@ -67,5 +67,9 @@ export function validateAaveCall(input: {
         break;
     }
   }
-  return { action: input.action, wallet: wallet.toLowerCase(), asset: asset.toLowerCase(), amountRaw: input.amountRaw.toString(), max: Boolean(input.max), call: tx };
+  // A Pool max call is not capped by the input reference amount. Never expose
+  // that number as an exact authorized amount to a downstream limit check.
+  return { action: input.action, wallet: wallet.toLowerCase(), asset: asset.toLowerCase(),
+    amountMode: input.max ? "max" as const : "exact" as const,
+    amountRaw: input.max ? null : input.amountRaw.toString(), max: Boolean(input.max), call: tx };
 }

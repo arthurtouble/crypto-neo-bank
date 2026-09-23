@@ -8,7 +8,16 @@ CREATE TABLE IF NOT EXISTS price_alerts (
   quote_currency TEXT NOT NULL,
   mapping_version TEXT NOT NULL,
   direction TEXT NOT NULL CHECK (direction IN ('above', 'below')),
-  threshold_decimal TEXT NOT NULL CHECK (length(threshold_decimal) BETWEEN 1 AND 80 AND threshold_decimal GLOB '[0-9]*' AND threshold_decimal NOT GLOB '*[^0-9.]*' AND length(threshold_decimal) - length(replace(threshold_decimal, '.', '')) <= 1 AND CAST(threshold_decimal AS REAL) > 0),
+  threshold_decimal TEXT NOT NULL CHECK (
+    length(threshold_decimal) BETWEEN 1 AND 79
+    AND threshold_decimal GLOB '[0-9]*' AND threshold_decimal NOT GLOB '*[^0-9.]*'
+    AND length(threshold_decimal) - length(replace(threshold_decimal, '.', '')) <= 1
+    AND (substr(threshold_decimal, 1, 1) != '0' OR length(threshold_decimal) = 1 OR substr(threshold_decimal, 2, 1) = '.')
+    AND substr(threshold_decimal, -1) != '.'
+    AND (instr(threshold_decimal, '.') = 0 OR (instr(threshold_decimal, '.') > 1 AND length(threshold_decimal) - instr(threshold_decimal, '.') BETWEEN 1 AND 18))
+    AND (instr(threshold_decimal, '.') = 0 AND length(threshold_decimal) <= 60 OR instr(threshold_decimal, '.') BETWEEN 2 AND 61)
+    AND CAST(threshold_decimal AS REAL) > 0
+  ),
   hysteresis_bps INTEGER NOT NULL DEFAULT 100 CHECK (hysteresis_bps BETWEEN 0 AND 1000),
   cooldown_seconds INTEGER NOT NULL DEFAULT 3600 CHECK (cooldown_seconds BETWEEN 0 AND 604800),
   status TEXT NOT NULL CHECK (status IN ('active', 'paused', 'cancelled')),
@@ -31,7 +40,16 @@ CREATE TABLE IF NOT EXISTS swap_reminder_plans (
   quote_asset_id TEXT NOT NULL,
   quote_currency TEXT NOT NULL,
   mapping_version TEXT NOT NULL,
-  amount_decimal TEXT NOT NULL CHECK (length(amount_decimal) BETWEEN 1 AND 80 AND amount_decimal GLOB '[0-9]*' AND amount_decimal NOT GLOB '*[^0-9.]*' AND length(amount_decimal) - length(replace(amount_decimal, '.', '')) <= 1 AND CAST(amount_decimal AS REAL) > 0),
+  amount_decimal TEXT NOT NULL CHECK (
+    length(amount_decimal) BETWEEN 1 AND 79
+    AND amount_decimal GLOB '[0-9]*' AND amount_decimal NOT GLOB '*[^0-9.]*'
+    AND length(amount_decimal) - length(replace(amount_decimal, '.', '')) <= 1
+    AND (substr(amount_decimal, 1, 1) != '0' OR length(amount_decimal) = 1 OR substr(amount_decimal, 2, 1) = '.')
+    AND substr(amount_decimal, -1) != '.'
+    AND (instr(amount_decimal, '.') = 0 OR (instr(amount_decimal, '.') > 1 AND length(amount_decimal) - instr(amount_decimal, '.') BETWEEN 1 AND 18))
+    AND (instr(amount_decimal, '.') = 0 AND length(amount_decimal) <= 60 OR instr(amount_decimal, '.') BETWEEN 2 AND 61)
+    AND CAST(amount_decimal AS REAL) > 0
+  ),
   schedule_type TEXT NOT NULL CHECK (schedule_type IN ('one_time', 'weekly', 'monthly')),
   time_zone TEXT NOT NULL,
   anchor_local TEXT NOT NULL,
@@ -59,8 +77,8 @@ CREATE TABLE IF NOT EXISTS swap_reminder_occurrences (
   reminder_state TEXT NOT NULL DEFAULT 'due' CHECK (reminder_state IN ('due', 'dismissed', 'superseded', 'expired')),
   created_at TEXT NOT NULL,
   updated_at TEXT,
-  CHECK ((kind = 'plan' AND plan_id IS NOT NULL AND plan_version > 0 AND due_at IS NOT NULL AND alert_id IS NULL AND threshold_version IS NULL AND crossing_observation_id IS NULL AND observed_price_decimal IS NULL AND source_observed_at IS NULL)
-    OR (kind = 'alert' AND alert_id IS NOT NULL AND threshold_version > 0 AND crossing_observation_id IS NOT NULL AND observed_price_decimal IS NOT NULL AND source_observed_at IS NOT NULL AND plan_id IS NULL AND plan_version IS NULL AND due_at IS NULL)),
+  CHECK ((kind = 'plan' AND plan_id IS NOT NULL AND plan_version IS NOT NULL AND plan_version > 0 AND due_at IS NOT NULL AND alert_id IS NULL AND threshold_version IS NULL AND crossing_observation_id IS NULL AND observed_price_decimal IS NULL AND source_observed_at IS NULL)
+    OR (kind = 'alert' AND alert_id IS NOT NULL AND threshold_version IS NOT NULL AND threshold_version > 0 AND crossing_observation_id IS NOT NULL AND observed_price_decimal IS NOT NULL AND source_observed_at IS NOT NULL AND plan_id IS NULL AND plan_version IS NULL AND due_at IS NULL)),
   FOREIGN KEY (plan_id, subject_reference) REFERENCES swap_reminder_plans(plan_id, subject_reference),
   FOREIGN KEY (alert_id, subject_reference) REFERENCES price_alerts(alert_id, subject_reference)
 );

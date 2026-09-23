@@ -35,4 +35,16 @@ SELECT COUNT(*) FROM swap_reminder_occurrences;`);
     const mixed = sqlite(`${setup}\nINSERT INTO swap_reminder_occurrences (occurrence_id,subject_reference,kind,plan_id,plan_version,due_at,alert_id,threshold_version,crossing_observation_id,created_at) VALUES ('o1','alice','plan','p1',1,'2026-09-30T08:00:00Z','a1',1,'obs-1','x');`);
     expect(mixed.status).not.toBe(0);
   });
+  it("requires non-null occurrence versions so unique identities cannot be bypassed", () => {
+    const plan = sqlite(`${setup}\nINSERT INTO swap_reminder_occurrences (occurrence_id,subject_reference,kind,plan_id,due_at,created_at) VALUES ('o1','alice','plan','p1','2026-09-30T08:00:00Z','2026-09-23T00:00:00Z');`);
+    expect(plan.status).not.toBe(0);
+    const alert = sqlite(`${setup}\nINSERT INTO swap_reminder_occurrences (occurrence_id,subject_reference,kind,alert_id,crossing_observation_id,observed_price_decimal,source_observed_at,created_at) VALUES ('o1','alice','alert','a1','obs-1','3001','2026-09-23T10:00:00Z','2026-09-23T10:01:00Z');`);
+    expect(alert.status).not.toBe(0);
+  });
+  it.each(["1.", "01", "0.0000000000000000001", `${"9".repeat(61)}`])("rejects noncanonical decimal %s in alert and plan rows", (value) => {
+    const alert = sqlite(`${setup}\nUPDATE price_alerts SET threshold_decimal = '${value}' WHERE alert_id = 'a1';`);
+    expect(alert.status).not.toBe(0);
+    const plan = sqlite(`${setup}\nUPDATE swap_reminder_plans SET amount_decimal = '${value}' WHERE plan_id = 'p1';`);
+    expect(plan.status).not.toBe(0);
+  });
 });

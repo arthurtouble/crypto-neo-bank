@@ -71,8 +71,8 @@ describe("Aave Base exact-call policy", () => {
   });
 
   it("permits max only for explicitly reviewed withdraw and repay", () => {
-    expect(call("withdraw", [usdc, maxUint256, wallet], { max: true }).max).toBe(true);
-    expect(call("repay", [usdc, maxUint256, 2n, wallet], { max: true }).max).toBe(true);
+    expect(call("withdraw", [usdc, maxUint256, wallet], { max: true, amountRaw: 1n })).toMatchObject({ amountMode: "max", amountRaw: null });
+    expect(call("repay", [usdc, maxUint256, 2n, wallet], { max: true, amountRaw: 1n })).toMatchObject({ amountMode: "max", amountRaw: null });
     expect(() => call("withdraw", [usdc, maxUint256, wallet])).toThrow();
     expect(() => call("supply", [usdc, maxUint256, wallet, 0], { max: true })).toThrow();
   });
