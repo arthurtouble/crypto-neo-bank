@@ -1,5 +1,6 @@
 import { configuredCountries } from "@/lib/beta/access";
 import { VALUATION_POLICY_VERSION } from "@/lib/transactions/valuation";
+import { validateActionPasskeyOrigin } from "./action-passkey-origin";
 
 /** All fields are derived from authenticated server state/configuration, never browser approval claims. */
 type ChallengeInput = {
@@ -12,6 +13,7 @@ type ChallengeInput = {
   /** Server-owned exact HTTPS configuration, never a value supplied by the browser. */
   origin: string;
   rpId: string;
+  deploymentMode: "development" | "production";
   now: Date;
 };
 
@@ -19,11 +21,8 @@ type ChallengeInput = {
 export async function issueActionPasskeyChallenge(
   db: D1Database, input: ChallengeInput
 ): Promise<{ challengeId: string; challenge: string; expiresAt: string }> {
-  let url: URL;
-  try { url = new URL(input.origin); } catch { throw new Error("Invalid passkey origin configuration."); }
-  if (url.protocol !== "https:" || url.origin !== input.origin || url.hostname !== input.rpId ||
-      input.rpId === "workers.dev" || !/^[a-z0-9.-]+\.[a-z]{2,}$/.test(input.rpId) ||
-      !input.subjectReference || !input.sessionReference || !input.intentId || !input.callFingerprint ||
+  validateActionPasskeyOrigin(input.origin, input.rpId, input.deploymentMode);
+  if (!input.subjectReference || !input.sessionReference || !input.intentId || !input.callFingerprint ||
       !Number.isSafeInteger(input.stepIndex) || input.stepIndex < 0 ||
       !Number.isSafeInteger(input.policyVersion) || input.policyVersion < 1 ||
       !Number.isFinite(input.now.getTime())) {

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { webcrypto } from "node:crypto";
 import type { AuthenticationResponseJSON } from "@simplewebauthn/server";
 import { verifyActionPasskeyAssertion } from "@/lib/security/action-passkey-assertion";
+import { validateActionPasskeyOrigin } from "@/lib/security/action-passkey-origin";
 
 const origin = "https://app.aurel.test";
 const rpId = "app.aurel.test";
@@ -61,6 +62,7 @@ async function signedAssertion(changes: {
     challenge,
     expectedOrigin: changes.expectedOrigin ?? origin,
     expectedRpId: changes.expectedRpId ?? rpId,
+    deploymentMode: "development" as const,
     subjectReference: "subject-1",
     credential: {
       credentialId,
@@ -95,5 +97,18 @@ describe("action-bound passkey assertion", () => {
     ["invalid configured RP", { expectedRpId: "workers.dev" }],
   ] as const)("rejects %s", async (_name, changes) => {
     await expect(verifyActionPasskeyAssertion(await signedAssertion(changes))).rejects.toThrow();
+  });
+
+  it("does not treat a Worker host as a production passkey origin", async () => {
+    const workerOrigin = "https://aurel-financial-os.aurel-events.workers.dev";
+    const workerInput = await signedAssertion({ origin: workerOrigin, rpId: new URL(workerOrigin).hostname,
+      expectedOrigin: workerOrigin, expectedRpId: new URL(workerOrigin).hostname });
+    workerInput.credential.rpId = new URL(workerOrigin).hostname;
+    await expect(verifyActionPasskeyAssertion({ ...workerInput, deploymentMode: "production" })).rejects.toThrow(/origin/i);
+    await expect(verifyActionPasskeyAssertion({ ...workerInput, deploymentMode: "development" })).resolves.toMatchObject({ origin: workerOrigin });
+  });
+
+  it("fails closed on an unknown deployment mode", () => {
+    expect(() => validateActionPasskeyOrigin("https://app.aurel.test", "app.aurel.test", "preview" as "production")).toThrow(/origin/i);
   });
 });

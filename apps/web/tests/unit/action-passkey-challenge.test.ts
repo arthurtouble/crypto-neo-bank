@@ -9,7 +9,7 @@ const at = new Date("2026-09-23T00:01:00.000Z");
 const input = {
   subjectReference: "subject-a", sessionReference: "session-a", intentId: "intent-1",
   stepIndex: 0, callFingerprint: "sha256:call", policyVersion: 1,
-  origin: "https://app.aurel.test", rpId: "app.aurel.test", now: at,
+  origin: "https://app.aurel.test", rpId: "app.aurel.test", deploymentMode: "development" as const, now: at,
 };
 
 let sqlite: DatabaseSync;
@@ -131,6 +131,12 @@ describe("disconnected action passkey challenge issuance", () => {
     await expect(issueActionPasskeyChallenge(database, input)).rejects.toThrow();
     vi.stubEnv("BETA_ALLOWED_COUNTRIES", "PT");
     await expect(issueActionPasskeyChallenge(database, { ...input, origin: "http://app.aurel.test" })).rejects.toThrow();
+  });
+
+  it("rejects a Worker host in production before writing a challenge", async () => {
+    const host = "aurel-financial-os.aurel-events.workers.dev";
+    await expect(issueActionPasskeyChallenge(database, { ...input, origin: `https://${host}`, rpId: host, deploymentMode: "production" })).rejects.toThrow(/origin/i);
+    expect((sqlite.prepare("SELECT COUNT(*) AS n FROM action_passkey_challenges").get() as { n: number }).n).toBe(0);
   });
 
   it("expires no later than the reviewed call", async () => {

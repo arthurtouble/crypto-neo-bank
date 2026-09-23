@@ -1,4 +1,5 @@
 import { verifyAuthenticationResponse, type AuthenticationResponseJSON } from "@simplewebauthn/server";
+import { validateActionPasskeyOrigin } from "./action-passkey-origin";
 
 export type StoredActionCredential = {
   credentialId: string;
@@ -14,6 +15,7 @@ export type VerifyActionPasskeyInput = {
   challenge: string;
   expectedOrigin: string;
   expectedRpId: string;
+  deploymentMode: "development" | "production";
   subjectReference: string;
   credential: StoredActionCredential;
 };
@@ -30,21 +32,7 @@ export type VerifiedActionPasskeyAssertion = {
 
 export async function verifyActionPasskeyAssertion(input: VerifyActionPasskeyInput): Promise<VerifiedActionPasskeyAssertion> {
   const { credential, expectedOrigin, expectedRpId } = input;
-  let configuredOrigin: URL;
-  try {
-    configuredOrigin = new URL(expectedOrigin);
-  } catch {
-    throw new Error("Invalid passkey origin configuration.");
-  }
-  if (
-    configuredOrigin.protocol !== "https:" ||
-    configuredOrigin.origin !== expectedOrigin ||
-    configuredOrigin.hostname !== expectedRpId ||
-    expectedRpId === "workers.dev" ||
-    !/^[a-z0-9.-]+\.[a-z]{2,}$/.test(expectedRpId)
-  ) {
-    throw new Error("Invalid passkey origin or RP ID configuration.");
-  }
+  validateActionPasskeyOrigin(expectedOrigin, expectedRpId, input.deploymentMode);
   if (
     !input.subjectReference ||
     credential.status !== "active" ||
