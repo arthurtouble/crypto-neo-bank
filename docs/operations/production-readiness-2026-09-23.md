@@ -1,5 +1,11 @@
 # Production readiness — 23 September 2026
 
+## 24 September development UI follow-up
+
+An authenticated development-browser inspection found that Swap reminders exposed internal asset IDs and offered creation controls even while the `swaps` capability was disabled. The authenticated alert and reminder list endpoints now report whether planning is available while still returning saved instructions. The UI displays asset/network labels, suppresses unavailable create/edit/resume controls, and does not request due reminders while swaps are disabled. Server-side mutation gates remain authoritative. No financial feature was enabled.
+
+The focused tests and full 1,100-test web suite plus nine mainnet-readiness tests passed; typecheck, lint, and web build passed. Desktop/mobile Playwright recorded 41 passes, two intentional skips, and one mobile Privy-session timeout; the timed-out case passed on an isolated rerun. Candidate Worker `08a590e2-7c8f-4e99-9e5c-f40e782c3856` passed preview smoke, received 100% of the existing workers.dev development traffic, and passed public-URL smoke. A read-only post-rollout D1 query confirmed `direct_transfers`, `swaps`, `cross_chain`, and `defi_actions` all remain disabled. This is a development UI deployment, not a production financial-service release.
+
 This is the release ledger for the product-parity branch. A green build is not permission to move money. The appropriate near-term target is an invite-only engineering beta with designated testers and small funds, after its access policy is verified. Aurel is **not** approved for a public financial-service launch. Keep every action whose authority or evidence is missing disabled.
 
 The [approved product design](../../docs/superpowers/specs/2026-09-22-aurel-product-parity-design.md) defines the financial-authority and safety rules. The [roadmap](../../PRODUCT_PARITY_ROADMAP.md) describes customer-facing scope. This ledger distinguishes work that can be completed in code from evidence that requires an operator, partner, independent reviewer, or counsel.

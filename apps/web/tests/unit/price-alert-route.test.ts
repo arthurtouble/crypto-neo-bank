@@ -21,7 +21,7 @@ vi.mock("@/lib/beta/access", () => {
 });
 vi.mock("@/lib/features/flags", () => {
   class FeatureUnavailableError extends Error {}
-  return { FeatureUnavailableError, requireFeature: async () => { if (!state.feature) throw new FeatureUnavailableError(); } };
+  return { FeatureUnavailableError, requireFeature: async () => { if (!state.feature) throw new FeatureUnavailableError(); }, featureEnabled: async () => state.feature };
 });
 vi.mock("@/lib/swap/catalog", () => ({ resolveCatalogAsset: async (id: string) => state.catalogEligible ? { id, verification: "verified", eligibility: "eligible" } : null }));
 vi.mock("@/lib/security/rate-limit", () => {
@@ -68,6 +68,13 @@ describe("customer price alert API", () => {
     state.subject = "bob";
     expect((await (await GET(new Request("https://aurel.test/api/swap/alerts"))).json() as { alerts: unknown[] }).alerts).toEqual([]);
     expect((await patch({ alertId: body.alert.alertId, version: 1, action: "cancel" })).status).toBe(404);
+  });
+  it("keeps saved alerts readable while reporting that new planning is unavailable", async () => {
+    expect((await post(input())).status).toBe(201);
+    state.feature = false;
+    const response = await GET(new Request("https://aurel.test/api/swap/alerts"));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ planningAvailable: false, alerts: [{ pairId: "ETH/USD" }] });
   });
 
   it("rejects unknown pairs, fake authority and invalid decimal thresholds", async () => {

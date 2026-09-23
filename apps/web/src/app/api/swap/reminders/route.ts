@@ -2,7 +2,7 @@ import { env } from "cloudflare:workers";
 import { z } from "zod";
 import { AuthenticationError, requireVerifiedSubject } from "@/lib/auth/server";
 import { BetaAccessError, configuredCountries, requireBetaAccess } from "@/lib/beta/access";
-import { FeatureUnavailableError, requireFeature } from "@/lib/features/flags";
+import { FeatureUnavailableError, featureEnabled, requireFeature } from "@/lib/features/flags";
 import { ensureSubjectProfile } from "@/lib/profile/ensure";
 import { enforceRateLimit, RateLimitError } from "@/lib/security/rate-limit";
 import { parseAssetId } from "@/lib/swap/assets";
@@ -45,7 +45,10 @@ export async function GET(request: Request) {
   const traceId = crypto.randomUUID();
   try {
     const subject = await requireVerifiedSubject(request);
-    return json({ plans: await listSwapReminderPlans(env.PROJECTION_DB, subject.subjectReference), execution: "customer_review_required", traceId });
+    const [plans, planningAvailable] = await Promise.all([
+      listSwapReminderPlans(env.PROJECTION_DB, subject.subjectReference), featureEnabled(env.PROJECTION_DB, "swaps")
+    ]);
+    return json({ plans, planningAvailable, execution: "customer_review_required", traceId });
   } catch (error) {
     if (error instanceof AuthenticationError) return json({ error: "unauthorized", traceId }, 401);
     console.error(JSON.stringify({ level: "error", event: "swap.reminders.read.failed", traceId, message: error instanceof Error ? error.message : "unknown" }));

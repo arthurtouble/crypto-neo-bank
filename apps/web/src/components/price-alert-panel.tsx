@@ -11,7 +11,7 @@ type PriceAlert = {
   direction: AlertDirection; threshold: string; hysteresisBps: number; cooldownSeconds: number; status: AlertStatus;
   thresholdVersion: number; createdAt: string; updatedAt: string;
 };
-type AlertResponse = { alerts: PriceAlert[]; delivery: "not_active" };
+type AlertResponse = { alerts: PriceAlert[]; planningAvailable: boolean; delivery: "not_active" };
 type MutationAction = "pause" | "resume" | "cancel";
 
 function responseError(status: number): string {
@@ -28,14 +28,14 @@ export async function commitAndRefresh(commit: () => Promise<unknown>, refresh: 
   catch { return "refresh_failed"; }
 }
 
-export function PriceAlertRow({ alert, busy, onEdit, onChange }: {
-  alert: PriceAlert; busy: boolean; onEdit(alert: PriceAlert): void; onChange(alert: PriceAlert, action: MutationAction): void;
+export function PriceAlertRow({ alert, busy, planningAvailable = true, onEdit, onChange }: {
+  alert: PriceAlert; busy: boolean; planningAvailable?: boolean; onEdit(alert: PriceAlert): void; onChange(alert: PriceAlert, action: MutationAction): void;
 }) {
   return <li className="priceAlertRow">
     <div><strong>{alertRuleLabel(alert.direction, alert.threshold)}</strong><small>{alertStateLabel(alert.status)}</small></div>
     <div className="priceAlertActions">
-      {alert.status === "active" && <button type="button" disabled={busy} onClick={() => onEdit(alert)}>Edit</button>}
-      <button type="button" disabled={busy} onClick={() => onChange(alert, alert.status === "active" ? "pause" : "resume")}>{alert.status === "active" ? "Pause" : "Resume"}</button>
+      {alert.status === "active" && planningAvailable && <button type="button" disabled={busy} onClick={() => onEdit(alert)}>Edit</button>}
+      <button type="button" disabled={busy || (!planningAvailable && alert.status !== "active")} onClick={() => onChange(alert, alert.status === "active" ? "pause" : "resume")}>{alert.status === "active" ? "Pause" : "Resume"}</button>
       <button type="button" disabled={busy} onClick={() => onChange(alert, "cancel")}>Remove</button>
     </div>
   </li>;
@@ -45,6 +45,7 @@ export function PriceAlertPanel() {
   const { getAccessToken } = usePrivy();
   const newAlertButton = useRef<HTMLButtonElement>(null);
   const [alerts, setAlerts] = useState<PriceAlert[]>([]);
+  const [planningAvailable, setPlanningAvailable] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loaded, setLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -67,7 +68,7 @@ export function PriceAlertPanel() {
 
   const refresh = useCallback(async (signal?: AbortSignal) => {
     const response = await request("GET", undefined, signal) as AlertResponse;
-    if (!signal?.aborted) { setAlerts(response.alerts); setLoaded(true); }
+    if (!signal?.aborted) { setAlerts(response.alerts); setPlanningAvailable(response.planningAvailable); setLoaded(true); }
   }, [request]);
 
   useEffect(() => {
@@ -113,13 +114,13 @@ export function PriceAlertPanel() {
   }
 
   return <section className="priceAlerts" aria-labelledby="priceAlertsTitle">
-    <div className="priceAlertsHeading"><div><h3 id="priceAlertsTitle">Price Alerts</h3><p>Save an ETH price threshold to revisit later.</p></div><button ref={newAlertButton} className="button secondary" type="button" onClick={openCreate} disabled={busy}>New Alert</button></div>
-    <p className="priceAlertsInactive">Price monitoring and notifications are not active yet. No trade will be placed.</p>
+    <div className="priceAlertsHeading"><div><h3 id="priceAlertsTitle">Price Alerts</h3><p>Save an ETH price threshold to revisit later.</p></div>{planningAvailable && <button ref={newAlertButton} className="button secondary" type="button" onClick={openCreate} disabled={busy}>New Alert</button>}</div>
+    <p className="priceAlertsInactive">{planningAvailable ? "Price monitoring and notifications are not active yet. No trade will be placed." : "Price alerts aren’t available for this account yet."}</p>
     {error && <p className="formError" role="alert">{error} <button type="button" onClick={() => { setError(null); setLoading(true); void refresh().catch(() => setError("Price alerts are unavailable. Try again.")).finally(() => setLoading(false)); }}>Try Again</button></p>}
     {notice && <p className="formSuccess" role="status">{notice}</p>}
     {listState === "loading" ? <p role="status">Loading alerts…</p>
       : listState === "empty" ? <p className="priceAlertsEmpty">No saved alerts.</p>
-      : listState === "populated" ? <ul className="priceAlertList">{alerts.map((alert) => <PriceAlertRow key={alert.alertId} alert={alert} busy={busy} onEdit={openEdit} onChange={(item, action) => void change(item, action)} />)}</ul> : null}
+      : listState === "populated" ? <ul className="priceAlertList">{alerts.map((alert) => <PriceAlertRow key={alert.alertId} alert={alert} busy={busy} planningAvailable={planningAvailable} onEdit={openEdit} onChange={(item, action) => void change(item, action)} />)}</ul> : null}
     <Dialog.Root open={modal !== null} onOpenChange={(open) => { if (!open && !busy) setModal(null); }}>
       <Dialog.Portal><Dialog.Overlay className="swapPickerOverlay" /><Dialog.Content className="swapPickerDialog priceAlertDialog" onCloseAutoFocus={(event) => { event.preventDefault(); newAlertButton.current?.focus(); }}>
         <div className="swapPickerHeading"><Dialog.Title>{modal === "create" ? "New Price Alert" : "Edit Price Alert"}</Dialog.Title><Dialog.Close className="swapPickerClose" aria-label="Close" disabled={busy}><X size={18} /></Dialog.Close></div>

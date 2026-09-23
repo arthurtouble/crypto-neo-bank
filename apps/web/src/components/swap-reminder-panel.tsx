@@ -3,10 +3,10 @@
 import { usePrivy } from "@privy-io/react-auth";
 import { useEffect, useState } from "react";
 import type { ReminderPlan } from "@/lib/swap/reminder-store";
-import { reminderDisabledText, reviewableReminder, type ReviewableOccurrence } from "@/lib/swap/reminder-view-model";
+import { reminderAssetLabel, reminderDisabledText, reviewableReminder, type ReviewableOccurrence } from "@/lib/swap/reminder-view-model";
 
 type Due = ReviewableOccurrence & { occurrenceId: string; dueAt: string };
-type Props = { fromAssetId: string; toAssetId: string; amount: string; onReview(value: { fromAssetId: string; toAssetId: string; amount: string }): void };
+type Props = { fromAssetId: string; toAssetId: string; fromSymbol?: string; toSymbol?: string; amount: string; onReview(value: { fromAssetId: string; toAssetId: string; amount: string }): void };
 type Schedule = "one_time" | "weekly" | "monthly";
 
 function localStart() {
@@ -18,9 +18,10 @@ function dateLabel(value: string | null) {
   return new Date(value).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 }
 
-export function SwapReminderPanel({ fromAssetId, toAssetId, amount, onReview }: Props) {
+export function SwapReminderPanel({ fromAssetId, toAssetId, fromSymbol, toSymbol, amount, onReview }: Props) {
   const { getAccessToken } = usePrivy();
   const [plans, setPlans] = useState<ReminderPlan[]>([]);
+  const [planningAvailable, setPlanningAvailable] = useState(false);
   const [due, setDue] = useState<Due[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -30,6 +31,7 @@ export function SwapReminderPanel({ fromAssetId, toAssetId, amount, onReview }: 
   const [scheduleType, setScheduleType] = useState<Schedule>("one_time");
   const [anchorLocal, setAnchorLocal] = useState(localStart);
   const [savedAmount, setSavedAmount] = useState("");
+  const pairLabel = (fromId: string, toId: string) => `${reminderAssetLabel(fromId, fromId === fromAssetId ? fromSymbol : undefined)} → ${reminderAssetLabel(toId, toId === toAssetId ? toSymbol : undefined)}`;
 
   async function api(path: string, method = "GET", body?: unknown) {
     const token = await getAccessToken();
@@ -39,9 +41,9 @@ export function SwapReminderPanel({ fromAssetId, toAssetId, amount, onReview }: 
     return response.json();
   }
   async function refresh() {
-    const [listed, materialized] = await Promise.all([api("/api/swap/reminders"), api("/api/swap/reminders/due")]);
-    setPlans((listed as { plans: ReminderPlan[] }).plans);
-    setDue((materialized as { occurrences: Due[] }).occurrences);
+    const listed = await api("/api/swap/reminders") as { plans: ReminderPlan[]; planningAvailable: boolean };
+    setPlans(listed.plans); setPlanningAvailable(listed.planningAvailable);
+    setDue(listed.planningAvailable ? (await api("/api/swap/reminders/due") as { occurrences: Due[] }).occurrences : []);
   }
   useEffect(() => {
     let active = true;
@@ -52,7 +54,9 @@ export function SwapReminderPanel({ fromAssetId, toAssetId, amount, onReview }: 
         const headers = { Authorization: `Bearer ${token}` };
         const listed = await fetch("/api/swap/reminders", { headers, cache: "no-store" });
         if (!listed.ok) throw new Error("Reminders are unavailable. Try again.");
-        if (active) setPlans(((await listed.json()) as { plans: ReminderPlan[] }).plans);
+        const list = await listed.json() as { plans: ReminderPlan[]; planningAvailable: boolean };
+        if (active) { setPlans(list.plans); setPlanningAvailable(list.planningAvailable); }
+        if (!list.planningAvailable) return;
         const materialized = await fetch("/api/swap/reminders/due", { headers, cache: "no-store" });
         if (!materialized.ok) throw new Error("Due reminders are unavailable. Saved plans remain visible.");
         if (active) {
@@ -101,23 +105,24 @@ export function SwapReminderPanel({ fromAssetId, toAssetId, amount, onReview }: 
   }
 
   return <section className="swapReminders" aria-labelledby="swapRemindersTitle">
-    <div className="swapRemindersHeading"><div><h3 id="swapRemindersTitle">Swap reminders</h3><p>Reminders bring you back to review a live route. They never place a trade.</p></div><button type="button" className="button secondary" disabled={busy} onClick={() => { setEditing(null); setSavedAmount(amount); setAnchorLocal(localStart()); }}>New reminder</button></div>
+    <div className="swapRemindersHeading"><div><h3 id="swapRemindersTitle">Swap reminders</h3><p>Reminders bring you back to review a live route. They never place a trade.</p></div>{planningAvailable && <button type="button" className="button secondary" disabled={busy} onClick={() => { setEditing(null); setSavedAmount(amount); setAnchorLocal(localStart()); }}>New reminder</button>}</div>
+    {!loading && !planningAvailable && <p>Reminders aren’t available for this account yet.</p>}
     {error && <p className="formError" role="alert">{error} <button type="button" onClick={() => { setError(null); void refresh().catch(() => setError("Reminders are unavailable. Try again.")); }}>Try again</button></p>}
     {notice && <p role="status" className="formSuccess">{notice}</p>}
-    <form className="swapReminderForm" onSubmit={(event) => void createOrEdit(event)}>
+    {planningAvailable && <form className="swapReminderForm" onSubmit={(event) => void createOrEdit(event)}>
       <strong>{editing ? "Edit reminder" : "Remind me about this pair"}</strong>
-      <p>{editing ? `${editing.fromAssetId} → ${editing.toAssetId}` : `${fromAssetId} → ${toAssetId}`}</p>
+      <p>{editing ? pairLabel(editing.fromAssetId, editing.toAssetId) : pairLabel(fromAssetId, toAssetId)}</p>
       <label>Amount<input aria-label="Reminder amount" inputMode="decimal" value={savedAmount} onChange={(event) => setSavedAmount(event.target.value)} required /></label>
       <label>Repeat<select value={scheduleType} onChange={(event) => setScheduleType(event.target.value as Schedule)}><option value="one_time">Once</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option></select></label>
       <label>First reminder<input type="datetime-local" value={anchorLocal} onChange={(event) => setAnchorLocal(event.target.value)} required /></label>
       <button className="button secondary" type="submit" disabled={busy || !savedAmount}>{busy ? "Saving…" : editing ? "Save changes" : "Save reminder"}</button>
       {editing && <button className="button secondary" type="button" onClick={() => setEditing(null)}>Cancel edit</button>}
-    </form>
+    </form>}
     {loading ? <p role="status">Loading reminders…</p> : <>
-      <h4>Due now</h4>
-      {due.length === 0 ? <p>No reminders are due.</p> : <ul className="swapReminderList">{due.map((item) => <li key={item.occurrenceId}><div><strong>{item.amount} · {item.fromAssetId} → {item.toAssetId}</strong><small>Due {dateLabel(item.dueAt)}</small>{!item.canReview && <small>{reminderDisabledText(item.disabledReason)}</small>}</div><button className="button secondary" type="button" disabled={busy || !item.canReview} onClick={() => void reviewDue(item)}>Review Swap</button></li>)}</ul>}
+      {planningAvailable && <><h4>Due now</h4>
+      {due.length === 0 ? <p>No reminders are due.</p> : <ul className="swapReminderList">{due.map((item) => <li key={item.occurrenceId}><div><strong>{item.amount} · {pairLabel(item.fromAssetId, item.toAssetId)}</strong><small>Due {dateLabel(item.dueAt)}</small>{!item.canReview && <small>{reminderDisabledText(item.disabledReason)}</small>}</div><button className="button secondary" type="button" disabled={busy || !item.canReview} onClick={() => void reviewDue(item)}>Review Swap</button></li>)}</ul>}</>}
       <h4>Saved plans</h4>
-      {plans.length === 0 ? <p>No saved reminders yet.</p> : <ul className="swapReminderList">{plans.map((plan) => <li key={plan.planId}><div><strong>{plan.amount} · {plan.fromAssetId} → {plan.toAssetId}</strong><small>{plan.scheduleType.replace("_", " ")} · {plan.status} · Next {dateLabel(plan.nextDueAt)}</small></div><div className="swapReminderActions"><button type="button" disabled={busy || plan.status !== "active"} onClick={() => { setEditing(plan); setSavedAmount(plan.amount); setScheduleType(plan.scheduleType); setAnchorLocal(plan.anchorLocal); }}>Edit</button><button type="button" disabled={busy} onClick={() => void change(plan, plan.status === "active" ? "pause" : "resume")}>{plan.status === "active" ? "Pause" : "Resume"}</button><button type="button" disabled={busy} onClick={() => void change(plan, "cancel")}>Cancel</button></div></li>)}</ul>}
+      {plans.length === 0 ? <p>No saved reminders yet.</p> : <ul className="swapReminderList">{plans.map((plan) => <li key={plan.planId}><div><strong>{plan.amount} · {pairLabel(plan.fromAssetId, plan.toAssetId)}</strong><small>{plan.scheduleType.replace("_", " ")} · {plan.status} · Next {dateLabel(plan.nextDueAt)}</small></div><div className="swapReminderActions">{planningAvailable && <button type="button" disabled={busy || plan.status !== "active"} onClick={() => { setEditing(plan); setSavedAmount(plan.amount); setScheduleType(plan.scheduleType); setAnchorLocal(plan.anchorLocal); }}>Edit</button>}<button type="button" disabled={busy || (!planningAvailable && plan.status !== "active")} onClick={() => void change(plan, plan.status === "active" ? "pause" : "resume")}>{plan.status === "active" ? "Pause" : "Resume"}</button><button type="button" disabled={busy} onClick={() => void change(plan, "cancel")}>Cancel</button></div></li>)}</ul>}
     </>}
   </section>;
 }

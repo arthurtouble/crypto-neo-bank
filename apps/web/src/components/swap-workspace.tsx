@@ -359,7 +359,7 @@ export function SwapWorkspace() {
       submittedDetail={reportWarning ?? "Waiting for independent confirmation. You can leave this screen."} />}
     {reportWarning && <p className="formError" role="alert">{reportWarning}</p>}
     <PriceAlertPanel />
-    <SwapReminderPanel fromAssetId={fromAssetId} toAssetId={toAssetId} amount={amount} onReview={(saved) => {
+    <SwapReminderPanel fromAssetId={fromAssetId} toAssetId={toAssetId} fromSymbol={source?.symbol} toSymbol={destination?.symbol} amount={amount} onReview={(saved) => {
       setFromAssetId(saved.fromAssetId); setToAssetId(saved.toAssetId); setAmount(saved.amount); setAcknowledged(false); clearReview();
       window.scrollTo({ top: 0, behavior: "smooth" });
     }} />

@@ -79,6 +79,13 @@ describe("authenticated Swap reminder API", () => {
     expect((await (await GET(new Request("https://aurel.test/api/swap/reminders"))).json() as { plans: unknown[] }).plans).toEqual([]);
     expect((await patch({ planId: plan.planId, version: 1, action: "cancel" })).status).toBe(404);
   });
+  it("keeps saved plans readable while reporting that new planning is unavailable", async () => {
+    expect((await post(input())).status).toBe(201);
+    state.feature = false;
+    const response = await GET(new Request("https://aurel.test/api/swap/reminders"));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ planningAvailable: false, plans: [{ fromAssetId, toAssetId }] });
+  });
   it("uses versions for edits and pause, and returns review-only due items", async () => {
     const created = (await (await post(input())).json() as { plan: { planId: string } }).plan;
     expect((await patch({ planId: created.planId, version: 1, action: "pause" })).status).toBe(200);

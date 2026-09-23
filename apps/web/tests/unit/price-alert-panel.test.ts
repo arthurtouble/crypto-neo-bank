@@ -23,6 +23,15 @@ describe("price alert row", () => {
     expect(html).not.toContain(">Edit<");
   });
 
+  it("keeps saved rules visible but prevents activation when planning is unavailable", () => {
+    const active = renderToStaticMarkup(createElement(PriceAlertRow, { alert, busy: false, planningAvailable: false, onEdit() {}, onChange() {} }));
+    const paused = renderToStaticMarkup(createElement(PriceAlertRow, { alert: { ...alert, status: "paused" }, busy: false, planningAvailable: false, onEdit() {}, onChange() {} }));
+    expect(active).toContain("ETH above $2,500");
+    expect(active).not.toContain(">Edit<");
+    expect(active).toContain("Pause");
+    expect(paused).toMatch(/<button[^>]*disabled=""[^>]*>Resume<\/button>/);
+  });
+
   it("keeps a committed mutation successful when only the follow-up list refresh fails", async () => {
     let committed = false;
     const result = await commitAndRefresh(async () => { committed = true; }, async () => { throw new Error("network offline"); });

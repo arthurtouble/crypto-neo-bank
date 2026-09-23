@@ -2,7 +2,7 @@ import { env } from "cloudflare:workers";
 import { z } from "zod";
 import { AuthenticationError, requireVerifiedSubject } from "@/lib/auth/server";
 import { BetaAccessError, configuredCountries, requireBetaAccess } from "@/lib/beta/access";
-import { FeatureUnavailableError, requireFeature } from "@/lib/features/flags";
+import { FeatureUnavailableError, featureEnabled, requireFeature } from "@/lib/features/flags";
 import { REVIEWED_PRICE_ALERT_PAIR as pair } from "@/lib/markets/alert-mapping";
 import { ensureSubjectProfile } from "@/lib/profile/ensure";
 import { enforceRateLimit, RateLimitError } from "@/lib/security/rate-limit";
@@ -62,7 +62,8 @@ export async function GET(request: Request) {
     const subject = await requireVerifiedSubject(request);
     const rows = await env.PROJECTION_DB.prepare("SELECT * FROM price_alerts WHERE subject_reference = ? AND status != 'cancelled' ORDER BY created_at DESC LIMIT 100")
       .bind(subject.subjectReference).all<AlertRow>();
-    return json({ alerts: rows.results.map(present), execution: "customer_review_required", delivery: "not_active", traceId });
+    const planningAvailable = await featureEnabled(env.PROJECTION_DB, "swaps");
+    return json({ alerts: rows.results.map(present), planningAvailable, execution: "customer_review_required", delivery: "not_active", traceId });
   } catch (error) { return failure(error, traceId, "read"); }
 }
 
