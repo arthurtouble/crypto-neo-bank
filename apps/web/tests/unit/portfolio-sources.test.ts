@@ -22,7 +22,9 @@ function chainFetch(responses: Record<string, unknown[]>) {
     return Response.json(kind === "internal-transactions" ? { meta: { status: 1 }, ...(result as object) } : result);
   });
 }
-const verified = vi.fn(async () => ({ blockHash, blockTimestamp: BigInt(Date.parse("2026-09-20T12:00:00.000Z") / 1000), finalized: true, receiptSuccess: true }));
+const verified = vi.fn(async () => ({ blockHash, blockTimestamp: BigInt(Date.parse("2026-09-20T12:00:00.000Z") / 1000), finalized: true, receiptSuccess: true,
+  transaction: { hash: txHash, blockHash, blockNumber: 100n, from: accountId.slice(5), to: tx.to.hash, value: 100n },
+  fee: { gasUsed: 2n, effectiveGasPrice: 3n, l1Fee: 1n, operatorFee: 0n } }));
 
 describe("Base chain history source", () => {
   it("uses a matching receipt log and on-chain precision to prove linked-wallet token transfers", async () => {
@@ -116,9 +118,50 @@ describe("Base chain history source", () => {
     expect(second.complete).toBe(true);
     expect(second.nextCursor).toBeNull();
     expect(first.events[0]).toMatchObject({ assetId: "8453:native", rawDelta: "-100", finality: "finalized" });
-    expect(first.events.find((item) => item.kind === "fee")?.rawDelta).toBe("-6");
-    expect(JSON.parse(first.events[0].evidenceJson)).toMatchObject({ sourceEvidenceVersion: 2, providerDigest: expect.any(String) });
+    expect(first.events.find((item) => item.kind === "fee")?.rawDelta).toBe("-7");
+    expect(JSON.parse(first.events[0].evidenceJson)).toMatchObject({ sourceEvidenceVersion: 3, providerDigest: expect.any(String), effectProof: "canonical_transaction" });
     expect(fetcher).toHaveBeenCalledTimes(4);
+  });
+
+  it("does not publish a native transfer contradicted by its canonical transaction", async () => {
+    const source = new BaseChainSource({ apiKey: "test", fetcher: chainFetch({ transactions: [page([tx])], "internal-transactions": [page([])], "token-transfers": [page([])] }),
+      verify: vi.fn(async () => ({ ...await verified(), transaction: { ...(await verified()).transaction, value: 99n } })) });
+    const result = await source.page(request);
+    expect(result.complete).toBe(false);
+    expect(result.events).toEqual([]);
+  });
+
+  it("uses canonical receipt gas economics rather than indexed gas fields", async () => {
+    const source = new BaseChainSource({ apiKey: "test", fetcher: chainFetch({ transactions: [page([tx])], "internal-transactions": [page([])], "token-transfers": [page([])] }),
+      verify: vi.fn(async () => ({ ...await verified(), fee: { gasUsed: 4n, effectiveGasPrice: 5n, l1Fee: 5n, operatorFee: 2n } })) });
+    const result = await source.page(request);
+    expect(result.complete).toBe(true);
+    expect(result.events.find((event) => event.kind === "fee")?.rawDelta).toBe("-27");
+    expect(JSON.parse(result.events.find((event) => event.kind === "fee")!.evidenceJson)).toMatchObject({ effectProof: "canonical_base_total_fee" });
+  });
+
+  it("keeps history incomplete when a successful native transfer lacks exact fee evidence", async () => {
+    const source = new BaseChainSource({ apiKey: "test", fetcher: chainFetch({ transactions: [page([tx])], "internal-transactions": [page([])], "token-transfers": [page([])] }),
+      verify: vi.fn(async () => ({ ...await verified(), fee: null })) });
+    const result = await source.page(request);
+    expect(result.complete).toBe(false);
+    expect(result.events.some((event) => event.kind === "fee")).toBe(false);
+  });
+
+  it("does not publish an execution-only fee when the Base L1 component is missing", async () => {
+    const source = new BaseChainSource({ apiKey: "test", fetcher: chainFetch({ transactions: [page([tx])], "internal-transactions": [page([])], "token-transfers": [page([])] }),
+      verify: vi.fn(async () => ({ ...await verified(), fee: { gasUsed: 2n, effectiveGasPrice: 3n, operatorFee: 0n } as never })) });
+    const result = await source.page(request);
+    expect(result.complete).toBe(false);
+    expect(result.events.some((event) => event.kind === "fee")).toBe(false);
+  });
+
+  it("does not treat an unverified internal trace as a native balance effect", async () => {
+    const internal = { ...tx, transaction_hash: txHash, index: 7, success: true };
+    const source = new BaseChainSource({ apiKey: "test", fetcher: chainFetch({ transactions: [page([])], "internal-transactions": [page([internal])], "token-transfers": [page([])] }), verify: verified });
+    const result = await source.page(request);
+    expect(result.complete).toBe(false);
+    expect(result.events).toEqual([]);
   });
 
   it("fails closed for absent native page, repeated cursor, duplicate event, malformed units, and changed hash", async () => {

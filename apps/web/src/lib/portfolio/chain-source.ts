@@ -6,13 +6,16 @@ const SOURCE_ID = "blockscout:8453";
 const STREAMS = ["transactions", "internal-transactions", "token-transfers"] as const;
 type Stream = typeof STREAMS[number];
 type Cursor = { version: 1; accountId: AccountId; from: string; through: string; pages: Record<Stream, Record<string, string | number> | null>; seen: string[] };
-type VerifyResult = { blockHash: string | null; blockTimestamp?: bigint; transactionIndex?: number; finalized: boolean; receiptSuccess: boolean; logs?: unknown; tokenDecimals?: unknown };
+type VerifyResult = { blockHash: string | null; blockTimestamp?: bigint; transactionIndex?: number; finalized: boolean; receiptSuccess: boolean; logs?: unknown; tokenDecimals?: unknown;
+  transaction?: { hash: string; blockHash: string | null; blockNumber: bigint; from: string; to: string | null; value: bigint };
+  fee?: { gasUsed: bigint; effectiveGasPrice: bigint; l1Fee: bigint; operatorFee: bigint } | null };
 type Options = { apiKey?: string; fetcher?: (url: string, init?: RequestInit) => Promise<Response>; verify?: (hash: `0x${string}`, blockNumber: bigint) => Promise<VerifyResult>; confirmationDepth?: bigint };
 type RecordValue = Record<string, unknown>;
 
 function record(value: unknown): RecordValue | null { return value && typeof value === "object" && !Array.isArray(value) ? value as RecordValue : null; }
 function address(value: unknown): string | null { const hash = record(value)?.hash; return typeof hash === "string" && /^0x[a-f0-9]{40}$/i.test(hash) ? hash.toLowerCase() : null; }
 function integer(value: unknown): bigint | null { return (typeof value === "string" || typeof value === "number" && Number.isSafeInteger(value)) && /^(0|[1-9]\d*)$/.test(String(value)) ? BigInt(value) : null; }
+function rpcInteger(value: unknown): bigint | null { return typeof value === "string" && /^0x(?:0|[1-9a-f][a-f0-9]*)$/i.test(value) ? BigInt(value) : null; }
 function hash(value: unknown): `0x${string}` | null { return typeof value === "string" && /^0x[a-f0-9]{64}$/i.test(value) ? value.toLowerCase() as `0x${string}` : null; }
 function iso(value: unknown): string | null { return typeof value === "string" && Number.isFinite(Date.parse(value)) ? new Date(value).toISOString() : null; }
 function tokenDecimals(value: unknown): number | null {
@@ -117,7 +120,7 @@ export class BaseChainSource implements HistoricalEventSource {
         const indexedHash = hash(raw.block_hash);
         if (!indexedHash) { valid = false; continue; }
         let verification: VerifyResult;
-        try { verification = await (this.options.verify ?? ((h, n) => this.verifyRpc(h, n, indexedHash, stream === "token-transfers" ? contract as `0x${string}` : null)))(txHash, blockNumber); }
+        try { verification = await (this.options.verify ?? ((h, n) => this.verifyRpc(h, n, indexedHash, stream, stream === "token-transfers" ? contract as `0x${string}` : null)))(txHash, blockNumber); }
         catch { valid = false; continue; }
         const rpcHash = hash(verification.blockHash);
         const changed = rpcHash !== indexedHash;
@@ -130,6 +133,14 @@ export class BaseChainSource implements HistoricalEventSource {
         const tokenProven = stream === "token-transfers" && !changed && tokenDecimals(verification.tokenDecimals) === decimals
           && matchesTransferLog(verification.logs, { contract: String(contract), from, to, value, logIndex: raw.log_index as number });
         if (stream === "token-transfers" && !changed && !tokenProven) { valid = false; continue; }
+        const nativeProven = stream === "transactions" && !changed && verification.receiptSuccess
+          && hash(verification.transaction?.hash) === txHash && hash(verification.transaction?.blockHash) === rpcHash
+          && verification.transaction?.blockNumber === blockNumber && verification.transaction.from.toLowerCase() === from
+          && verification.transaction.to?.toLowerCase() === to && verification.transaction.value === value;
+        if (stream === "transactions" && !changed && !nativeProven) { valid = false; continue; }
+        // A receipt does not contain internal call values. Until a trace-capable independent source is available,
+        // these rows can invalidate old history on reorg but cannot create a completed balance effect.
+        if (stream === "internal-transactions" && !changed) { valid = false; continue; }
         const providerDigest = await digest(raw);
         const identities: Array<{ suffix: string; delta: bigint; counterparty: string }> = [];
         if (from === wallet) identities.push({ suffix: "out", delta: -value, counterparty: to });
@@ -138,14 +149,14 @@ export class BaseChainSource implements HistoricalEventSource {
         const assetId = stream === "token-transfers" ? `8453:${String(contract).toLowerCase()}` : "8453:native";
         for (const identity of identities) {
           const sourceEventId = `${sourceRecordId}:${identity.suffix}`;
-          all.push({ sourceId: SOURCE_ID, sourceName: "Blockscout Pro Base", sourceEventId, ingestionVersion: 1, accountId: input.accountId, assetId, rawDelta: identity.delta.toString(), decimals, kind: "unknown", occurredAt: observedAt, chainId: 8453, blockNumber: blockNumber.toString(), blockHash: rpcHash, txHash, logIndex: stream === "token-transfers" ? raw.log_index as number : null, finality: changed ? "reorged" : finalized ? "finalized" : "pending", completeness: changed ? "partial" : finalized ? "complete" : "unfinalized", groupId: txHash, counterpartyAccountId: tokenProven && finalized ? `8453:${identity.counterparty}` as AccountId : null, evidenceJson: JSON.stringify({ sourceEvidenceVersion: 2, stream, providerDigest, indexedBlockHash: indexedHash, receiptSuccess: verification.receiptSuccess, transactionIndex: verification.transactionIndex, effectProof: tokenProven && finalized ? "receipt_log_and_onchain_decimals" : null }) });
+          all.push({ sourceId: SOURCE_ID, sourceName: "Blockscout Pro Base", sourceEventId, ingestionVersion: 1, accountId: input.accountId, assetId, rawDelta: identity.delta.toString(), decimals, kind: "unknown", occurredAt: observedAt, chainId: 8453, blockNumber: blockNumber.toString(), blockHash: rpcHash, txHash, logIndex: stream === "token-transfers" ? raw.log_index as number : null, finality: changed ? "reorged" : finalized ? "finalized" : "pending", completeness: changed ? "partial" : finalized ? "complete" : "unfinalized", groupId: txHash, counterpartyAccountId: tokenProven && finalized ? `8453:${identity.counterparty}` as AccountId : nativeProven && finalized ? `8453:${identity.counterparty}` as AccountId : null, evidenceJson: JSON.stringify({ sourceEvidenceVersion: 3, stream, providerDigest, indexedBlockHash: indexedHash, receiptSuccess: verification.receiptSuccess, transactionIndex: verification.transactionIndex, effectProof: tokenProven && finalized ? "receipt_log_and_onchain_decimals" : nativeProven && finalized ? "canonical_transaction" : null }) });
         }
         if (stream === "transactions" && from === wallet) {
-          const gasUsed = integer(raw.gas_used);
-          const gasPrice = integer(raw.gas_price);
-          const fee = gasUsed !== null && gasPrice !== null ? gasUsed * gasPrice : null;
+          const proof = verification.fee;
+          const fee = proof && [proof.gasUsed, proof.effectiveGasPrice, proof.l1Fee, proof.operatorFee].every((part) => typeof part === "bigint" && part >= 0n)
+            ? proof.gasUsed * proof.effectiveGasPrice + proof.l1Fee + proof.operatorFee : null;
           if (fee === null) valid = false;
-          else if (fee > 0n) all.push({ sourceId: SOURCE_ID, sourceName: "Blockscout Pro Base", sourceEventId: `${txHash}:fee`, ingestionVersion: 1, accountId: input.accountId, assetId: "8453:native", rawDelta: (-fee).toString(), decimals: 18, kind: "fee", occurredAt: observedAt, chainId: 8453, blockNumber: blockNumber.toString(), blockHash: rpcHash, txHash, logIndex: null, finality: changed ? "reorged" : finalized ? "finalized" : "pending", completeness: finalized ? "complete" : "partial", groupId: txHash, counterpartyAccountId: null, evidenceJson: JSON.stringify({ sourceEvidenceVersion: 2, stream, providerDigest, receiptSuccess: verification.receiptSuccess }) });
+          else if (fee > 0n) all.push({ sourceId: SOURCE_ID, sourceName: "Blockscout Pro Base", sourceEventId: `${txHash}:fee`, ingestionVersion: 1, accountId: input.accountId, assetId: "8453:native", rawDelta: (-fee).toString(), decimals: 18, kind: "fee", occurredAt: observedAt, chainId: 8453, blockNumber: blockNumber.toString(), blockHash: rpcHash, txHash, logIndex: null, finality: changed ? "reorged" : finalized ? "finalized" : "pending", completeness: finalized ? "complete" : "partial", groupId: txHash, counterpartyAccountId: null, evidenceJson: JSON.stringify({ sourceEvidenceVersion: 3, stream, providerDigest, receiptSuccess: verification.receiptSuccess, effectProof: finalized ? "canonical_base_total_fee" : null }) });
         }
       }
     }
@@ -155,16 +166,40 @@ export class BaseChainSource implements HistoricalEventSource {
     return { events: bounded, nextCursor: complete ? null : cursorEncode({ version: 1, accountId: input.accountId, from: input.from, through: input.through, pages: next, seen: [...seen].slice(-200) }), coveredThrough: complete ? input.through : input.from, complete, sourceId: SOURCE_ID };
   }
 
-  private async verifyRpc(txHash: `0x${string}`, blockNumber: bigint, indexedHash: `0x${string}`, tokenContract: `0x${string}` | null): Promise<VerifyResult> {
+  private async verifyRpc(txHash: `0x${string}`, blockNumber: bigint, indexedHash: `0x${string}`, stream: Stream, tokenContract: `0x${string}` | null): Promise<VerifyResult> {
     const client = createPublicClient({ chain: base, transport: http() });
     const [block, tip] = await Promise.all([client.getBlock({ blockNumber }), client.getBlockNumber()]);
     if (block.hash.toLowerCase() !== indexedHash) return { blockHash: block.hash, blockTimestamp: block.timestamp, receiptSuccess: false, finalized: false };
-    const receipt = await client.getTransactionReceipt({ hash: txHash });
+    const [receipt, transaction, rawReceipt] = await Promise.all([client.getTransactionReceipt({ hash: txHash }),
+      stream === "transactions" ? client.getTransaction({ hash: txHash }) : Promise.resolve(null),
+      stream === "transactions" ? client.request({ method: "eth_getTransactionReceipt", params: [txHash] }) : Promise.resolve(null)]);
+    const raw = record(rawReceipt);
+    const gasUsed = rpcInteger(raw?.gasUsed);
+    const gasPrice = rpcInteger(raw?.effectiveGasPrice);
+    const l1Fee = rpcInteger(raw?.l1Fee);
+    const operatorScalar = raw?.operatorFeeScalar == null ? 0n : rpcInteger(raw.operatorFeeScalar);
+    const operatorConstant = raw?.operatorFeeConstant == null ? 0n : rpcInteger(raw.operatorFeeConstant);
+    const operatorPairComplete = (raw?.operatorFeeScalar == null) === (raw?.operatorFeeConstant == null);
+    const jovianMarker = raw?.daFootprintGasScalar == null ? null : rpcInteger(raw.daFootprintGasScalar);
+    const rawMatches = raw && hash(raw.transactionHash) === txHash && hash(raw.blockHash) === block.hash
+      && rpcInteger(raw.blockNumber) === blockNumber && raw.status === "0x1"
+      && gasUsed === receipt.gasUsed && gasPrice === receipt.effectiveGasPrice
+      && (receipt.l1Fee == null || receipt.l1Fee === l1Fee);
+    // Base charges L2 execution plus L1 data and, when configured, an operator fee.
+    // Nonzero operator parameters without an explicit Jovian marker are not enough to select a fork formula.
+    const operatorFee = operatorPairComplete && operatorScalar !== null && operatorConstant !== null && gasUsed !== null
+      && (operatorScalar === 0n && operatorConstant === 0n || jovianMarker !== null)
+      ? gasUsed * operatorScalar * 100n + operatorConstant : null;
+    const fee = rawMatches && l1Fee !== null && operatorFee !== null && gasUsed !== null && gasPrice !== null
+      ? { gasUsed, effectiveGasPrice: gasPrice, l1Fee, operatorFee } : null;
     const decimals = tokenContract && receipt.status === "success" && receipt.blockHash === block.hash
       ? await client.readContract({ address: tokenContract, abi: erc20Abi, functionName: "decimals", blockNumber }) : null;
     return { blockHash: block.hash, blockTimestamp: block.timestamp, transactionIndex: receipt.transactionIndex,
       receiptSuccess: receipt.status === "success" && receipt.blockHash === block.hash && receipt.blockNumber === blockNumber
       && receipt.transactionHash.toLowerCase() === txHash,
-      finalized: tip >= blockNumber + (this.options.confirmationDepth ?? 20n), logs: receipt.logs, tokenDecimals: decimals };
+      finalized: tip >= blockNumber + (this.options.confirmationDepth ?? 20n), logs: receipt.logs, tokenDecimals: decimals,
+      transaction: transaction ? { hash: transaction.hash, blockHash: transaction.blockHash, blockNumber: transaction.blockNumber!,
+        from: transaction.from, to: transaction.to, value: transaction.value } : undefined,
+      fee };
   }
 }

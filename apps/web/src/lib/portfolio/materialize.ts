@@ -37,7 +37,7 @@ function evidenceRole(event: HistoricalEvent): string | null {
 }
 function currentChainEvidence(event: HistoricalEvent): boolean {
   if (event.sourceId !== "blockscout:8453") return true;
-  try { return (JSON.parse(event.evidenceJson) as { sourceEvidenceVersion?: unknown }).sourceEvidenceVersion === 2; }
+  try { return (JSON.parse(event.evidenceJson) as { sourceEvidenceVersion?: unknown }).sourceEvidenceVersion === 3; }
   catch { return false; }
 }
 async function digest(value: unknown): Promise<string> {
