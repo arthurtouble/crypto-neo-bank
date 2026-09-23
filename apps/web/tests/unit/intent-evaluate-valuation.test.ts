@@ -51,6 +51,12 @@ describe("server-authoritative intent evaluation", () => {
     expect(response.status).toBe(201);
     expect((await response.json() as { decision: { requiresStepUp: boolean } }).decision.requiresStepUp).toBe(true);
   });
+  it("requires step-up when a stored threshold is malformed", async () => {
+    state.stepUpThresholdUsd = Number.NaN;
+    const response = await POST(request("transfer", "USDC", "100"));
+    expect(response.status).toBe(201);
+    expect((await response.json() as { decision: { requiresStepUp: boolean } }).decision.requiresStepUp).toBe(true);
+  });
   it("blocks a 30k USDC transfer despite a zero client estimate and persists trusted evidence", async () => {
     const response = await POST(request());
     expect(response.status).toBe(422);

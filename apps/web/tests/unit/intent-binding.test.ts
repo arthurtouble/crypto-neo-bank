@@ -347,6 +347,16 @@ describe("intent preparation route", () => {
     expect(await response.json()).toMatchObject({ error: "step_up_unavailable" });
     expect(state.prepared.size).toBe(0);
   });
+
+  it("blocks preparation when a stored step-up threshold is malformed", async () => {
+    state.stepUpThresholdUsd = Number.NaN;
+    state.valuationCents = "100";
+    state.addressBook = [{ address: recipient, available_at: new Date(Date.now() - 60_000).toISOString() }];
+    const response = await request(payload);
+    expect(response.status).toBe(403);
+    expect(await response.json()).toMatchObject({ error: "step_up_unavailable" });
+    expect(state.prepared.size).toBe(0);
+  });
 });
 
 describe("reported transaction binding", () => {
