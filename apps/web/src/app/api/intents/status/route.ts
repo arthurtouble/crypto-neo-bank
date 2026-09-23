@@ -85,8 +85,10 @@ export async function POST(request: Request) {
       const lock = await env.PROJECTION_DB.prepare("SELECT account_locked FROM security_profiles WHERE subject_reference = ?").bind(subject.subjectReference).first<{ account_locked: number }>();
       if (!lock || lock.account_locked) return reply({ error: "account_locked", traceId }, 403);
       const claimed = await env.PROJECTION_DB.prepare(`UPDATE intent_prepared_calls SET reported_hash = ?, verification_state = 'pending', updated_at = ?
-        WHERE intent_id = ? AND step_index = ? AND (reported_hash IS NULL OR lower(reported_hash) = lower(?)) AND verification_state IN ('prepared', 'pending', 'reported')`)
-        .bind(hash.toLowerCase(), new Date().toISOString(), input.intentId, stepIndex, hash).run();
+        WHERE intent_id = ? AND step_index = ? AND (reported_hash IS NULL OR lower(reported_hash) = lower(?)) AND verification_state IN ('prepared', 'pending', 'reported')
+        AND EXISTS (SELECT 1 FROM transaction_intents i WHERE i.intent_id = intent_prepared_calls.intent_id
+          AND i.subject_reference = ? AND i.status IN ('reviewed', 'submitted'))`)
+        .bind(hash.toLowerCase(), new Date().toISOString(), input.intentId, stepIndex, hash, subject.subjectReference).run();
       if (claimed.meta.changes !== 1) return reply({ error: "hash_conflict", traceId }, 409);
       const observation = await observeTransactionIdentity(prepared.chain_id, hash);
       if (observation.status === "pending") return reply({ intentId: input.intentId, stepIndex, verificationState: "pending", traceId }, 202);
@@ -118,21 +120,30 @@ export async function POST(request: Request) {
       .bind(input.intentId, subject.subjectReference).first<{ reported: number }>();
     if (reported) return reply({ error: "transaction_pending", traceId }, 409);
     const now = new Date().toISOString();
-    const changed = await env.PROJECTION_DB.prepare(`UPDATE transaction_intents
-      SET status = ?, failure_reason = ?, updated_at = ?
-      WHERE intent_id = ? AND subject_reference = ? AND status = 'reviewed'
-        AND transaction_hash IS NULL
-        AND NOT EXISTS (SELECT 1 FROM intent_prepared_calls p WHERE p.intent_id = transaction_intents.intent_id AND p.reported_hash IS NOT NULL)`)
-      .bind(input.status, input.failureReason ?? null, now, input.intentId, subject.subjectReference).run();
-    if (changed.meta.changes !== 1) return reply({ error: "transaction_pending", traceId }, 409);
-    await env.PROJECTION_DB.batch([
+    const eventId = crypto.randomUUID();
+    const eventType = `intent_${input.status}`;
+    const changes = await env.PROJECTION_DB.batch([
+      env.PROJECTION_DB.prepare(`UPDATE transaction_intents
+        SET status = ?, failure_reason = ?, updated_at = ?
+        WHERE intent_id = ? AND subject_reference = ? AND status = 'reviewed'
+          AND transaction_hash IS NULL
+          AND NOT EXISTS (SELECT 1 FROM intent_prepared_calls p WHERE p.intent_id = transaction_intents.intent_id AND p.reported_hash IS NOT NULL)`)
+        .bind(input.status, input.failureReason ?? null, now, input.intentId, subject.subjectReference),
       env.PROJECTION_DB.prepare(`INSERT INTO intent_events (event_id, intent_id, subject_reference, event_type, evidence_json, occurred_at)
-        VALUES (?, ?, ?, ?, ?, ?)`)
-        .bind(crypto.randomUUID(), input.intentId, subject.subjectReference, `intent_${input.status}`, JSON.stringify({ failureReason: input.failureReason }), now),
+        SELECT ?, intent_id, subject_reference, ?, ?, ? FROM transaction_intents
+        WHERE intent_id = ? AND subject_reference = ? AND status = ? AND updated_at = ?
+          AND NOT EXISTS (SELECT 1 FROM intent_events WHERE intent_id = ? AND event_type = ? AND occurred_at = ?)`)
+        .bind(eventId, eventType, JSON.stringify({ failureReason: input.failureReason }), now,
+          input.intentId, subject.subjectReference, input.status, now, input.intentId, eventType, now),
       env.PROJECTION_DB.prepare(`INSERT INTO product_events (event_id, subject_reference, session_reference, event_name, surface, properties_json, occurred_at)
-        VALUES (?, ?, ?, ?, '/app/activity', ?, ?)`)
-        .bind(crypto.randomUUID(), subject.subjectReference, subject.sessionReference, "transaction_prepared", JSON.stringify({ intentId: input.intentId, status: input.status }), now)
+        SELECT ?, ?, ?, ?, '/app/activity', ?, ? WHERE EXISTS
+          (SELECT 1 FROM intent_events WHERE event_id = ? AND intent_id = ? AND subject_reference = ?)`)
+        .bind(crypto.randomUUID(), subject.subjectReference, subject.sessionReference, "transaction_prepared",
+          JSON.stringify({ intentId: input.intentId, status: input.status }), now, eventId, input.intentId, subject.subjectReference)
     ]);
+    if (changes[0].meta.changes !== 1 || changes[1].meta.changes !== 1 || changes[2].meta.changes !== 1) {
+      return reply({ error: "transaction_pending", traceId }, 409);
+    }
     return reply({ updated: true, traceId });
   } catch (error) {
     if (error instanceof AuthenticationError) return Response.json({ error: "unauthorized", message: error.message, traceId }, { status: 401, headers: { "Cache-Control": "no-store" } });

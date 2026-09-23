@@ -168,6 +168,15 @@ describe("intent reconciliation route", () => {
     }
   });
 
+  it("downgrades a previously confirmed routed intent that has only source evidence", async () => {
+    routeState.intents[0].intent_type = "bridge";
+    routeState.intents[0].status = "confirmed";
+    const response = await request();
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ results: [{ intentId, status: "submitted", verificationState: "source_confirmed_pending_settlement" }] });
+    expect(routeState.intents[0].status).toBe("submitted");
+  });
+
   it("revisits a reported hash saved before RPC indexed it", async () => {
     routeState.intents[0].status = "reviewed";
     routeState.intents[0].transaction_hash = null;

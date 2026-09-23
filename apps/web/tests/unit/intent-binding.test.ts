@@ -18,6 +18,8 @@ const state = vi.hoisted(() => ({
   valuations: [] as Array<unknown>,
   addressBook: [] as Array<{ address: string; available_at: string }>,
   intentUpdateAllowed: true,
+  cancelBeforeClaim: false,
+  terminalAuditFails: false,
   intent: null as null | Record<string, unknown>,
   prepared: new Map<number, Record<string, unknown>>(),
   events: [] as string[],
@@ -25,7 +27,16 @@ const state = vi.hoisted(() => ({
 }));
 
 vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
-  async batch(statements: Array<{ query: string }>) {
+  async batch(statements: Array<{ query: string; run?: () => Promise<{ meta: { changes: number } }> }>) {
+    if (statements[0]?.query.includes("UPDATE transaction_intents") && statements[0].query.includes("status = 'reviewed'")) {
+      const previousStatus = state.intent?.status;
+      const changed = await statements[0].run?.();
+      if (state.terminalAuditFails) {
+        if (state.intent) state.intent.status = previousStatus;
+        throw new Error("audit insertion failed; transaction rolled back");
+      }
+      return [changed ?? { meta: { changes: 0 } }, { meta: { changes: changed?.meta.changes ?? 0 } }, { meta: { changes: changed?.meta.changes ?? 0 } }];
+    }
     return statements.map((statement) => ({ results: statement.query.includes("security_profiles") ? [{ account_locked: state.accountLocked ? 1 : 0, enforce_address_book: 0, daily_limit_usd: state.dailyLimitUsd, new_address_threshold_usd: 1_000, step_up_threshold_usd: state.stepUpThresholdUsd, new_address_delay_seconds: 86_400 }] : statement.query.includes("address_book_entries") ? state.addressBook : [{ spent_cents: state.spentTodayUsd * 100, missing: state.spentMissing ? 1 : 0 }] }));
   },
   prepare(query: string) {
@@ -57,6 +68,8 @@ vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
           if (query.includes("INSERT INTO intent_events")) { state.events.push(String(args[3])); return { meta: { changes: 1 } }; }
           if (query.includes("INSERT INTO operational_issues")) { state.issues.push(String(args[0])); return { meta: { changes: 1 } }; }
           if (query.includes("UPDATE intent_prepared_calls")) {
+            if (query.includes("SET reported_hash") && state.cancelBeforeClaim) state.intent!.status = "cancelled";
+            if (query.includes("AND EXISTS (SELECT 1 FROM transaction_intents i") && !["reviewed", "submitted"].includes(String(state.intent?.status))) return { meta: { changes: 0 } };
             const step = Number(query.includes("'inconsistent'") ? args[2] : args[3]); const row = state.prepared.get(step);
             if (!row) return { meta: { changes: 0 } };
             if (query.includes("SET reported_hash") && row.reported_hash && String(row.reported_hash).toLowerCase() !== String(args[0]).toLowerCase()) return { meta: { changes: 0 } };
@@ -377,7 +390,7 @@ describe("reported transaction binding", () => {
   const report = (stepIndex = 0, transactionHash = txHash) => reportStatus(new Request("https://aurel.test/api/intents/status", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ intentId, stepIndex, status: "submitted", transactionHash }) }));
 
   beforeEach(async () => {
-    state.subject = "subject-a"; state.walletLinked = true; state.betaAllowed = true; state.featureAllowed = true; state.accountLocked = false; state.intentUpdateAllowed = true; state.prepared.clear(); state.events.length = 0; state.issues.length = 0;
+    state.subject = "subject-a"; state.walletLinked = true; state.betaAllowed = true; state.featureAllowed = true; state.accountLocked = false; state.intentUpdateAllowed = true; state.cancelBeforeClaim = false; state.terminalAuditFails = false; state.prepared.clear(); state.events.length = 0; state.issues.length = 0;
     state.intent = { intent_id: intentId, subject_reference: "subject-a", intent_type: "transfer", chain_id: 8453, wallet_reference: `wallet:${sender.toLowerCase()}`, request_json: JSON.stringify({ destination: recipient }), policy_result_json: JSON.stringify({ permitted: true }), status: "reviewed", expires_at: new Date(Date.now() + 60_000).toISOString() };
     const normalized = await normalizePreparedCall(call);
     state.prepared.set(0, { intent_id: intentId, step_index: 0, subject_reference: "subject-a", wallet_address: sender.toLowerCase(), chain_id: 8453, target_address: recipient.toLowerCase(), native_value: "100", calldata_hash: normalized.dataHash, call_fingerprint: normalized.fingerprint, semantic_action: "native_transfer", source_reference: "review-1", expected_effect_json: JSON.stringify({ type: "native_transfer", recipient, amountRaw: "100" }), expires_at: state.intent.expires_at, verification_state: "prepared", reported_hash: null });
@@ -495,5 +508,20 @@ describe("reported transaction binding", () => {
     const response = await reportStatus(new Request("https://aurel.test/api/intents/status", { method: "POST", body: JSON.stringify({ intentId, status: "cancelled", transactionHash: txHash }) }));
     expect(response.status).toBe(400);
     expect(state.intent!.status).toBe("reviewed");
+  });
+
+  it("rolls back cancellation when its audit insert fails", async () => {
+    state.terminalAuditFails = true;
+    const response = await reportStatus(new Request("https://aurel.test/api/intents/status", { method: "POST", body: JSON.stringify({ intentId, status: "cancelled" }) }));
+    expect(response.status).toBe(503);
+    expect(state.intent!.status).toBe("reviewed");
+  });
+
+  it("refuses a hash when cancellation wins just before the hash claim", async () => {
+    state.cancelBeforeClaim = true;
+    const response = await report();
+    expect(response.status).toBe(409);
+    expect(state.intent!.status).toBe("cancelled");
+    expect(state.prepared.get(0)!.reported_hash).toBeNull();
   });
 });
