@@ -280,10 +280,12 @@ export async function prepareAaveBaseAction(input: { action: AaveAction; sender:
     token: AAVE_BASE_ASSETS[input.symbol],
     chainId: 8453,
     ...(input.amount ? { amount: input.amount } : {}),
-    ...(input.max ? { max: true } : {}),
-    ...(input.action === "supply" ? { enableCollateral: Boolean(input.enableCollateral) } : {})
+    ...(input.max ? { max: true } : {})
   };
   const preview = await callAaveTool<unknown>("preview_action", args);
-  const plan = await callAaveTool<unknown>("prepare_action", args);
+  const plan = await callAaveTool<unknown>("prepare_action", {
+    ...args,
+    ...(input.action === "supply" ? { enableCollateral: Boolean(input.enableCollateral) } : {})
+  });
   return { preview, plan, preparedAt: new Date().toISOString(), authority: "Aave Protocol API" as const };
 }
