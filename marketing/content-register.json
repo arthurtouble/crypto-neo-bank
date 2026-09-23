@@ -5,8 +5,8 @@
     "owner": "product",
     "audience": "Global waitlist visitors; product access remains country-limited",
     "countries": ["GLOBAL"],
-    "disclosure": "One email to join. Access is limited by availability and eligibility.",
-    "claimIds": ["customer-controlled-signing-global-v1", "no-house-token-global-v1"],
+    "disclosure": "Join with email. Invites depend on eligibility and availability.",
+    "claimIds": ["customer-controlled-signing-global-v1"],
     "reviewStatus": "pending",
     "reviewAt": "2026-12-23T00:00:00.000Z"
   }

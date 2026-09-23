@@ -17,7 +17,7 @@ test("landing leads to an email-only waitlist and one success burst", async ({ p
   await expect(page.getByRole("textbox", { name: "Country" })).toHaveCount(0);
   await page.getByRole("textbox", { name: "Email" }).fill("person@example.com");
   await page.getByRole("button", { name: "Join waitlist" }).click();
-  await expect(page.getByRole("status")).toContainText("Thanks for joining");
+  await expect(page.getByRole("status")).toContainText("We’ll email you");
   await expect(page.getByTestId("waitlist-confetti")).toHaveCount(1);
   await expect(page.getByTestId("waitlist-confetti")).toHaveAttribute("aria-hidden", "true");
   await expect(page.getByTestId("waitlist-confetti")).toHaveCount(0, { timeout: 5000 });
@@ -40,7 +40,7 @@ test("reduced motion keeps the confirmation without particles", async ({ page })
   await page.goto("/waitlist");
   await page.getByRole("textbox", { name: "Email" }).fill("person@example.com");
   await page.getByRole("button", { name: "Join waitlist" }).click();
-  await expect(page.getByRole("status")).toContainText("Thanks for joining");
+  await expect(page.getByRole("status")).toContainText("We’ll email you");
   await expect(page.getByTestId("waitlist-confetti")).toHaveCount(0);
   const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
   expect(results.violations.filter((violation) => ["serious", "critical"].includes(violation.impact ?? ""))).toEqual([]);

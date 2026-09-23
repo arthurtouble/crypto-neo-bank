@@ -64,21 +64,18 @@ export function WaitlistForm({ privacyNoticeVersion }: { privacyNoticeVersion: s
 
   if (complete) return <section className="waitlistCard waitlistSuccess" aria-live="polite">
     <span className="waitlistSuccessMark" aria-hidden="true">✓</span>
-    <h2>{"You're on the waitlist."}</h2>
-    <p role="status">Thanks for joining. We’ll be in touch if we can offer you access. Joining doesn’t guarantee an invitation.</p>
+    <h2>{"You're on the list."}</h2>
+    <p role="status">We’ll email you if we can offer you access.</p>
     <a href={docsUrl}>Explore the documentation <span aria-hidden="true">↗</span></a>
     <WaitlistConfetti active={burst} />
   </section>;
 
   return <form className="waitlistCard" onSubmit={(event) => void submit(event)}>
-    <p className="eyebrow">PRIVATE BETA</p>
-    <h2>Get the first look.</h2>
-    <p>Join the global waitlist with your email. We’re opening access gradually, where the product is available.</p>
     <label className="fieldLabel" htmlFor="waitlist-email">Email</label>
     <input id="waitlist-email" name="email" type="email" autoComplete="email" placeholder="you@example.com" required maxLength={254} />
     <TurnstileField action="waitlist_signup" resetKey={resetKey} />
     <button className="button dark" type="submit" disabled={!ready || working}>{working ? "Joining…" : "Join waitlist"}</button>
     {error && <p className="waitlistError" ref={errorMessage} tabIndex={-1} role="alert">{error}</p>}
-    <small>By joining, you acknowledge our <a href={`${docsUrl}/legal/privacy-notice/`}>Privacy Notice</a>. No account or deposit is needed.</small>
+    <small>We’ll use your email to contact you about access. Read our <a href={`${docsUrl}/legal/privacy-notice/`}>Privacy Notice</a>.</small>
   </form>;
 }

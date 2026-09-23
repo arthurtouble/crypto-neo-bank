@@ -5,8 +5,8 @@ import "./identity.css";
 import "./product-system.css";
 
 export const metadata: Metadata = {
-  title: "Aurel — Digital assets, without the guesswork",
-  description: "Join the global private-beta waitlist for Aurel, a clearer workspace for supported digital assets and safer actions."
+  title: "Aurel — Know what you hold",
+  description: "See supported digital assets and wallet activity in one place. Join the private-beta waitlist with your email."
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

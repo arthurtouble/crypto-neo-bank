@@ -37,7 +37,7 @@
   },
   {
     "id": "customer-controlled-signing-global-v1",
-    "copy": "Customer-controlled signing",
+    "copy": "You approve supported actions in your wallet",
     "evidence": ["apps/web/src/components/wallet-workspace.tsx", "apps/docs/src/content/docs/getting-started/status.md"],
     "surfaces": ["landing"],
     "countries": ["GLOBAL"],

@@ -5,18 +5,19 @@ test("landing is a clear path to the global waitlist", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("link", { name: "Join waitlist" })).toHaveCount(4);
   await expect(page.locator('a[href="/apply"], a[href="/tour"]')).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "What Aurel does today" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "What we're working toward" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Documentation", exact: true })).toHaveAttribute("href", /aurel-docs/);
+  await expect(page.getByRole("heading", { name: "What you can do" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "More is planned." })).toBeVisible();
+  await expect(page.locator(".landingStrip, .landingDocs, .landingFutureGrid")).toHaveCount(0);
+  await expect(page.locator('.landingHeader > nav a[href^="https://aurel-docs"]')).toHaveCount(1);
   await expect(page.locator("#faq details")).toHaveCount(7);
-  for (const question of ["What is Aurel now?", "Is joining the waitlist free?", "Where is Aurel available?", "Does joining guarantee access?", "Who approves transactions?", "Are rewards live?", "What happens to my email?"]) {
+  for (const question of ["What can I do in Aurel?", "Is the waitlist free?", "Can I join from anywhere?", "Will I get an invitation?", "Who approves transactions?", "Are rewards available?", "How do you use my email?"]) {
     await expect(page.locator("#faq summary").filter({ hasText: question })).toHaveCount(1);
   }
   await expect(page.getByRole("heading", { name: "Resources" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Getting started" })).toHaveAttribute("href", /getting-started\/setup/);
   await expect(page.getByRole("link", { name: "Complaints" })).toHaveAttribute("href", /legal\/complaints/);
-  await page.locator("#faq summary").filter({ hasText: "Are rewards live?" }).click();
-  await expect(page.getByText("planned, not available today", { exact: false })).toBeVisible();
+  await page.locator("#faq summary").filter({ hasText: "Are rewards available?" }).click();
+  await expect(page.getByText("plans, not live features", { exact: false })).toBeVisible();
   await expect(page.getByText(`© ${new Date().getFullYear()} Aurel`)).toBeVisible();
 });
 
