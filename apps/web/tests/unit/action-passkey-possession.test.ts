@@ -92,6 +92,9 @@ afterEach(() => { sqlite.close(); vi.unstubAllEnvs(); });
 describe("pending passkey possession", () => {
   it("binds a UV assertion to the exact pending credential and stores one-use evidence without activation", async () => {
     const issued = await issuePendingPasskeyPossessionChallenge(database, input);
+    expect(sqlite.prepare("SELECT purpose, proposed_diff_digest FROM action_passkey_challenges WHERE challenge_id = ?")
+      .get(issued.challengeId)).toMatchObject({ purpose: "credential_change",
+        proposed_diff_digest: expect.stringMatching(/^passkey-possession:v1:sha256:[a-f0-9]{64}$/) });
     expect(issued.options.allowCredentials).toEqual([{ id: credentialId, type: "public-key" }]);
     expect(issued.options.userVerification).toBe("required");
     const response = await assertion(issued.challenge);
@@ -106,10 +109,10 @@ describe("pending passkey possession", () => {
     expect(sqlite.prepare("SELECT COUNT(*) AS n FROM audit_events").get()).toMatchObject({ n: 1 });
   });
 
-  it("rejects wrong origin, missing UV, forged signature and wrong challenge", async () => {
+  it("rejects wrong origin or RP, missing UV, forged signature and wrong challenge", async () => {
     const issued = await issuePendingPasskeyPossessionChallenge(database, input);
     const base = { ...input, challengeId: issued.challengeId, challenge: issued.challenge };
-    for (const changes of [{ origin: "https://wrong.aurel.test" }, { flags: 0x01 }, { badSignature: true }])
+    for (const changes of [{ origin: "https://wrong.aurel.test" }, { rpId: "wrong.aurel.test" }, { flags: 0x01 }, { badSignature: true }])
       await expect(completePendingPasskeyPossession(database, { ...base, response: await assertion(issued.challenge, changes) })).rejects.toThrow();
     await expect(completePendingPasskeyPossession(database, { ...base, response: await assertion("b".repeat(43)) })).rejects.toThrow();
   });
@@ -175,6 +178,30 @@ describe("pending passkey possession", () => {
     expect(sqlite.prepare("SELECT status, sign_count FROM action_passkey_credentials WHERE credential_id=?").get(credentialId))
       .toMatchObject({ status: "pending", sign_count: 1 });
     expect(sqlite.prepare("SELECT COUNT(*) AS n FROM audit_events").get()).toMatchObject({ n: 1 });
+  });
+
+  it("does not let two challenges reuse a positive authenticator counter", async () => {
+    const first = await issuePendingPasskeyPossessionChallenge(database, input);
+    const second = await issuePendingPasskeyPossessionChallenge(database, input);
+    await completePendingPasskeyPossession(database, { ...input, challengeId: first.challengeId,
+      challenge: first.challenge, response: await assertion(first.challenge, { counter: 1 }) });
+    await expect(completePendingPasskeyPossession(database, { ...input, challengeId: second.challengeId,
+      challenge: second.challenge, response: await assertion(second.challenge, { counter: 1 }) })).rejects.toThrow();
+    expect(sqlite.prepare("SELECT consumed_at FROM action_passkey_challenges WHERE challenge_id=?").get(second.challengeId))
+      .toMatchObject({ consumed_at: null });
+  });
+
+  it("accepts separate zero-counter assertions without allowing challenge replay", async () => {
+    for (let index = 0; index < 2; index++) {
+      const issued = await issuePendingPasskeyPossessionChallenge(database, input);
+      const completion = { ...input, challengeId: issued.challengeId, challenge: issued.challenge,
+        response: await assertion(issued.challenge, { counter: 0 }) };
+      await completePendingPasskeyPossession(database, completion);
+      await expect(completePendingPasskeyPossession(database, completion)).rejects.toThrow();
+    }
+    expect(sqlite.prepare("SELECT sign_count, counter_risk FROM action_passkey_credentials WHERE credential_id=?").get(credentialId))
+      .toMatchObject({ sign_count: 0, counter_risk: "zero" });
+    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM audit_events").get()).toMatchObject({ n: 2 });
   });
 
   it("does not issue for an active credential, locked account, or production Worker origin", async () => {

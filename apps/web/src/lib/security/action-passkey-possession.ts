@@ -28,6 +28,10 @@ async function digest(value: string): Promise<string> {
   return `sha256:${Array.from(hash, (byte) => byte.toString(16).padStart(2, "0")).join("")}`;
 }
 
+async function possessionBinding(credentialId: string): Promise<string> {
+  return `passkey-possession:v1:${await digest(credentialId)}`;
+}
+
 /** Separate, unexposed ceremony; proving possession never activates the credential. */
 export async function issuePendingPasskeyPossessionChallenge(db: D1Database, input: Binding): Promise<{
   challengeId: string; challenge: string; expiresAt: string; options: PublicKeyCredentialRequestOptionsJSON;
@@ -48,7 +52,7 @@ export async function issuePendingPasskeyPossessionChallenge(db: D1Database, inp
     WHERE k.credential_id = ? AND k.subject_reference = ? AND k.rp_id = ? AND k.status = 'pending'
       AND p.account_locked = 0 AND b.status = 'active'
       AND b.country_code IN (SELECT value FROM json_each(?))`)
-    .bind(challengeId, await digest(options.challenge), input.sessionReference, await digest(input.credentialId),
+    .bind(challengeId, await digest(options.challenge), input.sessionReference, await possessionBinding(input.credentialId),
       input.origin, expiresAt, now, input.credentialId, input.subjectReference, input.rpId,
       JSON.stringify(countries)).run();
   if (result.meta.changes !== 1) throw new Error("Pending passkey possession is unavailable for this credential.");
@@ -80,7 +84,7 @@ async function storePendingPasskeyPossession(db: D1Database, input: Binding & {
             AND k.rp_id = action_passkey_challenges.rp_id AND k.status = 'pending'
             AND (? > k.sign_count OR (? = 0 AND k.sign_count = 0)))`)
       .bind(now, input.challengeId, input.verified.challengeDigest, input.subjectReference,
-        input.sessionReference, await digest(input.credentialId), input.rpId, input.origin, now, now,
+        input.sessionReference, await possessionBinding(input.credentialId), input.rpId, input.origin, now, now,
         JSON.stringify(countries), input.credentialId, input.verified.newCounter, input.verified.newCounter),
     db.prepare(`UPDATE action_passkey_credentials
       SET sign_count = ?, counter_risk = CASE WHEN ? = 0 THEN 'zero' ELSE 'none' END
