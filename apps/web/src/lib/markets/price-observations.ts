@@ -2,10 +2,10 @@ import { z } from "zod";
 import { CATALOG_REGISTRY } from "@/lib/swap/catalog-registry";
 import type { PriceObservation } from "@/lib/swap/reminder-decisions";
 import { sourceInstantNs } from "@/lib/markets/source-instant";
+import { REVIEWED_PRICE_ALERT_PAIR as reviewed } from "@/lib/markets/alert-mapping";
 
 // This is a deliberately narrow, reviewed market-to-contract mapping. Kraken
 // ETH/USD is a market observation, not a price oracle or execution quote.
-const reviewed = { pairId: "ETH/USD", baseAssetId: "8453:native", quoteAssetId: "iso4217:USD", mappingVersion: "kraken-posttrade-eth-usd-v1" } as const;
 const MAX_RESPONSE_BYTES = 128_000;
 const pricePattern = /^(?:0|[1-9]\d{0,59})(?:\.\d{1,18})?$/;
 const tradeSchema = z.object({
