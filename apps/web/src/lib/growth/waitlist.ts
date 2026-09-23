@@ -17,7 +17,7 @@ export type WaitlistInput = z.infer<typeof waitlistSchema>;
 export type CountryHint = { countryCode: string | null; source: "cloudflare" | "unknown" };
 
 const regionNames = new Intl.DisplayNames(["en"], { type: "region" });
-const nonCountryRegions = new Set(["EU", "UN", "UK", "ZZ", "XX"]);
+const nonCountryRegions = new Set(["EU", "UN", "UK", "ZZ", "XX", "XK", "QO", "EZ", "XA", "XB"]);
 
 export function countryFromRequest(request: Request): CountryHint {
   const code = (request as Request & { cf?: { country?: string } }).cf?.country?.toUpperCase();

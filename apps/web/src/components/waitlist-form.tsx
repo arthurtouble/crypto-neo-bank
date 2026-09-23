@@ -4,7 +4,6 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { TurnstileField } from "./turnstile-field";
 import { WaitlistConfetti } from "./waitlist-confetti";
 
-const privacyNoticeVersion = "2026-09-23";
 const docsUrl = "https://aurel-docs.aurel-events.workers.dev";
 const subscribeToHydration = () => () => undefined;
 
@@ -21,7 +20,7 @@ function attribution() {
   };
 }
 
-export function WaitlistForm() {
+export function WaitlistForm({ privacyNoticeVersion }: { privacyNoticeVersion: string }) {
   const ready = useSyncExternalStore(subscribeToHydration, () => true, () => false);
   const [working, setWorking] = useState(false);
   const [complete, setComplete] = useState(false);

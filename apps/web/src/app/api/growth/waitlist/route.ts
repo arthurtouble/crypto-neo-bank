@@ -27,7 +27,7 @@ export async function POST(request: Request) {
     await persistWaitlist(env.PROJECTION_DB, input, countryFromRequest(request));
     return Response.json({ received: true }, { status: 202, headers: noStore });
   } catch (error) {
-    if (error instanceof z.ZodError) return Response.json({ received: false, message: "Enter a valid email address." }, { status: 400, headers: noStore });
+    if (error instanceof z.ZodError || error instanceof SyntaxError) return Response.json({ received: false, message: "Enter a valid email address." }, { status: 400, headers: noStore });
     if (error instanceof RateLimitError) return Response.json({ received: false, message: "Too many attempts. Please try again later." }, { status: 429, headers: { ...noStore, "Retry-After": String(error.retryAfterSeconds) } });
     console.error(JSON.stringify({ event: "growth_waitlist.failed", code: "unavailable" }));
     return Response.json({ received: false, message: "We couldn't add you right now. Please try again later." }, { status: 503, headers: noStore });

@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS growth_waitlist (
   updated_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS growth_waitlist_status_idx ON growth_waitlist(status, created_at DESC);
+CREATE INDEX IF NOT EXISTS growth_waitlist_created_idx ON growth_waitlist(created_at DESC, waitlist_id DESC);
 
 CREATE TABLE IF NOT EXISTS growth_waitlist_invites (
   waitlist_id TEXT PRIMARY KEY REFERENCES growth_waitlist(waitlist_id),

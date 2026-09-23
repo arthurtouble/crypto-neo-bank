@@ -8,7 +8,7 @@ import { WaitlistForm } from "@/components/waitlist-form";
 import { WaitlistConfetti } from "@/components/waitlist-confetti";
 
 it("asks for email only and includes an accessible submission control", () => {
-  const html = renderToString(createElement(WaitlistForm));
+  const html = renderToString(createElement(WaitlistForm, { privacyNoticeVersion: "2026-09-23" }));
   expect(html).toContain('type="email"');
   expect(html).toContain('name="email"');
   expect(html).toContain("Join waitlist");

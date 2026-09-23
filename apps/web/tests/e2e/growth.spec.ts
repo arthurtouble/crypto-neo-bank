@@ -9,9 +9,25 @@ test("landing is a clear path to the global waitlist", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "What we're working toward" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Documentation", exact: true })).toHaveAttribute("href", /aurel-docs/);
   await expect(page.locator("#faq details")).toHaveCount(7);
+  for (const question of ["What is Aurel now?", "Is joining the waitlist free?", "Where is Aurel available?", "Does joining guarantee access?", "Who approves transactions?", "Are rewards live?", "What happens to my email?"]) {
+    await expect(page.locator("#faq summary").filter({ hasText: question })).toHaveCount(1);
+  }
+  await expect(page.getByRole("heading", { name: "Resources" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Getting started" })).toHaveAttribute("href", /getting-started\/setup/);
+  await expect(page.getByRole("link", { name: "Complaints" })).toHaveAttribute("href", /legal\/complaints/);
   await page.locator("#faq summary").filter({ hasText: "Are rewards live?" }).click();
   await expect(page.getByText("planned, not available today", { exact: false })).toBeVisible();
   await expect(page.getByText(`© ${new Date().getFullYear()} Aurel`)).toBeVisible();
+});
+
+test("mobile navigation keeps product, FAQ, and docs reachable", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 780 });
+  await page.goto("/");
+  await page.getByText("Menu", { exact: true }).click();
+  const navigation = page.getByRole("navigation", { name: "Mobile navigation" });
+  await expect(navigation.getByRole("link", { name: "Product" })).toBeVisible();
+  await expect(navigation.getByRole("link", { name: "FAQ" })).toBeVisible();
+  await expect(navigation.getByRole("link", { name: "Docs" })).toBeVisible();
 });
 
 test("landing is accessible and fits common widths", async ({ page }) => {
@@ -35,4 +51,8 @@ test("growth operations and customer data endpoints fail closed", async ({ reque
     const response = await request.get(path);
     expect([401, 403]).toContain(response.status());
   }
+});
+
+test("the pre-launch application and tour routes are gone", async ({ request }) => {
+  for (const path of ["/apply", "/tour"]) expect((await request.get(path)).status()).toBe(404);
 });

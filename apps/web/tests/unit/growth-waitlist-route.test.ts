@@ -43,6 +43,13 @@ describe("public waitlist route", () => {
     expect(state.writes).toBe(0);
   });
 
+  it("classifies malformed JSON as bad input, not an outage", async () => {
+    const route = await load();
+    const response = await route?.POST(new Request("https://aurel.test/api/growth/waitlist", { method: "POST", body: "{" }));
+    expect(response?.status).toBe(400);
+    expect(state.writes).toBe(0);
+  });
+
   it("fails closed when paused or missing an abuse secret", async () => {
     const route = await load();
     process.env.GROWTH_WAITLIST_MODE = "closed";

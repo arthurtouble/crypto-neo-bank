@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const state = vi.hoisted(() => ({ authorized: true, row: { waitlist_id: "00000000-0000-4000-8000-000000000001", status: "waiting", country_hint: "PT", email_ciphertext: "cipher", email_nonce: "nonce", created_at: "2026-09-23T00:00:00.000Z" } as Record<string, unknown> | null, inviteIssued: false, batchCalls: 0 }));
+const state = vi.hoisted(() => ({ authorized: true, row: { waitlist_id: "00000000-0000-4000-8000-000000000001", status: "waiting", country_hint: "PT", email_ciphertext: "cipher", email_nonce: "nonce", created_at: "2026-09-23T00:00:00.000Z" } as Record<string, unknown> | null, listRows: null as Record<string, unknown>[] | null, listSql: "", listBinds: [] as unknown[], inviteIssued: false, batchCalls: 0 }));
 
 vi.mock("@/lib/auth/admin", () => {
   class AuthenticationError extends Error {}
@@ -12,11 +12,12 @@ vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
   prepare(sql: string) {
     return { values: [] as unknown[], bind(...values: unknown[]) { this.values = values; return this; },
       async first() {
+        if (sql.includes("COUNT(*)")) return { count: state.listRows?.length ?? (state.row ? 1 : 0) };
         if (sql.includes("growth_waitlist_invites")) return state.inviteIssued ? { invite_hash: "old-hash" } : null;
         if (sql.includes("growth_waitlist")) return state.row;
         return null;
       },
-      async all() { return { results: state.row ? [state.row] : [] }; },
+      async all() { state.listSql = sql; state.listBinds = this.values; return { results: state.listRows ?? (state.row ? [state.row] : []) }; },
       async run() { return { success: true, meta: { changes: 1 } }; }
     };
   },
@@ -34,6 +35,9 @@ beforeEach(() => {
   state.row = { waitlist_id: inviteId, status: "waiting", country_hint: "PT", email_ciphertext: "cipher", email_nonce: "nonce", created_at: "2026-09-23T00:00:00.000Z" };
   state.inviteIssued = false;
   state.batchCalls = 0;
+  state.listRows = null;
+  state.listSql = "";
+  state.listBinds = [];
   process.env.GROWTH_ALLOWED_COUNTRIES = "PT";
   process.env.GROWTH_EMAIL_ENCRYPTION_KEY = "unit-key";
   process.env.GROWTH_EMAIL_LOOKUP_KEY = "unit-lookup-key";
@@ -50,8 +54,24 @@ describe("operator waitlist", () => {
   it("returns a bounded admin list with an approximate country hint", async () => {
     const response = await (await listRoute())?.GET(new Request("https://aurel.test/api/ops/growth/waitlist?limit=1"));
     expect(response?.status).toBe(200);
-    const body = await response?.json() as { entries: Array<{ email: string; countryHint: string; countryHintLabel: string }> };
+    const body = await response?.json() as { entries: Array<{ email: string; countryHint: string; countryHintLabel: string }>; totalCount: number };
     expect(body.entries).toEqual([expect.objectContaining({ email: "person@example.com", countryHint: "PT", countryHintLabel: "Approximate" })]);
+    expect(body.totalCount).toBe(1);
+  });
+
+  it("pages by timestamp and waitlist ID so equal-time entries are not skipped", async () => {
+    state.listRows = [state.row!, { ...state.row!, waitlist_id: "00000000-0000-4000-8000-000000000000" }];
+    const first = await (await listRoute())?.GET(new Request("https://aurel.test/api/ops/growth/waitlist?limit=1"));
+    const body = await first?.json() as { nextCursor: string; totalCount: number };
+    expect(body.totalCount).toBe(2);
+    expect(body.nextCursor).toContain("00000000-0000-4000-8000-000000000001");
+    await (await listRoute())?.GET(new Request(`https://aurel.test/api/ops/growth/waitlist?limit=1&cursor=${encodeURIComponent(body.nextCursor)}`));
+    expect(state.listSql).toContain("waitlist_id < ?");
+    expect(state.listBinds).toContain("00000000-0000-4000-8000-000000000001");
+  });
+
+  it("rejects an invalid paging cursor", async () => {
+    expect((await (await listRoute())?.GET(new Request("https://aurel.test/api/ops/growth/waitlist?cursor=bad")))?.status).toBe(400);
   });
 
   it("requires independently checked country evidence", async () => {

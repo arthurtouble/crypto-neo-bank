@@ -13,6 +13,7 @@ The [original growth implementation specification](/growth/marketing-growth-impl
 - Obtain product/legal approval for the global landing content and geographic claims; keep the marketing register in `pending` until signed off.
 - Configure and test distinct `GROWTH_EMAIL_ENCRYPTION_KEY` and `GROWTH_EMAIL_LOOKUP_KEY` secrets, Turnstile, rate limiting, D1, and deletion/export handling for people without accounts.
 - Assign an operator to review invitations and an incident owner for the signup path.
+- Configure and verify a delivery process that sends each one-use bearer code only to the intended waitlist email. The current operator view reveals a code but does not send it or bind redemption to that email; keep signups closed until recipient assurance is operational.
 - Run unit, browser, accessibility, docs, build, and marketing checks against the release candidate.
 
 The required privacy notice version is set by `GROWTH_PRIVACY_NOTICE_VERSION`. An outdated form version is rejected. The public success response does not reveal whether an email was already present.

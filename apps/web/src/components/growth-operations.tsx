@@ -15,16 +15,18 @@ export function GrowthOperations() {
   const [inviteCode, setInviteCode] = useState("");
   const [error, setError] = useState("");
   const [working, setWorking] = useState(false);
+  const [cursors, setCursors] = useState<string[]>([]);
+  const cursor = cursors.at(-1);
 
   async function authorizedFetch(url: string, init?: RequestInit) {
     const token = await getAccessToken();
     return fetch(url, { ...init, headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(init?.body ? { "Content-Type": "application/json" } : {}) }, cache: "no-store" });
   }
 
-  const waitlist = useQuery<{ entries: WaitlistEntry[] }>({
-    queryKey: ["growth-waitlist", user?.id],
+  const waitlist = useQuery<{ entries: WaitlistEntry[]; totalCount: number; nextCursor: string | null }>({
+    queryKey: ["growth-waitlist", user?.id, cursor],
     queryFn: async () => {
-      const response = await authorizedFetch("/api/ops/growth/waitlist");
+      const response = await authorizedFetch(`/api/ops/growth/waitlist${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`);
       if (!response.ok) throw new Error("Waitlist is unavailable.");
       return response.json();
     },
@@ -59,6 +61,7 @@ export function GrowthOperations() {
           <span className="statusBadge neutral">{entry.status}</span>
           <time dateTime={entry.createdAt}>{new Date(entry.createdAt).toLocaleDateString()}</time>
         </button>)}</div> : <p>No one is on the waitlist yet.</p>}
+      {waitlist.data && <div className="growthQueueFooter"><span>{waitlist.data.totalCount} total</span><div>{cursors.length > 0 && <button type="button" className="button secondary small" onClick={() => { setSelected(null); setCursors((value) => value.slice(0, -1)); }}>Newer entries</button>}{waitlist.data.nextCursor && <button type="button" className="button secondary small" onClick={() => { setSelected(null); setCursors((value) => [...value, waitlist.data!.nextCursor!]); }}>Older entries</button>}</div></div>}
     </section>
     {selected && <section className="panel growthDetail" aria-label="Selected waitlist entry">
       <h3>{selected.email}</h3>

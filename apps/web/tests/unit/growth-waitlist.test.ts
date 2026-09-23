@@ -47,7 +47,7 @@ describe("email-only waitlist", () => {
     const waitlist = await load();
     const forged = new Request("https://aurel.test", { headers: { "CF-IPCountry": "PT" } });
     expect(waitlist?.countryFromRequest(forged)).toEqual({ countryCode: null, source: "unknown" });
-    for (const country of ["XX", "T1", "ZZ"]) {
+    for (const country of ["XX", "T1", "ZZ", "XK", "QO", "EZ"]) {
       const request = new Request("https://aurel.test") as Request & { cf?: { country: string } };
       request.cf = { country };
       expect(waitlist?.countryFromRequest(request)).toEqual({ countryCode: null, source: "unknown" });
