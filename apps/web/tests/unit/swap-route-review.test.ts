@@ -53,6 +53,21 @@ describe("swap route review", () => {
     expect(html).not.toContain("Review Swap</button>");
   });
 
+  it("offers the exact prerequisite only while the quote is fresh", () => {
+    const html = renderToStaticMarkup(createElement(SwapRouteReview, {
+      planId: "plan", fresh: true, walletAddress: "0xabc", busy: false,
+      state: "approval_required", approvalKind: "reset_required", onReview() {}, onApprove() {}
+    }));
+    expect(html).toContain("Reset Approval</button>");
+    expect(html).toContain("does not submit a swap");
+    expect(html).not.toContain("Confirm Swap");
+    const stale = renderToStaticMarkup(createElement(SwapRouteReview, {
+      planId: "plan", fresh: false, walletAddress: "0xabc", busy: false,
+      state: "approval_required", approvalKind: "reset_required", onReview() {}, onApprove() {}
+    }));
+    expect(stale).not.toContain("Reset Approval</button>");
+  });
+
   it("does not call an expired prepared route verified", () => {
     const html = renderToStaticMarkup(createElement(SwapRouteReview, {
       planId: "plan", fresh: false, walletAddress: "0xabc", busy: false,

@@ -1,6 +1,7 @@
 import { getAddress, isAddress } from "viem";
 import { z } from "zod";
 import type { CatalogAsset } from "./assets";
+import { isDirectUniswapPlan, validateDirectUniswapPlan } from "./direct-uniswap";
 import { validateGovernedSameChainPlan } from "./governed-route";
 import type { StoredSwapQuotePlan } from "./plans";
 
@@ -23,6 +24,7 @@ async function sha256(value: string): Promise<`0x${string}`> {
 export async function assertSwapPrepareIntegrity(plan: StoredSwapQuotePlan, assets: {
   from: CatalogAsset; to: CatalogAsset
 }, nowMs: number) {
+  if (isDirectUniswapPlan(plan)) return validateDirectUniswapPlan(plan, assets, nowMs);
   const configured = configSchema.parse(JSON.parse(process.env.AUREL_SWAP_EXECUTION_POLICY ?? "null"));
   const allowedTools = configuredSet("AUREL_LIFI_ALLOWED_TOOLS");
   const allowedExchanges = configuredSet("AUREL_LIFI_ALLOWED_EXCHANGES");

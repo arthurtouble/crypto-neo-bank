@@ -23,17 +23,21 @@ type SwapQuote = ValidatedSwapQuote & { planId?: string };
 type QuoteResponse = { quotes: SwapQuote[]; observedAt: string; authority: string; error?: string; message?: string };
 type ReviewState = "idle" | "reviewed" | "prepared" | "approval_required" | "submitted";
 type PreparedSwap = { state: "prepared"; intentId: string; stepIndex: number; fingerprint: string; call: PreparedCallInput; expiresAt: string };
-type SwapPreparation = PreparedSwap | { state: "approval_required" };
+type PreparedApproval = { state: "approval_required"; approvalId: string; kind: "approve" | "reset_required";
+  amountRaw: string; spender: string; fingerprint: string; call: PreparedCallInput; expiresAt: string };
+type SwapPreparation = PreparedSwap | PreparedApproval;
 
-export function SwapRouteReview({ planId, fresh, walletAddress, busy, state, routeKind, onReview, onSubmit }: {
+export function SwapRouteReview({ planId, fresh, walletAddress, busy, state, routeKind, onReview, onSubmit, onApprove, approvalKind, approvalAmount }: {
   planId: string | null; fresh: boolean; walletAddress: string | null; busy: boolean;
   state: ReviewState; routeKind?: "same_chain" | "cross_chain"; onReview(): void; onSubmit?(): void;
+  onApprove?(): void; approvalKind?: "approve" | "reset_required"; approvalAmount?: string;
 }) {
   if (routeKind === "cross_chain") return <p className="swapReviewStatus" role="status">Across-network swaps aren&apos;t available yet.</p>;
   if (state === "submitted") return null;
   if (!fresh) return <p className="swapReviewStatus">This quote expired. Find a new route.</p>;
+  if (state === "approval_required" && onApprove) return <div><p className="swapReviewStatus" role="status"><strong>{approvalKind === "reset_required" ? "Reset Token Approval" : "Token Approval Required"}</strong><span>{approvalKind === "reset_required" ? "Reset the old allowance before approving a new amount." : `Approve ${approvalAmount ?? "the exact amount"} for this swap.`} This does not submit a swap. Approvals remain on chain until used or revoked.</span></p><button className="button primary full swapReviewAction" type="button" disabled={busy} onClick={onApprove}>{busy ? "Opening Wallet" : approvalKind === "reset_required" ? "Reset Approval" : "Approve Token"}</button></div>;
   if (state === "prepared") return <div><p className="swapReviewStatus" role="status"><strong>Route Verified</strong><span>No swap has been submitted.</span></p>{onSubmit && <button className="button primary full swapReviewAction" type="button" disabled={busy} onClick={onSubmit}>{busy ? "Opening Wallet" : "Confirm Swap"}</button>}</div>;
-  if (state === "approval_required") return <p className="swapReviewStatus" role="status"><strong>Token Approval Required</strong><span>No swap has been submitted. This route cannot continue until approval is available.</span></p>;
+  if (state === "approval_required") return <p className="swapReviewStatus" role="status"><strong>Token Approval Required</strong><span>No swap has been submitted. Find a new route to continue.</span></p>;
   if (state === "reviewed") return <p className="swapReviewStatus" role="status"><strong>Review Complete</strong><span>No swap has been submitted.</span></p>;
   if (!planId) return <p className="swapReviewStatus">This route cannot be reviewed right now.</p>;
   if (!walletAddress) return <p className="swapReviewStatus">Connect a wallet to review this route.</p>;
@@ -75,10 +79,44 @@ export async function requestSwapRouteReview(input: { token: string; planId: str
   const prepared = await fetch("/api/swap/prepare", { method: "POST", headers, cache: "no-store",
     body: JSON.stringify({ intentId: review.intentId, planId: input.planId, walletAddress: input.walletAddress }) });
   const body = await prepared.json() as Partial<PreparedSwap> & { error?: string };
-  if (prepared.status === 409 && body.error === "approval_required") return { state: "approval_required" };
+  if (prepared.status === 409 && body.error === "approval_required") {
+    const approval = await fetch("/api/swap/approval", { method: "POST", headers, cache: "no-store",
+      body: JSON.stringify({ intentId: review.intentId, planId: input.planId, walletAddress: input.walletAddress }) });
+    const prerequisite = await approval.json() as Partial<PreparedApproval> & { error?: string };
+    if (approval.status !== 201 || !prerequisite.approvalId || !prerequisite.call || !prerequisite.fingerprint
+      || !prerequisite.expiresAt || !prerequisite.spender || !prerequisite.amountRaw
+      || !["approve", "reset_required"].includes(prerequisite.kind ?? "")) throw new Error(reviewError(prerequisite.error));
+    onPolicyReviewed?.();
+    return { state: "approval_required", approvalId: prerequisite.approvalId,
+      kind: prerequisite.kind!, amountRaw: prerequisite.amountRaw, spender: prerequisite.spender,
+      fingerprint: prerequisite.fingerprint, call: prerequisite.call, expiresAt: prerequisite.expiresAt };
+  }
   if (prepared.status !== 201 || body.intentId !== review.intentId || body.stepIndex !== 0 || !body.call || !body.fingerprint || !body.expiresAt) throw new Error(reviewError(body.error));
   onPolicyReviewed?.();
   return { state: "prepared", intentId: body.intentId, stepIndex: 0, call: body.call, fingerprint: body.fingerprint, expiresAt: body.expiresAt };
+}
+
+export async function submitPreparedApproval(input: {
+  prepared: PreparedApproval; walletAddress: string; token: string;
+  send: (call: { chainId: number; to: `0x${string}`; value: bigint; data: `0x${string}` }) => Promise<{ hash: string }>;
+  onBroadcast?: (hash: string) => void;
+}): Promise<{ hash: string; reportRecorded: boolean }> {
+  const { prepared } = input;
+  if (!quoteIsFresh(prepared.expiresAt) || prepared.call.chainId !== 8453
+    || getAddress(prepared.call.from) !== getAddress(input.walletAddress)
+    || prepared.call.value !== "0") throw new Error("This approval expired. Find a new route.");
+  const call = await normalizePreparedCall(prepared.call);
+  if (call.fingerprint !== prepared.fingerprint) throw new Error("This approval changed. Find a new route.");
+  const sent = await input.send({ chainId: call.chainId, to: call.to, value: 0n, data: call.data });
+  input.onBroadcast?.(sent.hash);
+  let reportRecorded = false;
+  try {
+    const response = await fetch("/api/swap/approval", { method: "PATCH", cache: "no-store",
+      headers: { Authorization: `Bearer ${input.token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ approvalId: prepared.approvalId, transactionHash: sent.hash }) });
+    reportRecorded = response.ok;
+  } catch { /* An approval may be on chain even if reporting failed. */ }
+  return { hash: sent.hash, reportRecorded };
 }
 
 export async function submitPreparedSwap(input: {
@@ -134,6 +172,12 @@ export function SwapWorkspace() {
   const [reviewState, setReviewState] = useState<ReviewState>("idle");
   const [reviewErrorText, setReviewErrorText] = useState<string | null>(null);
   const [preparedSwap, setPreparedSwap] = useState<{ key: string; planId: string; result: PreparedSwap } | null>(null);
+  const [preparedApproval, setPreparedApproval] = useState<PreparedApproval | null>(null);
+  const [approvalHash, setApprovalHash] = useState<string | null>(null);
+  const [approvalTrackingId, setApprovalTrackingId] = useState<string | null>(null);
+  const [approvalStatus, setApprovalStatus] = useState<string | null>(null);
+  const [approving, setApproving] = useState(false);
+  const [approvalUncertain, setApprovalUncertain] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submittedHash, setSubmittedHash] = useState<string | null>(null);
   const [submittedIntentId, setSubmittedIntentId] = useState<string | null>(null);
@@ -161,7 +205,9 @@ export function SwapWorkspace() {
   const freshQuote = quote && quoteIsFresh(quote.expiresAt, now) ? quote : null;
   const unverified = [source, destination].filter((asset): asset is CatalogAsset => Boolean(asset && asset.verification === "unverified"));
 
-  function clearReview() { reviewVersion.current += 1; setResult(null); setSelectedQuoteId(null); setError(null); setReviewState("idle"); setReviewErrorText(null); setPreparedSwap(null); setSubmissionUncertain(false); }
+  function clearReview() { reviewVersion.current += 1; setResult(null); setSelectedQuoteId(null); setError(null); setReviewState("idle"); setReviewErrorText(null); setPreparedSwap(null); setPreparedApproval(null); setSubmissionUncertain(false);
+    if (["confirmed", "failed", "inconsistent"].includes(approvalStatus ?? "")) { setApprovalHash(null); setApprovalTrackingId(null); setApprovalStatus(null); setApprovalUncertain(false); }
+  }
 
   function reverse() {
     setFromAssetId(toAssetId); setToAssetId(fromAssetId); setAmount(""); setAcknowledged(false); clearReview();
@@ -203,9 +249,57 @@ export function SwapWorkspace() {
       if (reviewVersion.current !== version || !quoteIsFresh(expiresAt)) return;
       setReviewState(state.state);
       if (state.state === "prepared") setPreparedSwap({ key: reviewKey, planId, result: state });
+      if (state.state === "approval_required") setPreparedApproval(state);
     } catch (caught) { if (reviewVersion.current === version) { setReviewState("idle"); setReviewErrorText(caught instanceof Error ? caught.message : "We couldn't review this route. Try again."); } }
     finally { setReviewing(false); }
   }
+
+  async function confirmApproval() {
+    if (!preparedApproval || !address || approving || approvalUncertain || approvalHash) return;
+    setReviewErrorText(null); setApproving(true);
+    let broadcasted = false;
+    try {
+      const token = await getAccessToken();
+      if (!token) throw new Error("Your secure session expired. Sign in again before approving.");
+      const result = await submitPreparedApproval({ prepared: preparedApproval, walletAddress: address, token,
+        send: (transaction) => sendTransaction(transaction, { address,
+          uiOptions: { description: preparedApproval.kind === "reset_required"
+            ? `Reset your existing ${source?.symbol ?? "token"} approval. This does not submit a swap.`
+            : `Approve exactly ${amount} ${source?.symbol ?? "tokens"} for this swap. This does not submit the swap.`,
+          buttonText: preparedApproval.kind === "reset_required" ? "Reset approval" : "Approve token",
+          successHeader: "Approval submitted", isCancellable: true } }),
+        onBroadcast: (hash) => { broadcasted = true; setApprovalHash(hash); setApprovalTrackingId(preparedApproval.approvalId); setApprovalStatus("pending"); }
+      });
+      if (!result.reportRecorded) setReviewErrorText("The approval was broadcast, but we could not record it yet. Keep the transaction link and do not approve again.");
+    } catch (caught) {
+      if (!broadcasted) { setApprovalUncertain(true); setReviewErrorText(caught instanceof Error
+        ? `${caught.message} Check your wallet activity before trying again.`
+        : "The wallet did not return a hash. Check your wallet activity before trying again."); }
+    } finally { setApproving(false); }
+  }
+
+  useEffect(() => {
+    if (!approvalTrackingId || !approvalHash || ["confirmed", "failed", "inconsistent"].includes(approvalStatus ?? "")) return;
+    let cancelled = false;
+    const check = async () => {
+      const token = await getAccessToken();
+      if (!token || cancelled) return;
+      const response = await fetch(`/api/swap/approval?approvalId=${encodeURIComponent(approvalTrackingId)}`,
+        { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" });
+      if (!response.ok || cancelled) return;
+      const body = await response.json() as { status?: string };
+      if (body.status === "prepared") {
+        await fetch("/api/swap/approval", { method: "PATCH", cache: "no-store",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ approvalId: approvalTrackingId, transactionHash: approvalHash }) }).catch(() => undefined);
+        return;
+      }
+      if (!cancelled && body.status) setApprovalStatus(body.status);
+    };
+    void check();
+    const interval = window.setInterval(() => void check(), 5_000);
+    return () => { cancelled = true; window.clearInterval(interval); };
+  }, [approvalTrackingId, approvalHash, approvalStatus, getAccessToken]);
 
   async function confirmSwap() {
     if (!preparedSwap || !freshQuote || !address || submitting || submissionUncertain
@@ -253,11 +347,15 @@ export function SwapWorkspace() {
     {liveResult && <section className="swapQuotes" aria-label="Available swap routes"><div className="swapQuotesHeader"><h3>Available Routes</h3><span>{liveResult.quotes.length} found</span></div>
       {liveResult.quotes.map((route) => <button type="button" className={`swapQuoteRow ${quote?.quoteId === route.quoteId ? "selected" : ""}`} key={route.planReference} onClick={() => { reviewVersion.current += 1; setSelectedQuoteId(route.quoteId); setReviewState("idle"); setReviewErrorText(null); }}><span><strong>{route.provider.replace(/^lifi:/, "")}</strong><small>{route.routeKind === "cross_chain" ? "Across networks" : "Same network"}</small></span><span><strong>{destination ? displayRawAmount(route.toAmountMinRaw, destination.decimals) : "—"} {destination?.symbol}</strong><small>{route.totalFeeUsd === null ? "Total fees unavailable" : `${formatEstimatedFeeUsd(route.totalFeeUsd)} estimated fees`}</small></span></button>)}
       {freshQuote && <div className="swapReview"><span>You Pay<strong>{amount} {source?.symbol}</strong></span><span>Minimum Received<strong>{destination ? displayRawAmount(freshQuote.toAmountMinRaw, destination.decimals) : "—"} {destination?.symbol}</strong></span><span>Estimated Fees<strong>{formatEstimatedFeeUsd(freshQuote.totalFeeUsd)}</strong></span><span>Price Impact<strong>{freshQuote.priceImpactPercent === null ? "Unavailable" : `${freshQuote.priceImpactPercent.toFixed(2)}%`}</strong></span></div>}
-      <SwapRouteReview planId={freshQuote?.planId ?? null} fresh={Boolean(freshQuote)} walletAddress={address ?? null} busy={reviewing || submitting || submissionUncertain}
+      <SwapRouteReview planId={freshQuote?.planId ?? null} fresh={Boolean(freshQuote)} walletAddress={address ?? null} busy={reviewing || submitting || approving || submissionUncertain || approvalUncertain || Boolean(approvalHash)}
         state={reviewState} routeKind={freshQuote?.routeKind} onReview={() => void reviewSelectedRoute()}
-        onSubmit={preparedSwap && submittedIntentId !== preparedSwap.result.intentId && !submissionUncertain ? () => void confirmSwap() : undefined} />
+        onSubmit={preparedSwap && submittedIntentId !== preparedSwap.result.intentId && !submissionUncertain ? () => void confirmSwap() : undefined}
+        onApprove={preparedApproval && !approvalHash && !approvalUncertain ? () => void confirmApproval() : undefined}
+        approvalKind={preparedApproval?.kind}
+        approvalAmount={preparedApproval && source ? `${displayRawAmount(preparedApproval.amountRaw, source.decimals)} ${source.symbol}` : undefined} />
       {reviewErrorText && <p className="formError" role="alert">{reviewErrorText}</p>}
     </section>}
+    {approvalHash && <div className="swapReviewStatus" role="status"><strong>{approvalStatus === "confirmed" ? "Approval Confirmed" : approvalStatus === "failed" || approvalStatus === "inconsistent" ? "Approval Could Not Be Confirmed" : "Approval Pending"}</strong><span>{approvalStatus === "confirmed" ? "Find a new route before swapping. If this was a reset, another exact approval may be needed." : "This is separate from the swap. Do not submit another approval while it is pending."}</span></div>}
     {submittedHash && <TransactionProgress action="Swap" status="submitted" intentId={submittedIntentId} hashes={[submittedHash]} chainId={8453}
       submittedDetail={reportWarning ?? "Waiting for independent confirmation. You can leave this screen."} />}
     {reportWarning && <p className="formError" role="alert">{reportWarning}</p>}

@@ -9,6 +9,8 @@ import { FeatureUnavailableError, requireFeature } from "@/lib/features/flags";
 import { ensureSubjectProfile } from "@/lib/profile/ensure";
 import { enforceRateLimit, RateLimitError } from "@/lib/security/rate-limit";
 import { resolveCatalogAsset } from "@/lib/swap/catalog";
+import { isDirectUniswapPlan, DIRECT_SWAP_ROUTER } from "@/lib/swap/direct-uniswap";
+import { assertSwapPrepareIntegrity } from "@/lib/swap/prepare-integrity";
 import { getActiveSwapQuotePlan, bindSwapQuotePlan } from "@/lib/swap/plans";
 import { observeSwapSourceBalance } from "@/lib/swap/source-balance";
 import { evaluateTransactionPolicy } from "@/lib/transactions/policy";
@@ -50,9 +52,14 @@ export async function POST(request: Request) {
     const targets = new Set<string>((process.env.AUREL_SWAP_ALLOWED_TARGETS ?? "").split(",")
       .map((value) => value.trim().toLowerCase()).filter((value) => isAddress(value)));
     if (!call.success || call.data.chainId !== plan.source_chain_id || call.data.from.toLowerCase() !== wallet
-      || !targets.has(call.data.to.toLowerCase())
+      || !(targets.has(call.data.to.toLowerCase())
+        || isDirectUniswapPlan(plan) && call.data.to.toLowerCase() === DIRECT_SWAP_ROUTER.toLowerCase())
       || (from.address === null ? BigInt(call.data.value) !== BigInt(plan.from_amount_raw) : call.data.value !== "0")) {
       return reply({ error: "quote_mismatch", traceId }, 409);
+    }
+    if (isDirectUniswapPlan(plan)) {
+      try { await assertSwapPrepareIntegrity(plan, { from, to }, now.getTime()); }
+      catch { return reply({ error: "quote_mismatch", traceId }, 409); }
     }
     await ensureSubjectProfile(env.PROJECTION_DB, subject.subjectReference, now);
     const valuation = await valueSwapSource({ assetId: plan.source_asset_id, amountRaw: plan.from_amount_raw }, { now });
