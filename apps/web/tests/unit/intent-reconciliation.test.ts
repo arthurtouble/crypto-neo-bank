@@ -11,14 +11,22 @@ const routeState = vi.hoisted(() => ({
   observation: null as unknown,
   observations: {} as Record<string, unknown>,
   issues: [] as string[],
-  events: [] as string[]
+  events: [] as string[],
+  candidates: [] as Array<Record<string, unknown>>,
+  candidateChecks: [] as Array<{ reportId: string; evidence: Record<string, unknown> }>
 }));
 
 vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
+  async batch(statements: Array<{ run: () => Promise<unknown> }>) {
+    const results = [];
+    for (const item of statements) results.push(await item.run());
+    return results;
+  },
   prepare(query: string) {
     return { bind(...args: unknown[]) {
       return {
         async all() {
+          if (query.includes("FROM intent_observation_candidates")) return { results: routeState.candidates.filter((item) => item.subject_reference === args[0]).map((item) => ({ ...item })) };
           if (query.includes("FROM transaction_intents")) {
             const db = new DatabaseSync(":memory:");
             try {
@@ -34,6 +42,12 @@ vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
           return { results: [] };
         },
         async run() {
+          if (query.includes("UPDATE intent_observation_candidates")) {
+            const candidate = routeState.candidates.find((item) => item.report_id === args[4]);
+            if (candidate) { candidate.verification_state = args[0]; candidate.canonical_block_hash = args[1]; candidate.effect_reason = args[2]; candidate.last_checked_at = args[3]; }
+            return { meta: { changes: candidate ? 1 : 0 } };
+          }
+          if (query.includes("INSERT INTO intent_observation_checks")) { routeState.candidateChecks.push({ reportId: String(args[1]), evidence: JSON.parse(String(args[5])) as Record<string, unknown> }); return { meta: { changes: 1 } }; }
           if (query.includes("UPDATE intent_prepared_calls SET updated_at = ?")) {
             const steps = routeState.steps.filter((step) => step.intent_id === args[1] && step.subject_reference === args[2] && step.reported_hash);
             for (const step of steps) step.updated_at = args[0];
@@ -100,6 +114,7 @@ describe("settlement evidence", () => {
 
   it("does not confirm a reverted receipt, unmined transaction, or shallow block", async () => {
     expect(await verifyExpectedEffect(nativePrepared, { ...nativeObservation, receipt: { ...nativeObservation.receipt!, status: "reverted" } })).toMatchObject({ status: "failed" });
+    expect(await verifyExpectedEffect(nativePrepared, { ...nativeObservation, receipt: { ...nativeObservation.receipt!, status: "reverted" }, finalizedBlockNumber: 99n })).toMatchObject({ status: "pending", reason: "finality" });
     expect(await verifyExpectedEffect(nativePrepared, { ...nativeObservation, blockHash: null })).toMatchObject({ status: "inconsistent" });
     expect(await verifyExpectedEffect(nativePrepared, { ...nativeObservation, confirmations: 1 })).toMatchObject({ status: "pending" });
     expect(await verifyExpectedEffect(nativePrepared, { ...nativeObservation, finalizedBlockNumber: 99n })).toMatchObject({ status: "pending", reason: "finality" });
@@ -136,7 +151,7 @@ describe("intent reconciliation route", () => {
   const intentId = "00000000-0000-4000-8000-000000000001";
   const request = () => reconcile(new Request("https://aurel.test/api/intents/reconcile", { method: "POST" }));
   beforeEach(() => {
-    routeState.subject = "subject-a"; routeState.issues.length = 0; routeState.events.length = 0; routeState.observations = {};
+    routeState.subject = "subject-a"; routeState.issues.length = 0; routeState.events.length = 0; routeState.observations = {}; routeState.candidates = []; routeState.candidateChecks = [];
     routeState.intents = [{ intent_id: intentId, subject_reference: "subject-a", chain_id: 8453, transaction_hash: hash, status: "submitted", intent_type: "transfer" }];
     routeState.steps = [{ intent_id: intentId, step_index: 0, subject_reference: "subject-a", wallet_address: sender.toLowerCase(), chain_id: 8453, target_address: recipient.toLowerCase(), native_value: "100", calldata_hash: nativePrepared.calldataHash, semantic_action: "native_transfer", expected_effect_json: JSON.stringify(nativePrepared.expectedEffect), reported_hash: hash, observed_block_hash: null, verification_state: "reported" }];
     routeState.observation = nativeObservation;
@@ -155,6 +170,45 @@ describe("intent reconciliation route", () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({ results: [{ intentId, status: "confirmed" }] });
     expect(routeState.intents[0].status).toBe("confirmed");
+  });
+
+  it("settles an exact late observation without confirming its cancelled intent", async () => {
+    routeState.intents[0].status = "cancelled";
+    routeState.intents[0].transaction_hash = null;
+    routeState.steps[0].reported_hash = null;
+    routeState.candidates = [{ report_id: "report-1", subject_reference: "subject-a", intent_id: intentId, step_index: 0,
+      chain_id: 8453, transaction_hash: hash, verification_state: "unindexed", wallet_address: sender.toLowerCase(),
+      target_address: recipient.toLowerCase(), native_value: "100", calldata_hash: nativePrepared.calldataHash,
+      semantic_action: "native_transfer", expected_effect_json: JSON.stringify(nativePrepared.expectedEffect) }];
+    const body = await (await request()).json() as Record<string, unknown>;
+    expect(body).toMatchObject({ observations: [{ reportId: "report-1", verificationState: "settled" }] });
+    expect(routeState.intents[0].status).toBe("cancelled");
+    expect(routeState.intents[0].transaction_hash).toBeNull();
+    expect(routeState.candidateChecks).toHaveLength(1);
+    expect(routeState.candidateChecks[0]).toMatchObject({ reportId: "report-1", evidence: { canonicalBlockHash: blockHash, confirmations: 3, receipt: { status: "success", blockNumber: "100" } } });
+  });
+
+  it.each([
+    ["settled", nativeObservation, "settled"],
+    ["unindexed", { status: "pending" }, "unindexed"],
+    ["mismatch", { ...nativeObservation, call: { ...nativeObservation.call, from: token } }, "identity_mismatch"],
+    ["reverted", { ...nativeObservation, receipt: { ...nativeObservation.receipt!, status: "reverted" } }, "reverted"],
+    ["rpc failure", new Error("RPC offline"), "check_failed"],
+    ["reorg", { ...nativeObservation, canonicalBlockHash: `0x${"c".repeat(64)}` }, "check_failed"]
+  ] as const)("keeps a late %s outside normal submission", async (_case, observation, expected) => {
+    routeState.intents[0].status = "reviewed";
+    routeState.intents[0].transaction_hash = null;
+    routeState.steps[0].reported_hash = null;
+    routeState.candidates = [{ report_id: "report-1", subject_reference: "subject-a", intent_id: intentId, step_index: 0,
+      chain_id: 8453, transaction_hash: hash, verification_state: "unindexed", wallet_address: sender.toLowerCase(),
+      target_address: recipient.toLowerCase(), native_value: "100", calldata_hash: nativePrepared.calldataHash,
+      semantic_action: "native_transfer", expected_effect_json: JSON.stringify(nativePrepared.expectedEffect) }];
+    routeState.observation = observation;
+    const body = await (await request()).json() as { observations: Array<{ verificationState: string }> };
+    expect(body.observations[0].verificationState).toBe(expected);
+    expect(routeState.intents[0]).toMatchObject({ status: "reviewed", transaction_hash: null });
+    expect(routeState.candidateChecks).toHaveLength(1);
+    if (expected === "settled") expect(routeState.issues).toHaveLength(1);
   });
 
   it("never marks a swap or bridge complete from source-chain evidence alone", async () => {

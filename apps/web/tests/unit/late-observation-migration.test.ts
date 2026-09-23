@@ -48,12 +48,14 @@ describe("late observation migration", () => {
       db.exec(`UPDATE intent_observation_candidates SET verification_state = 'identity_matched',
         canonical_block_hash = '0xblock', last_checked_at = '${timestamp}' WHERE report_id = 'report-1'`);
       db.exec(`INSERT INTO intent_observation_checks
-        (check_id, report_id, verification_state, reason, canonical_block_hash, checked_at)
-        VALUES ('check-1', 'report-1', 'identity_matched', NULL, '0xblock', '${timestamp}')`);
+        (check_id, report_id, verification_state, reason, canonical_block_hash, evidence_json, checked_at)
+        VALUES ('check-1', 'report-1', 'identity_matched', NULL, '0xblock', '{"receiptStatus":"success","confirmations":3}', '${timestamp}')`);
       expect(db.prepare("SELECT verification_state, canonical_block_hash FROM intent_observation_candidates WHERE report_id = 'report-1'").get())
         .toMatchObject({ verification_state: "identity_matched", canonical_block_hash: "0xblock" });
       expect(db.prepare("SELECT verification_state FROM intent_observation_checks WHERE report_id = 'report-1'").get())
         .toMatchObject({ verification_state: "identity_matched" });
+      expect(db.prepare("SELECT json_extract(evidence_json, '$.confirmations') AS confirmations FROM intent_observation_checks WHERE report_id = 'report-1'").get())
+        .toMatchObject({ confirmations: 3 });
     } finally { db.close(); }
   });
 
@@ -76,6 +78,15 @@ describe("late observation migration", () => {
         candidate.replace("'awaiting_step_up'", "'legacy'"),
         candidate.replace("'intent-1', 0,", "'intent-1', 1,")
       ]) expect(() => db.exec(invalid), invalid).toThrow();
+    } finally { db.close(); }
+  });
+
+  it("rejects a candidate attached to a non-transfer parent intent", () => {
+    const db = database();
+    try {
+      db.exec(prepared);
+      db.exec("UPDATE transaction_intents SET intent_type = 'swap' WHERE intent_id = 'intent-1'");
+      expect(() => db.exec(candidate)).toThrow();
     } finally { db.close(); }
   });
 
@@ -103,8 +114,8 @@ describe("late observation migration", () => {
       db.exec(prepared);
       db.exec(candidate);
       db.exec(`INSERT INTO intent_observation_checks
-        (check_id, report_id, verification_state, reason, checked_at)
-        VALUES ('check-1', 'report-1', 'unindexed', NULL, '${timestamp}')`);
+        (check_id, report_id, verification_state, reason, evidence_json, checked_at)
+        VALUES ('check-1', 'report-1', 'unindexed', NULL, '{}', '${timestamp}')`);
       for (const sql of [
         "UPDATE intent_observation_candidates SET transaction_hash = '0xchanged' WHERE report_id = 'report-1'",
         "UPDATE intent_observation_candidates SET prepared_fingerprint = 'changed' WHERE report_id = 'report-1'",
@@ -123,8 +134,8 @@ describe("late observation migration", () => {
       expect(() => db.exec(candidate.replace("'[\"expired_review\"]'", "'not json'"))).toThrow();
       db.exec(candidate);
       expect(() => db.exec(`INSERT INTO intent_observation_checks
-        (check_id, report_id, verification_state, checked_at)
-        VALUES ('check-1', 'report-1', 'confirmed', '${timestamp}')`)).toThrow();
+        (check_id, report_id, verification_state, evidence_json, checked_at)
+        VALUES ('check-1', 'report-1', 'confirmed', '{}', '${timestamp}')`)).toThrow();
     } finally { db.close(); }
   });
 });

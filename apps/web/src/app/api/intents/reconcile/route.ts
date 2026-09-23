@@ -2,6 +2,7 @@ import { env } from "cloudflare:workers";
 import { AuthenticationError, requireVerifiedSubject } from "@/lib/auth/server";
 import { observeTransaction } from "@/lib/transactions/chain-observation";
 import { verifyExpectedEffect, type PreparedEffectEvidence } from "@/lib/transactions/effects";
+import { reconcileLateObservations } from "@/lib/transactions/late-observation";
 
 type Intent = { intent_id: string; subject_reference: string; chain_id: number; transaction_hash: string | null; status: string; intent_type: string };
 type Step = { intent_id: string; step_index: number; wallet_address: string; chain_id: number; target_address: string; native_value: string; calldata_hash: string; semantic_action: string; expected_effect_json: string; reported_hash: string | null; observed_block_hash: string | null; verification_state: string; updated_at: string };
@@ -117,7 +118,8 @@ export async function POST(request: Request) {
         results.push({ intentId: intent.intent_id, status: intent.status, verificationState: "check_failed" });
       }
     }
-    return reply({ results }, 200);
+    const observations = await reconcileLateObservations(env.PROJECTION_DB, subject.subjectReference);
+    return reply({ results, observations }, 200);
   } catch (error) {
     if (error instanceof AuthenticationError) return reply({ error: "unauthorized" }, 401);
     return reply({ error: "reconcile_unavailable" }, 503);

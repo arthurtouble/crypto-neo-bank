@@ -59,12 +59,14 @@ END;
 
 CREATE TRIGGER IF NOT EXISTS intent_observation_candidates_prepared_identity_insert
 BEFORE INSERT ON intent_observation_candidates
-WHEN NOT EXISTS (SELECT 1 FROM intent_prepared_calls
-  WHERE intent_id = NEW.intent_id AND step_index = NEW.step_index
-    AND subject_reference = NEW.subject_reference AND chain_id = NEW.chain_id
-    AND call_fingerprint = NEW.prepared_fingerprint
-    AND submission_phase IS NEW.prepared_phase
-    AND semantic_action IN ('native_transfer', 'erc20_transfer'))
+WHEN NOT EXISTS (SELECT 1 FROM intent_prepared_calls p
+  JOIN transaction_intents i ON i.intent_id = p.intent_id
+  WHERE p.intent_id = NEW.intent_id AND p.step_index = NEW.step_index
+    AND p.subject_reference = NEW.subject_reference AND i.subject_reference = NEW.subject_reference
+    AND i.intent_type = 'transfer' AND p.chain_id = NEW.chain_id
+    AND p.call_fingerprint = NEW.prepared_fingerprint
+    AND p.submission_phase IS NEW.prepared_phase AND p.reported_hash IS NULL
+    AND p.semantic_action IN ('native_transfer', 'erc20_transfer'))
 BEGIN
   SELECT RAISE(ABORT, 'observation candidate must match a reviewed Base direct transfer');
 END;
@@ -92,6 +94,7 @@ CREATE TABLE IF NOT EXISTS intent_observation_checks (
     CHECK (verification_state IN ('unindexed', 'identity_matched', 'identity_mismatch', 'settled', 'reverted', 'check_failed')),
   reason TEXT,
   canonical_block_hash TEXT,
+  evidence_json TEXT NOT NULL CHECK (json_valid(evidence_json)),
   checked_at TEXT NOT NULL,
   FOREIGN KEY (report_id) REFERENCES intent_observation_candidates(report_id)
 );

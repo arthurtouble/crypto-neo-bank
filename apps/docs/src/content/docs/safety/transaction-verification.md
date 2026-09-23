@@ -15,6 +15,8 @@ An approval, swap, lending action, or cross-network route needs its own reviewed
 
 A transaction hash means the wallet broadcast something; it does not prove that the expected transfer happened. Aurel compares the network transaction with the prepared call, checks the receipt and expected effect, and waits for the network's finality threshold. A chain reorganization or conflicting evidence can return a previously confirmed action to a pending or review state.
 
+A hash first reported after a review window or safety control closes is tracked as an observation, not accepted as a new signing approval. The original account control stays in force while Aurel checks what happened on-chain. Even if the transfer settles, the separate Activity item says approval review is needed.
+
 For a cross-network route, a source-network receipt does not prove destination delivery. That needs separate destination evidence.
 
 ## Older activity

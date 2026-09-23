@@ -46,11 +46,11 @@ export async function verifyExpectedEffect(prepared: PreparedEffectEvidence, obs
   if (!observed.receipt) return { status: "pending", reason: "receipt_unavailable" };
   const receipt = observed.receipt;
   if (receipt.transactionHash.toLowerCase() !== prepared.reportedHash.toLowerCase()) return { status: "inconsistent", reason: "receipt_hash" };
-  if (receipt.status === "reverted") return { status: "failed", reason: "transaction_reverted" };
-  if (receipt.status !== "success") return { status: "pending", reason: "receipt_status_unknown" };
   if (!observed.blockHash || !observed.canonicalBlockHash || receipt.blockHash.toLowerCase() !== observed.blockHash.toLowerCase() || observed.canonicalBlockHash.toLowerCase() !== observed.blockHash.toLowerCase() || prepared.observedBlockHash && prepared.observedBlockHash.toLowerCase() !== observed.blockHash.toLowerCase()) return { status: "inconsistent", reason: "reorg" };
   if (observed.confirmations < requiredConfirmations(prepared.chainId)) return { status: "pending", reason: "finality" };
   if (observed.finalizedBlockNumber === null || observed.finalizedBlockNumber < receipt.blockNumber) return { status: "pending", reason: "finality" };
+  if (receipt.status === "reverted") return { status: "failed", reason: "transaction_reverted" };
+  if (receipt.status !== "success") return { status: "pending", reason: "receipt_status_unknown" };
   const parsed = effectSchema.safeParse(prepared.expectedEffect);
   if (!parsed.success || parsed.data.type !== prepared.semanticAction) return { status: "inconsistent", reason: "effect_schema" };
   const effect = parsed.data;

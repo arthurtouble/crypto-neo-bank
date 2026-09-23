@@ -25,7 +25,9 @@ const state = vi.hoisted(() => ({
   intent: null as null | Record<string, unknown>,
   prepared: new Map<number, Record<string, unknown>>(),
   events: [] as string[],
-  issues: [] as string[]
+  issues: [] as string[],
+  candidates: new Map<string, Record<string, unknown>>(),
+  candidateInsertFails: false
 }));
 
 vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
@@ -76,6 +78,7 @@ vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
       return {
         query,
         async first() {
+          if (query.includes("FROM intent_observation_candidates")) return state.candidates.get(String(args[1]).toLowerCase()) ?? null;
           if (query.includes("SELECT 1 AS reported FROM intent_prepared_calls")) {
             return [...state.prepared.values()].some((step) => step.intent_id === args[0] && step.subject_reference === args[1] && step.reported_hash) ? { reported: 1 } : null;
           }
@@ -88,6 +91,13 @@ vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
           return null;
         },
         async run() {
+          if (query.includes("INSERT INTO intent_observation_candidates")) {
+            if (state.candidateInsertFails) throw new Error("observation database unavailable");
+            const hash = String(args[5]).toLowerCase();
+            if (state.candidates.has(hash) || state.candidates.size >= 5 || state.prepared.get(Number(args[3]))?.reported_hash) return { meta: { changes: 0 } };
+            state.candidates.set(hash, { report_id: args[0], subject_reference: args[1], intent_id: args[2], step_index: args[3], chain_id: args[4], transaction_hash: hash, verification_state: "unindexed" });
+            return { meta: { changes: 1 } };
+          }
           if (query.includes("INSERT INTO intent_valuations")) { state.valuations.push(args); return { meta: { changes: 1 } }; }
           if (query.includes("INSERT INTO intent_prepared_calls")) {
             state.lastInsert = { query, args };
@@ -131,8 +141,8 @@ vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
 } } }));
 
 vi.mock("@/lib/auth/server", () => ({ AuthenticationError: class AuthenticationError extends Error {}, requireVerifiedSubject: async () => ({ subjectReference: state.subject, sessionReference: "session-a" }) }));
-vi.mock("@/lib/beta/access", () => ({ BetaAccessError: class BetaAccessError extends Error {}, requireBetaAccess: async () => { if (!state.betaAllowed) throw new Error("Beta denied"); return { transactionLimitUsd: 25_000 }; } }));
-vi.mock("@/lib/features/flags", () => ({ FeatureUnavailableError: class FeatureUnavailableError extends Error {}, requireFeature: async () => { if (!state.featureAllowed) throw new Error("Feature denied"); } }));
+vi.mock("@/lib/beta/access", () => { class BetaAccessError extends Error { code = "beta_access_denied"; } return { BetaAccessError, betaMode: () => "preview", requireBetaAccess: async () => { if (!state.betaAllowed) throw new BetaAccessError("Beta denied"); return { transactionLimitUsd: 25_000 }; } }; });
+vi.mock("@/lib/features/flags", () => { class FeatureUnavailableError extends Error {} return { FeatureUnavailableError, requireFeature: async () => { if (!state.featureAllowed) throw new FeatureUnavailableError("Feature denied"); } }; });
 vi.mock("@/lib/security/rate-limit", () => ({ RateLimitError: class RateLimitError extends Error {}, enforceRateLimit: async () => undefined }));
 vi.mock("@/lib/auth/wallet", () => {
   class WalletOwnershipError extends Error {}
@@ -437,7 +447,7 @@ describe("reported transaction binding", () => {
   const report = (stepIndex = 0, transactionHash = txHash) => reportStatus(new Request("https://aurel.test/api/intents/status", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ intentId, stepIndex, status: "submitted", transactionHash }) }));
 
   beforeEach(async () => {
-    state.subject = "subject-a"; state.walletLinked = true; state.betaAllowed = true; state.featureAllowed = true; state.accountLocked = false; state.intentUpdateAllowed = true; state.cancelBeforeClaim = false; state.terminalAuditFails = false; state.submissionAuditFails = false; state.prepared.clear(); state.events.length = 0; state.issues.length = 0;
+    state.subject = "subject-a"; state.walletLinked = true; state.betaAllowed = true; state.featureAllowed = true; state.accountLocked = false; state.intentUpdateAllowed = true; state.cancelBeforeClaim = false; state.terminalAuditFails = false; state.submissionAuditFails = false; state.prepared.clear(); state.events.length = 0; state.issues.length = 0; state.candidates.clear(); state.candidateInsertFails = false;
     state.intent = { intent_id: intentId, subject_reference: "subject-a", intent_type: "transfer", chain_id: 8453, wallet_reference: `wallet:${sender.toLowerCase()}`, request_json: JSON.stringify({ destination: recipient }), policy_result_json: JSON.stringify({ permitted: true }), status: "reviewed", expires_at: new Date(Date.now() + 60_000).toISOString() };
     const normalized = await normalizePreparedCall(call);
     state.prepared.set(0, { intent_id: intentId, step_index: 0, subject_reference: "subject-a", wallet_address: sender.toLowerCase(), chain_id: 8453, target_address: recipient.toLowerCase(), native_value: "100", calldata_hash: normalized.dataHash, call_fingerprint: normalized.fingerprint, semantic_action: "native_transfer", source_reference: "review-1", expected_effect_json: JSON.stringify({ type: "native_transfer", recipient, amountRaw: "100" }), expires_at: state.intent.expires_at, verification_state: "prepared", reported_hash: null });
@@ -458,9 +468,10 @@ describe("reported transaction binding", () => {
     const fetcher = vi.fn();
     vi.stubGlobal("fetch", fetcher);
     const response = await report();
-    expect(response.status).toBe(409);
-    expect(await response.json()).toMatchObject({ error: "prepared_step_unavailable" });
+    expect(response.status).toBe(202);
+    expect(await response.json()).toMatchObject({ verificationState: "observationPending" });
     expect(state.prepared.get(0)!.reported_hash).toBeNull();
+    expect(state.candidates.get(txHash)).toMatchObject({ verification_state: "unindexed" });
     expect(fetcher).not.toHaveBeenCalled();
   });
 
@@ -483,6 +494,55 @@ describe("reported transaction binding", () => {
     expect(await repeated.json()).toMatchObject({ verificationState: "pending" });
     expect(state.prepared.get(0)!.reported_hash).toBe(txHash);
     expect((await report(0, `0x${"b".repeat(64)}`)).status).toBe(409);
+  });
+
+  it("records a late Base transfer hash for observation without submitting the intent", async () => {
+    state.intent!.expires_at = new Date(Date.now() - 1_000).toISOString();
+    state.prepared.get(0)!.expires_at = state.intent!.expires_at;
+    state.featureAllowed = false;
+    const response = await report();
+    expect(response.status).toBe(202);
+    expect(await response.json()).toMatchObject({ verificationState: "observationPending" });
+    expect(state.candidates.get(txHash)).toMatchObject({ intent_id: intentId, verification_state: "unindexed" });
+    expect(state.intent?.status).toBe("reviewed");
+    expect(state.prepared.get(0)?.reported_hash).toBeNull();
+  });
+
+  it("records a held-step hash only as observation after beta access is revoked", async () => {
+    state.prepared.get(0)!.submission_phase = "awaiting_step_up";
+    state.betaAllowed = false;
+    const response = await report();
+    expect(response.status).toBe(202);
+    expect(state.intent?.status).toBe("reviewed");
+    expect(state.prepared.get(0)?.reported_hash).toBeNull();
+  });
+
+  it.each(["wallet", "beta", "feature"] as const)("records a late hash when %s access closes without creating submission", async (control) => {
+    if (control === "wallet") state.walletLinked = false;
+    if (control === "beta") state.betaAllowed = false;
+    if (control === "feature") state.featureAllowed = false;
+    expect((await report()).status).toBe(202);
+    expect(state.candidates.size).toBe(1);
+    expect(state.prepared.get(0)?.reported_hash).toBeNull();
+    expect(state.intent?.status).toBe("reviewed");
+  });
+
+  it("makes the same late hash idempotent and caps a prepared step at five candidates", async () => {
+    state.accountLocked = true;
+    expect((await report()).status).toBe(202);
+    expect((await report()).status).toBe(202);
+    expect(state.candidates.size).toBe(1);
+    for (let index = 1; index < 5; index++) expect((await report(0, `0x${index.toString(16).padStart(64, "0")}`)).status).toBe(202);
+    expect((await report(0, `0x${"f".repeat(64)}`)).status).toBe(409);
+    expect(state.candidates.size).toBe(5);
+  });
+
+  it("returns an unavailable error rather than a hash conflict when observation storage fails", async () => {
+    state.accountLocked = true;
+    state.candidateInsertFails = true;
+    expect((await report()).status).toBe(503);
+    expect(state.candidates.size).toBe(0);
+    expect(state.prepared.get(0)?.reported_hash).toBeNull();
   });
 
   it("treats a repeat of a confirmed hash as idempotent", async () => {
@@ -525,9 +585,10 @@ describe("reported transaction binding", () => {
     expect(state.events).toHaveLength(0);
   });
 
-  it("rejects an expired step or another subject", async () => {
+  it("observes an expired step but rejects another subject", async () => {
     state.prepared.get(0)!.expires_at = new Date(Date.now() - 1_000).toISOString();
-    expect((await report()).status).toBe(409);
+    expect((await report()).status).toBe(202);
+    expect(state.prepared.get(0)?.reported_hash).toBeNull();
     state.prepared.get(0)!.expires_at = new Date(Date.now() + 60_000).toISOString();
     state.subject = "subject-b";
     expect((await report()).status).toBe(404);
@@ -535,8 +596,9 @@ describe("reported transaction binding", () => {
 
   it("rechecks account lock before accepting a reported hash", async () => {
     state.accountLocked = true;
-    expect((await report()).status).toBe(403);
+    expect((await report()).status).toBe(202);
     expect(state.intent?.status).toBe("reviewed");
+    expect(state.prepared.get(0)?.reported_hash).toBeNull();
   });
 
   it("does not claim submission if the reviewed intent changed during binding", async () => {

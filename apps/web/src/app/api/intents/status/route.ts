@@ -1,11 +1,13 @@
 import { env } from "cloudflare:workers";
 import { z } from "zod";
 import { AuthenticationError, requireVerifiedSubject } from "@/lib/auth/server";
-import { BetaAccessError, requireBetaAccess } from "@/lib/beta/access";
+import { BetaAccessError, betaMode, requireBetaAccess } from "@/lib/beta/access";
 import { FeatureUnavailableError, requireFeature, type FeatureKey } from "@/lib/features/flags";
 import { WalletOwnershipError, requireLinkedEvmWallet } from "@/lib/auth/wallet";
 import { observeTransactionIdentity } from "@/lib/transactions/chain-observation";
 import { matchesPreparedCall, type NormalizedPreparedCall } from "@/lib/transactions/evidence";
+import { recordLateObservation } from "@/lib/transactions/late-observation";
+import { RateLimitError } from "@/lib/security/rate-limit";
 import { REPORTED_HASH_CLAIM_SQL, TERMINAL_INTENT_AUDIT_SQL, TERMINAL_INTENT_CANCEL_SQL, TERMINAL_INTENT_FAIL_SQL, TERMINAL_PRODUCT_EVENT_SQL } from "@/lib/transactions/status-sql";
 
 const statusSchema = z.object({
@@ -66,29 +68,44 @@ export async function POST(request: Request) {
     if (input.status === "submitted") {
       const stepIndex = input.stepIndex!;
       const hash = input.transactionHash!;
-      if (!["reviewed", "submitted", "confirmed"].includes(current.status)) return reply({ error: "intent_expired_or_unreviewed", traceId }, 409);
       const prepared = await env.PROJECTION_DB.prepare(`SELECT intent_id, step_index, wallet_address, chain_id, target_address, native_value, calldata_hash, call_fingerprint, semantic_action, source_reference, expires_at, expected_effect_json, reported_hash, verification_state, submission_phase
         FROM intent_prepared_calls WHERE intent_id = ? AND step_index = ? AND subject_reference = ?`)
         .bind(input.intentId, stepIndex, subject.subjectReference).first<{
           intent_id: string; step_index: number; wallet_address: string; chain_id: number; target_address: string; native_value: string; calldata_hash: string; call_fingerprint: string; semantic_action: string; source_reference: string; expires_at: string; expected_effect_json: string; reported_hash: string | null; verification_state: string; submission_phase: string | null;
         }>();
       if (!prepared) return reply({ error: "prepared_step_required", traceId }, 409);
-      if (prepared.submission_phase === "awaiting_step_up") return reply({ error: "prepared_step_unavailable", traceId }, 409);
-      if (!["prepared", "pending", "reported", "confirmed"].includes(prepared.verification_state)) return reply({ error: "prepared_step_unavailable", traceId }, 409);
-      const ownedAddress = await requireLinkedEvmWallet(subject.subjectReference, prepared.wallet_address);
+      const late = async (reason: string) => {
+        if (current.intent_type !== "transfer" || prepared.chain_id !== 8453 || stepIndex !== 0 || prepared.reported_hash)
+          return reply({ error: "prepared_step_unavailable", traceId }, 409);
+        const result = await recordLateObservation(env.PROJECTION_DB, { subjectReference: subject.subjectReference,
+          intentId: input.intentId, stepIndex, chainId: prepared.chain_id, hash, fingerprint: prepared.call_fingerprint,
+          phase: prepared.submission_phase, reason });
+        return result === "recorded" ? reply({ intentId: input.intentId, stepIndex, verificationState: "observationPending", traceId }, 202)
+          : reply({ error: "observation_conflict", traceId }, 409);
+      };
+      if (!["reviewed", "submitted", "confirmed"].includes(current.status)) return await late("intent_closed");
+      if (prepared.submission_phase === "awaiting_step_up") return await late("step_up_held");
+      if (!["prepared", "pending", "reported", "confirmed"].includes(prepared.verification_state)) return await late("prepared_unavailable");
+      let ownedAddress: string;
+      try { ownedAddress = await requireLinkedEvmWallet(subject.subjectReference, prepared.wallet_address); }
+      catch (error) { if (error instanceof WalletOwnershipError && !prepared.reported_hash) return await late("wallet_unlinked"); throw error; }
       if (current.wallet_reference !== `wallet:${ownedAddress}`) return reply({ error: "wallet_mismatch", traceId }, 409);
       if (prepared.reported_hash && prepared.reported_hash.toLowerCase() !== hash.toLowerCase()) return reply({ error: "hash_conflict", traceId }, 409);
       if (prepared.reported_hash) return reply({ intentId: input.intentId, stepIndex, verificationState: prepared.verification_state, traceId }, prepared.verification_state === "pending" ? 202 : 200);
       if (current.status === "confirmed") return reply({ error: "intent_expired_or_unreviewed", traceId }, 409);
-      if (current.expires_at <= new Date().toISOString()) return reply({ error: "intent_expired_or_unreviewed", traceId }, 409);
-      if (prepared.expires_at <= new Date().toISOString()) return reply({ error: "prepared_step_unavailable", traceId }, 409);
-      await requireBetaAccess(env.PROJECTION_DB, subject.subjectReference);
+      if (current.expires_at <= new Date().toISOString()) return await late("review_expired");
+      if (prepared.expires_at <= new Date().toISOString()) return await late("prepared_expired");
+      try { await requireBetaAccess(env.PROJECTION_DB, subject.subjectReference); }
+      catch (error) { if (error instanceof BetaAccessError) return await late("access_revoked"); throw error; }
       const feature: FeatureKey = current.intent_type === "swap" ? "swaps" : current.intent_type === "bridge" ? "cross_chain" : current.intent_type.startsWith("earn_") || ["borrow", "repay"].includes(current.intent_type) ? "defi_actions" : "direct_transfers";
-      await requireFeature(env.PROJECTION_DB, feature);
+      try { await requireFeature(env.PROJECTION_DB, feature); }
+      catch (error) { if (error instanceof FeatureUnavailableError) return await late("feature_disabled"); throw error; }
       const lock = await env.PROJECTION_DB.prepare("SELECT account_locked FROM security_profiles WHERE subject_reference = ?").bind(subject.subjectReference).first<{ account_locked: number }>();
-      if (!lock || lock.account_locked) return reply({ error: "account_locked", traceId }, 403);
+      if (!lock || lock.account_locked) return await late("account_locked");
+      const claimNow = new Date().toISOString();
       const claimed = await env.PROJECTION_DB.prepare(REPORTED_HASH_CLAIM_SQL)
-        .bind(hash.toLowerCase(), new Date().toISOString(), input.intentId, stepIndex, hash, subject.subjectReference).run();
+        .bind(hash.toLowerCase(), claimNow, input.intentId, stepIndex, hash,
+          claimNow, subject.subjectReference, claimNow, betaMode(), feature).run();
       if (claimed.meta.changes !== 1) return reply({ error: "hash_conflict", traceId }, 409);
       const observation = await observeTransactionIdentity(prepared.chain_id, hash);
       if (observation.status === "pending") return reply({ intentId: input.intentId, stepIndex, verificationState: "pending", traceId }, 202);
@@ -151,6 +168,7 @@ export async function POST(request: Request) {
     if (error instanceof WalletOwnershipError) return Response.json({ error: "wallet_not_linked", traceId }, { status: 403, headers: { "Cache-Control": "no-store" } });
     if (error instanceof BetaAccessError) return Response.json({ error: error.code, traceId }, { status: 403, headers: { "Cache-Control": "no-store" } });
     if (error instanceof FeatureUnavailableError) return Response.json({ error: "feature_unavailable", traceId }, { status: 503, headers: { "Cache-Control": "no-store" } });
+    if (error instanceof RateLimitError) return Response.json({ error: "rate_limited", traceId }, { status: 429, headers: { "Cache-Control": "no-store" } });
     if (error instanceof z.ZodError) return Response.json({ error: "invalid_status", issues: error.issues, traceId }, { status: 400, headers: { "Cache-Control": "no-store" } });
     console.error(JSON.stringify({ level: "error", event: "intent.status.failed", traceId, message: error instanceof Error ? error.message : "unknown" }));
     return Response.json({ error: "status_unavailable", traceId }, { status: 503, headers: { "Cache-Control": "no-store" } });

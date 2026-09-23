@@ -68,6 +68,10 @@ For a cross-network transfer, source-chain confirmation does not prove that fund
 
 A submitted transaction unresolved for more than 15 minutes becomes an operations exception. That threshold starts investigation; it does not mean the transaction has failed or that Aurel guarantees resolution within 15 minutes.
 
+## A transfer reported after controls close
+
+If your wallet broadcast a previously prepared Base transfer but its hash reaches Aurel after a review expires, access changes, or an account control closes, Activity keeps it in a separate **Transfer review** section. The report is not a new approval. Aurel checks the exact on-chain call, receipt, finality, and expected transfer effect. Until those checks finish it says **Checking transfer**. A settled transfer is marked **Transfer settled — approval review needed**, not an ordinary completed Aurel instruction. A mismatch or reverted transfer is shown separately and sent for operations review. This path cannot reopen signing or change a cancelled instruction into an approved payment.
+
 ## Replaced and repeated transactions
 
 A wallet may replace a pending transaction with another transaction using the same nonce. Network explorers may show the original as dropped or replaced. Aurel should preserve the known history rather than rewriting it as though only one request existed.
