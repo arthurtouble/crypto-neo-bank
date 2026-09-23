@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { formatUnits } from "viem";
 import { createLifiQuoteAdapter } from "@/lib/swap/lifi";
 import type { CatalogAsset } from "@/lib/swap/assets";
 
@@ -155,6 +156,24 @@ describe("provider-neutral LI.FI quotes", () => {
       const invalid = structuredClone(nativeQuote);
       invalid.transactionRequest.value = value;
       await expect(adapter(invalid).quote(input, { from: baseEth, to: baseUsdc })).rejects.toMatchObject({ code: "no_live_route" });
+    }
+  });
+
+  it("enforces the uint256 boundary even when a native quote and request agree", async () => {
+    const max = (1n << 256n) - 1n;
+    for (const [rawAmount, accepted] of [[max, true], [max + 1n, false]] as const) {
+      const quote = lifiQuote();
+      quote.action.fromToken = { symbol: "ETH", decimals: 18, chainId: 8453, address: "0x0000000000000000000000000000000000000000" };
+      quote.action.toToken = { symbol: "USDC", decimals: 6, chainId: 8453, address: baseUsdc.address! };
+      quote.action.fromAmount = rawAmount.toString();
+      quote.estimate.fromAmount = rawAmount.toString();
+      quote.estimate.toAmount = "990000";
+      quote.estimate.toAmountMin = "980000";
+      delete (quote.estimate as Partial<typeof quote.estimate>).approvalAddress;
+      quote.transactionRequest.value = `0x${rawAmount.toString(16)}`;
+      const result = adapter(quote).quote({ fromAssetId: baseEth.id, toAssetId: baseUsdc.id, amount: formatUnits(rawAmount, 18), fromAddress: wallet, slippageBps: 50 }, { from: baseEth, to: baseUsdc });
+      if (accepted) await expect(result).resolves.toHaveLength(1);
+      else await expect(result).rejects.toMatchObject({ code: "no_live_route" });
     }
   });
 
