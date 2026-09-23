@@ -27,7 +27,9 @@ vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
     return { bind(...args: unknown[]) {
       return {
         async all() {
-          if (query.includes("FROM intent_observation_candidates")) return { results: routeState.candidates.filter((item) => item.subject_reference === args[0]).map((item) => ({ ...item })) };
+          if (query.includes("FROM intent_observation_candidates")) return { results: routeState.candidates.filter((item) => item.subject_reference === args[0]).map((item) => ({ ...item,
+            intent_status: routeState.intents.find((intent) => intent.intent_id === item.intent_id)?.status,
+            intent_type: routeState.intents.find((intent) => intent.intent_id === item.intent_id)?.intent_type })) };
           if (query.includes("FROM transaction_intents")) {
             const db = new DatabaseSync(":memory:");
             try {
@@ -255,7 +257,7 @@ describe("intent reconciliation route", () => {
     ] } };
   }
 
-  it.each([[80n, "settled"], [79n, "identity_mismatch"]] as const)(
+  it.each([[80n, "settled"], [79n, "identity_matched"]] as const)(
     "tracks a late swap with %s destination units as %s without submitting it", async (received, expectedState) => {
       await swapEvidence(received);
       routeState.intents[0].status = "cancelled";
@@ -271,6 +273,7 @@ describe("intent reconciliation route", () => {
       expect(routeState.intents[0]).toMatchObject({ status: "cancelled", transaction_hash: null });
       expect(routeState.steps[0].reported_hash).toBeNull();
       expect(routeState.candidateChecks).toHaveLength(1);
+      if (received === 79n) expect(routeState.candidates[0]).toMatchObject({ effect_reason: "minimum_not_met" });
     }
   );
 

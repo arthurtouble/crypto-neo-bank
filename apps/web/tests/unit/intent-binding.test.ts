@@ -508,6 +508,45 @@ describe("reported transaction binding", () => {
     expect(state.prepared.get(0)?.reported_hash).toBeNull();
   });
 
+  it.each(["review_expired", "account_locked", "access_revoked", "feature_disabled"] as const)(
+    "records a late prepared Base swap after %s without creating a submission", async (control) => {
+      state.intent!.intent_type = "swap";
+      state.prepared.get(0)!.semantic_action = "swap";
+      state.prepared.get(0)!.submission_phase = "released";
+      if (control === "review_expired") state.intent!.expires_at = new Date(Date.now() - 1_000).toISOString();
+      if (control === "account_locked") state.accountLocked = true;
+      if (control === "access_revoked") state.betaAllowed = false;
+      if (control === "feature_disabled") state.featureAllowed = false;
+      const response = await report();
+      expect(response.status).toBe(202);
+      expect(await response.json()).toMatchObject({ verificationState: "observationPending" });
+      expect(state.candidates.get(txHash)).toMatchObject({ intent_id: intentId, verification_state: "unindexed" });
+      expect(state.intent).toMatchObject({ status: "reviewed" });
+      expect(state.prepared.get(0)?.reported_hash).toBeNull();
+    }
+  );
+
+  it("rejects a late swap candidate without an exact swap prepared step", async () => {
+    state.intent!.intent_type = "swap";
+    state.intent!.expires_at = new Date(Date.now() - 1_000).toISOString();
+    expect((await report()).status).toBe(409);
+    expect(state.candidates.size).toBe(0);
+    state.prepared.get(0)!.semantic_action = "swap";
+    state.prepared.get(0)!.submission_phase = "released";
+    state.prepared.get(0)!.chain_id = 1;
+    expect((await report()).status).toBe(409);
+    expect(state.candidates.size).toBe(0);
+  });
+
+  it("does not observe a swap step that was never released", async () => {
+    state.intent!.intent_type = "swap";
+    state.intent!.expires_at = new Date(Date.now() - 1_000).toISOString();
+    state.prepared.get(0)!.semantic_action = "swap";
+    state.prepared.get(0)!.submission_phase = "awaiting_step_up";
+    expect((await report()).status).toBe(409);
+    expect(state.candidates.size).toBe(0);
+  });
+
   it("records a held-step hash only as observation after beta access is revoked", async () => {
     state.prepared.get(0)!.submission_phase = "awaiting_step_up";
     state.betaAllowed = false;

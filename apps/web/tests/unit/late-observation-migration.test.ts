@@ -90,6 +90,20 @@ describe("late observation migration", () => {
     } finally { db.close(); }
   });
 
+  it("admits only an exact unreported prepared Base swap for late observation", () => {
+    const db = database();
+    try {
+      db.exec("UPDATE transaction_intents SET intent_type = 'swap' WHERE intent_id = 'intent-1'");
+      db.exec(prepared.replace("'native_transfer', 'review-1'", "'swap', 'review-1'")
+        .replace("'awaiting_step_up')", "'released')"));
+      const swapCandidate = candidate.replace("'awaiting_step_up'", "'released'");
+      db.exec(swapCandidate);
+      expect(db.prepare("SELECT verification_state FROM intent_observation_candidates WHERE report_id = 'report-1'").get())
+        .toMatchObject({ verification_state: "unindexed" });
+      expect(() => db.exec(swapCandidate.replaceAll("report-1", "report-2").replace("0xABC", "0xDEF").replace("'sha256:call'", "'sha256:other'"))).toThrow();
+    } finally { db.close(); }
+  });
+
   it("prevents ordinary calls and candidates from claiming each other's hash", () => {
     const db = database();
     try {

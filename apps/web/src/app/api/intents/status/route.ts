@@ -75,7 +75,9 @@ export async function POST(request: Request) {
         }>();
       if (!prepared) return reply({ error: "prepared_step_required", traceId }, 409);
       const late = async (reason: string) => {
-        if (current.intent_type !== "transfer" || prepared.chain_id !== 8453 || stepIndex !== 0 || prepared.reported_hash)
+        if (!(current.intent_type === "transfer" || current.intent_type === "swap"
+          && prepared.semantic_action === "swap" && prepared.submission_phase === "released")
+          || prepared.chain_id !== 8453 || stepIndex !== 0 || prepared.reported_hash)
           return reply({ error: "prepared_step_unavailable", traceId }, 409);
         const result = await recordLateObservation(env.PROJECTION_DB, { subjectReference: subject.subjectReference,
           intentId: input.intentId, stepIndex, chainId: prepared.chain_id, hash, fingerprint: prepared.call_fingerprint,
