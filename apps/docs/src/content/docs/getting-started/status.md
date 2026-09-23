@@ -40,6 +40,7 @@ A quote can expire. Swap and cross-chain execution are paused until the exact pr
 
 ## Preview only
 
+- Approval-required Swap reminders and saved ETH/USD price-alert preferences are built in the release candidate. They are not in the current production deployment. Price-alert checking and delivery are not active.
 - Membership tier projections
 - Travel, insurance, eSIM, concierge, and subscription benefit concepts
 - Tokenized market eligibility framework
@@ -79,4 +80,4 @@ Aurel does not currently offer bank accounts, fiat transfers, payment cards, ins
 
 A feature becomes live only when its technical path, security controls, operational ownership, terms, documentation, provider approval, and support route are complete. Marketing readiness alone does not change the label.
 
-Last reviewed: 22 September 2026.
+Last reviewed: 23 September 2026.

@@ -23,7 +23,7 @@ LI.FI currently supplies route data. Aurel checks the requested assets, amount, 
 
 Asset search and route review do not themselves enable trading. Swap execution remains unavailable until Aurel can hold and recheck the exact transaction plan, apply trusted value limits and any required step-up, simulate each call, prepare approvals in order, and verify the resulting transactions and settlement. The Swap screen will not request a wallet signature while this gate is closed.
 
-Price alerts and recurring Swap reminders are not yet available on the customer screen. Aurel is preparing an in-app reminder flow that will ask you to start a fresh Swap review when an instruction is due. A reminder is not an order and cannot exchange assets automatically. Alert triggering and email or push delivery are not active.
+You can save a recurring Swap reminder. When it is due, Aurel can show it in the app and take you back to a fresh route review. It does not reuse an old quote or sign for you. You can also save an ETH/USD price-alert preference, but price checking and delivery are not active yet; saving an alert is not a promise that you will be notified. Neither a reminder nor an alert is an order.
 
 Cross-network delivery needs separate destination evidence. A successful source transaction alone does not prove that the received asset arrived.
 
