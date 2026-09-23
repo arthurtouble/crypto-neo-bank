@@ -226,6 +226,62 @@ button { color: inherit; }
 @media (max-width:760px) { .waitlistMain { grid-template-columns: 1fr; gap: 48px; padding: 64px 20px 96px; }.waitlistIntro > span { margin-top: 20px; }.waitlistCard { padding: 26px; } }
 @media (prefers-reduced-motion:reduce) { .waitlistConfetti { display: none; } }
 
+/* Landing shares the product's semantic colors and controls. */
+.landingPage { overflow: clip; min-height: 100vh; background: var(--canvas); color: var(--text); }
+.landingPage a { text-decoration: none; }
+.landingPage a:focus-visible,.landingPage summary:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+.landingHeader { max-width: 1440px; height: 76px; margin: auto; padding: 0 40px; display: flex; align-items: center; gap: 36px; border-bottom: 1px solid var(--hairline); }
+.landingHeader nav { display: flex; align-items: center; gap: 28px; margin-left: auto; }
+.landingHeader nav a,.landingSignIn { color: var(--text-secondary); font-size: 13px; font-weight: 560; }
+.landingHeader nav a:hover,.landingSignIn:hover { color: var(--text); }
+.landingHeaderActions { display: flex; align-items: center; gap: 18px; }
+.landingHeaderActions .button { min-height: 40px; padding-inline: 17px; }
+.landingKicker { display: flex; align-items: center; gap: 9px; color: var(--accent); font-size: 11px; font-weight: 730; letter-spacing: .105em; }
+.landingStatusDot { display: inline-block; flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--positive); }
+.landingHero { max-width: 1440px; min-height: 660px; margin: auto; padding: 78px 40px 100px; display: grid; grid-template-columns: minmax(0,.9fr) minmax(0,1.1fr); align-items: center; gap: clamp(44px,7vw,110px); }
+.landingHeroCopy h1 { max-width: 620px; margin: 22px 0 24px; font-size: clamp(52px,5.3vw,78px); font-weight: 680; line-height: 1.01; letter-spacing: -.063em; }
+.landingHeroCopy > p:not(.landingKicker) { max-width: 520px; margin: 0; color: var(--text-secondary); font-size: 18px; line-height: 1.55; }
+.landingHeroActions { display: flex; align-items: center; gap: 24px; margin-top: 34px; }
+.landingHeroActions .button,.landingClose .button { display: inline-flex; align-items: center; gap: 14px; }
+.landingHeroActions > a:not(.button) { display: inline-flex; align-items: center; gap: 7px; color: var(--text-secondary); font-size: 13px; font-weight: 620; }
+.landingHeroCopy > small { display: block; margin-top: 24px; color: var(--text-tertiary); font-size: 12px; }
+.landingPreview { border: 1px solid var(--hairline-strong); border-radius: 16px; background: var(--surface); box-shadow: 0 32px 90px rgba(18,53,36,.12); transform: rotate(-1deg); overflow: hidden; }
+.landingPreviewBar { height: 56px; padding: 0 20px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--hairline); color: var(--text); font-size: 13px; font-weight: 650; }
+.landingPreviewMark { width: 24px; height: 24px; display: grid; place-items: center; border-radius: 6px; background: var(--accent); color: var(--surface); font-size: 13px; }
+.landingPreviewPill { margin-left: auto; padding: 5px 7px; border: 1px solid var(--hairline-strong); border-radius: 4px; color: var(--text-tertiary); font-size: 9px; letter-spacing: .08em; }
+.landingPreviewBody { display: grid; grid-template-columns: 135px minmax(0,1fr); min-height: 320px; }
+.landingPreviewSidebar { display: flex; flex-direction: column; gap: 5px; padding: 24px 13px; border-right: 1px solid var(--hairline); background: var(--surface-muted); }
+.landingPreviewSidebar span { padding: 9px 10px; border-radius: 6px; color: var(--text-tertiary); font-size: 11px; }
+.landingPreviewSidebar .selected { background: var(--surface); color: var(--text); font-weight: 660; }
+.landingPreviewContent { min-width: 0; padding: 32px 30px; }
+.landingPreviewOverline { margin: 0; color: var(--text-tertiary); font-size: 10px; font-weight: 700; letter-spacing: .1em; }
+.landingPreviewContent h3 { margin: 7px 0 4px; font-size: 22px; letter-spacing: -.03em; }
+.landingPreviewContent > p:not(.landingPreviewOverline) { margin: 0; color: var(--text-secondary); font-size: 11px; }
+.landingPreviewRows { display: grid; gap: 9px; margin-top: 27px; }
+.landingPreviewRows > div { min-height: 54px; padding: 9px 12px; display: flex; align-items: center; gap: 11px; border: 1px solid var(--hairline); border-radius: 7px; }
+.landingPreviewIcon { flex: none; width: 30px; height: 30px; display: grid; place-items: center; border-radius: 6px; background: var(--accent-soft); color: var(--accent); }
+.landingPreviewRows > div > span:nth-child(2) { display: grid; gap: 3px; flex: 1; min-width: 0; }
+.landingPreviewRows strong { font-size: 11px; }.landingPreviewRows small { color: var(--text-tertiary); font-size: 10px; }.landingPreviewRows svg { color: var(--text-tertiary); }
+.landingPreviewFoot { padding: 13px 20px; display: flex; justify-content: space-between; gap: 16px; border-top: 1px solid var(--hairline); color: var(--text-tertiary); font-size: 10px; }
+.landingPreviewFoot > span:first-child { display: flex; align-items: center; gap: 7px; }
+.landingStrip { padding: 20px 40px; display: flex; justify-content: center; gap: clamp(36px,6vw,100px); border-block: 1px solid var(--hairline); background: var(--surface); }
+.landingStrip span { display: flex; align-items: center; gap: 10px; color: var(--text-secondary); font-size: 12px; }.landingStrip svg { color: var(--accent); }
+.landingSection { max-width: 1280px; margin: auto; padding: 116px 40px; scroll-margin-top: 36px; }
+.landingSectionHead { max-width: 620px; }.landingSectionHead h2,.landingDocs h2,.landingClose h2 { margin: 16px 0 18px; font-size: clamp(36px,3.8vw,56px); font-weight: 670; line-height: 1.08; letter-spacing: -.05em; }.landingSectionHead > p:not(.landingKicker),.landingDocs p:not(.landingKicker),.landingClose p:not(.landingKicker) { margin: 0; color: var(--text-secondary); font-size: 16px; line-height: 1.65; }
+.landingFeatureGrid { margin-top: 52px; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; }
+.landingFeatureGrid article { min-height: 320px; padding: 34px; display: flex; flex-direction: column; align-items: flex-start; border: 1px solid var(--hairline-strong); border-radius: 12px; background: var(--surface); }
+.landingFeatureIcon { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 9px; background: var(--accent-soft); color: var(--accent); }
+.landingLabel { margin: 38px 0 8px; color: var(--accent); font-size: 10px; font-weight: 700; letter-spacing: .09em; }.landingFeatureGrid h3,.landingFutureGrid h3 { margin: 0 0 10px; font-size: 23px; letter-spacing: -.035em; }.landingFeatureGrid article > p:not(.landingLabel),.landingFutureGrid p { max-width: 430px; margin: 0; color: var(--text-secondary); font-size: 14px; line-height: 1.6; }.landingFeatureGrid a { display: inline-flex; align-items: center; gap: 5px; margin-top: auto; padding-top: 24px; color: var(--accent); font-size: 13px; font-weight: 650; }
+.landingFuture { max-width: none; padding-inline: max(40px,calc((100vw - 1200px)/2)); background: var(--surface-muted); }.landingFuture .landingSectionHead a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }.landingFutureGrid { margin-top: 48px; display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 30px; }.landingFutureGrid article { padding-top: 22px; border-top: 1px solid var(--hairline-strong); }.landingFutureGrid article > span { display: block; margin-bottom: 38px; color: var(--accent); font-size: 12px; font-weight: 690; }
+.landingDocs { max-width: 1200px; margin: auto; padding: 90px 40px; display: flex; align-items: center; justify-content: space-between; gap: 40px; border-bottom: 1px solid var(--hairline); }.landingDocs > div { max-width: 610px; }.landingDocs .button { display: inline-flex; align-items: center; gap: 10px; flex: none; }
+.landingFaq { display: grid; grid-template-columns: minmax(250px,.7fr) minmax(0,1.3fr); gap: 80px; }.landingFaqList { border-top: 1px solid var(--hairline-strong); }.landingFaqList details { border-bottom: 1px solid var(--hairline-strong); }.landingFaqList summary { min-height: 70px; display: flex; align-items: center; justify-content: space-between; gap: 20px; cursor: pointer; list-style: none; font-size: 16px; font-weight: 630; }.landingFaqList summary::-webkit-details-marker { display: none; }.landingFaqList details[open] summary svg { transform: rotate(180deg); }.landingFaqList details p { max-width: 580px; margin: -3px 0 23px; color: var(--text-secondary); font-size: 14px; line-height: 1.65; }
+.landingClose { padding: 96px 20px 104px; text-align: center; background: var(--accent); color: #fff; }.landingClose .landingKicker { justify-content: center; color: #b9dfc7; }.landingClose h2 { margin-inline: auto; }.landingClose p:not(.landingKicker) { color: #d5e7db; }.landingClose .button { margin-top: 30px; background: #fff; border-color: #fff; color: #123524; }.landingClose .button:hover { background: #e8f2eb; color: #123524; }
+.landingFooter { padding: 74px max(40px,calc((100vw - 1200px)/2)) 28px; background: #0d1d15; color: #fff; }.landingFooterTop { display: grid; grid-template-columns: minmax(220px,.75fr) minmax(0,1.25fr); gap: 70px; }.landingFooter .brand { color: #fff; }.landingFooter .brandDescriptor { display: none; }.landingFooterBrand p { margin: 26px 0 8px; font-size: 14px; }.landingFooterBrand small { color: #aab9ae; font-size: 12px; }.landingFooterLinks { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 24px; }.landingFooterLinks > div { display: flex; flex-direction: column; align-items: flex-start; gap: 13px; }.landingFooterLinks h2 { margin: 0 0 8px; color: #aab9ae; font-size: 11px; font-weight: 650; text-transform: uppercase; letter-spacing: .08em; }.landingFooterLinks a { color: #f1f6f2; font-size: 12px; }.landingFooterLinks a:hover { text-decoration: underline; }.landingFooterBottom { margin-top: 88px; padding-top: 20px; display: flex; justify-content: space-between; gap: 20px; border-top: 1px solid #314638; color: #aab9ae; font-size: 11px; }
+@media (max-width:1000px) { .landingHeader { gap: 20px; padding-inline: 24px; }.landingHeader nav { gap: 16px; }.landingHero { gap: 36px; padding-inline: 24px; }.landingHeroCopy h1 { font-size: clamp(48px,5.4vw,68px); }.landingPreviewSidebar { display: none; }.landingPreviewBody { grid-template-columns: 1fr; }.landingFaq { gap: 40px; }.landingFooter { padding-inline: 30px; }.landingFooterTop { grid-template-columns: 1fr; gap: 50px; } }
+@media (max-width:720px) { .landingHeader { height: 68px; padding-inline: 18px; }.landingHeader nav,.landingSignIn,.landingHeader .themeToggle,.landingHeader .brandDescriptor { display: none; }.landingHeaderActions { margin-left: auto; }.landingHeaderActions .button { min-height: 38px; padding-inline: 12px; font-size: 11px; }.landingHero { min-height: 0; padding: 64px 20px 72px; grid-template-columns: 1fr; gap: 54px; }.landingHeroCopy h1 { font-size: clamp(44px,10vw,64px); }.landingHeroCopy > p:not(.landingKicker) { font-size: 16px; }.landingPreview { transform: none; }.landingStrip { padding: 22px 20px; flex-wrap: wrap; justify-content: flex-start; gap: 18px 28px; }.landingSection { padding: 78px 20px; }.landingFeatureGrid,.landingFutureGrid,.landingFaq { grid-template-columns: 1fr; }.landingFuture { padding-inline: 20px; }.landingFutureGrid { gap: 24px; }.landingFutureGrid article > span { margin-bottom: 18px; }.landingDocs { padding: 74px 20px; display: block; }.landingDocs .button { margin-top: 28px; }.landingFaq { gap: 35px; }.landingFooter { padding: 60px 20px 26px; }.landingFooterLinks { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 36px 20px; }.landingFooterBottom { margin-top: 60px; } }
+@media (max-width:400px) { .landingHeroActions { align-items: flex-start; flex-direction: column; gap: 19px; }.landingPreviewContent { padding: 25px 16px; }.landingPreviewPill { font-size: 8px; }.landingPreviewRows small { font-size: 9px; }.landingFooterBottom { flex-direction: column; } }
+@media (prefers-reduced-motion:reduce) { .landingPreview,.landingHero > * { animation: none !important; } }
+
 /* Private access and product tour */
 .publicFlowPage,.tourPage { min-height: 100vh; background: var(--canvas); color: var(--text); }
 .publicFlowHeader { width: min(1280px,100%); height: 76px; margin: 0 auto; padding: 0 40px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--hairline); }

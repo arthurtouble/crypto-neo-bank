@@ -5,8 +5,8 @@ import "./identity.css";
 import "./product-system.css";
 
 export const metadata: Metadata = {
-  title: "Aurel — Your financial life, in one place",
-  description: "A secure account for money, digital assets, investing, and everyday benefits."
+  title: "Aurel — Digital assets, without the guesswork",
+  description: "Join the global private-beta waitlist for Aurel, a clearer workspace for supported digital assets and safer actions."
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
