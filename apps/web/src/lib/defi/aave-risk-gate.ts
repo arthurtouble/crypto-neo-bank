@@ -1,4 +1,5 @@
 export type AaveRiskAction = "supply" | "withdraw" | "borrow" | "repay";
+export type AavePostDebtStatus = "none" | "positive" | "unresolved";
 
 export type AaveRiskInput = {
   action: AaveRiskAction;
@@ -11,17 +12,22 @@ export type AaveRiskInput = {
     decimals: number; priceBase: bigint; liquidationThresholdBps: number;
     active: boolean; paused: boolean; frozen: boolean; borrowingEnabled: boolean;
     collateralEnabledForUser: boolean; availableLiquidityRaw: bigint;
-    supplyCapRemainingRaw: bigint; borrowCapRemainingRaw: bigint;
+    /** null means a separately verified uncapped reserve; zero means no room. */
+    supplyCapRemainingRaw: bigint | null; borrowCapRemainingRaw: bigint | null;
   };
   account: {
     weightedCollateralBase: bigint; debtBase: bigint; availableBorrowsBase: bigint;
-    assetCollateralBalanceRaw: bigint; assetDebtRaw: bigint;
-    eModeCategory: number; isolationMode: boolean;
+    assetCollateralBalanceRaw: bigint; variableDebtRaw: bigint;
+    allDebtAbsentProven: boolean; eModeCategory: number; isolationMode: boolean;
   };
 };
 
 function nonnegative(value: unknown, name: string): asserts value is bigint {
   if (typeof value !== "bigint" || value < 0n) throw new Error(`Invalid ${name}.`);
+}
+
+function cap(value: unknown, name: string): asserts value is bigint | null {
+  if (value !== null) nonnegative(value, name);
 }
 
 function ceilDiv(numerator: bigint, denominator: bigint): bigint {
@@ -30,7 +36,8 @@ function ceilDiv(numerator: bigint, denominator: bigint): bigint {
 
 /** Conservative calculation only; it is not an authority to sign or execute. */
 export function assessAaveActionRisk(input: AaveRiskInput): {
-  valueBase: bigint; postDebtBase: bigint; postWeightedCollateralBase: bigint; postHealthFactorWad: bigint | null;
+  valueBase: bigint; postDebtBase: bigint | null; postWeightedCollateralBase: bigint;
+  postHealthFactorWad: bigint | null; debtStatus: AavePostDebtStatus;
 } {
   const { action, amountRaw, snapshot, reserve, account } = input;
   if (!["supply", "withdraw", "borrow", "repay"].includes(action)) throw new Error("Unsupported Aave action.");
@@ -51,12 +58,16 @@ export function assessAaveActionRisk(input: AaveRiskInput): {
     .some((value) => typeof value !== "boolean")) throw new Error("Incomplete reserve configuration.");
   for (const [name, value] of Object.entries({
     priceBase: reserve.priceBase, availableLiquidityRaw: reserve.availableLiquidityRaw,
-    supplyCapRemainingRaw: reserve.supplyCapRemainingRaw, borrowCapRemainingRaw: reserve.borrowCapRemainingRaw,
     weightedCollateralBase: account.weightedCollateralBase, debtBase: account.debtBase,
     availableBorrowsBase: account.availableBorrowsBase,
-    assetCollateralBalanceRaw: account.assetCollateralBalanceRaw, assetDebtRaw: account.assetDebtRaw
+    assetCollateralBalanceRaw: account.assetCollateralBalanceRaw, variableDebtRaw: account.variableDebtRaw
   })) nonnegative(value, name);
+  cap(reserve.supplyCapRemainingRaw, "supply cap");
+  cap(reserve.borrowCapRemainingRaw, "borrow cap");
   if (reserve.priceBase === 0n || !reserve.active || reserve.paused) throw new Error("Reserve unavailable.");
+  if (typeof account.allDebtAbsentProven !== "boolean" || (account.debtBase === 0n) !== account.allDebtAbsentProven
+    || (account.allDebtAbsentProven && account.variableDebtRaw !== 0n))
+    throw new Error("Complete raw debt coverage is required.");
   if (account.eModeCategory !== 0 || account.isolationMode !== false) throw new Error("Position mode unsupported.");
   if (reserve.frozen && (action === "supply" || action === "borrow")) throw new Error("Reserve frozen.");
   if (action === "borrow" && !reserve.borrowingEnabled) throw new Error("Borrowing disabled.");
@@ -68,7 +79,7 @@ export function assessAaveActionRisk(input: AaveRiskInput): {
   let postDebtBase = account.debtBase;
   let postWeightedCollateralBase = account.weightedCollateralBase;
   if (action === "supply") {
-    if (amountRaw > reserve.supplyCapRemainingRaw) throw new Error("Supply cap exceeded.");
+    if (reserve.supplyCapRemainingRaw !== null && amountRaw > reserve.supplyCapRemainingRaw) throw new Error("Supply cap exceeded.");
     if (reserve.collateralEnabledForUser)
       postWeightedCollateralBase += valueBase * BigInt(reserve.liquidationThresholdBps) / 10_000n;
   } else if (action === "withdraw") {
@@ -79,17 +90,22 @@ export function assessAaveActionRisk(input: AaveRiskInput): {
       postWeightedCollateralBase -= reduction;
     }
   } else if (action === "borrow") {
-    if (amountRaw > reserve.borrowCapRemainingRaw || amountRaw > reserve.availableLiquidityRaw) throw new Error("Borrow unavailable.");
+    if ((reserve.borrowCapRemainingRaw !== null && amountRaw > reserve.borrowCapRemainingRaw)
+      || amountRaw > reserve.availableLiquidityRaw) throw new Error("Borrow unavailable.");
     if (upperValueBase > account.availableBorrowsBase) throw new Error("Borrow exceeds current borrowing power.");
     postDebtBase += upperValueBase;
   } else {
-    if (amountRaw > account.assetDebtRaw || valueBase > postDebtBase) throw new Error("Repayment exceeds debt.");
+    if (amountRaw > account.variableDebtRaw || valueBase > postDebtBase) throw new Error("Repayment exceeds variable debt.");
     postDebtBase -= valueBase;
   }
-  if (postDebtBase > 0n && postWeightedCollateralBase * 10n ** 18n < postDebtBase * input.minHealthFactorWad)
-    throw new Error("Post-action health factor is below the floor.");
-  return {
-    valueBase, postDebtBase, postWeightedCollateralBase,
-    postHealthFactorWad: postDebtBase === 0n ? null : postWeightedCollateralBase * 10n ** 18n / postDebtBase
-  };
+  if (postDebtBase > 0n && postWeightedCollateralBase * 10n ** 18n < postDebtBase * input.minHealthFactorWad) {
+    const improvesHealth = (action === "supply" && postWeightedCollateralBase > account.weightedCollateralBase)
+      || (action === "repay" && postDebtBase < account.debtBase);
+    if (!improvesHealth) throw new Error("Post-action health factor is below the floor.");
+  }
+  const debtStatus: AavePostDebtStatus = postDebtBase > 0n ? "positive"
+    : action === "repay" ? "unresolved" : "none";
+  return { valueBase, postDebtBase: debtStatus === "unresolved" ? null : postDebtBase,
+    postWeightedCollateralBase, debtStatus,
+    postHealthFactorWad: debtStatus === "positive" ? postWeightedCollateralBase * 10n ** 18n / postDebtBase : null };
 }

@@ -17,8 +17,8 @@ const base = {
   },
   account: {
     weightedCollateralBase: 16_000_000_000n, debtBase: 10_000_000_000n,
-    availableBorrowsBase: 5_000_000_000n,
-    assetCollateralBalanceRaw: 200_000_000n, assetDebtRaw: 100_000_000n,
+    availableBorrowsBase: 5_000_000_000n, allDebtAbsentProven: false,
+    assetCollateralBalanceRaw: 200_000_000n, variableDebtRaw: 100_000_000n,
     eModeCategory: 0, isolationMode: false
   }
 };
@@ -55,7 +55,7 @@ describe("disconnected Aave risk gate", () => {
 
   it("allows debt-free full withdrawal without interpreting a zero health factor as liquidation risk", () => {
     const result = assessAaveActionRisk({ ...base, action: "withdraw", amountRaw: 200_000_000n,
-      account: { ...base.account, weightedCollateralBase: 16_000_000_000n, debtBase: 0n, assetDebtRaw: 0n } });
+      account: { ...base.account, weightedCollateralBase: 16_000_000_000n, debtBase: 0n, variableDebtRaw: 0n, allDebtAbsentProven: true } });
     expect(result).toMatchObject({ postDebtBase: 0n, postWeightedCollateralBase: 0n, postHealthFactorWad: null });
   });
 
@@ -91,5 +91,37 @@ describe("disconnected Aave risk gate", () => {
     const generousHealth = { ...base, account: { ...base.account, weightedCollateralBase: 100_000_000_000n, availableBorrowsBase: 50_000_000n } };
     expect(() => assessAaveActionRisk(generousHealth)).toThrow(/borrow/i);
     expect(() => assessAaveActionRisk({ ...base, account: { ...base.account, availableBorrowsBase: undefined as unknown as bigint } })).toThrow();
+  });
+
+  it("permits a verified rescue that improves an already distressed account", () => {
+    const distressed = { ...base, amountRaw: 10_000_000n,
+      account: { ...base.account, weightedCollateralBase: 10_000_000_000n, debtBase: 10_000_000_000n } };
+    expect(assessAaveActionRisk({ ...distressed, action: "repay" }).postHealthFactorWad).toBeGreaterThan(1_000_000_000_000_000_000n);
+    expect(assessAaveActionRisk({ ...distressed, action: "supply" }).postHealthFactorWad).toBeGreaterThan(1_000_000_000_000_000_000n);
+    expect(() => assessAaveActionRisk({ ...distressed, action: "supply", reserve: { ...base.reserve, collateralEnabledForUser: false } })).toThrow(/health/i);
+    expect(() => assessAaveActionRisk({ ...distressed, action: "borrow" })).toThrow(/health/i);
+  });
+
+  it("keeps a full or rounded-to-zero repayment unresolved until settlement", () => {
+    const dust = { ...base, action: "repay" as const, amountRaw: 1_000_000_000_000_000_000n,
+      reserve: { ...base.reserve, decimals: 18, priceBase: 100_000_000n },
+      account: { ...base.account, debtBase: 100_000_000n, variableDebtRaw: 1_000_000_000_000_000_001n } };
+    expect(assessAaveActionRisk(dust)).toMatchObject({ postDebtBase: null, postHealthFactorWad: null, debtStatus: "unresolved" });
+    expect(assessAaveActionRisk({ ...dust, account: { ...dust.account, variableDebtRaw: dust.amountRaw } }))
+      .toMatchObject({ postDebtBase: null, debtStatus: "unresolved" });
+  });
+
+  it("does not infer no debt from a zero-valued aggregate without raw debt coverage", () => {
+    const zeroAggregate = { ...base, action: "withdraw" as const, account: { ...base.account, debtBase: 0n, variableDebtRaw: 0n } };
+    expect(() => assessAaveActionRisk(zeroAggregate)).toThrow(/debt/i);
+    expect(() => assessAaveActionRisk({ ...base, account: { ...base.account, allDebtAbsentProven: true } })).toThrow(/debt/i);
+    expect(() => assessAaveActionRisk({ ...zeroAggregate, account: { ...zeroAggregate.account,
+      variableDebtRaw: 1n, allDebtAbsentProven: true } })).toThrow(/debt/i);
+  });
+
+  it("treats only an explicit null cap as an independently proven uncapped reserve", () => {
+    expect(assessAaveActionRisk({ ...base, action: "supply", reserve: { ...base.reserve, supplyCapRemainingRaw: null } }).valueBase).toBe(100_000_000n);
+    expect(assessAaveActionRisk({ ...base, reserve: { ...base.reserve, borrowCapRemainingRaw: null } }).valueBase).toBe(100_000_000n);
+    expect(() => assessAaveActionRisk({ ...base, reserve: { ...base.reserve, borrowCapRemainingRaw: undefined as unknown as bigint } })).toThrow();
   });
 });
