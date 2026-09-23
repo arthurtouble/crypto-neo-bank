@@ -74,7 +74,7 @@ export async function consumeVerifiedActionPasskey(
             AND c.step_index = action_passkey_challenges.step_index
             AND c.subject_reference = action_passkey_challenges.subject_reference
             AND c.call_fingerprint = action_passkey_challenges.call_fingerprint
-            AND c.verification_state = 'prepared' AND c.expires_at > ?
+            AND c.verification_state = 'prepared' AND c.submission_phase = 'awaiting_step_up' AND c.expires_at > ?
             AND c.semantic_action IN ('native_transfer', 'erc20_transfer')
             AND EXISTS (SELECT 1 FROM transaction_intents i
               WHERE i.intent_id = c.intent_id AND i.chain_id = c.chain_id

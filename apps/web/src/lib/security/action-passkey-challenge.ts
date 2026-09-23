@@ -60,6 +60,7 @@ export async function issueActionPasskeyChallenge(
       AND json_extract(i.request_json, '$.type') = 'transfer'
       AND json_extract(i.policy_result_json, '$.permitted') = 1
       AND c.step_index = ? AND c.call_fingerprint = ? AND c.verification_state = 'prepared'
+      AND c.submission_phase = 'awaiting_step_up'
       AND c.chain_id = i.chain_id AND c.expires_at > ?
       AND c.semantic_action IN ('native_transfer', 'erc20_transfer')
       AND lower(json_extract(c.expected_effect_json, '$.recipient')) = lower(json_extract(i.request_json, '$.destination'))

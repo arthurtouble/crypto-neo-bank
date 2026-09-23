@@ -51,7 +51,7 @@ beforeEach(() => {
         '0x2222222222222222222222222222222222222222', '0', 'sha256:calldata', 'sha256:call',
         'native_transfer', 'source-1', '2026-09-23T00:04:00.000Z',
         '{"type":"native_transfer","recipient":"0x2222222222222222222222222222222222222222","amountRaw":"1"}',
-        '2026-09-23T00:00:00.000Z', 'legacy');
+        '2026-09-23T00:00:00.000Z', 'awaiting_step_up');
     INSERT INTO security_profiles (subject_reference, updated_at) VALUES ('subject-a', '2026-09-23T00:00:00.000Z');
     INSERT INTO beta_access (subject_reference, cohort, country_code, status, transaction_limit_usd,
       terms_version, terms_accepted_at, activated_at, updated_at)
@@ -72,6 +72,12 @@ beforeEach(() => {
 afterEach(() => { sqlite.close(); vi.unstubAllEnvs(); });
 
 describe("disconnected action passkey challenge issuance", () => {
+  it("does not issue a step-up challenge for an ordinary legacy call", async () => {
+    sqlite.exec("DROP TRIGGER intent_prepared_calls_step_up_hold; UPDATE intent_prepared_calls SET submission_phase='legacy' WHERE intent_id='intent-1'");
+    await expect(issueActionPasskeyChallenge(database, input)).rejects.toThrow();
+    expect((sqlite.prepare("SELECT COUNT(*) AS n FROM action_passkey_challenges").get() as { n: number }).n).toBe(0);
+  });
+
   it("stores only a digest of a random 32-byte challenge and exact action binding", async () => {
     const result = await issueActionPasskeyChallenge(database, input);
     expect(result.challenge).toMatch(/^[A-Za-z0-9_-]{43}$/);
@@ -120,7 +126,7 @@ describe("disconnected action passkey challenge issuance", () => {
     ["unavailable beta country", "UPDATE beta_access SET country_code='US' WHERE subject_reference='subject-a'"],
     ["no active passkey", "UPDATE action_passkey_credentials SET status='pending' WHERE credential_id='credential-1'"],
   ])("rejects %s before challenge exists", async (_label, mutation) => {
-    sqlite.exec("DROP TRIGGER IF EXISTS intent_prepared_calls_immutable_update; DROP TRIGGER IF EXISTS intent_valuations_no_update;");
+    sqlite.exec("DROP TRIGGER IF EXISTS intent_prepared_calls_immutable_update; DROP TRIGGER IF EXISTS intent_prepared_calls_step_up_hold; DROP TRIGGER IF EXISTS intent_valuations_no_update;");
     sqlite.exec(mutation);
     await expect(issueActionPasskeyChallenge(database, input)).rejects.toThrow();
     expect((sqlite.prepare("SELECT COUNT(*) AS n FROM action_passkey_challenges").get() as { n: number }).n).toBe(0);
@@ -140,7 +146,7 @@ describe("disconnected action passkey challenge issuance", () => {
   });
 
   it("expires no later than the reviewed call", async () => {
-    sqlite.exec("DROP TRIGGER IF EXISTS intent_prepared_calls_immutable_update");
+    sqlite.exec("DROP TRIGGER IF EXISTS intent_prepared_calls_immutable_update; DROP TRIGGER IF EXISTS intent_prepared_calls_step_up_hold");
     sqlite.exec("UPDATE intent_prepared_calls SET expires_at='2026-09-23T00:01:30.000Z' WHERE intent_id='intent-1'");
     const result = await issueActionPasskeyChallenge(database, input);
     expect(result.expiresAt).toBe("2026-09-23T00:01:30.000Z");

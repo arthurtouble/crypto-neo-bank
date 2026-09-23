@@ -70,7 +70,7 @@ beforeEach(() => {
         '0x2222222222222222222222222222222222222222', '0', 'sha256:calldata', 'sha256:call',
         'native_transfer', 'source-1', '2026-09-23T00:04:00.000Z',
         '{"type":"native_transfer","recipient":"0x2222222222222222222222222222222222222222","amountRaw":"1"}',
-        '2026-09-23T00:00:00.000Z', 'legacy');
+        '2026-09-23T00:00:00.000Z', 'awaiting_step_up');
     INSERT INTO security_profiles (subject_reference, updated_at) VALUES ('subject-a', '2026-09-23T00:00:00.000Z');
     INSERT INTO beta_access (subject_reference, cohort, country_code, status, transaction_limit_usd,
       terms_version, terms_accepted_at, activated_at, updated_at)
@@ -96,6 +96,13 @@ beforeEach(() => {
 afterEach(() => { sqlite.close(); vi.unstubAllEnvs(); });
 
 describe("action passkey evidence store", () => {
+  it("does not consume an assertion for an ordinary legacy call", async () => {
+    sqlite.exec("DROP TRIGGER intent_prepared_calls_step_up_hold; UPDATE intent_prepared_calls SET submission_phase='legacy' WHERE intent_id='intent-1'");
+    await expect(consumeVerifiedActionPasskey(database, base)).rejects.toThrow();
+    expect(count()).toBe(0);
+    expect(challenge().consumed_at).toBeNull();
+  });
+
   it("consumes exactly one matching challenge and records authorization with the verified counter", async () => {
     const result = await consumeVerifiedActionPasskey(database, base);
     expect(result.authorizationId).toMatch(/^[0-9a-f-]{36}$/);
@@ -142,7 +149,7 @@ describe("action passkey evidence store", () => {
     ["intent", "UPDATE transaction_intents SET expires_at='2026-09-23T00:01:30.000Z' WHERE intent_id='intent-1'", "2026-09-23T00:01:30.000Z"]
   ])("ends authorization when the reviewed %s expires first", async (_source, mutation, expected) => {
     // Build a shorter-lived preexisting record; production prepared calls are immutable after creation.
-    sqlite.exec("DROP TRIGGER intent_prepared_calls_immutable_update");
+    sqlite.exec("DROP TRIGGER intent_prepared_calls_immutable_update; DROP TRIGGER intent_prepared_calls_step_up_hold");
     sqlite.exec(mutation);
     await consumeVerifiedActionPasskey(database, base);
     expect(sqlite.prepare("SELECT expires_at FROM action_passkey_authorizations").get())
@@ -184,7 +191,7 @@ describe("action passkey evidence store", () => {
     if (_label === "changed prepared call" || _label === "expired prepared call" || _label === "missing prepared call" || _label === "wrong purpose") {
       // Immutable production evidence cannot be rebound; simulate a different preexisting record instead.
       sqlite.exec("PRAGMA foreign_keys=OFF");
-      sqlite.exec("DROP TRIGGER IF EXISTS intent_prepared_calls_immutable_update; DROP TRIGGER IF EXISTS intent_prepared_calls_no_delete; DROP TRIGGER IF EXISTS action_passkey_challenges_protect;");
+      sqlite.exec("DROP TRIGGER IF EXISTS intent_prepared_calls_immutable_update; DROP TRIGGER IF EXISTS intent_prepared_calls_step_up_hold; DROP TRIGGER IF EXISTS intent_prepared_calls_no_delete; DROP TRIGGER IF EXISTS action_passkey_challenges_protect;");
     }
     sqlite.exec(mutation);
     await expect(consumeVerifiedActionPasskey(database, base)).rejects.toThrow();
@@ -211,7 +218,7 @@ describe("action passkey evidence store", () => {
     ["both intent and call moved to another chain", "UPDATE transaction_intents SET chain_id=1 WHERE intent_id='intent-1'; UPDATE intent_prepared_calls SET chain_id=1 WHERE intent_id='intent-1'"],
     ["new review delay", "UPDATE transaction_intents SET release_at='2026-09-23T00:02:00.000Z' WHERE intent_id='intent-1'"]
   ])("rejects current %s before consuming the assertion", async (_label, mutation) => {
-    if (_label === "both intent and call moved to another chain") sqlite.exec("DROP TRIGGER intent_prepared_calls_immutable_update");
+    if (_label === "both intent and call moved to another chain") sqlite.exec("DROP TRIGGER intent_prepared_calls_immutable_update; DROP TRIGGER intent_prepared_calls_step_up_hold");
     sqlite.exec(mutation);
     await expect(consumeVerifiedActionPasskey(database, base)).rejects.toThrow();
     expect(count()).toBe(0);
