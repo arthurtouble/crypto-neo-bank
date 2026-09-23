@@ -1,11 +1,13 @@
 ---
 title: Marketing and growth implementation specification
-description: Buildable growth features, data models, APIs, controls, and acceptance tests.
+description: Superseded 22 September 2026 growth specification, retained for history.
 ---
 
 Date: 22 September 2026  
 Audience: implementation agent, product owner, security reviewer, and growth owner  
 Related plan: [Go-to-market and growth plan](/growth/go-to-market-and-growth-plan/)
+
+**Superseded:** This document describes the former `/apply` and `/tour` plan. The current public flow is the email-only global `/waitlist`; follow the [growth operations runbook](/growth/growth-operations-runbook/) for current procedures.
 
 This document converts the go-to-market plan into buildable features. It follows the existing architecture: Next/vinext on Cloudflare Workers, D1 for operational evidence and non-authoritative data, Privy authentication, Turnstile, explicit operations authorization, and fail-closed beta access.
 

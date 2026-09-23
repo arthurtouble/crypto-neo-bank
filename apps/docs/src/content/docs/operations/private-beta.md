@@ -11,13 +11,13 @@ An operator creates a labeled invitation for a named cohort, redemption count, o
 
 Redemption creates a subject-scoped access record containing cohort, country, status, terms version, accepted time, activation time, and transaction cap. An access record can be suspended without changing wallet ownership.
 
-Private-access applications are a separate qualification layer. Lists show only redacted email labels. Opening the detail view decrypts contact email for an authorized operator and writes audit evidence. Qualification never creates access; an operator must still issue the one-use invitation through the existing invitation authority.
+The global waitlist is separate from product access. Authorized operators can view waitlist email addresses. An approximate IP country hint is displayed for context only; the operator checks eligibility through a separate approved process before issuing an invitation.
 
 ## Growth operations
 
-The operations workspace includes the application inbox, country/job/source/age filters, application details, attribution, audit history, reason-coded state changes, assignment, and single invitation issuance. It also shows explicit funnel denominators, small-cohort suppression, support volume, and failed/stale transaction guardrails.
+The growth workspace lists waitlist entries and lets an authorized operator issue a one-use invitation after recording a verified country and evidence reference. It also contains draft campaigns and experiments. Invitation codes are shown once and must be sent through an approved contact process.
 
-Campaigns and experiments begin as drafts. Experiments are limited to approved presentation and guidance changes; they cannot alter legal disclosures, access eligibility, transaction limits, authentication, recovery, security, or signing. Referral invitations stay disabled until the referred application completes the normal review.
+Campaigns and experiments begin as drafts. Experiments are limited to approved presentation and guidance changes; they cannot alter legal disclosures, access eligibility, transaction limits, authentication, recovery, security, or signing. Referrals remain disabled until a new redemption path is reviewed.
 
 ## Feature kill switches
 

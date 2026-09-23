@@ -14,7 +14,7 @@ export default defineConfig({
       pagination: true,
       tableOfContents: { minHeadingLevel: 2, maxHeadingLevel: 3 },
       sidebar: [
-        { label: "Start here", items: [{ label: "Welcome", slug: "" }, { label: "Product status", slug: "getting-started/status" }, { label: "Set up Aurel", slug: "getting-started/setup" }, { label: "Apply for private access", slug: "getting-started/private-access-application" }, { label: "Private beta", slug: "getting-started/private-beta" }] },
+        { label: "Start here", items: [{ label: "Welcome", slug: "" }, { label: "Product status", slug: "getting-started/status" }, { label: "Set up Aurel", slug: "getting-started/setup" }, { label: "Join the waitlist", slug: "getting-started/waitlist" }, { label: "Private beta", slug: "getting-started/private-beta" }] },
         { label: "Understand Aurel", items: [
           { label: "Product principles", slug: "concepts/product-principles" },
           { label: "Architecture", slug: "concepts/architecture" },

@@ -1,76 +1,46 @@
 ---
 title: Growth operations runbook
-description: Configuration, operation, retention, security, tests, rollback, and incident handling for the private-access growth system.
+description: Operating the global waitlist, invitations, consent, and release gate.
 ---
 
-This runbook implements the [growth specification](/growth/marketing-growth-implementation-spec/) without changing Aurel’s financial-authority model. Provider and chain facts remain authoritative for balances and settlement. `beta_invites` and `beta_access` remain authoritative for product access. Growth tables hold applications, attribution, lifecycle evidence, aggregate reporting, and operational decisions only.
+The [original growth implementation specification](/growth/marketing-growth-implementation-spec/) is historical and superseded for the public flow. The current landing uses an email-only waitlist. The waitlist does not grant product access. `beta_invites` and `beta_access` remain authoritative for invitations and access.
 
-## Configuration
+## Before opening signups
 
-Non-secret Worker variables:
+`GROWTH_WAITLIST_MODE` defaults to `closed`. Do not change it to `open` until these are complete:
 
-- `GROWTH_APPLICATION_MODE`: `closed`, `open`, or `paused`;
-- `GROWTH_ALLOWED_COUNTRIES`: comma-separated ISO country codes used only at invitation time;
-- `GROWTH_PRIVACY_NOTICE_VERSION` and `GROWTH_APPLICATION_VERSION`: exact versions accepted by the API;
-- `GROWTH_REFERRALS_ENABLED`: false until the 30-day rule has mature server evidence;
-- `GROWTH_REFERRAL_LIMIT` and `GROWTH_REFERRAL_EXPIRY_DAYS`.
+- Publish the final privacy notice with controller identity, rights contact, retention period, lawful-basis mapping, and relevant provider details.
+- Obtain product/legal approval for the global landing content and geographic claims; keep the marketing register in `pending` until signed off.
+- Configure and test distinct `GROWTH_EMAIL_ENCRYPTION_KEY` and `GROWTH_EMAIL_LOOKUP_KEY` secrets, Turnstile, rate limiting, D1, and deletion/export handling for people without accounts.
+- Assign an operator to review invitations and an incident owner for the signup path.
+- Run unit, browser, accessibility, docs, build, and marketing checks against the release candidate.
 
-Distinct Worker secrets are required for `GROWTH_EMAIL_ENCRYPTION_KEY` and `GROWTH_EMAIL_LOOKUP_KEY`. Production fails closed if either is missing. Do not reuse the lookup key for encryption. Rotate through an approved migration because existing encrypted values and HMAC lookup values depend on the active keys.
+The required privacy notice version is set by `GROWTH_PRIVACY_NOTICE_VERSION`. An outdated form version is rejected. The public success response does not reveal whether an email was already present.
 
 ## Daily operation
 
-1. Review the inbox by age, then country and primary job.
-2. Open an application only when needed; detail access is audited.
-3. Move `received` to `reviewing`, assign an operator, and record an approved reason for a decline or reopen.
-4. Treat `fit_band` as operator workflow judgment, never regulated eligibility or suitability.
-5. Invite only `qualified` or `waitlisted` applications in an enabled country. The code is returned once and only its hash is stored.
-6. Review funnel denominators and guardrails together. Never use AUM as a growth leaderboard.
-7. Keep small cohort breakdowns suppressed below five submissions.
+1. Review the protected waitlist queue. Decrypted email is visible only to authorized operations admins.
+2. Treat the Cloudflare country hint as approximate. It is not proof of residence or eligibility.
+3. Check the prospective member's country through the approved process. Record the two-letter verified country and a non-sensitive evidence reference.
+4. Issue a one-use invitation only when that country is enabled by `GROWTH_ALLOWED_COUNTRIES` and capacity and product gates allow it. Copy the code once; only its hash is stored.
+5. Send the code through the approved contact process. The local adapter does not send invitation or confirmation email automatically.
 
-The country allowlist is checked again when an invite is issued. Application collection and product access are separate: an unsupported-country application may be retained or waitlisted but cannot receive an invitation.
+An invitation does not override the authenticated product's terms, geography, suspension, or feature gates. Do not use the IP country hint as the `verifiedCountry` field.
 
-## Identity and event chain
+## Campaigns, events, and referrals
 
-The linkage is server controlled:
+Campaign links point to `/waitlist` and may carry bounded source labels. The browser can send allowlisted landing/waitlist events; invitation and access facts are server-owned. Reports should remain aggregate and must not expose email or balances.
 
-`session UUID -> application -> hashed invite -> verified Privy subject`
-
-The public event endpoint accepts only landing, tour, and application-start events with bounded properties. Server facts such as qualification, invitation, first value, and retention cannot be posted by the browser. The scheduled event Worker materializes milestones from verified subject profiles, security-policy updates, confirmed transaction intents, and meaningful day 21–37 return activity. Rule versions are stored in event properties and retention runs.
-
-## Communications and consent
-
-The lifecycle layer is vendor-neutral and defaults to a local test adapter. No delivery vendor should be activated before DPA, residency, suppression, signing, sender-domain, and pricing review. Each message requires matching active consent, a versioned template, an idempotency key, and an audit record. Marketing is capped and blocked when access is restricted. Operational messages must not carry unrelated marketing.
-
-Customers can withdraw optional marketing consent in Settings. Operational application contact and optional marketing remain distinct. A withdrawn purpose blocks later sends.
-
-## Referrals
-
-Referrals are feature-flagged off initially. Eligibility is evaluated only from server records: active access, account-security milestone, confirmed first value, mature retention, no open critical issue, enabled country, capacity, and active-invite cap. A created referral is stored as a disabled beta invitation. The referred person submits the normal application; an operator qualifies the application before activating the original one-use code. Self-referral checks run during redemption. No financial reward accounting is included.
+`GROWTH_REFERRALS_ENABLED` stays false. The old application-qualification/activation step no longer exists, so enabling referrals requires a separate approved redemption path. A disabled referral code must not be described as usable access.
 
 ## Data rights and retention
 
-Authenticated customers may request export or deletion. Operators process requests in the growth data-request queue. Export includes application, lifecycle, communication, consent, and retention evidence. Deletion removes or disconnects growth application and analytics records while deliberately leaving `beta_access`, transaction intents, provider projections, and financial authority untouched. Audit and legally required evidence follow the separate retention schedule.
+Authenticated members can submit growth-data requests in Settings. Before opening the waitlist, publish a contact route for a person who only supplied an email and establish a secure identity-verification and deletion/export procedure. Never use a public email lookup response that confirms whether someone is on the waitlist. Retain necessary invitation and audit evidence under the approved schedule; do not delete financial or onchain authority records as part of a growth request.
 
-Scheduled retention evaluation is idempotent per subject and rule version. Do not mark route views as retained. Campaign reports are aggregate and must not expose identity or balances.
+## Deployment and rollback
 
-## Deployment and migration
+Apply the fresh `0008_growth_distribution.sql` schema before deploying code that reads the waitlist. This is a pre-launch replacement of application-only tables, not a migration of production applicant records. Do not delete an existing local D1 database implicitly.
 
-Apply `0008_growth_distribution.sql` before deploying code that reads growth tables. Verify it against an empty local database and a current-schema database. Then run typecheck, lint, unit tests, browser E2E on desktop and mobile, build, recovery drill, marketing claims check, public docs build, and internal KB build.
+Deploy with `GROWTH_WAITLIST_MODE=closed`, smoke-test the page and API, complete the release gate, and open signups only with an operator on call. To pause intake, set the mode to `closed`; existing records and product access remain untouched. Disable referrals independently. If operator authorization, encryption, geography checks, or logging are unsafe, roll back the Worker and preserve evidence for investigation.
 
-Required order:
-
-1. database migration;
-2. encryption and lookup secrets;
-3. Worker and scheduled consumer deployment;
-4. smoke tests while application mode is `paused`;
-5. set mode `open` only after privacy/copy/operator review.
-
-## Rollback
-
-Set `GROWTH_APPLICATION_MODE=paused` first. This stops durable public submissions without changing existing access. Roll back the web Worker if application, operator, or public-event behavior is unsafe. Disable referrals independently. The migration is additive; do not drop growth tables during an incident. Preserve application, consent, invitation linkage, and audit evidence until recovery and legal review are complete.
-
-Rollback must never delete or mutate `beta_access`, provider projections, transaction intents, security policies, or chain/provider authority.
-
-## Incident checks
-
-Pause growth traffic for missing privacy secrets, unexpected plaintext email, invitation disclosure, operator authorization failure, consent bypass, campaign identifier injection, cross-site identity linkage, incorrect country gating, or event spoofing. Use trace IDs and audit events; never paste email, free text, invite codes, tokens, wallet addresses, or IP addresses into incident chat or logs.
+Never paste email, invite codes, raw IP addresses, tokens, wallet addresses, or eligibility evidence into incident chat or logs.

@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 
-export function GrowthTracker({ eventName, contentId }: { eventName: "landing_viewed" | "product_tour_viewed" | "application_started"; contentId?: string }) {
+export function GrowthTracker({ eventName, contentId }: { eventName: "landing_viewed" | "waitlist_viewed"; contentId?: string }) {
   useEffect(() => {
     try {
       const key = "aurel-growth-session"; const anonymousSessionId = sessionStorage.getItem(key) ?? crypto.randomUUID(); sessionStorage.setItem(key, anonymousSessionId);
