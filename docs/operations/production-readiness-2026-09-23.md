@@ -1,6 +1,6 @@
 # Production readiness — 23 September 2026
 
-This is the release ledger for the product-parity branch. A green build is not permission to move money. Aurel can run an invite-only engineering beta with designated testers and small funds; it is **not** approved for a public financial-service launch. Keep every action whose authority or evidence is missing disabled.
+This is the release ledger for the product-parity branch. A green build is not permission to move money. The appropriate near-term target is an invite-only engineering beta with designated testers and small funds, after its access policy is verified. Aurel is **not** approved for a public financial-service launch. Keep every action whose authority or evidence is missing disabled.
 
 The [approved product design](../../docs/superpowers/specs/2026-09-22-aurel-product-parity-design.md) defines the financial-authority and safety rules. The [roadmap](../../PRODUCT_PARITY_ROADMAP.md) describes customer-facing scope. This ledger distinguishes work that can be completed in code from evidence that requires an operator, partner, independent reviewer, or counsel.
 
@@ -16,6 +16,7 @@ The [approved product design](../../docs/superpowers/specs/2026-09-22-aurel-prod
 | Bank, card, benefits, concierge | Provider-ready customer surfaces, no live operator connection. | Executed contracts, production credentials, country/capability matrix, provider settlement and reconciliation, support and escalation ownership. Keep `setup_required` until the provider reports availability. |
 | Tokenized securities | Read-only issuer catalog and eligibility/order adapter boundary. | Issuer/venue/distributor onboarding, instrument rights and disclosures, counsel-approved countries/customer classes, fresh provider eligibility, settlement evidence. A DEX quote is not authorization. |
 | Access policy | Checked-in Worker uses `BETA_ACCESS_MODE=preview`, no production country allowlist or named operator subjects. | Set invitation policy and approved countries, assign named operators, verify existing customer migration and denial cases, test Access and emergency lock. |
+| Customer security settings | The policy API currently accepts relaxation of the step-up threshold, daily limit, account lock, allowlist, and cooling settings with an ordinary session. | Enforce a non-customer-relaxable product floor and require transaction-bound step-up before loosening any customer protection. Tightening controls may remain immediate. |
 | Security and operations | Logs/traces and local recovery drill exist; independent review and human response coverage are open. | Independent assessment with no open Critical/High findings, primary/backup incident and support coverage, alert receiver, retention/export, edge controls, backup/restore exercise, kill-switch and rollback drill. |
 | Legal | Public legal pages are marked pre-launch drafts. | Counsel signs entity, countries, customer terms/disclosures, custody/DeFi/securities/provider responsibilities and complaints process before the affected service is offered. |
 
@@ -43,7 +44,7 @@ Do not change this section to “done” based on code or simulated provider fix
 
 ## Current automated baseline
 
-On 23 September 2026 the local branch passed 422 unit tests in 71 files, TypeScript typecheck, ESLint, and the documentation build. The documentation build emitted existing Astro/Vite content warnings but no Astro check errors. A local production-smoke attempt could not resolve the Worker hostname from the sandbox (`ENOTFOUND`); this is **not** a production pass. The production deployment and remote migration state have not been changed by this record.
+On 23 September 2026 the local branch passed its initial 422 unit tests in 71 files, TypeScript typecheck, ESLint, the web and documentation builds, the isolated D1 recovery drill through migration `0020`, and desktop/mobile Playwright (38 passed, 2 skipped). The documentation build emitted existing Astro/Vite content warnings but no Astro check errors. The web build emitted missing-local-secret and Wrangler-log-permission warnings but exited successfully; local Playwright emitted development-only Vinext/React warnings. Read-only smoke against the **currently deployed** Worker passed its baseline health, security-header, protected-route, docs redirect, and unsigned-webhook checks. That run did **not** set `AUREL_EXPECT_PARITY=1`; it did not test the unpublished parity branch or any authenticated financial flow. The production deployment and remote migration state have not been changed by this record.
 
 ## Non-negotiable release rules
 
