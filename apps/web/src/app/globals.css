@@ -202,6 +202,30 @@ button { color: inherit; }
   *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
 }
 
+/* Public waitlist: one field, one decision. */
+.waitlistMain { width: min(1120px,100%); min-height: calc(100vh - 76px); margin: auto; padding: clamp(64px,10vw,144px) 40px; display: grid; grid-template-columns: minmax(0,1fr) minmax(340px,440px); gap: clamp(48px,8vw,120px); align-items: center; }
+.waitlistIntro h1 { max-width: 680px; margin: 16px 0 24px; font-size: clamp(42px,5vw,70px); line-height: 1.04; letter-spacing: -.055em; }
+.waitlistIntro > p:not(.eyebrow) { max-width: 520px; color: var(--text-secondary); font-size: 17px; line-height: 1.65; }
+.waitlistIntro > span { display: inline-block; margin-top: 42px; padding-top: 20px; border-top: 1px solid var(--hairline); color: var(--text-tertiary); font-size: 13px; }
+.waitlistCard { position: relative; display: grid; gap: 16px; padding: 36px; border: 1px solid var(--hairline-strong); border-radius: var(--radius-feature); background: var(--surface); box-shadow: 0 24px 70px rgba(18,53,36,.08); }
+.waitlistCard h2 { margin: 0; font-size: 30px; letter-spacing: -.035em; }
+.waitlistCard > p:not(.eyebrow) { margin: 0 0 8px; color: var(--text-secondary); font-size: 14px; line-height: 1.6; }
+.waitlistCard .fieldLabel { margin-top: 8px; font-size: 13px; font-weight: 620; }
+.waitlistCard input[type="email"] { width: 100%; min-height: 52px; padding: 12px 15px; border: 1px solid var(--hairline-strong); border-radius: var(--radius-control); background: var(--surface); color: var(--text); font: inherit; }
+.waitlistCard input[type="email"]:focus-visible { outline: 3px solid color-mix(in srgb,var(--focus) 28%,transparent); outline-offset: 2px; }
+.waitlistCard > .button { width: 100%; min-height: 52px; }
+.waitlistCard > small { color: var(--text-tertiary); font-size: 11px; line-height: 1.55; }
+.waitlistCard a { color: var(--accent); text-underline-offset: 3px; }
+.waitlistCard a:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+.waitlistError { color: var(--danger) !important; }
+.waitlistSuccessMark { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 50%; background: var(--positive-soft); color: var(--positive); font-size: 24px; }
+.waitlistSuccess { min-height: 290px; align-content: center; }
+.waitlistConfetti { position: fixed; z-index: 1000; inset: 0; overflow: hidden; pointer-events: none; }
+.waitlistConfetti i { position: absolute; width: 8px; height: 14px; border-radius: 2px; opacity: 0; animation: waitlist-burst 1.5s ease-out forwards; }
+@keyframes waitlist-burst { 0% { transform: translate3d(0,0,0) rotate(0); opacity: 0; } 12% { opacity: 1; } 100% { transform: translate3d(22px, min(36vh,300px),0) rotate(600deg); opacity: 0; } }
+@media (max-width:760px) { .waitlistMain { grid-template-columns: 1fr; gap: 48px; padding: 64px 20px 96px; }.waitlistIntro > span { margin-top: 20px; }.waitlistCard { padding: 26px; } }
+@media (prefers-reduced-motion:reduce) { .waitlistConfetti { display: none; } }
+
 /* Private access and product tour */
 .publicFlowPage,.tourPage { min-height: 100vh; background: var(--canvas); color: var(--text); }
 .publicFlowHeader { width: min(1280px,100%); height: 76px; margin: 0 auto; padding: 0 40px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--hairline); }
