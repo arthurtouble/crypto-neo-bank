@@ -57,7 +57,7 @@ export async function POST(request: Request) {
       || (from.address === null ? BigInt(call.data.value) !== BigInt(plan.from_amount_raw) : call.data.value !== "0")) {
       return reply({ error: "quote_mismatch", traceId }, 409);
     }
-    if (isDirectUniswapPlan(plan)) {
+    if (isDirectUniswapPlan(plan) || plan.source_chain_id !== plan.destination_chain_id) {
       try { await assertSwapPrepareIntegrity(plan, { from, to }, now.getTime()); }
       catch { return reply({ error: "quote_mismatch", traceId }, 409); }
     }

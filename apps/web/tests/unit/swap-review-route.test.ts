@@ -3,8 +3,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const wallet = "0x1111111111111111111111111111111111111111";
 const source = "8453:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
 const target = "8453:native";
+const crossTarget = "42161:0xaf88d065e77c8cc2239327c5edb3a432268e5831";
 const fixture = vi.hoisted(() => ({
   walletOwned: true, planAvailable: true, unverified: false, stepUp: false, locked: false, bindSucceeds: true,
+  crossChain: false, integrityReject: false, integrityCalls: 0,
   recipient: "0x1111111111111111111111111111111111111111",
   callTo: "0x3333333333333333333333333333333333333333", countries: ["US"] as string[],
   valuationCalls: 0, balanceCalls: 0, bindCalls: 0, intentStatus: null as null | string, statements: [] as string[]
@@ -52,8 +54,10 @@ vi.mock("@/lib/security/rate-limit", () => ({
 vi.mock("@/lib/profile/ensure", () => ({ ensureSubjectProfile: async () => undefined }));
 vi.mock("@/lib/swap/plans", () => ({
   getActiveSwapQuotePlan: async () => fixture.planAvailable ? {
-    plan_id: "00000000-0000-4000-8000-000000000001", source_asset_id: source, destination_asset_id: target,
-    source_chain_id: 8453, destination_chain_id: 8453, from_amount_raw: "1000000", recipient: fixture.recipient,
+    plan_id: "00000000-0000-4000-8000-000000000001", source_asset_id: source,
+    destination_asset_id: fixture.crossChain ? crossTarget : target,
+    source_chain_id: 8453, destination_chain_id: fixture.crossChain ? 42161 : 8453,
+    from_amount_raw: "1000000", recipient: fixture.recipient,
     wallet_address: wallet, to_amount_min_raw: "100000000000000", expires_at: new Date(Date.now() + 40_000).toISOString(),
     source_call_json: JSON.stringify({ chainId: 8453, from: wallet, to: fixture.callTo, value: "0", data: "0x1234" }),
     route_steps_json: "[]", economics_json: "{}", fingerprint: `0x${"a".repeat(64)}`, intent_id: null
@@ -61,10 +65,16 @@ vi.mock("@/lib/swap/plans", () => ({
   bindSwapQuotePlan: async () => { fixture.bindCalls++; return fixture.bindSucceeds; }
 }));
 vi.mock("@/lib/swap/catalog", () => ({
-  resolveCatalogAsset: async (id: string) => ({ id, chainId: 8453, address: id === target ? null : source.split(":")[1],
+  resolveCatalogAsset: async (id: string) => ({ id, chainId: id === crossTarget ? 42161 : 8453,
+    address: id === target ? null : id.split(":")[1],
     decimals: id === target ? 18 : 6,
     verification: fixture.unverified ? "unverified" : "verified", eligibility: "eligible" })
 }));
+vi.mock("@/lib/swap/prepare-integrity", () => ({ assertSwapPrepareIntegrity: async () => {
+  fixture.integrityCalls++;
+  if (fixture.integrityReject) throw new Error("route not reviewed");
+  return { reviewedSpender: fixture.callTo };
+} }));
 vi.mock("@/lib/transactions/valuation", () => ({
   ValuationError: class ValuationError extends Error {},
   valueSwapSource: async () => { fixture.valuationCalls++; return { assetId: source, rawUnits: "1000000", decimals: 6,
@@ -85,6 +95,7 @@ function post(body: Record<string, unknown>) {
 describe("Swap review boundary", () => {
   beforeEach(() => { Object.assign(fixture, { walletOwned: true, planAvailable: true, unverified: false,
     stepUp: false, locked: false, bindSucceeds: true, recipient: wallet,
+    crossChain: false, integrityReject: false, integrityCalls: 0,
     callTo: "0x3333333333333333333333333333333333333333", countries: ["US"],
     valuationCalls: 0, balanceCalls: 0, bindCalls: 0, intentStatus: null, statements: [] });
     vi.stubEnv("AUREL_SWAP_ALLOWED_TARGETS", "0x3333333333333333333333333333333333333333");
@@ -131,6 +142,15 @@ describe("Swap review boundary", () => {
     const response = await post({ planId: "00000000-0000-4000-8000-000000000001", walletAddress: wallet });
     expect(response.status).toBe(409);
     expect(fixture.intentStatus).toBeNull();
+  });
+
+  it("refuses to review a bridge whose retained route fails the governed audit", async () => {
+    fixture.crossChain = true;
+    fixture.integrityReject = true;
+    const response = await post({ planId: "00000000-0000-4000-8000-000000000001", walletAddress: wallet });
+    expect(response.status).toBe(409);
+    expect(fixture.integrityCalls).toBe(1);
+    expect(fixture.bindCalls).toBe(0);
   });
 
   it("rejects an account lock before persisting a review", async () => {

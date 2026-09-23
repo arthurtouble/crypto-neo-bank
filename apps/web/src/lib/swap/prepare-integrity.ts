@@ -2,6 +2,7 @@ import { getAddress, isAddress } from "viem";
 import { z } from "zod";
 import type { CatalogAsset } from "./assets";
 import { isDirectUniswapPlan, validateDirectUniswapPlan } from "./direct-uniswap";
+import { validateGovernedAcrossPlan } from "./governed-across-route";
 import { validateGovernedSameChainPlan } from "./governed-route";
 import type { StoredSwapQuotePlan } from "./plans";
 
@@ -32,7 +33,8 @@ export async function assertSwapPrepareIntegrity(plan: StoredSwapQuotePlan, asse
   const allowedTargets = configuredSet("AUREL_SWAP_ALLOWED_TARGETS");
   const allowedSpenders = configuredSet("AUREL_SWAP_ALLOWED_SPENDERS");
   const diamond = getAddress(configured.diamond);
-  if (!allowedTools.has(plan.tool_id) || !allowedExchanges.has(plan.tool_id)
+  const isBridge = plan.source_chain_id !== plan.destination_chain_id;
+  if (!allowedTools.has(plan.tool_id) || !(isBridge ? allowedBridges : allowedExchanges).has(plan.tool_id)
     || !allowedTargets.has(diamond.toLowerCase()) || !allowedSpenders.has(diamond.toLowerCase())
     || !plan.approval_spender || getAddress(plan.approval_spender) !== diamond
     || assets.from.id !== plan.source_asset_id || assets.to.id !== plan.destination_asset_id
@@ -46,21 +48,13 @@ export async function assertSwapPrepareIntegrity(plan: StoredSwapQuotePlan, asse
     || plan.catalog_version !== await sha256(JSON.stringify([assets.from, assets.to])))
     throw new Error("Swap quote policy or catalog changed.");
 
-  const route = validateGovernedSameChainPlan(plan, {
-    nowMs, routePolicyVersion: currentPolicyVersion, diamond,
-    allowedToolIds: new Set([...allowedTools].filter((tool) => allowedExchanges.has(tool))),
-    routerSpenders: configured.routerSpenders.map(({ router, spender, feeTiers }) => ({
-      router: getAddress(router), spender: getAddress(spender), feeTiers: new Set(feeTiers)
-    })),
-    feeForwarder: getAddress(configured.feeForwarder),
-    feeRecipients: new Set(configured.feeRecipients.map((value) => value.toLowerCase())),
-    maxGasLimit: 2_000_000n, maxGasPriceWei: 100_000_000_000n
-  });
   const economics = JSON.parse(plan.economics_json ?? "null") as { toAmountRaw?: unknown } | null;
   const steps = JSON.parse(plan.route_steps_json) as unknown;
-  const call = route.sourceCall;
+  const call = JSON.parse(plan.source_call_json) as { to?: unknown; value?: unknown; data?: unknown;
+    providerGasLimit?: unknown; providerGasPrice?: unknown };
   if (!economics || typeof economics.toAmountRaw !== "string" || !/^\d+$/.test(economics.toAmountRaw)
-    || !Array.isArray(steps) || steps.length !== 2 || plan.step_id !== plan.quote_id)
+    || !Array.isArray(steps) || steps.length !== 2 || plan.step_id !== plan.quote_id
+    || typeof call.to !== "string" || typeof call.value !== "string" || typeof call.data !== "string")
     throw new Error("Swap plan evidence is incomplete.");
   const routeHash = await sha256(JSON.stringify([
     "lifi", plan.tool_id, plan.quote_id, plan.source_asset_id, plan.destination_asset_id,
@@ -71,5 +65,22 @@ export async function assertSwapPrepareIntegrity(plan: StoredSwapQuotePlan, asse
     plan.expires_at, currentPolicyVersion, plan.catalog_version, steps, economics
   ]));
   if (routeHash !== plan.fingerprint) throw new Error("Swap plan fingerprint changed.");
+  if (isBridge) {
+    const route = validateGovernedAcrossPlan(plan, { nowMs, routePolicyVersion: currentPolicyVersion, diamond,
+      feeForwarder: getAddress(configured.feeForwarder),
+      feeRecipients: new Set(configured.feeRecipients.map((value) => value.toLowerCase())),
+      maxGasLimit: 2_000_000n, maxGasPriceWei: 100_000_000_000n });
+    return { ...route, reviewedSpender: diamond };
+  }
+  const route = validateGovernedSameChainPlan(plan, {
+    nowMs, routePolicyVersion: currentPolicyVersion, diamond,
+    allowedToolIds: new Set([...allowedTools].filter((tool) => allowedExchanges.has(tool))),
+    routerSpenders: configured.routerSpenders.map(({ router, spender, feeTiers }) => ({
+      router: getAddress(router), spender: getAddress(spender), feeTiers: new Set(feeTiers)
+    })),
+    feeForwarder: getAddress(configured.feeForwarder),
+    feeRecipients: new Set(configured.feeRecipients.map((value) => value.toLowerCase())),
+    maxGasLimit: 2_000_000n, maxGasPriceWei: 100_000_000_000n
+  });
   return { ...route, reviewedSpender: diamond };
 }

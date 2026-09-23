@@ -11,10 +11,16 @@ const from = { id: source, chainId: 8453, address: source.split(":")[1], symbol:
   decimals: 6, logoUrl: null, verification: "verified" as const, eligibility: "eligible" as const };
 const to = { id: destination, chainId: 8453, address: destination.split(":")[1], symbol: "WETH", name: "Wrapped Ether",
   decimals: 18, logoUrl: null, verification: "verified" as const, eligibility: "eligible" as const };
+const arbitrum = { ...from, id: "42161:0xaf88d065e77c8cc2239327c5edb3a432268e5831",
+  chainId: 42161, address: "0xaf88d065e77c8cc2239327c5edb3a432268e5831" };
 
 vi.mock("@/lib/swap/governed-route", () => ({ validateGovernedSameChainPlan: (plan: StoredSwapQuotePlan) => ({
   sourceCall: JSON.parse(plan.source_call_json), expectedEffect: { wallet, sourceAssetId: source,
     destinationAssetId: destination, sourceAmountRaw: "1000000", minimumOutputRaw: "900000", recipient: wallet }
+}) }));
+vi.mock("@/lib/swap/governed-across-route", () => ({ validateGovernedAcrossPlan: (plan: StoredSwapQuotePlan) => ({
+  sourceCall: JSON.parse(plan.source_call_json), expectedSourceEffect: { wallet, bridgeAmountRaw: "997500" },
+  expectedDestinationEffect: { recipient: wallet, minimumOutputRaw: "900000" }
 }) }));
 
 async function hash(value: unknown) {
@@ -68,5 +74,30 @@ describe("stored Swap preparation integrity", () => {
     await expect(assertSwapPrepareIntegrity(plan, { from, to }, now)).rejects.toThrow();
     vi.stubEnv("AUREL_LIFI_ALLOWED_EXCHANGES", "uniswap");
     await expect(assertSwapPrepareIntegrity(plan, { from, to: { ...to, decimals: 17 } }, now)).rejects.toThrow();
+  });
+
+  it("rebinds a reviewed bridge to the bridge allowlist and the retained fingerprint", async () => {
+    vi.stubEnv("AUREL_LIFI_ALLOWED_TOOLS", "across,feecollection");
+    vi.stubEnv("AUREL_LIFI_ALLOWED_EXCHANGES", "");
+    vi.stubEnv("AUREL_LIFI_ALLOWED_BRIDGES", "across");
+    const plan = await fixture();
+    plan.destination_asset_id = arbitrum.id;
+    plan.destination_chain_id = 42161;
+    plan.tool_id = "across";
+    plan.route_steps_json = JSON.stringify([{ id: "fee", type: "protocol", tool: "feeCollection" },
+      { id: "quote-1", type: "cross", tool: "across" }]);
+    plan.route_policy_version = await hash([["across", "feecollection"], [], ["across"], [diamond], [diamond]]);
+    plan.catalog_version = await hash([from, arbitrum]);
+    plan.fingerprint = await hash(["lifi", "across", "quote-1", source, arbitrum.id,
+      "1000000", "950000", "900000", wallet, wallet, 0.005, 8453, diamond,
+      "0", "0x1234", diamond, null, null, plan.expires_at, plan.route_policy_version,
+      plan.catalog_version, JSON.parse(plan.route_steps_json), JSON.parse(plan.economics_json!)]);
+    const result = await assertSwapPrepareIntegrity(plan, { from, to: arbitrum }, now);
+    expect(result).toMatchObject({ reviewedSpender: diamond,
+      expectedSourceEffect: { bridgeAmountRaw: "997500" } });
+    await expect(assertSwapPrepareIntegrity({ ...plan, fingerprint: "0xwrong" },
+      { from, to: arbitrum }, now)).rejects.toThrow();
+    vi.stubEnv("AUREL_LIFI_ALLOWED_BRIDGES", "");
+    await expect(assertSwapPrepareIntegrity(plan, { from, to: arbitrum }, now)).rejects.toThrow();
   });
 });

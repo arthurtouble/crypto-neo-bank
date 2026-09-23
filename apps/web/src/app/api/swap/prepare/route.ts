@@ -70,6 +70,7 @@ export async function POST(request: Request) {
     let governed;
     try { governed = await assertSwapPrepareIntegrity(plan, { from, to }, now.getTime()); }
     catch { return reply({ error: "route_unavailable", traceId }, 422); }
+    if (!("expectedEffect" in governed)) return reply({ error: "route_unavailable", traceId }, 422);
     if (reviewed.data.amount !== formatUnits(BigInt(plan.from_amount_raw), from.decimals))
       return reply({ error: "review_mismatch", traceId }, 409);
     const chain = SUPPORTED_CHAINS.find(({ id }) => id === 8453);
