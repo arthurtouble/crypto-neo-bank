@@ -5,7 +5,7 @@ const source = "8453:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
 const target = "8453:native";
 const crossTarget = "42161:0xaf88d065e77c8cc2239327c5edb3a432268e5831";
 const fixture = vi.hoisted(() => ({
-  walletOwned: true, planAvailable: true, unverified: false, stepUp: false, locked: false, bindSucceeds: true,
+  swapsEnabled: true, walletOwned: true, planAvailable: true, unverified: false, stepUp: false, locked: false, bindSucceeds: true,
   crossChain: false, integrityReject: false, integrityCalls: 0,
   recipient: "0x1111111111111111111111111111111111111111",
   callTo: "0x3333333333333333333333333333333333333333", countries: ["US"] as string[],
@@ -45,9 +45,12 @@ vi.mock("@/lib/beta/access", () => ({
   BetaAccessError: class BetaAccessError extends Error {}, configuredCountries: () => fixture.countries,
   requireBetaAccess: async () => ({ mode: "invite", status: "active", countryCode: "US", transactionLimitUsd: 25_000 })
 }));
-vi.mock("@/lib/features/flags", () => ({
-  FeatureUnavailableError: class FeatureUnavailableError extends Error {}, requireFeature: async () => undefined
-}));
+vi.mock("@/lib/features/flags", () => {
+  class FeatureUnavailableError extends Error {}
+  return { FeatureUnavailableError, requireFeature: async (_db: unknown, feature: string) => {
+    if (feature === "swaps" && !fixture.swapsEnabled) throw new FeatureUnavailableError("swaps disabled");
+  } };
+});
 vi.mock("@/lib/security/rate-limit", () => ({
   RateLimitError: class RateLimitError extends Error {}, enforceRateLimit: async () => undefined
 }));
@@ -93,7 +96,7 @@ function post(body: Record<string, unknown>) {
 }
 
 describe("Swap review boundary", () => {
-  beforeEach(() => { Object.assign(fixture, { walletOwned: true, planAvailable: true, unverified: false,
+  beforeEach(() => { Object.assign(fixture, { swapsEnabled: true, walletOwned: true, planAvailable: true, unverified: false,
     stepUp: false, locked: false, bindSucceeds: true, recipient: wallet,
     crossChain: false, integrityReject: false, integrityCalls: 0,
     callTo: "0x3333333333333333333333333333333333333333", countries: ["US"],
@@ -113,6 +116,15 @@ describe("Swap review boundary", () => {
     const response = await post({ planId: "00000000-0000-4000-8000-000000000001", walletAddress: wallet });
     expect(response.status).toBe(409);
     expect(fixture.valuationCalls).toBe(0);
+    expect(fixture.bindCalls).toBe(0);
+  });
+
+  it("does not create an intent from a preview quote when swaps are disabled", async () => {
+    fixture.swapsEnabled = false;
+    const response = await post({ planId: "00000000-0000-4000-8000-000000000001", walletAddress: wallet });
+    expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({ error: "feature_unavailable" });
+    expect(fixture.intentStatus).toBeNull();
     expect(fixture.bindCalls).toBe(0);
   });
 

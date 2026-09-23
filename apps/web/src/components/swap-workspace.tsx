@@ -20,19 +20,21 @@ import { SwapReminderPanel } from "./swap-reminder-panel";
 import { PriceAlertPanel } from "./price-alert-panel";
 
 type SwapQuote = ValidatedSwapQuote & { planId?: string };
-type QuoteResponse = { quotes: SwapQuote[]; observedAt: string; authority: string; error?: string; message?: string };
+type QuoteResponse = { quotes: SwapQuote[]; reviewAccessAvailable: boolean; observedAt: string; authority: string; error?: string; message?: string };
 type ReviewState = "idle" | "reviewed" | "prepared" | "approval_required" | "submitted";
 type PreparedSwap = { state: "prepared"; intentId: string; stepIndex: number; fingerprint: string; call: PreparedCallInput; expiresAt: string };
 type PreparedApproval = { state: "approval_required"; approvalId: string; kind: "approve" | "reset_required";
   amountRaw: string; spender: string; fingerprint: string; call: PreparedCallInput; expiresAt: string };
 type SwapPreparation = PreparedSwap | PreparedApproval;
 
-export function SwapRouteReview({ planId, fresh, walletAddress, busy, state, routeKind, onReview, onSubmit, onApprove, approvalKind, approvalAmount }: {
+export function SwapRouteReview({ planId, fresh, walletAddress, busy, reviewAccessAvailable = true, state, routeKind, onReview, onSubmit, onApprove, approvalKind, approvalAmount }: {
   planId: string | null; fresh: boolean; walletAddress: string | null; busy: boolean;
+  reviewAccessAvailable?: boolean;
   state: ReviewState; routeKind?: "same_chain" | "cross_chain"; onReview(): void; onSubmit?(): void;
   onApprove?(): void; approvalKind?: "approve" | "reset_required"; approvalAmount?: string;
 }) {
   if (state === "submitted") return null;
+  if (!reviewAccessAvailable) return <p className="swapReviewStatus">Route preview only. Swaps aren’t available for this account yet.</p>;
   if (!fresh) return <p className="swapReviewStatus">This quote expired. Find a new route.</p>;
   if (state === "approval_required" && onApprove) return <div><p className="swapReviewStatus" role="status"><strong>{approvalKind === "reset_required" ? "Reset Token Approval" : "Token Approval Required"}</strong><span>{approvalKind === "reset_required" ? "Reset the old allowance before approving a new amount." : `Approve ${approvalAmount ?? "the exact amount"} for this swap.`} This does not submit a swap. Approvals remain on chain until used or revoked.</span></p><button className="button primary full swapReviewAction" type="button" disabled={busy} onClick={onApprove}>{busy ? "Opening Wallet" : approvalKind === "reset_required" ? "Reset Approval" : "Approve Token"}</button></div>;
   if (state === "prepared") return <div><p className="swapReviewStatus" role="status"><strong>Route Verified</strong><span>No swap has been submitted.{routeKind === "cross_chain" ? " Arrival on the other network may take a few minutes." : ""}</span></p>{onSubmit && <button className="button primary full swapReviewAction" type="button" disabled={busy} onClick={onSubmit}>{busy ? "Opening Wallet" : "Confirm Swap"}</button>}</div>;
@@ -347,6 +349,7 @@ export function SwapWorkspace() {
       {liveResult.quotes.map((route) => <button type="button" className={`swapQuoteRow ${quote?.quoteId === route.quoteId ? "selected" : ""}`} key={route.planReference} onClick={() => { reviewVersion.current += 1; setSelectedQuoteId(route.quoteId); setReviewState("idle"); setReviewErrorText(null); }}><span><strong>{route.provider.replace(/^lifi:/, "")}</strong><small>{route.routeKind === "cross_chain" ? "Across networks" : "Same network"}</small></span><span><strong>{destination ? displayRawAmount(route.toAmountMinRaw, destination.decimals) : "—"} {destination?.symbol}</strong><small>{route.totalFeeUsd === null ? "Total fees unavailable" : `${formatEstimatedFeeUsd(route.totalFeeUsd)} estimated fees`}</small></span></button>)}
       {freshQuote && <div className="swapReview"><span>You Pay<strong>{amount} {source?.symbol}</strong></span><span>Minimum Received<strong>{destination ? displayRawAmount(freshQuote.toAmountMinRaw, destination.decimals) : "—"} {destination?.symbol}</strong></span><span>Estimated Fees<strong>{formatEstimatedFeeUsd(freshQuote.totalFeeUsd)}</strong></span><span>Price Impact<strong>{freshQuote.priceImpactPercent === null ? "Unavailable" : `${freshQuote.priceImpactPercent.toFixed(2)}%`}</strong></span></div>}
       <SwapRouteReview planId={freshQuote?.planId ?? null} fresh={Boolean(freshQuote)} walletAddress={address ?? null} busy={reviewing || submitting || approving || submissionUncertain || approvalUncertain || Boolean(approvalHash)}
+        reviewAccessAvailable={liveResult.reviewAccessAvailable}
         state={reviewState} routeKind={freshQuote?.routeKind} onReview={() => void reviewSelectedRoute()}
         onSubmit={preparedSwap && submittedIntentId !== preparedSwap.result.intentId && !submissionUncertain ? () => void confirmSwap() : undefined}
         onApprove={preparedApproval && !approvalHash && !approvalUncertain ? () => void confirmApproval() : undefined}

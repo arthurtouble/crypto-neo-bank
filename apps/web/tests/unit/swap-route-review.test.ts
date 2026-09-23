@@ -4,6 +4,14 @@ import { describe, expect, it } from "vitest";
 import { SwapRouteReview } from "@/components/swap-workspace";
 
 describe("swap route review", () => {
+  it("shows a quote without a review action when execution is unavailable", () => {
+    const html = renderToStaticMarkup(createElement(SwapRouteReview, {
+      planId: "plan", fresh: true, walletAddress: "0xabc", busy: false,
+      reviewAccessAvailable: false, state: "idle", onReview() {}
+    }));
+    expect(html).toContain("preview");
+    expect(html).not.toContain("Review Swap</button>");
+  });
   it("offers policy review for a fresh plan without implying a trade has been sent", () => {
     const html = renderToStaticMarkup(createElement(SwapRouteReview, {
       planId: "d917c99a-f60d-4194-a98a-cc0fcdb84569", fresh: true, walletAddress: "0xabc", busy: false,

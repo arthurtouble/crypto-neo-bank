@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const fixture = vi.hoisted(() => ({
-  crossChainEnabled: true, walletOwned: true, fromAvailable: true, toAvailable: true,
+  swapsEnabled: true, crossChainEnabled: true, betaMode: "invite" as "invite" | "preview", allowedCountries: ["US"] as string[],
+  walletOwned: true, fromAvailable: true, toAvailable: true,
   fromVerification: "verified" as "verified" | "unverified", quoteCalls: 0, savedPlans: 0, saveFails: false
 }));
 
@@ -11,7 +12,9 @@ vi.mock("@/lib/auth/server", () => ({
   requireVerifiedSubject: async () => ({ subjectReference: "did:privy:owner" })
 }));
 vi.mock("@/lib/beta/access", () => ({
-  BetaAccessError: class BetaAccessError extends Error { code = "beta_required"; }, requireBetaAccess: async () => undefined
+  BetaAccessError: class BetaAccessError extends Error { code = "beta_required"; },
+  configuredCountries: () => fixture.allowedCountries,
+  requireBetaAccess: async () => ({ mode: fixture.betaMode, status: fixture.betaMode === "invite" ? "active" : "preview", countryCode: fixture.betaMode === "invite" ? "US" : undefined })
 }));
 vi.mock("@/lib/security/rate-limit", () => ({
   RateLimitError: class RateLimitError extends Error { retryAfterSeconds = 30; }, enforceRateLimit: async () => undefined
@@ -20,7 +23,9 @@ vi.mock("@/lib/features/flags", () => {
   class FeatureUnavailableError extends Error { constructor(readonly feature: string) { super(); } }
   return {
     FeatureUnavailableError,
+    featureEnabled: async (_db: unknown, feature: string) => feature === "swaps" ? fixture.swapsEnabled : fixture.crossChainEnabled,
     requireFeature: async (_db: unknown, feature: string) => {
+      if (feature === "swaps" && !fixture.swapsEnabled) throw new FeatureUnavailableError(feature);
       if (feature === "cross_chain" && !fixture.crossChainEnabled) throw new FeatureUnavailableError(feature);
     }
   };
@@ -68,16 +73,34 @@ function post(body: Record<string, unknown>) {
 
 describe("Swap quote API controls", () => {
   beforeEach(() => {
-    fixture.crossChainEnabled = true; fixture.walletOwned = true; fixture.fromAvailable = true;
+    fixture.swapsEnabled = true; fixture.crossChainEnabled = true; fixture.betaMode = "invite"; fixture.allowedCountries = ["US"];
+    fixture.walletOwned = true; fixture.fromAvailable = true;
     fixture.toAvailable = true; fixture.fromVerification = "verified"; fixture.quoteCalls = 0; fixture.savedPlans = 0; fixture.saveFails = false;
   });
 
-  it("requires the cross-chain switch before requesting a cross-chain quote", async () => {
-    fixture.crossChainEnabled = false;
+  it("returns preview-only cross-network metadata while execution is disabled", async () => {
+    fixture.swapsEnabled = false; fixture.crossChainEnabled = false;
     const response = await post(base);
-    expect(response.status).toBe(503);
-    expect(fixture.quoteCalls).toBe(0);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ reviewAccessAvailable: false, quotes: [{ quoteId: "q1" }] });
+    expect(fixture.savedPlans).toBe(1);
   });
+
+  it("marks an enabled route as reviewable without returning a signable call", async () => {
+    const response = await post(base);
+    expect(response.status).toBe(200);
+    const body = await response.json() as { reviewAccessAvailable: boolean };
+    expect(body.reviewAccessAvailable).toBe(true);
+    expect(JSON.stringify(body)).not.toContain("0x1234");
+  });
+
+  it("keeps public-preview accounts in quote-only mode even if financial switches are enabled", async () => {
+    fixture.betaMode = "preview";
+    const response = await post(base);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ reviewAccessAvailable: false });
+  });
+
 
   it("requires a currently owned wallet before requesting a quote", async () => {
     fixture.walletOwned = false;

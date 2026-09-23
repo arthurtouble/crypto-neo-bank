@@ -19,6 +19,8 @@ If live asset search cannot connect, Swap shows only the reviewed Base USDC and 
 
 Enter the amount, choose a slippage limit, and select **Find Route**. When a route is available, Aurel shows the minimum received, estimated fees and price impact when available, and whether the route crosses networks. Quotes expire quickly. If one expires, find a new route before continuing. A missing estimate is shown as unavailable, not zero.
 
+You may see a route preview before Swap trading is available for your account. In that case, Aurel shows the route and its estimate but does not offer **Review Swap** or a wallet request. A preview is not an order and does not reserve a price.
+
 LI.FI supplies cross-network and broader asset route data. For Base USDC and WETH, Aurel can also quote the reviewed Uniswap V3 pool directly. The first reviewed cross-network route is native USDC from Base to Arbitrum. Aurel checks the asset contracts, wallet, amount, recipient, minimum received, expiry, fees, and exact transaction call before asking for a signature. Other route shapes may appear in search but remain unavailable for confirmation until reviewed.
 
 ## Before you confirm
