@@ -67,7 +67,8 @@ export async function readAaveBaseRiskSnapshot(client: PublicClient, request: Re
     throw new Error("Aave canonical block unavailable.");
   const blockNumber = block.number;
   const read = async (target: Address, functionName: string, args: readonly unknown[] = []): Promise<unknown> =>
-    client.readContract({ address: target, abi: ABI, functionName, args, blockNumber } as never);
+    client.readContract({ address: target, abi: ABI, functionName, args,
+      blockHash: block.hash, requireCanonical: true } as never);
 
   const activePool = address(await read(ADDRESSES.provider, "getPool"), "Pool");
   if (activePool.toLowerCase() !== AAVE_BASE_V3_MARKET.toLowerCase()) throw new Error("Aave Pool address changed.");

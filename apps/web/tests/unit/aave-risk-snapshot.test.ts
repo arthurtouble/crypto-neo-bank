@@ -10,7 +10,7 @@ const token = `0x${"d".repeat(40)}`;
 const block = { number: 42n, hash: blockHash, timestamp: 1_000_000n };
 
 function mockClient(overrides: Record<string, unknown> = {}) {
-  const calls: Array<{ functionName: string; blockNumber: bigint; args?: readonly unknown[] }> = [];
+  const calls: Array<{ functionName: string; blockHash: string; requireCanonical: boolean; blockNumber?: bigint; args?: readonly unknown[] }> = [];
   const values: Record<string, unknown> = {
     getPool: "0xA238Dd80C259a72e81d7e4664a9801593F98d1c5",
     getPriceOracle: "0x2Cc0Fc26eD4563A5ce5e8bdcfe1A2878676Ae156",
@@ -34,8 +34,10 @@ function mockClient(overrides: Record<string, unknown> = {}) {
   const client = {
     getChainId: vi.fn(async () => 8453),
     getBlock: vi.fn(async () => block),
-    readContract: vi.fn(async ({ functionName, blockNumber, args }: { functionName: string; blockNumber: bigint; args?: readonly unknown[] }) => {
-      calls.push({ functionName, blockNumber, args });
+    readContract: vi.fn(async ({ functionName, blockHash, requireCanonical, blockNumber, args }: {
+      functionName: string; blockHash: string; requireCanonical: boolean; blockNumber?: bigint; args?: readonly unknown[]
+    }) => {
+      calls.push({ functionName, blockHash, requireCanonical, blockNumber, args });
       if (functionName === "getUserReserveData" && Object.hasOwn(overrides, "getUserReserveData")) return values.getUserReserveData;
       if (functionName === "getUserReserveData") return args?.[0] === asset
         ? [200_000_000n, 0n, 100_000_000n, 0n, 100_000_000n, 0n, 0n, 0n, true]
@@ -60,7 +62,7 @@ describe("read-only Aave Base risk snapshot", () => {
     expect(input.reserve).toMatchObject({ priceBase: 100_000_000n, availableLiquidityRaw: 400_000_000n,
       supplyCapRemainingRaw: 1_499_999_997n, borrowCapRemainingRaw: 899_999_997n });
     expect(calls.filter((call) => call.functionName === "getUserReserveData")).toHaveLength(2);
-    expect(calls.every((call) => call.blockNumber === 42n)).toBe(true);
+    expect(calls.every((call) => call.blockHash === blockHash && call.requireCanonical === true && call.blockNumber === undefined)).toBe(true);
     expect(client.getBlock).toHaveBeenCalledTimes(2);
   });
 
@@ -109,6 +111,13 @@ describe("read-only Aave Base risk snapshot", () => {
     const reorg = mockClient();
     reorg.client.getBlock.mockResolvedValueOnce(block).mockResolvedValueOnce({ ...block, hash: `0x${"1".repeat(64)}` });
     await expect(readAaveBaseRiskSnapshot(reorg.client as never, request)).rejects.toThrow(/canonical|block/i);
+  });
+
+  it("fails closed when the RPC does not support canonical block-hash calls", async () => {
+    const { client } = mockClient();
+    client.readContract.mockRejectedValueOnce(new Error("EIP-1898 blockHash unsupported"));
+    await expect(readAaveBaseRiskSnapshot(client as never, request)).rejects.toThrow(/EIP-1898/);
+    expect(client.readContract).toHaveBeenCalledTimes(1);
   });
 
   it("rejects ungoverned assets, wrong chains, and stale blocks", async () => {
