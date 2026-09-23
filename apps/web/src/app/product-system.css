@@ -289,6 +289,16 @@
 .activityButton:hover { background: color-mix(in srgb, var(--accent) 4%, transparent); }
 .activityButton > span:nth-child(2) { min-width: 0; }
 .activityIcon.good { color: var(--success); background: color-mix(in srgb, var(--success) 12%, transparent); }
+.activityObservations { margin-top: 18px; padding: 14px; border: 1px solid var(--border); border-radius: var(--radius-control); }
+.activityObservations h3 { margin: 0; font-size: 14px; }
+.activityObservations p { margin: 5px 0 0; color: var(--text-tertiary); font-size: 12px; }
+.activityObservations .activityAmount { max-width: 220px; }
+.activityObservations .activityAmount strong { color: var(--warning); font-family: inherit; font-size: 12px; }
+.activityObservations .activityAmount a { display: inline-flex; align-items: center; gap: 4px; margin-top: 6px; font-size: 12px; }
+@media (max-width: 640px) {
+  .activityObservations .activityRow { grid-template-columns: 31px minmax(0, 1fr); }
+  .activityObservations .activityAmount { grid-column: 2; max-width: none; padding-bottom: 12px; text-align: left; }
+}
 .activityIcon.bad { color: var(--danger); background: color-mix(in srgb, var(--danger) 10%, transparent); }
 .receiptModal { text-align: center; }
 .receiptStatus { width: 44px; height: 44px; margin: 2px auto 14px; display: grid; place-items: center; border-radius: 50%; background: var(--accent-soft); color: var(--accent); }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { activityCategory, activityCsv, activityEventLabel, activityLabel, activityStatus, taxSupportCsv } from "@/lib/activity/presentation";
+import { activityCategory, activityCsv, activityEventLabel, activityLabel, activityStatus, observationStatus, taxSupportCsv } from "@/lib/activity/presentation";
 
 describe("activity presentation", () => {
   it("uses familiar customer-facing labels", () => {
@@ -24,5 +24,14 @@ describe("activity presentation", () => {
     expect(output).toContain('"Unavailable"');
     expect(output).toContain('"Aave Protocol API and Base"');
     expect(output).toContain("Current displayed activity page; Aurel intents capped at latest 50; not complete historical or tax coverage");
+  });
+
+  it("never presents late observations as an approved completion", () => {
+    expect(observationStatus("unindexed", null)).toBe("Checking transfer");
+    expect(observationStatus("check_failed", null)).toBe("Checking transfer");
+    expect(observationStatus("settled", null)).toBe("Transfer settled — approval review needed");
+    expect(observationStatus("reverted", null)).toBe("Transfer reverted");
+    expect(observationStatus("identity_mismatch", null)).toBe("Transfer did not match the reviewed details");
+    expect(observationStatus("settled", "effect_mismatch")).toBe("Transfer did not match the reviewed details");
   });
 });

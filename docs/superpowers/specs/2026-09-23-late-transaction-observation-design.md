@@ -34,6 +34,8 @@ The ordinary status route must still refuse **new preparation and signing** afte
 
 Activity shows one linked exception item with the transaction hash and a human status: “Checking transfer”, “Transfer settled — approval review needed”, “Transfer reverted”, or “Transfer did not match the reviewed details”. Avoid showing raw D1 phases, risk codes, or an ordinary green success state. A visible link to the chain explorer is acceptable after chain/hash validation. The normal intent remains separately legible but must not duplicate the transfer as an approved completion. Operators see the immutable prepared fingerprint, control snapshot, canonical transaction/receipt evidence, retry history, and issue link. Neither view treats a support response as automatic authorization.
 
+The Activity read response has a separate, subject-scoped `observations` array (latest 50 reports) with report/intent links, chain, hash, report/check times, and one of the human statuses above. It does not expose verification phases or reason codes to the customer. The exception section remains visible independently of ordinary Activity filters and CSV exports; the existing `intents` array and approved completion counts do not absorb these reports. An explorer link is rendered only for a known chain and a valid transaction hash.
+
 ## Security and recovery invariants
 
 - Only a fresh authenticated session for the original subject can submit a candidate. A revoked beta entitlement or account lock does not turn that observation into an action permission. An invalid Privy session never bypasses authentication.

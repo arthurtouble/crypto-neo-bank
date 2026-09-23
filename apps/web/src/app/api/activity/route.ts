@@ -3,9 +3,11 @@ import { isAddress } from "viem";
 import { AuthenticationError, requireVerifiedSubject } from "@/lib/auth/server";
 import { getAaveBaseActivity } from "@/lib/defi/aave";
 import { enforceRateLimit, RateLimitError } from "@/lib/security/rate-limit";
+import { observationStatus } from "@/lib/activity/presentation";
 
 type IntentRow = { intent_id: string; intent_type: string; status: string; transaction_hash: string | null; request_json: string; created_at: string; updated_at: string; confirmed_at: string | null; failure_reason: string | null; chain_id: number; last_checked_at: string | null; route_reference: string | null };
 type EventRow = { intent_id: string; event_type: string; occurred_at: string };
+type ObservationRow = { report_id: string; intent_id: string; step_index: number; chain_id: number; transaction_hash: string; verification_state: string; effect_reason: string | null; reported_at: string; last_checked_at: string | null };
 
 export async function GET(request: Request) {
   const traceId = crypto.randomUUID();
@@ -14,12 +16,14 @@ export async function GET(request: Request) {
     await enforceRateLimit(env.PROJECTION_DB, { namespace: "activity_read", subject: subject.subjectReference, limit: 150, windowSeconds: 3600 });
     const address = new URL(request.url).searchParams.get("address");
     if (address && !isAddress(address)) return Response.json({ error: "invalid_address", traceId }, { status: 400, headers: { "Cache-Control": "no-store" } });
-    const [result, events, protocol] = await Promise.all([
+    const [result, events, observationsResult, protocol] = await Promise.all([
       env.PROJECTION_DB.prepare(`SELECT intent_id, intent_type, status, transaction_hash, request_json, created_at, updated_at, confirmed_at, failure_reason, chain_id, last_checked_at, route_reference
         FROM transaction_intents WHERE subject_reference = ? ORDER BY created_at DESC LIMIT 50`).bind(subject.subjectReference).all<IntentRow>(),
       env.PROJECTION_DB.prepare(`SELECT e.intent_id, e.event_type, e.occurred_at FROM intent_events e
         WHERE e.intent_id IN (SELECT intent_id FROM transaction_intents WHERE subject_reference = ? ORDER BY created_at DESC LIMIT 50)
         ORDER BY e.occurred_at ASC LIMIT 500`).bind(subject.subjectReference).all<EventRow>(),
+      env.PROJECTION_DB.prepare(`SELECT report_id, intent_id, step_index, chain_id, transaction_hash, verification_state, effect_reason, reported_at, last_checked_at
+        FROM intent_observation_candidates WHERE subject_reference = ? ORDER BY reported_at DESC LIMIT 50`).bind(subject.subjectReference).all<ObservationRow>(),
       address ? getAaveBaseActivity(address).catch(() => ({ items: [], partial: false, sourceStatus: "unavailable" as const })) : Promise.resolve({ items: [], partial: false, sourceStatus: "none" as const })
     ]);
     const eventsByIntent = new Map<string, Array<{ type: string; occurredAt: string }>>();
@@ -32,8 +36,10 @@ export async function GET(request: Request) {
     const localKeys = new Set(intents.filter((item) => item.transactionHash).map((item) => `${item.transactionHash?.toLowerCase()}:${item.type}`));
     const protocolIntents = protocol.items.filter((item) => !localKeys.has(`${item.transactionHash.toLowerCase()}:${item.type}`)).map((item) => ({ ...item, intentId: item.id }));
     const merged = [...intents, ...protocolIntents].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)).slice(0, 100);
+    const observations = observationsResult.results.map((row) => ({ reportId: row.report_id, intentId: row.intent_id, stepIndex: row.step_index, chainId: row.chain_id, transactionHash: row.transaction_hash, status: observationStatus(row.verification_state, row.effect_reason), reportedAt: row.reported_at, lastCheckedAt: row.last_checked_at }));
     return Response.json({
       intents: merged,
+      observations,
       observedAt: new Date().toISOString(),
       authority: "Aurel workflow evidence with source-reported Aave activity",
       sources: {

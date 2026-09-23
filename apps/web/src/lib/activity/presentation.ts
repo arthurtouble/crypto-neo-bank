@@ -35,6 +35,13 @@ export function activityStatus(status: string) {
   return status.replaceAll("_", " ");
 }
 
+export function observationStatus(verificationState: string, effectReason: string | null) {
+  if (verificationState === "identity_mismatch" || (verificationState === "settled" && effectReason)) return "Transfer did not match the reviewed details";
+  if (verificationState === "settled") return "Transfer settled — approval review needed";
+  if (verificationState === "reverted") return "Transfer reverted";
+  return "Checking transfer";
+}
+
 export function activityEventLabel(type: string) {
   if (type === "policy_evaluated") return "Security review completed";
   if (type === "cooling_completed") return "Security delay completed";
