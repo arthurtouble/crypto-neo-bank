@@ -3,7 +3,7 @@ import { AuthenticationError, requireVerifiedSubject } from "@/lib/auth/server";
 import { observeTransaction } from "@/lib/transactions/chain-observation";
 import { verifyExpectedEffect, type PreparedEffectEvidence } from "@/lib/transactions/effects";
 
-type Intent = { intent_id: string; subject_reference: string; chain_id: number; transaction_hash: string; status: string };
+type Intent = { intent_id: string; subject_reference: string; chain_id: number; transaction_hash: string | null; status: string };
 type Step = { intent_id: string; step_index: number; wallet_address: string; chain_id: number; target_address: string; native_value: string; calldata_hash: string; semantic_action: string; expected_effect_json: string; reported_hash: string | null; observed_block_hash: string | null; verification_state: string };
 
 function reply(body: Record<string, unknown>, status: number) {
@@ -14,8 +14,11 @@ export async function POST(request: Request) {
   try {
     const subject = await requireVerifiedSubject(request);
     const intents = await env.PROJECTION_DB.prepare(`SELECT intent_id, subject_reference, chain_id, transaction_hash, status
-      FROM transaction_intents WHERE subject_reference = ? AND status IN ('submitted', 'confirmed')
-      AND transaction_hash IS NOT NULL ORDER BY updated_at DESC LIMIT 20`).bind(subject.subjectReference).all<Intent>();
+      FROM transaction_intents WHERE subject_reference = ? AND (
+        (status IN ('submitted', 'confirmed') AND transaction_hash IS NOT NULL)
+        OR (status = 'reviewed' AND EXISTS (SELECT 1 FROM intent_prepared_calls reported
+          WHERE reported.intent_id = transaction_intents.intent_id AND reported.reported_hash IS NOT NULL))
+      ) ORDER BY updated_at DESC LIMIT 20`).bind(subject.subjectReference).all<Intent>();
     const results: Array<Record<string, unknown>> = [];
     for (const intent of intents.results) {
       const steps = await env.PROJECTION_DB.prepare(`SELECT intent_id, step_index, wallet_address, chain_id, target_address, native_value,
@@ -27,6 +30,7 @@ export async function POST(request: Request) {
       }
       let allConfirmed = true;
       let verificationState = "pending";
+      const matchedHashes = new Set<string>();
       try {
         for (const step of steps.results) {
           if (!step.reported_hash) { allConfirmed = false; continue; }
@@ -40,6 +44,7 @@ export async function POST(request: Request) {
             expectedEffect, reportedHash: step.reported_hash, observedBlockHash: step.observed_block_hash
           };
           const verification = await verifyExpectedEffect(evidence, observed);
+          if (observed.status === "found" && !(verification.status === "inconsistent" && ["invalid_transaction", "transaction_identity"].includes(verification.reason))) matchedHashes.add(step.reported_hash.toLowerCase());
           if (verification.status !== "confirmed") allConfirmed = false;
           if (verification.status !== "confirmed" && verification.reason === "reorg") verificationState = "reorged";
           else if (verification.status === "inconsistent" || verification.status === "failed") verificationState = verification.status;
@@ -56,9 +61,19 @@ export async function POST(request: Request) {
           }
         }
         const lastReported = [...steps.results].reverse().find((step) => step.reported_hash)?.reported_hash;
-        if (lastReported?.toLowerCase() !== intent.transaction_hash.toLowerCase()) {
+        if (intent.status === "reviewed" && lastReported && matchedHashes.has(lastReported.toLowerCase())) {
+          const bound = await env.PROJECTION_DB.prepare(`UPDATE transaction_intents SET status = 'submitted', transaction_hash = ?, updated_at = ?
+            WHERE intent_id = ? AND subject_reference = ? AND status = 'reviewed' AND transaction_hash IS NULL
+            AND EXISTS (SELECT 1 FROM intent_prepared_calls p WHERE p.intent_id = transaction_intents.intent_id AND lower(p.reported_hash) = lower(?))`)
+            .bind(lastReported.toLowerCase(), new Date().toISOString(), intent.intent_id, subject.subjectReference, lastReported).run();
+          if (bound.meta.changes === 1) {
+            intent.status = "submitted";
+            intent.transaction_hash = lastReported.toLowerCase();
+          } else allConfirmed = false;
+        }
+        if (!intent.transaction_hash || lastReported?.toLowerCase() !== intent.transaction_hash.toLowerCase()) {
           allConfirmed = false;
-          verificationState = "inconsistent";
+          if (intent.transaction_hash) verificationState = "inconsistent";
         }
         if (allConfirmed) {
           const changed = await env.PROJECTION_DB.prepare(`UPDATE transaction_intents SET status = 'confirmed', confirmed_at = ?, updated_at = ?
@@ -77,7 +92,7 @@ export async function POST(request: Request) {
           await env.PROJECTION_DB.prepare(`UPDATE transaction_intents SET status = 'submitted', confirmed_at = NULL, updated_at = ? WHERE intent_id = ? AND status = 'confirmed'`)
             .bind(new Date().toISOString(), intent.intent_id).run();
         }
-        results.push({ intentId: intent.intent_id, status: allConfirmed ? "confirmed" : "submitted", verificationState });
+        results.push({ intentId: intent.intent_id, status: allConfirmed ? "confirmed" : intent.status, verificationState });
       } catch (error) {
         if (intent.status === "confirmed") await env.PROJECTION_DB.prepare(`UPDATE transaction_intents SET status = 'submitted', confirmed_at = NULL, updated_at = ? WHERE intent_id = ? AND status = 'confirmed'`)
           .bind(new Date().toISOString(), intent.intent_id).run();

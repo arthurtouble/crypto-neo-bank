@@ -58,22 +58,26 @@ export async function POST(request: Request) {
     if (input.status === "submitted") {
       const stepIndex = input.stepIndex!;
       const hash = input.transactionHash!;
-      if (!(["reviewed", "submitted"].includes(current.status)) || current.expires_at <= new Date().toISOString()) return reply({ error: "intent_expired_or_unreviewed", traceId }, 409);
-      await requireBetaAccess(env.PROJECTION_DB, subject.subjectReference);
-      const feature: FeatureKey = current.intent_type === "swap" ? "swaps" : current.intent_type === "bridge" ? "cross_chain" : current.intent_type.startsWith("earn_") || ["borrow", "repay"].includes(current.intent_type) ? "defi_actions" : "direct_transfers";
-      await requireFeature(env.PROJECTION_DB, feature);
+      if (!["reviewed", "submitted", "confirmed"].includes(current.status)) return reply({ error: "intent_expired_or_unreviewed", traceId }, 409);
       const prepared = await env.PROJECTION_DB.prepare(`SELECT intent_id, step_index, wallet_address, chain_id, target_address, native_value, calldata_hash, call_fingerprint, semantic_action, source_reference, expires_at, expected_effect_json, reported_hash, verification_state
         FROM intent_prepared_calls WHERE intent_id = ? AND step_index = ? AND subject_reference = ?`)
         .bind(input.intentId, stepIndex, subject.subjectReference).first<{
           intent_id: string; step_index: number; wallet_address: string; chain_id: number; target_address: string; native_value: string; calldata_hash: string; call_fingerprint: string; semantic_action: string; source_reference: string; expires_at: string; expected_effect_json: string; reported_hash: string | null; verification_state: string;
         }>();
       if (!prepared) return reply({ error: "prepared_step_required", traceId }, 409);
-      if (prepared.expires_at <= new Date().toISOString() || !["prepared", "pending", "reported"].includes(prepared.verification_state)) return reply({ error: "prepared_step_unavailable", traceId }, 409);
+      if (!["prepared", "pending", "reported", "confirmed"].includes(prepared.verification_state)) return reply({ error: "prepared_step_unavailable", traceId }, 409);
       const ownedAddress = await requireLinkedEvmWallet(subject.subjectReference, prepared.wallet_address);
       if (current.wallet_reference !== `wallet:${ownedAddress}`) return reply({ error: "wallet_mismatch", traceId }, 409);
+      if (prepared.reported_hash && prepared.reported_hash.toLowerCase() !== hash.toLowerCase()) return reply({ error: "hash_conflict", traceId }, 409);
+      if (prepared.reported_hash) return reply({ intentId: input.intentId, stepIndex, verificationState: prepared.verification_state, traceId }, prepared.verification_state === "pending" ? 202 : 200);
+      if (current.status === "confirmed") return reply({ error: "intent_expired_or_unreviewed", traceId }, 409);
+      if (current.expires_at <= new Date().toISOString()) return reply({ error: "intent_expired_or_unreviewed", traceId }, 409);
+      if (prepared.expires_at <= new Date().toISOString()) return reply({ error: "prepared_step_unavailable", traceId }, 409);
+      await requireBetaAccess(env.PROJECTION_DB, subject.subjectReference);
+      const feature: FeatureKey = current.intent_type === "swap" ? "swaps" : current.intent_type === "bridge" ? "cross_chain" : current.intent_type.startsWith("earn_") || ["borrow", "repay"].includes(current.intent_type) ? "defi_actions" : "direct_transfers";
+      await requireFeature(env.PROJECTION_DB, feature);
       const lock = await env.PROJECTION_DB.prepare("SELECT account_locked FROM security_profiles WHERE subject_reference = ?").bind(subject.subjectReference).first<{ account_locked: number }>();
       if (!lock || lock.account_locked) return reply({ error: "account_locked", traceId }, 403);
-      if (prepared.reported_hash && prepared.reported_hash.toLowerCase() !== hash.toLowerCase()) return reply({ error: "hash_conflict", traceId }, 409);
       const claimed = await env.PROJECTION_DB.prepare(`UPDATE intent_prepared_calls SET reported_hash = ?, verification_state = 'pending', updated_at = ?
         WHERE intent_id = ? AND step_index = ? AND (reported_hash IS NULL OR lower(reported_hash) = lower(?)) AND verification_state IN ('prepared', 'pending', 'reported')`)
         .bind(hash.toLowerCase(), new Date().toISOString(), input.intentId, stepIndex, hash).run();

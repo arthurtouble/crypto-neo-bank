@@ -57,7 +57,7 @@ vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
             if (!row) return { meta: { changes: 0 } };
             if (query.includes("SET reported_hash") && row.reported_hash && String(row.reported_hash).toLowerCase() !== String(args[0]).toLowerCase()) return { meta: { changes: 0 } };
             if (query.includes("SET reported_hash")) row.reported_hash = args[0];
-            row.verification_state = query.includes("inconsistent") ? "inconsistent" : query.includes("reported") ? "reported" : "pending";
+            row.verification_state = query.includes("verification_state = 'inconsistent'") ? "inconsistent" : query.includes("verification_state = 'reported'") ? "reported" : "pending";
             return { meta: { changes: 1 } };
           }
           if (query.includes("UPDATE transaction_intents")) { if (!state.intentUpdateAllowed) return { meta: { changes: 0 } }; if (state.intent) state.intent.status = "submitted"; return { meta: { changes: 1 } }; }
@@ -366,6 +366,36 @@ describe("reported transaction binding", () => {
     expect(response.status).toBe(202);
     expect(await response.json()).toMatchObject({ verificationState: "pending" });
     expect(state.intent?.status).toBe("reviewed");
+  });
+
+  it("accepts the same reported hash after review expiry and feature shutdown", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockImplementation(async (_url, init: RequestInit) => Response.json({ jsonrpc: "2.0", id: 1, result: JSON.parse(String(init.body)).method === "eth_chainId" ? "0x2105" : null })));
+    expect((await report()).status).toBe(202);
+    state.intent!.expires_at = new Date(Date.now() - 1_000).toISOString();
+    state.prepared.get(0)!.expires_at = state.intent!.expires_at;
+    state.featureAllowed = false;
+    const repeated = await report();
+    expect(repeated.status).toBe(202);
+    expect(await repeated.json()).toMatchObject({ verificationState: "pending" });
+    expect(state.prepared.get(0)!.reported_hash).toBe(txHash);
+    expect((await report(0, `0x${"b".repeat(64)}`)).status).toBe(409);
+  });
+
+  it("treats a repeat of a confirmed hash as idempotent", async () => {
+    state.intent!.status = "confirmed";
+    state.prepared.get(0)!.reported_hash = txHash;
+    state.prepared.get(0)!.verification_state = "confirmed";
+    const response = await report();
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ verificationState: "confirmed" });
+    expect((await report(0, `0x${"b".repeat(64)}`)).status).toBe(409);
+  });
+
+  it("requires the linked wallet even for an already reported hash", async () => {
+    state.prepared.get(0)!.reported_hash = txHash;
+    state.prepared.get(0)!.verification_state = "pending";
+    state.walletLinked = false;
+    expect((await report()).status).toBe(403);
   });
 
   it("rejects a different sender's hash and opens an issue", async () => {

@@ -17,20 +17,27 @@ vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
     return { bind(...args: unknown[]) {
       return {
         async all() {
-          if (query.includes("FROM transaction_intents")) return { results: routeState.intents.filter((intent) => intent.subject_reference === args[0] && ["submitted", "confirmed"].includes(String(intent.status))) };
+          if (query.includes("FROM transaction_intents")) return { results: routeState.intents.filter((intent) => intent.subject_reference === args[0] && (["submitted", "confirmed"].includes(String(intent.status)) && intent.transaction_hash || query.includes("status = 'reviewed'") && intent.status === "reviewed" && routeState.steps.some((step) => step.intent_id === intent.intent_id && step.reported_hash))) };
           if (query.includes("FROM intent_prepared_calls")) return { results: routeState.steps.filter((step) => step.intent_id === args[0]) };
           return { results: [] };
         },
         async run() {
           if (query.includes("UPDATE intent_prepared_calls")) {
             const step = routeState.steps.find((item) => item.intent_id === args.at(-2) && item.step_index === args.at(-1));
-            if (step) step.verification_state = query.includes("'confirmed'") ? "confirmed" : query.includes("'reorged'") ? "reorged" : query.includes("'failed'") ? "failed" : "inconsistent";
+            if (step) step.verification_state = args[0];
             return { meta: { changes: step ? 1 : 0 } };
           }
           if (query.includes("UPDATE transaction_intents")) {
-            const intent = routeState.intents.find((item) => item.intent_id === args.at(-1));
-            if (intent && query.includes("SET status = 'confirmed'")) intent.status = "confirmed";
-            if (intent && query.includes("SET status = 'submitted'")) intent.status = "submitted";
+            const intent = routeState.intents.find((item) => item.intent_id === (query.includes("transaction_hash = ?") ? args[2] : args.at(-1)));
+            if (intent && query.includes("SET status = 'confirmed'")) {
+              if (!["submitted", "confirmed"].includes(String(intent.status)) || routeState.steps.some((step) => step.intent_id === intent.intent_id && step.verification_state !== "confirmed")) return { meta: { changes: 0 } };
+              intent.status = "confirmed";
+            }
+            if (intent && query.includes("SET status = 'submitted'")) {
+              if (query.includes("transaction_hash = ?") && (intent.status !== "reviewed" || intent.transaction_hash)) return { meta: { changes: 0 } };
+              intent.status = "submitted";
+              if (query.includes("transaction_hash = ?")) intent.transaction_hash = args[0];
+            }
             return { meta: { changes: intent ? 1 : 0 } };
           }
           if (query.includes("INSERT INTO operational_issues")) routeState.issues.push(String(args[0]));
@@ -127,6 +134,40 @@ describe("intent reconciliation route", () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({ results: [{ intentId, status: "confirmed" }] });
     expect(routeState.intents[0].status).toBe("confirmed");
+  });
+
+  it("revisits a reported hash saved before RPC indexed it", async () => {
+    routeState.intents[0].status = "reviewed";
+    routeState.intents[0].transaction_hash = null;
+    routeState.steps[0].verification_state = "pending";
+    routeState.observation = { status: "pending" };
+    const pending = await request();
+    expect(await pending.json()).toMatchObject({ results: [{ intentId, verificationState: "pending" }] });
+    expect(routeState.intents[0].status).toBe("reviewed");
+    routeState.observation = nativeObservation;
+    const settled = await request();
+    expect(await settled.json()).toMatchObject({ results: [{ intentId, status: "confirmed", verificationState: "confirmed" }] });
+    expect(routeState.intents[0]).toMatchObject({ status: "confirmed", transaction_hash: hash });
+  });
+
+  it("binds an indexed exact hash while receipt evidence is still pending", async () => {
+    routeState.intents[0].status = "reviewed";
+    routeState.intents[0].transaction_hash = null;
+    routeState.steps[0].verification_state = "pending";
+    routeState.observation = { ...nativeObservation, receipt: null };
+    const response = await request();
+    expect(await response.json()).toMatchObject({ results: [{ intentId, status: "submitted", verificationState: "pending" }] });
+    expect(routeState.intents[0]).toMatchObject({ status: "submitted", transaction_hash: hash });
+  });
+
+  it("does not bind a reviewed intent to a mismatched transaction", async () => {
+    routeState.intents[0].status = "reviewed";
+    routeState.intents[0].transaction_hash = null;
+    routeState.steps[0].verification_state = "pending";
+    routeState.observation = { ...nativeObservation, call: { ...nativeObservation.call, from: token } };
+    const response = await request();
+    expect(await response.json()).toMatchObject({ results: [{ intentId, status: "reviewed", verificationState: "inconsistent" }] });
+    expect(routeState.intents[0]).toMatchObject({ status: "reviewed", transaction_hash: null });
   });
 
   it("keeps multi-step intent pending until every step is verified", async () => {
