@@ -15,7 +15,7 @@ Markets search checks the full USD market list returned by its price source befo
 
 ## Review a route
 
-Enter the amount, choose a slippage limit, and select **Review Routes**. When a validated route is available, Aurel shows the minimum received, network fee when reported, price impact when available, and whether the route crosses networks. Quotes expire quickly; an expired quote needs a new review. A missing fee or price-impact estimate is shown as unavailable, not zero.
+Enter the amount, choose a slippage limit, and select **Review Routes**. When a validated route is available, Aurel shows the minimum received, estimated network and provider fees when both are reported, price impact when available, and whether the route crosses networks. Quotes expire quickly; an expired quote needs a new review. A missing total-fee or price-impact estimate is shown as unavailable, not zero.
 
 LI.FI currently supplies route data. Aurel checks the requested assets, amount, wallet, networks, transaction target, approval spender, and expiry against its own controls. It returns quote details to the app without exposing a raw provider transaction for the browser to sign. Only configured, reviewed route tools and targets may pass that check.
 

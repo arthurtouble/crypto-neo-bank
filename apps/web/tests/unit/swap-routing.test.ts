@@ -164,6 +164,7 @@ describe("provider-neutral LI.FI quotes", () => {
     const b = (await adapter(revised).quoteWithPlans(input, { from: baseUsdc, to: baseEth }))[0];
     expect(a.plan.economics).toMatchObject({ fromAmountUsd: "1", toAmountUsd: "0.99", toAmountRaw: "300000000000000", networkFeeUsd: 0.01, providerFeeUsd: 0.02, totalFeeUsd: 0.03, priceImpactPercent: 1, feeCosts: [{ amountUSD: "0.02" }] });
     expect(a.quote.networkFeeUsd).toBe(a.plan.economics.networkFeeUsd);
+    expect(a.quote).toMatchObject({ providerFeeUsd: 0.02, totalFeeUsd: 0.03 });
     expect(a.plan.fingerprint).not.toBe(b.plan.fingerprint);
   });
 

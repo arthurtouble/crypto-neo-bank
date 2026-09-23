@@ -286,6 +286,8 @@ async function validateQuote(
     toAmountMinRaw: toAmountMin.toString(),
     expiresAt,
     networkFeeUsd,
+    providerFeeUsd,
+    totalFeeUsd: economics.totalFeeUsd,
     priceImpactPercent,
     approvalTarget,
     planReference: `lifi:${quote.id}:${planHash}`,

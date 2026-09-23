@@ -23,6 +23,8 @@ export type ValidatedSwapQuote = {
   toAmountMinRaw: string;
   expiresAt: string;
   networkFeeUsd: number | null;
+  providerFeeUsd: number | null;
+  totalFeeUsd: number | null;
   priceImpactPercent: number | null;
   approvalTarget: string | null;
   planReference: string;
