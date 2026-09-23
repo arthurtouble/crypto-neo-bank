@@ -14,7 +14,7 @@ const RETURN_WINDOW = { pricedDays: PUBLISH_DAYS, scope: "recent_completed_utc_d
 // D1 paid Workers allow 1,000 queries per invocation; leave room for reads.
 const MAX_STATEMENTS = 800;
 // Increment when normalization, daily valuation, or basis semantics change.
-const CALCULATION_RULE_VERSION = 1;
+const CALCULATION_RULE_VERSION = 2;
 type Checkpoint = { account_id: string; source_id: string; cursor: string | null; covered_from: string | null; covered_through: string | null; status: string; ingestion_version: number; last_finalized_block: string | null; last_finalized_hash: string | null };
 type EventRow = { source_id: string; source_event_id: string; ingestion_version: number; account_id: string; asset_id: string; raw_delta: string; decimals: number; event_kind: HistoricalEvent["kind"]; occurred_at: string; chain_id: number | null; block_number: string | null; block_hash: string | null; tx_hash: string | null; log_index: number | null; finality: HistoricalEvent["finality"]; completeness: HistoricalEvent["completeness"]; group_id: string | null; counterparty_account_id: string | null; evidence_json: string };
 type Marker = { input_digest: string; calculation_version: number };

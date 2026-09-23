@@ -84,6 +84,21 @@ describe("covered historical portfolio values", () => {
     expect(result.disposals[0]).toMatchObject({ rawUnits: "150000000", proceedsUsd: "180", basisUsd: "145", gainUsd: "35", classification: "supported" });
   });
 
+  it.each(["withdrawal", "internal_transfer", "fee", "unknown"] as const)(
+    "keeps a %s debit as review-required evidence even if it carries a proceeds field",
+    (kind) => {
+      const acquisition = event(days[0], "acquisition", "100000000", "contribution");
+      acquisition.evidenceJson = '{"taxSupport":{"acquisitionCostUsd":"100","evidenceReference":"provider:acquisition"}}';
+      const debit = event(days[1], `${kind}-debit`, "-50000000", kind);
+      debit.evidenceJson = '{"taxSupport":{"disposalProceedsUsd":"75","evidenceReference":"provider:debit"},"sourceDigest":"original-observation"}';
+      const result = calculatePortfolioDays({ events: [acquisition, debit], prices: days.map((day) => price(day, "1")),
+        coverage: days.map((day) => cover(day)), calculationVersion: 2 });
+      expect(result.disposals).toHaveLength(1);
+      expect(result.disposals[0]).toMatchObject({ sourceEventId: `base-indexer:${kind}-debit`, rawUnits: "50000000",
+        proceedsUsd: null, gainUsd: null, classification: "review_required", evidenceJson: debit.evidenceJson });
+    }
+  );
+
   it("does not let an unrelated missing daily close erase documented tax basis", () => {
     const acquisition = event(days[0], "acquisition", "100000000", "contribution");
     acquisition.evidenceJson = '{"taxSupport":{"acquisitionCostUsd":"100","evidenceReference":"provider:acquisition"}}';

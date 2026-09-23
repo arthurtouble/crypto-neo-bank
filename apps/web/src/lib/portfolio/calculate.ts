@@ -133,9 +133,10 @@ function calculateBasis(events: HistoricalEvent[], coverage: DayCoverage[], calc
     }
     const basis = missing === 0n && pieces.every((piece) => piece.basis !== null)
       ? pieces.reduce((sum, piece) => sum + piece.basis!, 0n) : null;
-    const proceeds = documentedMoney(event, "disposalProceedsUsd");
-    const supported = basis !== null && proceeds !== null && event.kind !== "internal_transfer" && event.kind !== "unknown"
-      && !incompleteAccounts.has(event.accountId);
+    // Only an identified swap can use documented consideration as sale proceeds.
+    // Transfers, fees and unclassified debits retain their evidence for review.
+    const proceeds = event.kind === "swap" ? documentedMoney(event, "disposalProceedsUsd") : null;
+    const supported = basis !== null && proceeds !== null && event.kind === "swap" && !incompleteAccounts.has(event.accountId);
     disposals.push({ accountId: event.accountId, assetId: event.assetId, sourceEventId: sourceKey(event), legIndex: 0,
       calculationVersion, disposedAt: event.occurredAt, rawUnits: quantity.toString(),
       proceedsUsd: proceeds === null ? null : formatScaled(proceeds), basisUsd: basis === null ? null : formatScaled(basis),
