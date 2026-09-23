@@ -12,6 +12,7 @@ const plan: ServerHeldLifiPlan = {
   fromAmountRaw: "100", toAmountMinRaw: "90", recipient: wallet, slippageBps: 50,
   quoteId: "quote-1", stepId: "quote-1", toolId: "across", approvalSpender: null,
   routeSteps: [{ id: "step-1", type: "cross", tool: "across" }],
+  economics: { fromAmountUsd: "1", toAmountUsd: "0.99", toAmountRaw: "95", networkFeeUsd: 0.01, providerFeeUsd: 0.02, totalFeeUsd: 0.03, priceImpactPercent: 1, feeCosts: [{ amountUSD: "0.02" }] },
   sourceCall: { chainId: 8453, from: wallet, to: "0x3333333333333333333333333333333333333333", value: "100", data: "0x1234" },
   routePolicyVersion: "route-v1", catalogVersion: "catalog-v1", observedAt: new Date(now).toISOString(),
   expiresAt: new Date(now + 45_000).toISOString(), fingerprint: `0x${"a".repeat(64)}`
@@ -39,8 +40,13 @@ let sqlite: DatabaseSync;
 let database: D1Database;
 beforeEach(() => {
   sqlite = new DatabaseSync(":memory:");
-  sqlite.exec("PRAGMA foreign_keys = ON; CREATE TABLE transaction_intents (intent_id TEXT PRIMARY KEY); INSERT INTO transaction_intents VALUES ('submitted-intent');");
+  sqlite.exec(`PRAGMA foreign_keys = ON;
+    CREATE TABLE wallet_references (wallet_reference TEXT PRIMARY KEY, subject_reference TEXT NOT NULL, address TEXT NOT NULL);
+    INSERT INTO wallet_references VALUES ('wallet-a', 'subject-a', '${wallet}');
+    CREATE TABLE transaction_intents (intent_id TEXT PRIMARY KEY, subject_reference TEXT NOT NULL, wallet_reference TEXT NOT NULL);
+    INSERT INTO transaction_intents VALUES ('submitted-intent', 'subject-a', 'wallet-a');`);
   sqlite.exec(readFileSync(resolve(process.cwd(), "../../infra/d1/migrations/0021_server_held_swap_plans.sql"), "utf8"));
+  sqlite.exec(readFileSync(resolve(process.cwd(), "../../infra/d1/migrations/0023_swap_plan_integrity.sql"), "utf8"));
   database = d1(sqlite);
 });
 afterEach(() => sqlite.close());
@@ -53,7 +59,7 @@ describe("server-held Swap plans", () => {
     expect(await getActiveSwapQuotePlan(database, id, "subject-a", wallet, now)).toMatchObject({
       plan_id: id, subject_reference: "subject-a", wallet_address: wallet, source_call_json: JSON.stringify(plan.sourceCall),
       to_amount_min_raw: "90", fingerprint: plan.fingerprint,
-      route_steps_json: JSON.stringify(plan.routeSteps)
+      route_steps_json: JSON.stringify(plan.routeSteps), economics_json: JSON.stringify(plan.economics)
     });
     expect(await getActiveSwapQuotePlan(database, id, "subject-b", wallet, now)).toBeNull();
     expect(await getActiveSwapQuotePlan(database, id, "subject-a", "0x2222222222222222222222222222222222222222", now)).toBeNull();

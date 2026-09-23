@@ -9,7 +9,7 @@ export type StoredSwapQuotePlan = {
   from_amount_raw: string; recipient: string; slippage_bps: number; to_amount_min_raw: string;
   quote_id: string; step_id: string; tool_id: string; approval_spender: string | null;
   route_steps_json: string;
-  source_call_json: string; route_policy_version: string; catalog_version: string;
+  source_call_json: string; economics_json: string | null; route_policy_version: string; catalog_version: string;
   observed_at: string; expires_at: string; fingerprint: string; status: "active" | "expired" | "superseded";
   intent_id: string | null;
 };
@@ -30,12 +30,12 @@ export async function saveSwapQuotePlan(db: D1Database, subject: string, wallet:
     db.prepare(`INSERT INTO swap_quote_plans (
       plan_id, subject_reference, wallet_address, source_asset_id, destination_asset_id, source_chain_id, destination_chain_id,
       from_amount_raw, recipient, slippage_bps, to_amount_min_raw, quote_id, step_id, tool_id, approval_spender, route_steps_json,
-      source_call_json, route_policy_version, catalog_version, observed_at, expires_at, fingerprint
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+      source_call_json, economics_json, route_policy_version, catalog_version, observed_at, expires_at, fingerprint
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
       .bind(planId, subject, normalizedWallet, plan.fromAssetId, plan.toAssetId, plan.fromChainId, plan.toChainId,
         plan.fromAmountRaw, plan.recipient.toLowerCase(), plan.slippageBps, plan.toAmountMinRaw,
         plan.quoteId, plan.stepId, plan.toolId, plan.approvalSpender, JSON.stringify(plan.routeSteps),
-        JSON.stringify(plan.sourceCall), plan.routePolicyVersion, plan.catalogVersion,
+        JSON.stringify(plan.sourceCall), JSON.stringify(plan.economics), plan.routePolicyVersion, plan.catalogVersion,
         plan.observedAt, plan.expiresAt, plan.fingerprint)
   ]);
   return planId;

@@ -14,7 +14,10 @@ const MAX_UINT256 = (1n << 256n) - 1n;
 const tokenSchema = z.object({
   symbol: z.string(), decimals: z.number().int(), chainId: z.number().int(), address: z.string()
 });
-const costSchema = z.object({ amountUSD: z.string().optional() }).passthrough();
+const costSchema = z.object({
+  name: z.string().optional(), amount: z.string().regex(/^\d+$/).optional(), amountUSD: z.string().optional(),
+  percentage: z.string().optional(), included: z.boolean().optional(), token: tokenSchema.optional()
+}).passthrough();
 const actionSchema = z.object({
   fromChainId: z.number().int(), toChainId: z.number().int(), fromToken: tokenSchema, toToken: tokenSchema,
   fromAmount: z.string().regex(/^\d+$/), fromAddress: z.string(), toAddress: z.string(),
@@ -60,6 +63,9 @@ export type ServerHeldLifiPlan = {
   fromAmountRaw: string; toAmountMinRaw: string; recipient: string; slippageBps: number;
   quoteId: string; stepId: string; toolId: string; approvalSpender: string | null;
   routeSteps: Array<{ id: string; type: "swap" | "cross"; tool: string }>;
+  economics: { fromAmountUsd: string | null; toAmountUsd: string | null; toAmountRaw: string;
+    networkFeeUsd: number | null; providerFeeUsd: number | null; totalFeeUsd: number | null;
+    priceImpactPercent: number | null; feeCosts: Array<Pick<z.infer<typeof costSchema>, "name" | "amount" | "amountUSD" | "percentage" | "included" | "token">> | null };
   sourceCall: { chainId: number; from: string; to: string; value: string; data: string };
   routePolicyVersion: string; catalogVersion: string; observedAt: string; expiresAt: string; fingerprint: string;
 };
@@ -133,13 +139,14 @@ function matchesProviderToken(token: z.infer<typeof tokenSchema>, asset: Catalog
 }
 
 function optionalUsdTotal(costs: Array<{ amountUSD?: string }> | undefined): number | null {
-  if (!costs?.length) return null;
+  if (!costs) return null;
   let total = 0;
   for (const cost of costs) {
     if (cost.amountUSD === undefined) return null;
     const value = Number(cost.amountUSD);
     if (!Number.isFinite(value) || value < 0) return null;
     total += value;
+    if (!Number.isFinite(total)) return null;
   }
   return total;
 }
@@ -188,6 +195,7 @@ async function validateQuote(
   const quote = parsed.data;
   if ((quote.type === "swap" && assets.from.chainId !== assets.to.chainId)
     || (quote.type === "cross" && assets.from.chainId === assets.to.chainId)) return null;
+  if (quote.type === "lifi" && (!quote.includedSteps?.length || quote.includedSteps.some((step) => !step.action))) return null;
   if (!policy.allowedTools.has(quote.tool.toLowerCase())) return null;
   if (!(assets.from.chainId === assets.to.chainId ? policy.allowedExchanges : policy.allowedBridges).has(quote.tool.toLowerCase())) return null;
   const routeSteps = (quote.includedSteps ?? []).map(({ id, type, tool }) => ({ id, type, tool }));
@@ -222,6 +230,8 @@ async function validateQuote(
   }
   if (!policy.allowedTargets.has(target)) return null;
   if (quote.transactionRequest.chainId !== assets.from.chainId) return null;
+  if (quote.transactionRequest.gasLimit !== undefined || quote.transactionRequest.gasPrice !== undefined
+    || quote.transactionRequest.maxFeePerGas !== undefined || quote.transactionRequest.maxPriorityFeePerGas !== undefined) return null;
   if (!/^0x(?:[a-fA-F0-9]{2})+$/.test(quote.transactionRequest.data)) return null;
   try { hexToBytes(quote.transactionRequest.data as `0x${string}`); } catch { return null; }
   const transactionValue = unsignedTransactionValue(quote.transactionRequest.value);
@@ -237,6 +247,19 @@ async function validateQuote(
   const expiresAt = boundedExpiry(quote.expiresAt, now);
   if (!expiresAt) return null;
   const priceImpactPercent = observedPriceImpact(quote.estimate.fromAmountUSD, quote.estimate.toAmountUSD);
+  const networkFeeUsd = optionalUsdTotal(quote.estimate.gasCosts);
+  const providerFeeUsd = optionalUsdTotal(quote.estimate.feeCosts);
+  const combinedFeeUsd = networkFeeUsd !== null && providerFeeUsd !== null ? networkFeeUsd + providerFeeUsd : null;
+  const economics = {
+    fromAmountUsd: quote.estimate.fromAmountUSD ?? null,
+    toAmountUsd: quote.estimate.toAmountUSD ?? null,
+    toAmountRaw: toAmount.toString(),
+    networkFeeUsd, providerFeeUsd,
+    totalFeeUsd: combinedFeeUsd !== null && Number.isFinite(combinedFeeUsd) ? combinedFeeUsd : null,
+    priceImpactPercent,
+    feeCosts: quote.estimate.feeCosts?.map(({ name, amount, amountUSD, percentage, included, token }) =>
+      ({ name, amount, amountUSD, percentage, included, token })) ?? null
+  };
   const unverified = assets.from.verification === "unverified" || assets.to.verification === "unverified";
   if ((unverified && priceImpactPercent === null) || (priceImpactPercent !== null && priceImpactPercent > (unverified ? 1 : 3))) return null;
 
@@ -249,7 +272,7 @@ async function validateQuote(
     quote.type ?? null, quote.tool, quote.id, input.fromAssetId, input.toAssetId, fromAmount.toString(), toAmount.toString(), toAmountMin.toString(),
     input.fromAddress.toLowerCase(), quote.action.toAddress.toLowerCase(), quote.action.slippage,
     assets.from.chainId, target, transactionValue.toString(), quote.transactionRequest.data.toLowerCase(),
-    approvalTarget?.toLowerCase() ?? null, expiresAt, routePolicyVersion, catalogVersion, routeSteps
+    approvalTarget?.toLowerCase() ?? null, expiresAt, routePolicyVersion, catalogVersion, routeSteps, economics
   ]));
   const publicQuote: ValidatedSwapQuote = {
     provider: `lifi:${quote.tool}`,
@@ -262,7 +285,7 @@ async function validateQuote(
     toAmountRaw: toAmount.toString(),
     toAmountMinRaw: toAmountMin.toString(),
     expiresAt,
-    networkFeeUsd: optionalUsdTotal(quote.estimate.gasCosts),
+    networkFeeUsd,
     priceImpactPercent,
     approvalTarget,
     planReference: `lifi:${quote.id}:${planHash}`,
@@ -275,7 +298,7 @@ async function validateQuote(
     recipient: input.fromAddress.toLowerCase(), slippageBps: input.slippageBps,
     quoteId: quote.id, stepId: quote.id, toolId: quote.tool,
     approvalSpender: approvalTarget?.toLowerCase() ?? null,
-    routeSteps,
+    routeSteps, economics,
     sourceCall: { chainId: assets.from.chainId, from: input.fromAddress.toLowerCase(), to: target,
       value: transactionValue.toString(), data: quote.transactionRequest.data.toLowerCase() },
     routePolicyVersion, catalogVersion,

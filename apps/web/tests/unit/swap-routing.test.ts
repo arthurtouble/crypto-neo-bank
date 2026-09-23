@@ -140,6 +140,73 @@ describe("provider-neutral LI.FI quotes", () => {
     expect(result[0].quote).not.toHaveProperty("routeSteps");
   });
 
+  it("rejects a composite LI.FI route with no included steps", async () => {
+    await expect(adapter({ ...lifiQuote(), type: "lifi" }).quoteWithPlans(
+      { fromAssetId: baseUsdc.id, toAssetId: baseEth.id, amount: "1", fromAddress: wallet, slippageBps: 50 },
+      { from: baseUsdc, to: baseEth }
+    )).rejects.toMatchObject({ code: "no_live_route" });
+  });
+
+  it("rejects a composite LI.FI route with an incomplete included step", async () => {
+    await expect(adapter({ ...lifiQuote(), type: "lifi", includedSteps: [{ id: "step-1", type: "swap", tool: "1inch" }] }).quoteWithPlans(
+      { fromAssetId: baseUsdc.id, toAssetId: baseEth.id, amount: "1", fromAddress: wallet, slippageBps: 50 },
+      { from: baseUsdc, to: baseEth }
+    )).rejects.toMatchObject({ code: "no_live_route" });
+  });
+
+  it("retains displayed economics in the private plan fingerprint", async () => {
+    const input = { fromAssetId: baseUsdc.id, toAssetId: baseEth.id, amount: "1", fromAddress: wallet, slippageBps: 50 };
+    const original = lifiQuote();
+    const revised = lifiQuote();
+    original.estimate = { ...original.estimate, gasCosts: [{ amountUSD: "0.01" }], feeCosts: [{ amountUSD: "0.02" }] } as typeof original.estimate;
+    revised.estimate = { ...revised.estimate, gasCosts: [{ amountUSD: "0.03" }], feeCosts: [{ amountUSD: "0.04" }] } as typeof revised.estimate;
+    const a = (await adapter(original).quoteWithPlans(input, { from: baseUsdc, to: baseEth }))[0];
+    const b = (await adapter(revised).quoteWithPlans(input, { from: baseUsdc, to: baseEth }))[0];
+    expect(a.plan.economics).toMatchObject({ fromAmountUsd: "1", toAmountUsd: "0.99", toAmountRaw: "300000000000000", networkFeeUsd: 0.01, providerFeeUsd: 0.02, totalFeeUsd: 0.03, priceImpactPercent: 1, feeCosts: [{ amountUSD: "0.02" }] });
+    expect(a.quote.networkFeeUsd).toBe(a.plan.economics.networkFeeUsd);
+    expect(a.plan.fingerprint).not.toBe(b.plan.fingerprint);
+  });
+
+  it("fingerprints LI.FI fee inclusion and amount even when USD totals match", async () => {
+    const input = { fromAssetId: baseUsdc.id, toAssetId: baseEth.id, amount: "1", fromAddress: wallet, slippageBps: 50 };
+    const original = lifiQuote();
+    const revised = lifiQuote();
+    original.estimate = { ...original.estimate, feeCosts: [{ amountUSD: "0.02", amount: "20", included: true }] } as typeof original.estimate;
+    revised.estimate = { ...revised.estimate, feeCosts: [{ amountUSD: "0.02", amount: "21", included: false }] } as typeof revised.estimate;
+    const a = (await adapter(original).quoteWithPlans(input, { from: baseUsdc, to: baseEth }))[0];
+    const b = (await adapter(revised).quoteWithPlans(input, { from: baseUsdc, to: baseEth }))[0];
+    expect(a.plan.fingerprint).not.toBe(b.plan.fingerprint);
+  });
+
+  it("treats an explicit empty LI.FI cost list as zero rather than unavailable", async () => {
+    const payload = lifiQuote();
+    payload.estimate = { ...payload.estimate, gasCosts: [], feeCosts: [] } as typeof payload.estimate;
+    const result = await adapter(payload).quoteWithPlans(
+      { fromAssetId: baseUsdc.id, toAssetId: baseEth.id, amount: "1", fromAddress: wallet, slippageBps: 50 },
+      { from: baseUsdc, to: baseEth }
+    );
+    expect(result[0].plan.economics).toMatchObject({ networkFeeUsd: 0, providerFeeUsd: 0, totalFeeUsd: 0, feeCosts: [] });
+  });
+
+  it("marks an overflowing USD cost total unavailable", async () => {
+    const payload = lifiQuote();
+    payload.estimate = { ...payload.estimate, gasCosts: [{ amountUSD: "1e308" }, { amountUSD: "1e308" }] } as typeof payload.estimate;
+    const result = await adapter(payload).quoteWithPlans(
+      { fromAssetId: baseUsdc.id, toAssetId: baseEth.id, amount: "1", fromAddress: wallet, slippageBps: 50 },
+      { from: baseUsdc, to: baseEth }
+    );
+    expect(result[0].quote.networkFeeUsd).toBeNull();
+    expect(result[0].plan.economics.networkFeeUsd).toBeNull();
+  });
+
+  it("rejects unretained provider gas overrides", async () => {
+    const payload = { ...lifiQuote(), transactionRequest: { ...lifiQuote().transactionRequest, gasLimit: "21000" } };
+    await expect(adapter(payload).quoteWithPlans(
+      { fromAssetId: baseUsdc.id, toAssetId: baseEth.id, amount: "1", fromAddress: wallet, slippageBps: 50 },
+      { from: baseUsdc, to: baseEth }
+    )).rejects.toMatchObject({ code: "no_live_route" });
+  });
+
   it("accepts LI.FI nested step metadata without treating it as executable authority", async () => {
     const payload = { ...lifiQuote(), includedSteps: [{ id: "nested-1", type: "swap", tool: "1inch",
       toolDetails: { key: "1inch", name: "1inch" }, estimate: { fromAmount: "1000000" } }] };

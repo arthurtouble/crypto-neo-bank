@@ -4,6 +4,7 @@ import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
 
 const migration = () => readFileSync(resolve(process.cwd(), "../../infra/d1/migrations/0021_server_held_swap_plans.sql"), "utf8");
+const hardening = () => readFileSync(resolve(process.cwd(), "../../infra/d1/migrations/0023_swap_plan_integrity.sql"), "utf8");
 const parent = "PRAGMA foreign_keys = ON; CREATE TABLE transaction_intents (intent_id TEXT PRIMARY KEY); INSERT INTO transaction_intents VALUES ('submitted-intent');";
 const row = `INSERT INTO swap_quote_plans
   (plan_id, subject_reference, wallet_address, source_asset_id, destination_asset_id, source_chain_id, destination_chain_id,
@@ -55,5 +56,48 @@ describe("server-held Swap plan migration", () => {
     expect(unbound.stdout.trim()).toBe("0");
     const bound = sqlite(`${row} UPDATE swap_quote_plans SET intent_id = 'submitted-intent' WHERE plan_id = 'plan-1'; DELETE FROM swap_quote_plans WHERE plan_id = 'plan-1';`);
     expect(bound.status).not.toBe(0);
+  });
+});
+
+describe("server-held Swap plan integrity migration", () => {
+  function hardened(sql: string) {
+    const ownership = `PRAGMA foreign_keys = ON;
+      CREATE TABLE wallet_references (wallet_reference TEXT PRIMARY KEY, subject_reference TEXT NOT NULL, address TEXT NOT NULL);
+      INSERT INTO wallet_references VALUES ('wallet-a', 'subject-a', '0x1111111111111111111111111111111111111111');
+      INSERT INTO wallet_references VALUES ('wallet-a2', 'subject-a', '0x3333333333333333333333333333333333333333');
+      INSERT INTO wallet_references VALUES ('wallet-b', 'subject-b', '0x2222222222222222222222222222222222222222');
+      CREATE TABLE transaction_intents (intent_id TEXT PRIMARY KEY, subject_reference TEXT NOT NULL, wallet_reference TEXT NOT NULL);
+      INSERT INTO transaction_intents VALUES ('intent-a', 'subject-a', 'wallet-a');
+      INSERT INTO transaction_intents VALUES ('intent-a2', 'subject-a', 'wallet-a2');
+      INSERT INTO transaction_intents VALUES ('intent-b', 'subject-b', 'wallet-b');`;
+    return spawnSync("sqlite3", [":memory:"], { input: `${ownership}\n${migration()}\n${row}\n${hardening()}\n${sql}`, encoding: "utf8" });
+  }
+
+  it("rejects binding another subject or wallet's intent", () => {
+    const result = hardened("UPDATE swap_quote_plans SET intent_id = 'intent-b' WHERE plan_id = 'plan-1';");
+    expect(result.status).not.toBe(0);
+  });
+
+  it("permits a matching intent to bind once", () => {
+    const result = hardened("UPDATE swap_quote_plans SET intent_id = 'intent-a' WHERE plan_id = 'plan-1'; SELECT intent_id FROM swap_quote_plans WHERE plan_id = 'plan-1';");
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stdout.trim()).toBe("intent-a");
+  });
+
+  it("rejects binding another wallet's intent under the same subject", () => {
+    const result = hardened("UPDATE swap_quote_plans SET intent_id = 'intent-a2' WHERE plan_id = 'plan-1';");
+    expect(result.status).not.toBe(0);
+  });
+
+  it("keeps retained economics immutable", () => {
+    const result = hardened("UPDATE swap_quote_plans SET economics_json = '{\"networkFeeUsd\":1}' WHERE plan_id = 'plan-1';");
+    expect(result.status).not.toBe(0);
+  });
+
+  it("rejects resurrection of superseded and expired plans", () => {
+    for (const status of ["superseded", "expired"]) {
+      const result = hardened(`UPDATE swap_quote_plans SET status = '${status}' WHERE plan_id = 'plan-1'; UPDATE swap_quote_plans SET status = 'active' WHERE plan_id = 'plan-1';`);
+      expect(result.status).not.toBe(0);
+    }
   });
 });
