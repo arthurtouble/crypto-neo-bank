@@ -3,6 +3,7 @@ import { z } from "zod";
 import { AuthenticationError, requireVerifiedSubject } from "@/lib/auth/server";
 import { ensureSubjectProfile } from "@/lib/profile/ensure";
 import { writeAuditEvent } from "@/lib/security/audit";
+import { effectiveStepUpThresholdUsd, MAX_STEP_UP_THRESHOLD_USD } from "@/lib/transactions/policy";
 
 const updateSchema = z.object({
   accountLocked: z.boolean().optional(),
@@ -10,13 +11,13 @@ const updateSchema = z.object({
   dailyLimitUsd: z.number().min(100).max(1_000_000).optional(),
   newAddressThresholdUsd: z.number().min(0).max(1_000_000).optional(),
   newAddressDelayHours: z.number().int().min(0).max(168).optional(),
-  stepUpThresholdUsd: z.number().min(100).max(1_000_000).optional()
+  stepUpThresholdUsd: z.number().min(100).max(MAX_STEP_UP_THRESHOLD_USD).optional()
 }).refine((value) => Object.keys(value).length > 0);
 
 type PolicyRow = { account_locked: number; enforce_address_book: number; daily_limit_usd: number; new_address_threshold_usd: number; new_address_delay_seconds: number; step_up_threshold_usd: number; updated_at: string };
 
 function serialize(row: PolicyRow) {
-  return { accountLocked: Boolean(row.account_locked), enforceAddressBook: Boolean(row.enforce_address_book), dailyLimitUsd: row.daily_limit_usd, newAddressThresholdUsd: row.new_address_threshold_usd, newAddressDelayHours: row.new_address_delay_seconds / 3600, stepUpThresholdUsd: row.step_up_threshold_usd, updatedAt: row.updated_at };
+  return { accountLocked: Boolean(row.account_locked), enforceAddressBook: Boolean(row.enforce_address_book), dailyLimitUsd: row.daily_limit_usd, newAddressThresholdUsd: row.new_address_threshold_usd, newAddressDelayHours: row.new_address_delay_seconds / 3600, stepUpThresholdUsd: effectiveStepUpThresholdUsd(row.step_up_threshold_usd), updatedAt: row.updated_at };
 }
 
 export async function GET(request: Request) {
@@ -48,7 +49,7 @@ export async function PATCH(request: Request) {
       dailyLimitUsd: input.dailyLimitUsd ?? current.daily_limit_usd,
       newAddressThresholdUsd: input.newAddressThresholdUsd ?? current.new_address_threshold_usd,
       newAddressDelaySeconds: input.newAddressDelayHours !== undefined ? input.newAddressDelayHours * 3600 : current.new_address_delay_seconds,
-      stepUpThresholdUsd: input.stepUpThresholdUsd ?? current.step_up_threshold_usd
+      stepUpThresholdUsd: input.stepUpThresholdUsd ?? effectiveStepUpThresholdUsd(current.step_up_threshold_usd)
     };
     const now = new Date().toISOString();
     await env.PROJECTION_DB.prepare(`UPDATE security_profiles SET account_locked = ?, enforce_address_book = ?, daily_limit_usd = ?, new_address_threshold_usd = ?, new_address_delay_seconds = ?, step_up_threshold_usd = ?, updated_at = ? WHERE subject_reference = ?`)

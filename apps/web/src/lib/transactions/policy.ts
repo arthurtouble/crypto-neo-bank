@@ -32,6 +32,12 @@ export type PolicyDecision = {
   findings: PolicyFinding[];
 };
 
+export const MAX_STEP_UP_THRESHOLD_USD = 10_000;
+
+export function effectiveStepUpThresholdUsd(configuredUsd: number): number {
+  return Number.isFinite(configuredUsd) ? Math.min(configuredUsd, MAX_STEP_UP_THRESHOLD_USD) : MAX_STEP_UP_THRESHOLD_USD;
+}
+
 export const defaultTransactionPolicy: TransactionPolicy = {
   supportedChainIds: [8453, 1, 42161, 10, 137],
   allowlistedDestinations: [],
@@ -42,7 +48,7 @@ export const defaultTransactionPolicy: TransactionPolicy = {
   dailyLimitUsd: 25_000,
   spentTodayUsd: 0,
   newAddressThresholdUsd: 1_000,
-  stepUpThresholdUsd: 10_000,
+  stepUpThresholdUsd: MAX_STEP_UP_THRESHOLD_USD,
   delayThresholdUsd: 25_000,
   delaySeconds: 86_400
 };
@@ -93,7 +99,7 @@ export function evaluateTransactionPolicy(
     findings.push({ code: "daily_limit_exceeded", level: "block", message: "This action exceeds your rolling 24-hour transaction limit." });
   }
 
-  const requiresStepUp = !validValue || Boolean(reaches(policy.stepUpThresholdUsd));
+  const requiresStepUp = !validValue || !Number.isFinite(policy.stepUpThresholdUsd) || Boolean(reaches(effectiveStepUpThresholdUsd(policy.stepUpThresholdUsd)));
   const delayed = Boolean(reaches(policy.delayThresholdUsd));
   const releaseAt = delayed ? new Date(now.getTime() + policy.delaySeconds * 1000).toISOString() : undefined;
   if (delayed) findings.push({ code: "large_transfer_delay", level: "information", message: "The configured large-transfer review period applies before submission." });

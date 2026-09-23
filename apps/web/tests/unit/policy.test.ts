@@ -35,6 +35,29 @@ describe("transaction policy", () => {
     expect(decision.releaseAt).toBe("2026-09-22T12:00:00.000Z");
   });
 
+  it.each([
+    [20_000, "999999", false],
+    [20_000, "1000000", true],
+    [10_000, "1000000", true],
+    [5_000, "500000", true]
+  ])("enforces the step-up floor with configured threshold %i and trusted cents %s", (stepUpThresholdUsd, trustedCents, expected) => {
+    const decision = evaluateTransactionPolicy(
+      { ...baseIntent, type: "earn_supply" },
+      { ...defaultTransactionPolicy, stepUpThresholdUsd, dailyLimitUsd: 100_000 },
+      new Date(), trustedCents
+    );
+    expect(decision.requiresStepUp).toBe(expected);
+  });
+
+  it.each([Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY])("fails closed for a nonfinite persisted step-up threshold %s", (stepUpThresholdUsd) => {
+    const decision = evaluateTransactionPolicy(
+      { ...baseIntent, type: "earn_supply" },
+      { ...defaultTransactionPolicy, stepUpThresholdUsd, dailyLimitUsd: 100_000 },
+      new Date(), "100000"
+    );
+    expect(decision.requiresStepUp).toBe(true);
+  });
+
   it("warns without blocking when a reserve target would be crossed", () => {
     const decision = evaluateTransactionPolicy({ ...baseIntent, type: "earn_supply", estimatedUsd: 45_000 }, { ...defaultTransactionPolicy, dailyLimitUsd: 100_000 });
     expect(decision.permitted).toBe(false);

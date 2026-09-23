@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const state = vi.hoisted(() => ({ writes: [] as Array<{ sql: string; values: unknown[] }>, spent: { spent_cents: 0, missing: 0 } }));
+const state = vi.hoisted(() => ({ writes: [] as Array<{ sql: string; values: unknown[] }>, spent: { spent_cents: 0, missing: 0 }, stepUpThresholdUsd: 10_000 }));
 vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
   prepare(sql: string) {
     const statement = { values: [] as unknown[], bind(...values: unknown[]) { this.values.push(...values); return this; },
@@ -10,7 +10,7 @@ vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
   },
   async batch(statements: Array<{ values: unknown[] }>) {
     if (statements.length === 3) return [
-      { results: [{ account_locked: 0, enforce_address_book: 0, daily_limit_usd: 25000, new_address_threshold_usd: 100000, step_up_threshold_usd: 10000, new_address_delay_seconds: 86400 }] },
+      { results: [{ account_locked: 0, enforce_address_book: 0, daily_limit_usd: 25000, new_address_threshold_usd: 100000, step_up_threshold_usd: state.stepUpThresholdUsd, new_address_delay_seconds: 86400 }] },
       { results: [{ address: "0x3333333333333333333333333333333333333333", available_at: "2020-01-01T00:00:00Z" }] },
       { results: [state.spent] }
     ];
@@ -36,6 +36,7 @@ function request(type = "transfer", asset = "USDC", amount = "30000") {
 beforeEach(() => {
   state.writes.length = 0;
   state.spent = { spent_cents: 0, missing: 0 };
+  state.stepUpThresholdUsd = 10_000;
   vi.stubGlobal("fetch", vi.fn(async (url: string) => {
     const pair = new URL(url).searchParams.get("pair")!;
     const minute = Math.floor(Date.now() / 60_000) * 60;
@@ -44,6 +45,12 @@ beforeEach(() => {
 });
 
 describe("server-authoritative intent evaluation", () => {
+  it("requires step-up at 10k when a legacy profile stores a higher threshold", async () => {
+    state.stepUpThresholdUsd = 20_000;
+    const response = await POST(request("transfer", "USDC", "10000"));
+    expect(response.status).toBe(201);
+    expect((await response.json() as { decision: { requiresStepUp: boolean } }).decision.requiresStepUp).toBe(true);
+  });
   it("blocks a 30k USDC transfer despite a zero client estimate and persists trusted evidence", async () => {
     const response = await POST(request());
     expect(response.status).toBe(422);

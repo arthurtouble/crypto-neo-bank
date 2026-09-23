@@ -8,6 +8,7 @@ const state = vi.hoisted(() => ({
   featureAllowed: true,
   accountLocked: false,
   dailyLimitUsd: 25_000,
+  stepUpThresholdUsd: 10_000,
   spentTodayUsd: 0,
   spentMissing: false,
   atomicReservationExceeded: false,
@@ -25,7 +26,7 @@ const state = vi.hoisted(() => ({
 
 vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
   async batch(statements: Array<{ query: string }>) {
-    return statements.map((statement) => ({ results: statement.query.includes("security_profiles") ? [{ account_locked: state.accountLocked ? 1 : 0, enforce_address_book: 0, daily_limit_usd: state.dailyLimitUsd, new_address_threshold_usd: 1_000, step_up_threshold_usd: 10_000, new_address_delay_seconds: 86_400 }] : statement.query.includes("address_book_entries") ? state.addressBook : [{ spent_cents: state.spentTodayUsd * 100, missing: state.spentMissing ? 1 : 0 }] }));
+    return statements.map((statement) => ({ results: statement.query.includes("security_profiles") ? [{ account_locked: state.accountLocked ? 1 : 0, enforce_address_book: 0, daily_limit_usd: state.dailyLimitUsd, new_address_threshold_usd: 1_000, step_up_threshold_usd: state.stepUpThresholdUsd, new_address_delay_seconds: 86_400 }] : statement.query.includes("address_book_entries") ? state.addressBook : [{ spent_cents: state.spentTodayUsd * 100, missing: state.spentMissing ? 1 : 0 }] }));
   },
   prepare(query: string) {
     return { bind(...args: unknown[]) {
@@ -206,7 +207,7 @@ describe("intent preparation route", () => {
   async function request(body: unknown) { return prepare(new Request("https://aurel.test/api/intents/prepare", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })); }
 
   beforeEach(() => {
-    state.subject = "subject-a"; state.walletLinked = true; state.betaAllowed = true; state.featureAllowed = true; state.accountLocked = false; state.dailyLimitUsd = 25_000; state.spentTodayUsd = 0; state.spentMissing = false; state.atomicReservationExceeded = false; state.lastInsert = null; state.valuationFails = false; state.valuationCents = "1"; state.valuations.length = 0; state.addressBook = []; state.intentUpdateAllowed = true; state.prepared.clear(); state.events.length = 0; state.issues.length = 0;
+    state.subject = "subject-a"; state.walletLinked = true; state.betaAllowed = true; state.featureAllowed = true; state.accountLocked = false; state.dailyLimitUsd = 25_000; state.stepUpThresholdUsd = 10_000; state.spentTodayUsd = 0; state.spentMissing = false; state.atomicReservationExceeded = false; state.lastInsert = null; state.valuationFails = false; state.valuationCents = "1"; state.valuations.length = 0; state.addressBook = []; state.intentUpdateAllowed = true; state.prepared.clear(); state.events.length = 0; state.issues.length = 0;
     state.intent = { intent_id: intentId, subject_reference: "subject-a", intent_type: "transfer", chain_id: 8453, wallet_reference: `wallet:${sender.toLowerCase()}`, request_json: JSON.stringify({ type: "transfer", chainId: 8453, destination: recipient, asset: "ETH", amount: "0.0000000000000001", estimatedUsd: 20 }), policy_result_json: JSON.stringify({ permitted: true }), status: "reviewed", expires_at: new Date(Date.now() + 60_000).toISOString() };
   });
 
@@ -330,6 +331,16 @@ describe("intent preparation route", () => {
 
   it("blocks a high-value prepare until step-up has server-verifiable attestation", async () => {
     state.valuationCents = "1000001";
+    state.addressBook = [{ address: recipient, available_at: new Date(Date.now() - 60_000).toISOString() }];
+    const response = await request(payload);
+    expect(response.status).toBe(403);
+    expect(await response.json()).toMatchObject({ error: "step_up_unavailable" });
+    expect(state.prepared.size).toBe(0);
+  });
+
+  it("blocks preparation at the platform floor even with a legacy higher stored threshold", async () => {
+    state.stepUpThresholdUsd = 20_000;
+    state.valuationCents = "1000000";
     state.addressBook = [{ address: recipient, available_at: new Date(Date.now() - 60_000).toISOString() }];
     const response = await request(payload);
     expect(response.status).toBe(403);
