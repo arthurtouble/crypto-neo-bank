@@ -34,6 +34,11 @@ vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
           return { results: [] };
         },
         async run() {
+          if (query.includes("UPDATE intent_prepared_calls SET updated_at = ?")) {
+            const steps = routeState.steps.filter((step) => step.intent_id === args[1] && step.subject_reference === args[2] && step.reported_hash);
+            for (const step of steps) step.updated_at = args[0];
+            return { meta: { changes: steps.length } };
+          }
           if (query.includes("UPDATE intent_prepared_calls")) {
             const step = routeState.steps.find((item) => item.intent_id === args.at(-2) && item.step_index === args.at(-1));
             if (step) { step.verification_state = args[0]; step.updated_at = args[2]; }
@@ -246,6 +251,27 @@ describe("intent reconciliation route", () => {
       expect(new Set([...first.results, ...second.results].map((result) => result.intentId)).size).toBe(25);
       expect(routeState.intents.every((intent) => intent.status === "reviewed" && intent.transaction_hash === null)).toBe(true);
     } finally { vi.useRealTimers(); }
+  });
+
+  it("moves past 20 RPC failures to retry a healthy newer reported hash", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-09-23T10:00:00.000Z"));
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      routeState.intents = Array.from({ length: 21 }, (_, index) => ({ intent_id: `00000000-0000-4000-8000-${(index + 1).toString(16).padStart(12, "0")}`, subject_reference: "subject-a", chain_id: 8453, transaction_hash: null, status: "reviewed", updated_at: "2026-09-01T00:00:00.000Z" }));
+      routeState.steps = routeState.intents.map((intent, index) => ({ ...routeState.steps[0], intent_id: intent.intent_id, reported_hash: `0x${(index + 1).toString(16).padStart(64, "0")}`, verification_state: "pending", updated_at: index < 20 ? "2026-09-01T00:00:00.000Z" : "2026-09-02T00:00:00.000Z" }));
+      for (const step of routeState.steps.slice(0, 20)) routeState.observations[String(step.reported_hash)] = new Error("RPC unavailable");
+      routeState.observation = { status: "pending" };
+      const first = await (await request()).json() as { results: Array<{ intentId: string; status: string; verificationState: string }> };
+      expect(first.results).toHaveLength(20);
+      expect(first.results.every((result) => result.status === "reviewed" && result.verificationState === "check_failed")).toBe(true);
+      expect(errorSpy).toHaveBeenCalledTimes(20);
+      vi.setSystemTime(new Date("2026-09-23T10:00:01.000Z"));
+      const second = await (await request()).json() as { results: Array<{ intentId: string; status: string; verificationState: string }> };
+      expect(second.results).toContainEqual({ intentId: routeState.intents[20].intent_id, status: "reviewed", verificationState: "pending" });
+      expect(routeState.intents.every((intent) => intent.status === "reviewed" && intent.transaction_hash === null)).toBe(true);
+      expect(routeState.steps.every((step) => step.verification_state === "pending")).toBe(true);
+    } finally { errorSpy.mockRestore(); vi.useRealTimers(); }
   });
 
   it("does not confirm a receipt missing the expected effect", async () => {

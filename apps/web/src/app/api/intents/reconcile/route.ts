@@ -4,7 +4,7 @@ import { observeTransaction } from "@/lib/transactions/chain-observation";
 import { verifyExpectedEffect, type PreparedEffectEvidence } from "@/lib/transactions/effects";
 
 type Intent = { intent_id: string; subject_reference: string; chain_id: number; transaction_hash: string | null; status: string };
-type Step = { intent_id: string; step_index: number; wallet_address: string; chain_id: number; target_address: string; native_value: string; calldata_hash: string; semantic_action: string; expected_effect_json: string; reported_hash: string | null; observed_block_hash: string | null; verification_state: string };
+type Step = { intent_id: string; step_index: number; wallet_address: string; chain_id: number; target_address: string; native_value: string; calldata_hash: string; semantic_action: string; expected_effect_json: string; reported_hash: string | null; observed_block_hash: string | null; verification_state: string; updated_at: string };
 
 function reply(body: Record<string, unknown>, status: number) {
   return Response.json(body, { status, headers: { "Cache-Control": "no-store" } });
@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     const results: Array<Record<string, unknown>> = [];
     for (const intent of intents.results) {
       const steps = await env.PROJECTION_DB.prepare(`SELECT intent_id, step_index, wallet_address, chain_id, target_address, native_value,
-        calldata_hash, semantic_action, expected_effect_json, reported_hash, observed_block_hash, verification_state
+        calldata_hash, semantic_action, expected_effect_json, reported_hash, observed_block_hash, verification_state, updated_at
         FROM intent_prepared_calls WHERE intent_id = ? ORDER BY step_index`).bind(intent.intent_id).all<Step>();
       if (steps.results.length === 0) {
         results.push({ intentId: intent.intent_id, status: intent.status, verificationState: "unverified_legacy" });
@@ -100,13 +100,18 @@ export async function POST(request: Request) {
         }
         results.push({ intentId: intent.intent_id, status: allConfirmed ? "confirmed" : intent.status, verificationState });
       } catch (error) {
+        console.error(JSON.stringify({ level: "error", event: "intent.reconcile.failed", intentId: intent.intent_id, message: error instanceof Error ? error.message : "unknown" }));
+        const lastCheck = steps.results.reduce((latest, step) => step.reported_hash ? Math.max(latest, Date.parse(step.updated_at) || 0) : latest, 0);
+        const retryAt = new Date(Math.max(Date.now(), lastCheck + 1)).toISOString();
+        await env.PROJECTION_DB.prepare(`UPDATE intent_prepared_calls SET updated_at = ?
+          WHERE intent_id = ? AND subject_reference = ? AND reported_hash IS NOT NULL`)
+          .bind(retryAt, intent.intent_id, subject.subjectReference).run();
         if (intent.status === "confirmed") {
           const downgraded = await env.PROJECTION_DB.prepare(`UPDATE transaction_intents SET status = 'submitted', confirmed_at = NULL, updated_at = ? WHERE intent_id = ? AND status = 'confirmed'`)
             .bind(new Date().toISOString(), intent.intent_id).run();
           if (downgraded.meta.changes === 1) intent.status = "submitted";
         }
         results.push({ intentId: intent.intent_id, status: intent.status, verificationState: "check_failed" });
-        console.error(JSON.stringify({ level: "error", event: "intent.reconcile.failed", intentId: intent.intent_id, message: error instanceof Error ? error.message : "unknown" }));
       }
     }
     return reply({ results }, 200);
