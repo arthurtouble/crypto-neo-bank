@@ -20,6 +20,7 @@ const state = vi.hoisted(() => ({
   intentUpdateAllowed: true,
   cancelBeforeClaim: false,
   terminalAuditFails: false,
+  submissionAuditFails: false,
   preparationEventFails: false,
   intent: null as null | Record<string, unknown>,
   prepared: new Map<number, Record<string, unknown>>(),
@@ -29,6 +30,21 @@ const state = vi.hoisted(() => ({
 
 vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
   async batch(statements: Array<{ query: string; run?: () => Promise<{ meta: { changes: number } }> }>) {
+    if (statements[0]?.query.includes("UPDATE intent_prepared_calls SET verification_state = 'reported'")) {
+      const intent = state.intent ? { ...state.intent } : null;
+      const prepared = new Map([...state.prepared].map(([step, row]) => [step, { ...row }]));
+      const events = [...state.events];
+      try {
+        const bound = await statements[0].run!();
+        if (bound.meta.changes !== 1) return [bound, { meta: { changes: 0 } }, { meta: { changes: 0 } }];
+        return [bound, await statements[1].run!(), await statements[2].run!()];
+      } catch (error) {
+        state.intent = intent;
+        state.prepared = prepared;
+        state.events = events;
+        throw error;
+      }
+    }
     if (statements[0]?.query.includes("INSERT INTO intent_prepared_calls")) {
       const prepared = new Map(state.prepared);
       const events = [...state.events];
@@ -83,6 +99,7 @@ vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
           }
           if (query.includes("INSERT INTO intent_events")) {
             if (state.preparationEventFails && query.includes("call_prepared")) throw new Error("preparation event unavailable");
+            if (state.submissionAuditFails && query.includes("transaction_identity_matched")) throw new Error("submission event unavailable");
             state.events.push(String(args[3])); return { meta: { changes: 1 } };
           }
           if (query.includes("INSERT INTO operational_issues")) { state.issues.push(String(args[0])); return { meta: { changes: 1 } }; }
@@ -420,7 +437,7 @@ describe("reported transaction binding", () => {
   const report = (stepIndex = 0, transactionHash = txHash) => reportStatus(new Request("https://aurel.test/api/intents/status", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ intentId, stepIndex, status: "submitted", transactionHash }) }));
 
   beforeEach(async () => {
-    state.subject = "subject-a"; state.walletLinked = true; state.betaAllowed = true; state.featureAllowed = true; state.accountLocked = false; state.intentUpdateAllowed = true; state.cancelBeforeClaim = false; state.terminalAuditFails = false; state.prepared.clear(); state.events.length = 0; state.issues.length = 0;
+    state.subject = "subject-a"; state.walletLinked = true; state.betaAllowed = true; state.featureAllowed = true; state.accountLocked = false; state.intentUpdateAllowed = true; state.cancelBeforeClaim = false; state.terminalAuditFails = false; state.submissionAuditFails = false; state.prepared.clear(); state.events.length = 0; state.issues.length = 0;
     state.intent = { intent_id: intentId, subject_reference: "subject-a", intent_type: "transfer", chain_id: 8453, wallet_reference: `wallet:${sender.toLowerCase()}`, request_json: JSON.stringify({ destination: recipient }), policy_result_json: JSON.stringify({ permitted: true }), status: "reviewed", expires_at: new Date(Date.now() + 60_000).toISOString() };
     const normalized = await normalizePreparedCall(call);
     state.prepared.set(0, { intent_id: intentId, step_index: 0, subject_reference: "subject-a", wallet_address: sender.toLowerCase(), chain_id: 8453, target_address: recipient.toLowerCase(), native_value: "100", calldata_hash: normalized.dataHash, call_fingerprint: normalized.fingerprint, semantic_action: "native_transfer", source_reference: "review-1", expected_effect_json: JSON.stringify({ type: "native_transfer", recipient, amountRaw: "100" }), expires_at: state.intent.expires_at, verification_state: "prepared", reported_hash: null });
@@ -498,6 +515,14 @@ describe("reported transaction binding", () => {
     expect(await response.json()).toMatchObject({ verificationState: "reported" });
     expect(state.intent?.status).toBe("submitted");
     expect((await report(0, `0x${"b".repeat(64)}`)).status).toBe(409);
+  });
+
+  it("does not submit or report a matched transfer if its audit event fails", async () => {
+    state.submissionAuditFails = true;
+    expect((await report()).status).toBe(503);
+    expect(state.intent?.status).toBe("reviewed");
+    expect(state.prepared.get(0)?.verification_state).toBe("pending");
+    expect(state.events).toHaveLength(0);
   });
 
   it("rejects an expired step or another subject", async () => {

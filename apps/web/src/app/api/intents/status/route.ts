@@ -103,15 +103,20 @@ export async function POST(request: Request) {
         return reply({ error: "transaction_mismatch", reason: match.reason, traceId }, 409);
       }
       const now = new Date().toISOString();
-      const bound = await env.PROJECTION_DB.prepare(`UPDATE intent_prepared_calls SET verification_state = 'reported', observed_block_hash = ?, updated_at = ?
-        WHERE intent_id = ? AND step_index = ? AND lower(reported_hash) = lower(?) AND verification_state = 'pending'`)
-        .bind(observation.blockHash, now, input.intentId, stepIndex, hash).run();
-      if (bound.meta.changes !== 1) return reply({ error: "binding_conflict", traceId }, 409);
-      const submitted = await env.PROJECTION_DB.prepare(`UPDATE transaction_intents SET status = 'submitted', transaction_hash = ?, route_reference = ?, updated_at = ?
-        WHERE intent_id = ? AND subject_reference = ? AND status IN ('reviewed', 'submitted')`).bind(hash.toLowerCase(), prepared.source_reference, now, input.intentId, subject.subjectReference).run();
-      if (submitted.meta.changes !== 1) return reply({ error: "binding_conflict", traceId }, 409);
-      await env.PROJECTION_DB.prepare(`INSERT INTO intent_events (event_id, intent_id, subject_reference, event_type, evidence_json, occurred_at)
-        VALUES (?, ?, ?, 'transaction_identity_matched', ?, ?)`).bind(crypto.randomUUID(), input.intentId, subject.subjectReference, JSON.stringify({ stepIndex, transactionHash: hash.toLowerCase(), fingerprint: prepared.call_fingerprint }), now).run();
+      const changes = await env.PROJECTION_DB.batch([
+        env.PROJECTION_DB.prepare(`UPDATE intent_prepared_calls SET verification_state = 'reported', observed_block_hash = ?, updated_at = ?
+          WHERE intent_id = ? AND step_index = ? AND lower(reported_hash) = lower(?) AND verification_state = 'pending'
+            AND EXISTS (SELECT 1 FROM transaction_intents i WHERE i.intent_id = intent_prepared_calls.intent_id
+              AND i.subject_reference = ? AND i.status IN ('reviewed', 'submitted'))`)
+          .bind(observation.blockHash, now, input.intentId, stepIndex, hash, subject.subjectReference),
+        env.PROJECTION_DB.prepare(`UPDATE transaction_intents SET status = 'submitted', transaction_hash = ?, route_reference = ?, updated_at = ?
+          WHERE intent_id = ? AND subject_reference = ? AND status IN ('reviewed', 'submitted') AND changes() = 1`)
+          .bind(hash.toLowerCase(), prepared.source_reference, now, input.intentId, subject.subjectReference),
+        env.PROJECTION_DB.prepare(`INSERT INTO intent_events (event_id, intent_id, subject_reference, event_type, evidence_json, occurred_at)
+          SELECT ?, ?, ?, 'transaction_identity_matched', ?, ? WHERE changes() = 1`)
+          .bind(crypto.randomUUID(), input.intentId, subject.subjectReference, JSON.stringify({ stepIndex, transactionHash: hash.toLowerCase(), fingerprint: prepared.call_fingerprint }), now)
+      ]);
+      if (changes.some((item) => item.meta.changes !== 1)) return reply({ error: "binding_conflict", traceId }, 409);
       return reply({ updated: true, intentId: input.intentId, stepIndex, verificationState: "reported", traceId });
     }
     // A browser cannot establish that a routed transfer failed. A submitted
