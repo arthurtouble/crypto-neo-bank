@@ -45,6 +45,7 @@ async function fixture() {
     confirmations: 5, finalizedBlockNumber: 100n };
   return { call, observed, expected: { wallet, recipient, sourceChainId: 8453, destinationChainId: 42161,
     sourceAmountRaw: "1000000", bridgeAmountRaw: "997500", bridgeOutputRaw: "990000",
+    quoteTimestamp: 1, fillDeadline: 2,
     minimumOutputRaw: "980000", reportedHash: hash } };
 }
 
@@ -94,5 +95,14 @@ describe("Across source transaction evidence", () => {
       if (input.observed.status === "found") input.observed.receipt!.logs = [transfer(1_000_000n), ...deposits];
       expect((await verifyCrossChainSourceEffect(input)).status).toBe("inconsistent");
     }
+  });
+
+  it("binds the deposited quote and fill deadlines to the reviewed source call", async () => {
+    const input = await fixture();
+    input.expected.quoteTimestamp = 2;
+    expect((await verifyCrossChainSourceEffect(input)).status).toBe("inconsistent");
+    input.expected.quoteTimestamp = 1;
+    input.expected.fillDeadline = 3;
+    expect((await verifyCrossChainSourceEffect(input)).status).toBe("inconsistent");
   });
 });

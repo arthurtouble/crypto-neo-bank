@@ -6,7 +6,7 @@ import { matchesPreparedCall, type NormalizedPreparedCall } from "@/lib/transact
 type Expected = {
   wallet: string; recipient: string; sourceChainId: number; destinationChainId: number;
   sourceAmountRaw: string; bridgeAmountRaw: string; bridgeOutputRaw: string;
-  minimumOutputRaw: string; reportedHash: string;
+  minimumOutputRaw: string; quoteTimestamp: number; fillDeadline: number; reportedHash: string;
 };
 type Result = { status: "pending" | "inconsistent" | "reorged" | "failed" | "confirmed-source"; reason?: string };
 const same = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
@@ -36,6 +36,8 @@ export async function verifyCrossChainSourceEffect(input: {
     || !/^[1-9]\d*$/.test(expected.minimumOutputRaw)
     || BigInt(expected.bridgeAmountRaw) > BigInt(expected.sourceAmountRaw)
     || BigInt(expected.bridgeOutputRaw) < BigInt(expected.minimumOutputRaw)
+    || !Number.isSafeInteger(expected.quoteTimestamp) || !Number.isSafeInteger(expected.fillDeadline)
+    || expected.quoteTimestamp < 0 || expected.fillDeadline <= expected.quoteTimestamp
     || !/^0x[a-f0-9]{64}$/i.test(expected.reportedHash))
     return { status: "inconsistent", reason: "expectation" };
   if (observed.status === "pending") return { status: "pending", reason: "transaction_unavailable" };
@@ -77,6 +79,8 @@ export async function verifyCrossChainSourceEffect(input: {
       || deposit.outputToken.toLowerCase() !== word(destination.usdc)
       || deposit.inputAmount !== BigInt(expected.bridgeAmountRaw)
       || deposit.outputAmount !== BigInt(expected.bridgeOutputRaw)
+      || deposit.quoteTimestamp !== expected.quoteTimestamp
+      || deposit.fillDeadline !== expected.fillDeadline
       || deposit.depositor.toLowerCase() !== word(expected.wallet)
       || deposit.recipient.toLowerCase() !== word(expected.recipient)
       || deposit.message !== "0x") return { status: "inconsistent", reason: "across_deposit" };
