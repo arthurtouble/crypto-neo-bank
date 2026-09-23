@@ -34,7 +34,10 @@ export async function POST(request: Request) {
     await enforceRateLimit(env.PROJECTION_DB, { namespace: "intent", subject: subject.subjectReference, limit: 30, windowSeconds: 60 });
     const input = intentSchema.parse(await request.json());
     const ownedWalletAddress = await requireLinkedEvmWallet(subject.subjectReference, input.walletAddress);
-    await requireFeature(env.PROJECTION_DB, input.type === "swap" ? "swaps" : input.type === "bridge" ? "cross_chain" : input.type.startsWith("earn_") || ["borrow", "repay"].includes(input.type) ? "defi_actions" : "direct_transfers");
+    // Only direct transfers have an exact-call preparation path. Routed and
+    // protocol actions need their own server-held plan before review can exist.
+    if (input.type !== "transfer") return Response.json({ error: "action_not_ready", traceId }, { status: 409, headers: { "Cache-Control": "no-store" } });
+    await requireFeature(env.PROJECTION_DB, "direct_transfers");
     const now = new Date();
     await ensureSubjectProfile(env.PROJECTION_DB, subject.subjectReference, now);
     const valuation = await valueTransfer(input, { now });

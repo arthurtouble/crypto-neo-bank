@@ -69,10 +69,16 @@ describe("server-authoritative intent evaluation", () => {
     expect(JSON.stringify(intentWrite?.values)).not.toContain("estimatedUsd");
   });
 
-  it("fails closed for unsupported action or asset and for unvalued legacy spend", async () => {
+  it("does not create a reviewed intent for actions without governed preparation", async () => {
     for (const type of ["swap", "bridge", "earn_supply", "earn_withdraw", "earn_claim", "borrow", "repay"]) {
-      expect((await POST(request(type))).status).toBe(422);
+      const response = await POST(request(type));
+      expect(response.status).toBe(409);
+      expect(await response.json()).toMatchObject({ error: "action_not_ready" });
     }
+    expect(state.writes.some((item) => item.sql.includes("INSERT INTO transaction_intents"))).toBe(false);
+  });
+
+  it("fails closed for unsupported assets and unvalued legacy spend", async () => {
     expect((await POST(request("transfer", "DAI"))).status).toBe(422);
     state.spent = { spent_cents: 0, missing: 1 };
     const response = await POST(request("transfer", "USDC", "100"));

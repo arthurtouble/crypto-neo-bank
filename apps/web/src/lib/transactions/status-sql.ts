@@ -4,11 +4,18 @@ export const REPORTED_HASH_CLAIM_SQL = `UPDATE intent_prepared_calls SET reporte
   AND EXISTS (SELECT 1 FROM transaction_intents i WHERE i.intent_id = intent_prepared_calls.intent_id
     AND i.subject_reference = ? AND i.status IN ('reviewed', 'submitted'))`;
 
-export const TERMINAL_INTENT_UPDATE_SQL = `UPDATE transaction_intents
-  SET status = ?, failure_reason = ?, updated_at = ?
-  WHERE intent_id = ? AND subject_reference = ? AND status = 'reviewed'
+const TERMINAL_INTENT_PREDICATE = `WHERE intent_id = ? AND subject_reference = ? AND status = 'reviewed'
     AND transaction_hash IS NULL
     AND NOT EXISTS (SELECT 1 FROM intent_prepared_calls p WHERE p.intent_id = transaction_intents.intent_id AND p.reported_hash IS NOT NULL)`;
+
+export const TERMINAL_INTENT_CANCEL_SQL = `UPDATE transaction_intents
+  SET status = 'cancelled', failure_reason = NULL, updated_at = ?
+  ${TERMINAL_INTENT_PREDICATE}`;
+
+export const TERMINAL_INTENT_FAIL_SQL = `UPDATE transaction_intents
+  SET status = 'failed', failure_reason = ?, updated_at = ?
+  ${TERMINAL_INTENT_PREDICATE}
+    AND intent_type NOT IN ('swap', 'bridge')`;
 
 export const TERMINAL_INTENT_AUDIT_SQL = `INSERT INTO intent_events (event_id, intent_id, subject_reference, event_type, evidence_json, occurred_at)
   SELECT ?, intent_id, subject_reference, ?, ?, ? FROM transaction_intents

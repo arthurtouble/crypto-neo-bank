@@ -81,7 +81,7 @@ vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
             if (!state.intentUpdateAllowed) return { meta: { changes: 0 } };
             if (query.includes("NOT EXISTS (SELECT 1 FROM intent_prepared_calls")) {
               if (state.intent?.status !== "reviewed" || state.intent.transaction_hash || [...state.prepared.values()].some((step) => step.reported_hash)) return { meta: { changes: 0 } };
-              state.intent.status = args[0];
+              state.intent.status = query.includes("SET status = 'cancelled'") ? "cancelled" : "failed";
               return { meta: { changes: 1 } };
             }
             if (state.intent) state.intent.status = "submitted";
@@ -486,6 +486,14 @@ describe("reported transaction binding", () => {
     const response = await reportStatus(new Request("https://aurel.test/api/intents/status", { method: "POST", body: JSON.stringify({ intentId, status: "failed", failureReason: "I changed my mind" }) }));
     expect(response.status).toBe(409);
     expect(state.intent!.status).toBe("submitted");
+  });
+
+  it.each(["swap", "bridge"])("does not accept a browser-declared failure for a reviewed %s", async (intentType) => {
+    state.intent!.intent_type = intentType;
+    const response = await reportStatus(new Request("https://aurel.test/api/intents/status", { method: "POST", body: JSON.stringify({ intentId, status: "failed", failureReason: "The route looks slow" }) }));
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({ error: "settlement_evidence_required" });
+    expect(state.intent!.status).toBe("reviewed");
   });
 
   it("does not cancel or fail a reviewed intent with an unindexed reported hash", async () => {

@@ -6,7 +6,7 @@ import { FeatureUnavailableError, requireFeature, type FeatureKey } from "@/lib/
 import { WalletOwnershipError, requireLinkedEvmWallet } from "@/lib/auth/wallet";
 import { observeTransactionIdentity } from "@/lib/transactions/chain-observation";
 import { matchesPreparedCall, type NormalizedPreparedCall } from "@/lib/transactions/evidence";
-import { REPORTED_HASH_CLAIM_SQL, TERMINAL_INTENT_AUDIT_SQL, TERMINAL_INTENT_UPDATE_SQL, TERMINAL_PRODUCT_EVENT_SQL } from "@/lib/transactions/status-sql";
+import { REPORTED_HASH_CLAIM_SQL, TERMINAL_INTENT_AUDIT_SQL, TERMINAL_INTENT_CANCEL_SQL, TERMINAL_INTENT_FAIL_SQL, TERMINAL_PRODUCT_EVENT_SQL } from "@/lib/transactions/status-sql";
 
 const statusSchema = z.object({
   intentId: z.string().uuid(),
@@ -112,6 +112,10 @@ export async function POST(request: Request) {
         VALUES (?, ?, ?, 'transaction_identity_matched', ?, ?)`).bind(crypto.randomUUID(), input.intentId, subject.subjectReference, JSON.stringify({ stepIndex, transactionHash: hash.toLowerCase(), fingerprint: prepared.call_fingerprint }), now).run();
       return reply({ updated: true, intentId: input.intentId, stepIndex, verificationState: "reported", traceId });
     }
+    // A browser cannot establish that a routed transfer failed. A submitted
+    // source transaction may still settle or refund on the destination chain.
+    if (input.status === "failed" && ["swap", "bridge"].includes(current.intent_type))
+      return reply({ error: "settlement_evidence_required", traceId }, 409);
     if (!(transitions[current.status] ?? []).includes(input.status)) return reply({ error: "invalid_transition", message: `A ${current.status} intent cannot become ${input.status}.`, traceId }, 409);
     const reported = await env.PROJECTION_DB.prepare(`SELECT 1 AS reported FROM intent_prepared_calls
       WHERE intent_id = ? AND subject_reference = ? AND reported_hash IS NOT NULL LIMIT 1`)
@@ -121,8 +125,9 @@ export async function POST(request: Request) {
     const eventId = crypto.randomUUID();
     const eventType = `intent_${input.status}`;
     const changes = await env.PROJECTION_DB.batch([
-      env.PROJECTION_DB.prepare(TERMINAL_INTENT_UPDATE_SQL)
-        .bind(input.status, input.failureReason ?? null, now, input.intentId, subject.subjectReference),
+      input.status === "cancelled"
+        ? env.PROJECTION_DB.prepare(TERMINAL_INTENT_CANCEL_SQL).bind(now, input.intentId, subject.subjectReference)
+        : env.PROJECTION_DB.prepare(TERMINAL_INTENT_FAIL_SQL).bind(input.failureReason ?? null, now, input.intentId, subject.subjectReference),
       env.PROJECTION_DB.prepare(TERMINAL_INTENT_AUDIT_SQL)
         .bind(eventId, eventType, JSON.stringify({ failureReason: input.failureReason }), now,
           input.intentId, subject.subjectReference, input.status, now, input.intentId, eventType, now),
