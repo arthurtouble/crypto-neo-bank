@@ -66,7 +66,7 @@ export function foldDailyQuantities(events: HistoricalEvent[], opening: Readonly
   for (const event of events) {
     if (event.finality !== "finalized" || event.completeness !== "complete") throw new Error("Cannot fold incomplete portfolio events.");
     if (!signedInteger.test(event.rawDelta)) throw new Error("Invalid portfolio quantity.");
-    if (evidenceRole(event) === "position_receipt") continue;
+    if (evidenceRole(event) === "position_receipt" || evidenceRole(event) === "protocol_activity") continue;
     const key = `${event.accountId}|${event.assetId}`;
     const priorDecimals = decimals.get(key);
     if (priorDecimals !== undefined && priorDecimals !== event.decimals) throw new Error("Conflicting portfolio decimals.");

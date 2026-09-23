@@ -78,6 +78,14 @@ describe("portfolio event normalization", () => {
     expect(conflict.unresolved).toHaveLength(1);
   });
 
+  it("does not fold Aave activity into liquid wallet quantities", () => {
+    const walletOutflow = event("wallet-supply", "-1000000", { kind: "supply" });
+    const aaveActivity = event("aave-supply", "1000000", { sourceId: "aave:v3:8453", kind: "supply",
+      evidenceJson: '{"role":"protocol_activity"}' });
+    const balances = foldDailyQuantities([walletOutflow, aaveActivity], new Map());
+    expect(balances.get(`${A}|${USDC}`)).toBe(-1000000n);
+  });
+
   it("is deterministic across duplicate or reordered pages and refuses unfinalized data", () => {
     const first = event("b", "25", { groupId: "tx-b" });
     const second = event("a", "10", { groupId: "tx-a" });
