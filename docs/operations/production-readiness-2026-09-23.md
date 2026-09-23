@@ -154,6 +154,8 @@ A follow-up authenticated visual inspection of the development overview found th
 
 After migration, a second export of the development D1 was restored into an isolated local SQLite database. Its `integrity_check` returned `ok`, `foreign_key_check` returned no rows, and the restored counts matched a fresh remote query: one subject, no intents, audits, portfolio publications, or rebuild holds, and 27 recorded migrations. Direct transfers, swaps, cross-chain actions, and DeFi actions were disabled in both copies. The private SQL exports from before and after migration remain in the temporary release directory; the disposable restored SQLite copy was removed after verification. This confirms that the exported development snapshot can be read and restored locally. It does not exercise Cloudflare Time Travel restoration, an operator-led D1 restore, or customer-data reconciliation.
 
+The current `swaps` flag gates `/api/swap/quote` and alert/reminder mutations as well as intent preparation. Because the development D1 has `swaps=0`, an authenticated beta user cannot request a read-only route preview or create those planning instructions, even though the Swap UI has no trading CTA. Cross-network quote preview also checks the disabled `cross_chain` flag. Keep the financial flags off; do not turn them on merely to make previews work. A separate preview capability needs its own reviewed route guards and tests proving it cannot prepare or submit a transaction. This finding comes from the checked-in routes and the post-migration flag read, not an authenticated end-to-end Swap test.
+
 ## Non-negotiable release rules
 
 - D1 projections are not customer balances, settlement records, provider entitlements, or a substitute for chain/provider reads.
