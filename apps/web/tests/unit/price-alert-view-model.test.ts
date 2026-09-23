@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { alertRuleLabel, alertStateLabel, validAlertThreshold } from "@/lib/swap/price-alert-view-model";
+import { alertListState, alertRuleLabel, alertStateLabel, validAlertThreshold } from "@/lib/swap/price-alert-view-model";
 
 describe("price alert presentation", () => {
   it("labels saved rules without implying live monitoring", () => {
@@ -14,5 +14,12 @@ describe("price alert presentation", () => {
     expect(validAlertThreshold("0.000001")).toBe(true);
     for (const value of ["", "0", "0.000", "-5", "1e4", "1,000", "01", "1.1234567890123456789"])
       expect(validAlertThreshold(value)).toBe(false);
+  });
+
+  it("does not label an initial load failure as an empty alert list", () => {
+    expect(alertListState(true, false, 0)).toBe("loading");
+    expect(alertListState(false, false, 0)).toBe("unavailable");
+    expect(alertListState(false, true, 0)).toBe("empty");
+    expect(alertListState(false, true, 1)).toBe("populated");
   });
 });

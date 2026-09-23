@@ -4,7 +4,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { usePrivy } from "@privy-io/react-auth";
 import { X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { alertRuleLabel, alertStateLabel, validAlertThreshold, type AlertDirection, type AlertStatus } from "@/lib/swap/price-alert-view-model";
+import { alertListState, alertRuleLabel, alertStateLabel, validAlertThreshold, type AlertDirection, type AlertStatus } from "@/lib/swap/price-alert-view-model";
 
 type PriceAlert = {
   alertId: string; pairId: "ETH/USD"; baseAssetId: string; quoteAssetId: string; quoteCurrency: "USD"; mappingVersion: string;
@@ -20,6 +20,12 @@ function responseError(status: number): string {
   if (status === 403) return "Price alerts are unavailable for this account.";
   if (status === 429) return "Too many changes. Try again later.";
   return "Price alerts are unavailable. Try again.";
+}
+
+export async function commitAndRefresh(commit: () => Promise<unknown>, refresh: () => Promise<unknown>): Promise<"refreshed" | "refresh_failed"> {
+  await commit();
+  try { await refresh(); return "refreshed"; }
+  catch { return "refresh_failed"; }
 }
 
 export function PriceAlertRow({ alert, busy, onEdit, onChange }: {
@@ -40,12 +46,14 @@ export function PriceAlertPanel() {
   const newAlertButton = useRef<HTMLButtonElement>(null);
   const [alerts, setAlerts] = useState<PriceAlert[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loaded, setLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [modal, setModal] = useState<"create" | PriceAlert | null>(null);
   const [direction, setDirection] = useState<AlertDirection>("above");
   const [threshold, setThreshold] = useState("");
+  const listState = alertListState(loading, loaded, alerts.length);
 
   const request = useCallback(async (method: "GET" | "POST" | "PATCH", body?: unknown, signal?: AbortSignal) => {
     const token = await getAccessToken();
@@ -59,7 +67,7 @@ export function PriceAlertPanel() {
 
   const refresh = useCallback(async (signal?: AbortSignal) => {
     const response = await request("GET", undefined, signal) as AlertResponse;
-    if (!signal?.aborted) setAlerts(response.alerts);
+    if (!signal?.aborted) { setAlerts(response.alerts); setLoaded(true); }
   }, [request]);
 
   useEffect(() => {
@@ -81,11 +89,12 @@ export function PriceAlertPanel() {
     setBusy(true);
     try {
       if (modal === null) return;
-      if (modal === "create") await request("POST", { pairId: "ETH/USD", direction, threshold });
-      else await request("PATCH", { alertId: modal.alertId, version: modal.thresholdVersion, action: "edit", direction, threshold });
+      const outcome = await commitAndRefresh(() => modal === "create"
+        ? request("POST", { pairId: "ETH/USD", direction, threshold })
+        : request("PATCH", { alertId: modal.alertId, version: modal.thresholdVersion, action: "edit", direction, threshold }), refresh);
       setModal(null);
       setNotice(modal === "create" ? "Alert saved. Price monitoring is not active yet." : "Alert updated. Price monitoring is not active yet.");
-      await refresh().catch(() => setError("Saved, but the list could not refresh. Try again."));
+      if (outcome === "refresh_failed") setError("Saved, but the list could not refresh. Try again.");
     } catch (caught) { setError(caught instanceof Error ? caught.message : "Could not save alert."); }
     finally { setBusy(false); }
   }
@@ -94,9 +103,9 @@ export function PriceAlertPanel() {
     if (action === "cancel" && !window.confirm("Remove this price alert?")) return;
     setBusy(true); setError(null); setNotice(null);
     try {
-      await request("PATCH", { alertId: alert.alertId, version: alert.thresholdVersion, action });
-      await refresh();
+      const outcome = await commitAndRefresh(() => request("PATCH", { alertId: alert.alertId, version: alert.thresholdVersion, action }), refresh);
       setNotice(action === "cancel" ? "Alert removed." : action === "pause" ? "Alert paused." : "Alert resumed. Price monitoring is not active yet.");
+      if (outcome === "refresh_failed") setError("Updated, but the list could not refresh. Try again.");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Could not update alert.");
       if (caught instanceof Error && caught.message.includes("changed elsewhere")) await refresh().catch(() => {});
@@ -106,9 +115,11 @@ export function PriceAlertPanel() {
   return <section className="priceAlerts" aria-labelledby="priceAlertsTitle">
     <div className="priceAlertsHeading"><div><h3 id="priceAlertsTitle">Price Alerts</h3><p>Save an ETH price threshold to revisit later.</p></div><button ref={newAlertButton} className="button secondary" type="button" onClick={openCreate} disabled={busy}>New Alert</button></div>
     <p className="priceAlertsInactive">Price monitoring and notifications are not active yet. No trade will be placed.</p>
-    {error && <p className="formError" role="alert">{error} <button type="button" onClick={() => { setError(null); void refresh().catch(() => setError("Price alerts are unavailable. Try again.")); }}>Try Again</button></p>}
+    {error && <p className="formError" role="alert">{error} <button type="button" onClick={() => { setError(null); setLoading(true); void refresh().catch(() => setError("Price alerts are unavailable. Try again.")).finally(() => setLoading(false)); }}>Try Again</button></p>}
     {notice && <p className="formSuccess" role="status">{notice}</p>}
-    {loading ? <p role="status">Loading alerts…</p> : alerts.length === 0 ? <p className="priceAlertsEmpty">No saved alerts.</p> : <ul className="priceAlertList">{alerts.map((alert) => <PriceAlertRow key={alert.alertId} alert={alert} busy={busy} onEdit={openEdit} onChange={(item, action) => void change(item, action)} />)}</ul>}
+    {listState === "loading" ? <p role="status">Loading alerts…</p>
+      : listState === "empty" ? <p className="priceAlertsEmpty">No saved alerts.</p>
+      : listState === "populated" ? <ul className="priceAlertList">{alerts.map((alert) => <PriceAlertRow key={alert.alertId} alert={alert} busy={busy} onEdit={openEdit} onChange={(item, action) => void change(item, action)} />)}</ul> : null}
     <Dialog.Root open={modal !== null} onOpenChange={(open) => { if (!open && !busy) setModal(null); }}>
       <Dialog.Portal><Dialog.Overlay className="swapPickerOverlay" /><Dialog.Content className="swapPickerDialog priceAlertDialog" onCloseAutoFocus={(event) => { event.preventDefault(); newAlertButton.current?.focus(); }}>
         <div className="swapPickerHeading"><Dialog.Title>{modal === "create" ? "New Price Alert" : "Edit Price Alert"}</Dialog.Title><Dialog.Close className="swapPickerClose" aria-label="Close" disabled={busy}><X size={18} /></Dialog.Close></div>

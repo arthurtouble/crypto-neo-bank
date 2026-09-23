@@ -14,3 +14,9 @@ export function alertRuleLabel(direction: AlertDirection, threshold: string): st
 export function alertStateLabel(status: AlertStatus): string {
   return status === "active" ? "Saved · Not monitoring" : status === "paused" ? "Paused" : "Cancelled";
 }
+
+export function alertListState(loading: boolean, loaded: boolean, count: number): "loading" | "unavailable" | "empty" | "populated" {
+  if (loading) return "loading";
+  if (!loaded) return "unavailable";
+  return count === 0 ? "empty" : "populated";
+}

@@ -49,6 +49,31 @@ test("swap reminder controls fit desktop and mobile with reduced motion", async 
   }
 });
 
+test("price alert controls and dialog fit desktop and mobile with reduced motion", async ({ page }) => {
+  const styles = `${readFileSync("src/app/globals.css", "utf8")}\n${readFileSync("src/app/product-system.css", "utf8")}`;
+  for (const width of [1280, 390]) {
+    await page.setViewportSize({ width, height: 844 });
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.setContent(`<meta name="viewport" content="width=device-width, initial-scale=1"><style>${styles}</style><div class="productShell"><main class="productContent"><section class="panel swapPanel"><section class="priceAlerts" aria-labelledby="alertsTitle"><div class="priceAlertsHeading"><div><h3 id="alertsTitle">Price Alerts</h3><p>Save an ETH price threshold to revisit later.</p></div><button class="button secondary">New Alert</button></div><p class="priceAlertsInactive">Price monitoring and notifications are not active yet. No trade will be placed.</p><ul class="priceAlertList"><li class="priceAlertRow"><div><strong>ETH above $2,500</strong><small>Saved · Not monitoring</small></div><div class="priceAlertActions"><button>Edit</button><button>Pause</button><button>Remove</button></div></li></ul></section></section></main></div>`);
+    await expect(page.getByRole("heading", { name: "Price Alerts" })).toBeVisible();
+    await expect(page.getByText("Price monitoring and notifications are not active yet. No trade will be placed.")).toBeVisible();
+    await page.keyboard.press("Tab");
+    await expect(page.getByRole("button", { name: "New Alert" })).toBeFocused();
+    expect(await page.locator(".priceAlertActions button").first().evaluate((button) => Number.parseFloat(getComputedStyle(button).transitionDuration))).toBeLessThan(0.001);
+    const widthBefore = await page.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.clientWidth]);
+    expect(widthBefore[0]).toBeLessThanOrEqual(widthBefore[1] + 1);
+
+    await page.setContent(`<meta name="viewport" content="width=device-width, initial-scale=1"><style>${styles}</style><div class="productShell"><div class="swapPickerOverlay"></div><section class="swapPickerDialog priceAlertDialog" role="dialog" aria-modal="true" aria-labelledby="dialogTitle"><div class="swapPickerHeading"><h2 id="dialogTitle">New Price Alert</h2><button class="swapPickerClose" aria-label="Close">×</button></div><p>Monitoring and notifications are not active yet.</p><form class="priceAlertForm"><label for="direction">When ETH is</label><select id="direction"><option>Above</option></select><label for="threshold">Price in USD</label><input id="threshold" inputmode="decimal"><button class="button primary full">Save Alert</button></form></section></div>`);
+    await expect(page.getByRole("dialog", { name: "New Price Alert" })).toBeVisible();
+    await page.getByLabel("Price in USD").focus();
+    await expect(page.getByLabel("Price in USD")).toBeFocused();
+    const geometry = await page.locator(".priceAlertDialog").evaluate((dialog) => ({ width: dialog.getBoundingClientRect().width, left: dialog.getBoundingClientRect().left, right: dialog.getBoundingClientRect().right }));
+    expect(geometry.width).toBeLessThanOrEqual(width);
+    expect(geometry.left).toBeGreaterThanOrEqual(0);
+    expect(geometry.right).toBeLessThanOrEqual(width + 1);
+  }
+});
+
 test("partner sandbox exercises success and failure workflows", async ({ page }) => {
   test.setTimeout(60_000);
   await page.goto("/app/sandbox");
