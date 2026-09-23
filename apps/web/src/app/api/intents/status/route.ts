@@ -98,7 +98,10 @@ export async function POST(request: Request) {
       try { await requireBetaAccess(env.PROJECTION_DB, subject.subjectReference); }
       catch (error) { if (error instanceof BetaAccessError) return await late("access_revoked"); throw error; }
       const feature: FeatureKey = current.intent_type === "swap" ? "swaps" : current.intent_type === "bridge" ? "cross_chain" : current.intent_type.startsWith("earn_") || ["borrow", "repay"].includes(current.intent_type) ? "defi_actions" : "direct_transfers";
-      try { await requireFeature(env.PROJECTION_DB, feature); }
+      try {
+        await requireFeature(env.PROJECTION_DB, feature);
+        if (current.intent_type === "bridge") await requireFeature(env.PROJECTION_DB, "swaps");
+      }
       catch (error) { if (error instanceof FeatureUnavailableError) return await late("feature_disabled"); throw error; }
       const lock = await env.PROJECTION_DB.prepare("SELECT account_locked FROM security_profiles WHERE subject_reference = ?").bind(subject.subjectReference).first<{ account_locked: number }>();
       if (!lock || lock.account_locked) return await late("account_locked");

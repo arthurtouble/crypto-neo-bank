@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { DatabaseSync } from "node:sqlite";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { getActiveSwapQuotePlan, saveSwapQuotePlan } from "@/lib/swap/plans";
+import { bindSwapQuotePlan, getActiveSwapQuotePlan, saveSwapQuotePlan } from "@/lib/swap/plans";
 import type { ServerHeldLifiPlan } from "@/lib/swap/lifi";
 
 const wallet = "0x1111111111111111111111111111111111111111";
@@ -43,8 +43,9 @@ beforeEach(() => {
   sqlite.exec(`PRAGMA foreign_keys = ON;
     CREATE TABLE wallet_references (wallet_reference TEXT PRIMARY KEY, subject_reference TEXT NOT NULL, address TEXT NOT NULL);
     INSERT INTO wallet_references VALUES ('wallet-a', 'subject-a', '${wallet}');
-    CREATE TABLE transaction_intents (intent_id TEXT PRIMARY KEY, subject_reference TEXT NOT NULL, wallet_reference TEXT NOT NULL);
-    INSERT INTO transaction_intents VALUES ('submitted-intent', 'subject-a', 'wallet-a');`);
+    CREATE TABLE transaction_intents (intent_id TEXT PRIMARY KEY, subject_reference TEXT NOT NULL, wallet_reference TEXT NOT NULL,
+      intent_type TEXT NOT NULL, chain_id INTEGER NOT NULL, status TEXT NOT NULL, expires_at TEXT NOT NULL, route_reference TEXT);
+    INSERT INTO transaction_intents VALUES ('submitted-intent', 'subject-a', 'wallet-a', 'swap', 8453, 'reviewed', '2099-01-01', NULL);`);
   sqlite.exec(readFileSync(resolve(process.cwd(), "../../infra/d1/migrations/0021_server_held_swap_plans.sql"), "utf8"));
   sqlite.exec(readFileSync(resolve(process.cwd(), "../../infra/d1/migrations/0023_swap_plan_integrity.sql"), "utf8"));
   database = d1(sqlite);
@@ -83,5 +84,24 @@ describe("server-held Swap plans", () => {
   it("refuses to issue a plan ID after the provider quote has expired", async () => {
     await expect(saveSwapQuotePlan(database, "subject-a", wallet, plan, now + 45_000)).rejects.toThrow();
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM swap_quote_plans").get()).toMatchObject({ count: 0 });
+  });
+
+  it("binds one fresh plan only to an exact, reviewed intent on the same wallet and chain", async () => {
+    const id = await saveSwapQuotePlan(database, "subject-a", wallet, plan, now);
+    sqlite.prepare("UPDATE transaction_intents SET route_reference = ? WHERE intent_id = 'submitted-intent'").run(`swap-plan:${id}`);
+    expect(await bindSwapQuotePlan(database, { planId: id, intentId: "submitted-intent", subject: "subject-a", wallet, now })).toBe(true);
+    expect(sqlite.prepare("SELECT intent_id FROM swap_quote_plans WHERE plan_id = ?").get(id)).toMatchObject({ intent_id: "submitted-intent" });
+    expect(await bindSwapQuotePlan(database, { planId: id, intentId: "submitted-intent", subject: "subject-a", wallet, now })).toBe(false);
+  });
+
+  it("rejects wrong route reference, chain, subject, and expiry without consuming a plan", async () => {
+    const id = await saveSwapQuotePlan(database, "subject-a", wallet, plan, now);
+    expect(await bindSwapQuotePlan(database, { planId: id, intentId: "submitted-intent", subject: "subject-a", wallet, now })).toBe(false);
+    sqlite.prepare("UPDATE transaction_intents SET route_reference = ?, chain_id = 1 WHERE intent_id = 'submitted-intent'").run(`swap-plan:${id}`);
+    expect(await bindSwapQuotePlan(database, { planId: id, intentId: "submitted-intent", subject: "subject-a", wallet, now })).toBe(false);
+    sqlite.prepare("UPDATE transaction_intents SET chain_id = 8453 WHERE intent_id = 'submitted-intent'").run();
+    expect(await bindSwapQuotePlan(database, { planId: id, intentId: "submitted-intent", subject: "subject-b", wallet, now })).toBe(false);
+    expect(await bindSwapQuotePlan(database, { planId: id, intentId: "submitted-intent", subject: "subject-a", wallet, now: now + 45_000 })).toBe(false);
+    expect(sqlite.prepare("SELECT intent_id FROM swap_quote_plans WHERE plan_id = ?").get(id)).toMatchObject({ intent_id: null });
   });
 });

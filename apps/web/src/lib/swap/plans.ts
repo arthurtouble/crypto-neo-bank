@@ -46,3 +46,23 @@ export async function getActiveSwapQuotePlan(db: D1Database, planId: string, sub
     WHERE plan_id = ? AND subject_reference = ? AND wallet_address = ? AND status = 'active' AND expires_at > ?`)
     .bind(planId, subject, wallet.toLowerCase(), new Date(now).toISOString()).first<StoredSwapQuotePlan>();
 }
+
+/** Attach a current quote once, after the reviewed intent has been persisted. */
+export async function bindSwapQuotePlan(db: D1Database, input: {
+  planId: string; intentId: string; subject: string; wallet: string; now?: number;
+}): Promise<boolean> {
+  const now = new Date(input.now ?? Date.now()).toISOString();
+  const result = await db.prepare(`UPDATE swap_quote_plans SET intent_id = ?
+    WHERE plan_id = ? AND subject_reference = ? AND wallet_address = ?
+      AND status = 'active' AND expires_at > ? AND intent_id IS NULL
+      AND EXISTS (
+        SELECT 1 FROM transaction_intents i
+        JOIN wallet_references w ON w.wallet_reference = i.wallet_reference
+        WHERE i.intent_id = ? AND i.subject_reference = swap_quote_plans.subject_reference
+          AND w.subject_reference = i.subject_reference AND lower(w.address) = swap_quote_plans.wallet_address
+          AND i.intent_type IN ('swap', 'bridge') AND i.chain_id = swap_quote_plans.source_chain_id
+          AND i.status = 'reviewed' AND i.expires_at > ?
+          AND i.route_reference = 'swap-plan:' || swap_quote_plans.plan_id
+      )`).bind(input.intentId, input.planId, input.subject, input.wallet.toLowerCase(), now, input.intentId, now).run();
+  return result.meta.changes === 1;
+}

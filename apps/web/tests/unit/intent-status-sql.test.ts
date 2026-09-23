@@ -17,8 +17,8 @@ function database() {
   return db;
 }
 
-function claim(db: DatabaseSync, now: string, hash = `0x${"a".repeat(64)}`) {
-  return db.prepare(REPORTED_HASH_CLAIM_SQL).run(hash, now, "intent-a", 0, hash, now, "subject-a", now, "invite", "direct_transfers");
+function claim(db: DatabaseSync, now: string, hash = `0x${"a".repeat(64)}`, feature = "direct_transfers") {
+  return db.prepare(REPORTED_HASH_CLAIM_SQL).run(hash, now, "intent-a", 0, hash, now, "subject-a", now, "invite", feature);
 }
 
 function terminalBatch(db: DatabaseSync, now: string) {
@@ -88,6 +88,16 @@ describe("intent terminal SQL", () => {
       expect(claimResult.changes).toBe(0);
       expect(db.prepare("SELECT reported_hash, verification_state FROM intent_prepared_calls").get())
         .toMatchObject({ reported_hash: null, verification_state: "prepared" });
+    } finally { db.close(); }
+  });
+
+  it("requires both Swap and cross-network controls when claiming a bridge hash", () => {
+    const db = database();
+    try {
+      db.exec("UPDATE transaction_intents SET intent_type = 'bridge'; INSERT INTO feature_flags VALUES ('cross_chain', 1)");
+      expect(claim(db, "2026-09-01T00:02:00.000Z", undefined, "cross_chain").changes).toBe(0);
+      db.exec("INSERT INTO feature_flags VALUES ('swaps', 1)");
+      expect(claim(db, "2026-09-01T00:02:00.000Z", undefined, "cross_chain").changes).toBe(1);
     } finally { db.close(); }
   });
 

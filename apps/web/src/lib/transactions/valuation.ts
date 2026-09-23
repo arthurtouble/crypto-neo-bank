@@ -103,3 +103,70 @@ export async function valueTransfer(input: Input, options: Options = {}): Promis
     depegUncertainty: asset.stable
   };
 }
+
+// Source-asset spend limits use reviewed chain/contract identities, never a
+// provider ticker or its quoted USD amount. Unknown identities fail closed.
+const swapAssets: Readonly<Record<string, { decimals: number; pair: string; keys: readonly string[]; stable: boolean }>> = {
+  "8453:native": { decimals: 18, pair: "ETH/USD", keys: ["XETHZUSD", "ETHUSD", "ETH/USD"], stable: false },
+  "1:native": { decimals: 18, pair: "ETH/USD", keys: ["XETHZUSD", "ETHUSD", "ETH/USD"], stable: false },
+  "42161:native": { decimals: 18, pair: "ETH/USD", keys: ["XETHZUSD", "ETHUSD", "ETH/USD"], stable: false },
+  "10:native": { decimals: 18, pair: "ETH/USD", keys: ["XETHZUSD", "ETHUSD", "ETH/USD"], stable: false },
+  "8453:0x4200000000000000000000000000000000000006": { decimals: 18, pair: "ETH/USD", keys: ["XETHZUSD", "ETHUSD", "ETH/USD"], stable: false },
+  "8453:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913": { decimals: 6, pair: "USDC/USD", keys: ["USDCUSD", "USDC/USD"], stable: true },
+  "1:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48": { decimals: 6, pair: "USDC/USD", keys: ["USDCUSD", "USDC/USD"], stable: true },
+  "42161:0xaf88d065e77c8cc2239327c5edb3a432268e5831": { decimals: 6, pair: "USDC/USD", keys: ["USDCUSD", "USDC/USD"], stable: true },
+  "10:0x0b2c639c533813f4aa9d7837caf62653d097ff85": { decimals: 6, pair: "USDC/USD", keys: ["USDCUSD", "USDC/USD"], stable: true }
+};
+
+export async function valueSwapSource(
+  input: { assetId: string; amountRaw: string }, options: Options = {}
+): Promise<TrustedValuation> {
+  const asset = Object.hasOwn(swapAssets, input.assetId) ? swapAssets[input.assetId] : undefined;
+  if (!asset) throw new ValuationError("Unsupported asset for trusted swap valuation.");
+  if (!/^[1-9]\d{0,77}$/.test(input.amountRaw)) throw new ValuationError("Invalid source amount.");
+  const rawUnits = BigInt(input.amountRaw);
+  const now = options.now ?? new Date();
+  if (!Number.isFinite(now.getTime())) throw new ValuationError("Invalid valuation time.");
+  const pair = asset.pair.replace("/", "");
+  const url = `https://api.kraken.com/0/public/OHLC?pair=${pair}&interval=1&since=${Math.floor(now.getTime() / 1000) - 180}`;
+  let payload: unknown;
+  try {
+    payload = await readBounded(await (options.fetcher ?? fetch)(url, {
+      signal: AbortSignal.timeout(4_000), headers: { Accept: "application/json" }
+    }));
+  } catch (error) {
+    if (error instanceof ValuationError) throw error;
+    throw new ValuationError("Price source unavailable.");
+  }
+  const data = payload as { error?: unknown; result?: Record<string, unknown> } | null;
+  if (!data || !Array.isArray(data.error) || data.error.length || !data.result || typeof data.result !== "object") {
+    throw new ValuationError("Price source unavailable.");
+  }
+  const matches = asset.keys.filter((key) => Object.hasOwn(data.result!, key));
+  if (matches.length !== 1) throw new ValuationError("Ambiguous or missing price evidence.");
+  const candles = data.result[matches[0]];
+  if (!Array.isArray(candles) || !candles.length) throw new ValuationError("Price source unavailable.");
+  const latest = candles[candles.length - 1];
+  if (!Array.isArray(latest) || !Number.isSafeInteger(latest[0]) || typeof latest[2] !== "string"
+      || !Number.isSafeInteger(latest[7]) || latest[7] <= 0) {
+    throw new ValuationError("Price evidence is stale or invalid.");
+  }
+  const observedAtMs = latest[0] * 1000;
+  if (now.getTime() - observedAtMs > MAX_CANDLE_AGE_MS || observedAtMs > now.getTime() + 60_000) {
+    throw new ValuationError("Price evidence is stale.");
+  }
+  const market = decimalParts(latest[2], 12);
+  if (market.numerator <= 0n) throw new ValuationError("Invalid market price.");
+  const belowPeg = asset.stable && market.numerator < market.scale;
+  const riskPrice = belowPeg ? { numerator: 1n, scale: 1n } : market;
+  const denominator = (10n ** BigInt(asset.decimals)) * riskPrice.scale;
+  const cents = (rawUnits * riskPrice.numerator * 100n + denominator - 1n) / denominator;
+  if (cents > BigInt(Number.MAX_SAFE_INTEGER)) throw new ValuationError("Valuation exceeds supported policy range.");
+  return {
+    assetId: input.assetId, rawUnits: input.amountRaw, decimals: asset.decimals,
+    priceUsd: belowPeg ? "1" : latest[2], marketPriceUsd: latest[2],
+    priceSource: `kraken:ohlc:1m:${asset.pair}:high`, priceObservedAt: new Date(observedAtMs).toISOString(),
+    valuedAt: now.toISOString(), usdCents: cents.toString(), policyVersion: VALUATION_POLICY_VERSION,
+    depegUncertainty: asset.stable
+  };
+}
