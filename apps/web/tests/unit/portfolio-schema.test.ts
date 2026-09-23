@@ -1,7 +1,9 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
+import { CURRENT_PUBLICATION_SQL } from "@/lib/portfolio/publication";
 
 const migration = () => readFileSync(resolve(process.cwd(), "../../infra/d1/migrations/0017_portfolio_analytics.sql"), "utf8");
 const publicationMigrations = () => readFileSync(resolve(process.cwd(), "../../infra/d1/migrations/0019_portfolio_publications.sql"), "utf8")
@@ -71,5 +73,28 @@ describe("disposable portfolio analytics schema", () => {
              (SELECT count(*) FROM portfolio_events WHERE source_id = 'aave:v3:8453'),
              (SELECT count(*) FROM portfolio_events WHERE source_id = 'blockscout:8453');`);
     expect(outcome).toBe("1|1|1|0|1|0|1");
+  });
+
+  it("hides an old publication throughout Aave replay until its hold is released", () => {
+    const db = new DatabaseSync(":memory:");
+    try {
+      db.exec(`${migration()}\n${publicationMigrations()}`);
+      db.exec("INSERT INTO portfolio_publications VALUES ('subject-a', 'old', 1, '2026-09-01', '2026-09-20', 'published', '2026-09-21T00:00:00Z')");
+      const visible = () => db.prepare(CURRENT_PUBLICATION_SQL).get("subject-a");
+      expect(visible()).toMatchObject({ calculation_version: 1 });
+      db.exec(aaveReplayMigration());
+      expect(visible()).toBeUndefined();
+      db.exec(`INSERT INTO portfolio_events (subject_reference, source_id, source_event_id, ingestion_version, leg_index, account_id,
+        asset_id, raw_delta, decimals, event_kind, occurred_at, finality, completeness, evidence_hash, evidence_json, observed_at)
+        VALUES ('subject-a', 'aave:v3:8453', 'replayed', 3, 0, '8453:wallet', '8453:asset', '1', 6, 'supply',
+          '2026-09-20T00:00:00Z', 'finalized', 'complete', 'new',
+          '{"sourceEvidenceVersion":3,"effectProof":"canonical_aave_pool_log"}', '2026-09-21T00:00:00Z')`);
+      expect(visible()).toBeUndefined();
+      db.exec(`BEGIN;
+        UPDATE portfolio_publications SET input_digest = 'replayed', calculation_version = 2 WHERE subject_reference = 'subject-a';
+        DELETE FROM portfolio_rebuild_holds WHERE subject_reference = 'subject-a';
+        COMMIT;`);
+      expect(visible()).toMatchObject({ calculation_version: 2 });
+    } finally { db.close(); }
   });
 });
