@@ -40,7 +40,7 @@ export function ActivationJourney({ usdcBalance }: { usdcBalance?: bigint }) {
   }
 
   const tasks = useMemo(() => [
-    { label: "Secure account", detail: passkeyReady ? "Passkey enrolled" : "Add a passkey before higher-value actions", complete: passkeyReady, href: "/app/security" },
+    { label: "Secure account", detail: passkeyReady ? "Account passkey added" : "Add an account passkey", complete: passkeyReady, href: "/app/security" },
     { label: "Wallet ready", detail: walletReady ? "Customer-controlled wallet active" : "Wallet is being prepared", complete: walletReady, href: "/app/security" },
     { label: "Understand transfers", detail: "Review supported networks and recovery rules", complete: Boolean(progress.data?.progress.networkGuideRead && progress.data?.progress.riskGuideRead), href: "https://aurel-docs.aurel-events.workers.dev/product/networks-and-assets/" },
     { label: "Add money", detail: funded ? "USDC observed on Base" : "Begin with a small test transfer", complete: funded, href: "/app/assets" },

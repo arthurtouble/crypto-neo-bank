@@ -27,7 +27,7 @@ Base addresses use the same format as other EVM networks. The same-looking addre
 
 Before moving value:
 
-- add a passkey for higher-risk actions;
+- add a passkey to help protect account access;
 - save trusted destination addresses;
 - choose a review threshold;
 - keep the 24-hour address cooling period enabled; and

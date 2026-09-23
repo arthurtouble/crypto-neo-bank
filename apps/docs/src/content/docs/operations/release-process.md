@@ -36,6 +36,8 @@ New code is checked on the production endpoint before the release is considered 
 
 D1 migrations are forward-only and reviewed separately from application code. A release must remain safe if application deployment and schema migration do not complete at the same moment.
 
+The action-passkey foundation is an explicit migration-first release: apply and verify migration `0024` before deploying a build that reads `policy_version`. Keep passkey enrollment and transaction-specific approval disabled until the final domain, recovery path, and security review are complete.
+
 Destructive cleanup should follow a compatibility period. A field is not removed in the same release that stops writing it unless the migration and rollback plan explicitly support that choice.
 
 ## Provider changes
@@ -55,4 +57,3 @@ Application code can be rolled back. A signed transaction, completed provider ac
 ## Remaining edge launch work
 
 Before broad customer launch, Aurel still needs a custom production domain, finalized WAF and rate-limit policy, protected operations access, durable external log retention, formal alert routing, and tested on-call procedures. Current Worker deployment is a production-quality preview, not a declaration that every launch control is complete.
-

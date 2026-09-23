@@ -15,10 +15,10 @@ const updateSchema = z.object({
   stepUpThresholdUsd: z.number().min(100).max(MAX_STEP_UP_THRESHOLD_USD).optional()
 }).strict().refine((value) => Object.keys(value).length > 0);
 
-type PolicyRow = { account_locked: number; enforce_address_book: number; daily_limit_usd: number; new_address_threshold_usd: number; new_address_delay_seconds: number; step_up_threshold_usd: number; updated_at: string };
+type PolicyRow = { account_locked: number; enforce_address_book: number; daily_limit_usd: number; new_address_threshold_usd: number; new_address_delay_seconds: number; step_up_threshold_usd: number; policy_version: number; updated_at: string };
 
 function serialize(row: PolicyRow) {
-  return { accountLocked: Boolean(row.account_locked), enforceAddressBook: Boolean(row.enforce_address_book), dailyLimitUsd: row.daily_limit_usd, newAddressThresholdUsd: row.new_address_threshold_usd, newAddressDelayHours: row.new_address_delay_seconds / 3600, stepUpThresholdUsd: effectiveStepUpThresholdUsd(row.step_up_threshold_usd), updatedAt: row.updated_at };
+  return { accountLocked: Boolean(row.account_locked), enforceAddressBook: Boolean(row.enforce_address_book), dailyLimitUsd: row.daily_limit_usd, newAddressThresholdUsd: row.new_address_threshold_usd, newAddressDelayHours: row.new_address_delay_seconds / 3600, stepUpThresholdUsd: effectiveStepUpThresholdUsd(row.step_up_threshold_usd), policyVersion: row.policy_version, updatedAt: row.updated_at };
 }
 
 export async function GET(request: Request) {
@@ -28,6 +28,7 @@ export async function GET(request: Request) {
     await ensureSubjectProfile(env.PROJECTION_DB, subject.subjectReference);
     const row = await env.PROJECTION_DB.prepare("SELECT * FROM security_profiles WHERE subject_reference = ?").bind(subject.subjectReference).first<PolicyRow>();
     if (!row) throw new Error("Security profile was not initialized.");
+    if (!Number.isSafeInteger(row.policy_version) || row.policy_version < 1) throw new Error("Security policy version is unavailable.");
     return Response.json({ policy: serialize(row), traceId }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     if (error instanceof AuthenticationError) return Response.json({ error: "unauthorized", message: error.message, traceId }, { status: 401 });
@@ -44,6 +45,7 @@ export async function PATCH(request: Request) {
     await ensureSubjectProfile(env.PROJECTION_DB, subject.subjectReference);
     const current = await env.PROJECTION_DB.prepare("SELECT * FROM security_profiles WHERE subject_reference = ?").bind(subject.subjectReference).first<PolicyRow>();
     if (!current) throw new Error("Security profile was not initialized.");
+    if (!Number.isSafeInteger(current.policy_version) || current.policy_version < 1) throw new Error("Security policy version is unavailable.");
     const next = {
       accountLocked: input.accountLocked ?? Boolean(current.account_locked),
       enforceAddressBook: input.enforceAddressBook ?? Boolean(current.enforce_address_book),
@@ -60,12 +62,12 @@ export async function PATCH(request: Request) {
     }, next);
     if (relaxation.length) return Response.json({ error: "step_up_unavailable", traceId }, { status: 409, headers: { "Cache-Control": "no-store" } });
     const now = new Date().toISOString();
-    const result = await env.PROJECTION_DB.prepare(`UPDATE security_profiles SET account_locked = ?, enforce_address_book = ?, daily_limit_usd = ?, new_address_threshold_usd = ?, new_address_delay_seconds = ?, step_up_threshold_usd = ?, updated_at = ?
+    const result = await env.PROJECTION_DB.prepare(`UPDATE security_profiles SET account_locked = ?, enforce_address_book = ?, daily_limit_usd = ?, new_address_threshold_usd = ?, new_address_delay_seconds = ?, step_up_threshold_usd = ?, policy_version = policy_version + 1, updated_at = ?
       WHERE subject_reference = ? AND account_locked IS ? AND enforce_address_book IS ? AND daily_limit_usd IS ?
-        AND new_address_threshold_usd IS ? AND new_address_delay_seconds IS ? AND step_up_threshold_usd IS ?`)
+        AND new_address_threshold_usd IS ? AND new_address_delay_seconds IS ? AND step_up_threshold_usd IS ? AND policy_version IS ?`)
       .bind(next.accountLocked ? 1 : 0, next.enforceAddressBook ? 1 : 0, next.dailyLimitUsd, next.newAddressThresholdUsd, next.newAddressDelaySeconds, next.stepUpThresholdUsd, now,
         subject.subjectReference, current.account_locked, current.enforce_address_book, current.daily_limit_usd,
-        current.new_address_threshold_usd, current.new_address_delay_seconds, current.step_up_threshold_usd).run();
+        current.new_address_threshold_usd, current.new_address_delay_seconds, current.step_up_threshold_usd, current.policy_version).run();
     if (result.meta.changes !== 1) return Response.json({ error: "security_policy_changed", traceId }, { status: 409, headers: { "Cache-Control": "no-store" } });
     await Promise.all([
       writeAuditEvent(env.PROJECTION_DB, { subjectReference: subject.subjectReference, actorType: "customer", actorReference: subject.subjectReference, action: "security.policy.updated", targetType: "security_profile", targetReference: subject.subjectReference, evidence: { changedFields: Object.keys(input) }, occurredAt: now }),
@@ -73,7 +75,7 @@ export async function PATCH(request: Request) {
         VALUES (?, ?, ?, 'security_updated', '/app/security', ?, ?)`)
         .bind(crypto.randomUUID(), subject.subjectReference, subject.sessionReference, JSON.stringify({ changedFields: Object.keys(input) }), now).run()
     ]);
-    return Response.json({ policy: { ...next, newAddressDelayHours: next.newAddressDelaySeconds / 3600, updatedAt: now }, traceId });
+    return Response.json({ policy: { ...next, newAddressDelayHours: next.newAddressDelaySeconds / 3600, policyVersion: current.policy_version + 1, updatedAt: now }, traceId });
   } catch (error) {
     if (error instanceof AuthenticationError) return Response.json({ error: "unauthorized", message: error.message, traceId }, { status: 401 });
     if (error instanceof z.ZodError) return Response.json({ error: "invalid_security_policy", issues: error.issues, traceId }, { status: 400 });

@@ -25,13 +25,13 @@ export function SecurityCenter() {
   }
 
   const controls = [
-    { icon: Fingerprint, title: "Passkey Protection", note: passkeyReady ? "Enabled" : "Required for larger transfers", state: passkeyReady ? "Enabled" : "Set Up", action: () => showMfaEnrollmentModal() },
+    { icon: Fingerprint, title: "Account Passkey", note: passkeyReady ? "Added to your account" : "Add a passkey to your account", state: passkeyReady ? "Enabled" : "Set Up", action: () => showMfaEnrollmentModal() },
     { icon: KeyRound, title: "Account Recovery", note: "Review your recovery method", state: "Review", action: () => run("Recovery setup", () => setWalletRecovery()) },
     { icon: Download, title: "Wallet Export", note: "Export your wallet securely", state: "Available", action: () => wallet ? run("Wallet export", () => exportWallet({ address: wallet.address })) : undefined },
     { icon: MonitorSmartphone, title: "Current Session", note: `${user?.email?.address ?? user?.id ?? "Signed in"} · this browser`, state: "Active", action: undefined }
   ];
 
-  return <><div className="contentGrid"><section className="panel widePanel"><div className="panelHeading"><div><h2>Account Protection</h2></div><span className={`statusBadge ${passkeyReady ? "good" : "neutral"}`}><i /> {passkeyReady ? "Strong" : "Action Required"}</span></div>
+  return <><div className="contentGrid"><section className="panel widePanel"><div className="panelHeading"><div><h2>Account Protection</h2></div><span className={`statusBadge ${passkeyReady ? "good" : "neutral"}`}><i /> {passkeyReady ? "Passkey Added" : "Passkey Available"}</span></div>
     <div className="securityChecklist">{controls.map(({ icon: Icon, title, note, state, action }) => <div key={title}><span className={state === "Enabled" || state === "Active" ? "good" : "warn"}><Icon size={19} /></span><div><strong>{title}</strong><small>{note}</small></div>{action ? <button disabled={Boolean(working)} onClick={action}>{working && title.startsWith(working.split(" ")[0]) ? <LoaderCircle className="spin" size={14} /> : state}</button> : <b className="securityState"><Check size={14} /> {state}</b>}</div>)}</div>
     {message && <div className="securityMessage" role="status">{message}</div>}
   </section><aside className="panel connectionPanel"><h3>You Stay in Control</h3><div className="securityPrinciple"><ShieldCheck size={17} /><span><strong>You Approve Transfers</strong></span></div><div className="securityPrinciple"><KeyRound size={17} /><span><strong>Wallet Export Available</strong></span></div></aside></div><SecurityPolicyControls /></>;

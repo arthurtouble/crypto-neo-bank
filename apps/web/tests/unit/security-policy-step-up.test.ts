@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const state = vi.hoisted(() => ({ writes: [] as unknown[][], threshold: 10_000, locked: 0, allowlist: 0,
+const state = vi.hoisted(() => ({ writes: [] as unknown[][], threshold: 10_000, locked: 0, allowlist: 0, version: 4,
   daily: 25_000, newThreshold: 1_000, delay: 86_400, updateChanges: 1, lastUpdateSql: "" }));
 
 vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
@@ -11,7 +11,7 @@ vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
           if (sql.includes("FROM security_profiles")) return {
             account_locked: state.locked, enforce_address_book: state.allowlist, daily_limit_usd: state.daily,
             new_address_threshold_usd: state.newThreshold, new_address_delay_seconds: state.delay,
-            step_up_threshold_usd: state.threshold, updated_at: "2026-09-01T00:00:00Z"
+            step_up_threshold_usd: state.threshold, policy_version: state.version, updated_at: "2026-09-01T00:00:00Z"
           };
           return null;
         },
@@ -32,10 +32,27 @@ function request(stepUpThresholdUsd: number) {
   }));
 }
 
-beforeEach(() => { state.writes.length = 0; state.threshold = 10_000; state.locked = 0; state.allowlist = 0;
+beforeEach(() => { state.writes.length = 0; state.threshold = 10_000; state.locked = 0; state.allowlist = 0; state.version = 4;
   state.daily = 25_000; state.newThreshold = 1_000; state.delay = 86_400; state.updateChanges = 1; state.lastUpdateSql = ""; });
 
 describe("security policy step-up floor", () => {
+  it("increments the policy version on a tightening update and checks the version in the CAS", async () => {
+    const response = await PATCH(new Request("https://aurel.test/api/security/policy", {
+      method: "PATCH", body: JSON.stringify({ dailyLimitUsd: 20_000 })
+    }));
+    expect(response.status).toBe(200);
+    expect((await response.json() as { policy: { policyVersion: number } }).policy.policyVersion).toBe(5);
+    expect(state.lastUpdateSql).toContain("policy_version = policy_version + 1");
+    expect(state.lastUpdateSql).toContain("AND policy_version IS ?");
+    expect(state.writes[0].at(-1)).toBe(4);
+  });
+
+  it("does not present a policy without a valid version as current", async () => {
+    state.version = Number.NaN;
+    const response = await GET(new Request("https://aurel.test/api/security/policy"));
+    expect(response.status).toBe(503);
+  });
+
   it("rejects a request to raise the step-up threshold above 10k without writing", async () => {
     const response = await request(10_001);
     expect(response.status).toBe(400);

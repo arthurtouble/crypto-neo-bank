@@ -29,7 +29,7 @@ Privy supplies authentication and embedded-wallet infrastructure. Customers may 
 
 ### Policy layer
 
-Aurel evaluates product controls before it prepares a supported action. Examples include account lock, allowlisted networks and assets, saved-destination rules, cooling periods, rolling limits, high-value review, and passkey step-up.
+Aurel evaluates product controls before it prepares a supported action. Examples include account lock, allowlisted networks and assets, saved-destination rules, cooling periods, rolling limits, and high-value review. Actions that require transaction-specific approval remain unavailable until Aurel can verify that approval for the exact instruction.
 
 The policy layer can refuse to prepare an action inside Aurel. It cannot stop a customer from using an exported wallet or another application.
 
@@ -62,4 +62,3 @@ An abstraction is useful only when it preserves meaningful differences. A bank t
 Aurel fails closed when a required security or eligibility fact is missing. It should not prepare a tokenized-market action without current eligibility data, treat an unknown transaction value as below a step-up threshold, or mark a routed transfer complete only because the source transaction succeeded.
 
 When a dependency is unavailable, the product should show the affected feature as unavailable and leave unaffected areas usable. See [Reliability and recovery](/operations/reliability-and-recovery/) for the operating model.
-

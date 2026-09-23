@@ -7,7 +7,7 @@ Aurel's threat model starts with outcomes, not security slogans. The most import
 
 ## Account takeover
 
-An attacker may compromise email, a social account, a device, a session, or recovery method. Aurel relies on Privy for identity and wallet infrastructure, verifies access tokens on the server, and requires stronger authentication for higher-risk preparation.
+An attacker may compromise email, a social account, a device, a session, or recovery method. Aurel relies on Privy for identity and wallet infrastructure and verifies access tokens on the server. Actions needing transaction-specific approval stay on hold until Aurel can verify that approval for the exact instruction.
 
 Customers still need secure devices and recovery methods. Passkeys reduce phishing exposure but do not make a compromised session or device harmless.
 
@@ -58,4 +58,3 @@ An AI assistant can hallucinate, misread context, or be manipulated by untrusted
 ## Outside the boundary
 
 Aurel cannot enforce its controls after a customer exports a wallet or uses another application. It cannot reverse confirmed blockchain transactions, prevent every phishing attack, guarantee a protocol, or recover a secret it never possessed.
-
