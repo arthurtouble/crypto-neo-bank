@@ -8,6 +8,14 @@ const MAX_TOKENS_PER_CHAIN = 50_000;
 const MAX_RESPONSE_BYTES = 4_000_000;
 const MAX_CACHE_BYTES = 8_000_000;
 const NATIVE_ADDRESSES = new Set(["0x0000000000000000000000000000000000000000", "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"]);
+const REVIEWED_BASE_ASSETS: readonly CatalogAsset[] = [
+  { id: "8453:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", chainId: 8453,
+    address: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", symbol: "USDC", name: "USD Coin",
+    decimals: 6, logoUrl: null, verification: "verified", eligibility: "eligible" },
+  { id: "8453:0x4200000000000000000000000000000000000006", chainId: 8453,
+    address: "0x4200000000000000000000000000000000000006", symbol: "WETH", name: "Wrapped Ether",
+    decimals: 18, logoUrl: null, verification: "verified", eligibility: "eligible" }
+];
 const tokenSchema = z.object({
   address: z.string(),
   symbol: z.string().trim().min(1).max(32),
@@ -72,8 +80,8 @@ export function createCatalogCache(maxBytes = MAX_CACHE_BYTES): CatalogCache {
 const defaultCache = createCatalogCache();
 
 export class CatalogUnavailableError extends Error {
-  constructor(readonly code: "provider_unavailable" | "stale_cursor" | "invalid_cursor" | "capacity_exceeded") {
-    super(code === "provider_unavailable" || code === "capacity_exceeded"
+  constructor(readonly code: "provider_unavailable" | "provider_unreachable" | "stale_cursor" | "invalid_cursor" | "capacity_exceeded") {
+    super(code === "provider_unavailable" || code === "provider_unreachable" || code === "capacity_exceeded"
       ? "The live asset catalog is unavailable."
       : "The asset search changed. Search again.");
     this.name = "CatalogUnavailableError";
@@ -111,7 +119,7 @@ async function fetchSnapshot(chainId: number, fetcher: typeof fetch, now: number
       headers: process.env.LIFI_API_KEY ? { "x-lifi-api-key": process.env.LIFI_API_KEY } : undefined,
       signal: AbortSignal.timeout(12_000)
     });
-  } catch { throw new CatalogUnavailableError("provider_unavailable"); }
+  } catch { throw new CatalogUnavailableError("provider_unreachable"); }
   const declaredLength = Number(response.headers.get("content-length") ?? 0);
   if (!response.ok || !Number.isFinite(declaredLength) || declaredLength > MAX_RESPONSE_BYTES || !response.body) {
     await response.body?.cancel().catch(() => undefined);
@@ -215,7 +223,7 @@ function insertCandidate(candidates: Array<{ asset: CatalogAsset; key: SortKey }
 export async function getCatalogPage(
   input: { query: string; cursor?: string; chainIds: readonly number[] },
   dependencies: Dependencies = {}
-): Promise<{ assets: CatalogAsset[]; nextCursor: string | null; observedAt: string; source: "LI.FI" }> {
+): Promise<{ assets: CatalogAsset[]; nextCursor: string | null; observedAt: string; source: "LI.FI" | "Aurel reviewed" }> {
   const fetcher = dependencies.fetcher ?? fetch;
   const now = (dependencies.now ?? Date.now)();
   const registry = dependencies.registry ?? CATALOG_REGISTRY;
@@ -229,7 +237,18 @@ export async function getCatalogPage(
   const observedTimes: string[] = [];
   const snapshotVersions: string[] = [];
   const candidates: Array<{ asset: CatalogAsset; key: SortKey }> = [];
-  const snapshots = await Promise.all(chainIds.map((chainId) => snapshot(chainId, fetcher, cache, now, Boolean(cursor))));
+  let snapshots: Snapshot[];
+  try { snapshots = await Promise.all(chainIds.map((chainId) => snapshot(chainId, fetcher, cache, now, Boolean(cursor)))); }
+  catch (error) {
+    if (!(error instanceof CatalogUnavailableError) || error.code !== "provider_unreachable"
+      || cursor || !chainIds.includes(8453)) throw error;
+    const assets = REVIEWED_BASE_ASSETS.filter((asset) => {
+      const screening = screenAsset(asset, registry);
+      return screening === "verified" && (!query || asset.symbol.toLowerCase().includes(query)
+        || asset.name.toLowerCase().includes(query) || asset.address?.includes(query));
+    });
+    return { assets, nextCursor: null, observedAt: new Date(now).toISOString(), source: "Aurel reviewed" };
+  }
   for (const current of snapshots) {
     observedTimes.push(current.observedAt);
     snapshotVersions.push(current.version);
@@ -257,7 +276,13 @@ export async function resolveCatalogAsset(id: AssetId, dependencies: Dependencie
   if (!parsed) return null;
   const fetcher = dependencies.fetcher ?? fetch;
   const cache = dependencies.cache ?? (dependencies.fetcher ? createCatalogCache() : defaultCache);
-  const current = await snapshot(parsed.chainId, fetcher, cache, (dependencies.now ?? Date.now)(), false);
+  let current: Snapshot;
+  try { current = await snapshot(parsed.chainId, fetcher, cache, (dependencies.now ?? Date.now)(), false); }
+  catch (error) {
+    const reviewed = REVIEWED_BASE_ASSETS.find((asset) => asset.id === id);
+    if (!(error instanceof CatalogUnavailableError) || error.code !== "provider_unreachable" || !reviewed) throw error;
+    return screenAsset(reviewed, dependencies.registry ?? CATALOG_REGISTRY) === "verified" ? reviewed : null;
+  }
   const item = current.assets.find((asset) => asset.id === id);
   if (!item) return null;
   const screening = screenAsset(item, dependencies.registry ?? CATALOG_REGISTRY);

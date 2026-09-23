@@ -193,7 +193,9 @@ describe("LI.FI catalog", () => {
     expect((await getCatalogPage({ query: "", chainIds: [8453] }, dependencies)).assets).toHaveLength(1);
     time += 301_000;
     offline = true;
-    await expect(getCatalogPage({ query: "", chainIds: [8453] }, dependencies)).rejects.toBeInstanceOf(CatalogUnavailableError);
+    const fallback = await getCatalogPage({ query: "", chainIds: [8453] }, dependencies);
+    expect(fallback.source).toBe("Aurel reviewed");
+    expect(fallback.assets.map((asset) => asset.symbol)).toEqual(["USDC"]);
   });
 
   it("resolves exact supported contracts only and never treats a matching symbol as support", async () => {
@@ -202,6 +204,20 @@ describe("LI.FI catalog", () => {
     expect((await resolveCatalogAsset(assetId(8453, USDC), dependencies))?.id).toBe(assetId(8453, USDC));
     expect(await resolveCatalogAsset(assetId(8453, LOOKALIKE), dependencies)).toBeNull();
     expect(await resolveCatalogAsset("8453:0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", dependencies)).toBeNull();
+  });
+
+  it("keeps the reviewed Base pair available when LI.FI metadata is down", async () => {
+    const offline: typeof fetch = async () => { throw new Error("offline"); };
+    const dependencies = { fetcher: offline, cache: createCatalogCache() };
+    expect(await resolveCatalogAsset("8453:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", dependencies)).toMatchObject({ symbol: "USDC", decimals: 6, verification: "verified" });
+    expect(await resolveCatalogAsset("8453:0x4200000000000000000000000000000000000006", dependencies)).toMatchObject({ symbol: "WETH", decimals: 18, verification: "verified" });
+    await expect(resolveCatalogAsset(assetId(8453, LOOKALIKE), dependencies)).rejects.toBeInstanceOf(CatalogUnavailableError);
+    const page = await getCatalogPage({ query: "USDC", chainIds: [8453] }, dependencies);
+    expect(page.assets.map((asset) => asset.symbol)).toEqual(["USDC"]);
+    expect(page.source).toBe("Aurel reviewed");
+    const allNetworks = await getCatalogPage({ query: "", chainIds: [1, 10, 137, 8453, 42161] }, dependencies);
+    expect(allNetworks.assets.map((asset) => asset.symbol)).toEqual(["USDC", "WETH"]);
+    expect(allNetworks.source).toBe("Aurel reviewed");
   });
 
   it("rejects unsupported chains and oversized queries", async () => {

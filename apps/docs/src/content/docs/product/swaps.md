@@ -13,6 +13,8 @@ Markets prices and Swap routes come from different sources. A market opens Swap 
 
 Markets search checks the full USD market list returned by its price source before paging results; it is not limited to the page already on screen. This list and the LI.FI Swap catalog are different universes, so appearing in Markets does not guarantee a route.
 
+If live asset search cannot connect, Swap shows only the reviewed Base USDC and WETH contracts and labels the list as limited. Other assets do not become available from cached names or symbols. A live route is still required before you can trade.
+
 ## Review a route
 
 Enter the amount, choose a slippage limit, and select **Find Route**. When a route is available, Aurel shows the minimum received, estimated fees and price impact when available, and whether the route crosses networks. Quotes expire quickly. If one expires, find a new route before continuing. A missing estimate is shown as unavailable, not zero.
