@@ -20,6 +20,7 @@ const state = vi.hoisted(() => ({
   intentUpdateAllowed: true,
   cancelBeforeClaim: false,
   terminalAuditFails: false,
+  preparationEventFails: false,
   intent: null as null | Record<string, unknown>,
   prepared: new Map<number, Record<string, unknown>>(),
   events: [] as string[],
@@ -28,6 +29,21 @@ const state = vi.hoisted(() => ({
 
 vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
   async batch(statements: Array<{ query: string; run?: () => Promise<{ meta: { changes: number } }> }>) {
+    if (statements[0]?.query.includes("INSERT INTO intent_prepared_calls")) {
+      const prepared = new Map(state.prepared);
+      const events = [...state.events];
+      const valuations = [...state.valuations];
+      try {
+        const inserted = await statements[0].run?.() ?? { meta: { changes: 0 } };
+        if (inserted.meta.changes !== 1) return [inserted, { meta: { changes: 0 } }, { meta: { changes: 0 } }];
+        return [inserted, await statements[1].run!(), await statements[2].run!()];
+      } catch (error) {
+        state.prepared = prepared;
+        state.events = events;
+        state.valuations = valuations;
+        throw error;
+      }
+    }
     if (statements[0]?.query.includes("UPDATE transaction_intents") && statements[0].query.includes("status = 'reviewed'")) {
       const previousStatus = state.intent?.status;
       const changed = await statements[0].run?.();
@@ -65,7 +81,10 @@ vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
             state.prepared.set(step, { intent_id: args[12], step_index: step, subject_reference: args[13], wallet_address: args[1], chain_id: args[2], target_address: args[3], native_value: args[4], calldata_hash: args[5], call_fingerprint: args[6], semantic_action: args[7], source_reference: args[8], expected_effect_json: args[9], expires_at: state.intent.expires_at, verification_state: "prepared", reported_hash: null });
             return { meta: { changes: 1 } };
           }
-          if (query.includes("INSERT INTO intent_events")) { state.events.push(String(args[3])); return { meta: { changes: 1 } }; }
+          if (query.includes("INSERT INTO intent_events")) {
+            if (state.preparationEventFails && query.includes("call_prepared")) throw new Error("preparation event unavailable");
+            state.events.push(String(args[3])); return { meta: { changes: 1 } };
+          }
           if (query.includes("INSERT INTO operational_issues")) { state.issues.push(String(args[0])); return { meta: { changes: 1 } }; }
           if (query.includes("UPDATE intent_prepared_calls")) {
             if (query.includes("SET reported_hash") && state.cancelBeforeClaim) state.intent!.status = "cancelled";
@@ -232,7 +251,7 @@ describe("intent preparation route", () => {
   async function request(body: unknown) { return prepare(new Request("https://aurel.test/api/intents/prepare", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })); }
 
   beforeEach(() => {
-    state.subject = "subject-a"; state.walletLinked = true; state.betaAllowed = true; state.featureAllowed = true; state.accountLocked = false; state.dailyLimitUsd = 25_000; state.stepUpThresholdUsd = 10_000; state.spentTodayUsd = 0; state.spentMissing = false; state.atomicReservationExceeded = false; state.lastInsert = null; state.valuationFails = false; state.valuationCents = "1"; state.valuations.length = 0; state.addressBook = []; state.intentUpdateAllowed = true; state.prepared.clear(); state.events.length = 0; state.issues.length = 0;
+    state.subject = "subject-a"; state.walletLinked = true; state.betaAllowed = true; state.featureAllowed = true; state.accountLocked = false; state.dailyLimitUsd = 25_000; state.stepUpThresholdUsd = 10_000; state.spentTodayUsd = 0; state.spentMissing = false; state.atomicReservationExceeded = false; state.lastInsert = null; state.valuationFails = false; state.valuationCents = "1"; state.valuations.length = 0; state.addressBook = []; state.intentUpdateAllowed = true; state.preparationEventFails = false; state.prepared.clear(); state.events.length = 0; state.issues.length = 0;
     state.intent = { intent_id: intentId, subject_reference: "subject-a", intent_type: "transfer", chain_id: 8453, wallet_reference: `wallet:${sender.toLowerCase()}`, request_json: JSON.stringify({ type: "transfer", chainId: 8453, destination: recipient, asset: "ETH", amount: "0.0000000000000001", estimatedUsd: 20 }), policy_result_json: JSON.stringify({ permitted: true }), status: "reviewed", expires_at: new Date(Date.now() + 60_000).toISOString() };
   });
 
@@ -245,10 +264,20 @@ describe("intent preparation route", () => {
     expect((await request(payload)).status).toBe(409);
   });
 
+  it("does not retain a prepared call if its event cannot be persisted", async () => {
+    state.preparationEventFails = true;
+    expect((await request(payload)).status).toBe(503);
+    expect(state.prepared.size).toBe(0);
+    expect(state.events).toHaveLength(0);
+    expect(state.valuations).toHaveLength(0);
+  });
+
   it("refuses preparation when another request reserves the remaining daily limit before the atomic write", async () => {
     state.atomicReservationExceeded = true;
     expect((await request(payload)).status).toBe(409);
     expect(state.prepared.size).toBe(0);
+    expect(state.events).toHaveLength(0);
+    expect(state.valuations).toHaveLength(0);
   });
 
   it("enforces the reservation cap in SQLite's conditional INSERT, including another prepared intent", async () => {

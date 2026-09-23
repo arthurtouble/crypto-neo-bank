@@ -140,12 +140,8 @@ export async function POST(request: Request) {
     if (intent.wallet_reference !== `wallet:${ownedAddress}` || input.call.chainId !== intent.chain_id) return reply({ error: "call_not_reviewed", traceId }, 409);
     const effect = validatePreparedAction({ ...input, intentType: intent.intent_type, reviewedDestination: reviewed.destination, reviewedAsset: reviewed.asset, reviewedAmount: reviewed.amount });
     const call = await normalizePreparedCall(input.call);
-    await env.PROJECTION_DB.prepare(`INSERT INTO intent_valuations
-      (valuation_id, intent_id, asset_id, raw_units, decimals, price_usd, market_price_usd, price_source, price_observed_at, valued_at, usd_cents, policy_version, depeg_uncertainty)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(crypto.randomUUID(), input.intentId, valuation.assetId, valuation.rawUnits,
-        valuation.decimals, valuation.priceUsd, valuation.marketPriceUsd, valuation.priceSource, valuation.priceObservedAt,
-        valuation.valuedAt, valuation.usdCents, valuation.policyVersion, Number(valuation.depegUncertainty)).run();
-    const result = await env.PROJECTION_DB.prepare(`INSERT INTO intent_prepared_calls
+    const [result] = await env.PROJECTION_DB.batch([
+      env.PROJECTION_DB.prepare(`INSERT INTO intent_prepared_calls
       (intent_id, step_index, subject_reference, wallet_address, chain_id, target_address, native_value, calldata_hash, call_fingerprint, semantic_action, source_reference, expires_at, expected_effect_json, verification_state, created_at, submission_phase)
       SELECT i.intent_id, ?, i.subject_reference, ?, ?, ?, ?, ?, ?, ?, ?, i.expires_at, ?, 'prepared', ?, 'legacy'
       FROM transaction_intents i WHERE i.intent_id = ? AND i.subject_reference = ? AND i.status = 'reviewed' AND i.expires_at > ?
@@ -165,10 +161,18 @@ export async function POST(request: Request) {
                 AND reserved_call.expires_at > ? AND reserved_call.verification_state != 'failed'))
         ) reserved_spend WHERE reserved_spend.missing = 0 AND reserved_spend.cents + ? <= ?)`)
       .bind(input.stepIndex, ownedAddress, call.chainId, call.to.toLowerCase(), call.value, call.dataHash, call.fingerprint, input.semanticAction, input.sourceReference, JSON.stringify(effect), now, input.intentId, subject.subjectReference, now, input.stepIndex, input.stepIndex, input.stepIndex - 1,
-        subject.subjectReference, input.intentId, rollingStart, rollingStart, now, valuedCents, dailyLimitCents).run();
+        subject.subjectReference, input.intentId, rollingStart, rollingStart, now, valuedCents, dailyLimitCents),
+      env.PROJECTION_DB.prepare(`INSERT INTO intent_events (event_id, intent_id, subject_reference, event_type, evidence_json, occurred_at)
+        SELECT ?, ?, ?, 'call_prepared', ?, ? WHERE changes() = 1`)
+        .bind(crypto.randomUUID(), input.intentId, subject.subjectReference, JSON.stringify({ stepIndex: input.stepIndex, fingerprint: call.fingerprint, semanticAction: input.semanticAction }), now),
+      env.PROJECTION_DB.prepare(`INSERT INTO intent_valuations
+        (valuation_id, intent_id, asset_id, raw_units, decimals, price_usd, market_price_usd, price_source, price_observed_at, valued_at, usd_cents, policy_version, depeg_uncertainty)
+        SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? WHERE changes() = 1`)
+        .bind(crypto.randomUUID(), input.intentId, valuation.assetId, valuation.rawUnits,
+          valuation.decimals, valuation.priceUsd, valuation.marketPriceUsd, valuation.priceSource, valuation.priceObservedAt,
+          valuation.valuedAt, valuation.usdCents, valuation.policyVersion, Number(valuation.depegUncertainty))
+    ]);
     if (result.meta.changes !== 1) return reply({ error: "prepare_conflict", traceId }, 409);
-    await env.PROJECTION_DB.prepare(`INSERT INTO intent_events (event_id, intent_id, subject_reference, event_type, evidence_json, occurred_at)
-      VALUES (?, ?, ?, 'call_prepared', ?, ?)`).bind(crypto.randomUUID(), input.intentId, subject.subjectReference, JSON.stringify({ stepIndex: input.stepIndex, fingerprint: call.fingerprint, semanticAction: input.semanticAction }), now).run();
     return reply({ intentId: input.intentId, stepIndex: input.stepIndex, fingerprint: call.fingerprint, expiresAt: intent.expires_at, traceId }, 201);
   } catch (error) {
     if (error instanceof AuthenticationError) return reply({ error: "unauthorized", traceId }, 401);
