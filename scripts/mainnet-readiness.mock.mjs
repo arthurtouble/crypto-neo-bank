@@ -46,16 +46,17 @@ globalThis.fetch = async (input, init = {}) => {
   const result = body.method === "eth_chainId" ? `0x${chainId.toString(16)}`
     : body.method === "eth_getCode" ? missingAddress === address || process.env.AUREL_TEST_MISSING_LIFI_FACET_CODE && address === lifi.facet
       ? "0x" : process.env.AUREL_TEST_MALFORMED_CODE && address === baseContracts.pool ? "0x0" : "0x6000"
-    : body.method === "eth_call" ? `0x${(body.params[0].data === lifiFacetCall
+    : body.method === "eth_call" ? `0x${process.env.AUREL_TEST_MALFORMED_LIFI_FACET && body.params[0].data === lifiFacetCall ? "ff".repeat(12) : "00".repeat(12)}${(body.params[0].data === lifiFacetCall
       ? process.env.AUREL_TEST_BAD_LIFI_FACET ? "0x2222222222222222222222222222222222222222" : lifi.facet
-      : returnedAddress[body.params[0].data]).slice(2).toLowerCase().padStart(64, "0")}` : null;
+      : returnedAddress[body.params[0].data]).slice(2).toLowerCase()}` : null;
   return Response.json({ jsonrpc: "2.0", id: body.id, result });
 };
 
 process.on("beforeExit", () => {
   if (process.env.AUREL_TEST_BAD_POOL || process.env.AUREL_TEST_BAD_ORACLE || process.env.AUREL_TEST_BAD_DATA_PROVIDER
     || process.env.AUREL_TEST_MISSING_CODE || process.env.AUREL_TEST_MALFORMED_CODE
-    || process.env.AUREL_TEST_BAD_LIFI_FACET || process.env.AUREL_TEST_MISSING_LIFI_FACET_CODE) return;
+    || process.env.AUREL_TEST_BAD_LIFI_FACET || process.env.AUREL_TEST_MISSING_LIFI_FACET_CODE
+    || process.env.AUREL_TEST_MALFORMED_LIFI_FACET) return;
   for (const address of Object.values(baseContracts)) if (!observed.has(`code:${address}`)) throw new Error(`Missing Aave code check: ${address}`);
   for (const address of Object.values(lifi)) if (!observed.has(`code:${address}`)) throw new Error(`Missing LI.FI code check: ${address}`);
   if (!observed.has(lifiFacetCall)) throw new Error("Missing LI.FI mounted facet check.");

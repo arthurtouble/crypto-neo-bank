@@ -23,6 +23,12 @@ async function rpc(chain, method, params = []) {
   return payload.result;
 }
 
+function addressWord(result, label) {
+  if (typeof result !== "string" || !/^0x0{24}[0-9a-f]{40}$/i.test(result))
+    throw new Error(`${label} returned an invalid address word.`);
+  return `0x${result.slice(-40)}`;
+}
+
 async function checkChain(chain) {
   const returnedId = Number.parseInt(await rpc(chain, "eth_chainId"), 16);
   if (returnedId !== chain.id) throw new Error(`${chain.name} returned chain ${returnedId}; expected ${chain.id}`);
@@ -64,8 +70,7 @@ async function checkLifiBaseFacet() {
   // DiamondLoupeFacet.facetAddress(bytes4), queried rather than inferred from the manifest.
   const data = `0xcdffacc6${selector.padEnd(64, "0")}`;
   const result = await rpc(chain, "eth_call", [{ to: diamond, data }, "latest"]);
-  if (typeof result !== "string" || !/^0x[0-9a-f]{64}$/i.test(result)) throw new Error("LI.FI Base returned an invalid mounted facet.");
-  const active = `0x${result.slice(-40)}`;
+  const active = addressWord(result, "LI.FI Base mounted facet");
   if (active.toLowerCase() !== facet.toLowerCase()) throw new Error(`LI.FI Base swap facet differs from reviewed deployment: ${active}`);
   return "LI.FI Base: mounted swap facet matches reviewed deployment; deployed code at Diamond and facet";
 }
@@ -92,8 +97,7 @@ async function checkAaveBase() {
     ["data provider", "0xe860accb", AAVE_BASE_PROTOCOL.dataProvider]
   ]) {
     const result = await rpc(chain, "eth_call", [{ to: AAVE_BASE_PROTOCOL.provider, data: selector }, "latest"]);
-    if (typeof result !== "string" || !/^0x[0-9a-f]{64}$/i.test(result)) throw new Error(`Aave Base address provider returned an invalid ${name}.`);
-    const active = `0x${result.slice(-40)}`;
+    const active = addressWord(result, `Aave Base address provider ${name}`);
     if (active.toLowerCase() !== expected.toLowerCase()) throw new Error(`Aave Base ${name} differs from governed address: ${active}`);
   }
   return "Aave Base: active Pool, oracle, and data provider match governed addresses; deployed code at provider, Pool, oracle, data provider, USDC, and WETH";

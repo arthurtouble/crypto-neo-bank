@@ -53,6 +53,12 @@ test("readiness fails closed when the LI.FI selector maps to another facet", () 
   assert.match(result.stderr, /FAIL  LI.FI Base swap facet differs/);
 });
 
+test("readiness rejects a LI.FI facet word with nonzero ABI address padding", () => {
+  const result = run({ AUREL_TEST_MALFORMED_LIFI_FACET: "1" });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /FAIL  LI.FI Base mounted facet returned an invalid address word/);
+});
+
 test("readiness fails closed when the mounted LI.FI facet has no code", () => {
   const result = run({ AUREL_TEST_MISSING_LIFI_FACET_CODE: "1" });
   assert.equal(result.status, 1);

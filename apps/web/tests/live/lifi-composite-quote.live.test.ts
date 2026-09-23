@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createLifiQuoteAdapter } from "@/lib/swap/lifi";
+import { inspectLifiDiamondSwap } from "@/lib/swap/lifi-diamond-inspection";
 import type { CatalogAsset } from "@/lib/swap/assets";
 
 const diamond = "0x1231deb6f5749ef6ce6943a275a1d3e7486f4eae";
@@ -23,5 +24,9 @@ describe.skipIf(process.env.AUREL_LIVE_READONLY !== "1")("LI.FI Base composite q
     expect(result.quote).not.toHaveProperty("sourceCall");
     expect(result.plan.routeSteps.map((step) => step.type)).toEqual(["protocol", "swap"]);
     expect(result.plan.sourceCall.to).toBe(diamond);
+    const decoded = inspectLifiDiamondSwap({ data: result.plan.sourceCall.data,
+      receiver: wallet, minimumOutputRaw: result.plan.toAmountMinRaw });
+    expect(decoded.swaps.length).toBeGreaterThan(0);
+    expect(decoded.swaps.every((swap) => swap.callData.length >= 10)).toBe(true);
   }, 20_000);
 });
