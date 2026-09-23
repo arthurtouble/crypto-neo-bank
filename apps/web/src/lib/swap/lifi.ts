@@ -23,6 +23,14 @@ const actionSchema = z.object({
   fromAmount: z.string().regex(/^\d+$/), fromAddress: z.string(), toAddress: z.string(),
   slippage: z.number().finite().min(0).max(1)
 }).strict();
+const nestedActionSchema = actionSchema.extend({
+  jitoBundle: z.boolean().optional(), integratorId: z.string().max(80).optional(),
+  integratorFees: z.object({ feePercent: z.number().finite().min(0).max(1) }).passthrough().optional()
+});
+const nestedEstimateSchema = z.object({
+  fromAmount: z.string().regex(/^\d+$/), toAmount: z.string().regex(/^\d+$/),
+  toAmountMin: z.string().regex(/^\d+$/), feeCosts: z.array(costSchema).optional()
+}).partial().passthrough();
 const providerQuoteSchema = z.object({
   id: z.string().min(1).max(200),
   type: z.enum(["swap", "cross", "lifi"]).optional(),
@@ -44,8 +52,8 @@ const providerQuoteSchema = z.object({
     maxFeePerGas: z.string().optional(), maxPriorityFeePerGas: z.string().optional()
   }).strict(),
   includedSteps: z.array(z.object({
-    id: z.string().min(1).max(200), type: z.enum(["swap", "cross"]), tool: z.string().min(1).max(80),
-    action: actionSchema.optional()
+    id: z.string().min(1).max(200), type: z.enum(["swap", "cross", "protocol"]), tool: z.string().min(1).max(80),
+    action: nestedActionSchema.optional(), estimate: nestedEstimateSchema.optional()
   }).passthrough()).max(8).optional(),
   expiresAt: z.string().datetime().optional()
 });
@@ -62,11 +70,14 @@ export type ServerHeldLifiPlan = {
   fromAssetId: string; toAssetId: string; fromChainId: number; toChainId: number;
   fromAmountRaw: string; toAmountMinRaw: string; recipient: string; slippageBps: number;
   quoteId: string; stepId: string; toolId: string; approvalSpender: string | null;
-  routeSteps: Array<{ id: string; type: "swap" | "cross"; tool: string }>;
+  routeSteps: Array<{ id: string; type: "swap" | "cross" | "protocol"; tool: string;
+    fromAssetId?: string; toAssetId?: string; fromAmountRaw?: string; toAmountRaw?: string; toAmountMinRaw?: string;
+    slippage?: number; integratorFeePercent?: number }>;
   economics: { fromAmountUsd: string | null; toAmountUsd: string | null; toAmountRaw: string;
     networkFeeUsd: number | null; providerFeeUsd: number | null; totalFeeUsd: number | null;
     priceImpactPercent: number | null; feeCosts: Array<Pick<z.infer<typeof costSchema>, "name" | "amount" | "amountUSD" | "percentage" | "included" | "token">> | null };
-  sourceCall: { chainId: number; from: string; to: string; value: string; data: string };
+  sourceCall: { chainId: number; from: string; to: string; value: string; data: string;
+    providerGasLimit?: string; providerGasPrice?: string };
   routePolicyVersion: string; catalogVersion: string; observedAt: string; expiresAt: string; fingerprint: string;
 };
 
@@ -138,6 +149,11 @@ function matchesProviderToken(token: z.infer<typeof tokenSchema>, asset: Catalog
   }
 }
 
+function providerTokenId(token: z.infer<typeof tokenSchema>): string | null {
+  try { return assetId(token.chainId, NATIVE_SENTINELS.has(token.address.toLowerCase()) ? null : token.address); }
+  catch { return null; }
+}
+
 function optionalUsdTotal(costs: Array<{ amountUSD?: string }> | undefined): number | null {
   if (!costs) return null;
   let total = 0;
@@ -177,6 +193,21 @@ function unsignedTransactionValue(value: string): bigint | null {
   }
 }
 
+function containsNestedExecution(value: unknown): boolean {
+  const pending = [value];
+  let inspected = 0;
+  while (pending.length) {
+    if (++inspected > 2_000) return true;
+    const item = pending.pop();
+    if (!item || typeof item !== "object") continue;
+    for (const [key, child] of Object.entries(item)) {
+      if (/call|transactionrequest|includedsteps|permit/i.test(key)) return true;
+      if (child && typeof child === "object") pending.push(child);
+    }
+  }
+  return false;
+}
+
 async function sha256(value: string): Promise<`0x${string}`> {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
   return `0x${Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("")}`;
@@ -193,23 +224,75 @@ async function validateQuote(
   const parsed = providerQuoteSchema.safeParse(value);
   if (!parsed.success) return null;
   const quote = parsed.data;
+  let target: string;
+  try { target = getAddress(quote.transactionRequest.to).toLowerCase(); } catch { return null; }
   if ((quote.type === "swap" && assets.from.chainId !== assets.to.chainId)
     || (quote.type === "cross" && assets.from.chainId === assets.to.chainId)) return null;
-  if (quote.type === "lifi" && (!quote.includedSteps?.length || quote.includedSteps.some((step) => !step.action))) return null;
+  if (quote.type === "lifi" && (assets.from.chainId !== assets.to.chainId || !quote.includedSteps?.length
+    || quote.includedSteps.length !== 2 || quote.includedSteps[0].type !== "protocol"
+    || quote.includedSteps[1].type !== "swap"
+    || quote.includedSteps.some((step) => !step.action || !step.estimate))) return null;
   if (!policy.allowedTools.has(quote.tool.toLowerCase())) return null;
   if (!(assets.from.chainId === assets.to.chainId ? policy.allowedExchanges : policy.allowedBridges).has(quote.tool.toLowerCase())) return null;
-  const routeSteps = (quote.includedSteps ?? []).map(({ id, type, tool }) => ({ id, type, tool }));
+  const routeSteps: ServerHeldLifiPlan["routeSteps"] = [];
+  let cursorAssetId = assets.from.id as string;
+  let cursorDecimals = assets.from.decimals;
+  let cursorAmount = rawAmount;
   for (const step of quote.includedSteps ?? []) {
-    if (Object.keys(step).some((key) => /call|transactionRequest|includedSteps/i.test(key))) return null;
-    if (!policy.allowedTools.has(step.tool.toLowerCase())
-      || !(step.type === "swap" ? policy.allowedExchanges : policy.allowedBridges).has(step.tool.toLowerCase())) return null;
+    if (containsNestedExecution(step)) return null;
+    if (step.type === "protocol" && quote.type !== "lifi") return null;
+    const stepTool = step.tool.toLowerCase();
+    if (!policy.allowedTools.has(stepTool)
+      || (step.type === "protocol" ? stepTool !== "feecollection"
+        : !(step.type === "swap" ? policy.allowedExchanges : policy.allowedBridges).has(stepTool))) return null;
     if (step.action) {
       try {
-        if (getAddress(step.action.fromAddress) !== getAddress(input.fromAddress)
-          || getAddress(step.action.toAddress) !== getAddress(input.fromAddress)) return null;
+        const expectedAddress = quote.type === "lifi" ? target : getAddress(input.fromAddress);
+        if (getAddress(step.action.fromAddress).toLowerCase() !== expectedAddress.toLowerCase()
+          || getAddress(step.action.toAddress).toLowerCase() !== expectedAddress.toLowerCase()) return null;
       } catch { return null; }
     }
+    if (quote.type === "lifi") {
+      const action = step.action!;
+      const estimate = step.estimate!;
+      if (!estimate.fromAmount || !estimate.toAmount || !estimate.toAmountMin) return null;
+      const fromId = providerTokenId(action.fromToken);
+      const toId = providerTokenId(action.toToken);
+      if (!fromId || !toId || fromId !== cursorAssetId || action.fromChainId !== assets.from.chainId
+        || action.toChainId !== assets.to.chainId || action.slippage > input.slippageBps / 10_000 + Number.EPSILON
+        || action.fromToken.chainId !== action.fromChainId || action.toToken.chainId !== action.toChainId
+        || action.fromToken.decimals !== cursorDecimals || action.toToken.decimals < 0 || action.toToken.decimals > 36
+        || BigInt(action.fromAmount) !== cursorAmount
+        || BigInt(estimate.fromAmount) !== cursorAmount) return null;
+      const output = BigInt(estimate.toAmount);
+      const minimum = BigInt(estimate.toAmountMin);
+      if (output <= 0n || minimum <= 0n || minimum > output) return null;
+      if (step.type === "protocol") {
+        if (toId !== fromId || output > cursorAmount || !step.estimate?.feeCosts?.length
+          || !quote.estimate.feeCosts?.some((fee) => fee.amount === (cursorAmount - output).toString()
+            && fee.included === true && fee.token && providerTokenId(fee.token) === fromId)) return null;
+        const fee = step.estimate.feeCosts;
+        if (fee.some((cost) => !cost.amount || cost.included !== true || !cost.token || providerTokenId(cost.token) !== fromId)
+          || fee.reduce((sum, cost) => sum + BigInt(cost.amount!), 0n) !== cursorAmount - output) return null;
+        if (action.integratorFees) {
+          const feeShare = BigInt(action.integratorFees.feePercent.toFixed(18).replace(".", ""));
+          const expectedFee = cursorAmount * feeShare / 1_000_000_000_000_000_000n;
+          const actualFee = cursorAmount - output;
+          if (actualFee < expectedFee || actualFee > expectedFee + 1n) return null;
+        }
+      }
+      routeSteps.push({ id: step.id, type: step.type, tool: step.tool, fromAssetId: fromId,
+        toAssetId: toId, fromAmountRaw: cursorAmount.toString(), toAmountRaw: output.toString(),
+        toAmountMinRaw: minimum.toString(), slippage: action.slippage,
+        ...(action.integratorFees ? { integratorFeePercent: action.integratorFees.feePercent } : {}) });
+      cursorAssetId = toId;
+      cursorDecimals = action.toToken.decimals;
+      cursorAmount = output;
+    } else routeSteps.push({ id: step.id, type: step.type, tool: step.tool });
   }
+  if (quote.type === "lifi" && (cursorAssetId !== assets.to.id || cursorDecimals !== assets.to.decimals
+    || cursorAmount !== BigInt(quote.estimate.toAmount)
+    || routeSteps.at(-1)?.toAmountMinRaw !== quote.estimate.toAmountMin)) return null;
   if (quote.action.fromChainId !== assets.from.chainId || quote.action.toChainId !== assets.to.chainId) return null;
   if (!matchesProviderToken(quote.action.fromToken, assets.from) || !matchesProviderToken(quote.action.toToken, assets.to)) return null;
   if (BigInt(quote.action.fromAmount) !== rawAmount || quote.action.slippage > input.slippageBps / 10_000 + Number.EPSILON) return null;
@@ -223,15 +306,19 @@ async function validateQuote(
   const toAmountMin = BigInt(quote.estimate.toAmountMin);
   if (fromAmount !== rawAmount || toAmount <= 0n || toAmountMin <= 0n || toAmountMin > toAmount) return null;
 
-  let target: string;
-  try { target = getAddress(quote.transactionRequest.to).toLowerCase(); } catch { return null; }
   if (quote.transactionRequest.from) {
     try { if (getAddress(quote.transactionRequest.from) !== getAddress(input.fromAddress)) return null; } catch { return null; }
   }
   if (!policy.allowedTargets.has(target)) return null;
   if (quote.transactionRequest.chainId !== assets.from.chainId) return null;
-  if (quote.transactionRequest.gasLimit !== undefined || quote.transactionRequest.gasPrice !== undefined
-    || quote.transactionRequest.maxFeePerGas !== undefined || quote.transactionRequest.maxPriorityFeePerGas !== undefined) return null;
+  const providerGasLimit = quote.transactionRequest.gasLimit === undefined ? null : unsignedTransactionValue(quote.transactionRequest.gasLimit);
+  const providerGasPrice = quote.transactionRequest.gasPrice === undefined ? null : unsignedTransactionValue(quote.transactionRequest.gasPrice);
+  if (quote.transactionRequest.maxFeePerGas !== undefined || quote.transactionRequest.maxPriorityFeePerGas !== undefined
+    || (quote.transactionRequest.gasLimit !== undefined && providerGasLimit === null)
+    || (quote.transactionRequest.gasPrice !== undefined && providerGasPrice === null)
+    || (quote.type !== "lifi" && (providerGasLimit !== null || providerGasPrice !== null))
+    || (quote.type === "lifi" && ((providerGasLimit === null) !== (providerGasPrice === null)))
+    || (providerGasLimit !== null && (providerGasLimit <= 0n || providerGasPrice === null || providerGasPrice <= 0n))) return null;
   if (!/^0x(?:[a-fA-F0-9]{2})+$/.test(quote.transactionRequest.data)) return null;
   try { hexToBytes(quote.transactionRequest.data as `0x${string}`); } catch { return null; }
   const transactionValue = unsignedTransactionValue(quote.transactionRequest.value);
@@ -272,7 +359,8 @@ async function validateQuote(
     quote.type ?? null, quote.tool, quote.id, input.fromAssetId, input.toAssetId, fromAmount.toString(), toAmount.toString(), toAmountMin.toString(),
     input.fromAddress.toLowerCase(), quote.action.toAddress.toLowerCase(), quote.action.slippage,
     assets.from.chainId, target, transactionValue.toString(), quote.transactionRequest.data.toLowerCase(),
-    approvalTarget?.toLowerCase() ?? null, expiresAt, routePolicyVersion, catalogVersion, routeSteps, economics
+    approvalTarget?.toLowerCase() ?? null, providerGasLimit?.toString() ?? null, providerGasPrice?.toString() ?? null,
+    expiresAt, routePolicyVersion, catalogVersion, routeSteps, economics
   ]));
   const publicQuote: ValidatedSwapQuote = {
     provider: `lifi:${quote.tool}`,
@@ -302,7 +390,8 @@ async function validateQuote(
     approvalSpender: approvalTarget?.toLowerCase() ?? null,
     routeSteps, economics,
     sourceCall: { chainId: assets.from.chainId, from: input.fromAddress.toLowerCase(), to: target,
-      value: transactionValue.toString(), data: quote.transactionRequest.data.toLowerCase() },
+      value: transactionValue.toString(), data: quote.transactionRequest.data.toLowerCase(),
+      ...(providerGasLimit !== null ? { providerGasLimit: providerGasLimit.toString(), providerGasPrice: providerGasPrice!.toString() } : {}) },
     routePolicyVersion, catalogVersion,
     observedAt: new Date(now).toISOString(), expiresAt, fingerprint: planHash
   } };

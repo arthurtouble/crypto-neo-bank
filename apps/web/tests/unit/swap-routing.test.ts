@@ -15,6 +15,8 @@ const baseEth: CatalogAsset = {
   id: "8453:native", chainId: 8453, address: null, symbol: "ETH", name: "Ether",
   decimals: 18, logoUrl: null, verification: "verified", eligibility: "eligible"
 };
+const baseWeth: CatalogAsset = { ...baseEth, id: "8453:0x4200000000000000000000000000000000000006",
+  address: "0x4200000000000000000000000000000000000006", symbol: "WETH", name: "Wrapped Ether" };
 const mainnetEth: CatalogAsset = { ...baseEth, id: "1:native", chainId: 1 };
 
 type ProviderQuote = ReturnType<typeof lifiQuote>;
@@ -55,7 +57,133 @@ function adapterWithFetcher(fetcher: typeof fetch) {
   });
 }
 
+function compositeQuote() {
+  const sourceToken = lifiQuote().action.fromToken;
+  const destinationToken = { symbol: "WETH", decimals: 18, chainId: 8453, address: baseWeth.address! };
+  const action = { fromChainId: 8453, toChainId: 8453, fromAmount: "1000000", fromAddress: wallet,
+    toAddress: wallet, slippage: 0.005, fromToken: sourceToken, toToken: destinationToken };
+  const innerAction = { ...action, fromAddress: routeTarget, toAddress: routeTarget,
+    jitoBundle: false, integratorId: "aurel", integratorFees: { feePercent: 0.0025 } };
+  return { ...lifiQuote(), type: "lifi", tool: "nordstern", action,
+    estimate: { ...lifiQuote().estimate, toAmount: "300000000000000", toAmountMin: "290000000000000",
+      feeCosts: [{ amount: "2500", amountUSD: "0.0025", included: true, token: sourceToken }] },
+    transactionRequest: { to: routeTarget, from: wallet, data: "0x5fd9ae2e", value: "0x0", chainId: 8453,
+      gasLimit: "0x493e0", gasPrice: "0x989680" },
+    includedSteps: [
+      { id: "fee-1", type: "protocol", tool: "feeCollection",
+        action: { ...innerAction, toToken: sourceToken },
+        estimate: { fromAmount: "1000000", toAmount: "997500", toAmountMin: "997500",
+          feeCosts: [{ amount: "2500", included: true, token: sourceToken }] } },
+      { id: "swap-1", type: "swap", tool: "nordstern",
+        action: { ...innerAction, fromAmount: "997500" },
+        estimate: { fromAmount: "997500", toAmount: "300000000000000", toAmountMin: "290000000000000" } }
+    ]
+  };
+}
+
+function compositeAdapter(payload: unknown) {
+  return createLifiQuoteAdapter({ fetcher: vi.fn(async () => Response.json(payload)),
+    now: () => Date.parse("2026-09-22T12:00:00.000Z"), policy: {
+      allowedTools: new Set(["nordstern", "feecollection"]), allowedExchanges: new Set(["nordstern"]),
+      allowedBridges: new Set(), allowedTargets: new Set([routeTarget.toLowerCase()]),
+      allowedApprovalTargets: new Set([approvalTarget.toLowerCase()])
+    } });
+}
+
 describe("provider-neutral LI.FI quotes", () => {
+  it("previews an observed fee-collection plus swap route without exposing execution authority", async () => {
+    const result = await compositeAdapter(compositeQuote()).quoteWithPlans({ fromAssetId: baseUsdc.id,
+      toAssetId: baseWeth.id, amount: "1", fromAddress: wallet, slippageBps: 50 }, { from: baseUsdc, to: baseWeth });
+    expect(result).toHaveLength(1);
+    expect(result[0].quote).toMatchObject({ provider: "lifi:nordstern", toAmountMinRaw: "290000000000000", providerFeeUsd: 0.0025 });
+    expect(result[0].quote).not.toHaveProperty("transactionRequest");
+    expect(result[0].plan.routeSteps.map((step) => [step.type, step.tool])).toEqual([["protocol", "feeCollection"], ["swap", "nordstern"]]);
+    expect(result[0].plan.sourceCall).toMatchObject({ to: routeTarget.toLowerCase(), value: "0", data: "0x5fd9ae2e" });
+  });
+
+  it("rejects a composite fee or swap amount discontinuity", async () => {
+    const changed = compositeQuote();
+    changed.includedSteps[1].action.fromAmount = "997501";
+    await expect(compositeAdapter(changed).quoteWithPlans({ fromAssetId: baseUsdc.id,
+      toAssetId: baseWeth.id, amount: "1", fromAddress: wallet, slippageBps: 50 }, { from: baseUsdc, to: baseWeth }))
+      .rejects.toMatchObject({ code: "no_live_route" });
+  });
+
+  it("rejects a nested route that exceeds the reviewed slippage", async () => {
+    const changed = compositeQuote();
+    changed.includedSteps[1].action.slippage = 0.2;
+    await expect(compositeAdapter(changed).quoteWithPlans({ fromAssetId: baseUsdc.id,
+      toAssetId: baseWeth.id, amount: "1", fromAddress: wallet, slippageBps: 50 }, { from: baseUsdc, to: baseWeth }))
+      .rejects.toMatchObject({ code: "no_live_route" });
+  });
+
+  it("rejects protocol fee steps in a non-composite root quote", async () => {
+    const changed = compositeQuote();
+    changed.type = "swap";
+    changed.includedSteps = [{ ...changed.includedSteps[0], action: { ...changed.includedSteps[0].action,
+      fromAddress: wallet, toAddress: wallet } }];
+    delete (changed.transactionRequest as { gasLimit?: string }).gasLimit;
+    delete (changed.transactionRequest as { gasPrice?: string }).gasPrice;
+    await expect(compositeAdapter(changed).quoteWithPlans({ fromAssetId: baseUsdc.id,
+      toAssetId: baseWeth.id, amount: "1", fromAddress: wallet, slippageBps: 50 }, { from: baseUsdc, to: baseWeth }))
+      .rejects.toMatchObject({ code: "no_live_route" });
+  });
+
+  it("rejects nested token scales or chains that conflict with the routed action", async () => {
+    const changed = compositeQuote();
+    changed.includedSteps[0].action.fromToken = { ...changed.includedSteps[0].action.fromToken, decimals: 18 };
+    const input = { fromAssetId: baseUsdc.id, toAssetId: baseWeth.id, amount: "1", fromAddress: wallet, slippageBps: 50 };
+    await expect(compositeAdapter(changed).quoteWithPlans(input, { from: baseUsdc, to: baseWeth }))
+      .rejects.toMatchObject({ code: "no_live_route" });
+    changed.includedSteps[0].action.fromToken = compositeQuote().includedSteps[0].action.fromToken;
+    changed.includedSteps[0].action.toToken = { ...changed.includedSteps[0].action.toToken, chainId: 1 };
+    await expect(compositeAdapter(changed).quoteWithPlans(input, { from: baseUsdc, to: baseWeth }))
+      .rejects.toMatchObject({ code: "no_live_route" });
+  });
+
+  it("rejects a second fee-collection step matching the same reported fee", async () => {
+    const changed = compositeQuote();
+    changed.includedSteps.splice(1, 0, structuredClone(changed.includedSteps[0]));
+    await expect(compositeAdapter(changed).quoteWithPlans({ fromAssetId: baseUsdc.id,
+      toAssetId: baseWeth.id, amount: "1", fromAddress: wallet, slippageBps: 50 }, { from: baseUsdc, to: baseWeth }))
+      .rejects.toMatchObject({ code: "no_live_route" });
+  });
+
+  it("rejects a fee share inconsistent with the quoted fee amount", async () => {
+    const changed = compositeQuote();
+    changed.includedSteps[0].action.integratorFees.feePercent = 0.1;
+    await expect(compositeAdapter(changed).quoteWithPlans({ fromAssetId: baseUsdc.id,
+      toAssetId: baseWeth.id, amount: "1", fromAddress: wallet, slippageBps: 50 }, { from: baseUsdc, to: baseWeth }))
+      .rejects.toMatchObject({ code: "no_live_route" });
+  });
+
+  it("rejects a concealed executable call inside composite fee metadata", async () => {
+    const changed = compositeQuote();
+    (changed.includedSteps[0].action.integratorFees as Record<string, unknown>).destinationCall = { to: wallet, data: "0x1234" };
+    await expect(compositeAdapter(changed).quoteWithPlans({ fromAssetId: baseUsdc.id,
+      toAssetId: baseWeth.id, amount: "1", fromAddress: wallet, slippageBps: 50 }, { from: baseUsdc, to: baseWeth }))
+      .rejects.toMatchObject({ code: "no_live_route" });
+  });
+
+  it("rejects malformed provider gas fields even when the matching field is absent", async () => {
+    const changed = compositeQuote();
+    delete (changed.transactionRequest as { gasLimit?: string }).gasLimit;
+    changed.transactionRequest.gasPrice = "not-a-price";
+    await expect(compositeAdapter(changed).quoteWithPlans({ fromAssetId: baseUsdc.id,
+      toAssetId: baseWeth.id, amount: "1", fromAddress: wallet, slippageBps: 50 }, { from: baseUsdc, to: baseWeth }))
+      .rejects.toMatchObject({ code: "no_live_route" });
+  });
+
+  it("binds provider gas fields into the private plan fingerprint", async () => {
+    const original = compositeQuote();
+    const changed = compositeQuote();
+    changed.transactionRequest.gasPrice = "0x989681";
+    const input = { fromAssetId: baseUsdc.id, toAssetId: baseWeth.id, amount: "1", fromAddress: wallet, slippageBps: 50 };
+    const [before] = await compositeAdapter(original).quoteWithPlans(input, { from: baseUsdc, to: baseWeth });
+    const [after] = await compositeAdapter(changed).quoteWithPlans(input, { from: baseUsdc, to: baseWeth });
+    expect(after.plan.fingerprint).not.toBe(before.plan.fingerprint);
+    expect(after.plan.sourceCall.providerGasPrice).toBe("10000001");
+  });
   it("asks LI.FI to choose only from configured audited exchanges", async () => {
     const requests: string[] = [];
     const fetcher: typeof fetch = async (input) => {
