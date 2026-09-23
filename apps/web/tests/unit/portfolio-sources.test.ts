@@ -6,7 +6,7 @@ const accountId = "8453:0x1111111111111111111111111111111111111111" as const;
 const txHash = `0x${"a".repeat(64)}`;
 const blockHash = `0x${"b".repeat(64)}`;
 const request = { accountId, cursor: null, from: "2026-09-20T00:00:00.000Z", through: "2026-09-21T00:00:00.000Z", limit: 10 };
-const tx = { hash: txHash, block_number: 100, timestamp: "2026-09-20T12:00:00Z", from: { hash: accountId.slice(5) }, to: { hash: "0x2222222222222222222222222222222222222222" }, value: "100", status: "ok", gas_used: "2", gas_price: "3", fee: { value: "999" } };
+const tx = { hash: txHash, block_number: 100, block_hash: blockHash, timestamp: "2026-09-20T12:00:00Z", from: { hash: accountId.slice(5) }, to: { hash: "0x2222222222222222222222222222222222222222" }, value: "100", status: "ok", gas_used: "2", gas_price: "3", fee: { value: "999" } };
 const page = (items: unknown[], next: unknown = null) => ({ items, next_page_params: next });
 
 function chainFetch(responses: Record<string, unknown[]>) {
@@ -48,6 +48,8 @@ describe("Base chain history source", () => {
     expect((await duplicate.page({ ...request, cursor: d1.nextCursor })).complete).toBe(false);
     const malformed = new BaseChainSource({ apiKey: "test", fetcher: chainFetch({ transactions: [page([{ ...tx, value: "1.5" }])], "internal-transactions": [page([])], "token-transfers": [page([])] }), verify: verified });
     expect((await malformed.page(request)).complete).toBe(false);
+    const noIndexedBlock = new BaseChainSource({ apiKey: "test", fetcher: chainFetch({ transactions: [page([{ ...tx, block_hash: null }])], "internal-transactions": [page([])], "token-transfers": [page([])] }), verify: verified });
+    expect((await noIndexedBlock.page(request)).complete).toBe(false);
     const changed = new BaseChainSource({ apiKey: "test", fetcher: chainFetch({ transactions: [page([tx])], "internal-transactions": [page([])], "token-transfers": [page([])] }), verify: vi.fn(async () => ({ blockHash, finalized: false, receiptSuccess: false })) });
     expect((await changed.page(request)).complete).toBe(false);
     const token = { block_hash: `0x${"c".repeat(64)}`, block_number: 100, transaction_hash: txHash, timestamp: "2026-09-20T12:00:00Z", from: { hash: accountId.slice(5) }, to: { hash: "0x2222222222222222222222222222222222222222" }, log_index: 1, token_type: "ERC-20", token: { address_hash: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", decimals: "6" }, total: { value: "1000000" } };
@@ -57,6 +59,10 @@ describe("Base chain history source", () => {
     expect(reorgPage.events[0]?.finality).toBe("reorged");
     const partial = new BaseChainSource({ apiKey: "test", fetcher: chainFetch({ transactions: [{ ...page([]), partial: true }], "internal-transactions": [page([])], "token-transfers": [page([])] }), verify: verified });
     expect((await partial.page(request)).complete).toBe(false);
+    const missingPrecision = new BaseChainSource({ apiKey: "test", fetcher: chainFetch({ transactions: [page([])], "internal-transactions": [page([])], "token-transfers": [page([{ ...token, block_hash: blockHash, token: { ...token.token, decimals: null } }])] }), verify: verified });
+    expect((await missingPrecision.page(request)).complete).toBe(false);
+    const malformedPrecision = new BaseChainSource({ apiKey: "test", fetcher: chainFetch({ transactions: [page([])], "internal-transactions": [page([])], "token-transfers": [page([{ ...token, block_hash: blockHash, token: { ...token.token, decimals: "0x06" } }])] }), verify: verified });
+    expect((await malformedPrecision.page(request)).complete).toBe(false);
     const badInternal = new BaseChainSource({ apiKey: "test", fetcher: chainFetch({ transactions: [page([])], "internal-transactions": [{ ...page([]), meta: { status: 0 } }], "token-transfers": [page([])] }), verify: verified });
     expect((await badInternal.page(request)).complete).toBe(false);
   });
@@ -80,6 +86,15 @@ describe("Base Aave source", () => {
     expect(result.status).toBe("partial");
     const source = new BaseAaveSource({ call: vi.fn(async () => ({ data: { v3: { items: [], pageInfo: {} } } })) });
     expect((await source.page(request)).complete).toBe(false);
+  });
+
+  it("does not turn a missing Aave reserve precision into zero decimals", async () => {
+    const call = vi.fn(async (name: string) => name === "get_user_positions"
+      ? { data: { v3: { supplies: [{ market, reserve: { underlyingToken: reserve, decimals: null }, balance: "10" }], borrows: [] } } }
+      : { data: { v3: { markets: [{ market }] } } });
+    const result = await readCurrentAaveLegs(accountId, { call });
+    expect(result.status).toBe("partial");
+    expect(result.legs).toEqual([]);
   });
 
   it("finalizes a terminal Aave activity page only with verified chain evidence", async () => {

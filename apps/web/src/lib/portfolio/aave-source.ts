@@ -21,6 +21,7 @@ function rawAmount(value: unknown, decimals: number): string | null {
 function reserveOf(value: unknown): { assetId: string; decimals: number } | null {
   const reserve = record(value);
   const contract = address(reserve?.underlyingToken);
+  if (typeof reserve?.decimals !== "number" && (typeof reserve?.decimals !== "string" || !/^(0|[1-9]\d*)$/.test(reserve.decimals))) return null;
   const decimals = Number(reserve?.decimals);
   return contract && Number.isInteger(decimals) && decimals >= 0 && decimals <= 36 ? { assetId: `8453:${contract}`, decimals } : null;
 }

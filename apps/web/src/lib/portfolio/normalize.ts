@@ -46,7 +46,7 @@ export function normalizeEconomicEvents(
     if (!event.counterpartyAccountId || !ownedAccounts.has(event.counterpartyAccountId)) continue;
     const matches = normalized.filter((other) => other !== event && other.groupId !== null && other.groupId === event.groupId
       && other.assetId === event.assetId && other.accountId === event.counterpartyAccountId
-      && other.counterpartyAccountId === event.accountId && signedInteger.test(other.rawDelta)
+      && other.counterpartyAccountId === event.accountId && other.logIndex === event.logIndex && signedInteger.test(other.rawDelta)
       && BigInt(other.rawDelta) === -BigInt(event.rawDelta));
     if (matches.length === 1) event.kind = "internal_transfer";
     else {

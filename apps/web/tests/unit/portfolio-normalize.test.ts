@@ -24,6 +24,18 @@ describe("portfolio event normalization", () => {
     expect([...foldDailyQuantities(result.events, new Map()).values()].sort()).toEqual([-2000000n, 2000000n]);
   });
 
+  it("pairs repeated equal transfers by log position, not only transaction and amount", () => {
+    const rows = [
+      event("tx:log:1:out", "-2000000", { logIndex: 1, counterpartyAccountId: B }),
+      event("tx:log:2:out", "-2000000", { logIndex: 2, counterpartyAccountId: B }),
+      event("tx:log:1:in", "2000000", { logIndex: 1, accountId: B, counterpartyAccountId: A }),
+      event("tx:log:2:in", "2000000", { logIndex: 2, accountId: B, counterpartyAccountId: A })
+    ];
+    const result = normalizeEconomicEvents(rows, new Set([A, B]));
+    expect(result.unresolved).toEqual([]);
+    expect(result.events.map((row) => row.kind)).toEqual(Array(4).fill("internal_transfer"));
+  });
+
   it("leaves an unmatched owned-wallet side incomplete until the other source page arrives", () => {
     const result = normalizeEconomicEvents([event("tx:0", "-2000000", { counterpartyAccountId: B })], new Set([A, B]));
     expect(result.events[0]).toMatchObject({ kind: "unknown", completeness: "partial" });

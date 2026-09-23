@@ -15,7 +15,11 @@ function address(value: unknown): string | null { const hash = record(value)?.ha
 function integer(value: unknown): bigint | null { return (typeof value === "string" || typeof value === "number") && /^(0|[1-9]\d*)$/.test(String(value)) ? BigInt(value) : null; }
 function hash(value: unknown): `0x${string}` | null { return typeof value === "string" && /^0x[a-f0-9]{64}$/i.test(value) ? value.toLowerCase() as `0x${string}` : null; }
 function iso(value: unknown): string | null { return typeof value === "string" && Number.isFinite(Date.parse(value)) ? new Date(value).toISOString() : null; }
-function tokenDecimals(value: unknown): number | null { const n = Number(value); return Number.isInteger(n) && n >= 0 && n <= 36 ? n : null; }
+function tokenDecimals(value: unknown): number | null {
+  if (typeof value !== "number" && (typeof value !== "string" || !/^(0|[1-9]\d*)$/.test(value))) return null;
+  const n = Number(value);
+  return Number.isInteger(n) && n >= 0 && n <= 36 ? n : null;
+}
 function cursorEncode(value: Cursor): string { return btoa(JSON.stringify(value)); }
 async function digest(value: unknown): Promise<string> {
   const bytes = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify(value))));
@@ -101,7 +105,8 @@ export class BaseChainSource implements HistoricalEventSource {
         catch { valid = false; continue; }
         const indexedHash = hash(raw.block_hash);
         const rpcHash = hash(verification.blockHash);
-        const changed = indexedHash !== null && rpcHash !== indexedHash;
+        if (!indexedHash) { valid = false; continue; }
+        const changed = rpcHash !== indexedHash;
         const finalized = !changed && Boolean(rpcHash && verification.finalized && verification.receiptSuccess);
         if (!finalized) valid = false;
         const providerDigest = await digest(raw);
