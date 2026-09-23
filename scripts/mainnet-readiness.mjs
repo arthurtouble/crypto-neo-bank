@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { AAVE_BASE_ASSETS, AAVE_BASE_V3_MARKET } from "../apps/web/src/lib/defi/aave.ts";
+import { AAVE_BASE_ASSETS, AAVE_BASE_PROTOCOL, AAVE_BASE_V3_MARKET } from "../apps/web/src/lib/defi/aave.ts";
 
 const chains = [
   { name: "Base", id: 8453, rpc: "https://base-rpc.publicnode.com", contracts: ["0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"] },
@@ -53,21 +53,30 @@ async function checkLifi() {
 async function checkAaveBase() {
   const chain = chains[0];
   // Aave V3 Base address book: https://github.com/aave-dao/aave-address-book/blob/main/src/AaveV3Base.sol
-  const provider = "0xe20fCBdBfFC4Dd138cE8b2E6FBb6CB49777ad64D";
   const published = { pool: "0xA238Dd80C259a72e81d7e4664a9801593F98d1c5",
+    provider: "0xe20fCBdBfFC4Dd138cE8b2E6FBb6CB49777ad64D",
+    dataProvider: "0x0F43731EB8d45A581f4a36DD74F5f358bc90C73A",
+    oracle: "0x2Cc0Fc26eD4563A5ce5e8bdcfe1A2878676Ae156",
     USDC: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", WETH: "0x4200000000000000000000000000000000000006" };
-  for (const [name, configured] of Object.entries({ pool: AAVE_BASE_V3_MARKET, ...AAVE_BASE_ASSETS }))
+  for (const [name, configured] of Object.entries({ pool: AAVE_BASE_V3_MARKET, ...AAVE_BASE_PROTOCOL, ...AAVE_BASE_ASSETS }))
     if (!published[name] || configured.toLowerCase() !== published[name].toLowerCase()) throw new Error(`Aave Base ${name} differs from reviewed address-book snapshot.`);
-  for (const address of [provider, AAVE_BASE_V3_MARKET, ...Object.values(AAVE_BASE_ASSETS)]) {
+  for (const address of [AAVE_BASE_PROTOCOL.provider, AAVE_BASE_V3_MARKET, AAVE_BASE_PROTOCOL.oracle,
+    AAVE_BASE_PROTOCOL.dataProvider, ...Object.values(AAVE_BASE_ASSETS)]) {
     const code = await rpc(chain, "eth_getCode", [address, "latest"]);
     if (!code || code === "0x") throw new Error(`Aave Base has no contract code at ${address}`);
     if (typeof code !== "string" || !/^0x(?:[0-9a-f]{2})+$/i.test(code)) throw new Error(`Aave Base has invalid contract code at ${address}`);
   }
-  const result = await rpc(chain, "eth_call", [{ to: provider, data: "0x026b1d5f" }, "latest"]); // getPool()
-  if (typeof result !== "string" || !/^0x[0-9a-f]{64}$/i.test(result)) throw new Error("Aave Base address provider returned an invalid Pool.");
-  const activePool = `0x${result.slice(-40)}`;
-  if (activePool.toLowerCase() !== AAVE_BASE_V3_MARKET.toLowerCase()) throw new Error(`Aave Base Pool differs from governed address: ${activePool}`);
-  return "Aave Base: active Pool matches governed address; deployed code at provider, Pool, USDC, and WETH";
+  for (const [name, selector, expected] of [
+    ["Pool", "0x026b1d5f", AAVE_BASE_V3_MARKET],
+    ["oracle", "0xfca513a8", AAVE_BASE_PROTOCOL.oracle],
+    ["data provider", "0xe860accb", AAVE_BASE_PROTOCOL.dataProvider]
+  ]) {
+    const result = await rpc(chain, "eth_call", [{ to: AAVE_BASE_PROTOCOL.provider, data: selector }, "latest"]);
+    if (typeof result !== "string" || !/^0x[0-9a-f]{64}$/i.test(result)) throw new Error(`Aave Base address provider returned an invalid ${name}.`);
+    const active = `0x${result.slice(-40)}`;
+    if (active.toLowerCase() !== expected.toLowerCase()) throw new Error(`Aave Base ${name} differs from governed address: ${active}`);
+  }
+  return "Aave Base: active Pool, oracle, and data provider match governed addresses; deployed code at provider, Pool, oracle, data provider, USDC, and WETH";
 }
 
 const results = await Promise.allSettled([...chains.map(checkChain), checkLifi(), checkAaveBase()]);

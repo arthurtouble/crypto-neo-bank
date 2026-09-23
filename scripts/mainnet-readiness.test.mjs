@@ -19,8 +19,16 @@ test("readiness fails closed when the address provider points to another Pool", 
   assert.match(result.stderr, /FAIL  Aave Base Pool differs/);
 });
 
+test("readiness fails closed when Aave changes the active oracle or data provider", () => {
+  for (const [flag, name] of [["AUREL_TEST_BAD_ORACLE", "oracle"], ["AUREL_TEST_BAD_DATA_PROVIDER", "data provider"]]) {
+    const result = run({ [flag]: "1" });
+    assert.equal(result.status, 1, `${name}: ${result.stderr}`);
+    assert.match(result.stderr, new RegExp(`FAIL  Aave Base ${name} differs`));
+  }
+});
+
 test("readiness fails closed when a governed Aave contract has no code", () => {
-  for (const target of ["provider", "pool", "usdc", "weth"]) {
+  for (const target of ["provider", "pool", "oracle", "dataProvider", "usdc", "weth"]) {
     const result = run({ AUREL_TEST_MISSING_CODE: target });
     assert.equal(result.status, 1, `${target}: ${result.stderr}`);
     assert.match(result.stderr, /FAIL  Aave Base has no contract code/);

@@ -5,6 +5,8 @@ const chainIds = new Map([
 const baseContracts = {
   provider: "0xe20fcbdBffc4dd138ce8b2e6fbb6cb49777ad64d".toLowerCase(),
   pool: "0xa238dd80c259a72e81d7e4664a9801593f98d1c5",
+  oracle: "0x2cc0fc26ed4563a5ce5e8bdcfe1a2878676ae156",
+  dataProvider: "0x0f43731eb8d45a581f4a36dd74f5f358bc90c73a",
   usdc: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
   weth: "0x4200000000000000000000000000000000000006"
 };
@@ -16,27 +18,33 @@ globalThis.fetch = async (input, init = {}) => {
   const body = JSON.parse(init.body);
   const chainId = chainIds.get(url.hostname);
   if (!chainId) throw new Error(`Unexpected RPC host: ${url.hostname}`);
-  const pool = process.env.AUREL_TEST_BAD_POOL ? "0x2222222222222222222222222222222222222222" : "0xA238Dd80C259a72e81d7e4664a9801593F98d1c5";
+  const returnedAddress = {
+    "0x026b1d5f": process.env.AUREL_TEST_BAD_POOL ? "0x2222222222222222222222222222222222222222" : baseContracts.pool,
+    "0xfca513a8": process.env.AUREL_TEST_BAD_ORACLE ? "0x2222222222222222222222222222222222222222" : baseContracts.oracle,
+    "0xe860accb": process.env.AUREL_TEST_BAD_DATA_PROVIDER ? "0x2222222222222222222222222222222222222222" : baseContracts.dataProvider
+  };
   const address = String(body.params?.[0] ?? "").toLowerCase();
   if (chainId === 8453 && body.method === "eth_getCode") {
     if (!Object.values(baseContracts).includes(address)) throw new Error(`Unexpected Base code address: ${address}`);
     observed.add(`code:${address}`);
   }
   if (body.method === "eth_call") {
-    if (chainId !== 8453 || !body.params?.[0] || typeof body.params[0] !== "object" || String(body.params[0].to).toLowerCase() !== baseContracts.provider || body.params[0].data !== "0x026b1d5f")
+    if (chainId !== 8453 || !body.params?.[0] || typeof body.params[0] !== "object" || String(body.params[0].to).toLowerCase() !== baseContracts.provider || !Object.hasOwn(returnedAddress, body.params[0].data))
       throw new Error("Unexpected Aave provider call.");
-    observed.add("getPool");
+    observed.add(body.params[0].data);
   }
   const missing = process.env.AUREL_TEST_MISSING_CODE;
   const missingAddress = missing && baseContracts[missing];
   const result = body.method === "eth_chainId" ? `0x${chainId.toString(16)}`
     : body.method === "eth_getCode" ? missingAddress === address ? "0x" : process.env.AUREL_TEST_MALFORMED_CODE && address === baseContracts.pool ? "0x0" : "0x6000"
-    : body.method === "eth_call" ? `0x${pool.slice(2).toLowerCase().padStart(64, "0")}` : null;
+    : body.method === "eth_call" ? `0x${returnedAddress[body.params[0].data].slice(2).toLowerCase().padStart(64, "0")}` : null;
   return Response.json({ jsonrpc: "2.0", id: body.id, result });
 };
 
 process.on("beforeExit", () => {
-  if (process.env.AUREL_TEST_BAD_POOL || process.env.AUREL_TEST_MISSING_CODE || process.env.AUREL_TEST_MALFORMED_CODE) return;
+  if (process.env.AUREL_TEST_BAD_POOL || process.env.AUREL_TEST_BAD_ORACLE || process.env.AUREL_TEST_BAD_DATA_PROVIDER
+    || process.env.AUREL_TEST_MISSING_CODE || process.env.AUREL_TEST_MALFORMED_CODE) return;
   for (const address of Object.values(baseContracts)) if (!observed.has(`code:${address}`)) throw new Error(`Missing Aave code check: ${address}`);
-  if (!observed.has("getPool")) throw new Error("Missing Aave getPool check.");
+  for (const selector of ["0x026b1d5f", "0xfca513a8", "0xe860accb"])
+    if (!observed.has(selector)) throw new Error(`Missing Aave provider check: ${selector}`);
 });
