@@ -27,7 +27,7 @@ let sqlite: DatabaseSync;
 let database: D1Database;
 beforeEach(() => {
   sqlite = new DatabaseSync(":memory:");
-  sqlite.exec("PRAGMA foreign_keys=ON; CREATE TABLE subject_profiles(subject_reference TEXT PRIMARY KEY); INSERT INTO subject_profiles VALUES ('alice'),('bob');");
+  sqlite.exec("PRAGMA foreign_keys=ON; CREATE TABLE subject_profiles(subject_reference TEXT PRIMARY KEY); CREATE TABLE audit_events(audit_id TEXT PRIMARY KEY,subject_reference TEXT,actor_type TEXT NOT NULL,actor_reference TEXT NOT NULL,action TEXT NOT NULL,target_type TEXT NOT NULL,target_reference TEXT,evidence_json TEXT NOT NULL,occurred_at TEXT NOT NULL); INSERT INTO subject_profiles VALUES ('alice'),('bob');");
   sqlite.exec(readFileSync(resolve(process.cwd(), "../../infra/d1/migrations/0022_price_alerts_swap_reminders.sql"), "utf8"));
   database = d1(sqlite);
 });
@@ -46,6 +46,8 @@ describe("approval-required Swap reminder storage", () => {
     expect(await changeSwapReminderPlan(database, "bob", { planId: created.planId, version: 1, action: "pause" }, now)).toBe(false);
     expect(await changeSwapReminderPlan(database, "alice", { planId: created.planId, version: 1, action: "pause" }, now)).toBe(true);
     expect(await changeSwapReminderPlan(database, "alice", { planId: created.planId, version: 1, action: "cancel" }, now)).toBe(false);
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM audit_events WHERE action='swap.reminder.pause'").get()).toMatchObject({ count: 1 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM audit_events WHERE action='swap.reminder.cancel'").get()).toMatchObject({ count: 0 });
     expect(await materializeDueSwapReminders(database, "alice", new Date("2026-09-30T09:05:00Z"))).toEqual([]);
   });
   it("materializes a due instant once, even on repeated evaluation, and does not execute a trade", async () => {
@@ -75,5 +77,25 @@ describe("approval-required Swap reminder storage", () => {
     sqlite.prepare("INSERT INTO swap_reminder_occurrences (occurrence_id,subject_reference,kind,plan_id,plan_version,due_at,created_at) VALUES ('old','alice','plan',?,1,'2026-09-24T09:00:00.000Z','2026-09-24T09:00:00.000Z')").run(created.planId);
     expect(await materializeDueSwapReminders(database, "alice", new Date("2026-09-26T10:00:00Z"))).toEqual([]);
     expect(sqlite.prepare("SELECT reminder_state FROM swap_reminder_occurrences WHERE occurrence_id='old'").get()).toMatchObject({ reminder_state: "expired" });
+  });
+  it("rolls back creation when audit storage fails and permits a clean retry", async () => {
+    sqlite.exec("CREATE TRIGGER reject_reminder_audit BEFORE INSERT ON audit_events BEGIN SELECT RAISE(FAIL, 'audit unavailable'); END;");
+    await expect(createSwapReminderPlan(database, "alice", input, now)).rejects.toThrow("audit unavailable");
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM swap_reminder_plans").get()).toMatchObject({ count: 0 });
+    sqlite.exec("DROP TRIGGER reject_reminder_audit");
+    await createSwapReminderPlan(database, "alice", input, now);
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM swap_reminder_plans").get()).toMatchObject({ count: 1 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM audit_events WHERE action='swap.reminder.created'").get()).toMatchObject({ count: 1 });
+  });
+  it("rolls back a versioned change and supersession when audit storage fails", async () => {
+    const created = await createSwapReminderPlan(database, "alice", input, now);
+    sqlite.prepare("INSERT INTO swap_reminder_occurrences (occurrence_id,subject_reference,kind,plan_id,plan_version,due_at,created_at) VALUES ('due','alice','plan',?,1,'2026-09-30T09:00:00.000Z','2026-09-30T09:00:00.000Z')").run(created.planId);
+    sqlite.exec("CREATE TRIGGER reject_reminder_audit BEFORE INSERT ON audit_events BEGIN SELECT RAISE(FAIL, 'audit unavailable'); END;");
+    await expect(changeSwapReminderPlan(database, "alice", { planId: created.planId, version: 1, action: "pause" }, now)).rejects.toThrow("audit unavailable");
+    expect(sqlite.prepare("SELECT plan_version,status FROM swap_reminder_plans WHERE plan_id=?").get(created.planId)).toMatchObject({ plan_version: 1, status: "active" });
+    expect(sqlite.prepare("SELECT reminder_state FROM swap_reminder_occurrences WHERE occurrence_id='due'").get()).toMatchObject({ reminder_state: "due" });
+    sqlite.exec("DROP TRIGGER reject_reminder_audit");
+    expect(await changeSwapReminderPlan(database, "alice", { planId: created.planId, version: 1, action: "pause" }, now)).toBe(true);
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM audit_events WHERE action='swap.reminder.pause'").get()).toMatchObject({ count: 1 });
   });
 });

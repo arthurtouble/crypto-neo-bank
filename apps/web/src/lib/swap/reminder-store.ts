@@ -23,10 +23,15 @@ export async function createSwapReminderPlan(db: D1Database, subjectReference: s
   if (!next) throw new Error("The reminder time has elapsed.");
   const id = crypto.randomUUID();
   const timestamp = now.toISOString();
-  await db.prepare(`INSERT INTO swap_reminder_plans
-    (plan_id, subject_reference, pair_id, base_asset_id, quote_asset_id, quote_currency, mapping_version, amount_decimal, schedule_type, time_zone, anchor_local, next_due_at, status, plan_version, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, 'USD', ?, ?, ?, ?, ?, ?, 'active', 1, ?, ?)`)
-    .bind(id, subjectReference, `${input.fromAssetId}/${input.toAssetId}`, input.fromAssetId, input.toAssetId, MAPPING_VERSION, input.amount, input.scheduleType, input.timeZone, input.anchorLocal, next.toISOString(), timestamp, timestamp).run();
+  await db.batch([
+    db.prepare(`INSERT INTO swap_reminder_plans
+      (plan_id, subject_reference, pair_id, base_asset_id, quote_asset_id, quote_currency, mapping_version, amount_decimal, schedule_type, time_zone, anchor_local, next_due_at, status, plan_version, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, 'USD', ?, ?, ?, ?, ?, ?, 'active', 1, ?, ?)`)
+      .bind(id, subjectReference, `${input.fromAssetId}/${input.toAssetId}`, input.fromAssetId, input.toAssetId, MAPPING_VERSION, input.amount, input.scheduleType, input.timeZone, input.anchorLocal, next.toISOString(), timestamp, timestamp),
+    db.prepare(`INSERT INTO audit_events (audit_id, subject_reference, actor_type, actor_reference, action, target_type, target_reference, evidence_json, occurred_at)
+      VALUES (?, ?, 'customer', ?, 'swap.reminder.created', 'swap_reminder_plan', ?, ?, ?)`)
+      .bind(crypto.randomUUID(), subjectReference, subjectReference, id, JSON.stringify({ scheduleType: input.scheduleType, version: 1 }), timestamp)
+  ]);
   return { ...input, planId: id, planVersion: 1, status: "active", nextDueAt: next.toISOString() };
 }
 
@@ -40,13 +45,18 @@ export async function changeSwapReminderPlan(db: D1Database, subjectReference: s
     : { fromAssetId: row.base_asset_id, toAssetId: row.quote_asset_id, amount: row.amount_decimal, scheduleType: row.schedule_type, timeZone: row.time_zone, anchorLocal: row.anchor_local };
   const next = status === "active" ? nextOccurrence({ scheduleType: input.scheduleType, timeZone: input.timeZone, anchorLocal: input.anchorLocal, after: now }) : null;
   if (status === "active" && !next) return false;
+  const auditId = crypto.randomUUID();
   const [updated] = await db.batch([
     db.prepare(`UPDATE swap_reminder_plans SET pair_id = ?, base_asset_id = ?, quote_asset_id = ?, amount_decimal = ?, schedule_type = ?, time_zone = ?, anchor_local = ?, next_due_at = ?, status = ?, plan_version = plan_version + 1, updated_at = ?
       WHERE plan_id = ? AND subject_reference = ? AND plan_version = ? AND status = ?`)
       .bind(`${input.fromAssetId}/${input.toAssetId}`, input.fromAssetId, input.toAssetId, input.amount, input.scheduleType, input.timeZone, input.anchorLocal, next?.toISOString() ?? null, status, now.toISOString(), change.planId, subjectReference, change.version, row.status),
+    db.prepare(`INSERT INTO audit_events (audit_id, subject_reference, actor_type, actor_reference, action, target_type, target_reference, evidence_json, occurred_at)
+      SELECT ?, ?, 'customer', ?, ?, 'swap_reminder_plan', ?, ?, ? WHERE changes() = 1`)
+      .bind(auditId, subjectReference, subjectReference, `swap.reminder.${change.action}`, change.planId, JSON.stringify({ priorVersion: change.version }), now.toISOString()),
     db.prepare(`UPDATE swap_reminder_occurrences SET reminder_state = 'superseded', updated_at = ?
-      WHERE plan_id = ? AND subject_reference = ? AND plan_version = ? AND reminder_state = 'due' AND changes() = 1`)
-      .bind(now.toISOString(), change.planId, subjectReference, change.version)
+      WHERE plan_id = ? AND subject_reference = ? AND plan_version = ? AND reminder_state = 'due'
+        AND EXISTS (SELECT 1 FROM audit_events WHERE audit_id = ?)`)
+      .bind(now.toISOString(), change.planId, subjectReference, change.version, auditId)
   ]);
   return updated.meta.changes === 1;
 }

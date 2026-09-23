@@ -5,7 +5,6 @@ import { BetaAccessError, configuredCountries, requireBetaAccess } from "@/lib/b
 import { FeatureUnavailableError, requireFeature } from "@/lib/features/flags";
 import { ensureSubjectProfile } from "@/lib/profile/ensure";
 import { enforceRateLimit, RateLimitError } from "@/lib/security/rate-limit";
-import { writeAuditEvent } from "@/lib/security/audit";
 import { parseAssetId } from "@/lib/swap/assets";
 import { CATALOG_REGISTRY } from "@/lib/swap/catalog-registry";
 import { changeSwapReminderPlan, createSwapReminderPlan, listSwapReminderPlans } from "@/lib/swap/reminder-store";
@@ -65,7 +64,6 @@ export async function POST(request: Request) {
     const from = parseAssetId(input.fromAssetId)!, to = parseAssetId(input.toAssetId)!;
     if (from.chainId !== to.chainId) await requireFeature(env.PROJECTION_DB, "cross_chain");
     const plan = await createSwapReminderPlan(env.PROJECTION_DB, subject.subjectReference, input);
-    await writeAuditEvent(env.PROJECTION_DB, { subjectReference: subject.subjectReference, actorType: "customer", actorReference: subject.subjectReference, action: "swap.reminder.created", targetType: "swap_reminder_plan", targetReference: plan.planId, evidence: { scheduleType: plan.scheduleType, version: 1 } });
     return json({ plan, execution: "customer_review_required", traceId }, 201);
   } catch (error) { return failure(error, traceId, "create"); }
 }
@@ -86,7 +84,6 @@ export async function PATCH(request: Request) {
     }
     const updated = await changeSwapReminderPlan(env.PROJECTION_DB, subject.subjectReference, input);
     if (!updated) return json({ error: "reminder_changed", traceId }, 409);
-    await writeAuditEvent(env.PROJECTION_DB, { subjectReference: subject.subjectReference, actorType: "customer", actorReference: subject.subjectReference, action: `swap.reminder.${input.action}`, targetType: "swap_reminder_plan", targetReference: input.planId, evidence: { priorVersion: input.version } });
     return json({ updated: true, planVersion: input.version + 1, execution: "customer_review_required", traceId });
   } catch (error) { return failure(error, traceId, "update"); }
 }

@@ -3,7 +3,7 @@ import { DatabaseSync } from "node:sqlite";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-const state = vi.hoisted(() => ({ database: null as D1Database | null, subject: "alice" as string | null, beta: true, feature: true, country: "PT", rate: true }));
+const state = vi.hoisted(() => ({ database: null as D1Database | null, subject: "alice" as string | null, beta: true, feature: true, crossChain: true, catalogEligible: true, country: "PT", rate: true }));
 vi.mock("cloudflare:workers", () => ({ env: { get PROJECTION_DB() { return state.database; } } }));
 vi.mock("@/lib/auth/server", () => {
   class AuthenticationError extends Error {}
@@ -21,8 +21,9 @@ vi.mock("@/lib/beta/access", () => {
 });
 vi.mock("@/lib/features/flags", () => {
   class FeatureUnavailableError extends Error {}
-  return { FeatureUnavailableError, requireFeature: async () => { if (!state.feature) throw new FeatureUnavailableError(); } };
+  return { FeatureUnavailableError, requireFeature: async () => { if (!state.feature) throw new FeatureUnavailableError(); }, featureEnabled: async (_db: D1Database, key: string) => key === "cross_chain" ? state.crossChain : state.feature };
 });
+vi.mock("@/lib/swap/catalog", () => ({ resolveCatalogAsset: async (id: string) => state.catalogEligible ? { id, verification: "verified", eligibility: "eligible" } : null }));
 vi.mock("@/lib/security/rate-limit", () => {
   class RateLimitError extends Error { retryAfterSeconds = 60; }
   return { RateLimitError, enforceRateLimit: async () => { if (!state.rate) throw new RateLimitError(); } };
@@ -50,9 +51,9 @@ const patch = (body: unknown) => PATCH(new Request("https://aurel.test/api/swap/
 const input = () => ({ fromAssetId, toAssetId, amount: "0.1", scheduleType: "weekly", timeZone: "UTC", anchorLocal: future() });
 let sqlite: DatabaseSync;
 beforeEach(() => {
-  Object.assign(state, { subject: "alice", beta: true, feature: true, country: "PT", rate: true });
+  Object.assign(state, { subject: "alice", beta: true, feature: true, crossChain: true, catalogEligible: true, country: "PT", rate: true });
   sqlite = new DatabaseSync(":memory:");
-  sqlite.exec("PRAGMA foreign_keys=ON; CREATE TABLE subject_profiles(subject_reference TEXT PRIMARY KEY); CREATE TABLE security_profiles(subject_reference TEXT PRIMARY KEY, account_locked INTEGER NOT NULL); INSERT INTO subject_profiles VALUES ('alice'),('bob'); INSERT INTO security_profiles VALUES ('alice',0),('bob',0);");
+  sqlite.exec("PRAGMA foreign_keys=ON; CREATE TABLE subject_profiles(subject_reference TEXT PRIMARY KEY); CREATE TABLE security_profiles(subject_reference TEXT PRIMARY KEY, account_locked INTEGER NOT NULL); CREATE TABLE audit_events(audit_id TEXT PRIMARY KEY,subject_reference TEXT,actor_type TEXT NOT NULL,actor_reference TEXT NOT NULL,action TEXT NOT NULL,target_type TEXT,target_reference TEXT,evidence_json TEXT NOT NULL,occurred_at TEXT NOT NULL); INSERT INTO subject_profiles VALUES ('alice'),('bob'); INSERT INTO security_profiles VALUES ('alice',0),('bob',0);");
   sqlite.exec(readFileSync(resolve(process.cwd(), "../../infra/d1/migrations/0022_price_alerts_swap_reminders.sql"), "utf8"));
   state.database = d1(sqlite);
 });
@@ -89,6 +90,7 @@ describe("authenticated Swap reminder API", () => {
     expect(response.status).toBe(200);
     const body = await response.json() as { occurrences: Array<Record<string, unknown>>; execution: string };
     expect(body.occurrences).toHaveLength(1);
+    expect(body.occurrences[0]).toMatchObject({ canReview: true, disabledReason: null });
     expect(body.occurrences[0]).not.toHaveProperty("transactionHash");
     expect(body.occurrences[0]).not.toHaveProperty("quoteId");
     expect(body.execution).toBe("customer_review_required");
@@ -96,5 +98,20 @@ describe("authenticated Swap reminder API", () => {
   it("rejects an edit that changes only one asset to the saved other asset", async () => {
     const created = (await (await post(input())).json() as { plan: { planId: string } }).plan;
     expect((await patch({ planId: created.planId, version: 1, action: "edit", fromAssetId: toAssetId })).status).toBe(400);
+  });
+  it("disables only an ineligible due occurrence when cross-chain or catalog review is unavailable", async () => {
+    const created = (await (await post({ ...input(), toAssetId: "1:native" })).json() as { plan: { planId: string } }).plan;
+    const dueAt = new Date(Date.now() - 60_000).toISOString().slice(0, 16);
+    sqlite.prepare("UPDATE swap_reminder_plans SET schedule_type='one_time', anchor_local=?, next_due_at=? WHERE plan_id=?").run(dueAt, `${dueAt}:00.000Z`, created.planId);
+    state.crossChain = false;
+    const disabledByRoute = await (await dueGET(new Request("https://aurel.test/api/swap/reminders/due"))).json() as { occurrences: Array<{ canReview: boolean; disabledReason: string }> };
+    expect(disabledByRoute.occurrences[0]).toMatchObject({ canReview: false, disabledReason: "cross_chain_unavailable" });
+    state.crossChain = true; state.catalogEligible = false;
+    const disabledByCatalog = await (await dueGET(new Request("https://aurel.test/api/swap/reminders/due"))).json() as { occurrences: Array<{ canReview: boolean; disabledReason: string }> };
+    expect(disabledByCatalog.occurrences[0]).toMatchObject({ canReview: false, disabledReason: "asset_unavailable" });
+    state.catalogEligible = true;
+    sqlite.exec("UPDATE security_profiles SET account_locked=1 WHERE subject_reference='alice'");
+    const disabledByLock = await (await dueGET(new Request("https://aurel.test/api/swap/reminders/due"))).json() as { occurrences: Array<{ canReview: boolean; disabledReason: string }> };
+    expect(disabledByLock.occurrences[0]).toMatchObject({ canReview: false, disabledReason: "account_locked" });
   });
 });
