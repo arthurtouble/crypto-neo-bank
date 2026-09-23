@@ -41,7 +41,7 @@ function currentSourceEvidence(event: HistoricalEvent): boolean {
   try {
     const proof = JSON.parse(event.evidenceJson) as { sourceEvidenceVersion?: unknown; effectProof?: unknown };
     return event.sourceId === "blockscout:8453" ? proof.sourceEvidenceVersion === 3
-      : proof.sourceEvidenceVersion === 2 && proof.effectProof === "canonical_aave_pool_log";
+      : proof.sourceEvidenceVersion === 3 && proof.effectProof === "canonical_aave_pool_log";
   }
   catch { return false; }
 }

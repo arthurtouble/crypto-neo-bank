@@ -91,7 +91,6 @@ export class BaseAaveSource implements HistoricalEventSource {
       const txHash = typeof row?.txHash === "string" && /^0x[a-f0-9]{64}$/i.test(row.txHash) ? row.txHash.toLowerCase() : null;
       const occurredAt = iso(row?.timestamp);
       if (!occurredAt) return partial(events);
-      if (occurredAt < input.from || occurredAt >= input.through) continue;
       const reserve = reserveOf(row?.reserve);
       const amount = reserve ? rawAmount(row?.amount, reserve.decimals) : null;
       const type = typeof row?.__typename === "string" ? row.__typename.toLowerCase() : "";
@@ -109,7 +108,8 @@ export class BaseAaveSource implements HistoricalEventSource {
         && proof.blockTimestamp !== undefined && BigInt(Date.parse(occurredAt)) === proof.blockTimestamp * 1000n
         && Array.isArray(proof.logs) && proof.logs.some((log) => matchesPoolEvent(log, kind, reserve.assetId.slice(5), input.accountId.slice(5), amount, logIndex as number));
       if (!finalized) return partial(events);
-      events.push({ sourceId: SOURCE_ID, sourceName: "Aave V3 Base", sourceEventId: id, ingestionVersion: 2, accountId: input.accountId, assetId: reserve.assetId, rawDelta: kind === "redeem" || kind === "borrow" ? `-${amount}` : amount, decimals: reserve.decimals, kind, occurredAt, chainId: 8453, blockNumber, blockHash, txHash, logIndex: logIndex as number, finality: "finalized", completeness: "complete", groupId: txHash, counterpartyAccountId: null, evidenceJson: JSON.stringify({ sourceEvidenceVersion: 2, effectProof: "canonical_aave_pool_log", market: AAVE_BASE_V3_MARKET, type: row.__typename, role: "protocol_activity" }) });
+      if (occurredAt < input.from || occurredAt >= input.through) continue;
+      events.push({ sourceId: SOURCE_ID, sourceName: "Aave V3 Base", sourceEventId: id, ingestionVersion: 3, accountId: input.accountId, assetId: reserve.assetId, rawDelta: kind === "redeem" || kind === "borrow" ? `-${amount}` : amount, decimals: reserve.decimals, kind, occurredAt, chainId: 8453, blockNumber, blockHash, txHash, logIndex: logIndex as number, finality: "finalized", completeness: "complete", groupId: txHash, counterpartyAccountId: null, evidenceJson: JSON.stringify({ sourceEvidenceVersion: 3, effectProof: "canonical_aave_pool_log", market: AAVE_BASE_V3_MARKET, type: row.__typename, role: "protocol_activity" }) });
     }
     const complete = !info.hasNextPage;
     return { events, nextCursor: complete ? null : info.next as string, coveredThrough: complete ? input.through : input.from, complete, sourceId: SOURCE_ID };

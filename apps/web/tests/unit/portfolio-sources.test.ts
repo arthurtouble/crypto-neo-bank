@@ -243,7 +243,20 @@ describe("Base Aave source", () => {
     const result = await source.page(request);
     expect(result.complete).toBe(true);
     expect(result.events[0]).toMatchObject({ kind: "borrow", rawDelta: "-3000000", finality: "finalized" });
-    expect(JSON.parse(result.events[0].evidenceJson)).toMatchObject({ sourceEvidenceVersion: 2, effectProof: "canonical_aave_pool_log" });
+    expect(result.events[0].ingestionVersion).toBe(3);
+    expect(JSON.parse(result.events[0].evidenceJson)).toMatchObject({ sourceEvidenceVersion: 3, effectProof: "canonical_aave_pool_log" });
+  });
+
+  it("does not complete a window when an in-window Pool event is indexed outside it", async () => {
+    const verify = vi.fn(async () => proof());
+    const source = new BaseAaveSource({
+      call: vi.fn(async () => ({ data: { v3: { items: [activity({ timestamp: "2026-09-19T12:00:00Z" })], pageInfo: { hasNextPage: false } } } })),
+      verify
+    });
+    const result = await source.page(request);
+    expect(verify).toHaveBeenCalledOnce();
+    expect(result.complete).toBe(false);
+    expect(result.events).toEqual([]);
   });
 
   it("rejects successful receipts without an exact governed Pool event", async () => {
@@ -303,17 +316,15 @@ describe("Base Aave source", () => {
   });
 
   it("excludes activity outside the requested coverage window", async () => {
-    const activityAt = (timestamp: string, logIndex: number) => activity({ timestamp, logIndex });
-    const verify = vi.fn(async () => proof({ logs: [borrowLog({ logIndex: 2 })] }));
+    const verify = vi.fn(async () => proof({
+      blockTimestamp: BigInt(Date.parse("2026-09-19T12:00:00Z") / 1000)
+    }));
     const source = new BaseAaveSource({
-      call: vi.fn(async () => ({ data: { v3: { items: [
-        activityAt("2026-09-19T12:00:00Z", 1), activityAt("2026-09-20T12:00:00Z", 2), activityAt("2026-09-21T12:00:00Z", 3)
-      ], pageInfo: { hasNextPage: false } } } })), verify
+      call: vi.fn(async () => ({ data: { v3: { items: [activity({ timestamp: "2026-09-19T12:00:00Z" })], pageInfo: { hasNextPage: false } } } })), verify
     });
     const result = await source.page(request);
     expect(result.complete).toBe(true);
-    expect(result.events).toHaveLength(1);
-    expect(result.events[0].logIndex).toBe(2);
+    expect(result.events).toEqual([]);
     expect(verify).toHaveBeenCalledTimes(1);
   });
 });
