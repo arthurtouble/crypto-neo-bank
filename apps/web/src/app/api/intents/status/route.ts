@@ -6,6 +6,7 @@ import { FeatureUnavailableError, requireFeature, type FeatureKey } from "@/lib/
 import { WalletOwnershipError, requireLinkedEvmWallet } from "@/lib/auth/wallet";
 import { observeTransactionIdentity } from "@/lib/transactions/chain-observation";
 import { matchesPreparedCall, type NormalizedPreparedCall } from "@/lib/transactions/evidence";
+import { REPORTED_HASH_CLAIM_SQL, TERMINAL_INTENT_AUDIT_SQL, TERMINAL_INTENT_UPDATE_SQL, TERMINAL_PRODUCT_EVENT_SQL } from "@/lib/transactions/status-sql";
 
 const statusSchema = z.object({
   intentId: z.string().uuid(),
@@ -84,10 +85,7 @@ export async function POST(request: Request) {
       await requireFeature(env.PROJECTION_DB, feature);
       const lock = await env.PROJECTION_DB.prepare("SELECT account_locked FROM security_profiles WHERE subject_reference = ?").bind(subject.subjectReference).first<{ account_locked: number }>();
       if (!lock || lock.account_locked) return reply({ error: "account_locked", traceId }, 403);
-      const claimed = await env.PROJECTION_DB.prepare(`UPDATE intent_prepared_calls SET reported_hash = ?, verification_state = 'pending', updated_at = ?
-        WHERE intent_id = ? AND step_index = ? AND (reported_hash IS NULL OR lower(reported_hash) = lower(?)) AND verification_state IN ('prepared', 'pending', 'reported')
-        AND EXISTS (SELECT 1 FROM transaction_intents i WHERE i.intent_id = intent_prepared_calls.intent_id
-          AND i.subject_reference = ? AND i.status IN ('reviewed', 'submitted'))`)
+      const claimed = await env.PROJECTION_DB.prepare(REPORTED_HASH_CLAIM_SQL)
         .bind(hash.toLowerCase(), new Date().toISOString(), input.intentId, stepIndex, hash, subject.subjectReference).run();
       if (claimed.meta.changes !== 1) return reply({ error: "hash_conflict", traceId }, 409);
       const observation = await observeTransactionIdentity(prepared.chain_id, hash);
@@ -123,21 +121,12 @@ export async function POST(request: Request) {
     const eventId = crypto.randomUUID();
     const eventType = `intent_${input.status}`;
     const changes = await env.PROJECTION_DB.batch([
-      env.PROJECTION_DB.prepare(`UPDATE transaction_intents
-        SET status = ?, failure_reason = ?, updated_at = ?
-        WHERE intent_id = ? AND subject_reference = ? AND status = 'reviewed'
-          AND transaction_hash IS NULL
-          AND NOT EXISTS (SELECT 1 FROM intent_prepared_calls p WHERE p.intent_id = transaction_intents.intent_id AND p.reported_hash IS NOT NULL)`)
+      env.PROJECTION_DB.prepare(TERMINAL_INTENT_UPDATE_SQL)
         .bind(input.status, input.failureReason ?? null, now, input.intentId, subject.subjectReference),
-      env.PROJECTION_DB.prepare(`INSERT INTO intent_events (event_id, intent_id, subject_reference, event_type, evidence_json, occurred_at)
-        SELECT ?, intent_id, subject_reference, ?, ?, ? FROM transaction_intents
-        WHERE intent_id = ? AND subject_reference = ? AND status = ? AND updated_at = ?
-          AND NOT EXISTS (SELECT 1 FROM intent_events WHERE intent_id = ? AND event_type = ? AND occurred_at = ?)`)
+      env.PROJECTION_DB.prepare(TERMINAL_INTENT_AUDIT_SQL)
         .bind(eventId, eventType, JSON.stringify({ failureReason: input.failureReason }), now,
           input.intentId, subject.subjectReference, input.status, now, input.intentId, eventType, now),
-      env.PROJECTION_DB.prepare(`INSERT INTO product_events (event_id, subject_reference, session_reference, event_name, surface, properties_json, occurred_at)
-        SELECT ?, ?, ?, ?, '/app/activity', ?, ? WHERE EXISTS
-          (SELECT 1 FROM intent_events WHERE event_id = ? AND intent_id = ? AND subject_reference = ?)`)
+      env.PROJECTION_DB.prepare(TERMINAL_PRODUCT_EVENT_SQL)
         .bind(crypto.randomUUID(), subject.subjectReference, subject.sessionReference, "transaction_prepared",
           JSON.stringify({ intentId: input.intentId, status: input.status }), now, eventId, input.intentId, subject.subjectReference)
     ]);
