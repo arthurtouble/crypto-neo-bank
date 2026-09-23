@@ -1,4 +1,4 @@
-import { encodeFunctionData, erc20Abi, type PublicClient } from "viem";
+import { decodeFunctionResult, encodeFunctionData, erc20Abi, type PublicClient } from "viem";
 import { BASE_ASSETS } from "@/config/chains";
 import { normalizePreparedCall, type NormalizedPreparedCall } from "./evidence";
 
@@ -51,6 +51,14 @@ export async function simulateBaseDirectTransfer(client: PublicClient, request: 
     blockHash: block.hash, requireCanonical: true });
   if (effect.type === "erc20_transfer" && result.data !== `0x${"0".repeat(63)}1`)
     throw new Error("Token transfer simulation did not return true.");
+  const assetBalance = effect.type === "native_transfer"
+    ? await client.getBalance({ address: normalized.from, blockHash: block.hash, requireCanonical: true })
+    : decodeFunctionResult({ abi: erc20Abi, functionName: "balanceOf", data: (await client.call({
+      to: normalized.to,
+      data: encodeFunctionData({ abi: erc20Abi, functionName: "balanceOf", args: [normalized.from] }),
+      blockHash: block.hash, requireCanonical: true
+    })).data ?? "0x" });
+  if (assetBalance < amount) throw new Error("Insufficient asset balance at the simulation block.");
   const canonical = await client.getBlock({ blockNumber: block.number });
   if (canonical.hash?.toLowerCase() !== block.hash.toLowerCase() || canonical.timestamp !== block.timestamp)
     throw new Error("Canonical simulation block changed.");
@@ -61,6 +69,8 @@ export async function simulateBaseDirectTransfer(client: PublicClient, request: 
     observedAtMs,
     fingerprint: normalized.fingerprint,
     simulationSucceeded: true as const,
+    assetBalanceRaw: assetBalance.toString(),
+    assetBalanceObserved: true as const,
     balanceAndGasProven: false as const,
     signingReady: false as const
   };

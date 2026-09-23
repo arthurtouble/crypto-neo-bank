@@ -15,7 +15,9 @@ function rpc() {
   const client = {
     getChainId: vi.fn(async () => 8453),
     getBlock: vi.fn(async () => block),
-    call: vi.fn(async (): Promise<{ data: string }> => ({ data: truthy }))
+    getBalance: vi.fn(async () => 2_000n),
+    call: vi.fn(async ({ data }: { data: string }): Promise<{ data: string }> =>
+      ({ data: data.startsWith("0x70a08231") ? `0x${(2_000n).toString(16).padStart(64, "0")}` : truthy }))
   };
   return client;
 }
@@ -40,10 +42,12 @@ describe("disconnected direct-transfer simulation", () => {
     });
     expect(proof).toEqual({ chainId: 8453, blockNumber: 42n, blockHash: hash,
       observedAtMs: 1_000_000_000, fingerprint: call.fingerprint, simulationSucceeded: true,
+      assetBalanceRaw: "2000", assetBalanceObserved: true,
       balanceAndGasProven: false, signingReady: false });
     expect(client.call).toHaveBeenCalledWith({ account: from, to: recipient, value: 1_000n, data: "0x",
       blockHash: hash, requireCanonical: true });
     expect(client.getBlock).toHaveBeenCalledWith({ blockNumber: 42n });
+    expect(client.getBalance).toHaveBeenCalledWith({ address: from, blockHash: hash, requireCanonical: true });
   });
 
   it("requires a true ERC20 transfer result at the same canonical block", async () => {
@@ -55,12 +59,77 @@ describe("disconnected direct-transfer simulation", () => {
     expect(proof.simulationSucceeded).toBe(true);
     expect(client.call).toHaveBeenCalledWith({ account: from, to: usdc, value: 0n, data: call.data,
       blockHash: hash, requireCanonical: true });
+    expect(client.call).toHaveBeenCalledWith({ to: usdc, data: encodeFunctionData({ abi: erc20Abi,
+      functionName: "balanceOf", args: [from] }), blockHash: hash, requireCanonical: true });
     for (const data of [`0x${"0".repeat(64)}`, "0x", "0x1234"]) {
       client.call.mockResolvedValueOnce({ data });
       await expect(simulateBaseDirectTransfer(client as unknown as PublicClient, {
         call, effect: { type: "erc20_transfer", token: usdc, recipient, amountRaw: "1000" }, nowMs, maxAgeMs: 30_000
       })).rejects.toThrow(/token|result|return/i);
     }
+  });
+
+  it("rejects insufficient native value or token balance at the simulation block", async () => {
+    const nativeCall = await native();
+    const nativeClient = rpc();
+    nativeClient.getBalance.mockResolvedValueOnce(999n);
+    await expect(simulateBaseDirectTransfer(nativeClient as unknown as PublicClient, {
+      call: nativeCall, effect: { type: "native_transfer", recipient, amountRaw: "1000" }, nowMs, maxAgeMs: 30_000
+    })).rejects.toThrow(/balance/i);
+
+    const tokenCall = await token();
+    const tokenClient = rpc();
+    tokenClient.call.mockResolvedValueOnce({ data: truthy }).mockResolvedValueOnce({ data: `0x${(999n).toString(16).padStart(64, "0")}` });
+    await expect(simulateBaseDirectTransfer(tokenClient as unknown as PublicClient, {
+      call: tokenCall, effect: { type: "erc20_transfer", token: usdc, recipient, amountRaw: "1000" }, nowMs, maxAgeMs: 30_000
+    })).rejects.toThrow(/balance/i);
+  });
+
+  it("accepts an exact asset balance without claiming fee coverage", async () => {
+    const nativeCall = await native();
+    const nativeClient = rpc();
+    nativeClient.getBalance.mockResolvedValueOnce(1_000n);
+    const nativeProof = await simulateBaseDirectTransfer(nativeClient as unknown as PublicClient, {
+      call: nativeCall, effect: { type: "native_transfer", recipient, amountRaw: "1000" }, nowMs, maxAgeMs: 30_000
+    });
+    expect(nativeProof).toMatchObject({ assetBalanceRaw: "1000", balanceAndGasProven: false, signingReady: false });
+
+    const tokenCall = await token();
+    const tokenClient = rpc();
+    tokenClient.call.mockResolvedValueOnce({ data: truthy }).mockResolvedValueOnce({ data: `0x${(1_000n).toString(16).padStart(64, "0")}` });
+    const tokenProof = await simulateBaseDirectTransfer(tokenClient as unknown as PublicClient, {
+      call: tokenCall, effect: { type: "erc20_transfer", token: usdc, recipient, amountRaw: "1000" }, nowMs, maxAgeMs: 30_000
+    });
+    expect(tokenProof).toMatchObject({ assetBalanceRaw: "1000", balanceAndGasProven: false, signingReady: false });
+  });
+
+  it("rejects unavailable balance evidence and a changed canonical block after the balance read", async () => {
+    const nativeCall = await native();
+    const unavailable = rpc();
+    unavailable.getBalance.mockRejectedValueOnce(new Error("historical balance unavailable"));
+    await expect(simulateBaseDirectTransfer(unavailable as unknown as PublicClient, {
+      call: nativeCall, effect: { type: "native_transfer", recipient, amountRaw: "1000" }, nowMs, maxAgeMs: 30_000
+    })).rejects.toThrow(/balance unavailable/i);
+
+    const tokenCall = await token();
+    const malformed = rpc();
+    malformed.call.mockResolvedValueOnce({ data: truthy }).mockResolvedValueOnce({ data: "0x" });
+    await expect(simulateBaseDirectTransfer(malformed as unknown as PublicClient, {
+      call: tokenCall, effect: { type: "erc20_transfer", token: usdc, recipient, amountRaw: "1000" }, nowMs, maxAgeMs: 30_000
+    })).rejects.toThrow();
+
+    const offline = rpc();
+    offline.call.mockResolvedValueOnce({ data: truthy }).mockRejectedValueOnce(new Error("balanceOf unavailable"));
+    await expect(simulateBaseDirectTransfer(offline as unknown as PublicClient, {
+      call: tokenCall, effect: { type: "erc20_transfer", token: usdc, recipient, amountRaw: "1000" }, nowMs, maxAgeMs: 30_000
+    })).rejects.toThrow(/balanceOf unavailable/i);
+
+    const changed = rpc();
+    changed.getBlock.mockResolvedValueOnce(block).mockResolvedValueOnce({ ...block, hash: `0x${"b".repeat(64)}` });
+    await expect(simulateBaseDirectTransfer(changed as unknown as PublicClient, {
+      call: nativeCall, effect: { type: "native_transfer", recipient, amountRaw: "1000" }, nowMs, maxAgeMs: 30_000
+    })).rejects.toThrow(/canonical/i);
+    expect(changed.getBalance).toHaveBeenCalledOnce();
   });
 
   it("rejects a changed fingerprint, data hash, recipient, amount, or unsupported token before RPC execution", async () => {
