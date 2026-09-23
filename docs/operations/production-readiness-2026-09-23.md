@@ -162,6 +162,8 @@ Wrangler was subsequently verified against the intended `Crypto Neo Bank` accoun
 
 A separate post-rollout development D1 export was restored into isolated in-memory SQLite. Its `integrity_check` returned `ok`, `foreign_key_check` returned no rows, all 28 migrations were present, both observation tables were empty, and the four financial-action flags remained `0`. The pre- and post-migration exports are retained privately with mode `0600` in the development release directory, outside the repository. This checks the export/restore evidence shape; it is not a Cloudflare Time Travel restoration or a live operator rollback drill.
 
+An authenticated check in the embedded browser reached the deployed Overview and Activity pages after the new Worker rollout. The account session restored on navigation and Activity loaded its search, filters, and export control without an error. That development account has no activity or late-observation records, so this check cannot validate observation rendering, reconciliation, or a real customer money-movement journey. No transaction was prepared or signed.
+
 ## Non-negotiable release rules
 
 - D1 projections are not customer balances, settlement records, provider entitlements, or a substitute for chain/provider reads.
