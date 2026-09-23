@@ -20,7 +20,7 @@
     "kb:build": "pnpm --filter @aurel/kb build",
     "kb:deploy": "pnpm --filter @aurel/kb deploy",
     "test": "pnpm --filter @aurel/web test",
-    "test:unit": "pnpm --filter @aurel/web test:unit",
+    "test:unit": "pnpm --filter @aurel/web test:unit && node --test scripts/mainnet-readiness.test.mjs",
     "test:e2e": "pnpm --filter @aurel/web test:e2e",
     "test:mainnet-readiness": "node scripts/mainnet-readiness.mjs",
     "test:production": "node scripts/production-smoke.mjs",
