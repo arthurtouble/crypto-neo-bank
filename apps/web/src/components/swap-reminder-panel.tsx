@@ -50,13 +50,12 @@ export function SwapReminderPanel({ fromAssetId, toAssetId, amount, onReview }: 
         const token = await getAccessToken();
         if (!token) throw new Error("Sign in to manage reminders.");
         const headers = { Authorization: `Bearer ${token}` };
-        const [listed, materialized] = await Promise.all([
-          fetch("/api/swap/reminders", { headers, cache: "no-store" }),
-          fetch("/api/swap/reminders/due", { headers, cache: "no-store" })
-        ]);
-        if (!listed.ok || !materialized.ok) throw new Error("Reminders are unavailable. Try again.");
+        const listed = await fetch("/api/swap/reminders", { headers, cache: "no-store" });
+        if (!listed.ok) throw new Error("Reminders are unavailable. Try again.");
+        if (active) setPlans(((await listed.json()) as { plans: ReminderPlan[] }).plans);
+        const materialized = await fetch("/api/swap/reminders/due", { headers, cache: "no-store" });
+        if (!materialized.ok) throw new Error("Due reminders are unavailable. Saved plans remain visible.");
         if (active) {
-          setPlans(((await listed.json()) as { plans: ReminderPlan[] }).plans);
           setDue(((await materialized.json()) as { occurrences: Due[] }).occurrences);
         }
       } catch (caught) { if (active) setError(caught instanceof Error ? caught.message : "Reminders are unavailable."); }
@@ -73,7 +72,8 @@ export function SwapReminderPanel({ fromAssetId, toAssetId, amount, onReview }: 
       const fields = { amount: savedAmount, scheduleType, timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone, anchorLocal };
       if (editing) await api("/api/swap/reminders", "PATCH", { ...fields, planId: editing.planId, version: editing.planVersion, action: "edit" });
       else await api("/api/swap/reminders", "POST", { ...fields, fromAssetId, toAssetId });
-      await refresh(); setEditing(null); setNotice(editing ? "Reminder updated." : "Reminder saved. No trade was placed.");
+      setEditing(null); setNotice(editing ? "Reminder updated." : "Reminder saved. No trade was placed.");
+      try { await refresh(); } catch { setError("Saved, but the list could not refresh. Please try again later."); }
     } catch (caught) { setError(caught instanceof Error ? caught.message : "Could not save reminder."); }
     finally { setBusy(false); }
   }
@@ -81,7 +81,8 @@ export function SwapReminderPanel({ fromAssetId, toAssetId, amount, onReview }: 
     setBusy(true); setError(null); setNotice(null);
     try {
       await api("/api/swap/reminders", "PATCH", { planId: plan.planId, version: plan.planVersion, action });
-      await refresh(); setNotice(`Reminder ${action === "cancel" ? "cancelled" : action === "pause" ? "paused" : "resumed"}.`);
+      setNotice(`Reminder ${action === "cancel" ? "cancelled" : action === "pause" ? "paused" : "resumed"}.`);
+      try { await refresh(); } catch { setError("Updated, but the list could not refresh. Please try again later."); }
     } catch (caught) { setError(caught instanceof Error ? caught.message : "Could not update reminder."); }
     finally { setBusy(false); }
   }
