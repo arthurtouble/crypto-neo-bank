@@ -14,7 +14,7 @@ export type AaveRiskInput = {
     supplyCapRemainingRaw: bigint; borrowCapRemainingRaw: bigint;
   };
   account: {
-    weightedCollateralBase: bigint; debtBase: bigint;
+    weightedCollateralBase: bigint; debtBase: bigint; availableBorrowsBase: bigint;
     assetCollateralBalanceRaw: bigint; assetDebtRaw: bigint;
     eModeCategory: number; isolationMode: boolean;
   };
@@ -53,6 +53,7 @@ export function assessAaveActionRisk(input: AaveRiskInput): {
     priceBase: reserve.priceBase, availableLiquidityRaw: reserve.availableLiquidityRaw,
     supplyCapRemainingRaw: reserve.supplyCapRemainingRaw, borrowCapRemainingRaw: reserve.borrowCapRemainingRaw,
     weightedCollateralBase: account.weightedCollateralBase, debtBase: account.debtBase,
+    availableBorrowsBase: account.availableBorrowsBase,
     assetCollateralBalanceRaw: account.assetCollateralBalanceRaw, assetDebtRaw: account.assetDebtRaw
   })) nonnegative(value, name);
   if (reserve.priceBase === 0n || !reserve.active || reserve.paused) throw new Error("Reserve unavailable.");
@@ -79,6 +80,7 @@ export function assessAaveActionRisk(input: AaveRiskInput): {
     }
   } else if (action === "borrow") {
     if (amountRaw > reserve.borrowCapRemainingRaw || amountRaw > reserve.availableLiquidityRaw) throw new Error("Borrow unavailable.");
+    if (upperValueBase > account.availableBorrowsBase) throw new Error("Borrow exceeds current borrowing power.");
     postDebtBase += upperValueBase;
   } else {
     if (amountRaw > account.assetDebtRaw || valueBase > postDebtBase) throw new Error("Repayment exceeds debt.");

@@ -17,6 +17,7 @@ const base = {
   },
   account: {
     weightedCollateralBase: 16_000_000_000n, debtBase: 10_000_000_000n,
+    availableBorrowsBase: 5_000_000_000n,
     assetCollateralBalanceRaw: 200_000_000n, assetDebtRaw: 100_000_000n,
     eModeCategory: 0, isolationMode: false
   }
@@ -84,5 +85,11 @@ describe("disconnected Aave risk gate", () => {
       account: { ...base.account, weightedCollateralBase: 10n, debtBase: 1n, assetCollateralBalanceRaw: 1n } };
     expect(assessAaveActionRisk({ ...tiny, action: "borrow" }).postDebtBase).toBe(4n);
     expect(assessAaveActionRisk({ ...tiny, action: "withdraw" }).postWeightedCollateralBase).toBe(8n);
+  });
+
+  it("checks the protocol borrow-power ceiling independently of liquidation health", () => {
+    const generousHealth = { ...base, account: { ...base.account, weightedCollateralBase: 100_000_000_000n, availableBorrowsBase: 50_000_000n } };
+    expect(() => assessAaveActionRisk(generousHealth)).toThrow(/borrow/i);
+    expect(() => assessAaveActionRisk({ ...base, account: { ...base.account, availableBorrowsBase: undefined as unknown as bigint } })).toThrow();
   });
 });
