@@ -91,15 +91,17 @@ describe("authoritative portfolio chart", () => {
     expect(model.returnPercent).toBeCloseTo(1);
   });
 
-  it("renders source loading, coverage reasons, separate Aave legs and external scope", () => {
+  it("keeps incomplete history plain-language while retaining Aave legs and external scope", () => {
     fixture.query = { data: undefined, isPending: true, error: null };
     expect(renderToStaticMarkup(React.createElement(PortfolioPerformance))).toContain("Loading verified history");
     fixture.query = { data: history([complete("2026-09-19", "100"), partial("2026-09-20", "Aave source partial")]), isPending: false, error: null };
     const markup = renderToStaticMarkup(React.createElement(PortfolioPerformance));
-    expect(markup).toContain("Aave source partial");
+    expect(markup).toContain("still verifying 1 day of history.");
+    expect(markup).not.toContain("Aave source partial");
+    expect(markup).not.toContain("Missing portfolio history days");
     expect(markup).toMatch(/Aave supply <strong class="sensitiveAmount">unavailable/);
     expect(markup).toMatch(/Aave debt <strong class="sensitiveAmount">unavailable/);
-    expect(markup).toContain("1 linked external wallet");
+    expect(markup).toContain("Includes your Aurel wallet and 1 linked wallet.");
     expect(markup).toContain("Return unavailable");
     expect(markup).toContain('aria-label="Portfolio history period"');
     expect(markup).toContain(">7D</button>");
