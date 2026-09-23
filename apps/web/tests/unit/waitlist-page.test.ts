@@ -12,6 +12,7 @@ it("asks for email only and includes an accessible submission control", () => {
   expect(html).toContain('type="email"');
   expect(html).toContain('name="email"');
   expect(html).toContain("Join waitlist");
+  expect(html).toMatch(/<button[^>]+disabled/);
   expect(html).not.toContain('name="country"');
 });
 

@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { TurnstileField } from "./turnstile-field";
 import { WaitlistConfetti } from "./waitlist-confetti";
 
 const privacyNoticeVersion = "2026-09-23";
 const docsUrl = "https://aurel-docs.aurel-events.workers.dev";
+const subscribeToHydration = () => () => undefined;
 
 function attribution() {
   const params = new URLSearchParams(window.location.search);
@@ -21,6 +22,7 @@ function attribution() {
 }
 
 export function WaitlistForm() {
+  const ready = useSyncExternalStore(subscribeToHydration, () => true, () => false);
   const [working, setWorking] = useState(false);
   const [complete, setComplete] = useState(false);
   const [error, setError] = useState("");
@@ -63,7 +65,7 @@ export function WaitlistForm() {
 
   if (complete) return <section className="waitlistCard waitlistSuccess" aria-live="polite">
     <span className="waitlistSuccessMark" aria-hidden="true">✓</span>
-    <h2>You're on the waitlist.</h2>
+    <h2>{"You're on the waitlist."}</h2>
     <p role="status">Thanks for joining. We’ll be in touch if we can offer you access. Joining doesn’t guarantee an invitation.</p>
     <a href={docsUrl}>Explore the documentation <span aria-hidden="true">↗</span></a>
     <WaitlistConfetti active={burst} />
@@ -76,7 +78,7 @@ export function WaitlistForm() {
     <label className="fieldLabel" htmlFor="waitlist-email">Email</label>
     <input id="waitlist-email" name="email" type="email" autoComplete="email" placeholder="you@example.com" required maxLength={254} />
     <TurnstileField action="waitlist_signup" resetKey={resetKey} />
-    <button className="button dark" type="submit" disabled={working}>{working ? "Joining…" : "Join waitlist"}</button>
+    <button className="button dark" type="submit" disabled={!ready || working}>{working ? "Joining…" : "Join waitlist"}</button>
     {error && <p className="waitlistError" ref={errorMessage} tabIndex={-1} role="alert">{error}</p>}
     <small>By joining, you acknowledge our <a href={`${docsUrl}/legal/privacy-notice/`}>Privacy Notice</a>. No account or deposit is needed.</small>
   </form>;

@@ -57,7 +57,7 @@ test("public landing page has no serious accessibility violations", async ({ pag
 test("mobile layout does not overflow and retains product entry", async ({ page }, testInfo) => {
   test.skip(!testInfo.project.name.includes("mobile"), "Mobile-only assertion");
   await page.goto("/");
-  await expect(page.getByRole("link", { name: /Apply/ }).first()).toBeVisible();
+  await expect(page.getByRole("link", { name: "Join waitlist" }).first()).toBeVisible();
   const dimensions = await page.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, clientWidth: document.documentElement.clientWidth }));
   expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth + 1);
 });
