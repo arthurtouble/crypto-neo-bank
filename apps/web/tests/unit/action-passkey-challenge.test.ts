@@ -34,6 +34,7 @@ beforeEach(() => {
   for (const file of readdirSync(root).filter((name) => name.endsWith(".sql")).sort()) {
     sqlite.exec(readFileSync(resolve(root, file), "utf8"));
   }
+  sqlite.exec("UPDATE feature_flags SET enabled=1 WHERE flag_key='direct_transfers'");
   sqlite.exec(`INSERT INTO subject_profiles (subject_reference, privy_user_reference, onboarding_state, created_at, updated_at)
       VALUES ('subject-a', 'subject-a', 'beta_active', '2026-09-23T00:00:00.000Z', '2026-09-23T00:00:00.000Z');
     INSERT INTO wallet_references (wallet_reference, subject_reference, provider, address, chain_family, control_model, observed_at)

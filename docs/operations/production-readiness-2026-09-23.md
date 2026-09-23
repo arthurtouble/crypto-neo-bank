@@ -164,6 +164,8 @@ A separate post-rollout development D1 export was restored into isolated in-memo
 
 An authenticated check in the embedded browser reached the deployed Overview and Activity pages after the new Worker rollout. The account session restored on navigation and Activity loaded its search, filters, and export control without an error. That development account has no activity or late-observation records, so this check cannot validate observation rendering, reconciliation, or a real customer money-movement journey. No transaction was prepared or signed.
 
+A later fail-closed review found that a missing `feature_flags` row still enabled direct transfers, cross-chain actions, or DeFi actions through application defaults, while the historical `0006` migration seeded those three rows enabled. Migration `0029` closes the four money-movement flags after the historical migrations; application defaults now also deny these actions if a row is missing. Tests for both paths failed before the changes and passed afterward. Positive passkey tests now explicitly enable transfers in their isolated fixture, rather than relying on an implicit production default. The local D1 recovery drill passed through `0029`. This migration is not yet deployed; the existing development D1 remains on `0028` with all four flags disabled. An operator must deliberately re-enable a capability only after its release gates pass.
+
 ## Non-negotiable release rules
 
 - D1 projections are not customer balances, settlement records, provider entitlements, or a substitute for chain/provider reads.

@@ -2,10 +2,10 @@ export const featureKeys = ["direct_transfers", "swaps", "cross_chain", "defi_ac
 export type FeatureKey = (typeof featureKeys)[number];
 
 const safeDefaults: Record<FeatureKey, boolean> = {
-  direct_transfers: true,
+  direct_transfers: false,
   swaps: false,
-  cross_chain: true,
-  defi_actions: true,
+  cross_chain: false,
+  defi_actions: false,
   concierge: true,
   membership_preview: true,
   tokenized_markets: false,
