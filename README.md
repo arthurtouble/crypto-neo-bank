@@ -6,7 +6,9 @@ Aurel is a Cloudflare-native, mainnet-first private financial interface built ov
 
 - Premium marketing site and responsive private-client workspace.
 - Live Base ETH, USDC, and WETH portfolio reads plus authenticated Aurel intent history.
-- User-confirmed sends, multichain USDC routing, Aave Earn, collateralized borrowing, and repayment preparation.
+- Direct Base ETH and supported-token sends with exact-call preparation and chain-evidence checks. Higher-value sends requiring transaction-specific step-up remain paused.
+- Searchable screened digital-asset catalog and live LI.FI same-chain/cross-network quote previews. Swap and cross-network signing remain disabled.
+- Read-only Aave positions, rewards, Earn, and Borrow previews. New protocol actions and claims remain disabled.
 - Privy authentication, embedded/external wallet support, MFA/recovery/export surfaces, and server-side token verification.
 - Membership projections, vendor-neutral benefit entitlements, and a read-only AI concierge.
 - Fail-closed tokenized-market eligibility, restricted operations/reconciliation, and an effective-dated trust center.
@@ -69,9 +71,9 @@ The current mainnet-preview environment is deployed to Cloudflare:
 - Disposable projections: D1 database `aurel-projections` (EU jurisdiction)
 - Event transport: `aurel-provider-events` with `aurel-provider-events-dlq`
 
-Privy authentication and direct Base reads are live in this environment. Direct DeFi and cross-chain routes are prepared from live mainnet data and require the customer to sign. Fiat transfers, cards, and vendor-funded benefits remain unavailable until their respective partner programs and credentials are activated; the provider lab is clearly separated and illustrative.
+Privy authentication and direct Base reads are live in this environment. The deployed Worker may lag the product-parity branch; do not infer branch features from this URL. The app can show live DeFi and cross-network previews, but Swap, cross-network submission, and Aave writes are paused until exact transaction plans and settlement evidence pass review. Fiat transfers, cards, regulated orders, and vendor-funded benefits remain unavailable until their respective partner programs and credentials are activated; the provider lab is clearly separated and illustrative.
 
-Create the D1 database and queues, replace the placeholder D1 IDs in both Wrangler files, apply the migrations, and set the webhook secret before deployment. Exact commands are in the internal [partner integration guide](./apps/kb/src/content/docs/architecture/partner-integration.md).
+The D1 database and queues already have concrete production IDs in the Wrangler files. Before any release, inspect remote migration status, verify a backup, apply only reviewed backward-compatible migrations, and verify secrets and bindings. Exact commands are in the internal [partner integration guide](./apps/kb/src/content/docs/architecture/partner-integration.md).
 
 The web Worker configuration is in `apps/web/wrangler.jsonc`; the Queue consumer is in `apps/events/wrangler.jsonc`.
 
@@ -87,3 +89,5 @@ Do not add provider credentials to `wrangler.jsonc`. Add Bridge, Rain, Privy ser
 An Aurel database must never become the source of truth for fiat balances, wallet balances, DeFi positions, loans, or card settlement. Financial projections are rebuildable; security policies, customer instructions, consent receipts, cases, and audit evidence are operational records that require retention and recovery even though they do not authorize or prove a balance.
 
 See [launch readiness](./apps/kb/src/content/docs/overview/launch-readiness.md) for the closed-beta gates, the [closed-beta plan](./apps/kb/src/content/docs/operations/closed-beta-plan.md) for cohort controls, the [acceptance test plan](./apps/kb/src/content/docs/operations/acceptance-test-plan.md) for funded-wallet evidence, and the [threat model](./apps/kb/src/content/docs/security/threat-model.md) for the security boundary.
+
+The dated [production-readiness ledger](./docs/operations/production-readiness-2026-09-23.md) distinguishes verified code from operator and provider release gates.
