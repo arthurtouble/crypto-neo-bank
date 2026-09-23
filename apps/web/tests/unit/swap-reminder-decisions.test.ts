@@ -31,6 +31,14 @@ describe("price alert decisions", () => {
     expect(decidePriceAlert(alert, first, observation("3100", "2026-09-23T09:59:00.000Z", "obs-0"), now).accepted).toBe(false);
     expect(decidePriceAlert(alert, first, observation("3100", "2026-09-23T10:00:00.000Z", "obs-2"), now).accepted).toBe(false);
   });
+  it("accepts a later source trade within the same millisecond and preserves its cursor", () => {
+    const before = decidePriceAlert(alert, null, observation("2960", "2026-09-23T10:00:00.123456001Z", "obs-a"), now);
+    const crossed = decidePriceAlert(alert, before.next, observation("3010", "2026-09-23T10:00:00.123456002Z", "obs-b"), now);
+    expect(crossed.trigger).toBe(true);
+    expect(crossed.next?.sourceObservedAt).toBe("2026-09-23T10:00:00.123456002Z");
+    expect(crossed.next?.lastTriggeredAt).toBe("2026-09-23T10:00:00.123456002Z");
+    expect(decidePriceAlert(alert, crossed.next, observation("2960", "2026-09-23T10:00:00.123456001Z", "obs-c"), now).reason).toBe("out_of_order");
+  });
   it("requires a genuine opposite side before a zero-hysteresis threshold edge", () => {
     const exact = { ...alert, hysteresisBps: 0 };
     const first = decidePriceAlert(exact, null, observation("3000"), now).next;

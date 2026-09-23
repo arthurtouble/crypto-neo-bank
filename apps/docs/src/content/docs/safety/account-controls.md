@@ -1,6 +1,6 @@
 ---
 title: Account controls
-description: Passkeys, saved addresses, review periods, limits, and account lock.
+description: Saved addresses, review periods, limits, and account lock.
 sidebar:
   order: 2
 ---

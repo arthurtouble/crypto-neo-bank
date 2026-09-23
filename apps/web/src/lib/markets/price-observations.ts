@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { CATALOG_REGISTRY } from "@/lib/swap/catalog-registry";
 import type { PriceObservation } from "@/lib/swap/reminder-decisions";
+import { sourceInstantNs } from "@/lib/markets/source-instant";
 
 // This is a deliberately narrow, reviewed market-to-contract mapping. Kraken
 // ETH/USD is a market observation, not a price oracle or execution quote.
@@ -16,7 +17,7 @@ const tradeSchema = z.object({
 });
 const responseSchema = z.object({
   error: z.array(z.string()),
-  result: z.object({ count: z.number().int().nonnegative(), trades: z.array(tradeSchema).min(1).max(10) })
+  result: z.object({ count: z.number().int().nonnegative(), last_ts: z.string(), trades: z.array(tradeSchema).min(1).max(10) })
 });
 
 async function boundedJson(response: Response): Promise<unknown> {
@@ -43,11 +44,16 @@ async function boundedJson(response: Response): Promise<unknown> {
 
 export async function getReviewedSpotObservation(
   selection: { pairId: string; baseAssetId: string; quoteAssetId: string },
-  dependencies: { fetcher?: typeof fetch; now?: () => number } = {}
+  dependencies: { fetcher?: typeof fetch; now?: () => number; checkEligibility?: (assetId: string) => Promise<boolean> } = {}
 ): Promise<PriceObservation> {
   if (selection.pairId !== reviewed.pairId || selection.baseAssetId !== reviewed.baseAssetId
-    || selection.quoteAssetId !== reviewed.quoteAssetId || !CATALOG_REGISTRY.verified.has(reviewed.baseAssetId)) {
+    || selection.quoteAssetId !== reviewed.quoteAssetId || !CATALOG_REGISTRY.verified.has(reviewed.baseAssetId)
+    || CATALOG_REGISTRY.denied.has(reviewed.baseAssetId) || CATALOG_REGISTRY.regulated.has(reviewed.baseAssetId)) {
     throw new Error("Market-to-asset mapping is not reviewed.");
+  }
+  // Identity verification is not a country, risk, or feature eligibility decision.
+  if (!dependencies.checkEligibility || !await dependencies.checkEligibility(reviewed.baseAssetId).catch(() => false)) {
+    throw new Error("Current asset eligibility could not be confirmed.");
   }
   const fetcher = dependencies.fetcher ?? fetch;
   const response = await fetcher("https://api.kraken.com/0/public/PostTrade?symbol=ETH%2FUSD&count=10", {
@@ -57,18 +63,23 @@ export async function getReviewedSpotObservation(
   if (parsed.error.length || parsed.result.count !== parsed.result.trades.length) throw new Error("Spot price source returned an incomplete observation.");
   const now = (dependencies.now ?? Date.now)();
   if (!Number.isFinite(now)) throw new Error("Spot price observation clock is unavailable.");
+  const nowNs = BigInt(Math.trunc(now)) * 1_000_000n;
   const observed = parsed.result.trades.map((item) => {
-    const time = Date.parse(item.trade_ts);
-    const publication = Date.parse(item.publication_ts);
-    if (!Number.isFinite(time) || !Number.isFinite(publication) || time > publication || publication > now) throw new Error("Spot price source returned an invalid timestamp.");
+    const time = sourceInstantNs(item.trade_ts);
+    const publication = sourceInstantNs(item.publication_ts);
+    if (time === null || publication === null || time > publication || publication > nowNs) throw new Error("Spot price source returned an invalid timestamp.");
     return { item, time };
   });
   const newest = observed.reduce((best, candidate) => candidate.time > best.time ? candidate : best);
-  if (now - newest.time > 300_000) throw new Error("Spot price source is stale.");
+  if (observed.filter((candidate) => candidate.time === newest.time).length !== 1) {
+    throw new Error("Spot price source returned an ambiguous latest trade.");
+  }
+  if (sourceInstantNs(parsed.result.last_ts) !== newest.time) throw new Error("Spot price source returned an inconsistent cursor.");
+  if (nowNs - newest.time > 300_000_000_000n) throw new Error("Spot price source is stale.");
   return {
     pairId: reviewed.pairId, baseAssetId: reviewed.baseAssetId, quoteAssetId: reviewed.quoteAssetId,
     quoteCurrency: "USD", mappingVersion: reviewed.mappingVersion, price: newest.item.price,
-    sourceObservedAt: new Date(newest.time).toISOString(), fetchedAt: new Date(now).toISOString(),
+    sourceObservedAt: newest.item.trade_ts, fetchedAt: new Date(now).toISOString(),
     observationId: `kraken:${reviewed.pairId}:${newest.item.trade_id}`,
     mappingReviewed: true, assetEligible: true, depegged: false
   };
