@@ -18,6 +18,8 @@ INSERT INTO wallet_references (wallet_reference,subject_reference,provider,addre
 VALUES ('recovery-wallet','recovery:test','privy','0x1111111111111111111111111111111111111111','evm','customer','2026-09-21T00:00:00.000Z');
 INSERT INTO transaction_intents (intent_id,subject_reference,wallet_reference,intent_type,chain_id,request_json,policy_result_json,disclosure_version,status,created_at,updated_at,expires_at)
 VALUES ('recovery-intent','recovery:test','recovery-wallet','transfer',8453,'{}','{}','drill-v1','reviewed','2026-09-21T00:00:00.000Z','2026-09-21T00:00:00.000Z','2026-09-21T00:05:00.000Z');
+INSERT INTO intent_prepared_calls (intent_id,step_index,subject_reference,wallet_address,chain_id,target_address,native_value,calldata_hash,call_fingerprint,semantic_action,source_reference,expires_at,expected_effect_json,verification_state,created_at,submission_phase)
+VALUES ('recovery-intent',0,'recovery:test','0x1111111111111111111111111111111111111111',8453,'0x2222222222222222222222222222222222222222','1','sha256:data','sha256:call','native_transfer','recovery-review','2026-09-21T00:05:00.000Z',json_object('type','native_transfer','recipient','0x2222222222222222222222222222222222222222','amountRaw','1'),'prepared','2026-09-21T00:00:00.000Z','awaiting_step_up');
 INSERT INTO action_passkey_credentials (credential_id,subject_reference,public_key_cose,algorithm,rp_id,status,created_at,activated_at)
 VALUES ('recovery-credential','recovery:test',X'A101',-7,'app.aurel.test','active','2026-09-21T00:00:00.000Z','2026-09-21T00:00:00.000Z');
 INSERT INTO action_passkey_challenges (challenge_id,challenge_digest,subject_reference,session_reference,purpose,intent_id,step_index,call_fingerprint,policy_version,rp_id,origin,expires_at,consumed_at,created_at)
@@ -60,8 +62,8 @@ for table in beta_access customer_feedback feature_flags incident_updates operat
   fi
 done
 
-evidence="$(pnpm exec wrangler d1 execute aurel-projections --local --persist-to "$restore_dir" --command "SELECT subject_reference,cohort,country_code,status,transaction_limit_usd FROM beta_access WHERE subject_reference='recovery:test'; SELECT consent_id,document_version FROM consent_receipts WHERE consent_id='recovery-consent'; SELECT credential_id FROM action_passkey_credentials WHERE credential_id='recovery-credential'; SELECT challenge_id FROM action_passkey_challenges WHERE challenge_id='recovery-challenge'; SELECT authorization_id FROM action_passkey_authorizations WHERE authorization_id='recovery-authorization';")"
-if [[ "$evidence" != *"recovery:test"* || "$evidence" != *"recovery-consent"* || "$evidence" != *"recovery-credential"* || "$evidence" != *"recovery-challenge"* || "$evidence" != *"recovery-authorization"* ]]; then
+evidence="$(pnpm exec wrangler d1 execute aurel-projections --local --persist-to "$restore_dir" --command "SELECT subject_reference,cohort,country_code,status,transaction_limit_usd FROM beta_access WHERE subject_reference='recovery:test'; SELECT consent_id,document_version FROM consent_receipts WHERE consent_id='recovery-consent'; SELECT credential_id FROM action_passkey_credentials WHERE credential_id='recovery-credential'; SELECT challenge_id FROM action_passkey_challenges WHERE challenge_id='recovery-challenge'; SELECT authorization_id FROM action_passkey_authorizations WHERE authorization_id='recovery-authorization'; SELECT submission_phase,reported_hash FROM intent_prepared_calls WHERE intent_id='recovery-intent';")"
+if [[ "$evidence" != *"recovery:test"* || "$evidence" != *"recovery-consent"* || "$evidence" != *"recovery-credential"* || "$evidence" != *"recovery-challenge"* || "$evidence" != *"recovery-authorization"* || "$evidence" != *"awaiting_step_up"* ]]; then
   echo "Recovery drill failed: retained beta, consent, or passkey evidence was not restored" >&2
   exit 1
 fi

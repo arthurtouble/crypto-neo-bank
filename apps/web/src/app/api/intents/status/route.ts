@@ -37,6 +37,7 @@ export async function GET(request: Request) {
     const intent = await env.PROJECTION_DB.prepare(`SELECT intent_id, status, intent_type AS type, chain_id, transaction_hash, route_reference,
       failure_reason, updated_at, confirmed_at,
       (SELECT CASE WHEN COUNT(*) = 0 THEN 'unverified_legacy'
+        WHEN SUM(CASE WHEN p.submission_phase = 'awaiting_step_up' THEN 1 ELSE 0 END) > 0 THEN 'awaiting_step_up'
         WHEN transaction_intents.status = 'confirmed' AND SUM(CASE WHEN p.verification_state = 'confirmed' THEN 1 ELSE 0 END) = COUNT(*) THEN 'confirmed'
         WHEN SUM(CASE WHEN p.verification_state IN ('reorged', 'inconsistent', 'failed') THEN 1 ELSE 0 END) > 0 THEN 'exception'
         ELSE 'pending' END FROM intent_prepared_calls p WHERE p.intent_id = transaction_intents.intent_id) AS verification_state
@@ -66,12 +67,13 @@ export async function POST(request: Request) {
       const stepIndex = input.stepIndex!;
       const hash = input.transactionHash!;
       if (!["reviewed", "submitted", "confirmed"].includes(current.status)) return reply({ error: "intent_expired_or_unreviewed", traceId }, 409);
-      const prepared = await env.PROJECTION_DB.prepare(`SELECT intent_id, step_index, wallet_address, chain_id, target_address, native_value, calldata_hash, call_fingerprint, semantic_action, source_reference, expires_at, expected_effect_json, reported_hash, verification_state
+      const prepared = await env.PROJECTION_DB.prepare(`SELECT intent_id, step_index, wallet_address, chain_id, target_address, native_value, calldata_hash, call_fingerprint, semantic_action, source_reference, expires_at, expected_effect_json, reported_hash, verification_state, submission_phase
         FROM intent_prepared_calls WHERE intent_id = ? AND step_index = ? AND subject_reference = ?`)
         .bind(input.intentId, stepIndex, subject.subjectReference).first<{
-          intent_id: string; step_index: number; wallet_address: string; chain_id: number; target_address: string; native_value: string; calldata_hash: string; call_fingerprint: string; semantic_action: string; source_reference: string; expires_at: string; expected_effect_json: string; reported_hash: string | null; verification_state: string;
+          intent_id: string; step_index: number; wallet_address: string; chain_id: number; target_address: string; native_value: string; calldata_hash: string; call_fingerprint: string; semantic_action: string; source_reference: string; expires_at: string; expected_effect_json: string; reported_hash: string | null; verification_state: string; submission_phase: string | null;
         }>();
       if (!prepared) return reply({ error: "prepared_step_required", traceId }, 409);
+      if (prepared.submission_phase === "awaiting_step_up") return reply({ error: "prepared_step_unavailable", traceId }, 409);
       if (!["prepared", "pending", "reported", "confirmed"].includes(prepared.verification_state)) return reply({ error: "prepared_step_unavailable", traceId }, 409);
       const ownedAddress = await requireLinkedEvmWallet(subject.subjectReference, prepared.wallet_address);
       if (current.wallet_reference !== `wallet:${ownedAddress}`) return reply({ error: "wallet_mismatch", traceId }, 409);

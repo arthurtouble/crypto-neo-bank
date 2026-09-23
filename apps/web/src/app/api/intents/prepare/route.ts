@@ -146,8 +146,8 @@ export async function POST(request: Request) {
         valuation.decimals, valuation.priceUsd, valuation.marketPriceUsd, valuation.priceSource, valuation.priceObservedAt,
         valuation.valuedAt, valuation.usdCents, valuation.policyVersion, Number(valuation.depegUncertainty)).run();
     const result = await env.PROJECTION_DB.prepare(`INSERT INTO intent_prepared_calls
-      (intent_id, step_index, subject_reference, wallet_address, chain_id, target_address, native_value, calldata_hash, call_fingerprint, semantic_action, source_reference, expires_at, expected_effect_json, verification_state, created_at)
-      SELECT i.intent_id, ?, i.subject_reference, ?, ?, ?, ?, ?, ?, ?, ?, i.expires_at, ?, 'prepared', ?
+      (intent_id, step_index, subject_reference, wallet_address, chain_id, target_address, native_value, calldata_hash, call_fingerprint, semantic_action, source_reference, expires_at, expected_effect_json, verification_state, created_at, submission_phase)
+      SELECT i.intent_id, ?, i.subject_reference, ?, ?, ?, ?, ?, ?, ?, ?, i.expires_at, ?, 'prepared', ?, 'legacy'
       FROM transaction_intents i WHERE i.intent_id = ? AND i.subject_reference = ? AND i.status = 'reviewed' AND i.expires_at > ?
         AND NOT EXISTS (SELECT 1 FROM security_profiles s WHERE s.subject_reference = i.subject_reference AND s.account_locked = 1)
         AND NOT EXISTS (SELECT 1 FROM intent_prepared_calls p WHERE p.intent_id = i.intent_id AND p.step_index = ?)

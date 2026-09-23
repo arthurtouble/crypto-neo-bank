@@ -65,12 +65,12 @@ beforeEach(() => {
         '2026-09-23T00:00:00.000Z', '2026-09-23T00:00:00.000Z', '2026-09-23T00:05:00.000Z');
     INSERT INTO intent_prepared_calls (intent_id, step_index, subject_reference, wallet_address, chain_id, target_address,
       native_value, calldata_hash, call_fingerprint, semantic_action, source_reference, expires_at,
-      expected_effect_json, created_at)
+      expected_effect_json, created_at, submission_phase)
       VALUES ('intent-1', 0, 'subject-a', '0x1111111111111111111111111111111111111111', 8453,
         '0x2222222222222222222222222222222222222222', '0', 'sha256:calldata', 'sha256:call',
         'native_transfer', 'source-1', '2026-09-23T00:04:00.000Z',
         '{"type":"native_transfer","recipient":"0x2222222222222222222222222222222222222222","amountRaw":"1"}',
-        '2026-09-23T00:00:00.000Z');
+        '2026-09-23T00:00:00.000Z', 'legacy');
     INSERT INTO security_profiles (subject_reference, updated_at) VALUES ('subject-a', '2026-09-23T00:00:00.000Z');
     INSERT INTO beta_access (subject_reference, cohort, country_code, status, transaction_limit_usd,
       terms_version, terms_accepted_at, activated_at, updated_at)
@@ -248,10 +248,10 @@ describe("action passkey evidence store", () => {
         '2026-09-23T00:00:30.000Z', '2026-09-23T00:00:30.000Z', '6000', 1, 0);
       INSERT INTO intent_prepared_calls (intent_id, step_index, subject_reference, wallet_address, chain_id,
         target_address, native_value, calldata_hash, call_fingerprint, semantic_action, source_reference,
-        expires_at, expected_effect_json, created_at)
+        expires_at, expected_effect_json, created_at, submission_phase)
       VALUES ('intent-2', 0, 'subject-a', '0x1111111111111111111111111111111111111111', 8453,
         '0x2222222222222222222222222222222222222222', '0', 'sha256:other', 'sha256:other',
-        'native_transfer', 'source-2', '2026-09-23T00:04:00.000Z', '{}', '2026-09-23T00:00:30.000Z');`);
+        'native_transfer', 'source-2', '2026-09-23T00:04:00.000Z', '{}', '2026-09-23T00:00:30.000Z', 'legacy');`);
     await expect(consumeVerifiedActionPasskey(database, base)).rejects.toThrow();
     expect(count()).toBe(0);
     expect(challenge().consumed_at).toBeNull();
@@ -298,10 +298,10 @@ describe("action passkey evidence store", () => {
         '2026-09-23T00:00:30.000Z', '2026-09-23T00:00:30.000Z', '2026-09-23T00:05:00.000Z');
       INSERT INTO intent_prepared_calls (intent_id, step_index, subject_reference, wallet_address, chain_id,
         target_address, native_value, calldata_hash, call_fingerprint, semantic_action, source_reference,
-        expires_at, expected_effect_json, created_at)
+        expires_at, expected_effect_json, created_at, submission_phase)
       VALUES ('intent-2', 0, 'subject-a', '0x1111111111111111111111111111111111111111', 8453,
         '0x2222222222222222222222222222222222222222', '0', 'sha256:other', 'sha256:other',
-        'native_transfer', 'source-2', '2026-09-23T00:04:00.000Z', '{}', '2026-09-23T00:00:30.000Z');`);
+        'native_transfer', 'source-2', '2026-09-23T00:04:00.000Z', '{}', '2026-09-23T00:00:30.000Z', 'legacy');`);
     await expect(consumeVerifiedActionPasskey(database, base)).rejects.toThrow();
     expect(count()).toBe(0);
     expect(challenge().consumed_at).toBeNull();

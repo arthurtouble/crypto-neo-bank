@@ -1,6 +1,7 @@
 /** Financial status writes use these exact statements in D1 and SQLite tests. */
 export const REPORTED_HASH_CLAIM_SQL = `UPDATE intent_prepared_calls SET reported_hash = ?, verification_state = 'pending', updated_at = ?
-  WHERE intent_id = ? AND step_index = ? AND (reported_hash IS NULL OR lower(reported_hash) = lower(?)) AND verification_state IN ('prepared', 'pending', 'reported')
+  WHERE intent_id = ? AND step_index = ? AND (submission_phase IS NULL OR submission_phase IN ('legacy', 'released'))
+    AND (reported_hash IS NULL OR lower(reported_hash) = lower(?)) AND verification_state IN ('prepared', 'pending', 'reported')
   AND EXISTS (SELECT 1 FROM transaction_intents i WHERE i.intent_id = intent_prepared_calls.intent_id
     AND i.subject_reference = ? AND i.status IN ('reviewed', 'submitted'))`;
 

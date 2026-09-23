@@ -5,11 +5,11 @@ import { REPORTED_HASH_CLAIM_SQL, TERMINAL_INTENT_CANCEL_SQL, TERMINAL_INTENT_FA
 function database() {
   const db = new DatabaseSync(":memory:");
   db.exec(`CREATE TABLE transaction_intents (intent_id TEXT PRIMARY KEY, subject_reference TEXT NOT NULL, intent_type TEXT NOT NULL, status TEXT NOT NULL, transaction_hash TEXT, failure_reason TEXT, updated_at TEXT);
-    CREATE TABLE intent_prepared_calls (intent_id TEXT NOT NULL, step_index INTEGER NOT NULL, subject_reference TEXT NOT NULL, reported_hash TEXT, verification_state TEXT NOT NULL, updated_at TEXT);
+    CREATE TABLE intent_prepared_calls (intent_id TEXT NOT NULL, step_index INTEGER NOT NULL, subject_reference TEXT NOT NULL, reported_hash TEXT, verification_state TEXT NOT NULL, updated_at TEXT, submission_phase TEXT DEFAULT 'legacy');
     CREATE TABLE intent_events (event_id TEXT PRIMARY KEY, intent_id TEXT NOT NULL, subject_reference TEXT NOT NULL, event_type TEXT NOT NULL, evidence_json TEXT, occurred_at TEXT);
     CREATE TABLE product_events (event_id TEXT PRIMARY KEY, subject_reference TEXT NOT NULL, session_reference TEXT NOT NULL, event_name TEXT NOT NULL, surface TEXT NOT NULL, properties_json TEXT, occurred_at TEXT);`);
   db.prepare("INSERT INTO transaction_intents VALUES (?, ?, ?, ?, ?, ?, ?)").run("intent-a", "subject-a", "transfer", "reviewed", null, null, "2026-09-01T00:00:00.000Z");
-  db.prepare("INSERT INTO intent_prepared_calls VALUES (?, ?, ?, ?, ?, ?)").run("intent-a", 0, "subject-a", null, "prepared", "2026-09-01T00:00:00.000Z");
+  db.prepare("INSERT INTO intent_prepared_calls (intent_id, step_index, subject_reference, reported_hash, verification_state, updated_at) VALUES (?, ?, ?, ?, ?, ?)").run("intent-a", 0, "subject-a", null, "prepared", "2026-09-01T00:00:00.000Z");
   return db;
 }
 
@@ -57,6 +57,28 @@ describe("intent terminal SQL", () => {
       const claim = db.prepare(REPORTED_HASH_CLAIM_SQL).run(`0x${"a".repeat(64)}`, "2026-09-01T00:02:00.000Z", "intent-a", 0, `0x${"a".repeat(64)}`, "subject-a");
       expect(claim.changes).toBe(0);
       expect(db.prepare("SELECT reported_hash FROM intent_prepared_calls").get()).toMatchObject({ reported_hash: null });
+    } finally { db.close(); }
+  });
+
+  it("cannot claim a hash for an awaiting step-up plan", () => {
+    const db = database();
+    try {
+      db.exec("UPDATE intent_prepared_calls SET submission_phase = 'awaiting_step_up'");
+      const claim = db.prepare(REPORTED_HASH_CLAIM_SQL).run(`0x${"a".repeat(64)}`, "2026-09-01T00:02:00.000Z", "intent-a", 0, `0x${"a".repeat(64)}`, "subject-a");
+      expect(claim.changes).toBe(0);
+      expect(db.prepare("SELECT reported_hash, verification_state FROM intent_prepared_calls").get())
+        .toMatchObject({ reported_hash: null, verification_state: "prepared" });
+    } finally { db.close(); }
+  });
+
+  it("continues to accept a hash for pre-migration prepared evidence", () => {
+    const db = database();
+    try {
+      db.exec("UPDATE intent_prepared_calls SET submission_phase = NULL");
+      const hash = `0x${"a".repeat(64)}`;
+      expect(db.prepare(REPORTED_HASH_CLAIM_SQL).run(hash, "2026-09-01T00:02:00.000Z", "intent-a", 0, hash, "subject-a").changes).toBe(1);
+      expect(db.prepare("SELECT reported_hash, verification_state FROM intent_prepared_calls").get())
+        .toMatchObject({ reported_hash: hash, verification_state: "pending" });
     } finally { db.close(); }
   });
 

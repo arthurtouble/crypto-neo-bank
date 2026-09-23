@@ -255,6 +255,7 @@ describe("intent preparation route", () => {
     expect((await request(payload)).status).toBe(201);
     const captured = state.lastInsert;
     expect(captured).not.toBeNull();
+    expect(captured!.query).toMatch(/submission_phase[\s\S]*'legacy'/);
     const bound = [...captured!.args];
     const sql = captured!.query.replace(/\?/g, () => {
       const value = bound.shift();
@@ -267,11 +268,11 @@ describe("intent preparation route", () => {
       CREATE TABLE transaction_intents (intent_id TEXT PRIMARY KEY, subject_reference TEXT, status TEXT, expires_at TEXT, created_at TEXT);
       CREATE TABLE security_profiles (subject_reference TEXT, account_locked INTEGER);
       CREATE TABLE intent_valuations (valuation_id TEXT, intent_id TEXT, usd_cents TEXT);
-      CREATE TABLE intent_prepared_calls (intent_id TEXT, step_index INTEGER, subject_reference TEXT, wallet_address TEXT, chain_id INTEGER, target_address TEXT, native_value TEXT, calldata_hash TEXT, call_fingerprint TEXT, semantic_action TEXT, source_reference TEXT, expires_at TEXT, expected_effect_json TEXT, verification_state TEXT, created_at TEXT);
+      CREATE TABLE intent_prepared_calls (intent_id TEXT, step_index INTEGER, subject_reference TEXT, wallet_address TEXT, chain_id INTEGER, target_address TEXT, native_value TEXT, calldata_hash TEXT, call_fingerprint TEXT, semantic_action TEXT, source_reference TEXT, expires_at TEXT, expected_effect_json TEXT, verification_state TEXT, created_at TEXT, submission_phase TEXT);
       INSERT INTO transaction_intents VALUES ('${current}', 'subject-a', 'reviewed', '${future}', datetime('now'));
       INSERT INTO transaction_intents VALUES ('peer', 'subject-a', 'reviewed', '${future}', datetime('now'${oldPeerIntent ? ",'-2 days'" : ""}));
       INSERT INTO security_profiles VALUES ('subject-a', 0);
-      INSERT INTO intent_prepared_calls VALUES ('peer', 0, 'subject-a', '${sender.toLowerCase()}', 8453, '${recipient.toLowerCase()}', '100', 'hash', 'fingerprint', 'native_transfer', 'review', '${future}', '{}', 'prepared', datetime('now'));
+      INSERT INTO intent_prepared_calls VALUES ('peer', 0, 'subject-a', '${sender.toLowerCase()}', 8453, '${recipient.toLowerCase()}', '100', 'hash', 'fingerprint', 'native_transfer', 'review', '${future}', '{}', 'prepared', datetime('now'), 'legacy');
     `;
     const run = (reservedCents: number, oldPeerIntent = false) => spawnSync("sqlite3", [":memory:"], {
       input: `${schema(oldPeerIntent)} INSERT INTO intent_valuations VALUES ('peer-value','peer','${reservedCents}'); ${sql}; SELECT COUNT(*) FROM intent_prepared_calls WHERE intent_id='${current}';`, encoding: "utf8"
@@ -404,6 +405,17 @@ describe("reported transaction binding", () => {
     state.prepared.clear();
     expect((await report()).status).toBe(409);
     expect(state.intent?.status).toBe("reviewed");
+  });
+
+  it("never accepts a browser-reported hash for a step-up plan", async () => {
+    state.prepared.get(0)!.submission_phase = "awaiting_step_up";
+    const fetcher = vi.fn();
+    vi.stubGlobal("fetch", fetcher);
+    const response = await report();
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({ error: "prepared_step_unavailable" });
+    expect(state.prepared.get(0)!.reported_hash).toBeNull();
+    expect(fetcher).not.toHaveBeenCalled();
   });
 
   it("keeps an unindexed hash pending without submitting the intent", async () => {
