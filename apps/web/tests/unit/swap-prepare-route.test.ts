@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const wallet = "0x1111111111111111111111111111111111111111";
 const intentId = "00000000-0000-4000-8000-000000000002";
@@ -8,6 +8,7 @@ const destination = "8453:0x4200000000000000000000000000000000000006";
 const fixture = vi.hoisted(() => ({
   planIntent: "00000000-0000-4000-8000-000000000002", intentStatus: "reviewed", intentType: "swap", locked: false,
   allowance: "sufficient", routeValid: true, simulationValid: true, changes: 1,
+  expiryAt: "", advanceAfterSimulation: false,
   countries: ["US"] as string[], inserted: [] as string[], simulationCalls: 0
 }));
 
@@ -21,7 +22,7 @@ vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
           asset: source, amount: "1", amountRaw: "1000000", destination: wallet,
           destinationChainId: 8453, destinationAssetId: destination, toAmountMinRaw: "900000", planId }),
         policy_result_json: JSON.stringify({ permitted: true }), status: fixture.intentStatus,
-        expires_at: new Date(Date.now() + 45_000).toISOString()
+        expires_at: fixture.expiryAt
       };
       if (sql.includes("security_profiles")) return { account_locked: fixture.locked ? 1 : 0,
         enforce_address_book: 0, daily_limit_usd: 25_000, new_address_threshold_usd: 1_000,
@@ -47,7 +48,7 @@ vi.mock("@/lib/swap/plans", () => ({ getActiveSwapQuotePlan: async () => ({
   source_asset_id: source, destination_asset_id: destination, source_chain_id: 8453, destination_chain_id: 8453,
   from_amount_raw: "1000000", to_amount_min_raw: "900000", recipient: wallet,
   source_call_json: JSON.stringify({ chainId: 8453, from: wallet, to: "0x2222222222222222222222222222222222222222", value: "0", data: "0x1234" }),
-  expires_at: new Date(Date.now() + 45_000).toISOString(), status: "active", approval_spender: "0x2222222222222222222222222222222222222222"
+  expires_at: fixture.expiryAt, status: "active", approval_spender: "0x2222222222222222222222222222222222222222"
 }) }));
 vi.mock("@/lib/swap/catalog", () => ({ resolveCatalogAsset: async (id: string) => ({ id, chainId: 8453,
   address: id.split(":")[1], symbol: id === source ? "USDC" : "WETH", name: id === source ? "USD Coin" : "Wrapped Ether",
@@ -60,6 +61,7 @@ vi.mock("@/lib/swap/approval-steps", () => ({ observeNextSwapApproval: async () 
 vi.mock("@/lib/swap/source-balance", () => ({ observeSwapSourceBalance: async () => ({ chainId: 8453, wallet, assetId: source,
   amountRaw: "1000000", balanceRaw: "2000000", blockNumber: 1n, blockHash: `0x${"a".repeat(64)}`, observedAtMs: Date.now() }) }));
 vi.mock("@/lib/swap/simulation", () => ({ observeSwapExecutionBudget: async () => { fixture.simulationCalls++;
+  if (fixture.advanceAfterSimulation) vi.setSystemTime(new Date(Date.now() + 60_000));
   if (!fixture.simulationValid) throw new Error("simulation failed"); return { signingReady: false }; } }));
 vi.mock("@/lib/transactions/valuation", () => ({ ValuationError: class ValuationError extends Error {}, valueSwapSource: async () => ({
   assetId: source, rawUnits: "1000000", decimals: 6, priceUsd: "1", marketPriceUsd: "1", priceSource: "kraken",
@@ -79,7 +81,9 @@ function post(body: Record<string, unknown> = { intentId, planId, walletAddress:
 describe("governed Swap preparation boundary", () => {
   beforeEach(() => { Object.assign(fixture, { planIntent: intentId, intentStatus: "reviewed", intentType: "swap",
     locked: false, allowance: "sufficient", routeValid: true, simulationValid: true, changes: 1,
-    countries: ["US"], inserted: [], simulationCalls: 0 }); });
+    countries: ["US"], inserted: [], simulationCalls: 0, advanceAfterSimulation: false,
+    expiryAt: new Date(Date.now() + 45_000).toISOString() }); });
+  afterEach(() => vi.useRealTimers());
 
   it("rejects browser-authored calldata", async () => {
     expect((await post({ intentId, planId, walletAddress: wallet, call: { data: "0xdeadbeef" } })).status).toBe(400);
@@ -121,6 +125,16 @@ describe("governed Swap preparation boundary", () => {
     fixture.changes = 0;
     const response = await post();
     expect(response.status).toBe(409);
+    expect(JSON.stringify(await response.json())).not.toContain("0x1234");
+  });
+
+  it("does not prepare a quote that expires during network simulation", async () => {
+    vi.useFakeTimers();
+    fixture.expiryAt = new Date(Date.now() + 45_000).toISOString();
+    fixture.advanceAfterSimulation = true;
+    const response = await post();
+    expect(response.status).toBe(409);
+    expect(fixture.inserted).toHaveLength(0);
     expect(JSON.stringify(await response.json())).not.toContain("0x1234");
   });
 });

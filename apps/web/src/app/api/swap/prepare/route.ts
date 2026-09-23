@@ -127,7 +127,10 @@ export async function POST(request: Request) {
       delaySeconds: profile.new_address_delay_seconds }, now, valuation.usdCents);
     if (!decision.permitted || decision.releaseAt) return reply({ error: "policy_not_permitted", traceId }, 403);
     if (decision.requiresStepUp) return reply({ error: "step_up_unavailable", traceId }, 403);
-    const at = now.toISOString();
+    // RPC and pricing checks can outlive a 45-second quote. Never insert or
+    // return a signable call against the time captured before those awaits.
+    const at = new Date().toISOString();
+    if (intent.expires_at <= at || plan.expires_at <= at) return reply({ error: "quote_expired", traceId }, 409);
     const [insert] = await env.PROJECTION_DB.batch([
       env.PROJECTION_DB.prepare(`INSERT INTO intent_prepared_calls
         (intent_id, step_index, subject_reference, wallet_address, chain_id, target_address, native_value,
@@ -142,8 +145,11 @@ export async function POST(request: Request) {
         JOIN feature_flags f ON f.flag_key = 'swaps' AND f.enabled = 1 AND f.audience IN ('all', 'beta')
         WHERE i.intent_id = ? AND i.subject_reference = ? AND i.intent_type = 'swap'
           AND i.chain_id = 8453 AND i.wallet_reference = ? AND i.route_reference = 'swap-plan:' || p.plan_id
-          AND i.status = 'reviewed' AND i.expires_at > ? AND p.plan_id = ? AND p.status = 'active'
-          AND p.expires_at > ? AND p.wallet_address = ? AND p.source_chain_id = 8453
+          AND i.status = 'reviewed' AND i.expires_at > ?
+          AND i.expires_at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+          AND p.plan_id = ? AND p.status = 'active'
+          AND p.expires_at > ? AND p.expires_at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+          AND p.wallet_address = ? AND p.source_chain_id = 8453
           AND p.destination_chain_id = 8453 AND p.fingerprint = ? AND p.route_policy_version = ?
           AND NOT EXISTS (SELECT 1 FROM intent_prepared_calls prior WHERE prior.intent_id = i.intent_id)
           AND EXISTS (SELECT 1 FROM (

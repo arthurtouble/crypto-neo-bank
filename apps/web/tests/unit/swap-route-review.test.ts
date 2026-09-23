@@ -61,4 +61,22 @@ describe("swap route review", () => {
     expect(html).toContain("expired");
     expect(html).not.toContain("Route Verified");
   });
+
+  it("offers deliberate wallet confirmation only for a prepared route", () => {
+    const html = renderToStaticMarkup(createElement(SwapRouteReview, {
+      planId: "plan", fresh: true, walletAddress: "0xabc", busy: false,
+      state: "prepared", onReview() {}, onSubmit() {}
+    }));
+    expect(html).toContain("Confirm Swap");
+    expect(html).not.toContain("Swap Complete");
+  });
+
+  it("does not offer cross-network review while execution is unavailable", () => {
+    const html = renderToStaticMarkup(createElement(SwapRouteReview, {
+      planId: "plan", fresh: true, walletAddress: "0xabc", busy: false,
+      state: "idle", routeKind: "cross_chain", onReview() {}
+    }));
+    expect(html).toContain("Across-network swaps aren&#x27;t available yet");
+    expect(html).not.toContain("Review Swap</button>");
+  });
 });

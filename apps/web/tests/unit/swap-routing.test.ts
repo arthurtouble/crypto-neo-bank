@@ -156,6 +156,14 @@ describe("provider-neutral LI.FI quotes", () => {
       .rejects.toMatchObject({ code: "no_live_route" });
   });
 
+  it("rejects a provider slippage that cannot be revalidated from the retained plan", async () => {
+    const changed = compositeQuote();
+    changed.action.slippage = 0.003;
+    await expect(compositeAdapter(changed).quoteWithPlans({ fromAssetId: baseUsdc.id,
+      toAssetId: baseWeth.id, amount: "1", fromAddress: wallet, slippageBps: 50 }, { from: baseUsdc, to: baseWeth }))
+      .rejects.toMatchObject({ code: "no_live_route" });
+  });
+
   it("rejects protocol fee steps in a non-composite root quote", async () => {
     const changed = compositeQuote();
     changed.type = "swap";

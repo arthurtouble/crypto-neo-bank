@@ -1,32 +1,38 @@
 "use client";
 
-import { useConnectWallet, usePrivy, useWallets } from "@privy-io/react-auth";
+import { useConnectWallet, usePrivy, useSendTransaction, useWallets } from "@privy-io/react-auth";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowDownUp, LoaderCircle } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useBalance, useReadContract } from "wagmi";
-import { erc20Abi, formatUnits, parseUnits } from "viem";
+import { erc20Abi, formatUnits, getAddress, parseUnits } from "viem";
 import { SUPPORTED_CHAINS } from "@/config/chains";
 import type { AssetId, CatalogAsset } from "@/lib/swap/assets";
 import type { ValidatedSwapQuote } from "@/lib/swap/quotes";
 import { assetNetwork } from "@/lib/swap/picker-model";
 import { displayRawAmount, formatEstimatedFeeUsd, makeSwapReviewKey, quoteIsFresh } from "@/lib/swap/review-model";
 import { parseSwapDeepLink } from "@/lib/markets/swap-links";
+import { normalizePreparedCall, type PreparedCallInput } from "@/lib/transactions/evidence";
 import { SwapAssetPicker } from "./swap-asset-picker";
+import { TransactionProgress } from "./transaction-progress";
 import { SwapReminderPanel } from "./swap-reminder-panel";
 import { PriceAlertPanel } from "./price-alert-panel";
 
 type SwapQuote = ValidatedSwapQuote & { planId?: string };
 type QuoteResponse = { quotes: SwapQuote[]; observedAt: string; authority: string; error?: string; message?: string };
-type ReviewState = "idle" | "reviewed" | "prepared" | "approval_required";
+type ReviewState = "idle" | "reviewed" | "prepared" | "approval_required" | "submitted";
+type PreparedSwap = { state: "prepared"; intentId: string; stepIndex: number; fingerprint: string; call: PreparedCallInput; expiresAt: string };
+type SwapPreparation = PreparedSwap | { state: "approval_required" };
 
-export function SwapRouteReview({ planId, fresh, walletAddress, busy, state, onReview }: {
+export function SwapRouteReview({ planId, fresh, walletAddress, busy, state, routeKind, onReview, onSubmit }: {
   planId: string | null; fresh: boolean; walletAddress: string | null; busy: boolean;
-  state: ReviewState; onReview(): void;
+  state: ReviewState; routeKind?: "same_chain" | "cross_chain"; onReview(): void; onSubmit?(): void;
 }) {
+  if (routeKind === "cross_chain") return <p className="swapReviewStatus" role="status">Across-network swaps aren&apos;t available yet.</p>;
+  if (state === "submitted") return null;
   if (!fresh) return <p className="swapReviewStatus">This quote expired. Find a new route.</p>;
-  if (state === "prepared") return <p className="swapReviewStatus" role="status"><strong>Route Verified</strong><span>No swap has been submitted.</span></p>;
+  if (state === "prepared") return <div><p className="swapReviewStatus" role="status"><strong>Route Verified</strong><span>No swap has been submitted.</span></p>{onSubmit && <button className="button primary full swapReviewAction" type="button" disabled={busy} onClick={onSubmit}>{busy ? "Opening Wallet" : "Confirm Swap"}</button>}</div>;
   if (state === "approval_required") return <p className="swapReviewStatus" role="status"><strong>Token Approval Required</strong><span>No swap has been submitted. This route cannot continue until approval is available.</span></p>;
   if (state === "reviewed") return <p className="swapReviewStatus" role="status"><strong>Review Complete</strong><span>No swap has been submitted.</span></p>;
   if (!planId) return <p className="swapReviewStatus">This route cannot be reviewed right now.</p>;
@@ -60,19 +66,42 @@ export function swapQuoteErrorText(code: string | undefined): string {
   }
 }
 
-export async function requestSwapRouteReview(input: { token: string; planId: string; walletAddress: string }, onPolicyReviewed?: () => void): Promise<"prepared" | "approval_required"> {
+export async function requestSwapRouteReview(input: { token: string; planId: string; walletAddress: string }, onPolicyReviewed?: () => void): Promise<SwapPreparation> {
   const headers = { Authorization: `Bearer ${input.token}`, "Content-Type": "application/json" };
   const response = await fetch("/api/swap/review", { method: "POST", headers, cache: "no-store",
     body: JSON.stringify({ planId: input.planId, walletAddress: input.walletAddress }) });
   const review = await response.json() as { error?: string; intentId?: string };
   if (!response.ok || !review.intentId) throw new Error(reviewError(review.error));
-  onPolicyReviewed?.();
   const prepared = await fetch("/api/swap/prepare", { method: "POST", headers, cache: "no-store",
     body: JSON.stringify({ intentId: review.intentId, planId: input.planId, walletAddress: input.walletAddress }) });
-  const body = await prepared.json() as { error?: string; intentId?: string };
-  if (prepared.status === 409 && body.error === "approval_required") return "approval_required";
-  if (!prepared.ok || body.intentId !== review.intentId) throw new Error(reviewError(body.error));
-  return "prepared";
+  const body = await prepared.json() as Partial<PreparedSwap> & { error?: string };
+  if (prepared.status === 409 && body.error === "approval_required") return { state: "approval_required" };
+  if (prepared.status !== 201 || body.intentId !== review.intentId || body.stepIndex !== 0 || !body.call || !body.fingerprint || !body.expiresAt) throw new Error(reviewError(body.error));
+  onPolicyReviewed?.();
+  return { state: "prepared", intentId: body.intentId, stepIndex: 0, call: body.call, fingerprint: body.fingerprint, expiresAt: body.expiresAt };
+}
+
+export async function submitPreparedSwap(input: {
+  prepared: PreparedSwap; walletAddress: string; reviewKey: string; currentReviewKey: string; token: string;
+  send: (call: { chainId: number; to: `0x${string}`; value: bigint; data: `0x${string}` }) => Promise<{ hash: string }>;
+  onBroadcast?: (hash: string) => void;
+}): Promise<{ hash: string; reportRecorded: boolean }> {
+  const { prepared } = input;
+  if (prepared.state !== "prepared" || prepared.stepIndex !== 0 || input.reviewKey !== input.currentReviewKey
+    || !quoteIsFresh(prepared.expiresAt) || prepared.call.chainId !== 8453
+    || getAddress(prepared.call.from) !== getAddress(input.walletAddress)) throw new Error("This swap changed. Find a new route before continuing.");
+  const call = await normalizePreparedCall(prepared.call);
+  if (call.fingerprint !== prepared.fingerprint) throw new Error("This swap changed. Find a new route before continuing.");
+  const sent = await input.send({ chainId: call.chainId, to: call.to, value: BigInt(call.value), data: call.data });
+  input.onBroadcast?.(sent.hash);
+  let reportRecorded = false;
+  try {
+    const response = await fetch("/api/intents/status", { method: "POST", cache: "no-store",
+      headers: { Authorization: `Bearer ${input.token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ intentId: prepared.intentId, stepIndex: prepared.stepIndex, status: "submitted", transactionHash: sent.hash }) });
+    reportRecorded = response.ok;
+  } catch { /* A broadcast transaction remains pending even when reporting fails. */ }
+  return { hash: sent.hash, reportRecorded };
 }
 
 async function readAsset(id: AssetId, getAccessToken: () => Promise<string | null>): Promise<CatalogAsset | null> {
@@ -90,6 +119,7 @@ export function SwapWorkspace() {
   const { getAccessToken } = usePrivy();
   const { wallets } = useWallets();
   const { connectWallet } = useConnectWallet();
+  const { sendTransaction } = useSendTransaction();
   const wallet = useMemo(() => wallets.find((item) => item.walletClientType === "privy") ?? wallets[0], [wallets]);
   const [fromAssetId, setFromAssetId] = useState<AssetId>(initial.fromAssetId);
   const [toAssetId, setToAssetId] = useState<AssetId>(initial.toAssetId);
@@ -103,6 +133,12 @@ export function SwapWorkspace() {
   const [reviewing, setReviewing] = useState(false);
   const [reviewState, setReviewState] = useState<ReviewState>("idle");
   const [reviewErrorText, setReviewErrorText] = useState<string | null>(null);
+  const [preparedSwap, setPreparedSwap] = useState<{ key: string; planId: string; result: PreparedSwap } | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [submittedHash, setSubmittedHash] = useState<string | null>(null);
+  const [submittedIntentId, setSubmittedIntentId] = useState<string | null>(null);
+  const [submissionUncertain, setSubmissionUncertain] = useState(false);
+  const [reportWarning, setReportWarning] = useState<string | null>(null);
   const reviewVersion = useRef(0);
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 5_000); return () => window.clearInterval(timer); }, []);
@@ -125,7 +161,7 @@ export function SwapWorkspace() {
   const freshQuote = quote && quoteIsFresh(quote.expiresAt, now) ? quote : null;
   const unverified = [source, destination].filter((asset): asset is CatalogAsset => Boolean(asset && asset.verification === "unverified"));
 
-  function clearReview() { reviewVersion.current += 1; setResult(null); setSelectedQuoteId(null); setError(null); setReviewState("idle"); setReviewErrorText(null); }
+  function clearReview() { reviewVersion.current += 1; setResult(null); setSelectedQuoteId(null); setError(null); setReviewState("idle"); setReviewErrorText(null); setPreparedSwap(null); setSubmissionUncertain(false); }
 
   function reverse() {
     setFromAssetId(toAssetId); setToAssetId(fromAssetId); setAmount(""); setAcknowledged(false); clearReview();
@@ -153,7 +189,7 @@ export function SwapWorkspace() {
   }
 
   async function reviewSelectedRoute() {
-    if (!freshQuote?.planId || !address || reviewing) return;
+    if (!freshQuote?.planId || freshQuote.routeKind !== "same_chain" || !address || reviewing) return;
     const planId = freshQuote.planId;
     const version = reviewVersion.current;
     const expiresAt = freshQuote.expiresAt;
@@ -165,9 +201,35 @@ export function SwapWorkspace() {
         if (reviewVersion.current === version && quoteIsFresh(expiresAt)) setReviewState("reviewed");
       });
       if (reviewVersion.current !== version || !quoteIsFresh(expiresAt)) return;
-      setReviewState(state);
-    } catch (caught) { if (reviewVersion.current === version) setReviewErrorText(caught instanceof Error ? caught.message : "We couldn't review this route. Try again."); }
+      setReviewState(state.state);
+      if (state.state === "prepared") setPreparedSwap({ key: reviewKey, planId, result: state });
+    } catch (caught) { if (reviewVersion.current === version) { setReviewState("idle"); setReviewErrorText(caught instanceof Error ? caught.message : "We couldn't review this route. Try again."); } }
     finally { setReviewing(false); }
+  }
+
+  async function confirmSwap() {
+    if (!preparedSwap || !freshQuote || !address || submitting || submissionUncertain
+      || submittedIntentId === preparedSwap.result.intentId && Boolean(submittedHash)
+      || preparedSwap.planId !== freshQuote.planId) return;
+    setReviewErrorText(null); setReportWarning(null); setSubmitting(true);
+    let broadcasted = false;
+    try {
+      const token = await getAccessToken();
+      if (!token) throw new Error("Your secure session expired. Sign in again before swapping.");
+      const result = await submitPreparedSwap({ prepared: preparedSwap.result, walletAddress: address,
+        reviewKey: preparedSwap.key, currentReviewKey: reviewKey, token,
+        send: (transaction) => sendTransaction(transaction, { address,
+          uiOptions: { description: `Exchange ${amount} ${source?.symbol ?? "tokens"}. Review the request in your wallet.`,
+            buttonText: "Confirm swap", successHeader: "Swap submitted", isCancellable: true } }),
+        onBroadcast: (hash) => { broadcasted = true; setSubmittedHash(hash); setSubmittedIntentId(preparedSwap.result.intentId); setReviewState("submitted"); }
+      });
+      if (!result.reportRecorded) setReportWarning("Your swap was broadcast, but Aurel could not record it yet. Do not submit it again. Keep the transaction link and contact support.");
+    } catch (caught) {
+      if (!broadcasted) {
+        setSubmissionUncertain(true);
+        setReviewErrorText(caught instanceof Error ? `${caught.message} Check your wallet activity before trying again.` : "Wallet confirmation did not return a hash. Check your wallet activity before trying again.");
+      }
+    } finally { setSubmitting(false); }
   }
 
   return <section className="panel swapPanel">
@@ -191,10 +253,14 @@ export function SwapWorkspace() {
     {liveResult && <section className="swapQuotes" aria-label="Available swap routes"><div className="swapQuotesHeader"><h3>Available Routes</h3><span>{liveResult.quotes.length} found</span></div>
       {liveResult.quotes.map((route) => <button type="button" className={`swapQuoteRow ${quote?.quoteId === route.quoteId ? "selected" : ""}`} key={route.planReference} onClick={() => { reviewVersion.current += 1; setSelectedQuoteId(route.quoteId); setReviewState("idle"); setReviewErrorText(null); }}><span><strong>{route.provider.replace(/^lifi:/, "")}</strong><small>{route.routeKind === "cross_chain" ? "Across networks" : "Same network"}</small></span><span><strong>{destination ? displayRawAmount(route.toAmountMinRaw, destination.decimals) : "—"} {destination?.symbol}</strong><small>{route.totalFeeUsd === null ? "Total fees unavailable" : `${formatEstimatedFeeUsd(route.totalFeeUsd)} estimated fees`}</small></span></button>)}
       {freshQuote && <div className="swapReview"><span>You Pay<strong>{amount} {source?.symbol}</strong></span><span>Minimum Received<strong>{destination ? displayRawAmount(freshQuote.toAmountMinRaw, destination.decimals) : "—"} {destination?.symbol}</strong></span><span>Estimated Fees<strong>{formatEstimatedFeeUsd(freshQuote.totalFeeUsd)}</strong></span><span>Price Impact<strong>{freshQuote.priceImpactPercent === null ? "Unavailable" : `${freshQuote.priceImpactPercent.toFixed(2)}%`}</strong></span></div>}
-      <SwapRouteReview planId={freshQuote?.planId ?? null} fresh={Boolean(freshQuote)} walletAddress={address ?? null} busy={reviewing}
-        state={reviewState} onReview={() => void reviewSelectedRoute()} />
+      <SwapRouteReview planId={freshQuote?.planId ?? null} fresh={Boolean(freshQuote)} walletAddress={address ?? null} busy={reviewing || submitting || submissionUncertain}
+        state={reviewState} routeKind={freshQuote?.routeKind} onReview={() => void reviewSelectedRoute()}
+        onSubmit={preparedSwap && submittedIntentId !== preparedSwap.result.intentId && !submissionUncertain ? () => void confirmSwap() : undefined} />
       {reviewErrorText && <p className="formError" role="alert">{reviewErrorText}</p>}
     </section>}
+    {submittedHash && <TransactionProgress action="Swap" status="submitted" intentId={submittedIntentId} hashes={[submittedHash]} chainId={8453}
+      submittedDetail={reportWarning ?? "Waiting for independent confirmation. You can leave this screen."} />}
+    {reportWarning && <p className="formError" role="alert">{reportWarning}</p>}
     <PriceAlertPanel />
     <SwapReminderPanel fromAssetId={fromAssetId} toAssetId={toAssetId} amount={amount} onReview={(saved) => {
       setFromAssetId(saved.fromAssetId); setToAssetId(saved.toAssetId); setAmount(saved.amount); setAcknowledged(false); clearReview();

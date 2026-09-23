@@ -298,7 +298,9 @@ async function validateQuote(
     && routeSteps[1].integratorFeePercent !== routeSteps[0].integratorFeePercent) return null;
   if (quote.action.fromChainId !== assets.from.chainId || quote.action.toChainId !== assets.to.chainId) return null;
   if (!matchesProviderToken(quote.action.fromToken, assets.from) || !matchesProviderToken(quote.action.toToken, assets.to)) return null;
-  if (BigInt(quote.action.fromAmount) !== rawAmount || quote.action.slippage > input.slippageBps / 10_000 + Number.EPSILON) return null;
+  // Preparation reconstructs the retained plan fingerprint from the customer's
+  // requested tolerance. A provider-adjusted tolerance cannot be reconstructed.
+  if (BigInt(quote.action.fromAmount) !== rawAmount || quote.action.slippage !== input.slippageBps / 10_000) return null;
   try {
     if (getAddress(quote.action.fromAddress) !== getAddress(input.fromAddress)
       || getAddress(quote.action.toAddress) !== getAddress(input.fromAddress)) return null;
