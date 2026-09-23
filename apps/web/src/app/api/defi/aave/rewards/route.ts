@@ -2,7 +2,6 @@ import { env } from "cloudflare:workers";
 import { z } from "zod";
 import { AuthenticationError, requireVerifiedSubject } from "@/lib/auth/server";
 import { BetaAccessError, requireBetaAccess } from "@/lib/beta/access";
-import { getAaveBaseRewardClaimPlan } from "@/lib/defi/aave";
 import { FeatureUnavailableError, requireFeature } from "@/lib/features/flags";
 import { enforceRateLimit, RateLimitError } from "@/lib/security/rate-limit";
 import { WalletOwnershipError, requireLinkedEvmWallet } from "@/lib/auth/wallet";
@@ -17,9 +16,9 @@ export async function POST(request: Request) {
     await requireFeature(env.PROJECTION_DB, "defi_actions");
     await enforceRateLimit(env.PROJECTION_DB, { namespace: "aave_reward_claim", subject: subject.subjectReference, limit: 10, windowSeconds: 60 });
     const input = requestSchema.parse(await request.json());
-    const sender = await requireLinkedEvmWallet(subject.subjectReference, input.sender);
-    const result = await getAaveBaseRewardClaimPlan(sender);
-    return Response.json({ ...result, traceId }, { headers: { "Cache-Control": "no-store", "X-Aurel-Execution": "unsigned-user-confirmation-required" } });
+    await requireLinkedEvmWallet(subject.subjectReference, input.sender);
+    // Reward distributors and claim effects are not yet independently governed.
+    return Response.json({ error: "execution_unavailable", message: "Reward claims aren't available yet.", traceId }, { status: 503, headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     if (error instanceof AuthenticationError) return Response.json({ error: "unauthorized", message: error.message, traceId }, { status: 401 });
     if (error instanceof RateLimitError) return Response.json({ error: "rate_limited", message: error.message, traceId }, { status: 429, headers: { "Retry-After": String(error.retryAfterSeconds) } });

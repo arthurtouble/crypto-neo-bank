@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { AuthenticationError, requireVerifiedSubject } from "@/lib/auth/server";
-import { prepareAaveBaseAction } from "@/lib/defi/aave";
 import { env } from "cloudflare:workers";
 import { enforceRateLimit, RateLimitError } from "@/lib/security/rate-limit";
 import { FeatureUnavailableError, requireFeature } from "@/lib/features/flags";
@@ -24,9 +23,10 @@ export async function POST(request: Request) {
     await requireFeature(env.PROJECTION_DB, "defi_actions");
     await enforceRateLimit(env.PROJECTION_DB, { namespace: "aave_action", subject: subject.subjectReference, limit: 20, windowSeconds: 60 });
     const input = actionSchema.parse(await request.json());
-    const sender = await requireLinkedEvmWallet(subject.subjectReference, input.sender);
-    const result = await prepareAaveBaseAction({ ...input, sender });
-    return Response.json({ ...result, traceId }, { headers: { "Cache-Control": "no-store", "X-Aurel-Execution": "unsigned-user-confirmation-required" } });
+    await requireLinkedEvmWallet(subject.subjectReference, input.sender);
+    // The MCP may return executable calldata, but no Aurel-governed plan,
+    // action-bound step-up, or protocol-effect verifier exists yet.
+    return Response.json({ error: "execution_unavailable", message: "This action isn't available yet.", traceId }, { status: 503, headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     if (error instanceof AuthenticationError) return Response.json({ error: "unauthorized", traceId }, { status: 401 });
     if (error instanceof RateLimitError) return Response.json({ error: "rate_limited", message: error.message, traceId }, { status: 429, headers: { "Retry-After": String(error.retryAfterSeconds) } });
