@@ -1,7 +1,7 @@
 import { getAddress, hexToBytes, parseUnits } from "viem";
 import { z } from "zod";
 import { assetId, catalogAssetSchema, parseAssetId, type CatalogAsset } from "@/lib/swap/assets";
-import { inspectLifiDiamondSwap, inspectLifiFeeForwarderCall } from "@/lib/swap/lifi-diamond-inspection";
+import { inspectLifiAcrossV4Call, inspectLifiDiamondSwap, inspectLifiFeeForwarderCall } from "@/lib/swap/lifi-diamond-inspection";
 import {
   requireExactUnverifiedAcknowledgements, SwapQuoteError, type QuoteAdapter, type SwapQuoteInput, type ValidatedSwapQuote
 } from "@/lib/swap/quotes";
@@ -225,14 +225,19 @@ async function validateQuote(
   const parsed = providerQuoteSchema.safeParse(value);
   if (!parsed.success) return null;
   const quote = parsed.data;
+  const compositeCross = quote.type === "lifi" && assets.from.chainId !== assets.to.chainId;
   let target: string;
   try { target = getAddress(quote.transactionRequest.to).toLowerCase(); } catch { return null; }
   if ((quote.type === "swap" && assets.from.chainId !== assets.to.chainId)
     || (quote.type === "cross" && assets.from.chainId === assets.to.chainId)) return null;
-  if (quote.type === "lifi" && (assets.from.chainId !== assets.to.chainId || !quote.includedSteps?.length
+  if (quote.type === "lifi" && (!quote.includedSteps?.length
     || quote.includedSteps.length !== 2 || quote.includedSteps[0].type !== "protocol"
-    || quote.includedSteps[1].type !== "swap"
+    || quote.includedSteps[1].type !== (compositeCross ? "cross" : "swap")
     || quote.includedSteps.some((step) => !step.action || !step.estimate))) return null;
+  if (compositeCross && (assets.from.chainId !== 8453 || assets.to.chainId !== 42161
+    || assets.from.address?.toLowerCase() !== "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+    || assets.to.address?.toLowerCase() !== "0xaf88d065e77c8cc2239327c5edb3a432268e5831"
+    || quote.tool.toLowerCase() !== "across")) return null;
   if (!policy.allowedTools.has(quote.tool.toLowerCase())) return null;
   if (!(assets.from.chainId === assets.to.chainId ? policy.allowedExchanges : policy.allowedBridges).has(quote.tool.toLowerCase())) return null;
   const routeSteps: ServerHeldLifiPlan["routeSteps"] = [];
@@ -248,9 +253,10 @@ async function validateQuote(
         : !(step.type === "swap" ? policy.allowedExchanges : policy.allowedBridges).has(stepTool))) return null;
     if (step.action) {
       try {
-        const expectedAddress = quote.type === "lifi" ? target : getAddress(input.fromAddress);
-        if (getAddress(step.action.fromAddress).toLowerCase() !== expectedAddress.toLowerCase()
-          || getAddress(step.action.toAddress).toLowerCase() !== expectedAddress.toLowerCase()) return null;
+        const expectedFrom = quote.type === "lifi" ? target : getAddress(input.fromAddress);
+        const expectedTo = compositeCross && step.type === "cross" ? getAddress(input.fromAddress) : expectedFrom;
+        if (getAddress(step.action.fromAddress).toLowerCase() !== expectedFrom.toLowerCase()
+          || getAddress(step.action.toAddress).toLowerCase() !== expectedTo.toLowerCase()) return null;
       } catch { return null; }
     }
     if (quote.type === "lifi") {
@@ -260,7 +266,8 @@ async function validateQuote(
       const fromId = providerTokenId(action.fromToken);
       const toId = providerTokenId(action.toToken);
       if (!fromId || !toId || fromId !== cursorAssetId || action.fromChainId !== assets.from.chainId
-        || action.toChainId !== assets.to.chainId || action.slippage > input.slippageBps / 10_000 + Number.EPSILON
+        || action.toChainId !== (step.type === "protocol" ? assets.from.chainId : assets.to.chainId)
+        || action.slippage > input.slippageBps / 10_000 + Number.EPSILON
         || action.fromToken.chainId !== action.fromChainId || action.toToken.chainId !== action.toChainId
         || action.fromToken.decimals !== cursorDecimals || action.toToken.decimals < 0 || action.toToken.decimals > 36
         || BigInt(action.fromAmount) !== cursorAmount
@@ -328,7 +335,36 @@ async function validateQuote(
   try { hexToBytes(quote.transactionRequest.data as `0x${string}`); } catch { return null; }
   const transactionValue = unsignedTransactionValue(quote.transactionRequest.value);
   if (transactionValue === null || transactionValue !== (assets.from.address === null ? rawAmount : 0n)) return null;
-  if (quote.type === "lifi") {
+  if (compositeCross) {
+    if (!assets.from.address || !assets.to.address || !routeSteps[0].toAmountRaw) return null;
+    try {
+      const decoded = inspectLifiAcrossV4Call({ data: quote.transactionRequest.data,
+        recipient: input.fromAddress, sourceToken: assets.from.address,
+        destinationToken: assets.to.address, destinationChainId: assets.to.chainId,
+        sourceAmountRaw: rawAmount.toString() });
+      const [fee] = decoded.swaps;
+      const net = BigInt(routeSteps[0].toAmountRaw);
+      const predictedOutput = net * BigInt(decoded.outputAmountMultiplierRaw) / 1_000_000_000_000_000_000n;
+      if (decoded.swaps.length !== 1 || decoded.referrer !== NATIVE_SENTINEL
+        || decoded.exclusiveRelayer !== `0x${"00".repeat(32)}`
+        || decoded.exclusivityParameter !== 0
+        || decoded.minimumBridgeAmountRaw !== net.toString()
+        || decoded.outputAmountRaw !== quote.estimate.toAmount
+        || predictedOutput !== BigInt(quote.estimate.toAmount)
+        || predictedOutput < BigInt(quote.estimate.toAmountMin)
+        || net >= rawAmount || BigInt(decoded.outputAmountMultiplierRaw) > 1_000_000_000_000_000_000n
+        || decoded.quoteTimestamp > Math.floor(now / 1_000) + 60
+        || decoded.quoteTimestamp < Math.floor(now / 1_000) - 300
+        || decoded.fillDeadline <= Math.floor(now / 1_000) + 600
+        || decoded.fillDeadline > Math.floor(now / 1_000) + 14_400
+        || fee.sendingAssetId !== assets.from.address.toLowerCase()
+        || fee.receivingAssetId !== assets.from.address.toLowerCase()
+        || fee.fromAmountRaw !== rawAmount.toString() || !fee.requiresDeposit
+        || fee.callTo !== fee.approveTo) return null;
+      inspectLifiFeeForwarderCall({ data: fee.callData, token: assets.from.address,
+        expectedFeeRaw: (rawAmount - net).toString() });
+    } catch { return null; }
+  } else if (quote.type === "lifi") {
     // Quote integrity only. The nested targets and swap calldata remain unaudited;
     // this check must never be used as execution or signing authority.
     if (assets.from.chainId !== 8453 || !assets.from.address || !assets.to.address

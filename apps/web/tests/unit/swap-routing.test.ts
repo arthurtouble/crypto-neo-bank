@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { encodeFunctionData, formatUnits } from "viem";
 import { createLifiQuoteAdapter } from "@/lib/swap/lifi";
-import { LIFI_ERC20_SWAP_ABI, LIFI_FEE_FORWARDER_ABI } from "@/lib/swap/lifi-diamond-inspection";
+import { LIFI_ACROSS_V4_ABI, LIFI_ERC20_SWAP_ABI, LIFI_FEE_FORWARDER_ABI } from "@/lib/swap/lifi-diamond-inspection";
 import type { CatalogAsset } from "@/lib/swap/assets";
 
 const wallet = "0x1111111111111111111111111111111111111111";
@@ -19,6 +19,9 @@ const baseEth: CatalogAsset = {
 const baseWeth: CatalogAsset = { ...baseEth, id: "8453:0x4200000000000000000000000000000000000006",
   address: "0x4200000000000000000000000000000000000006", symbol: "WETH", name: "Wrapped Ether" };
 const mainnetEth: CatalogAsset = { ...baseEth, id: "1:native", chainId: 1 };
+const arbitrumUsdc: CatalogAsset = { ...baseUsdc,
+  id: "42161:0xaf88d065e77c8cc2239327c5edb3a432268e5831", chainId: 42161,
+  address: "0xaf88d065e77c8cc2239327c5edb3a432268e5831" };
 
 type ProviderQuote = ReturnType<typeof lifiQuote>;
 
@@ -106,6 +109,69 @@ function compositeAdapter(payload: unknown) {
       allowedApprovalTargets: new Set([approvalTarget.toLowerCase()])
     } });
 }
+
+function acrossCompositeQuote() {
+  const original = compositeQuote();
+  const sourceToken = original.action.fromToken;
+  const destinationToken = { ...sourceToken, chainId: 42161, address: arbitrumUsdc.address! };
+  const word = (address: string) => `0x${"0".repeat(24)}${address.slice(2)}` as `0x${string}`;
+  const gross = 1_000_000n;
+  const net = 997_500n;
+  const multiplier = 999_822_977_443_609_023n;
+  const output = net * multiplier / 1_000_000_000_000_000_000n;
+  const feeCall = encodeFunctionData({ abi: LIFI_FEE_FORWARDER_ABI, functionName: "forwardERC20Fees",
+    args: [baseUsdc.address! as `0x${string}`, [{ recipient: approvalTarget as `0x${string}`, amount: 2_500n }]] });
+  const data = encodeFunctionData({ abi: LIFI_ACROSS_V4_ABI,
+    functionName: "swapAndStartBridgeTokensViaAcrossV4", args: [
+      { transactionId: `0x${"ab".repeat(32)}` as `0x${string}`, bridge: "across", integrator: "aurel",
+        referrer: "0x0000000000000000000000000000000000000000" as `0x${string}`,
+        sendingAssetId: baseUsdc.address! as `0x${string}`,
+        receiver: wallet as `0x${string}`, minAmount: net, destinationChainId: 42161n,
+        hasSourceSwaps: true, hasDestinationCall: false },
+      [{ callTo: approvalTarget as `0x${string}`, approveTo: approvalTarget as `0x${string}`,
+        sendingAssetId: baseUsdc.address! as `0x${string}`,
+        receivingAssetId: baseUsdc.address! as `0x${string}`, fromAmount: gross,
+        callData: feeCall, requiresDeposit: true }],
+      { receiverAddress: word(wallet), refundAddress: word(wallet),
+        sendingAssetId: word(baseUsdc.address!), receivingAssetId: word(arbitrumUsdc.address!),
+        outputAmount: output, outputAmountMultiplier: multiplier,
+        exclusiveRelayer: `0x${"00".repeat(32)}` as `0x${string}`,
+        quoteTimestamp: 1_790_078_400, fillDeadline: 1_790_082_000,
+        exclusivityParameter: 0, message: "0x" }
+    ] });
+  return { ...original, tool: "across", action: { ...original.action, toChainId: 42161, toToken: destinationToken },
+    estimate: { ...original.estimate, toAmount: output.toString(), toAmountMin: "995000" },
+    transactionRequest: { ...original.transactionRequest, data },
+    includedSteps: [original.includedSteps[0], {
+      ...original.includedSteps[1], type: "cross", tool: "across",
+      action: { ...original.includedSteps[1].action, toChainId: 42161,
+        toToken: destinationToken, toAddress: wallet },
+      estimate: { ...original.includedSteps[1].estimate,
+        toAmount: output.toString(), toAmountMin: "995000" }
+    }] };
+}
+
+function acrossCompositeAdapter(payload: unknown) {
+  return createLifiQuoteAdapter({ fetcher: vi.fn(async () => Response.json(payload)),
+    now: () => Date.parse("2026-09-22T12:00:00.000Z"), policy: {
+      allowedTools: new Set(["across", "feecollection"]), allowedExchanges: new Set(),
+      allowedBridges: new Set(["across"]), allowedTargets: new Set([routeTarget.toLowerCase()]),
+      allowedApprovalTargets: new Set([approvalTarget.toLowerCase()])
+    } });
+}
+
+describe("LI.FI Across V4 quote preview", () => {
+  const input = { fromAssetId: baseUsdc.id, toAssetId: arbitrumUsdc.id,
+    amount: "1", fromAddress: wallet, slippageBps: 50 };
+  it("retains the exact fee and bridge call privately while previewing a reviewed cross-network route", async () => {
+    const [result] = await acrossCompositeAdapter(acrossCompositeQuote()).quoteWithPlans(input,
+      { from: baseUsdc, to: arbitrumUsdc });
+    expect(result.quote).toMatchObject({ provider: "lifi:across", routeKind: "cross_chain", toAmountMinRaw: "995000" });
+    expect(result.quote).not.toHaveProperty("sourceCall");
+    expect(result.plan.routeSteps.map((step) => step.type)).toEqual(["protocol", "cross"]);
+    expect(result.plan.sourceCall.data).toMatch(/^0x1794958f/);
+  });
+});
 
 describe("provider-neutral LI.FI quotes", () => {
   it("rejects a composite route when its source calldata is only a selector", async () => {
