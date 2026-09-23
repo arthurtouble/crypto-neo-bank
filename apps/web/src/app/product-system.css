@@ -493,6 +493,31 @@
 .swapReview span:last-child { border-right: 0; }
 .swapReview strong { color: var(--text); font-size: var(--type-label); }
 .swapReminders { margin-top: 24px; padding-top: 22px; border-top: 1px solid var(--border); }
+.priceAlerts { margin-top: 24px; padding-top: 22px; border-top: 1px solid var(--border); }
+.priceAlertsHeading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.priceAlerts h3 { margin: 0 0 8px; font-size: var(--type-row-title); }
+.priceAlerts p { color: var(--muted); font-size: var(--type-body-small); }
+.priceAlertsHeading p { margin: 0; }
+.priceAlertsInactive { margin: 16px 0; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--surface-subtle); }
+.priceAlertsEmpty { margin: 20px 0 0; }
+.priceAlertList { margin: 0; padding: 0; list-style: none; }
+.priceAlertRow { min-height: 68px; padding: 12px 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--border); }
+.priceAlertRow > div:first-child { display: grid; gap: 4px; }
+.priceAlertRow strong { font-size: var(--type-body); }
+.priceAlertRow small { color: var(--muted); font-size: var(--type-label); }
+.priceAlertActions { display: flex; flex-wrap: wrap; gap: 6px; }
+.priceAlertActions button { min-height: 44px; padding: 0 12px; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--surface); color: var(--text); font: 600 var(--type-label)/1.2 var(--font-body); cursor: pointer; transition: border-color var(--motion-fast), background var(--motion-fast), transform var(--motion-fast); }
+.priceAlertActions button:hover { border-color: var(--accent); background: var(--accent-soft); }
+.priceAlertActions button:active { transform: scale(.98); }
+.priceAlertActions button:disabled { opacity: .5; cursor: not-allowed; }
+.priceAlertActions button:focus-visible, .priceAlertsHeading .button:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 40%, transparent); outline-offset: 2px; }
+.priceAlertDialog { width: min(440px, calc(100vw - 32px)); }
+.priceAlertDialog > p { margin: 0 0 18px; color: var(--muted); font-size: var(--type-body-small); line-height: 1.5; }
+.priceAlertForm { display: grid; gap: 8px; }
+.priceAlertForm label { color: var(--muted); font-size: var(--type-label); font-weight: 650; }
+.priceAlertForm input, .priceAlertForm select { min-height: 44px; width: 100%; margin-bottom: 12px; padding: 0 12px; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--surface); color: var(--text); font: 500 var(--type-body)/1.2 var(--font-body); }
+.priceAlertForm input:focus-visible, .priceAlertForm select:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 28%, transparent); outline-offset: 1px; }
+.priceAlertForm .formError { margin: 0 0 4px; }
 .swapRemindersHeading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
 .swapReminders h3, .swapReminders h4 { margin: 0 0 8px; }
 .swapReminders p { color: var(--muted); font-size: var(--type-body-small); }
@@ -521,9 +546,11 @@
   .swapReview { grid-template-columns: 1fr; }
   .swapReview span { min-height: 58px; border-right: 0; border-bottom: 1px solid var(--border); }
   .swapReview span:last-child { border-bottom: 0; }
-  .swapRemindersHeading, .swapReminderList li { align-items: stretch; flex-direction: column; }
+  .priceAlertsHeading, .priceAlertRow, .swapRemindersHeading, .swapReminderList li { align-items: stretch; flex-direction: column; }
+  .priceAlertActions button { flex: 1; }
   .swapReminderForm label { flex-basis: 100%; }
 }
+@media (prefers-reduced-motion: reduce) { .priceAlertActions button { transition: none; } }
 
 /* Cards, benefits, and concierge */
 .productShell .membershipTop,
