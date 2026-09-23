@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const fixture = vi.hoisted(() => ({
   crossChainEnabled: true, walletOwned: true, fromAvailable: true, toAvailable: true,
-  fromVerification: "verified" as "verified" | "unverified", quoteCalls: 0
+  fromVerification: "verified" as "verified" | "unverified", quoteCalls: 0, savedPlans: 0, saveFails: false
 }));
 
 vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {} } }));
@@ -47,7 +47,13 @@ vi.mock("@/lib/swap/catalog", () => ({
   }
 }));
 vi.mock("@/lib/swap/lifi", () => ({
-  getSwapQuotes: async () => { fixture.quoteCalls++; return [{ quoteId: "q1" }]; }
+  getSwapQuotePlans: async () => { fixture.quoteCalls++; return [{
+    quote: { quoteId: "q1", planReference: "lifi:q1:fingerprint", toAmountMinRaw: "90" },
+    plan: { sourceCall: { chainId: 8453, from: "0x1111111111111111111111111111111111111111", to: "0x3333333333333333333333333333333333333333", value: "0", data: "0x1234" } }
+  }]; }
+}));
+vi.mock("@/lib/swap/plans", () => ({
+  saveSwapQuotePlan: async () => { fixture.savedPlans++; if (fixture.saveFails) throw Error("storage unavailable"); return "00000000-0000-4000-8000-000000000001"; }
 }));
 
 import { POST } from "@/app/api/swap/quote/route";
@@ -63,7 +69,7 @@ function post(body: Record<string, unknown>) {
 describe("Swap quote API controls", () => {
   beforeEach(() => {
     fixture.crossChainEnabled = true; fixture.walletOwned = true; fixture.fromAvailable = true;
-    fixture.toAvailable = true; fixture.fromVerification = "verified"; fixture.quoteCalls = 0;
+    fixture.toAvailable = true; fixture.fromVerification = "verified"; fixture.quoteCalls = 0; fixture.savedPlans = 0; fixture.saveFails = false;
   });
 
   it("requires the cross-chain switch before requesting a cross-chain quote", async () => {
@@ -96,5 +102,22 @@ describe("Swap quote API controls", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("Cache-Control")).toBe("no-store");
     expect(fixture.quoteCalls).toBe(1);
+  });
+
+  it("returns an opaque plan ID with public metadata and no executable call", async () => {
+    const response = await post(base);
+    expect(response.status).toBe(200);
+    const body = await response.json() as { quotes: Array<Record<string, unknown>> };
+    expect(body.quotes[0]).toMatchObject({ quoteId: "q1", planId: "00000000-0000-4000-8000-000000000001" });
+    expect(JSON.stringify(body)).not.toContain("0x1234");
+    expect(JSON.stringify(body)).not.toContain("sourceCall");
+    expect(fixture.savedPlans).toBe(1);
+  });
+
+  it("withholds quote metadata when its server-held plan cannot be saved", async () => {
+    fixture.saveFails = true;
+    const response = await post(base);
+    expect(response.status).toBe(503);
+    expect((await response.json() as { error: string }).error).toBe("quote_unavailable");
   });
 });

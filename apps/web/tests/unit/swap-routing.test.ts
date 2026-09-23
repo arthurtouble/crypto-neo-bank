@@ -48,6 +48,7 @@ function adapterWithFetcher(fetcher: typeof fetch) {
     policy: {
       allowedTools: new Set(["1inch", "across"]),
       allowedExchanges: new Set(["1inch", "0x"]),
+      allowedBridges: new Set(["across"]),
       allowedTargets: new Set([routeTarget.toLowerCase()]),
       allowedApprovalTargets: new Set([approvalTarget.toLowerCase()])
     }
@@ -66,6 +67,140 @@ describe("provider-neutral LI.FI quotes", () => {
     }, { from: baseUsdc, to: baseEth });
 
     expect(new URL(requests[0]).searchParams.getAll("allowExchanges")).toEqual(["0x", "1inch"]);
+    expect(new URL(requests[0]).searchParams.getAll("allowBridges")).toEqual(["none"]);
+  });
+
+  it("uses only the audited bridge filter for cross-chain quotes", async () => {
+    const payload = lifiQuote();
+    payload.tool = "across";
+    payload.action.toChainId = 1;
+    payload.action.toToken.chainId = 1;
+    const requests: string[] = [];
+    const fetcher: typeof fetch = async (input) => { requests.push(String(input)); return Response.json(payload); };
+    await adapterWithFetcher(fetcher).quote({ fromAssetId: baseUsdc.id, toAssetId: mainnetEth.id, amount: "1", fromAddress: wallet, slippageBps: 50 }, { from: baseUsdc, to: mainnetEth });
+    expect(new URL(requests[0]).searchParams.getAll("allowBridges")).toEqual(["across"]);
+    expect(new URL(requests[0]).searchParams.getAll("allowExchanges")).toEqual(["0x", "1inch"]);
+  });
+
+  it("fails closed for a cross-chain quote when no audited bridge is configured", async () => {
+    const fetcher = vi.fn(async () => Response.json(lifiQuote()));
+    const configured = createLifiQuoteAdapter({ fetcher, policy: {
+      allowedTools: new Set(["across"]), allowedExchanges: new Set(["1inch"]), allowedBridges: new Set(),
+      allowedTargets: new Set([routeTarget.toLowerCase()]), allowedApprovalTargets: new Set([approvalTarget.toLowerCase()])
+    } });
+    await expect(configured.quote({ fromAssetId: baseUsdc.id, toAssetId: mainnetEth.id, amount: "1", fromAddress: wallet, slippageBps: 50 }, { from: baseUsdc, to: mainnetEth })).rejects.toMatchObject({ code: "no_live_route" });
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it("rejects a returned cross-chain tool outside the audited bridge list", async () => {
+    const payload = lifiQuote();
+    payload.tool = "1inch";
+    payload.action.toChainId = 1;
+    payload.action.toToken.chainId = 1;
+    await expect(adapter(payload).quote({ fromAssetId: baseUsdc.id, toAssetId: mainnetEth.id, amount: "1", fromAddress: wallet, slippageBps: 50 }, { from: baseUsdc, to: mainnetEth })).rejects.toMatchObject({ code: "no_live_route" });
+  });
+
+  it("rejects a protocol root route outside the modeled Swap and bridge classes", async () => {
+    const payload = { ...lifiQuote(), type: "protocol" };
+    await expect(adapter(payload).quote({ fromAssetId: baseUsdc.id, toAssetId: baseEth.id, amount: "1", fromAddress: wallet, slippageBps: 50 }, { from: baseUsdc, to: baseEth })).rejects.toMatchObject({ code: "no_live_route" });
+  });
+
+  it("rejects a cross-chain response mislabeled as a same-chain swap", async () => {
+    const payload = { ...lifiQuote(), type: "swap" };
+    payload.tool = "across";
+    payload.action.toChainId = 1;
+    payload.action.toToken.chainId = 1;
+    await expect(adapter(payload).quote({ fromAssetId: baseUsdc.id, toAssetId: mainnetEth.id, amount: "1", fromAddress: wallet, slippageBps: 50 }, { from: baseUsdc, to: mainnetEth })).rejects.toMatchObject({ code: "no_live_route" });
+  });
+
+  it("rejects a nested destination call in provider data", async () => {
+    const payload = { ...lifiQuote(), action: { ...lifiQuote().action, destinationCall: { to: routeTarget, data: "0x1234" } } };
+    await expect(adapter(payload).quote({ fromAssetId: baseUsdc.id, toAssetId: baseEth.id, amount: "1", fromAddress: wallet, slippageBps: 50 }, { from: baseUsdc, to: baseEth })).rejects.toMatchObject({ code: "no_live_route" });
+  });
+
+  it("rejects a provider source transaction from another wallet", async () => {
+    const payload = { ...lifiQuote(), transactionRequest: { ...lifiQuote().transactionRequest, from: "0x4444444444444444444444444444444444444444" } };
+    await expect(adapter(payload).quote({ fromAssetId: baseUsdc.id, toAssetId: baseEth.id, amount: "1", fromAddress: wallet, slippageBps: 50 }, { from: baseUsdc, to: baseEth })).rejects.toMatchObject({ code: "no_live_route" });
+  });
+
+  it("rejects a nested call hidden in the source transaction envelope", async () => {
+    const payload = { ...lifiQuote(), transactionRequest: { ...lifiQuote().transactionRequest, destinationCall: { to: routeTarget, data: "0x1234" } } };
+    await expect(adapter(payload).quote({ fromAssetId: baseUsdc.id, toAssetId: baseEth.id, amount: "1", fromAddress: wallet, slippageBps: 50 }, { from: baseUsdc, to: baseEth })).rejects.toMatchObject({ code: "no_live_route" });
+  });
+
+  it("rejects a nested route step using an unaudited tool", async () => {
+    const payload = { ...lifiQuote(), includedSteps: [{ id: "nested-1", type: "swap", tool: "unknown", action: { destinationCall: { to: routeTarget, data: "0x1234" } } }] };
+    await expect(adapter(payload).quote({ fromAssetId: baseUsdc.id, toAssetId: baseEth.id, amount: "1", fromAddress: wallet, slippageBps: 50 }, { from: baseUsdc, to: baseEth })).rejects.toMatchObject({ code: "no_live_route" });
+  });
+
+  it("keeps audited nested step identities in the private plan", async () => {
+    const payload = { ...lifiQuote(), includedSteps: [{ id: "nested-1", type: "swap", tool: "1inch" }] };
+    const result = await adapter(payload).quoteWithPlans({ fromAssetId: baseUsdc.id, toAssetId: baseEth.id, amount: "1", fromAddress: wallet, slippageBps: 50 }, { from: baseUsdc, to: baseEth });
+    expect(result[0].plan.routeSteps).toEqual([{ id: "nested-1", type: "swap", tool: "1inch" }]);
+    expect(result[0].quote).not.toHaveProperty("routeSteps");
+  });
+
+  it("accepts LI.FI nested step metadata without treating it as executable authority", async () => {
+    const payload = { ...lifiQuote(), includedSteps: [{ id: "nested-1", type: "swap", tool: "1inch",
+      toolDetails: { key: "1inch", name: "1inch" }, estimate: { fromAmount: "1000000" } }] };
+    const result = await adapter(payload).quoteWithPlans({ fromAssetId: baseUsdc.id, toAssetId: baseEth.id, amount: "1", fromAddress: wallet, slippageBps: 50 }, { from: baseUsdc, to: baseEth });
+    expect(result[0].plan.routeSteps).toEqual([{ id: "nested-1", type: "swap", tool: "1inch" }]);
+    expect(JSON.stringify(result[0].plan)).not.toContain("toolDetails");
+  });
+
+  it("rejects a nested executable source request", async () => {
+    const payload = { ...lifiQuote(), includedSteps: [{ id: "nested-1", type: "swap", tool: "1inch", transactionRequest: { to: routeTarget, data: "0x1234" } }] };
+    await expect(adapter(payload).quote({ fromAssetId: baseUsdc.id, toAssetId: baseEth.id, amount: "1", fromAddress: wallet, slippageBps: 50 }, { from: baseUsdc, to: baseEth })).rejects.toMatchObject({ code: "no_live_route" });
+  });
+
+  it("changes the plan fingerprint if the minimum or calldata changes", async () => {
+    const input = { fromAssetId: baseUsdc.id, toAssetId: baseEth.id, amount: "1", fromAddress: wallet, slippageBps: 50 };
+    const original = await adapter(lifiQuote()).quoteWithPlans(input, { from: baseUsdc, to: baseEth });
+    const minimum = lifiQuote(); minimum.estimate.toAmountMin = "280000000000000";
+    const calldata = lifiQuote(); calldata.transactionRequest.data = "0xabcd";
+    const changedMinimum = await adapter(minimum).quoteWithPlans(input, { from: baseUsdc, to: baseEth });
+    const changedCalldata = await adapter(calldata).quoteWithPlans(input, { from: baseUsdc, to: baseEth });
+    expect(changedMinimum[0].plan.fingerprint).not.toBe(original[0].plan.fingerprint);
+    expect(changedCalldata[0].plan.fingerprint).not.toBe(original[0].plan.fingerprint);
+  });
+
+  it("retains the exact normalized unsigned call only in the internal plan", async () => {
+    const input = { fromAssetId: baseUsdc.id, toAssetId: baseEth.id, amount: "1", fromAddress: wallet, slippageBps: 50 };
+    const result = await adapter(lifiQuote()).quoteWithPlans(input, { from: baseUsdc, to: baseEth });
+    expect(result[0].quote).not.toHaveProperty("transactionRequest");
+    expect(JSON.stringify(result[0].quote)).not.toContain("0x1234");
+    expect(result[0].plan).toMatchObject({
+      fromAssetId: baseUsdc.id, toAssetId: baseEth.id, fromAmountRaw: "1000000",
+      toAmountMinRaw: "290000000000000", recipient: wallet, slippageBps: 50,
+      quoteId: "quote-1", stepId: "quote-1", toolId: "1inch", approvalSpender: approvalTarget.toLowerCase(),
+      sourceCall: { chainId: 8453, from: wallet, to: routeTarget, value: "0", data: "0x1234" }
+    });
+    expect(result[0].plan.fingerprint).toMatch(/^0x[a-f0-9]{64}$/);
+  });
+
+  it("fingerprints equivalent decimal and hex source values identically", async () => {
+    const first = lifiQuote();
+    const second = lifiQuote(); second.transactionRequest.value = "0x0";
+    const input = { fromAssetId: baseUsdc.id, toAssetId: baseEth.id, amount: "1", fromAddress: wallet, slippageBps: 50 };
+    const a = await adapter(first).quoteWithPlans(input, { from: baseUsdc, to: baseEth });
+    const b = await adapter(second).quoteWithPlans(input, { from: baseUsdc, to: baseEth });
+    expect(a[0].plan.fingerprint).toBe(b[0].plan.fingerprint);
+  });
+
+  it("records policy and catalog changes in the retained plan identity", async () => {
+    const input = { fromAssetId: baseUsdc.id, toAssetId: baseEth.id, amount: "1", fromAddress: wallet, slippageBps: 50 };
+    const original = await adapter(lifiQuote()).quoteWithPlans(input, { from: baseUsdc, to: baseEth });
+    const revisedPolicy = createLifiQuoteAdapter({
+      fetcher: vi.fn(async () => Response.json(lifiQuote())), now: () => Date.parse("2026-09-22T12:00:00.000Z"),
+      policy: { allowedTools: new Set(["1inch", "across"]), allowedExchanges: new Set(["1inch", "0x"]),
+        allowedBridges: new Set(["across"]), allowedTargets: new Set([routeTarget.toLowerCase(), "0x4444444444444444444444444444444444444444"]),
+        allowedApprovalTargets: new Set([approvalTarget.toLowerCase()]) }
+    });
+    const changedPolicy = await revisedPolicy.quoteWithPlans(input, { from: baseUsdc, to: baseEth });
+    const changedCatalog = await adapter(lifiQuote()).quoteWithPlans({ ...input, unverifiedAcknowledgements: [baseUsdc.id] }, { from: { ...baseUsdc, verification: "unverified" }, to: baseEth });
+    expect(changedPolicy[0].plan.routePolicyVersion).not.toBe(original[0].plan.routePolicyVersion);
+    expect(changedPolicy[0].plan.fingerprint).not.toBe(original[0].plan.fingerprint);
+    expect(changedCatalog[0].plan.catalogVersion).not.toBe(original[0].plan.catalogVersion);
   });
 
   it("accepts a valid quote response delivered in chunks", async () => {

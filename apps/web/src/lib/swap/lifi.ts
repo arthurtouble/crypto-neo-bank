@@ -15,14 +15,16 @@ const tokenSchema = z.object({
   symbol: z.string(), decimals: z.number().int(), chainId: z.number().int(), address: z.string()
 });
 const costSchema = z.object({ amountUSD: z.string().optional() }).passthrough();
+const actionSchema = z.object({
+  fromChainId: z.number().int(), toChainId: z.number().int(), fromToken: tokenSchema, toToken: tokenSchema,
+  fromAmount: z.string().regex(/^\d+$/), fromAddress: z.string(), toAddress: z.string(),
+  slippage: z.number().finite().min(0).max(1)
+}).strict();
 const providerQuoteSchema = z.object({
   id: z.string().min(1).max(200),
+  type: z.enum(["swap", "cross", "lifi"]).optional(),
   tool: z.string().min(1).max(80),
-  action: z.object({
-    fromChainId: z.number().int(), toChainId: z.number().int(), fromToken: tokenSchema, toToken: tokenSchema,
-    fromAmount: z.string().regex(/^\d+$/), fromAddress: z.string(), toAddress: z.string(),
-    slippage: z.number().finite().min(0).max(1)
-  }),
+  action: actionSchema,
   estimate: z.object({
     fromAmount: z.string().regex(/^\d+$/),
     toAmount: z.string().regex(/^\d+$/),
@@ -34,17 +36,35 @@ const providerQuoteSchema = z.object({
     feeCosts: z.array(costSchema).optional()
   }),
   transactionRequest: z.object({
-    to: z.string(), data: z.string(), value: z.string(), chainId: z.number().int()
-  }),
+    from: z.string().optional(), to: z.string(), data: z.string(), value: z.string(), chainId: z.number().int(),
+    gasLimit: z.string().optional(), gasPrice: z.string().optional(),
+    maxFeePerGas: z.string().optional(), maxPriorityFeePerGas: z.string().optional()
+  }).strict(),
+  includedSteps: z.array(z.object({
+    id: z.string().min(1).max(200), type: z.enum(["swap", "cross"]), tool: z.string().min(1).max(80),
+    action: actionSchema.optional()
+  }).passthrough()).max(8).optional(),
   expiresAt: z.string().datetime().optional()
 });
 
 export type LifiRoutePolicy = {
   allowedTools: ReadonlySet<string>;
-  allowedExchanges?: ReadonlySet<string>;
+  allowedExchanges: ReadonlySet<string>;
+  allowedBridges: ReadonlySet<string>;
   allowedTargets: ReadonlySet<string>;
   allowedApprovalTargets: ReadonlySet<string>;
 };
+
+export type ServerHeldLifiPlan = {
+  fromAssetId: string; toAssetId: string; fromChainId: number; toChainId: number;
+  fromAmountRaw: string; toAmountMinRaw: string; recipient: string; slippageBps: number;
+  quoteId: string; stepId: string; toolId: string; approvalSpender: string | null;
+  routeSteps: Array<{ id: string; type: "swap" | "cross"; tool: string }>;
+  sourceCall: { chainId: number; from: string; to: string; value: string; data: string };
+  routePolicyVersion: string; catalogVersion: string; observedAt: string; expiresAt: string; fingerprint: string;
+};
+
+export type LifiQuoteWithPlan = { quote: ValidatedSwapQuote; plan: ServerHeldLifiPlan };
 
 type Dependencies = {
   fetcher?: typeof fetch;
@@ -57,10 +77,10 @@ function configuredSet(name: string): ReadonlySet<string> {
 }
 
 function configuredPolicy(): LifiRoutePolicy {
-  const allowedTools = configuredSet("AUREL_LIFI_ALLOWED_TOOLS");
   return {
-    allowedTools,
-    allowedExchanges: allowedTools,
+    allowedTools: configuredSet("AUREL_LIFI_ALLOWED_TOOLS"),
+    allowedExchanges: configuredSet("AUREL_LIFI_ALLOWED_EXCHANGES"),
+    allowedBridges: configuredSet("AUREL_LIFI_ALLOWED_BRIDGES"),
     allowedTargets: configuredSet("AUREL_SWAP_ALLOWED_TARGETS"),
     allowedApprovalTargets: configuredSet("AUREL_SWAP_ALLOWED_SPENDERS")
   };
@@ -162,11 +182,26 @@ async function validateQuote(
   rawAmount: bigint,
   now: number,
   policy: LifiRoutePolicy
-): Promise<ValidatedSwapQuote | null> {
+): Promise<LifiQuoteWithPlan | null> {
   const parsed = providerQuoteSchema.safeParse(value);
   if (!parsed.success) return null;
   const quote = parsed.data;
+  if ((quote.type === "swap" && assets.from.chainId !== assets.to.chainId)
+    || (quote.type === "cross" && assets.from.chainId === assets.to.chainId)) return null;
   if (!policy.allowedTools.has(quote.tool.toLowerCase())) return null;
+  if (!(assets.from.chainId === assets.to.chainId ? policy.allowedExchanges : policy.allowedBridges).has(quote.tool.toLowerCase())) return null;
+  const routeSteps = (quote.includedSteps ?? []).map(({ id, type, tool }) => ({ id, type, tool }));
+  for (const step of quote.includedSteps ?? []) {
+    if (Object.keys(step).some((key) => /call|transactionRequest|includedSteps/i.test(key))) return null;
+    if (!policy.allowedTools.has(step.tool.toLowerCase())
+      || !(step.type === "swap" ? policy.allowedExchanges : policy.allowedBridges).has(step.tool.toLowerCase())) return null;
+    if (step.action) {
+      try {
+        if (getAddress(step.action.fromAddress) !== getAddress(input.fromAddress)
+          || getAddress(step.action.toAddress) !== getAddress(input.fromAddress)) return null;
+      } catch { return null; }
+    }
+  }
   if (quote.action.fromChainId !== assets.from.chainId || quote.action.toChainId !== assets.to.chainId) return null;
   if (!matchesProviderToken(quote.action.fromToken, assets.from) || !matchesProviderToken(quote.action.toToken, assets.to)) return null;
   if (BigInt(quote.action.fromAmount) !== rawAmount || quote.action.slippage > input.slippageBps / 10_000 + Number.EPSILON) return null;
@@ -182,6 +217,9 @@ async function validateQuote(
 
   let target: string;
   try { target = getAddress(quote.transactionRequest.to).toLowerCase(); } catch { return null; }
+  if (quote.transactionRequest.from) {
+    try { if (getAddress(quote.transactionRequest.from) !== getAddress(input.fromAddress)) return null; } catch { return null; }
+  }
   if (!policy.allowedTargets.has(target)) return null;
   if (quote.transactionRequest.chainId !== assets.from.chainId) return null;
   if (!/^0x(?:[a-fA-F0-9]{2})+$/.test(quote.transactionRequest.data)) return null;
@@ -202,13 +240,18 @@ async function validateQuote(
   const unverified = assets.from.verification === "unverified" || assets.to.verification === "unverified";
   if ((unverified && priceImpactPercent === null) || (priceImpactPercent !== null && priceImpactPercent > (unverified ? 1 : 3))) return null;
 
+  const routePolicyVersion = await sha256(JSON.stringify([
+    ...[policy.allowedTools, policy.allowedExchanges, policy.allowedBridges, policy.allowedTargets, policy.allowedApprovalTargets]
+      .map((set) => [...set].map((item) => item.toLowerCase()).sort())
+  ]));
+  const catalogVersion = await sha256(JSON.stringify([assets.from, assets.to]));
   const planHash = await sha256(JSON.stringify([
-    quote.tool, quote.id, input.fromAssetId, input.toAssetId, fromAmount.toString(), toAmount.toString(), toAmountMin.toString(),
+    quote.type ?? null, quote.tool, quote.id, input.fromAssetId, input.toAssetId, fromAmount.toString(), toAmount.toString(), toAmountMin.toString(),
     input.fromAddress.toLowerCase(), quote.action.toAddress.toLowerCase(), quote.action.slippage,
     assets.from.chainId, target, transactionValue.toString(), quote.transactionRequest.data.toLowerCase(),
-    approvalTarget?.toLowerCase() ?? null, expiresAt
+    approvalTarget?.toLowerCase() ?? null, expiresAt, routePolicyVersion, catalogVersion, routeSteps
   ]));
-  return {
+  const publicQuote: ValidatedSwapQuote = {
     provider: `lifi:${quote.tool}`,
     quoteId: quote.id,
     fromAssetId: input.fromAssetId,
@@ -225,12 +268,29 @@ async function validateQuote(
     planReference: `lifi:${quote.id}:${planHash}`,
     routeKind: assets.from.chainId === assets.to.chainId ? "same_chain" : "cross_chain"
   };
+  return { quote: publicQuote, plan: {
+    fromAssetId: input.fromAssetId, toAssetId: input.toAssetId,
+    fromChainId: assets.from.chainId, toChainId: assets.to.chainId,
+    fromAmountRaw: fromAmount.toString(), toAmountMinRaw: toAmountMin.toString(),
+    recipient: input.fromAddress.toLowerCase(), slippageBps: input.slippageBps,
+    quoteId: quote.id, stepId: quote.id, toolId: quote.tool,
+    approvalSpender: approvalTarget?.toLowerCase() ?? null,
+    routeSteps,
+    sourceCall: { chainId: assets.from.chainId, from: input.fromAddress.toLowerCase(), to: target,
+      value: transactionValue.toString(), data: quote.transactionRequest.data.toLowerCase() },
+    routePolicyVersion, catalogVersion,
+    observedAt: new Date(now).toISOString(), expiresAt, fingerprint: planHash
+  } };
 }
 
 class LifiQuoteAdapter implements QuoteAdapter {
   constructor(private readonly dependencies: Required<Dependencies>) {}
 
   async quote(input: SwapQuoteInput, assets: { from: CatalogAsset; to: CatalogAsset }): Promise<ValidatedSwapQuote[]> {
+    return (await this.quoteWithPlans(input, assets)).map(({ quote }) => quote);
+  }
+
+  async quoteWithPlans(input: SwapQuoteInput, assets: { from: CatalogAsset; to: CatalogAsset }): Promise<LifiQuoteWithPlan[]> {
     if (!parseAssetId(input.fromAssetId) || !parseAssetId(input.toAssetId)) {
       throw new SwapQuoteError("unsupported_chain", "This asset chain is not supported.");
     }
@@ -259,13 +319,14 @@ class LifiQuoteAdapter implements QuoteAdapter {
       order: "CHEAPEST", slippage: String(input.slippageBps / 10_000), integrator: "aurel",
       allowDestinationCall: "false", maxPriceImpact: String((unverified ? 1 : 3) / 100)
     });
-    const allowedExchanges = this.dependencies.policy.allowedExchanges ?? this.dependencies.policy.allowedTools;
-    if (allowedExchanges.size === 0) {
+    const isBridge = from.data.chainId !== to.data.chainId;
+    const allowedTools = isBridge ? this.dependencies.policy.allowedBridges : this.dependencies.policy.allowedExchanges;
+    if (allowedTools.size === 0) {
       throw new SwapQuoteError("no_live_route", "No validated live route is currently available.");
     }
-    for (const exchange of [...allowedExchanges].map((value) => value.toLowerCase()).sort()) {
-      query.append("allowExchanges", exchange);
-    }
+    for (const tool of [...(isBridge ? this.dependencies.policy.allowedBridges : new Set(["none"]))].map((value) => value.toLowerCase()).sort()) query.append("allowBridges", tool);
+    const exchanges = this.dependencies.policy.allowedExchanges.size ? this.dependencies.policy.allowedExchanges : new Set(["none"]);
+    for (const tool of [...exchanges].map((value) => value.toLowerCase()).sort()) query.append("allowExchanges", tool);
     let response: Response;
     try {
       response = await this.dependencies.fetcher(`https://li.quest/v1/quote?${query}`, {
@@ -280,13 +341,13 @@ class LifiQuoteAdapter implements QuoteAdapter {
       throw new SwapQuoteError("no_live_route", "No validated live route is currently available.");
     }
     const body = await readBoundedJson(response);
-    const quote = await validateQuote(body, input, { from: from.data, to: to.data }, rawAmount, this.dependencies.now(), this.dependencies.policy);
-    if (!quote) throw new SwapQuoteError("no_live_route", "No validated live route is currently available.");
-    return [quote];
+    const result = await validateQuote(body, input, { from: from.data, to: to.data }, rawAmount, this.dependencies.now(), this.dependencies.policy);
+    if (!result) throw new SwapQuoteError("no_live_route", "No validated live route is currently available.");
+    return [result];
   }
 }
 
-export function createLifiQuoteAdapter(dependencies: Dependencies = {}): QuoteAdapter {
+export function createLifiQuoteAdapter(dependencies: Dependencies = {}): LifiQuoteAdapter {
   return new LifiQuoteAdapter({
     fetcher: dependencies.fetcher ?? fetch,
     now: dependencies.now ?? Date.now,
@@ -296,4 +357,8 @@ export function createLifiQuoteAdapter(dependencies: Dependencies = {}): QuoteAd
 
 export function getSwapQuotes(input: SwapQuoteInput, assets: { from: CatalogAsset; to: CatalogAsset }): Promise<ValidatedSwapQuote[]> {
   return createLifiQuoteAdapter().quote(input, assets);
+}
+
+export function getSwapQuotePlans(input: SwapQuoteInput, assets: { from: CatalogAsset; to: CatalogAsset }): Promise<LifiQuoteWithPlan[]> {
+  return createLifiQuoteAdapter().quoteWithPlans(input, assets);
 }

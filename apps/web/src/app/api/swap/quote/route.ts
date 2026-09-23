@@ -6,7 +6,8 @@ import { BetaAccessError, requireBetaAccess } from "@/lib/beta/access";
 import { FeatureUnavailableError, requireFeature } from "@/lib/features/flags";
 import { enforceRateLimit, RateLimitError } from "@/lib/security/rate-limit";
 import { resolveCatalogAsset } from "@/lib/swap/catalog";
-import { getSwapQuotes } from "@/lib/swap/lifi";
+import { getSwapQuotePlans } from "@/lib/swap/lifi";
+import { saveSwapQuotePlan } from "@/lib/swap/plans";
 import { requireExactUnverifiedAcknowledgements, SwapQuoteError, swapQuoteRequestSchema } from "@/lib/swap/quotes";
 
 function reply(body: Record<string, unknown>, status = 200, headers?: HeadersInit) {
@@ -29,7 +30,10 @@ export async function POST(request: Request) {
     if (from.chainId !== to.chainId) await requireFeature(env.PROJECTION_DB, "cross_chain");
     const normalized = { ...input, fromAddress };
     requireExactUnverifiedAcknowledgements(normalized, { from, to });
-    const quotes = await getSwapQuotes(normalized, { from, to });
+    const planned = await getSwapQuotePlans(normalized, { from, to });
+    const quotes = await Promise.all(planned.map(async ({ quote, plan }) => ({
+      ...quote, planId: await saveSwapQuotePlan(env.PROJECTION_DB, subject.subjectReference, fromAddress, plan)
+    })));
     return reply({ quotes, observedAt: new Date().toISOString(), authority: "Validated LI.FI quote metadata; not execution authority" });
   } catch (error) {
     if (error instanceof AuthenticationError) return reply({ error: "unauthorized", message: error.message, traceId }, 401);
