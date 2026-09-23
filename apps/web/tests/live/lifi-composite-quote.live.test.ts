@@ -26,7 +26,13 @@ describe.skipIf(process.env.AUREL_LIVE_READONLY !== "1")("LI.FI Base composite q
     expect(result.plan.sourceCall.to).toBe(diamond);
     const decoded = inspectLifiDiamondSwap({ data: result.plan.sourceCall.data,
       receiver: wallet, minimumOutputRaw: result.plan.toAmountMinRaw });
-    expect(decoded.swaps.length).toBeGreaterThan(0);
-    expect(decoded.swaps.every((swap) => swap.callData.length >= 10)).toBe(true);
+    expect(decoded.swaps).toHaveLength(2);
+    expect(decoded.swaps.map((swap) => swap.callData.slice(0, 10))).toEqual(["0x332d746b", "0x3f0bde25"]);
+    expect(decoded.swaps.map((swap) => swap.requiresDeposit)).toEqual([true, false]);
+    expect(decoded.swaps[0]).toMatchObject({ sendingAssetId: from.address!.toLowerCase(),
+      receivingAssetId: from.address!.toLowerCase(), fromAmountRaw: result.plan.fromAmountRaw });
+    expect(decoded.swaps[1]).toMatchObject({ sendingAssetId: from.address!.toLowerCase(),
+      receivingAssetId: to.address!.toLowerCase(), fromAmountRaw: result.plan.routeSteps[0].toAmountRaw });
+    expect(decoded.swaps.every((swap) => swap.callTo === swap.approveTo)).toBe(true);
   }, 20_000);
 });

@@ -100,6 +100,8 @@ The repeatable read-only mainnet readiness check now asks the Base Diamond's `fa
 
 A separate server-side inspection helper now decodes that exact outer ABI with canonical-encoding, receiver, minimum, and bounded-array checks. The opt-in live quote test confirms the observed calldata structurally decodes. It is **disconnected** from customer preparation and does not approve any nested target, selector, fee recipient, or swap economics. Its output is audit material; it must not become an execution policy until each nested call is fully decoded and compared to an independent plan and on-chain state.
 
+The live contract check also confirms the current two-call structure: fee-forwarder selector `0x332d746b` spends the full source amount with `requiresDeposit=true`, then Nordstern selector `0x3f0bde25` spends the quoted post-fee amount with `requiresDeposit=false`; the decoded source/destination assets, receiver, and outer minimum match the retained quote. These are **observations of one route**, not an audited target allowlist or proof of settlement. The fee recipient and Nordstern calldata remain unvalidated.
+
 ## Non-negotiable release rules
 
 - D1 projections are not customer balances, settlement records, provider entitlements, or a substitute for chain/provider reads.
