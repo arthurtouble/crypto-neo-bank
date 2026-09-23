@@ -30,12 +30,12 @@ export type VerifiedActionPasskeyAssertion = {
   readonly [verifiedAssertionBrand]: true;
 };
 
-export async function verifyActionPasskeyAssertion(input: VerifyActionPasskeyInput): Promise<VerifiedActionPasskeyAssertion> {
+async function verifyAssertion(input: VerifyActionPasskeyInput, requiredStatus: "pending" | "active"): Promise<VerifiedActionPasskeyAssertion> {
   const { credential, expectedOrigin, expectedRpId } = input;
   validateActionPasskeyOrigin(expectedOrigin, expectedRpId, input.deploymentMode);
   if (
     !input.subjectReference ||
-    credential.status !== "active" ||
+    credential.status !== requiredStatus ||
     credential.subjectReference !== input.subjectReference ||
     credential.rpId !== expectedRpId ||
     credential.credentialId !== input.response.id ||
@@ -74,4 +74,13 @@ export async function verifyActionPasskeyAssertion(input: VerifyActionPasskeyInp
     rpId: verified.authenticationInfo.rpID,
     challengeDigest: `sha256:${Array.from(challengeHash, (byte) => byte.toString(16).padStart(2, "0")).join("")}`,
   } as VerifiedActionPasskeyAssertion;
+}
+
+export function verifyActionPasskeyAssertion(input: VerifyActionPasskeyInput): Promise<VerifiedActionPasskeyAssertion> {
+  return verifyAssertion(input, "active");
+}
+
+/** Verifies key possession only. A pending credential remains ineligible for action authorization. */
+export function verifyPendingPasskeyPossession(input: VerifyActionPasskeyInput): Promise<VerifiedActionPasskeyAssertion> {
+  return verifyAssertion(input, "pending");
 }
