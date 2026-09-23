@@ -7,6 +7,9 @@ import { decodeFunctionData, encodeFunctionData, getAddress, parseAbi } from "vi
 export const LIFI_ERC20_SWAP_ABI = parseAbi([
   "function swapTokensMultipleV3ERC20ToERC20(bytes32 _transactionId, string _integrator, string _referrer, address _receiver, uint256 _minAmountOut, (address callTo, address approveTo, address sendingAssetId, address receivingAssetId, uint256 fromAmount, bytes callData, bool requiresDeposit)[] _swapData) payable"
 ]);
+export const LIFI_FEE_FORWARDER_ABI = parseAbi([
+  "function forwardERC20Fees(address _token, (address recipient, uint256 amount)[] _distributions)"
+]);
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
@@ -36,4 +39,27 @@ export function inspectLifiDiamondSwap(input: { data: string; receiver: string; 
   });
   return { transactionId: transactionId.toLowerCase(), integrator, referrer,
     receiver: receiver.toLowerCase(), minimumOutputRaw: minimumOutput.toString(), swaps };
+}
+
+// Inspection only. Matching a fee total does not make its recipients or the
+// surrounding swap executable without independent policy and effect checks.
+export function inspectLifiFeeForwarderCall(input: { data: string; token: string; expectedFeeRaw: string }) {
+  if (!/^0x(?:[0-9a-fA-F]{2})+$/.test(input.data) || input.data.length > 16_386
+    || !/^\d+$/.test(input.expectedFeeRaw) || BigInt(input.expectedFeeRaw) <= 0n)
+    throw new Error("LI.FI fee call envelope is invalid.");
+  const decoded = decodeFunctionData({ abi: LIFI_FEE_FORWARDER_ABI, data: input.data as `0x${string}` });
+  if (decoded.functionName !== "forwardERC20Fees" || !decoded.args)
+    throw new Error("LI.FI fee selector is not reviewed.");
+  const canonical = encodeFunctionData({ abi: LIFI_FEE_FORWARDER_ABI, functionName: "forwardERC20Fees", args: decoded.args });
+  if (canonical.toLowerCase() !== input.data.toLowerCase()) throw new Error("LI.FI fee encoding is not canonical.");
+  const [token, rawDistributions] = decoded.args;
+  if (getAddress(token) !== getAddress(input.token) || rawDistributions.length < 1 || rawDistributions.length > 8)
+    throw new Error("LI.FI fee token or distribution count differs from review.");
+  const distributions = rawDistributions.map(({ recipient, amount }) => {
+    if (getAddress(recipient) === ZERO_ADDRESS || amount <= 0n) throw new Error("LI.FI fee recipient or amount is invalid.");
+    return { recipient: recipient.toLowerCase(), amountRaw: amount.toString() };
+  });
+  const total = rawDistributions.reduce((sum, distribution) => sum + distribution.amount, 0n);
+  if (total !== BigInt(input.expectedFeeRaw)) throw new Error("LI.FI fee total differs from review.");
+  return { token: token.toLowerCase(), totalFeeRaw: total.toString(), distributions };
 }

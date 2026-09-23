@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { createLifiQuoteAdapter } from "@/lib/swap/lifi";
-import { inspectLifiDiamondSwap } from "@/lib/swap/lifi-diamond-inspection";
+import { inspectLifiDiamondSwap, inspectLifiFeeForwarderCall } from "@/lib/swap/lifi-diamond-inspection";
 import type { CatalogAsset } from "@/lib/swap/assets";
 
 const diamond = "0x1231deb6f5749ef6ce6943a275a1d3e7486f4eae";
+// Observational drift sentinels, not execution allowlists.
+const observedFeeForwarder = "0xce40449b773a3e6e5e769adb4e567179d4828cbd";
+const observedNordstern = "0xc87de04e2ec1f4282dff2933a2d58199f688fc3d";
 const wallet = "0x000000000000000000000000000000000000dEaD";
 const from: CatalogAsset = { id: "8453:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", chainId: 8453,
   address: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", symbol: "USDC", name: "USD Coin",
@@ -34,5 +37,10 @@ describe.skipIf(process.env.AUREL_LIVE_READONLY !== "1")("LI.FI Base composite q
     expect(decoded.swaps[1]).toMatchObject({ sendingAssetId: from.address!.toLowerCase(),
       receivingAssetId: to.address!.toLowerCase(), fromAmountRaw: result.plan.routeSteps[0].toAmountRaw });
     expect(decoded.swaps.every((swap) => swap.callTo === swap.approveTo)).toBe(true);
+    expect(decoded.swaps.map((swap) => swap.callTo)).toEqual([observedFeeForwarder, observedNordstern]);
+    const expectedFeeRaw = (BigInt(result.plan.fromAmountRaw) - BigInt(result.plan.routeSteps[0].toAmountRaw!)).toString();
+    const fee = inspectLifiFeeForwarderCall({ data: decoded.swaps[0].callData,
+      token: from.address!, expectedFeeRaw });
+    expect(fee.distributions.length).toBeGreaterThan(0);
   }, 20_000);
 });

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { encodeFunctionData } from "viem";
-import { inspectLifiDiamondSwap, LIFI_ERC20_SWAP_ABI } from "@/lib/swap/lifi-diamond-inspection";
+import { inspectLifiDiamondSwap, inspectLifiFeeForwarderCall, LIFI_ERC20_SWAP_ABI,
+  LIFI_FEE_FORWARDER_ABI } from "@/lib/swap/lifi-diamond-inspection";
 
 const wallet = "0x1111111111111111111111111111111111111111" as const;
 const usdc = "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913" as const;
@@ -45,5 +46,30 @@ describe("disconnected LI.FI Diamond call inspection", () => {
       expect(() => inspectLifiDiamondSwap({ data: call({ swaps }), receiver: wallet,
         minimumOutputRaw: "900000" })).toThrow();
     }
+  });
+});
+
+describe("disconnected LI.FI fee-forwarder inspection", () => {
+  function feeCall(distributions: Array<{ recipient: Address; amount: bigint }> = [{ recipient: dex, amount: 2_500n }]) {
+    return encodeFunctionData({ abi: LIFI_FEE_FORWARDER_ABI, functionName: "forwardERC20Fees",
+      args: [usdc, distributions] });
+  }
+
+  it("requires the exact token and total fee while retaining recipients for review", () => {
+    expect(feeCall().slice(0, 10)).toBe("0x332d746b");
+    expect(inspectLifiFeeForwarderCall({ data: feeCall(), token: usdc, expectedFeeRaw: "2500" }))
+      .toEqual({ token: usdc.toLowerCase(), totalFeeRaw: "2500",
+        distributions: [{ recipient: dex.toLowerCase(), amountRaw: "2500" }] });
+  });
+
+  it("rejects wrong token, wrong total, zero recipient, empty or excessive distributions, and malformed calldata", () => {
+    const base = { token: usdc, expectedFeeRaw: "2500" };
+    expect(() => inspectLifiFeeForwarderCall({ ...base, token: weth, data: feeCall() })).toThrow();
+    expect(() => inspectLifiFeeForwarderCall({ ...base, expectedFeeRaw: "2501", data: feeCall() })).toThrow();
+    expect(() => inspectLifiFeeForwarderCall({ ...base, data: feeCall([{ recipient: "0x0000000000000000000000000000000000000000", amount: 2_500n }]) })).toThrow();
+    expect(() => inspectLifiFeeForwarderCall({ ...base, data: feeCall([]) })).toThrow();
+    expect(() => inspectLifiFeeForwarderCall({ ...base, data: feeCall(Array(9).fill({ recipient: dex, amount: 2_500n })) })).toThrow();
+    expect(() => inspectLifiFeeForwarderCall({ ...base, data: `0xdeadbeef${feeCall().slice(10)}` })).toThrow();
+    expect(() => inspectLifiFeeForwarderCall({ ...base, data: `${feeCall()}00` })).toThrow();
   });
 });
