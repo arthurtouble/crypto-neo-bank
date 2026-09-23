@@ -140,6 +140,16 @@ function boundedExpiry(providerExpiry: string | undefined, now: number): string 
   return new Date(Math.min(parsed, localExpiry)).toISOString();
 }
 
+function unsignedTransactionValue(value: string): bigint | null {
+  if (!/^(?:\d+|0x[\da-fA-F]+)$/.test(value)) return null;
+  try {
+    const parsed = BigInt(value);
+    return parsed <= MAX_UINT256 ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
 async function sha256(value: string): Promise<`0x${string}`> {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
   return `0x${Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("")}`;
@@ -176,9 +186,8 @@ async function validateQuote(
   if (quote.transactionRequest.chainId !== assets.from.chainId) return null;
   if (!/^0x(?:[a-fA-F0-9]{2})+$/.test(quote.transactionRequest.data)) return null;
   try { hexToBytes(quote.transactionRequest.data as `0x${string}`); } catch { return null; }
-  if (!/^\d+$/.test(quote.transactionRequest.value)) return null;
-  const transactionValue = BigInt(quote.transactionRequest.value);
-  if (transactionValue > MAX_UINT256 || transactionValue !== (assets.from.address === null ? rawAmount : 0n)) return null;
+  const transactionValue = unsignedTransactionValue(quote.transactionRequest.value);
+  if (transactionValue === null || transactionValue !== (assets.from.address === null ? rawAmount : 0n)) return null;
 
   let approvalTarget: string | null = null;
   if (quote.estimate.approvalAddress !== undefined) {

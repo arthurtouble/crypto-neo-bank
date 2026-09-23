@@ -128,6 +128,36 @@ describe("provider-neutral LI.FI quotes", () => {
     expect(quote.planReference).toMatch(/^lifi:quote-1:0x[a-f0-9]{64}$/);
   });
 
+  it("accepts LI.FI hex transaction values without changing an equivalent plan reference", async () => {
+    const decimal = lifiQuote();
+    const hexadecimal = lifiQuote();
+    hexadecimal.transactionRequest.value = "0x0";
+    const input = { fromAssetId: baseUsdc.id, toAssetId: baseEth.id, amount: "1", fromAddress: wallet, slippageBps: 50 };
+    const [decimalQuote] = await adapter(decimal).quote(input, { from: baseUsdc, to: baseEth });
+    const [hexQuote] = await adapter(hexadecimal).quote(input, { from: baseUsdc, to: baseEth });
+    expect(hexQuote.planReference).toBe(decimalQuote.planReference);
+  });
+
+  it("accepts an exact hex native source value and rejects malformed or excessive values", async () => {
+    const nativeQuote = lifiQuote();
+    nativeQuote.action.fromToken = { symbol: "ETH", decimals: 18, chainId: 8453, address: "0x0000000000000000000000000000000000000000" };
+    nativeQuote.action.toToken = { symbol: "USDC", decimals: 6, chainId: 8453, address: baseUsdc.address! };
+    nativeQuote.action.fromAmount = "1000000000000000000";
+    nativeQuote.estimate.fromAmount = "1000000000000000000";
+    nativeQuote.estimate.toAmount = "990000";
+    nativeQuote.estimate.toAmountMin = "980000";
+    delete (nativeQuote.estimate as Partial<typeof nativeQuote.estimate>).approvalAddress;
+    nativeQuote.transactionRequest.value = "0xde0b6b3a7640000";
+    const input = { fromAssetId: baseEth.id, toAssetId: baseUsdc.id, amount: "1", fromAddress: wallet, slippageBps: 50 };
+    await expect(adapter(nativeQuote).quote(input, { from: baseEth, to: baseUsdc })).resolves.toHaveLength(1);
+
+    for (const value of ["0x", "0xgg", "-1", `0x1${"0".repeat(64)}`, "0xde0b6b3a7640001"]) {
+      const invalid = structuredClone(nativeQuote);
+      invalid.transactionRequest.value = value;
+      await expect(adapter(invalid).quote(input, { from: baseEth, to: baseUsdc })).rejects.toMatchObject({ code: "no_live_route" });
+    }
+  });
+
   it("uses the source asset's actual decimals and rejects excessive request precision", async () => {
     await expect(adapter(lifiQuote()).quote({
       fromAssetId: baseUsdc.id, toAssetId: baseEth.id, amount: "1.0000001", fromAddress: wallet, slippageBps: 50
