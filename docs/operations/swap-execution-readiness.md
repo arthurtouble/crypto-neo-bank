@@ -20,10 +20,11 @@ LI.FI's unauthenticated public API can be used for initial testing. An API key m
 
 ## Required before a small-funds release
 
-1. Back up development D1 and apply outstanding migrations through `0034_governed_bridge_preparation.sql`; deploy the matching Worker. Do not apply the new release trigger to a Worker running older preparation code.
-2. Rehearse small self-owned Base USDC/WETH and Base-USDC → Arbitrum-USDC transactions. Cover zero allowance, exact approval, an existing nonzero insufficient allowance, fresh re-quote, rejection, quote expiry, source revert, destination delay, partial/refund status, reorg, account lock, and lost-response recovery. A source receipt alone must never mark a bridge complete.
-3. Have an independent reviewer assess the deployed contract mapping, LI.FI fee forwarder and recipient allowlist, canonical calldata decoder, approval flow, simulation, route economics, status parser, Across event linkage, and receipt verifiers. Confirm legal eligibility of launch jurisdictions and assets.
-4. Only after those checks, make a separate operator decision to enable the existing `swaps` and `cross_chain` controls for a limited beta. Other bridge tools, assets, tokenized securities, and arbitrary token routes need separate contract/effect audits; a quote in the picker does not make an asset signable.
+The development D1 was backed up, migrated through `0034_governed_bridge_preparation.sql`, and paired with the matching Worker on 24 September. Both the candidate and public workers.dev URLs passed smoke checks; the migrated export restored locally with 34 migrations and clean integrity checks. `swaps` and `cross_chain` remain disabled. See the production-readiness ledger for version IDs and rollback context.
+
+1. Rehearse small self-owned Base USDC/WETH and Base-USDC → Arbitrum-USDC transactions. Cover zero allowance, exact approval, an existing nonzero insufficient allowance, fresh re-quote, rejection, quote expiry, source revert, destination delay, partial/refund status, reorg, account lock, and lost-response recovery. A source receipt alone must never mark a bridge complete.
+2. Have an independent reviewer assess the deployed contract mapping, LI.FI fee forwarder and recipient allowlist, canonical calldata decoder, approval flow, simulation, route economics, status parser, Across event linkage, and receipt verifiers. Confirm legal eligibility of launch jurisdictions and assets.
+3. Only after those checks, make a separate operator decision to enable the existing `swaps` and `cross_chain` controls for a limited beta. Other bridge tools, assets, tokenized securities, and arbitrary token routes need separate contract/effect audits; a quote in the picker does not make an asset signable.
 
 Aurel uses LI.FI as the route provider, including when LI.FI selects Across as the underlying bridge. No direct Across Swap API integration or key is planned. See [LI.FI's contract architecture](https://github.com/lifinance/contracts) and [Across event changes](https://docs.across.to/guides/migration/non-evm/indexers).
 
