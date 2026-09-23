@@ -86,12 +86,12 @@ describe("swap route review", () => {
     expect(html).not.toContain("Swap Complete");
   });
 
-  it("does not offer cross-network review while execution is unavailable", () => {
+  it("offers a deliberate review for a fresh cross-network quote", () => {
     const html = renderToStaticMarkup(createElement(SwapRouteReview, {
       planId: "plan", fresh: true, walletAddress: "0xabc", busy: false,
       state: "idle", routeKind: "cross_chain", onReview() {}
     }));
-    expect(html).toContain("Across-network swaps aren&#x27;t available yet");
-    expect(html).not.toContain("Review Swap</button>");
+    expect(html).toContain("Review Swap</button>");
+    expect(html).not.toContain("Confirm Swap</button>");
   });
 });

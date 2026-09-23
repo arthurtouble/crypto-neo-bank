@@ -4,10 +4,10 @@ import { usePrivy } from "@privy-io/react-auth";
 import { Check, CircleAlert, ExternalLink, LoaderCircle, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { SUPPORTED_CHAINS } from "@/config/chains";
-import { lifecycleCopy, lifecycleStep, normalizeVerifiedIntentStatus, terminalIntentStatuses, type TransactionLifecycleStatus } from "@/lib/transactions/lifecycle";
+import { bridgeProgressDetail, lifecycleCopy, lifecycleStep, normalizeVerifiedIntentStatus, terminalIntentStatuses, type TransactionLifecycleStatus } from "@/lib/transactions/lifecycle";
 
-type IntentState = { status: string; verificationState?: string; failureReason?: string | null };
-type ObservedState = { intentId: string; status: TransactionLifecycleStatus; failureReason: string | null };
+type IntentState = { status: string; type?: string; verificationState?: string; failureReason?: string | null };
+type ObservedState = { intentId: string; status: TransactionLifecycleStatus; failureReason: string | null; detail: string | null };
 
 type Props = {
   action: string;
@@ -53,7 +53,9 @@ export function TransactionProgress({ action, status, stage, error, intentId, ha
         if (!response.ok) return;
         const body = await response.json() as IntentState;
         const next = normalizeVerifiedIntentStatus(body.status, body.verificationState);
-        if (next) setObserved({ intentId, status: next, failureReason: body.status === "confirmed" && body.verificationState !== "confirmed" ? "This historical confirmation lacks independently verified transaction evidence." : body.failureReason ?? null });
+        if (next) setObserved({ intentId, status: next,
+          failureReason: body.status === "confirmed" && body.verificationState !== "confirmed" ? "This historical confirmation lacks independently verified transaction evidence." : body.failureReason ?? null,
+          detail: body.type === "bridge" ? bridgeProgressDetail(body.verificationState) : null });
         if (next === "confirmed" && !notified) { notified = true; onConfirmedRef.current?.(); }
         if ((!next || !terminalIntentStatuses.has(next)) && !stopped) timer = window.setTimeout(check, 5_000);
       } catch {
@@ -70,7 +72,7 @@ export function TransactionProgress({ action, status, stage, error, intentId, ha
   return <div className={`transactionProgress ${failed ? "failed" : complete ? "complete" : "active"}`} role={failed ? "alert" : "status"} aria-live="polite">
     <div className="transactionProgressHeadline">
       <span>{failed ? <X size={17} /> : complete ? <Check size={17} /> : submitted ? <Check size={17} /> : <LoaderCircle className="spin" size={17} />}</span>
-      <div><strong>{stage || copy.title}</strong><small>{error || currentObservation?.failureReason || (submitted && submittedDetail) || copy.detail}</small></div>
+      <div><strong>{stage || copy.title}</strong><small>{error || currentObservation?.failureReason || currentObservation?.detail || (submitted && submittedDetail) || copy.detail}</small></div>
     </div>
     {!failed && <div className="transactionSteps" aria-label={`${action} progress`}>
       {["Review", "Confirm", "Submitted", "Complete"].map((label, index) => <span className={index <= currentStep ? "done" : ""} key={label}><i>{index < currentStep || complete ? <Check size={10} /> : index + 1}</i>{label}</span>)}

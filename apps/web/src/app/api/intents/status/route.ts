@@ -42,12 +42,31 @@ export async function GET(request: Request) {
         WHEN SUM(CASE WHEN p.submission_phase = 'awaiting_step_up' THEN 1 ELSE 0 END) > 0 THEN 'awaiting_step_up'
         WHEN transaction_intents.status = 'confirmed' AND SUM(CASE WHEN p.verification_state = 'confirmed' THEN 1 ELSE 0 END) = COUNT(*) THEN 'confirmed'
         WHEN SUM(CASE WHEN p.verification_state IN ('reorged', 'inconsistent', 'failed') THEN 1 ELSE 0 END) > 0 THEN 'exception'
-        ELSE 'pending' END FROM intent_prepared_calls p WHERE p.intent_id = transaction_intents.intent_id) AS verification_state
+        ELSE 'pending' END FROM intent_prepared_calls p WHERE p.intent_id = transaction_intents.intent_id) AS verification_state,
+      (SELECT p.verification_state FROM intent_prepared_calls p
+        WHERE p.intent_id = transaction_intents.intent_id AND p.step_index = 0
+          AND p.semantic_action = 'bridge') AS source_verification_state,
+      (SELECT d.verification_state FROM swap_destination_observations d
+        WHERE d.intent_id = transaction_intents.intent_id) AS destination_verification_state,
+      (SELECT d.destination_hash FROM swap_destination_observations d
+        WHERE d.intent_id = transaction_intents.intent_id) AS destination_transaction_hash
       FROM transaction_intents WHERE intent_id = ? AND subject_reference = ?`)
       .bind(intentId, subject.subjectReference)
-      .first<{ intent_id: string; status: string; type: string; chain_id: number; transaction_hash: string | null; route_reference: string | null; failure_reason: string | null; updated_at: string; confirmed_at: string | null; verification_state?: string }>();
+      .first<{ intent_id: string; status: string; type: string; chain_id: number; transaction_hash: string | null; route_reference: string | null; failure_reason: string | null; updated_at: string; confirmed_at: string | null; verification_state?: string; source_verification_state: string | null; destination_verification_state: string | null; destination_transaction_hash: string | null }>();
     if (!intent) return Response.json({ error: "intent_not_found", traceId }, { status: 404, headers: { "Cache-Control": "no-store" } });
-    return Response.json({ intentId: intent.intent_id, status: intent.status, verificationState: intent.verification_state ?? "unverified_legacy", type: intent.type, chainId: intent.chain_id, transactionHash: intent.transaction_hash, routeReference: intent.route_reference, failureReason: intent.failure_reason, updatedAt: intent.updated_at, confirmedAt: intent.confirmed_at, traceId }, { headers: { "Cache-Control": "no-store" } });
+    const verificationState = intent.type !== "bridge" ? intent.verification_state ?? "unverified_legacy"
+      : intent.source_verification_state !== "confirmed"
+        ? intent.source_verification_state ?? intent.verification_state ?? "unverified_legacy"
+        : intent.destination_verification_state === "complete"
+          ? intent.status === "confirmed" ? "confirmed" : "source_confirmed_pending_settlement"
+          : intent.destination_verification_state && intent.destination_verification_state !== "pending"
+            ? intent.destination_verification_state : "source_confirmed_pending_settlement";
+    return Response.json({ intentId: intent.intent_id, status: intent.status, verificationState,
+      ...(intent.type === "bridge" ? { sourceVerificationState: intent.source_verification_state,
+        destinationTransactionHash: intent.destination_transaction_hash } : {}),
+      type: intent.type, chainId: intent.chain_id, transactionHash: intent.transaction_hash,
+      routeReference: intent.route_reference, failureReason: intent.failure_reason, updatedAt: intent.updated_at,
+      confirmedAt: intent.confirmed_at, traceId }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     if (error instanceof AuthenticationError) return Response.json({ error: "unauthorized", message: error.message, traceId }, { status: 401, headers: { "Cache-Control": "no-store" } });
     if (error instanceof z.ZodError) return Response.json({ error: "invalid_intent", issues: error.issues, traceId }, { status: 400, headers: { "Cache-Control": "no-store" } });
@@ -75,8 +94,8 @@ export async function POST(request: Request) {
         }>();
       if (!prepared) return reply({ error: "prepared_step_required", traceId }, 409);
       const late = async (reason: string) => {
-        if (!(current.intent_type === "transfer" || current.intent_type === "swap"
-          && prepared.semantic_action === "swap" && prepared.submission_phase === "released")
+        if (!(current.intent_type === "transfer" || ["swap", "bridge"].includes(current.intent_type)
+          && prepared.semantic_action === current.intent_type && prepared.submission_phase === "released")
           || prepared.chain_id !== 8453 || stepIndex !== 0 || prepared.reported_hash)
           return reply({ error: "prepared_step_unavailable", traceId }, 409);
         const result = await recordLateObservation(env.PROJECTION_DB, { subjectReference: subject.subjectReference,

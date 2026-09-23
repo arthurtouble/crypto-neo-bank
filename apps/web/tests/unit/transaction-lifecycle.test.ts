@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { lifecycleCopy, lifecycleStep, normalizeIntentStatus, normalizeVerifiedIntentStatus, terminalIntentStatuses } from "@/lib/transactions/lifecycle";
+import { bridgeProgressDetail, lifecycleCopy, lifecycleStep, normalizeIntentStatus, normalizeVerifiedIntentStatus, terminalIntentStatuses } from "@/lib/transactions/lifecycle";
 
 describe("transaction lifecycle presentation", () => {
   it("maps authoritative intent states without upgrading pending work", () => {
@@ -25,5 +25,14 @@ describe("transaction lifecycle presentation", () => {
   it("only treats terminal provider or chain states as terminal", () => {
     expect(terminalIntentStatuses.has("confirmed")).toBe(true);
     expect(terminalIntentStatuses.has("submitted")).toBe(false);
+  });
+
+  it("distinguishes source confirmation, pending delivery, and a delivery exception", () => {
+    expect(bridgeProgressDetail("source_confirmed_pending_settlement")).toMatch(/waiting for delivery/i);
+    expect(bridgeProgressDetail("pending")).toMatch(/waiting for.*confirmed/i);
+    expect(bridgeProgressDetail("pending")).not.toMatch(/first transaction is confirmed/i);
+    expect(bridgeProgressDetail("partial")).toMatch(/less than the minimum/i);
+    expect(bridgeProgressDetail("refund_reported")).toMatch(/refund.*not yet verified/i);
+    expect(bridgeProgressDetail("complete")).toBeNull();
   });
 });

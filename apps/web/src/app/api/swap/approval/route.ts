@@ -55,12 +55,17 @@ export async function POST(request: Request) {
         .bind(input.planId).first<{ approval_id: string }>()
     ]);
     if (prior) return reply({ error: "approval_already_prepared", traceId }, 409);
-    if (!plan || !isDirectUniswapPlan(plan) || plan.intent_id !== input.intentId
-      || !intent || intent.intent_type !== "swap" || intent.status !== "reviewed"
+    const bridge = plan?.tool_id === "across" && plan.source_chain_id === 8453
+      && plan.destination_chain_id === 42161
+      && plan.source_asset_id === "8453:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+      && plan.destination_asset_id === "42161:0xaf88d065e77c8cc2239327c5edb3a432268e5831";
+    if (!plan || !(isDirectUniswapPlan(plan) || bridge) || plan.intent_id !== input.intentId
+      || !intent || intent.intent_type !== (bridge ? "bridge" : "swap") || intent.status !== "reviewed"
       || intent.wallet_reference !== `wallet:${wallet}` || intent.expires_at <= now.toISOString()
       || intent.route_reference !== `swap-plan:${plan.plan_id}`
       || z.object({ permitted: z.literal(true) }).passthrough().safeParse(JSON.parse(intent.policy_result_json)).success === false)
       return reply({ error: "review_mismatch", traceId }, 409);
+    if (bridge) await requireFeature(env.PROJECTION_DB, "cross_chain");
     const [from, to] = await Promise.all([resolveCatalogAsset(plan.source_asset_id), resolveCatalogAsset(plan.destination_asset_id)]);
     if (!from || !to) return reply({ error: "route_unavailable", traceId }, 422);
     let governed;
@@ -89,7 +94,15 @@ export async function POST(request: Request) {
       JOIN beta_access b ON b.subject_reference = i.subject_reference AND b.status = 'active' AND b.country_code = ?
       JOIN feature_flags f ON f.flag_key = 'swaps' AND f.enabled = 1 AND f.audience IN ('all', 'beta')
       WHERE p.plan_id = ? AND i.intent_id = ? AND p.subject_reference = ? AND p.wallet_address = ?
-        AND p.tool_id = 'uniswap_v3_direct' AND p.status = 'active' AND i.status = 'reviewed'
+        AND p.status = 'active' AND i.status = 'reviewed' AND i.chain_id = 8453
+        AND p.source_chain_id = 8453
+        AND ((i.intent_type = 'swap' AND p.tool_id = 'uniswap_v3_direct' AND p.destination_chain_id = 8453)
+          OR (i.intent_type = 'bridge' AND p.tool_id = 'across' AND p.destination_chain_id = 42161
+            AND p.source_asset_id = '8453:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913'
+            AND p.destination_asset_id = '42161:0xaf88d065e77c8cc2239327c5edb3a432268e5831'
+            AND p.recipient = p.wallet_address
+            AND EXISTS (SELECT 1 FROM feature_flags cross_chain WHERE cross_chain.flag_key = 'cross_chain'
+              AND cross_chain.enabled = 1 AND cross_chain.audience IN ('all', 'beta'))))
         AND i.route_reference = 'swap-plan:' || p.plan_id
         AND json_extract(i.policy_result_json, '$.permitted') = 1
         AND p.expires_at > ? AND p.expires_at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now')

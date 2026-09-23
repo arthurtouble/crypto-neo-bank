@@ -3,15 +3,15 @@ title: Cross-chain routes
 description: How to read route previews and what must happen before cross-chain transfers resume.
 ---
 
-Aurel Move Money can look across connected accounts for USD Coin and show possible routes. Cross-chain execution is paused. A route preview does not move money, and the current screen will not request a wallet signature for it.
+Aurel Move Money can look across connected accounts for USD Coin and show possible routes. Its cross-network execution remains paused. Separately, Swap has a reviewed Base-USDC → Arbitrum-USDC route for eligible accounts when operations enables it. A preview does not move money.
 
-The current routing adapter uses LI.FI. The product is provider-neutral so a contracted Socket route or another approved provider can be added without changing the customer flow.
+The current routing adapter uses LI.FI. The product is provider-neutral, but additional providers or route shapes need their own contract and settlement review before customers can confirm them.
 
 ## What a quote contains
 
 A route quote may include the source and destination networks, input and expected output, estimated gas, fees, price impact, timing estimate, and approval requirements. These are estimates, not a completed transfer.
 
-Aurel checks route fields against the customer's request and product rules. Quotes expire quickly. Execution remains paused until the exact approval and route calls can be held server-side, independently rechecked, and prepared one step at a time.
+Aurel checks route fields against the customer's request and product rules. Quotes expire quickly. Swap's reviewed USDC route holds the exact approval and transaction calls server-side and prepares one step at a time. Move Money route previews do not yet prepare cross-network signing requests.
 
 ## Safety checks before approval
 
@@ -29,7 +29,7 @@ An exact approval reduces exposure but does not make the route risk-free. The ap
 4. Aurel obtains a fresh route, prepares and simulates the exact transaction, then asks for a separate signature.
 5. Aurel verifies the source transaction and tracks destination delivery independently.
 
-This sequence describes the activation gate. It is not a claim that customer-signed cross-chain transfers are currently available.
+This sequence is implemented for Swap's narrow USDC route, but live use still needs a small-funds rehearsal and operator activation. It is not a claim that every cross-network transfer is available.
 
 ## Source confirmation is not destination delivery
 

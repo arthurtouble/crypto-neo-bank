@@ -10,12 +10,12 @@ Activity is an evidence trail, not just a list of successful payments. Aurel rec
 1. **Request.** The customer enters the action, amount, network, destination, or protocol position.
 2. **Prepare.** Aurel or the integrated protocol produces an unsigned transaction plan.
 3. **Validate.** The server checks product policy, supported contracts, account controls, and required disclosures.
-4. **Simulate.** Supported direct sends use gas estimation and a read-only execution call. Protocol screens may preview a position, but protocol signing is not currently enabled.
+4. **Simulate.** Supported direct sends and the reviewed Swap route use gas estimation and a read-only execution call. Protocol screens may preview a position, but protocol signing is not currently enabled.
 5. **Confirm.** The wallet presents the final transaction. The customer signs or cancels.
 6. **Submit.** A transaction hash exists and the source network has received the transaction.
 7. **Observe.** Aurel checks the source receipt and, where relevant, the provider or destination state.
 
-Supported direct sends use **Review**, **Confirm**, **Submitted**, and **Complete**. Other actions may show a preview or route review, but they do not reach a signing step while their execution integration is disabled. The progress panel can be closed after submission; the request remains visible in Activity.
+Supported direct sends use **Review**, **Confirm**, **Submitted**, and **Complete**. Eligible accounts can also confirm the reviewed USD Coin Swap route when it is enabled. Other route previews do not reach a signing step. The progress panel can be closed after submission; the request remains visible in Activity.
 
 ## State meanings
 
@@ -25,7 +25,7 @@ Supported direct sends use **Review**, **Confirm**, **Submitted**, and **Complet
 | **Cooling** | A new-destination or high-value waiting period is active. |
 | **Reviewed** | The hold elapsed and the same instruction was revalidated. This release expires after 15 minutes. |
 | **Submitted** | The customer signed and a transaction hash exists. Settlement is still pending. |
-| **Confirmed** | The supported source-chain receipt is final enough under product policy and its observed calls and effects match the prepared instruction. |
+| **Confirmed** | The transaction has passed the required checks. A cross-network Swap also needs verified delivery on the destination network. |
 | **Failed** | Preparation, submission, provider handling, or the source receipt failed. |
 | **Cancelled** | The instruction was cancelled before settlement. |
 
@@ -64,13 +64,15 @@ For a protocol action, previewed health factors and rates are decision support. 
 
 Aurel checks supported submitted transactions using source-chain JSON-RPC. The activity record can include the transaction hash, source block, receipt result, last-check time, and available route or provider reference.
 
-For a cross-network transfer, source-chain confirmation does not prove that funds arrived on the destination network. Route execution remains disabled until Aurel can verify both the planned route and its destination result; quote review is not a transfer.
+For a cross-network Swap, source confirmation does not prove delivery. Activity shows the first transaction and destination delivery separately. Aurel marks the Swap complete only after it verifies both. If less than the stated minimum arrives, a refund is reported, or the evidence changes, the transfer stays under review. A quote preview is not a transfer.
 
 A submitted transaction unresolved for more than 15 minutes becomes an operations exception. That threshold starts investigation; it does not mean the transaction has failed or that Aurel guarantees resolution within 15 minutes.
 
 ## A transfer reported after controls close
 
 If your wallet broadcast a previously prepared Base transfer but its hash reaches Aurel after a review expires, access changes, or an account control closes, Activity keeps it in a separate **Transfer review** section. The report is not a new approval. Aurel checks the exact on-chain call, receipt, finality, and expected transfer effect. Until those checks finish it says **Checking transfer**. A settled transfer is marked **Transfer settled — approval review needed**, not an ordinary completed Aurel instruction. A mismatch or reverted transfer is shown separately and sent for operations review. This path cannot reopen signing or change a cancelled instruction into an approved payment.
+
+The same observation-only rule applies to a late Swap report. For a cross-network Swap, checking the first transaction is not the same as confirming delivery; support reviews the result separately. A late report never renews an expired approval or permits another signature.
 
 ## Replaced and repeated transactions
 

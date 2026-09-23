@@ -19,19 +19,19 @@ If live asset search cannot connect, Swap shows only the reviewed Base USDC and 
 
 Enter the amount, choose a slippage limit, and select **Find Route**. When a route is available, Aurel shows the minimum received, estimated fees and price impact when available, and whether the route crosses networks. Quotes expire quickly. If one expires, find a new route before continuing. A missing estimate is shown as unavailable, not zero.
 
-LI.FI supplies cross-network and broader asset route data. For Base USDC and WETH, Aurel can also quote the reviewed Uniswap V3 pool directly. Aurel checks the asset contracts, wallet, amount, recipient, minimum received, expiry, and exact router call before asking for a signature. Other route shapes may appear in search but remain unavailable for confirmation until reviewed.
+LI.FI supplies cross-network and broader asset route data. For Base USDC and WETH, Aurel can also quote the reviewed Uniswap V3 pool directly. The first reviewed cross-network route is native USDC from Base to Arbitrum. Aurel checks the asset contracts, wallet, amount, recipient, minimum received, expiry, fees, and exact transaction call before asking for a signature. Other route shapes may appear in search but remain unavailable for confirmation until reviewed.
 
 ## Before you confirm
 
 **Review Swap** checks the route against your account controls. If the route passes, Aurel prepares the exact wallet request and shows **Confirm Swap**. Your wallet asks you to approve that request; Aurel cannot sign it for you. A quote, a successful review, and a wallet request are not completed trades. After broadcast, the transaction remains pending until its on-chain result is verified.
 
-If a token needs approval, your wallet asks you to approve only the amount for this trade. This is a separate transaction; it does not submit the swap. Some tokens need an existing approval reset to zero first. After the approval is confirmed, find a new route—Aurel never reuses the old quote. An approval may remain on chain if the swap fails or is never submitted, and you can revoke it separately. Across-network swaps are not available for confirmation yet. Finding a route does not mean it can be traded.
+If a token needs approval, your wallet asks you to approve only the amount for this trade. This is a separate transaction; it does not submit the swap. Some tokens need an existing approval reset to zero first. After the approval is confirmed, find a new route—Aurel never reuses the old quote. An approval may remain on chain if the swap fails or is never submitted, and you can revoke it separately. Finding a route does not mean it can be traded.
 
 Swap confirmation is subject to account eligibility and availability. It is not currently enabled for customers.
 
 You can save a recurring Swap reminder. When it is due, Aurel can show it in the app and take you back to a fresh route review. It does not reuse an old quote or sign for you. You can also save an ETH/USD price-alert preference, but price checking and delivery are not active yet; saving an alert is not a promise that you will be notified. Neither a reminder nor an alert is an order.
 
-Cross-network delivery needs separate destination evidence. A successful source transaction alone does not prove that the received asset arrived.
+Cross-network delivery needs separate destination evidence. A successful source transaction alone does not prove that the received asset arrived. Aurel checks the routing provider's status against finalized transactions on both networks and the amount credited to your wallet. If delivery is delayed, partial, refunded, or cannot be verified, the swap stays unresolved and is flagged for review. Do not send it again just because the destination balance has not updated.
 
 ## What can change
 

@@ -32,11 +32,10 @@ export function SwapRouteReview({ planId, fresh, walletAddress, busy, state, rou
   state: ReviewState; routeKind?: "same_chain" | "cross_chain"; onReview(): void; onSubmit?(): void;
   onApprove?(): void; approvalKind?: "approve" | "reset_required"; approvalAmount?: string;
 }) {
-  if (routeKind === "cross_chain") return <p className="swapReviewStatus" role="status">Across-network swaps aren&apos;t available yet.</p>;
   if (state === "submitted") return null;
   if (!fresh) return <p className="swapReviewStatus">This quote expired. Find a new route.</p>;
   if (state === "approval_required" && onApprove) return <div><p className="swapReviewStatus" role="status"><strong>{approvalKind === "reset_required" ? "Reset Token Approval" : "Token Approval Required"}</strong><span>{approvalKind === "reset_required" ? "Reset the old allowance before approving a new amount." : `Approve ${approvalAmount ?? "the exact amount"} for this swap.`} This does not submit a swap. Approvals remain on chain until used or revoked.</span></p><button className="button primary full swapReviewAction" type="button" disabled={busy} onClick={onApprove}>{busy ? "Opening Wallet" : approvalKind === "reset_required" ? "Reset Approval" : "Approve Token"}</button></div>;
-  if (state === "prepared") return <div><p className="swapReviewStatus" role="status"><strong>Route Verified</strong><span>No swap has been submitted.</span></p>{onSubmit && <button className="button primary full swapReviewAction" type="button" disabled={busy} onClick={onSubmit}>{busy ? "Opening Wallet" : "Confirm Swap"}</button>}</div>;
+  if (state === "prepared") return <div><p className="swapReviewStatus" role="status"><strong>Route Verified</strong><span>No swap has been submitted.{routeKind === "cross_chain" ? " Arrival on the other network may take a few minutes." : ""}</span></p>{onSubmit && <button className="button primary full swapReviewAction" type="button" disabled={busy} onClick={onSubmit}>{busy ? "Opening Wallet" : "Confirm Swap"}</button>}</div>;
   if (state === "approval_required") return <p className="swapReviewStatus" role="status"><strong>Token Approval Required</strong><span>No swap has been submitted. Find a new route to continue.</span></p>;
   if (state === "reviewed") return <p className="swapReviewStatus" role="status"><strong>Review Complete</strong><span>No swap has been submitted.</span></p>;
   if (!planId) return <p className="swapReviewStatus">This route cannot be reviewed right now.</p>;
@@ -235,7 +234,7 @@ export function SwapWorkspace() {
   }
 
   async function reviewSelectedRoute() {
-    if (!freshQuote?.planId || freshQuote.routeKind !== "same_chain" || !address || reviewing) return;
+    if (!freshQuote?.planId || !address || reviewing) return;
     const planId = freshQuote.planId;
     const version = reviewVersion.current;
     const expiresAt = freshQuote.expiresAt;

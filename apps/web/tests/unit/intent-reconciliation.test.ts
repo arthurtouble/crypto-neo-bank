@@ -14,7 +14,12 @@ const routeState = vi.hoisted(() => ({
   issues: [] as string[],
   events: [] as string[],
   candidates: [] as Array<Record<string, unknown>>,
-  candidateChecks: [] as Array<{ reportId: string; evidence: Record<string, unknown> }>
+  candidateChecks: [] as Array<{ reportId: string; evidence: Record<string, unknown> }>,
+  plans: [] as Array<Record<string, unknown>>,
+  destinations: [] as Array<Record<string, unknown>>,
+  bridgeSourceVerification: { status: "confirmed-source" } as { status: string; reason?: string },
+  bridgeDestinationVerification: { status: "complete" } as { status: string; reason?: string } | null,
+  lifiStatus: { status: "DONE", substatus: "COMPLETED" } as Record<string, unknown>
 }));
 
 vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
@@ -33,10 +38,10 @@ vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
           if (query.includes("FROM transaction_intents")) {
             const db = new DatabaseSync(":memory:");
             try {
-              db.exec("CREATE TABLE transaction_intents (intent_id TEXT, subject_reference TEXT, chain_id INTEGER, transaction_hash TEXT, status TEXT, updated_at TEXT, intent_type TEXT); CREATE TABLE intent_prepared_calls (intent_id TEXT, reported_hash TEXT, updated_at TEXT)");
-              const insertIntent = db.prepare("INSERT INTO transaction_intents VALUES (?, ?, ?, ?, ?, ?, ?)");
+              db.exec("CREATE TABLE transaction_intents (intent_id TEXT, subject_reference TEXT, chain_id INTEGER, transaction_hash TEXT, status TEXT, updated_at TEXT, intent_type TEXT, route_reference TEXT); CREATE TABLE intent_prepared_calls (intent_id TEXT, reported_hash TEXT, updated_at TEXT)");
+              const insertIntent = db.prepare("INSERT INTO transaction_intents VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
               const insertStep = db.prepare("INSERT INTO intent_prepared_calls VALUES (?, ?, ?)");
-              for (const intent of routeState.intents) insertIntent.run(String(intent.intent_id), String(intent.subject_reference), Number(intent.chain_id), intent.transaction_hash == null ? null : String(intent.transaction_hash), String(intent.status), String(intent.updated_at ?? "2026-09-01T00:00:00.000Z"), String(intent.intent_type ?? "transfer"));
+              for (const intent of routeState.intents) insertIntent.run(String(intent.intent_id), String(intent.subject_reference), Number(intent.chain_id), intent.transaction_hash == null ? null : String(intent.transaction_hash), String(intent.status), String(intent.updated_at ?? "2026-09-01T00:00:00.000Z"), String(intent.intent_type ?? "transfer"), intent.route_reference == null ? null : String(intent.route_reference));
               for (const step of routeState.steps) insertStep.run(String(step.intent_id), step.reported_hash == null ? null : String(step.reported_hash), String(step.updated_at ?? "2026-09-01T00:00:00.000Z"));
               return { results: db.prepare(query).all(String(args[0])).map((row) => ({ ...row })) };
             } finally { db.close(); }
@@ -44,7 +49,23 @@ vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
           if (query.includes("FROM intent_prepared_calls")) return { results: routeState.steps.filter((step) => step.intent_id === args[0]).map((step) => ({ ...step })) };
           return { results: [] };
         },
+        async first() {
+          if (query.includes("FROM swap_quote_plans")) return routeState.plans.find((plan) => plan.intent_id === args[0] && plan.subject_reference === args[1]) ?? null;
+          if (query.includes("FROM swap_destination_observations")) return routeState.destinations.find((row) => row.intent_id === args[0]) ?? null;
+          return null;
+        },
         async run() {
+          if (query.includes("INSERT INTO swap_destination_observations")) {
+            routeState.destinations.push({ intent_id: args[0], subject_reference: args[1], plan_id: args[2], plan_fingerprint: args[3],
+              source_hash: args[4], source_call_fingerprint: args[5], destination_chain_id: args[6], destination_hash: args[7],
+              observed_block_hash: args[8], provider_status: args[9], provider_substatus: args[10], verification_state: args[11], reason_code: args[12] });
+            return { meta: { changes: 1 } };
+          }
+          if (query.includes("UPDATE swap_destination_observations")) {
+            const row = routeState.destinations.find((item) => item.intent_id === args.at(-1));
+            if (row) { row.provider_status = args[0]; row.provider_substatus = args[1]; row.verification_state = args[2]; row.reason_code = args[3]; row.observed_block_hash = args[4] ?? row.observed_block_hash; row.destination_hash = args[5] ?? row.destination_hash; }
+            return { meta: { changes: row ? 1 : 0 } };
+          }
           if (query.includes("UPDATE intent_observation_candidates")) {
             const candidate = routeState.candidates.find((item) => item.report_id === args[4]);
             if (candidate) { candidate.verification_state = args[0]; candidate.canonical_block_hash = args[1]; candidate.effect_reason = args[2]; candidate.last_checked_at = args[3]; }
@@ -66,11 +87,13 @@ vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
             if (intent && query.includes("SET status = 'confirmed'")) {
               const db = new DatabaseSync(":memory:");
               try {
-                db.exec("CREATE TABLE transaction_intents (intent_id TEXT, intent_type TEXT, status TEXT, confirmed_at TEXT, updated_at TEXT); CREATE TABLE intent_prepared_calls (intent_id TEXT, step_index INTEGER, semantic_action TEXT, verification_state TEXT)");
-                db.prepare("INSERT INTO transaction_intents (intent_id, intent_type, status) VALUES (?, ?, ?)")
-                  .run(String(intent.intent_id), String(intent.intent_type), String(intent.status));
+                db.exec("CREATE TABLE transaction_intents (intent_id TEXT, intent_type TEXT, status TEXT, confirmed_at TEXT, updated_at TEXT, transaction_hash TEXT); CREATE TABLE intent_prepared_calls (intent_id TEXT, step_index INTEGER, semantic_action TEXT, verification_state TEXT, reported_hash TEXT); CREATE TABLE swap_destination_observations (intent_id TEXT, verification_state TEXT, source_hash TEXT)");
+                db.prepare("INSERT INTO transaction_intents (intent_id, intent_type, status, transaction_hash) VALUES (?, ?, ?, ?)")
+                  .run(String(intent.intent_id), String(intent.intent_type), String(intent.status), intent.transaction_hash == null ? null : String(intent.transaction_hash));
                 for (const step of routeState.steps.filter((item) => item.intent_id === intent.intent_id))
-                  db.prepare("INSERT INTO intent_prepared_calls VALUES (?, ?, ?, ?)").run(String(step.intent_id), Number(step.step_index), String(step.semantic_action), String(step.verification_state));
+                  db.prepare("INSERT INTO intent_prepared_calls VALUES (?, ?, ?, ?, ?)").run(String(step.intent_id), Number(step.step_index), String(step.semantic_action), String(step.verification_state), step.reported_hash == null ? null : String(step.reported_hash));
+                for (const destination of routeState.destinations.filter((item) => item.intent_id === intent.intent_id))
+                  db.prepare("INSERT INTO swap_destination_observations VALUES (?, ?, ?)").run(String(destination.intent_id), String(destination.verification_state), String(destination.source_hash));
                 if (db.prepare(query).run(...args.map(String)).changes !== 1) return { meta: { changes: 0 } };
               } finally { db.close(); }
               intent.status = "confirmed";
@@ -96,6 +119,13 @@ vi.mock("@/lib/transactions/chain-observation", async (importOriginal) => ({ ...
   if (observation instanceof Error) throw observation;
   return observation;
 } }));
+vi.mock("@/lib/swap/cross-source-effect", () => ({ verifyCrossChainSourceEffect: async () => routeState.bridgeSourceVerification }));
+vi.mock("@/lib/swap/destination-evidence", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/swap/destination-evidence")>();
+  return { ...actual, verifySwapDestination: (input: Parameters<typeof actual.verifySwapDestination>[0]) =>
+    routeState.bridgeDestinationVerification ?? actual.verifySwapDestination(input) };
+});
+vi.mock("@/lib/swap/lifi-status", () => ({ readLifiTransferStatus: async () => routeState.lifiStatus }));
 
 import { POST as reconcile } from "@/app/api/intents/reconcile/route";
 
@@ -164,6 +194,8 @@ describe("intent reconciliation route", () => {
   const request = () => reconcile(new Request("https://aurel.test/api/intents/reconcile", { method: "POST" }));
   beforeEach(() => {
     routeState.subject = "subject-a"; routeState.issues.length = 0; routeState.events.length = 0; routeState.observations = {}; routeState.candidates = []; routeState.candidateChecks = [];
+    routeState.plans = []; routeState.destinations = []; routeState.bridgeSourceVerification = { status: "confirmed-source" };
+    routeState.bridgeDestinationVerification = { status: "complete" }; routeState.lifiStatus = { status: "DONE", substatus: "COMPLETED" };
     routeState.intents = [{ intent_id: intentId, subject_reference: "subject-a", chain_id: 8453, transaction_hash: hash, status: "submitted", intent_type: "transfer" }];
     routeState.steps = [{ intent_id: intentId, step_index: 0, subject_reference: "subject-a", wallet_address: sender.toLowerCase(), chain_id: 8453, target_address: recipient.toLowerCase(), native_value: "100", calldata_hash: nativePrepared.calldataHash, semantic_action: "native_transfer", expected_effect_json: JSON.stringify(nativePrepared.expectedEffect), reported_hash: hash, observed_block_hash: null, verification_state: "reported" }];
     routeState.observation = nativeObservation;
@@ -318,6 +350,113 @@ describe("intent reconciliation route", () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({ results: [{ intentId, status: "submitted", verificationState: "source_confirmed_pending_settlement" }] });
     expect(routeState.intents[0].status).toBe("submitted");
+  });
+
+  async function bridgeEvidence() {
+    const destinationHash = `0x${"d".repeat(64)}`;
+    const destinationUsdc = "0xaf88d065e77c8cc2239327c5edb3a432268e5831";
+    const call = { chainId: 8453, from: sender, to: recipient, value: "0", data: "0x12345678" };
+    const normalized = await normalizePreparedCall(call);
+    routeState.intents[0] = { ...routeState.intents[0], intent_type: "bridge", route_reference: "swap-plan:plan-1" };
+    routeState.steps[0] = { ...routeState.steps[0], target_address: recipient.toLowerCase(), native_value: "0",
+      calldata_hash: normalized.dataHash, call_fingerprint: normalized.fingerprint, source_reference: "swap-plan:plan-1",
+      semantic_action: "bridge", expected_effect_json: JSON.stringify({ type: "bridge", wallet: sender.toLowerCase(),
+        recipient: sender.toLowerCase(), sourceChainId: 8453, destinationChainId: 42161,
+        sourceAmountRaw: "100", bridgeAmountRaw: "99", bridgeOutputRaw: "98", minimumOutputRaw: "90",
+        quoteTimestamp: 2_000_000_000, fillDeadline: 2_000_003_600,
+        sourceAssetId: `8453:${token.toLowerCase()}`, destinationAssetId: `42161:${destinationUsdc}` }) };
+    routeState.observation = { ...nativeObservation, call };
+    routeState.plans = [{ intent_id: intentId, subject_reference: "subject-a", plan_id: "plan-1",
+      fingerprint: `0x${"e".repeat(64)}`, wallet_address: sender.toLowerCase(), recipient: sender.toLowerCase(),
+      source_asset_id: `8453:${token.toLowerCase()}`, destination_asset_id: `42161:${destinationUsdc}`,
+      source_chain_id: 8453, destination_chain_id: 42161, from_amount_raw: "100", to_amount_min_raw: "90",
+      tool_id: "across", source_call_json: JSON.stringify(call) }];
+    routeState.lifiStatus = { status: "DONE", sourceHash: hash, destinationChainId: 42161,
+      destinationHash, toolId: "across", substatus: "COMPLETED" };
+    routeState.observations[destinationHash] = { ...nativeObservation, call: { ...call, chainId: 42161 },
+      receipt: { ...(nativeObservation as Extract<ChainObservation, { status: "found" }>).receipt!, transactionHash: destinationHash } };
+    return destinationHash;
+  }
+
+  it("confirms a bound bridge only after LI.FI completion and finalized destination evidence", async () => {
+    const destinationHash = await bridgeEvidence();
+    const result = await (await request()).json();
+    expect(result).toMatchObject({ results: [{ intentId, status: "confirmed", verificationState: "confirmed" }] });
+    expect(routeState.destinations).toMatchObject([{ intent_id: intentId, source_hash: hash,
+      destination_hash: destinationHash, verification_state: "complete" }]);
+    expect(routeState.events).toContain("settlement_confirmed");
+  });
+
+  it.each([
+    [{ status: "NOT_FOUND", sourceHash: null, destinationChainId: null, destinationHash: null, toolId: null, substatus: null }, "source_confirmed_pending_settlement"],
+    [{ status: "PENDING", sourceHash: hash, destinationChainId: null, destinationHash: null, toolId: "across", substatus: "WAIT_SOURCE_CONFIRMATIONS" }, "source_confirmed_pending_settlement"],
+    [{ status: "PARTIAL", sourceHash: hash, destinationChainId: 42161, destinationHash: null, toolId: "across", substatus: "PARTIAL" }, "partial"],
+    [{ status: "REFUNDED", sourceHash: hash, destinationChainId: null, destinationHash: null, toolId: "across", substatus: "REFUNDED" }, "refund_reported"],
+    [{ status: "FAILED", sourceHash: hash, destinationChainId: null, destinationHash: null, toolId: "across", substatus: null }, "failed"]
+  ] as const)("never settles a bridge on provider state %s", async (provider, state) => {
+    await bridgeEvidence();
+    routeState.lifiStatus = provider;
+    routeState.bridgeDestinationVerification = null;
+    const result = await (await request()).json();
+    expect(result).toMatchObject({ results: [{ intentId, status: "submitted", verificationState: state }] });
+    expect(routeState.intents[0].status).toBe("submitted");
+    expect(routeState.destinations[0].verification_state).not.toBe("complete");
+    expect(routeState.destinations[0].provider_substatus).not.toBe("WAIT_SOURCE_CONFIRMATIONS");
+    expect(routeState.events).not.toContain("settlement_confirmed");
+  });
+
+  it("does not settle a destination awaiting independent chain evidence", async () => {
+    const destinationHash = await bridgeEvidence();
+    routeState.bridgeDestinationVerification = { status: "pending", reason: "finality" };
+    routeState.observations[destinationHash] = { status: "pending" };
+    const result = await (await request()).json();
+    expect(result).toMatchObject({ results: [{ intentId, status: "submitted", verificationState: "source_confirmed_pending_settlement" }] });
+    expect(routeState.destinations[0].verification_state).toBe("pending");
+  });
+
+  it("advances the same retained bridge observation from pending to complete without duplicate settlement", async () => {
+    const destinationHash = await bridgeEvidence();
+    routeState.lifiStatus = { status: "PENDING", sourceHash: hash, destinationChainId: null,
+      destinationHash: null, toolId: "across", substatus: null };
+    routeState.bridgeDestinationVerification = null;
+    expect((await (await request()).json() as { results: Array<{ status: string }> }).results[0].status).toBe("submitted");
+    expect(routeState.destinations).toHaveLength(1);
+    expect(routeState.destinations[0].destination_hash).toBeNull();
+    routeState.lifiStatus = { status: "DONE", sourceHash: hash, destinationChainId: 42161,
+      destinationHash, toolId: "across", substatus: "COMPLETED" };
+    routeState.bridgeDestinationVerification = { status: "complete" };
+    expect((await (await request()).json() as { results: Array<{ status: string }> }).results[0].status).toBe("confirmed");
+    expect(routeState.destinations).toHaveLength(1);
+    expect(routeState.destinations[0].destination_hash).toBe(destinationHash);
+    expect(routeState.events.filter((event) => event === "settlement_confirmed")).toHaveLength(1);
+  });
+
+  it("rejects a bridge source step not bound to its retained plan call", async () => {
+    await bridgeEvidence();
+    routeState.steps[0].call_fingerprint = `0x${"f".repeat(64)}`;
+    const result = await (await request()).json();
+    expect(result).toMatchObject({ results: [{ intentId, status: "submitted", verificationState: "inconsistent" }] });
+    expect(routeState.destinations).toHaveLength(0);
+  });
+
+  it("downgrades a settled bridge when destination evidence reorgs", async () => {
+    await bridgeEvidence();
+    const first = await (await request()).json() as { results: Array<{ status: string }> };
+    expect(first.results).toMatchObject([{ status: "confirmed" }]);
+    routeState.bridgeDestinationVerification = { status: "reorged", reason: "destination_block" };
+    const result = await (await request()).json();
+    expect(result).toMatchObject({ results: [{ intentId, status: "submitted", verificationState: "reorged" }] });
+    expect(routeState.intents[0].status).toBe("submitted");
+    expect(routeState.destinations[0].verification_state).toBe("reorged");
+  });
+
+  it("opens an operator issue when a settled bridge loses source finality", async () => {
+    await bridgeEvidence();
+    await request();
+    routeState.bridgeSourceVerification = { status: "reorged", reason: "canonical_block" };
+    const result = await (await request()).json();
+    expect(result).toMatchObject({ results: [{ intentId, status: "submitted", verificationState: "reorged" }] });
+    expect(routeState.issues).toHaveLength(1);
   });
 
   it("revisits a reported hash saved before RPC indexed it", async () => {

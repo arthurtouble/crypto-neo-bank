@@ -5,22 +5,24 @@ const intentId = "00000000-0000-4000-8000-000000000002";
 const planId = "00000000-0000-4000-8000-000000000001";
 const source = "8453:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
 const destination = "8453:0x4200000000000000000000000000000000000006";
+const bridgeDestination = "42161:0xaf88d065e77c8cc2239327c5edb3a432268e5831";
 const fixture = vi.hoisted(() => ({
   planIntent: "00000000-0000-4000-8000-000000000002", intentStatus: "reviewed", intentType: "swap", locked: false,
   allowance: "sufficient", routeValid: true, simulationValid: true, changes: 1,
-  expiryAt: "", advanceAfterSimulation: false,
-  countries: ["US"] as string[], inserted: [] as string[], simulationCalls: 0
+  expiryAt: "", advanceAfterSimulation: false, bridge: false,
+  countries: ["US"] as string[], inserted: [] as string[], insertValues: [] as unknown[][], simulationCalls: 0
 }));
 
 vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
-  prepare(sql: string) { return { bind() { return {
+  prepare(sql: string) { return { bind(...values: unknown[]) { return {
     async first() {
       if (sql.includes("FROM transaction_intents") && sql.includes("WHERE intent_id =")) return {
         intent_id: intentId, intent_type: fixture.intentType, chain_id: 8453,
         wallet_reference: `wallet:${wallet}`, route_reference: `swap-plan:${planId}`,
-        request_json: JSON.stringify({ type: "swap", walletAddress: wallet, chainId: 8453,
+        request_json: JSON.stringify({ type: fixture.bridge ? "bridge" : "swap", walletAddress: wallet, chainId: 8453,
           asset: source, amount: "1", amountRaw: "1000000", destination: wallet,
-          destinationChainId: 8453, destinationAssetId: destination, toAmountMinRaw: "900000", planId }),
+          destinationChainId: fixture.bridge ? 42161 : 8453,
+          destinationAssetId: fixture.bridge ? bridgeDestination : destination, toAmountMinRaw: "900000", planId }),
         policy_result_json: JSON.stringify({ permitted: true }), status: fixture.intentStatus,
         expires_at: fixture.expiryAt
       };
@@ -29,7 +31,9 @@ vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
         step_up_threshold_usd: 10_000, new_address_delay_seconds: 86_400 };
       if (sql.includes("spent_cents")) return { spent_cents: 0, missing: 0 };
       return null;
-    }, async run() { if (sql.includes("INSERT INTO intent_prepared_calls")) fixture.inserted.push(sql);
+    }, async run() { if (sql.includes("INSERT INTO intent_prepared_calls")) {
+      fixture.inserted.push(sql); fixture.insertValues.push(values);
+    }
       return { meta: { changes: sql.includes("INSERT INTO intent_prepared_calls") ? fixture.changes : 1 } }; }
   }; } }; },
   async batch(statements: Array<{ run(): Promise<unknown> }>) { return Promise.all(statements.map((statement) => statement.run())); }
@@ -45,16 +49,24 @@ vi.mock("@/lib/features/flags", () => ({ FeatureUnavailableError: class FeatureU
 vi.mock("@/lib/security/rate-limit", () => ({ RateLimitError: class RateLimitError extends Error {}, enforceRateLimit: async () => undefined }));
 vi.mock("@/lib/swap/plans", () => ({ getActiveSwapQuotePlan: async () => ({
   plan_id: planId, intent_id: fixture.planIntent, subject_reference: "did:privy:owner", wallet_address: wallet,
-  source_asset_id: source, destination_asset_id: destination, source_chain_id: 8453, destination_chain_id: 8453,
+  source_asset_id: source, destination_asset_id: fixture.bridge ? bridgeDestination : destination,
+  source_chain_id: 8453, destination_chain_id: fixture.bridge ? 42161 : 8453,
   from_amount_raw: "1000000", to_amount_min_raw: "900000", recipient: wallet,
   source_call_json: JSON.stringify({ chainId: 8453, from: wallet, to: "0x2222222222222222222222222222222222222222", value: "0", data: "0x1234" }),
   expires_at: fixture.expiryAt, status: "active", approval_spender: "0x2222222222222222222222222222222222222222"
 }) }));
-vi.mock("@/lib/swap/catalog", () => ({ resolveCatalogAsset: async (id: string) => ({ id, chainId: 8453,
+vi.mock("@/lib/swap/catalog", () => ({ resolveCatalogAsset: async (id: string) => ({ id, chainId: id.startsWith("42161:") ? 42161 : 8453,
   address: id.split(":")[1], symbol: id === source ? "USDC" : "WETH", name: id === source ? "USD Coin" : "Wrapped Ether",
   decimals: id === source ? 6 : 18, logoUrl: null, verification: "verified", eligibility: "eligible" }) }));
 vi.mock("@/lib/swap/prepare-integrity", () => ({ assertSwapPrepareIntegrity: async () => { if (!fixture.routeValid) throw new Error("bad route");
   return { sourceCall: { chainId: 8453, from: wallet, to: "0x2222222222222222222222222222222222222222", value: "0", data: "0x1234" },
+    ...(fixture.bridge ? { expectedSourceEffect: { wallet, sourceAssetId: source, grossInputRaw: "1000000",
+      netInputRaw: "997500", feeRaw: "2500", bridgeAmountRaw: "997500", bridgeOutputRaw: "997000",
+      quoteTimestamp: Math.floor(Date.now() / 1000), fillDeadline: Math.floor(Date.now() / 1000) + 3600,
+      feeRecipients: ["0x3333333333333333333333333333333333333333"],
+      spender: "0x2222222222222222222222222222222222222222" },
+      expectedDestinationEffect: { wallet, recipient: wallet, destinationAssetId: bridgeDestination,
+        outputAmountRaw: "997000", minimumOutputRaw: "900000" } } : {}),
     expectedEffect: { wallet, sourceAssetId: source, destinationAssetId: destination,
       sourceAmountRaw: "1000000", minimumOutputRaw: "900000", recipient: wallet }, reviewedSpender: "0x2222222222222222222222222222222222222222" }; } }));
 vi.mock("@/lib/swap/approval-steps", () => ({ observeNextSwapApproval: async () => ({ kind: fixture.allowance }) }));
@@ -81,7 +93,7 @@ function post(body: Record<string, unknown> = { intentId, planId, walletAddress:
 describe("governed Swap preparation boundary", () => {
   beforeEach(() => { Object.assign(fixture, { planIntent: intentId, intentStatus: "reviewed", intentType: "swap",
     locked: false, allowance: "sufficient", routeValid: true, simulationValid: true, changes: 1,
-    countries: ["US"], inserted: [], simulationCalls: 0, advanceAfterSimulation: false,
+    countries: ["US"], inserted: [], insertValues: [], simulationCalls: 0, advanceAfterSimulation: false, bridge: false,
     expiryAt: new Date(Date.now() + 45_000).toISOString() }); });
   afterEach(() => vi.useRealTimers());
 
@@ -119,6 +131,19 @@ describe("governed Swap preparation boundary", () => {
     expect(fixture.simulationCalls).toBe(1);
     expect(fixture.inserted).toHaveLength(1);
     expect(fixture.inserted[0]).toContain("submission_phase");
+  });
+
+  it("prepares a reviewed LI.FI bridge source without treating it as a completed swap", async () => {
+    fixture.bridge = true; fixture.intentType = "bridge";
+    const response = await post();
+    expect(response.status, JSON.stringify(await response.clone().json())).toBe(201);
+    expect(await response.json()).toMatchObject({ intentId, stepIndex: 0, call: { chainId: 8453, from: wallet } });
+    expect(fixture.inserted).toHaveLength(1);
+    expect(fixture.inserted[0]).toContain("semantic_action");
+    expect(fixture.insertValues[0]).toContain("bridge");
+    expect(fixture.insertValues[0]).toContain(42161);
+    expect(fixture.insertValues[0]).toContainEqual(expect.stringContaining('"sourceChainId":8453'));
+    expect(fixture.insertValues[0]).toContainEqual(expect.stringContaining('"minimumOutputRaw":"900000"'));
   });
 
   it("never returns executable calldata if the conditional insert loses a race", async () => {

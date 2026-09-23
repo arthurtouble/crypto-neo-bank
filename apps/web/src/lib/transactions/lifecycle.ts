@@ -22,6 +22,21 @@ export function normalizeVerifiedIntentStatus(status: string | null | undefined,
   return normalizeIntentStatus(status);
 }
 
+export function bridgeProgressDetail(state: string | null | undefined): string | null {
+  switch (state) {
+    case "source_confirmed_pending_settlement":
+      return "The first transaction is confirmed. We’re waiting for delivery.";
+    case "pending":
+    case "reported": return "We’re waiting for the first transaction to be confirmed.";
+    case "partial": return "Less than the minimum arrived. We’re reviewing this transfer.";
+    case "refund_reported": return "A refund was reported but is not yet verified. Do not send again.";
+    case "failed":
+    case "inconsistent":
+    case "reorged": return "We couldn’t verify delivery. Please contact support before trying again.";
+    default: return null;
+  }
+}
+
 export function lifecycleStep(status: TransactionLifecycleStatus) {
   if (status === "reviewing") return 0;
   if (status === "awaiting_confirmation") return 1;

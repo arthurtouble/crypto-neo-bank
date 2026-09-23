@@ -13,10 +13,10 @@ function database() {
   db.exec(`INSERT INTO subject_profiles (subject_reference, privy_user_reference, created_at, updated_at)
       VALUES ('subject-a', 'subject-a', '2026-09-23T00:00:00.000Z', '2026-09-23T00:00:00.000Z');
     INSERT INTO wallet_references (wallet_reference, subject_reference, provider, address, chain_family, control_model, observed_at)
-      VALUES ('wallet-a', 'subject-a', 'privy', '0x1111111111111111111111111111111111111111', 'evm', 'customer', '2026-09-23T00:00:00.000Z');
+      VALUES ('wallet:0x1111111111111111111111111111111111111111', 'subject-a', 'privy', '0x1111111111111111111111111111111111111111', 'evm', 'customer', '2026-09-23T00:00:00.000Z');
     INSERT INTO transaction_intents (intent_id, subject_reference, wallet_reference, intent_type, chain_id, request_json,
       policy_result_json, disclosure_version, status, created_at, updated_at, expires_at)
-      VALUES ('intent-1', 'subject-a', 'wallet-a', 'swap', 8453, '{}', '{}', 'v1', 'reviewed',
+      VALUES ('intent-1', 'subject-a', 'wallet:0x1111111111111111111111111111111111111111', 'swap', 8453, '{}', '{}', 'v1', 'reviewed',
         '2026-09-23T00:00:00.000Z', '2026-09-23T00:00:00.000Z', '2026-09-23T00:05:00.000Z');`);
   return db;
 }
@@ -31,6 +31,44 @@ const call = `INSERT INTO intent_prepared_calls
     'prepared', '2026-09-23T00:00:00.000Z', 'released')`;
 
 describe("governed Swap prepared-call migration", () => {
+  it("permits only a bound, reviewed Base-to-Arbitrum LI.FI bridge source", () => {
+    const db = database();
+    try {
+      db.exec(`UPDATE transaction_intents SET intent_type = 'bridge', route_reference = 'swap-plan:plan-1'
+        WHERE intent_id = 'intent-1';
+        INSERT INTO swap_quote_plans (plan_id, subject_reference, wallet_address, source_asset_id,
+          destination_asset_id, source_chain_id, destination_chain_id, from_amount_raw, recipient,
+          slippage_bps, to_amount_min_raw, quote_id, step_id, tool_id, approval_spender,
+          source_call_json, route_policy_version, catalog_version, observed_at, expires_at,
+          fingerprint, intent_id)
+        VALUES ('plan-1', 'subject-a', '0x1111111111111111111111111111111111111111',
+          '8453:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913',
+          '42161:0xaf88d065e77c8cc2239327c5edb3a432268e5831', 8453, 42161, '1000000',
+          '0x1111111111111111111111111111111111111111', 50, '900000', 'quote-1', 'quote-1',
+          'across', '0x2222222222222222222222222222222222222222', '{}', 'v1', 'v1',
+          '2026-09-23T00:00:00.000Z', '2026-09-23T00:05:00.000Z', 'fingerprint', 'intent-1');`);
+      db.exec(call.replace("'swap', 'swap-plan:plan-1'", "'bridge', 'swap-plan:plan-1'")
+        .replace("'{\"type\":\"swap\"}'", "'{\"type\":\"bridge\",\"sourceAmountRaw\":\"1000000\",\"minimumOutputRaw\":\"900000\",\"destinationChainId\":42161,\"destinationAssetId\":\"42161:0xaf88d065e77c8cc2239327c5edb3a432268e5831\"}'"));
+      expect(db.prepare("SELECT semantic_action FROM intent_prepared_calls").get())
+        .toMatchObject({ semantic_action: "bridge" });
+      db.exec(`INSERT INTO intent_observation_candidates
+        (report_id, subject_reference, intent_id, step_index, chain_id, transaction_hash,
+          prepared_fingerprint, prepared_phase, control_reasons_json, reported_at)
+        VALUES ('late-bridge', 'subject-a', 'intent-1', 0, 8453, '0xabc', 'sha256:call',
+          'released', '["review_expired"]', '2026-09-23T00:06:00.000Z')`);
+      expect(db.prepare("SELECT verification_state FROM intent_observation_candidates WHERE report_id = 'late-bridge'").get())
+        .toMatchObject({ verification_state: "unindexed" });
+      for (const [id, fingerprint, phase] of [
+        ["wrong-fingerprint", "sha256:wrong", "released"],
+        ["wrong-phase", "sha256:call", "awaiting_step_up"]
+      ]) expect(() => db.exec(`INSERT INTO intent_observation_candidates
+        (report_id, subject_reference, intent_id, step_index, chain_id, transaction_hash,
+          prepared_fingerprint, prepared_phase, control_reasons_json, reported_at)
+        VALUES ('${id}', 'subject-a', 'intent-1', 0, 8453, '0x${id === "wrong-phase" ? "def" : "fed"}',
+          '${fingerprint}', '${phase}', '["review_expired"]', '2026-09-23T00:06:00.000Z')`)).toThrow();
+    } finally { db.close(); }
+  });
+
   it("permits only an explicit released Base Swap first step", () => {
     const db = database();
     try {

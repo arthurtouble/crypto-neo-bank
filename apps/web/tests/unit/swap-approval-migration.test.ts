@@ -12,7 +12,7 @@ const wallet = "0x1111111111111111111111111111111111111111";
 const router = "0x2626664c2603336e57b271c5c0b26f421741e481";
 const token = "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
 
-function database() {
+function database(bridge = false) {
   const db = new DatabaseSync(":memory:");
   db.exec("PRAGMA foreign_keys = ON");
   for (const file of readdirSync(migrationDirectory).filter((name) => name.endsWith(".sql")).sort())
@@ -23,18 +23,18 @@ function database() {
       VALUES ('wallet-a', 'subject-a', 'privy', '${wallet}', 'evm', 'customer', '${at}');
     INSERT INTO transaction_intents (intent_id, subject_reference, wallet_reference, intent_type, chain_id, request_json,
       policy_result_json, disclosure_version, status, created_at, updated_at, expires_at, route_reference)
-      VALUES ('intent-a', 'subject-a', 'wallet-a', 'swap', 8453, '{}', '{"permitted":true}', 'v1', 'reviewed', '${at}', '${at}', '${expiry}', 'swap-plan:plan-a');
+      VALUES ('intent-a', 'subject-a', 'wallet-a', '${bridge ? "bridge" : "swap"}', 8453, '{}', '{"permitted":true}', 'v1', 'reviewed', '${at}', '${at}', '${expiry}', 'swap-plan:plan-a');
     INSERT INTO security_profiles (subject_reference, updated_at) VALUES ('subject-a', '${at}');
     INSERT INTO beta_access (subject_reference, cohort, country_code, status, terms_version, terms_accepted_at, activated_at, updated_at)
       VALUES ('subject-a', 'test', 'PT', 'active', 'v1', '${at}', '${at}', '${at}');
-    UPDATE feature_flags SET enabled = 1 WHERE flag_key = 'swaps';
+    UPDATE feature_flags SET enabled = 1 WHERE flag_key IN ('swaps', 'cross_chain');
     INSERT INTO swap_quote_plans
       (plan_id, subject_reference, wallet_address, source_asset_id, destination_asset_id, source_chain_id, destination_chain_id,
        from_amount_raw, recipient, slippage_bps, to_amount_min_raw, quote_id, step_id, tool_id, approval_spender,
        source_call_json, route_policy_version, catalog_version, observed_at, expires_at, fingerprint, intent_id)
       VALUES ('plan-a', 'subject-a', '${wallet}', '8453:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913',
-       '8453:0x4200000000000000000000000000000000000006', 8453, 8453, '1000000', '${wallet}', 50,
-       '100', 'quote-a', 'quote-a', 'uniswap_v3_direct', '${router}',
+       '${bridge ? "42161:0xaf88d065e77c8cc2239327c5edb3a432268e5831" : "8453:0x4200000000000000000000000000000000000006"}', 8453, ${bridge ? 42161 : 8453}, '1000000', '${wallet}', 50,
+       '100', 'quote-a', 'quote-a', '${bridge ? "across" : "uniswap_v3_direct"}', '${router}',
        '{"chainId":8453,"from":"${wallet}","to":"${router}","value":"0","data":"0x1234"}',
        'policy', 'catalog', '${at}', '${expiry}', 'hash', 'intent-a');`);
   return db;
@@ -51,6 +51,17 @@ function insert(db: DatabaseSync, amount = "1000000", subject = "subject-a") {
 }
 
 describe("separate swap approval migration", () => {
+  it("accepts an exact approval for a reviewed LI.FI bridge and nothing beyond the source amount", () => {
+    const db = database(true);
+    try {
+      insert(db);
+      expect(db.prepare("SELECT amount_raw FROM swap_approval_requests").get()).toMatchObject({ amount_raw: "1000000" });
+    } finally { db.close(); }
+    const excess = database(true);
+    try { expect(() => insert(excess, "1000001")).toThrow(); }
+    finally { excess.close(); }
+  });
+
   it("accepts an exact approval and a zero reset for a reviewed active plan", () => {
     for (const amount of ["1000000", "0"]) {
       const db = database();
