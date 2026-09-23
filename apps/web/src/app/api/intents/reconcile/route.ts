@@ -2,7 +2,9 @@ import { env } from "cloudflare:workers";
 import { AuthenticationError, requireVerifiedSubject } from "@/lib/auth/server";
 import { observeTransaction } from "@/lib/transactions/chain-observation";
 import { verifyExpectedEffect, type PreparedEffectEvidence } from "@/lib/transactions/effects";
+import { normalizePreparedCall } from "@/lib/transactions/evidence";
 import { reconcileLateObservations } from "@/lib/transactions/late-observation";
+import { verifySameChainSwapEffect } from "@/lib/swap/source-effect";
 
 type Intent = { intent_id: string; subject_reference: string; chain_id: number; transaction_hash: string | null; status: string; intent_type: string };
 type Step = { intent_id: string; step_index: number; wallet_address: string; chain_id: number; target_address: string; native_value: string; calldata_hash: string; semantic_action: string; expected_effect_json: string; reported_hash: string | null; observed_block_hash: string | null; verification_state: string; updated_at: string };
@@ -38,7 +40,8 @@ export async function POST(request: Request) {
       try {
         for (const step of steps.results) {
           if (!step.reported_hash) { allConfirmed = false; continue; }
-          const observed = await observeTransaction(step.chain_id, step.reported_hash);
+          const reportedHash = step.reported_hash;
+          const observed = await observeTransaction(step.chain_id, reportedHash);
           let expectedEffect: unknown;
           try { expectedEffect = JSON.parse(step.expected_effect_json); }
           catch { expectedEffect = null; }
@@ -47,15 +50,40 @@ export async function POST(request: Request) {
             nativeValue: step.native_value, calldataHash: step.calldata_hash, semanticAction: step.semantic_action,
             expectedEffect, reportedHash: step.reported_hash, observedBlockHash: step.observed_block_hash
           };
-          const verification = await verifyExpectedEffect(evidence, observed);
-          if (observed.status === "found" && !(verification.status === "inconsistent" && ["invalid_transaction", "transaction_identity"].includes(verification.reason))) matchedHashes.add(step.reported_hash.toLowerCase());
+          const verification = intent.intent_type === "swap" && step.semantic_action === "swap"
+            ? await (async () => {
+              if (observed.status === "pending") return { status: "pending" as const, reason: "transaction_unavailable" };
+              let call;
+              try { call = await normalizePreparedCall(observed.call); }
+              catch { return { status: "inconsistent" as const, reason: "invalid_transaction" }; }
+              if (call.chainId !== step.chain_id || call.from.toLowerCase() !== step.wallet_address.toLowerCase()
+                || call.to.toLowerCase() !== step.target_address.toLowerCase() || call.value !== step.native_value
+                || call.dataHash.toLowerCase() !== step.calldata_hash.toLowerCase())
+                return { status: "inconsistent" as const, reason: "transaction_identity" };
+              if (step.observed_block_hash && step.observed_block_hash.toLowerCase() !== observed.blockHash?.toLowerCase())
+                return { status: "reorged" as const, reason: "reorg" };
+              if (!expectedEffect || typeof expectedEffect !== "object" || Array.isArray(expectedEffect))
+                return { status: "inconsistent" as const, reason: "effect_schema" };
+              const swap = expectedEffect as Record<string, unknown>;
+              if (swap.type !== "swap" || ["wallet", "sourceAssetId", "destinationAssetId", "sourceAmountRaw", "minimumOutputRaw"]
+                .some((field) => typeof swap[field] !== "string"))
+                return { status: "inconsistent" as const, reason: "effect_schema" };
+              return verifySameChainSwapEffect({ call, observed, expected: {
+                wallet: swap.wallet as string, sourceAssetId: swap.sourceAssetId as string,
+                destinationAssetId: swap.destinationAssetId as string,
+                sourceAmountRaw: swap.sourceAmountRaw as string, minimumOutputRaw: swap.minimumOutputRaw as string,
+                reportedHash
+              } });
+            })()
+            : await verifyExpectedEffect(evidence, observed);
+          if (observed.status === "found" && !(verification.status === "inconsistent" && ["invalid_transaction", "transaction_identity"].includes(verification.reason ?? ""))) matchedHashes.add(reportedHash.toLowerCase());
           if (verification.status !== "confirmed") allConfirmed = false;
-          if (verification.status !== "confirmed" && verification.reason === "reorg") verificationState = "reorged";
-          else if (verification.status === "inconsistent" || verification.status === "failed") verificationState = verification.status;
+          if (verification.status === "reorged" || verification.status !== "confirmed" && verification.reason === "reorg") verificationState = "reorged";
+          else if (verification.status === "inconsistent" || verification.status === "failed" || verification.status === "partial") verificationState = verification.status;
           await env.PROJECTION_DB.prepare(`UPDATE intent_prepared_calls SET verification_state = ?, observed_block_hash = COALESCE(observed_block_hash, ?), updated_at = ?
-            WHERE intent_id = ? AND step_index = ?`).bind(verification.status === "inconsistent" && verification.reason === "reorg" ? "reorged" : verification.status,
+            WHERE intent_id = ? AND step_index = ?`).bind("reason" in verification && verification.reason === "reorg" ? "reorged" : verification.status,
               observed.status === "found" ? observed.blockHash : null, new Date().toISOString(), intent.intent_id, step.step_index).run();
-          if (verification.status === "inconsistent" || verification.status === "failed") {
+          if (verification.status === "inconsistent" || verification.status === "failed" || verification.status === "partial") {
             await env.PROJECTION_DB.prepare(`INSERT INTO operational_issues
               (issue_id, subject_reference, issue_type, severity, source_name, source_reference, summary, status, opened_at)
               SELECT ?, ?, 'settlement_mismatch', 'high', 'intent_reconcile', ?, ?, 'open', ?
@@ -80,14 +108,19 @@ export async function POST(request: Request) {
           allConfirmed = false;
           if (lastReported && matchedHashes.has(lastReported.toLowerCase())) verificationState = "inconsistent";
         }
-        // The generic effect verifier covers direct transfers only. A swap or
-        // bridge additionally needs route-specific destination settlement.
-        if (allConfirmed && intent.intent_type === "transfer") {
+        const swapSettled = intent.intent_type === "swap" && steps.results.length === 1
+          && steps.results[0].step_index === 0 && steps.results[0].semantic_action === "swap";
+        const settleable = intent.intent_type === "transfer" || swapSettled;
+        if (allConfirmed && settleable) {
           const changed = await env.PROJECTION_DB.prepare(`UPDATE transaction_intents SET status = 'confirmed', confirmed_at = ?, updated_at = ?
-            WHERE intent_id = ? AND intent_type = 'transfer' AND status IN ('submitted', 'confirmed')
+            WHERE intent_type = ? AND intent_id = ? AND status IN ('submitted', 'confirmed')
             AND EXISTS (SELECT 1 FROM intent_prepared_calls p WHERE p.intent_id = transaction_intents.intent_id)
-            AND NOT EXISTS (SELECT 1 FROM intent_prepared_calls p WHERE p.intent_id = transaction_intents.intent_id AND p.verification_state != 'confirmed')`)
-            .bind(new Date().toISOString(), new Date().toISOString(), intent.intent_id).run();
+            AND NOT EXISTS (SELECT 1 FROM intent_prepared_calls p WHERE p.intent_id = transaction_intents.intent_id AND p.verification_state != 'confirmed')
+            AND (intent_type = 'transfer' OR (intent_type = 'swap'
+              AND (SELECT COUNT(*) FROM intent_prepared_calls p WHERE p.intent_id = transaction_intents.intent_id) = 1
+              AND EXISTS (SELECT 1 FROM intent_prepared_calls p WHERE p.intent_id = transaction_intents.intent_id
+                AND p.step_index = 0 AND p.semantic_action = 'swap')))`)
+            .bind(new Date().toISOString(), new Date().toISOString(), intent.intent_type, intent.intent_id).run();
           if (changed.meta.changes === 1) {
             verificationState = "confirmed";
             if (intent.status !== "confirmed") await env.PROJECTION_DB.prepare(`INSERT INTO intent_events (event_id, intent_id, subject_reference, event_type, evidence_json, occurred_at)
@@ -96,13 +129,13 @@ export async function POST(request: Request) {
             intent.status = "confirmed";
           } else allConfirmed = false;
         }
-        if (allConfirmed && intent.intent_type !== "transfer") verificationState = "source_confirmed_pending_settlement";
-        if ((!allConfirmed || intent.intent_type !== "transfer") && intent.status === "confirmed") {
+        if (allConfirmed && !settleable) verificationState = "source_confirmed_pending_settlement";
+        if ((!allConfirmed || !settleable) && intent.status === "confirmed") {
           const downgraded = await env.PROJECTION_DB.prepare(`UPDATE transaction_intents SET status = 'submitted', confirmed_at = NULL, updated_at = ? WHERE intent_id = ? AND status = 'confirmed'`)
             .bind(new Date().toISOString(), intent.intent_id).run();
           if (downgraded.meta.changes === 1) intent.status = "submitted";
         }
-        results.push({ intentId: intent.intent_id, status: allConfirmed && intent.intent_type === "transfer" ? "confirmed" : intent.status, verificationState });
+        results.push({ intentId: intent.intent_id, status: allConfirmed && settleable ? "confirmed" : intent.status, verificationState });
       } catch (error) {
         console.error(JSON.stringify({ level: "error", event: "intent.reconcile.failed", intentId: intent.intent_id, message: error instanceof Error ? error.message : "unknown" }));
         const lastCheck = steps.results.reduce((latest, step) => step.reported_hash ? Math.max(latest, Date.parse(step.updated_at) || 0) : latest, 0);

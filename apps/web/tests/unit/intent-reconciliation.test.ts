@@ -3,6 +3,7 @@ import { DatabaseSync } from "node:sqlite";
 import { encodeEventTopics, erc20Abi } from "viem";
 import { verifyExpectedEffect } from "@/lib/transactions/effects";
 import type { ChainObservation } from "@/lib/transactions/chain-observation";
+import { normalizePreparedCall } from "@/lib/transactions/evidence";
 
 const routeState = vi.hoisted(() => ({
   subject: "subject-a",
@@ -61,7 +62,15 @@ vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
           if (query.includes("UPDATE transaction_intents")) {
             const intent = routeState.intents.find((item) => item.intent_id === (query.includes("transaction_hash = ?") ? args[2] : args.at(-1)));
             if (intent && query.includes("SET status = 'confirmed'")) {
-              if (!["submitted", "confirmed"].includes(String(intent.status)) || routeState.steps.some((step) => step.intent_id === intent.intent_id && step.verification_state !== "confirmed")) return { meta: { changes: 0 } };
+              const db = new DatabaseSync(":memory:");
+              try {
+                db.exec("CREATE TABLE transaction_intents (intent_id TEXT, intent_type TEXT, status TEXT, confirmed_at TEXT, updated_at TEXT); CREATE TABLE intent_prepared_calls (intent_id TEXT, step_index INTEGER, semantic_action TEXT, verification_state TEXT)");
+                db.prepare("INSERT INTO transaction_intents (intent_id, intent_type, status) VALUES (?, ?, ?)")
+                  .run(String(intent.intent_id), String(intent.intent_type), String(intent.status));
+                for (const step of routeState.steps.filter((item) => item.intent_id === intent.intent_id))
+                  db.prepare("INSERT INTO intent_prepared_calls VALUES (?, ?, ?, ?)").run(String(step.intent_id), Number(step.step_index), String(step.semantic_action), String(step.verification_state));
+                if (db.prepare(query).run(...args.map(String)).changes !== 1) return { meta: { changes: 0 } };
+              } finally { db.close(); }
               intent.status = "confirmed";
             }
             if (intent && query.includes("SET status = 'submitted'")) {
@@ -72,7 +81,7 @@ vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
             return { meta: { changes: intent ? 1 : 0 } };
           }
           if (query.includes("INSERT INTO operational_issues")) routeState.issues.push(String(args[0]));
-          if (query.includes("INSERT INTO intent_events")) routeState.events.push(String(args[3]));
+          if (query.includes("INSERT INTO intent_events")) routeState.events.push(query.includes("'settlement_confirmed'") ? "settlement_confirmed" : String(args[3]));
           return { meta: { changes: 1 } };
         }
       };
@@ -91,6 +100,7 @@ import { POST as reconcile } from "@/app/api/intents/reconcile/route";
 const sender = "0x000000000000000000000000000000000000dEaD";
 const recipient = "0x0000000000000000000000000000000000000001";
 const token = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
+const destinationToken = "0x4200000000000000000000000000000000000006";
 const hash = `0x${"a".repeat(64)}`;
 const blockHash = `0x${"b".repeat(64)}`;
 
@@ -220,6 +230,82 @@ describe("intent reconciliation route", () => {
       expect(routeState.intents[0].status).toBe("submitted");
       expect(routeState.events).not.toContain("settlement_confirmed");
     }
+  });
+
+  async function swapEvidence(receivedRaw: bigint) {
+    const diamond = recipient;
+    const call = { chainId: 8453, from: sender, to: diamond, value: "0", data: "0x12345678" };
+    const normalized = await normalizePreparedCall(call);
+    const transferLog = (asset: string, from: string, to: string, amount: bigint) => ({
+      address: asset,
+      topics: encodeEventTopics({ abi: erc20Abi, eventName: "Transfer", args: { from: from as `0x${string}`, to: to as `0x${string}` } }) as string[],
+      data: `0x${amount.toString(16).padStart(64, "0")}`
+    });
+    routeState.intents[0].intent_type = "swap";
+    routeState.steps[0] = { ...routeState.steps[0], target_address: diamond.toLowerCase(), native_value: "0",
+      calldata_hash: normalized.dataHash, semantic_action: "swap", expected_effect_json: JSON.stringify({
+        type: "swap", wallet: sender, sourceAssetId: `8453:${token.toLowerCase()}`,
+        destinationAssetId: `8453:${destinationToken.toLowerCase()}`, sourceAmountRaw: "100",
+        minimumOutputRaw: "80", recipient: sender
+      }) };
+    const baseObservation = nativeObservation as Extract<ChainObservation, { status: "found" }>;
+    routeState.observation = { ...baseObservation, call, receipt: { ...baseObservation.receipt!, logs: [
+      transferLog(token, sender, diamond, 100n),
+      ...(receivedRaw > 0n ? [transferLog(destinationToken, diamond, sender, receivedRaw)] : [])
+    ] } };
+  }
+
+  it.each([[80n, "settled"], [79n, "identity_mismatch"]] as const)(
+    "tracks a late swap with %s destination units as %s without submitting it", async (received, expectedState) => {
+      await swapEvidence(received);
+      routeState.intents[0].status = "cancelled";
+      routeState.intents[0].transaction_hash = null;
+      routeState.steps[0].reported_hash = null;
+      routeState.candidates = [{ report_id: "swap-report", subject_reference: "subject-a", intent_id: intentId,
+        step_index: 0, chain_id: 8453, transaction_hash: hash, verification_state: "unindexed",
+        wallet_address: sender.toLowerCase(), target_address: recipient.toLowerCase(), native_value: "0",
+        calldata_hash: routeState.steps[0].calldata_hash, semantic_action: "swap",
+        expected_effect_json: routeState.steps[0].expected_effect_json }];
+      const body = await (await request()).json() as { observations: Array<{ verificationState: string }> };
+      expect(body.observations).toMatchObject([{ reportId: "swap-report", verificationState: expectedState }]);
+      expect(routeState.intents[0]).toMatchObject({ status: "cancelled", transaction_hash: null });
+      expect(routeState.steps[0].reported_hash).toBeNull();
+      expect(routeState.candidateChecks).toHaveLength(1);
+    }
+  );
+
+  it("confirms an exact same-chain swap only after finalized source debit and minimum destination credit", async () => {
+    await swapEvidence(80n);
+    const body = await (await request()).json();
+    expect(body).toMatchObject({ results: [{ intentId, status: "confirmed", verificationState: "confirmed" }] });
+    expect(routeState.intents[0].status).toBe("confirmed");
+    expect(routeState.events).toContain("settlement_confirmed");
+  });
+
+  it.each([[0n, "inconsistent"], [79n, "partial"]])("does not settle swap with only %s destination units", async (received, state) => {
+    await swapEvidence(received);
+    const body = await (await request()).json();
+    expect(body).toMatchObject({ results: [{ intentId, status: "submitted", verificationState: state }] });
+    expect(routeState.intents[0].status).toBe("submitted");
+    expect(routeState.events).not.toContain("settlement_confirmed");
+  });
+
+  it("does not settle a swap whose transaction differs from the prepared calldata", async () => {
+    await swapEvidence(100n);
+    routeState.observation = { ...(routeState.observation as Extract<ChainObservation, { status: "found" }>),
+      call: { ...(routeState.observation as Extract<ChainObservation, { status: "found" }>).call, data: "0xdeadbeef" } };
+    const body = await (await request()).json();
+    expect(body).toMatchObject({ results: [{ intentId, status: "submitted", verificationState: "inconsistent" }] });
+    expect(routeState.events).not.toContain("settlement_confirmed");
+  });
+
+  it("downgrades a previously confirmed swap after a reorg", async () => {
+    await swapEvidence(100n);
+    routeState.intents[0].status = "confirmed";
+    routeState.steps[0].observed_block_hash = `0x${"c".repeat(64)}`;
+    const body = await (await request()).json();
+    expect(body).toMatchObject({ results: [{ intentId, status: "submitted", verificationState: "reorged" }] });
+    expect(routeState.intents[0].status).toBe("submitted");
   });
 
   it("downgrades a previously confirmed routed intent that has only source evidence", async () => {
