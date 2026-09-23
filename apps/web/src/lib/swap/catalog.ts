@@ -229,8 +229,8 @@ export async function getCatalogPage(
   const observedTimes: string[] = [];
   const snapshotVersions: string[] = [];
   const candidates: Array<{ asset: CatalogAsset; key: SortKey }> = [];
-  for (const chainId of chainIds) {
-    const current = await snapshot(chainId, fetcher, cache, now, Boolean(cursor));
+  const snapshots = await Promise.all(chainIds.map((chainId) => snapshot(chainId, fetcher, cache, now, Boolean(cursor))));
+  for (const current of snapshots) {
     observedTimes.push(current.observedAt);
     snapshotVersions.push(current.version);
     for (const item of current.assets) {

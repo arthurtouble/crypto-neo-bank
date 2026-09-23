@@ -113,6 +113,26 @@ describe("LI.FI catalog", () => {
     expect(calls).toBe(2);
   });
 
+  it("starts independent network snapshots together for a cold multi-network search", async () => {
+    const started: number[] = [];
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    const fetcher: typeof fetch = async (input) => {
+      const chainId = Number(new URL(String(input)).searchParams.get("chains"));
+      started.push(chainId);
+      await gate;
+      return Response.json({ tokens: { [chainId]: [token(USDC, "USDC", "USD Coin", chainId)] } });
+    };
+    const pending = getCatalogPage({ query: "USDC", chainIds: [8453, 1] }, { fetcher, registry, cache: createCatalogCache() });
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(started).toEqual([1, 8453]);
+    } finally {
+      release();
+      await pending;
+    }
+  });
+
   it("stops a chunked provider body at the byte limit before JSON parsing", async () => {
     let cancelled = false;
     const chunk = new Uint8Array(1_500_000).fill(32);

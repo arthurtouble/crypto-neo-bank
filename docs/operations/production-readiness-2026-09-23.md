@@ -126,6 +126,8 @@ The disconnected pending-registration tranche passed 864 web unit tests, typeche
 
 A fresh local desktop/mobile browser run on this branch passed 42 cases with two intentional desktop skips for mobile-only assertions. The built app was tested for responsive layouts, reduced motion, public accessibility, fail-closed unauthenticated APIs, and sandbox behavior. This does not cover an authenticated customer, passkey ceremony on the production RP ID, real wallet signature, or production deployment. The first run could not bind the local Cloudflare inspector port under filesystem/network sandboxing; the same suite passed with loopback permission. Local build/test output still warns about absent development secrets, development-only React `eval`, and missing dependency sourcemaps.
 
+Cold asset searches now start independent LI.FI snapshots for the selected networks concurrently, then apply the same screening, ranking, cursor, cache-capacity, and all-or-nothing checks. A regression observed the old sequential behavior fail before the change. The final source passed 866 web unit tests, typecheck, lint, and web build. This reduces serial waiting in a cold search; it is not a measured production latency claim or permission to execute a quoted route.
+
 ## Non-negotiable release rules
 
 - D1 projections are not customer balances, settlement records, provider entitlements, or a substitute for chain/provider reads.
