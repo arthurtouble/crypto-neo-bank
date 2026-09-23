@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { encodeEventTopics, erc20Abi } from "viem";
+import { encodeAbiParameters, encodeEventTopics, erc20Abi, padHex, parseAbiItem, type AbiParameter } from "viem";
 import { verifySwapDestination, type SwapDestinationEvidence } from "@/lib/swap/destination-evidence";
 
 const sourceHash = `0x${"a".repeat(64)}`;
@@ -44,6 +44,55 @@ function fixture(): FoundEvidence {
 }
 
 describe("cross-chain swap destination evidence", () => {
+  it("binds an Across Base deposit to an Arbitrum fill and received USDC", () => {
+    const sourcePool = "0x09aea4b2242abC8bb4BB78D537A67a245A7bEC64";
+    const destinationPool = "0xe35e9842fceaCA96570B734083f4a58e8F7C5f2A";
+    const destinationToken = "0xaf88d065e77c8cc2239327c5edb3a432268e5831";
+    const addressWord = (address: string) => padHex(address as `0x${string}`, { size: 32 });
+    const sourceAbi = parseAbiItem("event FundsDeposited(bytes32 inputToken, bytes32 outputToken, uint256 inputAmount, uint256 outputAmount, uint256 indexed destinationChainId, uint256 indexed depositId, uint32 quoteTimestamp, uint32 fillDeadline, uint32 exclusivityDeadline, bytes32 indexed depositor, bytes32 recipient, bytes32 exclusiveRelayer, bytes message)");
+    const destinationAbi = parseAbiItem("event FilledRelay(bytes32 inputToken, bytes32 outputToken, uint256 inputAmount, uint256 outputAmount, uint256 repaymentChainId, uint256 indexed originChainId, uint256 indexed depositId, uint32 fillDeadline, uint32 exclusivityDeadline, bytes32 exclusiveRelayer, bytes32 indexed relayer, bytes32 depositor, bytes32 recipient, bytes32 messageHash, (bytes32 updatedRecipient, bytes32 updatedMessageHash, uint256 updatedOutputAmount, uint8 fillType) relayExecutionInfo)");
+    const source = fixture();
+    source.expected.sourceChainId = 8453;
+    source.expected.destinationChainId = 42161;
+    source.expected.destinationToken = destinationToken;
+    source.expected.across = { sourceToken: token, sourceAmountRaw: "1000000", depositor: sender };
+    source.expected.bridgeLink = undefined;
+    source.provider.destinationChainId = 42161;
+    source.sourceObserved.call.chainId = 8453;
+    source.sourceObserved.call.from = sender;
+    source.sourceObserved.receipt!.logs = [{ address: sourcePool,
+      topics: encodeEventTopics({ abi: [sourceAbi], eventName: "FundsDeposited", args: { destinationChainId: 42161n, depositId: 42n, depositor: addressWord(sender) } }).map(String),
+      data: encodeAbiParameters(sourceAbi.inputs.filter((field) => !("indexed" in field && field.indexed)) as AbiParameter[], [addressWord(token), addressWord(destinationToken), 1000000n, 990000n, 1, 2000000000, 0, addressWord(recipient), addressWord("0x0000000000000000000000000000000000000000"), "0x"]) }];
+    source.observed.call.chainId = 42161;
+    source.observed.receipt!.logs = [{ address: destinationPool,
+      topics: encodeEventTopics({ abi: [destinationAbi], eventName: "FilledRelay", args: { originChainId: 8453n, depositId: 42n, relayer: addressWord(sender) } }).map(String),
+      data: encodeAbiParameters(destinationAbi.inputs.filter((field) => !("indexed" in field && field.indexed)) as AbiParameter[], [addressWord(token), addressWord(destinationToken), 1000000n, 990000n, 42161n, 2000000000, 0, addressWord("0x0000000000000000000000000000000000000000"), addressWord(sender), addressWord(recipient), `0x${"0".repeat(64)}`, [addressWord(recipient), `0x${"0".repeat(64)}`, 990000n, 0]]) },
+      { address: destinationToken, topics: encodeEventTopics({ abi: erc20Abi, eventName: "Transfer", args: { from: destinationPool, to: recipient } }).map(String),
+        data: `0x${(990000n).toString(16).padStart(64, "0")}` }];
+    expect(verifySwapDestination(source)).toEqual({ status: "complete" });
+    source.expected.across.sourceAmountRaw = "1000001";
+    expect(verifySwapDestination(source)).toEqual({ status: "inconsistent", reason: "across_relay_mismatch" });
+    source.expected.across.sourceAmountRaw = "1000000";
+    source.expected.recipient = sender;
+    expect(verifySwapDestination(source)).not.toEqual({ status: "complete" });
+    source.expected.recipient = recipient;
+    source.observed.receipt!.logs[0].topics[2] = `0x${"9".repeat(64)}`;
+    expect(verifySwapDestination(source)).not.toEqual({ status: "complete" });
+  });
+
+  it("never treats an Across deposit ID alone as generic bridge settlement proof", () => {
+    const input = fixture();
+    input.expected.bridgeLink = { sourceContract: "0x09aea4b2242abC8bb4BB78D537A67a245A7bEC64",
+      sourceEventTopic: "0x32ed1a409ef04c7b0227189c3a103dc5ac10e775a15b785dcc510201f7c25ad3",
+      destinationContract: "0xe35e9842fceaCA96570B734083f4a58e8F7C5f2A",
+      destinationEventTopic: "0x44b559f101f8fbcc8a0ea43fa91a05a729a5ea6e14a7c75aa750374690137208", messageTopicIndex: 2 };
+    const depositId = `0x${"a".repeat(64)}`;
+    input.sourceObserved.receipt!.logs[0] = { address: input.expected.bridgeLink.sourceContract,
+      topics: [input.expected.bridgeLink.sourceEventTopic, `0x${"0".repeat(64)}`, depositId], data: "0x" };
+    input.observed.receipt!.logs[0] = { address: input.expected.bridgeLink.destinationContract,
+      topics: [input.expected.bridgeLink.destinationEventTopic, `0x${"0".repeat(64)}`, depositId], data: "0x" };
+    expect(verifySwapDestination(input)).toEqual({ status: "pending", reason: "bridge_link_unverified" });
+  });
   it("confirms only a source-bound, finalized destination transfer above the reviewed minimum", () => {
     expect(verifySwapDestination(fixture())).toEqual({ status: "complete" });
   });

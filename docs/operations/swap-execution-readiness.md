@@ -10,7 +10,7 @@ This page describes what the current implementation can prove. It is not a launc
 - If allowance is insufficient, a separate exact-amount ERC-20 approval (or zero reset) can be prepared and tracked. Approval confirmation requires its own canonical, finalized on-chain event. It never confirms the swap or renews an expired quote; the customer must find a fresh route afterward. Approval may persist on chain even if Aurel's record expires.
 - The customer must still confirm any released call in their own wallet. The server does not hold a signing key.
 - A reported transaction is matched to the prepared call. Confirmation requires a canonical, finalized receipt with the exact source debit and at least the reviewed destination minimum. A LI.FI status of `DONE` is not settlement proof.
-- Cross-chain destination evidence requires a separately reviewed bridge-specific message-link adapter. No such production adapter is configured, so cross-chain execution must remain unavailable.
+- Cross-chain destination evidence has a narrow Across Base-USDC/Arbitrum-USDC event verifier. It matches the finalized source deposit to the finalized destination fill and token credit, rather than trusting a deposit ID or provider `DONE` status alone. It is not connected to an approved source-call preparation flow, so cross-chain execution remains unavailable.
 
 ## Live-route finding, 23 September 2026
 
@@ -23,6 +23,6 @@ LI.FI's unauthenticated public API can be used for initial testing. An API key m
 1. Apply migration `0032_swap_approval_requests.sql` in development after a backup; deploy the Worker and verify the existing `swaps` control remains disabled until a deliberate test window.
 2. Rehearse a small self-owned Base USDC/WETH trade, including zero allowance, exact approval, an existing nonzero insufficient allowance, fresh re-quote, user rejection, expired quote, failed receipt, reorg, account lock, and lost-response recovery. The direct route currently has no Aurel integrator fee; do not represent one in pricing.
 3. Have an independent reviewer assess the deployed Uniswap contract mapping, canonical calldata decoder, approval flow, simulation, route economics, and receipt verifier. Confirm legal eligibility of launch jurisdictions and assets.
-4. Only after those checks, make a separate operator decision to enable the existing `swaps` control for a limited beta. LI.FI nested routes, other assets, tokenized securities, and cross-chain execution require their own explicit audits and release decisions. Across needs a provider-specific source/destination event adapter; matching only its deposit ID is not sufficient proof of delivery.
+4. Only after those checks, make a separate operator decision to enable the existing `swaps` control for a limited beta. LI.FI nested routes, other assets, tokenized securities, and cross-chain execution require their own explicit audits and release decisions. The Across evidence verifier still needs to be bound to an audited quote, exact source call, approval, status observer, and recovery flow before cross-chain signing can be enabled.
 
 The current `workers.dev` deployment is a development environment. It is not the production origin or passkey RP ID. Do not describe the swap as live to customers until the release checks above are complete.
