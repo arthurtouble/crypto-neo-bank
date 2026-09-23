@@ -15,6 +15,7 @@
     "cf-types": "wrangler types --env-interface CloudflareEnv",
     "test": "pnpm test:unit && pnpm test:e2e",
     "test:unit": "vitest run",
+    "test:live:readonly": "AUREL_LIVE_READONLY=1 vitest run",
     "test:e2e": "pnpm build && playwright test",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"
