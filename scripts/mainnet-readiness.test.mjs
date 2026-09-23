@@ -40,3 +40,21 @@ test("readiness rejects malformed contract-code responses", () => {
   assert.equal(result.status, 1);
   assert.match(result.stderr, /FAIL  Aave Base has invalid contract code/);
 });
+
+test("readiness checks the mounted LI.FI Base swap facet and its deployed code", () => {
+  const result = run();
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /PASS  LI.FI Base:.*mounted swap facet.*deployed code/);
+});
+
+test("readiness fails closed when the LI.FI selector maps to another facet", () => {
+  const result = run({ AUREL_TEST_BAD_LIFI_FACET: "1" });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /FAIL  LI.FI Base swap facet differs/);
+});
+
+test("readiness fails closed when the mounted LI.FI facet has no code", () => {
+  const result = run({ AUREL_TEST_MISSING_LIFI_FACET_CODE: "1" });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /FAIL  LI.FI Base has no contract code/);
+});
