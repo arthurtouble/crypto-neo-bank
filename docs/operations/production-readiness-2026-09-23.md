@@ -84,6 +84,8 @@ A disconnected challenge issuer now returns a short-lived random WebAuthn challe
 
 The activation audit found a sequencing gap: high-value `/api/intents/prepare` returns `step_up_unavailable` before saving the immutable call that challenge issuance requires, and the UI exits before preparation. The [two-phase activation plan](../superpowers/plans/2026-09-23-action-passkey-activation.md) keeps this blocked while specifying a server-held `awaiting_step_up` plan, exact-call simulation, one-use assertion, final pre-sign recheck, and settlement evidence. Browser simulation and post-broadcast reconciliation do not substitute for these gates.
 
+A disconnected Base direct-transfer simulator now checks the normalized call and expected native/ERC-20 effect, then makes a canonical block-hash-bound `eth_call`. Four focused tests and an independent review found no Critical or Important issue in this slice. It explicitly returns `balanceAndGasProven: false` and `signingReady: false`; it is not imported by a route. Only trusted server code may supply its clock and maximum age. Same-block balance, gas/fee sufficiency, current policy, an immediate pre-sign recheck, and settlement verification still need implementation.
+
 ## Non-negotiable release rules
 
 - D1 projections are not customer balances, settlement records, provider entitlements, or a substitute for chain/provider reads.
