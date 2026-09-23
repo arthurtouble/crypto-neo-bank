@@ -4,6 +4,7 @@ import { BetaAccessError, requireBetaAccess } from "@/lib/beta/access";
 import { RateLimitError, enforceRateLimit } from "@/lib/security/rate-limit";
 import { resolvePortfolioAccounts } from "@/lib/portfolio/accounts";
 import { readCurrentAaveLegs } from "@/lib/portfolio/aave-source";
+import { currentPortfolioPublication } from "@/lib/portfolio/publication";
 import type { AccountId, Completeness, DayCoverage, HistoryPoint, PortfolioHistory } from "@/lib/portfolio/types";
 
 const RANGE_DAYS = { "7D": 7 } as const;
@@ -37,11 +38,7 @@ export async function GET(request: Request) {
     const days = dayRange(RANGE_DAYS[range as keyof typeof RANGE_DAYS]);
     const accounts = await resolvePortfolioAccounts(subject.subjectReference);
     const allowed = new Set<string>(accounts.map((item) => item.accountId));
-    const publication = await env.PROJECTION_DB.prepare(`SELECT calculation_version FROM portfolio_publications
-      WHERE subject_reference = ? AND status = 'published'
-        AND NOT EXISTS (SELECT 1 FROM portfolio_rebuild_holds h WHERE h.subject_reference = portfolio_publications.subject_reference)`)
-      .bind(subject.subjectReference).first<{ calculation_version: number }>();
-    const calculationVersion = publication?.calculation_version ?? 0;
+    const calculationVersion = await currentPortfolioPublication(env.PROJECTION_DB, subject.subjectReference);
     const [daily, checkpoints, nonfinal] = await Promise.all([
       calculationVersion ? env.PROJECTION_DB.prepare(`SELECT day, calculation_version, net_value_usd, twr_index, coverage_status, coverage_json
         FROM portfolio_daily_results WHERE subject_reference = ? AND calculation_version = ? AND day BETWEEN ? AND ? ORDER BY day ASC LIMIT 365`)

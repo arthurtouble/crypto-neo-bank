@@ -14,7 +14,7 @@ const RETURN_WINDOW = { pricedDays: PUBLISH_DAYS, scope: "recent_completed_utc_d
 // D1 paid Workers allow 1,000 queries per invocation; leave room for reads.
 const MAX_STATEMENTS = 800;
 // Increment when normalization, daily valuation, or basis semantics change.
-const CALCULATION_RULE_VERSION = 2;
+const CALCULATION_RULE_VERSION = 3;
 type Checkpoint = { account_id: string; source_id: string; cursor: string | null; covered_from: string | null; covered_through: string | null; status: string; ingestion_version: number; last_finalized_block: string | null; last_finalized_hash: string | null };
 type EventRow = { source_id: string; source_event_id: string; ingestion_version: number; account_id: string; asset_id: string; raw_delta: string; decimals: number; event_kind: HistoricalEvent["kind"]; occurred_at: string; chain_id: number | null; block_number: string | null; block_hash: string | null; tx_hash: string | null; log_index: number | null; finality: HistoricalEvent["finality"]; completeness: HistoricalEvent["completeness"]; group_id: string | null; counterparty_account_id: string | null; evidence_json: string };
 type Marker = { input_digest: string; calculation_version: number };
@@ -34,6 +34,11 @@ function dayList(through: string): string[] {
 function evidenceRole(event: HistoricalEvent): string | null {
   try { const value = JSON.parse(event.evidenceJson) as { role?: unknown }; return typeof value.role === "string" ? value.role : null; }
   catch { return null; }
+}
+function currentChainEvidence(event: HistoricalEvent): boolean {
+  if (event.sourceId !== "blockscout:8453") return true;
+  try { return (JSON.parse(event.evidenceJson) as { sourceEvidenceVersion?: unknown }).sourceEvidenceVersion === 2; }
+  catch { return false; }
 }
 async function digest(value: unknown): Promise<string> {
   const bytes = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify(value))));
@@ -80,7 +85,8 @@ export async function materializePortfolioDaily(db: D1Database, subjectReference
   const allowed = new Set<string>(accounts);
   const rawEvents = eventResult.results.filter((row) => allowed.has(row.account_id)).map(toEvent);
   if (rawEvents.some((event) => event.finality !== "finalized" || event.completeness !== "complete" || !/^-?(?:0|[1-9]\d*)$/.test(event.rawDelta)
-    || !Number.isInteger(event.decimals) || event.decimals < 0 || event.decimals > 36 || !Number.isInteger(event.ingestionVersion) || event.ingestionVersion < 1))
+    || !Number.isInteger(event.decimals) || event.decimals < 0 || event.decimals > 36 || !Number.isInteger(event.ingestionVersion) || event.ingestionVersion < 1
+    || !currentChainEvidence(event)))
     throw new PortfolioMaterializeError("incomplete_event", "Raw event history is incomplete or malformed.");
   const normalized = normalizeEconomicEvents(rawEvents, new Set(accounts));
   if (normalized.unresolved.length) throw new PortfolioMaterializeError("incomplete_event", "Economic event normalization is unresolved.");

@@ -24,6 +24,12 @@ function sourceRole(event: HistoricalEvent): string | null {
     return evidence && typeof evidence === "object" && "role" in evidence && typeof evidence.role === "string" ? evidence.role : null;
   } catch { return null; }
 }
+function transactionIndex(event: HistoricalEvent): number | null {
+  try {
+    const value = (JSON.parse(event.evidenceJson) as { transactionIndex?: unknown }).transactionIndex;
+    return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : null;
+  } catch { return null; }
+}
 
 type MutableLot = BasisLot & { remaining: bigint; remainingBasis: bigint | null };
 
@@ -42,13 +48,25 @@ function documentedMoney(event: HistoricalEvent, field: "acquisitionCostUsd" | "
 function calculateBasis(events: HistoricalEvent[], coverage: DayCoverage[], calculationVersion: number): { lots: BasisLot[]; disposals: BasisDisposal[] } {
   const byAssetAccount = new Map<string, MutableLot[]>();
   const disposals: BasisDisposal[] = [];
+  const phase = (event: HistoricalEvent) => event.kind !== "internal_transfer" ? 1 : BigInt(event.rawDelta) < 0n ? 0 : 2;
+  const compare = (a: HistoricalEvent, b: HistoricalEvent) => {
+    const blockA = /^\d+$/.test(a.blockNumber ?? "") ? BigInt(a.blockNumber!) : null;
+    const blockB = /^\d+$/.test(b.blockNumber ?? "") ? BigInt(b.blockNumber!) : null;
+    return a.occurredAt.localeCompare(b.occurredAt) || (a.chainId ?? 0) - (b.chainId ?? 0)
+      || (blockA === null && blockB === null ? 0 : blockA === null ? 1 : blockB === null ? -1 : blockA < blockB ? -1 : blockA > blockB ? 1 : 0)
+      || (transactionIndex(a) ?? Number.MAX_SAFE_INTEGER) - (transactionIndex(b) ?? Number.MAX_SAFE_INTEGER)
+      || (a.txHash ?? "").localeCompare(b.txHash ?? "")
+      || (a.logIndex ?? Number.MAX_SAFE_INTEGER) - (b.logIndex ?? Number.MAX_SAFE_INTEGER)
+      || phase(a) - phase(b) || a.sourceId.localeCompare(b.sourceId) || a.sourceEventId.localeCompare(b.sourceEventId);
+  };
   const finalized = events.filter((event) => event.finality === "finalized" && event.completeness === "complete" && signedInteger.test(event.rawDelta)
     && event.decimals >= 0 && event.decimals <= 36 && sourceRole(event) !== "position_receipt" && sourceRole(event) !== "liability"
     && sourceRole(event) !== "protocol_activity")
-    .sort((a, b) => a.occurredAt.localeCompare(b.occurredAt)
-      || (a.groupId && a.groupId === b.groupId && a.kind === "internal_transfer" && b.kind === "internal_transfer"
-        ? (BigInt(a.rawDelta) < 0n ? -1 : 1) : 0)
-      || a.sourceId.localeCompare(b.sourceId) || a.sourceEventId.localeCompare(b.sourceEventId));
+    .sort(compare);
+  const ambiguousOrder = (event: HistoricalEvent) => finalized.some((other) => other !== event && other.accountId === event.accountId
+    && other.assetId === event.assetId && other.chainId === event.chainId && other.blockNumber === event.blockNumber
+    && other.blockHash === event.blockHash && other.occurredAt === event.occurredAt && other.txHash !== event.txHash
+    && (transactionIndex(event) === null || transactionIndex(other) === null || transactionIndex(event) === transactionIndex(other)));
   const transferPairs = new Map<HistoricalEvent, HistoricalEvent>();
   const pairedIncoming = new Set<HistoricalEvent>();
   for (const outgoing of finalized) {
@@ -56,6 +74,8 @@ function calculateBasis(events: HistoricalEvent[], coverage: DayCoverage[], calc
     const incoming = finalized.find((candidate) => candidate !== outgoing && !pairedIncoming.has(candidate)
       && candidate.kind === "internal_transfer" && candidate.groupId === outgoing.groupId
       && candidate.accountId === outgoing.counterpartyAccountId && candidate.counterpartyAccountId === outgoing.accountId
+      && candidate.logIndex === outgoing.logIndex && candidate.blockNumber === outgoing.blockNumber
+      && candidate.blockHash === outgoing.blockHash && candidate.occurredAt === outgoing.occurredAt
       && candidate.assetId === outgoing.assetId && BigInt(candidate.rawDelta) === -BigInt(outgoing.rawDelta));
     if (incoming) { transferPairs.set(outgoing, incoming); pairedIncoming.add(incoming); }
   }
@@ -71,6 +91,15 @@ function calculateBasis(events: HistoricalEvent[], coverage: DayCoverage[], calc
   }
   const accountKey = (event: HistoricalEvent) => `${event.accountId}|${event.assetId}`;
   const sourceKey = (event: HistoricalEvent) => `${event.sourceId}:${event.sourceEventId}`;
+  const basisTainted = new Set<string>();
+  const taintBasis = (key: string) => {
+    basisTainted.add(key);
+    for (const lot of byAssetAccount.get(key) ?? []) {
+      lot.remainingBasis = null;
+      lot.basisUsd = null;
+      lot.classification = "review_required";
+    }
+  };
   const takeLots = (event: HistoricalEvent, quantity: bigint) => {
     let needed = quantity;
     const pieces: Array<{ units: bigint; basis: bigint | null; source: MutableLot }> = [];
@@ -90,10 +119,11 @@ function calculateBasis(events: HistoricalEvent[], coverage: DayCoverage[], calc
   };
   for (const event of finalized) {
     if (pairedIncoming.has(event)) continue;
+    if (ambiguousOrder(event)) taintBasis(accountKey(event));
     const delta = BigInt(event.rawDelta);
     if (delta === 0n) continue;
     if (delta > 0n) {
-      const basis = !incompleteAccounts.has(event.accountId) && (event.kind === "contribution" || event.kind === "swap")
+      const basis = !incompleteAccounts.has(event.accountId) && !basisTainted.has(accountKey(event)) && (event.kind === "contribution" || event.kind === "swap")
         ? documentedMoney(event, "acquisitionCostUsd") : null;
       const lot: MutableLot = {
         accountId: event.accountId, assetId: event.assetId, sourceEventId: sourceKey(event), calculationVersion,
@@ -109,14 +139,15 @@ function calculateBasis(events: HistoricalEvent[], coverage: DayCoverage[], calc
     if (event.kind === "internal_transfer") {
       const incoming = transferPairs.get(event);
       if (incoming) {
+        if (basisTainted.has(accountKey(event))) taintBasis(accountKey(incoming));
         for (const [index, piece] of pieces.entries()) {
           const moved: MutableLot = {
             accountId: incoming.accountId, assetId: event.assetId,
             sourceEventId: `${sourceKey(incoming)}:basis-${index}`, calculationVersion,
             acquiredAt: piece.source.acquiredAt, rawAcquired: piece.units.toString(), rawRemaining: piece.units.toString(),
-            basisUsd: piece.basis === null ? null : formatScaled(piece.basis),
-            classification: piece.basis === null ? "review_required" : "supported",
-            evidenceJson: incoming.evidenceJson, remaining: piece.units, remainingBasis: piece.basis
+            basisUsd: piece.basis === null || basisTainted.has(accountKey(event)) ? null : formatScaled(piece.basis),
+            classification: piece.basis === null || basisTainted.has(accountKey(event)) ? "review_required" : "supported",
+            evidenceJson: incoming.evidenceJson, remaining: piece.units, remainingBasis: basisTainted.has(accountKey(event)) ? null : piece.basis
           };
           byAssetAccount.set(accountKey(incoming), [...(byAssetAccount.get(accountKey(incoming)) ?? []), moved]);
         }
@@ -131,7 +162,7 @@ function calculateBasis(events: HistoricalEvent[], coverage: DayCoverage[], calc
         continue;
       }
     }
-    const basis = missing === 0n && pieces.every((piece) => piece.basis !== null)
+    const basis = !basisTainted.has(accountKey(event)) && missing === 0n && pieces.every((piece) => piece.basis !== null)
       ? pieces.reduce((sum, piece) => sum + piece.basis!, 0n) : null;
     // Only an identified swap can use documented consideration as sale proceeds.
     // Transfers, fees and unclassified debits retain their evidence for review.

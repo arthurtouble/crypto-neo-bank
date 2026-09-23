@@ -3,6 +3,7 @@ import { AuthenticationError, requireVerifiedSubject } from "@/lib/auth/server";
 import { BetaAccessError, requireBetaAccess } from "@/lib/beta/access";
 import { RateLimitError, enforceRateLimit } from "@/lib/security/rate-limit";
 import { resolvePortfolioAccounts } from "@/lib/portfolio/accounts";
+import { currentPortfolioPublication } from "@/lib/portfolio/publication";
 
 const PAGE_SIZE = 50;
 const REQUIRED_SOURCES = ["blockscout:8453", "aave:v3:8453"] as const;
@@ -35,11 +36,7 @@ export async function GET(request: Request) {
     const accountFilter = accountIds.map(() => "?").join(",");
     const from = new Date(Date.UTC(year, 0, 1)).toISOString();
     const through = new Date(Date.UTC(year + 1, 0, 1)).toISOString();
-    const publication = await env.PROJECTION_DB.prepare(`SELECT calculation_version FROM portfolio_publications
-      WHERE subject_reference = ? AND status = 'published'
-        AND NOT EXISTS (SELECT 1 FROM portfolio_rebuild_holds h WHERE h.subject_reference = portfolio_publications.subject_reference)`)
-      .bind(subject.subjectReference).first<{ calculation_version: number }>();
-    const calculationVersion = accountIds.length ? publication?.calculation_version ?? 0 : 0;
+    const calculationVersion = accountIds.length ? await currentPortfolioPublication(env.PROJECTION_DB, subject.subjectReference) : 0;
     const published = calculationVersion ? await env.PROJECTION_DB.prepare(`SELECT coverage_json FROM portfolio_daily_results
       WHERE subject_reference = ? AND calculation_version = ? ORDER BY day DESC LIMIT 1`)
       .bind(subject.subjectReference, calculationVersion).first<{ coverage_json: string }>() : null;

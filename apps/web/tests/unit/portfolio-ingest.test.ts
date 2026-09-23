@@ -1,4 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
+import { DatabaseSync } from "node:sqlite";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { ingestOnePage, PortfolioIngestError } from "@/lib/portfolio/ingest";
 import { rebuildPortfolioAnalytics, invalidateFromBlock } from "@/lib/portfolio/store";
 import type { HistoricalEvent, HistoricalEventSource } from "@/lib/portfolio/types";
@@ -7,7 +10,7 @@ const accountId = "8453:0x1111111111111111111111111111111111111111" as const;
 const event: HistoricalEvent = { sourceId: "blockscout:8453", sourceName: "Blockscout Pro Base", sourceEventId: "tx:1:out", ingestionVersion: 1, accountId, assetId: "8453:native", rawDelta: "-100", decimals: 18, kind: "unknown", occurredAt: "2026-09-20T12:00:00Z", chainId: 8453, blockNumber: "100", blockHash: `0x${"a".repeat(64)}`, txHash: `0x${"b".repeat(64)}`, logIndex: null, finality: "finalized", completeness: "complete", groupId: null, counterpartyAccountId: null, evidenceJson: "{}" };
 
 function fakeDb() {
-  const state = { checkpoint: null as null | Record<string, unknown>, priorEvent: null as null | { block_hash: string; block_number: string }, events: new Map<string, unknown[]>(), batches: 0, failBatch: false, queries: [] as string[], bound: [] as unknown[][] };
+  const state = { checkpoint: null as null | Record<string, unknown>, priorEvent: null as null | { block_hash: string; block_number: string; finality?: string }, events: new Map<string, unknown[]>(), batches: 0, failBatch: false, queries: [] as string[], bound: [] as unknown[][] };
   const db = {
     prepare(query: string) {
       state.queries.push(query);
@@ -30,6 +33,29 @@ function fakeDb() {
 }
 
 describe("bounded portfolio ingestion", () => {
+  it("replaces every source effect field when a reorged row is replayed canonically", async () => {
+    const { db, state } = fakeDb();
+    state.priorEvent = { block_hash: `0x${"c".repeat(64)}`, block_number: "90", finality: "reorged" };
+    const replay: HistoricalEvent = { ...event, assetId: "8453:0x00000000000000000000000000000000000000aa", rawDelta: "-200", decimals: 6,
+      occurredAt: "2026-09-21T13:00:00Z", blockNumber: "100", counterpartyAccountId: "8453:0x2222222222222222222222222222222222222222", evidenceJson: '{"sourceEvidenceVersion":2}' };
+    const source: HistoricalEventSource = { sourceId: "blockscout:8453", page: async ({ through }) => ({ events: [replay], nextCursor: null, coveredThrough: through, complete: true, sourceId: "blockscout:8453" }) };
+    await ingestOnePage(db, "subject-a", accountId, source, null, { now: new Date("2026-09-22T12:00:00Z") });
+    const sql = state.queries.find((query) => query.startsWith("INSERT INTO portfolio_events"))!;
+    const values = state.events.get(replay.sourceEventId)!;
+    const sqlite = new DatabaseSync(":memory:");
+    try {
+      sqlite.exec(readFileSync(resolve(process.cwd(), "../../infra/d1/migrations/0017_portfolio_analytics.sql"), "utf8"));
+      sqlite.prepare(`INSERT INTO portfolio_events (subject_reference, source_id, source_event_id, ingestion_version, leg_index, account_id, asset_id, raw_delta, decimals, event_kind, occurred_at, chain_id, block_number, block_hash, tx_hash, log_index, finality, completeness, group_id, counterparty_account_id, evidence_hash, evidence_json, observed_at)
+        VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+        "subject-a", event.sourceId, event.sourceEventId, 1, accountId, event.assetId, event.rawDelta, event.decimals, event.kind,
+        event.occurredAt, event.chainId, "90", `0x${"c".repeat(64)}`, event.txHash, event.logIndex, "reorged", "partial", event.groupId,
+        null, "legacy", "{}", "2026-09-20T12:00:00Z");
+      sqlite.prepare(sql).run(...values.map((value) => value as string | number | null));
+      expect(sqlite.prepare("SELECT asset_id, raw_delta, decimals, occurred_at, block_hash, counterparty_account_id, evidence_json, finality FROM portfolio_events WHERE subject_reference = ?").get("subject-a"))
+        .toMatchObject({ asset_id: replay.assetId, raw_delta: replay.rawDelta, decimals: 6, occurred_at: replay.occurredAt,
+          block_hash: replay.blockHash, counterparty_account_id: replay.counterpartyAccountId, evidence_json: replay.evidenceJson, finality: "finalized" });
+    } finally { sqlite.close(); }
+  });
   it("stores one page and server-issued checkpoint together; replay cannot duplicate or forge coverage", async () => {
     const { db, state } = fakeDb();
     const source: HistoricalEventSource = { sourceId: "blockscout:8453", page: vi.fn(async () => ({ events: [event], nextCursor: "provider-next", coveredThrough: "2023-01-01T00:00:00Z", complete: false, sourceId: "blockscout:8453" })) };

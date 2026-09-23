@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
+import { padHex, toHex } from "viem";
 import { BaseChainSource } from "@/lib/portfolio/chain-source";
 import { readCurrentAaveLegs, BaseAaveSource } from "@/lib/portfolio/aave-source";
+import { normalizeEconomicEvents } from "@/lib/portfolio/normalize";
+import { calculatePortfolioDays } from "@/lib/portfolio/calculate";
 
 const accountId = "8453:0x1111111111111111111111111111111111111111" as const;
 const txHash = `0x${"a".repeat(64)}`;
@@ -19,9 +22,90 @@ function chainFetch(responses: Record<string, unknown[]>) {
     return Response.json(kind === "internal-transactions" ? { meta: { status: 1 }, ...(result as object) } : result);
   });
 }
-const verified = vi.fn(async () => ({ blockHash, finalized: true, receiptSuccess: true }));
+const verified = vi.fn(async () => ({ blockHash, blockTimestamp: BigInt(Date.parse("2026-09-20T12:00:00.000Z") / 1000), finalized: true, receiptSuccess: true }));
 
 describe("Base chain history source", () => {
+  it("uses a matching receipt log and on-chain precision to prove linked-wallet token transfers", async () => {
+    const other = "8453:0x2222222222222222222222222222222222222222" as const;
+    const tokenAddress = "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
+    const transfer = { block_hash: blockHash, block_number: 100, transaction_hash: txHash, timestamp: "2026-09-20T12:00:00Z",
+      from: { hash: accountId.slice(5) }, to: { hash: other.slice(5) }, log_index: 1, token_type: "ERC-20",
+      token: { address_hash: tokenAddress, decimals: "6" }, total: { value: "2000000" } };
+    const log = { address: tokenAddress, logIndex: 1,
+      topics: ["0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef", padHex(accountId.slice(5) as `0x${string}`, { size: 32 }), padHex(other.slice(5) as `0x${string}`, { size: 32 })],
+      data: toHex(2_000_000n, { size: 32 }) };
+    const fetcher = chainFetch({ transactions: [page([]), page([])], "internal-transactions": [page([]), page([])], "token-transfers": [page([transfer]), page([transfer])] });
+    const source = new BaseChainSource({ apiKey: "test", fetcher, verify: vi.fn(async () => ({ blockHash, blockTimestamp: BigInt(Date.parse("2026-09-20T12:00:00.000Z") / 1000), finalized: true, receiptSuccess: true, logs: [log], tokenDecimals: 6 })) });
+    const outbound = await source.page(request);
+    const inbound = await source.page({ ...request, accountId: other });
+    expect(outbound.complete && inbound.complete).toBe(true);
+    const normalized = normalizeEconomicEvents([...outbound.events, ...inbound.events], new Set([accountId, other]));
+    expect(normalized.unresolved).toEqual([]);
+    expect(normalized.events.map((event) => event.kind)).toEqual(["internal_transfer", "internal_transfer"]);
+    const acquisition = { ...outbound.events[0], sourceEventId: "documented-acquisition", occurredAt: "2026-09-19T12:00:00.000Z",
+      rawDelta: "2000000", kind: "contribution" as const, groupId: "prior-deposit", counterpartyAccountId: null,
+      evidenceJson: '{"taxSupport":{"acquisitionCostUsd":"1.8","evidenceReference":"provider:deposit-1"}}' };
+    const assetId = outbound.events[0].assetId;
+    const prices = ["2026-09-19", "2026-09-20"].map((day) => ({ assetId, day, usd: "1", sourceId: "independent-price",
+      observedAt: `${day}T23:59:59.000Z`, methodology: "USD-close", version: 1 }));
+    const coverage = ["2026-09-19", "2026-09-20"].flatMap((day) => [accountId, other].map((id) => ({ day, accountId: id,
+      sourceId: "blockscout:8453", eventStatus: "complete" as const, priceStatus: "complete" as const, reason: null })));
+    const calculation = calculatePortfolioDays({ events: [acquisition, ...normalized.events], prices, coverage, calculationVersion: 2 });
+    expect(calculation.disposals).toEqual([]);
+    expect(calculation.lots.find((lot) => lot.accountId === other)).toMatchObject({ rawRemaining: "2000000", basisUsd: "1.8", classification: "supported" });
+  });
+
+  it("does not complete history from a token row contradicted by its receipt", async () => {
+    const to = "0x2222222222222222222222222222222222222222";
+    const tokenAddress = "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
+    const transfer = { block_hash: blockHash, block_number: 100, transaction_hash: txHash, timestamp: "2026-09-20T12:00:00Z",
+      from: { hash: accountId.slice(5) }, to: { hash: to }, log_index: 1, token_type: "ERC-20",
+      token: { address_hash: tokenAddress, decimals: "6" }, total: { value: "2000000" } };
+    const log = { address: tokenAddress, logIndex: 1,
+      topics: ["0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef", padHex(accountId.slice(5) as `0x${string}`, { size: 32 }), padHex(to as `0x${string}`, { size: 32 })],
+      data: toHex(2_000_000n, { size: 32 }) };
+    for (const proof of [
+      { logs: [{ ...log, data: toHex(1_000_000n, { size: 32 }) }], tokenDecimals: 6 },
+      { logs: [{ ...log, logIndex: 2 }], tokenDecimals: 6 },
+      { logs: [log], tokenDecimals: 18 },
+      { logs: [], tokenDecimals: 6 }
+    ]) {
+      const source = new BaseChainSource({ apiKey: "test", fetcher: chainFetch({ transactions: [page([])], "internal-transactions": [page([])], "token-transfers": [page([transfer])] }),
+        verify: vi.fn(async () => ({ blockHash, finalized: true, receiptSuccess: true, ...proof })) });
+      const result = await source.page(request);
+      expect(result.complete).toBe(false);
+      expect(result.events).toEqual([]);
+    }
+  });
+
+  it("does not attach an owned counterparty to an unsuccessful receipt", async () => {
+    const to = "0x2222222222222222222222222222222222222222";
+    const tokenAddress = "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
+    const transfer = { block_hash: blockHash, block_number: 100, transaction_hash: txHash, timestamp: "2026-09-20T12:00:00Z",
+      from: { hash: accountId.slice(5) }, to: { hash: to }, log_index: 1, token_type: "ERC-20",
+      token: { address_hash: tokenAddress, decimals: "6" }, total: { value: "2000000" } };
+    const source = new BaseChainSource({ apiKey: "test", fetcher: chainFetch({ transactions: [page([])], "internal-transactions": [page([])], "token-transfers": [page([transfer])] }),
+      verify: vi.fn(async () => ({ blockHash, finalized: true, receiptSuccess: false, tokenDecimals: 6, logs: [{ address: tokenAddress, logIndex: 1,
+        topics: ["0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef", padHex(accountId.slice(5) as `0x${string}`, { size: 32 }), padHex(to as `0x${string}`, { size: 32 })],
+        data: toHex(2_000_000n, { size: 32 }) }] })) });
+    const result = await source.page(request);
+    expect(result.complete).toBe(false);
+    expect(result.events.every((event) => event.counterpartyAccountId === null)).toBe(true);
+  });
+
+  it("rejects an indexer page containing a proven transfer unrelated to the requested wallet", async () => {
+    const from = "0x2222222222222222222222222222222222222222";
+    const to = "0x3333333333333333333333333333333333333333";
+    const tokenAddress = "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
+    const transfer = { block_hash: blockHash, block_number: 100, transaction_hash: txHash, timestamp: "2026-09-20T12:00:00Z",
+      from: { hash: from }, to: { hash: to }, log_index: 1, token_type: "ERC-20", token: { address_hash: tokenAddress, decimals: "6" }, total: { value: "2000000" } };
+    const proof = { blockHash, blockTimestamp: BigInt(Date.parse("2026-09-20T12:00:00.000Z") / 1000), finalized: true, receiptSuccess: true, tokenDecimals: 6,
+      logs: [{ address: tokenAddress, logIndex: 1, topics: ["0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
+        padHex(from, { size: 32 }), padHex(to, { size: 32 })], data: toHex(2_000_000n, { size: 32 }) }] };
+    const source = new BaseChainSource({ apiKey: "test", fetcher: chainFetch({ transactions: [page([])], "internal-transactions": [page([])], "token-transfers": [page([transfer])] }), verify: vi.fn(async () => proof) });
+    expect((await source.page(request)).complete).toBe(false);
+  });
+
   it("requires explicit terminal pages for all three independent streams", async () => {
     const fetcher = chainFetch({ transactions: [page([tx], { block_number: 100, index: 0 }), page([])], "internal-transactions": [page([])], "token-transfers": [page([])] });
     const source = new BaseChainSource({ apiKey: "test", fetcher, verify: verified });
@@ -33,7 +117,7 @@ describe("Base chain history source", () => {
     expect(second.nextCursor).toBeNull();
     expect(first.events[0]).toMatchObject({ assetId: "8453:native", rawDelta: "-100", finality: "finalized" });
     expect(first.events.find((item) => item.kind === "fee")?.rawDelta).toBe("-6");
-    expect(JSON.parse(first.events[0].evidenceJson)).toHaveProperty("providerDigest");
+    expect(JSON.parse(first.events[0].evidenceJson)).toMatchObject({ sourceEvidenceVersion: 2, providerDigest: expect.any(String) });
     expect(fetcher).toHaveBeenCalledTimes(4);
   });
 
@@ -48,6 +132,8 @@ describe("Base chain history source", () => {
     expect((await duplicate.page({ ...request, cursor: d1.nextCursor })).complete).toBe(false);
     const malformed = new BaseChainSource({ apiKey: "test", fetcher: chainFetch({ transactions: [page([{ ...tx, value: "1.5" }])], "internal-transactions": [page([])], "token-transfers": [page([])] }), verify: verified });
     expect((await malformed.page(request)).complete).toBe(false);
+    const roundedAmount = new BaseChainSource({ apiKey: "test", fetcher: chainFetch({ transactions: [page([{ ...tx, value: 9007199254740993 }])], "internal-transactions": [page([])], "token-transfers": [page([])] }), verify: verified });
+    expect((await roundedAmount.page(request)).complete).toBe(false);
     const noIndexedBlock = new BaseChainSource({ apiKey: "test", fetcher: chainFetch({ transactions: [page([{ ...tx, block_hash: null }])], "internal-transactions": [page([])], "token-transfers": [page([])] }), verify: verified });
     expect((await noIndexedBlock.page(request)).complete).toBe(false);
     const changed = new BaseChainSource({ apiKey: "test", fetcher: chainFetch({ transactions: [page([tx])], "internal-transactions": [page([])], "token-transfers": [page([])] }), verify: vi.fn(async () => ({ blockHash, finalized: false, receiptSuccess: false })) });

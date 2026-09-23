@@ -64,9 +64,9 @@ export async function ingestOnePage(
     if (!validateEvent(event, accountId, source.sourceId, from, through) || identities.has(key)) throw new PortfolioIngestError("incomplete_page", "Historical page contains malformed or duplicate evidence.");
     identities.add(key);
     try { JSON.parse(event.evidenceJson); } catch { throw new PortfolioIngestError("incomplete_page", "Historical event evidence is invalid."); }
-    const prior = await db.prepare(`SELECT block_hash, block_number FROM portfolio_events WHERE subject_reference = ? AND source_id = ? AND source_event_id = ? AND ingestion_version = ? AND leg_index = 0`)
-      .bind(subjectReference, source.sourceId, event.sourceEventId, event.ingestionVersion).first<{ block_hash: string | null; block_number: string | null }>();
-    if (prior?.block_hash && prior.block_hash.toLowerCase() !== event.blockHash?.toLowerCase()) {
+    const prior = await db.prepare(`SELECT block_hash, block_number, finality FROM portfolio_events WHERE subject_reference = ? AND source_id = ? AND source_event_id = ? AND ingestion_version = ? AND leg_index = 0`)
+      .bind(subjectReference, source.sourceId, event.sourceEventId, event.ingestionVersion).first<{ block_hash: string | null; block_number: string | null; finality: string }>();
+    if (prior?.block_hash && prior.finality !== "reorged" && prior.block_hash.toLowerCase() !== event.blockHash?.toLowerCase()) {
       const earliest = prior.block_number && /^\d+$/.test(prior.block_number) && BigInt(prior.block_number) < BigInt(event.blockNumber!) ? prior.block_number : event.blockNumber!;
       await invalidateFromBlock(db, subjectReference, 8453, earliest);
       throw new PortfolioIngestError("reorg", "A canonical block changed; derived coverage was invalidated.");
@@ -79,9 +79,13 @@ export async function ingestOnePage(
     (subject_reference, source_id, source_event_id, ingestion_version, leg_index, account_id, asset_id, raw_delta, decimals, event_kind, occurred_at, chain_id, block_number, block_hash, tx_hash, log_index, finality, completeness, group_id, counterparty_account_id, evidence_hash, evidence_json, observed_at)
     VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(subject_reference, source_id, source_event_id, ingestion_version, leg_index) DO UPDATE SET
-      block_number = excluded.block_number, block_hash = excluded.block_hash, finality = excluded.finality,
-      completeness = excluded.completeness, evidence_hash = excluded.evidence_hash, evidence_json = excluded.evidence_json,
-      observed_at = excluded.observed_at WHERE portfolio_events.finality = 'reorged'`)
+      account_id = excluded.account_id, asset_id = excluded.asset_id, raw_delta = excluded.raw_delta,
+      decimals = excluded.decimals, event_kind = excluded.event_kind, occurred_at = excluded.occurred_at,
+      chain_id = excluded.chain_id, block_number = excluded.block_number, block_hash = excluded.block_hash,
+      tx_hash = excluded.tx_hash, log_index = excluded.log_index, finality = excluded.finality,
+      completeness = excluded.completeness, group_id = excluded.group_id, counterparty_account_id = excluded.counterparty_account_id,
+      evidence_hash = excluded.evidence_hash, evidence_json = excluded.evidence_json, observed_at = excluded.observed_at
+      WHERE portfolio_events.finality = 'reorged'`)
     .bind(subjectReference, source.sourceId, event.sourceEventId, event.ingestionVersion, accountId, event.assetId, event.rawDelta, event.decimals, event.kind, event.occurredAt, event.chainId, event.blockNumber, event.blockHash, event.txHash, event.logIndex, event.finality, event.completeness, event.groupId, event.counterpartyAccountId, await sha256(event.evidenceJson), event.evidenceJson, now.toISOString())));
   statements.push(db.prepare(`INSERT INTO portfolio_source_checkpoints
     (subject_reference, account_id, source_id, cursor, covered_from, covered_through, last_finalized_block, last_finalized_hash, ingestion_version, status, reason, updated_at)

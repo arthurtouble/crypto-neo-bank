@@ -1,4 +1,4 @@
-import { createPublicClient, http } from "viem";
+import { createPublicClient, decodeEventLog, erc20Abi, http } from "viem";
 import { base } from "viem/chains";
 import type { AccountId, HistoricalEvent, HistoricalEventSource, HistoryPage } from "@/lib/portfolio/types";
 
@@ -6,19 +6,33 @@ const SOURCE_ID = "blockscout:8453";
 const STREAMS = ["transactions", "internal-transactions", "token-transfers"] as const;
 type Stream = typeof STREAMS[number];
 type Cursor = { version: 1; accountId: AccountId; from: string; through: string; pages: Record<Stream, Record<string, string | number> | null>; seen: string[] };
-type VerifyResult = { blockHash: string | null; finalized: boolean; receiptSuccess: boolean };
+type VerifyResult = { blockHash: string | null; blockTimestamp?: bigint; transactionIndex?: number; finalized: boolean; receiptSuccess: boolean; logs?: unknown; tokenDecimals?: unknown };
 type Options = { apiKey?: string; fetcher?: (url: string, init?: RequestInit) => Promise<Response>; verify?: (hash: `0x${string}`, blockNumber: bigint) => Promise<VerifyResult>; confirmationDepth?: bigint };
 type RecordValue = Record<string, unknown>;
 
 function record(value: unknown): RecordValue | null { return value && typeof value === "object" && !Array.isArray(value) ? value as RecordValue : null; }
 function address(value: unknown): string | null { const hash = record(value)?.hash; return typeof hash === "string" && /^0x[a-f0-9]{40}$/i.test(hash) ? hash.toLowerCase() : null; }
-function integer(value: unknown): bigint | null { return (typeof value === "string" || typeof value === "number") && /^(0|[1-9]\d*)$/.test(String(value)) ? BigInt(value) : null; }
+function integer(value: unknown): bigint | null { return (typeof value === "string" || typeof value === "number" && Number.isSafeInteger(value)) && /^(0|[1-9]\d*)$/.test(String(value)) ? BigInt(value) : null; }
 function hash(value: unknown): `0x${string}` | null { return typeof value === "string" && /^0x[a-f0-9]{64}$/i.test(value) ? value.toLowerCase() as `0x${string}` : null; }
 function iso(value: unknown): string | null { return typeof value === "string" && Number.isFinite(Date.parse(value)) ? new Date(value).toISOString() : null; }
 function tokenDecimals(value: unknown): number | null {
   if (typeof value !== "number" && (typeof value !== "string" || !/^(0|[1-9]\d*)$/.test(value))) return null;
   const n = Number(value);
   return Number.isInteger(n) && n >= 0 && n <= 36 ? n : null;
+}
+function matchesTransferLog(logs: unknown, input: { contract: string; from: string; to: string; value: bigint; logIndex: number }): boolean {
+  if (!Array.isArray(logs)) return false;
+  return logs.some((item) => {
+    const log = record(item);
+    if (!log || typeof log.address !== "string" || log.address.toLowerCase() !== input.contract.toLowerCase() || log.logIndex !== input.logIndex
+      || typeof log.data !== "string" || !/^0x(?:[a-f0-9]{2})*$/i.test(log.data) || !Array.isArray(log.topics)
+      || !log.topics.every((topic) => typeof topic === "string" && /^0x[a-f0-9]{64}$/i.test(topic))) return false;
+    try {
+      const decoded = decodeEventLog({ abi: erc20Abi, eventName: "Transfer", data: log.data as `0x${string}`,
+        topics: log.topics as [`0x${string}`, ...`0x${string}`[]] });
+      return decoded.args.from.toLowerCase() === input.from && decoded.args.to.toLowerCase() === input.to && decoded.args.value === input.value;
+    } catch { return false; }
+  });
 }
 function cursorEncode(value: Cursor): string { return btoa(JSON.stringify(value)); }
 async function digest(value: unknown): Promise<string> {
@@ -100,42 +114,57 @@ export class BaseChainSource implements HistoricalEventSource {
         if (stream === "transactions" && raw.status !== "ok") { valid = false; continue; }
         if (seen.has(sourceRecordId)) { valid = false; continue; }
         seen.add(sourceRecordId);
-        let verification: VerifyResult;
-        try { verification = await (this.options.verify ?? ((h, n) => this.verifyRpc(h, n)))(txHash, blockNumber); }
-        catch { valid = false; continue; }
         const indexedHash = hash(raw.block_hash);
-        const rpcHash = hash(verification.blockHash);
         if (!indexedHash) { valid = false; continue; }
+        let verification: VerifyResult;
+        try { verification = await (this.options.verify ?? ((h, n) => this.verifyRpc(h, n, indexedHash, stream === "token-transfers" ? contract as `0x${string}` : null)))(txHash, blockNumber); }
+        catch { valid = false; continue; }
+        const rpcHash = hash(verification.blockHash);
         const changed = rpcHash !== indexedHash;
+        const canonicalTime = typeof verification.blockTimestamp === "bigint" && verification.blockTimestamp >= 0n
+          && verification.blockTimestamp <= 8_640_000_000_000n ? new Date(Number(verification.blockTimestamp) * 1000).toISOString() : null;
+        if (!changed && !canonicalTime) { valid = false; continue; }
+        const observedAt = canonicalTime ?? occurredAt;
         const finalized = !changed && Boolean(rpcHash && verification.finalized && verification.receiptSuccess);
         if (!finalized) valid = false;
+        const tokenProven = stream === "token-transfers" && !changed && tokenDecimals(verification.tokenDecimals) === decimals
+          && matchesTransferLog(verification.logs, { contract: String(contract), from, to, value, logIndex: raw.log_index as number });
+        if (stream === "token-transfers" && !changed && !tokenProven) { valid = false; continue; }
         const providerDigest = await digest(raw);
-        const identities: Array<{ suffix: string; delta: bigint }> = [];
-        if (from === wallet) identities.push({ suffix: "out", delta: -value });
-        if (to === wallet) identities.push({ suffix: "in", delta: value });
+        const identities: Array<{ suffix: string; delta: bigint; counterparty: string }> = [];
+        if (from === wallet) identities.push({ suffix: "out", delta: -value, counterparty: to });
+        if (to === wallet) identities.push({ suffix: "in", delta: value, counterparty: from });
+        if (!identities.length) { valid = false; continue; }
         const assetId = stream === "token-transfers" ? `8453:${String(contract).toLowerCase()}` : "8453:native";
         for (const identity of identities) {
           const sourceEventId = `${sourceRecordId}:${identity.suffix}`;
-          all.push({ sourceId: SOURCE_ID, sourceName: "Blockscout Pro Base", sourceEventId, ingestionVersion: 1, accountId: input.accountId, assetId, rawDelta: identity.delta.toString(), decimals, kind: "unknown", occurredAt, chainId: 8453, blockNumber: blockNumber.toString(), blockHash: rpcHash, txHash, logIndex: stream === "token-transfers" ? raw.log_index as number : null, finality: changed ? "reorged" : finalized ? "finalized" : "pending", completeness: changed ? "partial" : finalized ? "complete" : "unfinalized", groupId: txHash, counterpartyAccountId: null, evidenceJson: JSON.stringify({ stream, providerDigest, indexedBlockHash: indexedHash, receiptSuccess: verification.receiptSuccess }) });
+          all.push({ sourceId: SOURCE_ID, sourceName: "Blockscout Pro Base", sourceEventId, ingestionVersion: 1, accountId: input.accountId, assetId, rawDelta: identity.delta.toString(), decimals, kind: "unknown", occurredAt: observedAt, chainId: 8453, blockNumber: blockNumber.toString(), blockHash: rpcHash, txHash, logIndex: stream === "token-transfers" ? raw.log_index as number : null, finality: changed ? "reorged" : finalized ? "finalized" : "pending", completeness: changed ? "partial" : finalized ? "complete" : "unfinalized", groupId: txHash, counterpartyAccountId: tokenProven && finalized ? `8453:${identity.counterparty}` as AccountId : null, evidenceJson: JSON.stringify({ sourceEvidenceVersion: 2, stream, providerDigest, indexedBlockHash: indexedHash, receiptSuccess: verification.receiptSuccess, transactionIndex: verification.transactionIndex, effectProof: tokenProven && finalized ? "receipt_log_and_onchain_decimals" : null }) });
         }
         if (stream === "transactions" && from === wallet) {
           const gasUsed = integer(raw.gas_used);
           const gasPrice = integer(raw.gas_price);
           const fee = gasUsed !== null && gasPrice !== null ? gasUsed * gasPrice : null;
           if (fee === null) valid = false;
-          else if (fee > 0n) all.push({ sourceId: SOURCE_ID, sourceName: "Blockscout Pro Base", sourceEventId: `${txHash}:fee`, ingestionVersion: 1, accountId: input.accountId, assetId: "8453:native", rawDelta: (-fee).toString(), decimals: 18, kind: "fee", occurredAt, chainId: 8453, blockNumber: blockNumber.toString(), blockHash: rpcHash, txHash, logIndex: null, finality: changed ? "reorged" : finalized ? "finalized" : "pending", completeness: finalized ? "complete" : "partial", groupId: txHash, counterpartyAccountId: null, evidenceJson: JSON.stringify({ stream, providerDigest, receiptSuccess: verification.receiptSuccess }) });
+          else if (fee > 0n) all.push({ sourceId: SOURCE_ID, sourceName: "Blockscout Pro Base", sourceEventId: `${txHash}:fee`, ingestionVersion: 1, accountId: input.accountId, assetId: "8453:native", rawDelta: (-fee).toString(), decimals: 18, kind: "fee", occurredAt: observedAt, chainId: 8453, blockNumber: blockNumber.toString(), blockHash: rpcHash, txHash, logIndex: null, finality: changed ? "reorged" : finalized ? "finalized" : "pending", completeness: finalized ? "complete" : "partial", groupId: txHash, counterpartyAccountId: null, evidenceJson: JSON.stringify({ sourceEvidenceVersion: 2, stream, providerDigest, receiptSuccess: verification.receiptSuccess }) });
         }
       }
     }
-    const bounded = all.filter((event) => event.occurredAt >= input.from && event.occurredAt < input.through);
+    const bounded = all.filter((event) => event.finality === "reorged" || event.occurredAt >= input.from && event.occurredAt < input.through);
     if (!valid) return empty(bounded);
     const complete = STREAMS.every((stream) => next[stream] === null);
     return { events: bounded, nextCursor: complete ? null : cursorEncode({ version: 1, accountId: input.accountId, from: input.from, through: input.through, pages: next, seen: [...seen].slice(-200) }), coveredThrough: complete ? input.through : input.from, complete, sourceId: SOURCE_ID };
   }
 
-  private async verifyRpc(txHash: `0x${string}`, blockNumber: bigint): Promise<VerifyResult> {
+  private async verifyRpc(txHash: `0x${string}`, blockNumber: bigint, indexedHash: `0x${string}`, tokenContract: `0x${string}` | null): Promise<VerifyResult> {
     const client = createPublicClient({ chain: base, transport: http() });
-    const [receipt, block, tip] = await Promise.all([client.getTransactionReceipt({ hash: txHash }), client.getBlock({ blockNumber }), client.getBlockNumber()]);
-    return { blockHash: block.hash, receiptSuccess: receipt.status === "success" && receipt.blockHash === block.hash, finalized: tip >= blockNumber + (this.options.confirmationDepth ?? 20n) };
+    const [block, tip] = await Promise.all([client.getBlock({ blockNumber }), client.getBlockNumber()]);
+    if (block.hash.toLowerCase() !== indexedHash) return { blockHash: block.hash, blockTimestamp: block.timestamp, receiptSuccess: false, finalized: false };
+    const receipt = await client.getTransactionReceipt({ hash: txHash });
+    const decimals = tokenContract && receipt.status === "success" && receipt.blockHash === block.hash
+      ? await client.readContract({ address: tokenContract, abi: erc20Abi, functionName: "decimals", blockNumber }) : null;
+    return { blockHash: block.hash, blockTimestamp: block.timestamp, transactionIndex: receipt.transactionIndex,
+      receiptSuccess: receipt.status === "success" && receipt.blockHash === block.hash && receipt.blockNumber === blockNumber
+      && receipt.transactionHash.toLowerCase() === txHash,
+      finalized: tip >= blockNumber + (this.options.confirmationDepth ?? 20n), logs: receipt.logs, tokenDecimals: decimals };
   }
 }

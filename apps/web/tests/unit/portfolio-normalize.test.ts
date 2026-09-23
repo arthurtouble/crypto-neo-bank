@@ -36,6 +36,15 @@ describe("portfolio event normalization", () => {
     expect(result.events.map((row) => row.kind)).toEqual(Array(4).fill("internal_transfer"));
   });
 
+  it("does not pair transfer legs observed on different canonical blocks", () => {
+    const outbound = event("move-out", "-2000000", { counterpartyAccountId: B });
+    const inbound = event("move-in", "2000000", { accountId: B, counterpartyAccountId: A,
+      blockHash: `0x${"3".repeat(64)}` });
+    const result = normalizeEconomicEvents([outbound, inbound], new Set([A, B]));
+    expect(result.unresolved).toHaveLength(2);
+    expect(result.events.every((item) => item.kind === "unknown" && item.completeness === "partial")).toBe(true);
+  });
+
   it("leaves an unmatched owned-wallet side incomplete until the other source page arrives", () => {
     const result = normalizeEconomicEvents([event("tx:0", "-2000000", { counterpartyAccountId: B })], new Set([A, B]));
     expect(result.events[0]).toMatchObject({ kind: "unknown", completeness: "partial" });

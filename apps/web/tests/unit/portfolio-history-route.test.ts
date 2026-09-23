@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const wallet = "8453:0x1111111111111111111111111111111111111111";
 const external = "8453:0x2222222222222222222222222222222222222222";
-const state = vi.hoisted(() => ({ authorized: true, betaAllowed: true, rebuildHeld: false, accounts: [] as Array<{ accountId: string; origin: string }>, rows: [] as Record<string, unknown>[], checkpoints: [] as Record<string, unknown>[], nonfinal: [] as Record<string, unknown>[], calls: [] as Array<{ sql: string; values: unknown[] }>, aaveUnavailable: false, markerVersion: 1 as number | null }));
-vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: { prepare(sql: string) { const query = { values: [] as unknown[], bind(...values: unknown[]) { this.values = values; state.calls.push({ sql, values }); return this; }, async first() { if (sql.includes("portfolio_publications")) return state.rebuildHeld ? null : { calculation_version: state.markerVersion }; return { version: state.rows.length ? Math.max(...state.rows.map((row) => Number(row.calculation_version))) : null }; }, async all() { if (sql.includes("portfolio_daily_results")) return { results: state.rows.filter((row) => row.calculation_version === this.values[1]) }; if (sql.includes("portfolio_source_checkpoints")) return { results: state.checkpoints }; if (sql.includes("portfolio_events")) return { results: state.nonfinal }; return { results: [] }; } }; return query; } } } }));
+const state = vi.hoisted(() => ({ authorized: true, betaAllowed: true, rebuildHeld: false, legacyEvidence: false, accounts: [] as Array<{ accountId: string; origin: string }>, rows: [] as Record<string, unknown>[], checkpoints: [] as Record<string, unknown>[], nonfinal: [] as Record<string, unknown>[], calls: [] as Array<{ sql: string; values: unknown[] }>, aaveUnavailable: false, markerVersion: 1 as number | null }));
+vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: { prepare(sql: string) { const query = { values: [] as unknown[], bind(...values: unknown[]) { this.values = values; state.calls.push({ sql, values }); return this; }, async first() { if (sql.includes("portfolio_publications")) return state.rebuildHeld || state.legacyEvidence && sql.includes("sourceEvidenceVersion") ? null : { calculation_version: state.markerVersion }; return { version: state.rows.length ? Math.max(...state.rows.map((row) => Number(row.calculation_version))) : null }; }, async all() { if (sql.includes("portfolio_daily_results")) return { results: state.rows.filter((row) => row.calculation_version === this.values[1]) }; if (sql.includes("portfolio_source_checkpoints")) return { results: state.checkpoints }; if (sql.includes("portfolio_events")) return { results: state.nonfinal }; return { results: [] }; } }; return query; } } } }));
 vi.mock("@/lib/auth/server", () => { class AuthenticationError extends Error {} return { AuthenticationError, requireVerifiedSubject: async () => { if (!state.authorized) throw new AuthenticationError(); return { subjectReference: "subject-a" }; } }; });
 vi.mock("@/lib/beta/access", () => { class BetaAccessError extends Error { code = "beta_access_required"; } return { BetaAccessError, requireBetaAccess: async () => { if (!state.betaAllowed) throw new BetaAccessError(); } }; });
 vi.mock("@/lib/security/rate-limit", () => ({ RateLimitError: class extends Error {}, enforceRateLimit: async () => undefined }));
@@ -16,9 +16,18 @@ type HistoryBody = { points: Array<{ day: string; netValueUsd: string | null; tw
 async function readBody(response: Response): Promise<HistoryBody> { return response.json() as Promise<HistoryBody>; }
 function request(range = "7D") { return new Request(`https://aurel.test/api/portfolio/history?range=${range}`); }
 function lastCompletedDay() { const now = new Date(); return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) - 86_400_000).toISOString().slice(0, 10); }
-beforeEach(() => { state.authorized = true; state.betaAllowed = true; state.rebuildHeld = false; state.accounts = [{ accountId: wallet, origin: "embedded" }]; state.rows = []; state.checkpoints = []; state.nonfinal = []; state.calls = []; state.aaveUnavailable = false; state.markerVersion = 1; });
+beforeEach(() => { state.authorized = true; state.betaAllowed = true; state.rebuildHeld = false; state.legacyEvidence = false; state.accounts = [{ accountId: wallet, origin: "embedded" }]; state.rows = []; state.checkpoints = []; state.nonfinal = []; state.calls = []; state.aaveUnavailable = false; state.markerVersion = 1; });
 
 describe("portfolio history read boundary", () => {
+  it("hides a pre-upgrade publication despite complete old checkpoints", async () => {
+    const day = lastCompletedDay();
+    state.legacyEvidence = true;
+    state.rows = [{ day, calculation_version: 1, net_value_usd: "100", twr_index: "1", coverage_status: "complete", coverage_json: JSON.stringify(["blockscout:8453", "aave:v3:8453"].map((sourceId) => ({ day, accountId: wallet, sourceId, ingestionVersion: 1, eventStatus: "complete", priceStatus: "complete", reason: null }))) }];
+    state.checkpoints = ["blockscout:8453", "aave:v3:8453"].map((source_id) => ({ account_id: wallet, source_id, covered_from: "2023-01-01T00:00:00Z", covered_through: "2099-01-01T00:00:00Z", status: "complete", ingestion_version: 1 }));
+    const body = await readBody(await GET(request()));
+    expect(body.calculationVersion).toBe(0);
+    expect(body.points.at(-1)).toMatchObject({ netValueUsd: null, status: "partial" });
+  });
   it("ends seven-day history on the last completed UTC day", async () => {
     const body = await readBody(await GET(request("7D")));
     const utcMidnight = Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate());

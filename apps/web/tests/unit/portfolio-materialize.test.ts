@@ -8,8 +8,9 @@ const accountId = "8453:0x1111111111111111111111111111111111111111" as const;
 const state = vi.hoisted(() => ({ prices: [] as PriceObservation[], priceCalls: 0 }));
 vi.mock("@/lib/portfolio/prices", () => ({ loadObservedUsdPrices: async () => { state.priceCalls++; return state.prices; } }));
 import { materializePortfolioDaily } from "@/lib/portfolio/materialize";
+import { CURRENT_PUBLICATION_SQL } from "@/lib/portfolio/publication";
 
-const raw: HistoricalEvent = { sourceId: "blockscout:8453", sourceName: "Blockscout Pro Base", sourceEventId: "first", ingestionVersion: 1, accountId, assetId: "8453:native", rawDelta: "1000000000000000000", decimals: 18, kind: "contribution", occurredAt: "2026-09-15T12:00:00Z", chainId: 8453, blockNumber: "100", blockHash: `0x${"a".repeat(64)}`, txHash: `0x${"b".repeat(64)}`, logIndex: null, finality: "finalized", completeness: "complete", groupId: null, counterpartyAccountId: null, evidenceJson: "{}" };
+const raw: HistoricalEvent = { sourceId: "blockscout:8453", sourceName: "Blockscout Pro Base", sourceEventId: "first", ingestionVersion: 1, accountId, assetId: "8453:native", rawDelta: "1000000000000000000", decimals: 18, kind: "contribution", occurredAt: "2026-09-15T12:00:00Z", chainId: 8453, blockNumber: "100", blockHash: `0x${"a".repeat(64)}`, txHash: `0x${"b".repeat(64)}`, logIndex: null, finality: "finalized", completeness: "complete", groupId: null, counterpartyAccountId: null, evidenceJson: '{"sourceEvidenceVersion":2}' };
 const checkpoints = ["blockscout:8453", "aave:v3:8453"].map((source_id) => ({ account_id: accountId, source_id, cursor: null, covered_from: "2023-01-01T00:00:00.000Z", covered_through: "2026-09-22T00:00:00.000Z", status: "complete", ingestion_version: 1, last_finalized_block: "100", last_finalized_hash: `0x${"a".repeat(64)}` }));
 function database() {
   const store = { checkpointRows: [...checkpoints] as Record<string, unknown>[], eventRows: [] as Record<string, unknown>[], marker: null as Record<string, unknown> | null, rebuildHold: null as null | { rebuild_id: string }, dailyCount: 7, priorPrice: null as Record<string, unknown> | null, batches: [] as Array<Array<{ sql: string; values: unknown[] }>>, calls: [] as Array<{ sql: string; values: unknown[] }> };
@@ -21,6 +22,29 @@ const now = new Date("2026-09-22T12:00:00Z");
 beforeEach(() => { state.priceCalls = 0; state.prices = Array.from({ length: 7 }, (_, index) => ({ assetId: "8453:native", day: `2026-09-${String(index + 15).padStart(2, "0")}`, usd: "2000", sourceId: "kraken-spot-ohlc", observedAt: "2026-09-22T10:00:00Z", methodology: "ETHUSD:UTC-daily-close", version: 1 })); });
 
 describe("bounded portfolio daily publication", () => {
+  it("uses the same source-evidence gate for published history and tax reads", () => {
+    const sqlite = new DatabaseSync(":memory:");
+    try {
+      sqlite.exec("CREATE TABLE portfolio_publications (subject_reference TEXT PRIMARY KEY, calculation_version INTEGER, status TEXT); CREATE TABLE portfolio_rebuild_holds (subject_reference TEXT PRIMARY KEY); CREATE TABLE portfolio_events (subject_reference TEXT, source_id TEXT, evidence_json TEXT);");
+      sqlite.prepare("INSERT INTO portfolio_publications VALUES (?, ?, ?)").run("subject-a", 3, "published");
+      const insert = sqlite.prepare("INSERT INTO portfolio_events VALUES (?, ?, ?)");
+      insert.run("subject-a", "blockscout:8453", "{}");
+      expect(sqlite.prepare(CURRENT_PUBLICATION_SQL).get("subject-a")).toBeUndefined();
+      sqlite.exec("DELETE FROM portfolio_events");
+      insert.run("subject-a", "blockscout:8453", '{"sourceEvidenceVersion":2}');
+      expect(sqlite.prepare(CURRENT_PUBLICATION_SQL).get("subject-a")).toMatchObject({ calculation_version: 3 });
+      insert.run("subject-a", "blockscout:8453", "malformed");
+      expect(sqlite.prepare(CURRENT_PUBLICATION_SQL).get("subject-a")).toBeUndefined();
+    } finally { sqlite.close(); }
+  });
+  it("holds pre-upgrade finalized history until a subject-scoped source replay", async () => {
+    const { db, store } = database();
+    store.marker = { input_digest: "prior-published-digest", calculation_version: 3 };
+    store.eventRows = [eventRow({ ...raw, evidenceJson: "{}" })];
+    await expect(materializePortfolioDaily(db, "subject-a", [accountId], { now })).rejects.toMatchObject({ code: "incomplete_event" });
+    expect(state.priceCalls).toBe(0);
+    expect(store.batches).toHaveLength(0);
+  });
   it("refuses incomplete source checkpoints without writing a daily projection", async () => {
     const { db, store } = database();
     store.checkpointRows.pop();

@@ -122,12 +122,86 @@ describe("covered historical portfolio values", () => {
     incoming.groupId = "move";
     incoming.accountId = B;
     incoming.counterpartyAccountId = A;
-    incoming.occurredAt = `${days[1]}T09:59:59.000Z`;
     const result = calculatePortfolioDays({ events: [initial, outgoing, incoming], prices: days.map((day) => price(day, "1")),
       coverage: days.flatMap((day) => [cover(day), { ...cover(day), accountId: B }]), calculationVersion: 2 });
     expect(result.disposals).toEqual([]);
     expect(result.lots.filter((lot) => lot.accountId === A)[0]).toMatchObject({ rawRemaining: "60000000" });
     expect(result.lots.filter((lot) => lot.accountId === B)[0]).toMatchObject({ rawRemaining: "40000000", basisUsd: "40", classification: "supported" });
+  });
+
+  it("attaches transferred FIFO basis to the matching log when equal transfers share a transaction", () => {
+    const B = "8453:0x00000000000000000000000000000000000000b2" as AccountId;
+    const first = event(days[0], "first", "2000000", "contribution");
+    first.evidenceJson = '{"taxSupport":{"acquisitionCostUsd":"1","evidenceReference":"provider:first"}}';
+    const second = event(days[0], "second", "2000000", "contribution");
+    second.occurredAt = `${days[0]}T11:00:00.000Z`;
+    second.evidenceJson = '{"taxSupport":{"acquisitionCostUsd":"3","evidenceReference":"provider:second"}}';
+    const outgoing1 = event(days[1], "out-1", "-2000000", "internal_transfer");
+    outgoing1.groupId = "same-tx"; outgoing1.logIndex = 1; outgoing1.counterpartyAccountId = B;
+    const outgoing2 = event(days[1], "out-2", "-2000000", "internal_transfer");
+    outgoing2.groupId = "same-tx"; outgoing2.logIndex = 2; outgoing2.counterpartyAccountId = B;
+    const incoming2 = event(days[1], "in-a-log-2", "2000000", "internal_transfer");
+    incoming2.groupId = "same-tx"; incoming2.logIndex = 2; incoming2.accountId = B; incoming2.counterpartyAccountId = A;
+    const incoming1 = event(days[1], "in-z-log-1", "2000000", "internal_transfer");
+    incoming1.groupId = "same-tx"; incoming1.logIndex = 1; incoming1.accountId = B; incoming1.counterpartyAccountId = A;
+    const result = calculatePortfolioDays({ events: [first, second, outgoing1, outgoing2, incoming2, incoming1],
+      prices: days.map((day) => price(day, "1")), coverage: days.flatMap((day) => [cover(day), { ...cover(day), accountId: B }]), calculationVersion: 2 });
+    expect(result.disposals).toEqual([]);
+    expect(result.lots.find((lot) => lot.sourceEventId.endsWith("in-z-log-1:basis-0"))).toMatchObject({ basisUsd: "1" });
+    expect(result.lots.find((lot) => lot.sourceEventId.endsWith("in-a-log-2:basis-0"))).toMatchObject({ basisUsd: "3" });
+  });
+
+  it("does not support basis for same-block transfers without transaction order evidence", () => {
+    const B = "8453:0x00000000000000000000000000000000000000b2" as AccountId;
+    const prior = event(days[0], "prior", "1000000", "contribution");
+    prior.evidenceJson = '{"taxSupport":{"acquisitionCostUsd":"1","evidenceReference":"provider:prior"}}';
+    const acquire = event(days[1], "m-acquire", "1000000", "contribution");
+    acquire.txHash = `0x${"3".repeat(64)}`;
+    acquire.groupId = "other-tx";
+    acquire.evidenceJson = '{"taxSupport":{"acquisitionCostUsd":"3","evidenceReference":"provider:acquire"}}';
+    const out = event(days[1], "z-out", "-2000000", "internal_transfer");
+    out.groupId = "transfer-tx"; out.counterpartyAccountId = B;
+    const incoming = event(days[1], "a-in", "2000000", "internal_transfer");
+    incoming.groupId = "transfer-tx"; incoming.accountId = B; incoming.counterpartyAccountId = A;
+    const coverage = days.flatMap((day) => [cover(day), { ...cover(day), accountId: B }]);
+    const derived: Array<Array<{ sourceEventId: string; rawRemaining: string; classification: string }>> = [];
+    const permutations = (items: HistoricalEvent[]): HistoricalEvent[][] => items.length === 0 ? [[]]
+      : items.flatMap((item, index) => permutations(items.filter((_, other) => other !== index)).map((rest) => [item, ...rest]));
+    for (const events of permutations([prior, acquire, out, incoming])) {
+      const result = calculatePortfolioDays({ events, prices: days.map((day) => price(day, "1")), coverage, calculationVersion: 2 });
+      expect(result.lots.filter((lot) => lot.accountId === B).every((lot) => lot.classification === "review_required" && lot.basisUsd === null)).toBe(true);
+      derived.push(result.lots.map((lot) => ({ sourceEventId: lot.sourceEventId, rawRemaining: lot.rawRemaining, classification: lot.classification })));
+    }
+    for (const result of derived) expect(result).toEqual(derived[0]);
+    const ordered = [prior, { ...acquire, evidenceJson: '{"transactionIndex":1,"taxSupport":{"acquisitionCostUsd":"3","evidenceReference":"provider:acquire"}}' },
+      { ...out, evidenceJson: '{"transactionIndex":2}' }, { ...incoming, evidenceJson: '{"transactionIndex":2}' }];
+    const supported = calculatePortfolioDays({ events: ordered, prices: days.map((day) => price(day, "1")), coverage, calculationVersion: 2 });
+    expect(supported.lots.filter((lot) => lot.accountId === B).map((lot) => ({ basisUsd: lot.basisUsd, classification: lot.classification })))
+      .toEqual([{ basisUsd: "1", classification: "supported" }, { basisUsd: "3", classification: "supported" }]);
+  });
+
+  it("withholds a competing swap gain when same-block transfer order is unknown", () => {
+    const B = "8453:0x00000000000000000000000000000000000000b2" as AccountId;
+    const first = event(days[0], "first-lot", "1000000", "contribution");
+    first.evidenceJson = '{"taxSupport":{"acquisitionCostUsd":"1","evidenceReference":"provider:first"}}';
+    const second = event(days[0], "second-lot", "1000000", "contribution");
+    second.occurredAt = `${days[0]}T11:00:00.000Z`;
+    second.evidenceJson = '{"taxSupport":{"acquisitionCostUsd":"3","evidenceReference":"provider:second"}}';
+    const coverage = days.flatMap((day) => [cover(day), { ...cover(day), accountId: B }]);
+    for (const [transferHash, swapHash] of [["3", "4"], ["4", "3"]]) {
+      const outgoing = event(days[1], "transfer-out", "-1000000", "internal_transfer");
+      outgoing.groupId = "transfer"; outgoing.counterpartyAccountId = B; outgoing.txHash = `0x${transferHash.repeat(64)}`;
+      const incoming = { ...outgoing, sourceEventId: "transfer-in", accountId: B, rawDelta: "1000000", counterpartyAccountId: A };
+      const sale = event(days[1], "sale", "-1000000", "swap");
+      sale.groupId = "swap"; sale.txHash = `0x${swapHash.repeat(64)}`;
+      sale.evidenceJson = '{"taxSupport":{"disposalProceedsUsd":"5","evidenceReference":"provider:sale"}}';
+      const result = calculatePortfolioDays({ events: [first, second, outgoing, incoming, sale],
+        prices: days.map((day) => price(day, "1")), coverage, calculationVersion: 3 });
+      expect(result.disposals.find((item) => item.sourceEventId.endsWith(":sale"))).toMatchObject({
+        proceedsUsd: "5", basisUsd: null, gainUsd: null, classification: "review_required"
+      });
+      expect(result.lots.filter((lot) => lot.accountId === B).every((lot) => lot.basisUsd === null)).toBe(true);
+    }
   });
 
   it("does not promote gains when source coverage or event classification is incomplete", () => {
