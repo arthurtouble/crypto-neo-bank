@@ -170,6 +170,8 @@ For the authorized workers.dev development rollout, Wrangler again resolved to t
 
 A subsequent shared-gate review found that `featureEnabled` read only the `enabled` column, so a flag explicitly limited to the `operations` audience could pass customer routes. Customer feature checks now require both `enabled = 1` and an `all` or `beta` audience; their callers already require beta access. A regression test failed before this correction and passed afterward. This code change does not alter the stored flags or grant operator access through customer routes.
 
+Code-only candidate `132f61cb-e171-4f85-b263-4a71bdca3dc1` passed parity smoke on its preview URL and was deployed to 100% of the workers.dev development URL. Post-rollout smoke passed and the four money-movement flags remained disabled. This check does not prove an authenticated operations-only flag case against remote D1; the regression is covered in the local test suite.
+
 ## Non-negotiable release rules
 
 - D1 projections are not customer balances, settlement records, provider entitlements, or a substitute for chain/provider reads.
