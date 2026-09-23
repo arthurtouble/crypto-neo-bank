@@ -14,6 +14,7 @@ import { assetNetwork } from "@/lib/swap/picker-model";
 import { displayRawAmount, makeSwapReviewKey, quoteIsFresh } from "@/lib/swap/review-model";
 import { parseSwapDeepLink } from "@/lib/markets/swap-links";
 import { SwapAssetPicker } from "./swap-asset-picker";
+import { SwapReminderPanel } from "./swap-reminder-panel";
 
 type QuoteResponse = { quotes: ValidatedSwapQuote[]; observedAt: string; authority: string; error?: string; message?: string };
 
@@ -112,5 +113,9 @@ export function SwapWorkspace() {
       {quote && !freshQuote && <p className="formWarning">This quote expired. Review routes again.</p>}
       <p className="swapExecutionGate">Trading is unavailable until the route can be independently verified. No wallet approval will be requested.</p>
     </section>}
+    <SwapReminderPanel fromAssetId={fromAssetId} toAssetId={toAssetId} amount={amount} onReview={(saved) => {
+      setFromAssetId(saved.fromAssetId); setToAssetId(saved.toAssetId); setAmount(saved.amount); setAcknowledged(false); clearReview();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }} />
   </section>;
 }

@@ -35,6 +35,20 @@ test("portfolio history gap layout stays readable in desktop and mobile themes w
   }
 });
 
+test("swap reminder controls fit desktop and mobile with reduced motion", async ({ page }) => {
+  const styles = `${readFileSync("src/app/globals.css", "utf8")}\n${readFileSync("src/app/product-system.css", "utf8")}`;
+  for (const width of [1280, 390]) {
+    await page.setViewportSize({ width, height: 844 });
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.setContent(`<meta name="viewport" content="width=device-width, initial-scale=1"><style>${styles}</style><div class="productShell"><main class="productContent"><section class="panel swapPanel"><section class="swapReminders" aria-labelledby="remindersTitle"><div class="swapRemindersHeading"><div><h3 id="remindersTitle">Swap reminders</h3><p>Reminders bring you back to review a live route. They never place a trade.</p></div><button class="button secondary">New reminder</button></div><form class="swapReminderForm"><strong>Remind me about this pair</strong><p>8453:native → 8453:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913</p><label>Amount<input aria-label="Reminder amount"></label><label>Repeat<select><option>Weekly</option></select></label><label>First reminder<input type="datetime-local"></label><button class="button secondary">Save reminder</button></form><h4>Due now</h4><ul class="swapReminderList"><li><div><strong>0.1 · 8453:native → 8453:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913</strong><small>Due today</small></div><button class="button secondary">Review Swap</button></li></ul></section></section></main></div>`);
+    await expect(page.getByRole("heading", { name: "Swap reminders" })).toBeVisible();
+    const dimensions = await page.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, clientWidth: document.documentElement.clientWidth }));
+    expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth + 1);
+    await page.keyboard.press("Tab");
+    await expect(page.getByRole("button", { name: "New reminder" })).toBeFocused();
+  }
+});
+
 test("partner sandbox exercises success and failure workflows", async ({ page }) => {
   test.setTimeout(60_000);
   await page.goto("/app/sandbox");

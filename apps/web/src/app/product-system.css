@@ -492,6 +492,22 @@
 .swapReview span { min-height: 68px; padding: 14px; display: grid; align-content: center; gap: 5px; color: var(--muted); font-size: var(--type-caption); border-right: 1px solid var(--border); }
 .swapReview span:last-child { border-right: 0; }
 .swapReview strong { color: var(--text); font-size: var(--type-label); }
+.swapReminders { margin-top: 24px; padding-top: 22px; border-top: 1px solid var(--border); }
+.swapRemindersHeading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.swapReminders h3, .swapReminders h4 { margin: 0 0 8px; }
+.swapReminders p { color: var(--muted); font-size: var(--type-body-small); }
+.swapReminderForm { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; margin: 16px 0 24px; padding: 16px; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--surface-subtle); }
+.swapReminderForm > strong, .swapReminderForm > p { min-width: 0; flex-basis: 100%; margin: 0; overflow-wrap: anywhere; }
+.swapReminderForm label { min-width: 130px; flex: 1; display: grid; gap: 6px; color: var(--muted); font-size: var(--type-label); }
+.swapReminderForm input, .swapReminderForm select { min-height: 42px; width: 100%; padding: 0 10px; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--surface); color: var(--text); font: inherit; }
+.swapReminderList { margin: 0 0 22px; padding: 0; list-style: none; }
+.swapReminderList li { min-height: 66px; padding: 12px 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--border); }
+.swapReminderList li > div:first-child { min-width: 0; display: grid; gap: 4px; }
+.swapReminderList strong { overflow-wrap: anywhere; font-size: var(--type-body-small); }
+.swapReminderList small { color: var(--muted); font-size: var(--type-caption); }
+.swapReminderActions { display: flex; flex-wrap: wrap; gap: 6px; }
+.swapReminderActions button { min-height: 36px; padding: 0 10px; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--surface); color: var(--text); font: inherit; cursor: pointer; }
+.swapReminderActions button:disabled { opacity: .5; cursor: not-allowed; }
 
 @media (max-width: 720px) {
   .walletHeading { flex-direction: column; align-items: stretch; }
@@ -505,6 +521,8 @@
   .swapReview { grid-template-columns: 1fr; }
   .swapReview span { min-height: 58px; border-right: 0; border-bottom: 1px solid var(--border); }
   .swapReview span:last-child { border-bottom: 0; }
+  .swapRemindersHeading, .swapReminderList li { align-items: stretch; flex-direction: column; }
+  .swapReminderForm label { flex-basis: 100%; }
 }
 
 /* Cards, benefits, and concierge */
