@@ -14,7 +14,7 @@ const chains = {
   8453: { pool: "0x09aea4b2242abC8bb4BB78D537A67a245A7bEC64", usdc: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913" },
   42161: { pool: "0xe35e9842fceaCA96570B734083f4a58e8F7C5f2A", usdc: "0xaf88d065e77c8cc2239327c5edb3a432268e5831" }
 } as const;
-// Across V4 bytes32 event, matching the source ABI in destination-evidence.ts.
+// Across V4 bytes32 event, matching the deposit ABI in destination-evidence.ts.
 const FUNDS_DEPOSITED = parseAbiItem("event FundsDeposited(bytes32 inputToken, bytes32 outputToken, uint256 inputAmount, uint256 outputAmount, uint256 indexed destinationChainId, uint256 indexed depositId, uint32 quoteTimestamp, uint32 fillDeadline, uint32 exclusivityDeadline, bytes32 indexed depositor, bytes32 recipient, bytes32 exclusiveRelayer, bytes message)");
 const depositTopic = "0x32ed1a409ef04c7b0227189c3a103dc5ac10e775a15b785dcc510201f7c25ad3";
 const word = (address: string) => padHex(getAddress(address), { size: 32 }).toLowerCase();

@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS swap_destination_observations (
     AND lower(substr(plan_fingerprint, 3)) NOT GLOB '*[^0-9a-f]*'),
   source_hash TEXT NOT NULL CHECK (length(source_hash) = 66 AND substr(source_hash, 1, 2) = '0x'
     AND lower(substr(source_hash, 3)) NOT GLOB '*[^0-9a-f]*'),
+  source_call_fingerprint TEXT NOT NULL,
   destination_chain_id INTEGER NOT NULL CHECK (destination_chain_id > 0),
   destination_hash TEXT CHECK (destination_hash IS NULL OR (length(destination_hash) = 66
     AND substr(destination_hash, 1, 2) = '0x'
@@ -15,12 +16,16 @@ CREATE TABLE IF NOT EXISTS swap_destination_observations (
   observed_block_hash TEXT CHECK (observed_block_hash IS NULL OR (length(observed_block_hash) = 66
     AND substr(observed_block_hash, 1, 2) = '0x'
     AND lower(substr(observed_block_hash, 3)) NOT GLOB '*[^0-9a-f]*')),
-  provider_status TEXT NOT NULL CHECK (provider_status IN ('PENDING', 'DONE', 'PARTIAL', 'REFUNDED', 'FAILED')),
+  provider_status TEXT NOT NULL CHECK (provider_status IN ('NOT_FOUND', 'INVALID', 'PENDING', 'DONE', 'FAILED')),
+  provider_substatus TEXT CHECK (provider_substatus IS NULL OR provider_substatus IN ('COMPLETED', 'PARTIAL', 'REFUNDED')),
   verification_state TEXT NOT NULL CHECK (verification_state IN
     ('pending', 'complete', 'partial', 'refund_reported', 'failed', 'inconsistent', 'reorged')),
   reason_code TEXT,
   checked_at TEXT NOT NULL,
-  created_at TEXT NOT NULL
+  created_at TEXT NOT NULL,
+  CHECK (verification_state != 'complete' OR (provider_status = 'DONE'
+    AND provider_substatus = 'COMPLETED' AND destination_hash IS NOT NULL
+    AND observed_block_hash IS NOT NULL))
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS swap_destination_chain_hash_unique
@@ -36,6 +41,13 @@ BEFORE INSERT ON swap_destination_observations
 WHEN NOT EXISTS (
   SELECT 1 FROM transaction_intents i
   JOIN swap_quote_plans p ON p.plan_id = NEW.plan_id AND p.intent_id = i.intent_id
+  JOIN intent_prepared_calls source_call ON source_call.intent_id = i.intent_id
+    AND source_call.step_index = 0 AND source_call.semantic_action = 'bridge'
+    AND source_call.verification_state = 'confirmed'
+    AND source_call.chain_id = i.chain_id
+    AND source_call.source_reference = 'swap-plan:' || p.plan_id
+    AND lower(source_call.reported_hash) = lower(NEW.source_hash)
+    AND source_call.call_fingerprint = NEW.source_call_fingerprint
   WHERE i.intent_id = NEW.intent_id AND i.intent_type = 'bridge'
     AND i.status IN ('submitted', 'confirmed')
     AND i.subject_reference = NEW.subject_reference
@@ -43,6 +55,8 @@ WHEN NOT EXISTS (
     AND i.chain_id = p.source_chain_id
     AND lower(i.transaction_hash) = lower(NEW.source_hash)
     AND p.subject_reference = NEW.subject_reference
+    AND source_call.subject_reference = NEW.subject_reference
+    AND lower(source_call.wallet_address) = lower(p.wallet_address)
     AND p.fingerprint = NEW.plan_fingerprint
     AND p.destination_chain_id = NEW.destination_chain_id
 )
@@ -57,6 +71,7 @@ WHEN OLD.intent_id IS NOT NEW.intent_id
   OR OLD.plan_id IS NOT NEW.plan_id
   OR OLD.plan_fingerprint IS NOT NEW.plan_fingerprint
   OR OLD.source_hash IS NOT NEW.source_hash
+  OR OLD.source_call_fingerprint IS NOT NEW.source_call_fingerprint
   OR OLD.destination_chain_id IS NOT NEW.destination_chain_id
   OR (OLD.destination_hash IS NOT NULL AND lower(OLD.destination_hash) IS NOT lower(NEW.destination_hash))
   OR (OLD.observed_block_hash IS NOT NULL AND lower(OLD.observed_block_hash) IS NOT lower(NEW.observed_block_hash))
