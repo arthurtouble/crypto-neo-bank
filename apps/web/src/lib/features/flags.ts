@@ -18,8 +18,8 @@ export class FeatureUnavailableError extends Error {
 }
 
 export async function featureEnabled(database: D1Database, key: FeatureKey): Promise<boolean> {
-  const row = await database.prepare("SELECT enabled FROM feature_flags WHERE flag_key = ?").bind(key).first<{ enabled: number }>();
-  return row ? Boolean(row.enabled) : safeDefaults[key];
+  const row = await database.prepare("SELECT enabled, audience FROM feature_flags WHERE flag_key = ?").bind(key).first<{ enabled: number; audience: string }>();
+  return row ? Boolean(row.enabled) && (row.audience === "all" || row.audience === "beta") : safeDefaults[key];
 }
 
 export async function requireFeature(database: D1Database, key: FeatureKey): Promise<void> {

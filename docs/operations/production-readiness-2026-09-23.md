@@ -168,6 +168,8 @@ A later fail-closed review found that a missing `feature_flags` row still enable
 
 For the authorized workers.dev development rollout, Wrangler again resolved to the intended account and showed only `0029` pending, with all four money-movement flags already `0`. A fresh private mode-`0600` pre-migration export restored in isolated SQLite with `integrity_check = ok` and no foreign-key violations. Migration `0029` applied; candidate Worker version `63272dc7-4a6a-4567-b12b-be672b8ae3c5` retained existing variables, passed parity smoke on its preview URL, and received 100% of development traffic. Post-rollout smoke passed on the public development URL, no migrations remained pending, and all four flags were still `0`. The local branch passed 913 web unit tests plus nine readiness tests, typecheck, lint, web build, and the isolated D1 recovery drill. This is not authorization to activate any money-movement feature or to launch a production financial service.
 
+A subsequent shared-gate review found that `featureEnabled` read only the `enabled` column, so a flag explicitly limited to the `operations` audience could pass customer routes. Customer feature checks now require both `enabled = 1` and an `all` or `beta` audience; their callers already require beta access. A regression test failed before this correction and passed afterward. This code change does not alter the stored flags or grant operator access through customer routes.
+
 ## Non-negotiable release rules
 
 - D1 projections are not customer balances, settlement records, provider entitlements, or a substitute for chain/provider reads.
