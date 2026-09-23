@@ -54,10 +54,17 @@ export async function consumeVerifiedActionPasskey(
         AND EXISTS (SELECT 1 FROM transaction_intents i
           WHERE i.intent_id = action_passkey_challenges.intent_id
             AND i.subject_reference = action_passkey_challenges.subject_reference
-            AND i.intent_type = 'transfer' AND i.status = 'reviewed' AND i.expires_at > ?
+            AND i.intent_type = 'transfer' AND i.chain_id = 8453
+            AND i.status = 'reviewed' AND i.expires_at > ?
             AND (i.release_at IS NULL OR i.release_at <= ?)
             AND json_extract(i.request_json, '$.type') = 'transfer'
             AND json_extract(i.policy_result_json, '$.permitted') = 1
+            AND EXISTS (SELECT 1 FROM wallet_references w
+              JOIN intent_prepared_calls wallet_call ON wallet_call.intent_id = i.intent_id
+                AND wallet_call.step_index = action_passkey_challenges.step_index
+              WHERE w.wallet_reference = i.wallet_reference AND w.subject_reference = i.subject_reference
+                AND w.chain_family = 'evm' AND wallet_call.subject_reference = i.subject_reference
+                AND lower(w.address) = lower(wallet_call.wallet_address))
             AND EXISTS (SELECT 1 FROM address_book_entries a
               WHERE a.subject_reference = i.subject_reference AND a.chain_family = 'evm'
                 AND lower(a.address) = lower(json_extract(i.request_json, '$.destination'))

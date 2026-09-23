@@ -206,8 +206,12 @@ describe("action passkey evidence store", () => {
     ["revoked reviewed decision", `UPDATE transaction_intents SET policy_result_json='{"permitted":false}' WHERE intent_id='intent-1'`],
     ["changed reviewed recipient", `UPDATE transaction_intents SET request_json='{"type":"transfer","destination":"0x3333333333333333333333333333333333333333"}' WHERE intent_id='intent-1'`],
     ["changed reviewed chain", "UPDATE transaction_intents SET chain_id=1 WHERE intent_id='intent-1'"],
+    ["changed linked wallet address", "UPDATE wallet_references SET address='0x3333333333333333333333333333333333333333' WHERE wallet_reference='wallet-a'"],
+    ["changed linked wallet family", "UPDATE wallet_references SET chain_family='solana' WHERE wallet_reference='wallet-a'"],
+    ["both intent and call moved to another chain", "UPDATE transaction_intents SET chain_id=1 WHERE intent_id='intent-1'; UPDATE intent_prepared_calls SET chain_id=1 WHERE intent_id='intent-1'"],
     ["new review delay", "UPDATE transaction_intents SET release_at='2026-09-23T00:02:00.000Z' WHERE intent_id='intent-1'"]
   ])("rejects current %s before consuming the assertion", async (_label, mutation) => {
+    if (_label === "both intent and call moved to another chain") sqlite.exec("DROP TRIGGER intent_prepared_calls_immutable_update");
     sqlite.exec(mutation);
     await expect(consumeVerifiedActionPasskey(database, base)).rejects.toThrow();
     expect(count()).toBe(0);
