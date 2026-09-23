@@ -3,7 +3,7 @@ import { DatabaseSync } from "node:sqlite";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-const state = vi.hoisted(() => ({ database: null as D1Database | null, subject: "alice" as string | null, beta: true, feature: true, catalogEligible: true, country: "PT", rate: true }));
+const state = vi.hoisted(() => ({ database: null as D1Database | null, subject: "alice" as string | null, beta: true, mode: "invite" as "invite" | "preview", feature: true, catalogEligible: true, country: "PT", rate: true }));
 vi.mock("cloudflare:workers", () => ({ env: { get PROJECTION_DB() { return state.database; } } }));
 vi.mock("@/lib/auth/server", () => {
   class AuthenticationError extends Error {}
@@ -16,7 +16,7 @@ vi.mock("@/lib/beta/access", () => {
   class BetaAccessError extends Error { constructor(readonly code: string) { super(code); } }
   return { BetaAccessError, configuredCountries: () => ["PT"], requireBetaAccess: async () => {
     if (!state.beta) throw new BetaAccessError("invite_required");
-    return { countryCode: state.country };
+    return { mode: state.mode, countryCode: state.country };
   } };
 });
 vi.mock("@/lib/features/flags", () => {
@@ -47,9 +47,9 @@ const patch = (body: unknown) => PATCH(new Request("https://aurel.test/api/swap/
 const input = () => ({ pairId: "ETH/USD", direction: "above", threshold: "3500.5" });
 let sqlite: DatabaseSync;
 beforeEach(() => {
-  Object.assign(state, { subject: "alice", beta: true, feature: true, catalogEligible: true, country: "PT", rate: true });
+  Object.assign(state, { subject: "alice", beta: true, mode: "invite", feature: true, catalogEligible: true, country: "PT", rate: true });
   sqlite = new DatabaseSync(":memory:");
-  sqlite.exec("PRAGMA foreign_keys=ON; CREATE TABLE subject_profiles(subject_reference TEXT PRIMARY KEY); CREATE TABLE security_profiles(subject_reference TEXT PRIMARY KEY, account_locked INTEGER NOT NULL); CREATE TABLE audit_events(audit_id TEXT PRIMARY KEY,subject_reference TEXT,actor_type TEXT NOT NULL,actor_reference TEXT NOT NULL,action TEXT NOT NULL,target_type TEXT NOT NULL,target_reference TEXT,evidence_json TEXT NOT NULL,occurred_at TEXT NOT NULL); INSERT INTO subject_profiles VALUES ('alice'),('bob'); INSERT INTO security_profiles VALUES ('alice',0),('bob',0);");
+  sqlite.exec("PRAGMA foreign_keys=ON; CREATE TABLE subject_profiles(subject_reference TEXT PRIMARY KEY); CREATE TABLE security_profiles(subject_reference TEXT PRIMARY KEY, account_locked INTEGER NOT NULL); CREATE TABLE beta_access(subject_reference TEXT PRIMARY KEY,status TEXT NOT NULL,country_code TEXT NOT NULL); CREATE TABLE feature_flags(flag_key TEXT PRIMARY KEY,enabled INTEGER NOT NULL); CREATE TABLE audit_events(audit_id TEXT PRIMARY KEY,subject_reference TEXT,actor_type TEXT NOT NULL,actor_reference TEXT NOT NULL,action TEXT NOT NULL,target_type TEXT NOT NULL,target_reference TEXT,evidence_json TEXT NOT NULL,occurred_at TEXT NOT NULL); INSERT INTO subject_profiles VALUES ('alice'),('bob'); INSERT INTO security_profiles VALUES ('alice',0),('bob',0); INSERT INTO beta_access VALUES ('alice','active','PT'),('bob','active','PT'); INSERT INTO feature_flags VALUES ('swaps',1);");
   sqlite.exec(readFileSync(resolve(process.cwd(), "../../infra/d1/migrations/0022_price_alerts_swap_reminders.sql"), "utf8"));
   state.database = d1(sqlite);
 });
@@ -123,5 +123,55 @@ describe("customer price alert API", () => {
     expect((await post(input())).status).toBe(409);
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM price_alerts").get()).toMatchObject({ count: 0 });
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM audit_events").get()).toMatchObject({ count: 0 });
+  });
+
+  it("does not save an alert if beta status, country or Swap feature changes before the write", async () => {
+    const database = state.database!;
+    for (const [change, restore] of [
+      ["UPDATE beta_access SET status='suspended' WHERE subject_reference='alice'", "UPDATE beta_access SET status='active' WHERE subject_reference='alice'"],
+      ["UPDATE beta_access SET country_code='US' WHERE subject_reference='alice'", "UPDATE beta_access SET country_code='PT' WHERE subject_reference='alice'"],
+      ["UPDATE feature_flags SET enabled=0 WHERE flag_key='swaps'", "UPDATE feature_flags SET enabled=1 WHERE flag_key='swaps'"]
+    ]) {
+      state.database = { ...database, async batch(statements) { sqlite.exec(change); return database.batch(statements); } } as D1Database;
+      expect((await post(input())).status).toBe(409);
+      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM price_alerts").get()).toMatchObject({ count: 0 });
+      sqlite.exec(restore);
+    }
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM audit_events").get()).toMatchObject({ count: 0 });
+  });
+
+  it("keeps preview-mode alerts independent of invite records while still requiring the feature flag", async () => {
+    state.mode = "preview";
+    sqlite.exec("DELETE FROM beta_access WHERE subject_reference='alice'");
+    expect((await post(input())).status).toBe(201);
+    sqlite.exec("UPDATE feature_flags SET enabled=0 WHERE flag_key='swaps'");
+    expect((await post(input())).status).toBe(409);
+  });
+
+  it("does not resume when beta access or the feature is removed after eligibility review", async () => {
+    const { alert } = await (await post(input())).json() as { alert: { alertId: string } };
+    expect((await patch({ alertId: alert.alertId, version: 1, action: "pause" })).status).toBe(200);
+    const database = state.database!;
+    state.database = { ...database, async batch(statements) {
+      sqlite.exec("UPDATE feature_flags SET enabled=0 WHERE flag_key='swaps'");
+      return database.batch(statements);
+    } } as D1Database;
+    expect((await patch({ alertId: alert.alertId, version: 2, action: "resume" })).status).toBe(409);
+    expect(sqlite.prepare("SELECT status,threshold_version FROM price_alerts WHERE alert_id=?").get(alert.alertId)).toMatchObject({ status: "paused", threshold_version: 2 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM audit_events WHERE action='swap.alert.resume'").get()).toMatchObject({ count: 0 });
+  });
+
+  it("records complete before and after customer instructions without signing data", async () => {
+    const { alert } = await (await post({ ...input(), hysteresisBps: 250, cooldownSeconds: 7200 })).json() as { alert: { alertId: string } };
+    const creation = sqlite.prepare("SELECT evidence_json FROM audit_events WHERE action='swap.alert.created'").get() as { evidence_json: string };
+    expect(JSON.parse(creation.evidence_json)).toMatchObject({ before: null, after: {
+      pairId: "ETH/USD", baseAssetId: "8453:native", quoteAssetId: "iso4217:USD", mappingVersion: "kraken-posttrade-eth-usd-v1",
+      direction: "above", threshold: "3500.5", hysteresisBps: 250, cooldownSeconds: 7200, status: "active", version: 1
+    } });
+    expect((await patch({ alertId: alert.alertId, version: 1, action: "edit", direction: "below", threshold: "3200" })).status).toBe(200);
+    const edit = sqlite.prepare("SELECT evidence_json FROM audit_events WHERE action='swap.alert.edit'").get() as { evidence_json: string };
+    expect(JSON.parse(edit.evidence_json)).toMatchObject({ before: { direction: "above", threshold: "3500.5", status: "active", version: 1 },
+      after: { direction: "below", threshold: "3200", hysteresisBps: 250, cooldownSeconds: 7200, status: "active", version: 2 } });
+    expect(edit.evidence_json).not.toContain("walletSignature");
   });
 });
