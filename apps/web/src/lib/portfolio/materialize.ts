@@ -35,9 +35,13 @@ function evidenceRole(event: HistoricalEvent): string | null {
   try { const value = JSON.parse(event.evidenceJson) as { role?: unknown }; return typeof value.role === "string" ? value.role : null; }
   catch { return null; }
 }
-function currentChainEvidence(event: HistoricalEvent): boolean {
-  if (event.sourceId !== "blockscout:8453") return true;
-  try { return (JSON.parse(event.evidenceJson) as { sourceEvidenceVersion?: unknown }).sourceEvidenceVersion === 3; }
+function currentSourceEvidence(event: HistoricalEvent): boolean {
+  if (event.sourceId !== "blockscout:8453" && event.sourceId !== "aave:v3:8453") return true;
+  try {
+    const proof = JSON.parse(event.evidenceJson) as { sourceEvidenceVersion?: unknown; effectProof?: unknown };
+    return event.sourceId === "blockscout:8453" ? proof.sourceEvidenceVersion === 3
+      : proof.sourceEvidenceVersion === 2 && proof.effectProof === "canonical_aave_pool_log";
+  }
   catch { return false; }
 }
 async function digest(value: unknown): Promise<string> {
@@ -86,7 +90,7 @@ export async function materializePortfolioDaily(db: D1Database, subjectReference
   const rawEvents = eventResult.results.filter((row) => allowed.has(row.account_id)).map(toEvent);
   if (rawEvents.some((event) => event.finality !== "finalized" || event.completeness !== "complete" || !/^-?(?:0|[1-9]\d*)$/.test(event.rawDelta)
     || !Number.isInteger(event.decimals) || event.decimals < 0 || event.decimals > 36 || !Number.isInteger(event.ingestionVersion) || event.ingestionVersion < 1
-    || !currentChainEvidence(event)))
+    || !currentSourceEvidence(event)))
     throw new PortfolioMaterializeError("incomplete_event", "Raw event history is incomplete or malformed.");
   const normalized = normalizeEconomicEvents(rawEvents, new Set(accounts));
   if (normalized.unresolved.length) throw new PortfolioMaterializeError("incomplete_event", "Economic event normalization is unresolved.");

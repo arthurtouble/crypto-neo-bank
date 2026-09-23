@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { padHex, toHex } from "viem";
+import { encodeAbiParameters, encodeEventTopics, padHex, parseAbiItem, toHex } from "viem";
 
 const rpc = vi.hoisted(() => ({
   getTransactionReceipt: vi.fn(), getTransaction: vi.fn(), getBlock: vi.fn(), getBlockNumber: vi.fn(), readContract: vi.fn(), request: vi.fn()
@@ -10,6 +10,7 @@ vi.mock("viem", async (importOriginal) => ({
 }));
 
 import { BaseChainSource } from "@/lib/portfolio/chain-source";
+import { BaseAaveSource } from "@/lib/portfolio/aave-source";
 
 describe("canonical Base portfolio effects", () => {
   it("uses the canonical native transaction and receipt fee rather than conflicting indexer fields", async () => {
@@ -115,5 +116,27 @@ describe("canonical Base portfolio effects", () => {
     expect(result.complete).toBe(true);
     expect(result.events[0]).toMatchObject({ occurredAt: "2026-09-20T12:00:00.000Z", rawDelta: "-2000000", counterpartyAccountId: `8453:${to}` });
     expect(JSON.parse(result.events[0].evidenceJson)).toMatchObject({ transactionIndex: 3 });
+  });
+});
+
+describe("canonical Aave Pool receipt", () => {
+  it("rejects a receipt returned for a different transaction hash", async () => {
+    const txHash = `0x${"a".repeat(64)}`;
+    const blockHash = `0x${"b".repeat(64)}`;
+    const wallet = "0x1111111111111111111111111111111111111111" as const;
+    const reserve = "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913" as const;
+    const market = "0xa238dd80c259a72e81d7e4664a9801593f98d1c5" as const;
+    const borrow = parseAbiItem("event Borrow(address indexed reserve, address user, address indexed onBehalfOf, uint256 amount, uint8 interestRateMode, uint256 borrowRate, uint16 indexed referralCode)");
+    rpc.getTransactionReceipt.mockResolvedValue({ status: "success", transactionHash: `0x${"c".repeat(64)}`, blockHash, blockNumber: 100n, logs: [{ address: market, logIndex: 1,
+      topics: encodeEventTopics({ abi: [borrow], eventName: "Borrow", args: { reserve, onBehalfOf: wallet, referralCode: 0 } }),
+      data: encodeAbiParameters([{ type: "address" }, { type: "uint256" }, { type: "uint8" }, { type: "uint256" }], [wallet, 3_000_000n, 2, 1n]) }] });
+    rpc.getBlock.mockResolvedValue({ hash: blockHash, timestamp: BigInt(Date.parse("2026-09-20T12:00:00Z") / 1000) });
+    rpc.getBlockNumber.mockResolvedValue(200n);
+    const call = vi.fn(async () => ({ data: { v3: { items: [{ txHash, timestamp: "2026-09-20T12:00:00Z", reserve: { underlyingToken: reserve, decimals: 6 }, amount: "3", market,
+      __typename: "Borrow", logIndex: 1, blockNumber: 100, blockHash }], pageInfo: { hasNextPage: false } } } }));
+    const result = await new BaseAaveSource({ call }).page({ accountId: `8453:${wallet}`, cursor: null,
+      from: "2026-09-20T00:00:00.000Z", through: "2026-09-21T00:00:00.000Z", limit: 10 });
+    expect(result.complete).toBe(false);
+    expect(result.events).toEqual([]);
   });
 });

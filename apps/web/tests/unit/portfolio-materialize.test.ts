@@ -36,6 +36,11 @@ describe("bounded portfolio daily publication", () => {
       sqlite.exec("DELETE FROM portfolio_events");
       insert.run("subject-a", "blockscout:8453", '{"sourceEvidenceVersion":3}');
       expect(sqlite.prepare(CURRENT_PUBLICATION_SQL).get("subject-a")).toMatchObject({ calculation_version: 3 });
+      insert.run("subject-a", "aave:v3:8453", '{"role":"protocol_activity"}');
+      expect(sqlite.prepare(CURRENT_PUBLICATION_SQL).get("subject-a")).toBeUndefined();
+      sqlite.exec("DELETE FROM portfolio_events WHERE source_id = 'aave:v3:8453'");
+      insert.run("subject-a", "aave:v3:8453", '{"sourceEvidenceVersion":2,"effectProof":"canonical_aave_pool_log"}');
+      expect(sqlite.prepare(CURRENT_PUBLICATION_SQL).get("subject-a")).toMatchObject({ calculation_version: 3 });
       insert.run("subject-a", "blockscout:8453", "malformed");
       expect(sqlite.prepare(CURRENT_PUBLICATION_SQL).get("subject-a")).toBeUndefined();
     } finally { sqlite.close(); }
@@ -44,6 +49,13 @@ describe("bounded portfolio daily publication", () => {
     const { db, store } = database();
     store.marker = { input_digest: "prior-published-digest", calculation_version: 3 };
     store.eventRows = [eventRow({ ...raw, evidenceJson: '{"sourceEvidenceVersion":2}' })];
+    await expect(materializePortfolioDaily(db, "subject-a", [accountId], { now })).rejects.toMatchObject({ code: "incomplete_event" });
+    expect(state.priceCalls).toBe(0);
+    expect(store.batches).toHaveLength(0);
+  });
+  it("holds old Aave activity until exact Pool events are replayed", async () => {
+    const { db, store } = database();
+    store.eventRows = [eventRow(raw), eventRow({ ...raw, sourceId: "aave:v3:8453", sourceEventId: "old-protocol", kind: "supply", evidenceJson: '{"role":"protocol_activity"}' })];
     await expect(materializePortfolioDaily(db, "subject-a", [accountId], { now })).rejects.toMatchObject({ code: "incomplete_event" });
     expect(state.priceCalls).toBe(0);
     expect(store.batches).toHaveLength(0);
@@ -99,7 +111,7 @@ describe("bounded portfolio daily publication", () => {
 
   it("marks protocol activity partial and does not double-count an Aave quantity", async () => {
     const { db, store } = database();
-    store.eventRows = [eventRow(raw), eventRow({ ...raw, sourceId: "aave:v3:8453", sourceEventId: "protocol-1", occurredAt: "2026-09-16T12:00:00Z", rawDelta: "1000000000000000000", kind: "supply" })];
+    store.eventRows = [eventRow(raw), eventRow({ ...raw, sourceId: "aave:v3:8453", sourceEventId: "protocol-1", occurredAt: "2026-09-16T12:00:00Z", rawDelta: "1000000000000000000", kind: "supply", evidenceJson: '{"sourceEvidenceVersion":2,"effectProof":"canonical_aave_pool_log","role":"protocol_activity"}' })];
     await materializePortfolioDaily(db, "subject-a", [accountId], { now });
     const statements = store.batches[0];
     const day = statements.find((item) => item.sql.includes("INSERT INTO portfolio_daily_results") && item.values.includes("2026-09-16"));

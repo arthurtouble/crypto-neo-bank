@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { padHex, toHex } from "viem";
+import { encodeAbiParameters, encodeEventTopics, padHex, parseAbiItem, toHex } from "viem";
 import { BaseChainSource } from "@/lib/portfolio/chain-source";
 import { readCurrentAaveLegs, BaseAaveSource } from "@/lib/portfolio/aave-source";
 import { normalizeEconomicEvents } from "@/lib/portfolio/normalize";
@@ -200,6 +200,15 @@ describe("Base chain history source", () => {
 describe("Base Aave source", () => {
   const reserve = "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
   const market = "0xa238dd80c259a72e81d7e4664a9801593f98d1c5";
+  const borrowEvent = parseAbiItem("event Borrow(address indexed reserve, address user, address indexed onBehalfOf, uint256 amount, uint8 interestRateMode, uint256 borrowRate, uint16 indexed referralCode)");
+  const borrowLog = (overrides: Record<string, unknown> = {}) => ({
+    address: market, logIndex: 1,
+    topics: encodeEventTopics({ abi: [borrowEvent], eventName: "Borrow", args: { reserve, onBehalfOf: accountId.slice(5) as `0x${string}`, referralCode: 0 } }),
+    data: encodeAbiParameters([{ type: "address" }, { type: "uint256" }, { type: "uint8" }, { type: "uint256" }], [accountId.slice(5) as `0x${string}`, 3_000_000n, 2, 1n]),
+    ...overrides
+  });
+  const activity = (overrides: Record<string, unknown> = {}) => ({ txHash, timestamp: "2026-09-20T12:00:00Z", reserve: { underlyingToken: reserve, decimals: 6 }, amount: "3", market, __typename: "Borrow", logIndex: 1, blockNumber: 100, blockHash, ...overrides });
+  const proof = (overrides: Record<string, unknown> = {}) => ({ blockHash, blockTimestamp: BigInt(Date.parse("2026-09-20T12:00:00Z") / 1000), receiptSuccess: true, finalized: true, logs: [borrowLog()], ...overrides });
   it("keeps supply and debt as separately signed underlying legs", async () => {
     const call = vi.fn(async (name: string) => name === "get_user_positions" ? { data: { v3: { supplies: [{ market, reserve: { underlyingToken: reserve, decimals: 6 }, balance: "10" }], borrows: [{ market, reserve: { underlyingToken: reserve, decimals: 6 }, balance: "3" }] } } } : { data: { v3: { markets: [{ market }] } } });
     const result = await readCurrentAaveLegs(accountId, { call, now: new Date("2026-09-22T12:00:00Z") });
@@ -228,28 +237,77 @@ describe("Base Aave source", () => {
 
   it("finalizes a terminal Aave activity page only with verified chain evidence", async () => {
     const source = new BaseAaveSource({
-      call: vi.fn(async () => ({ data: { v3: { items: [{ txHash, timestamp: "2026-09-20T12:00:00Z", reserve: { underlyingToken: reserve, decimals: 6 }, amount: "3", market, __typename: "Borrow", logIndex: 1, blockNumber: 100, blockHash }], pageInfo: { hasNextPage: false } } } })),
-      verify: vi.fn(async () => ({ blockHash, receiptSuccess: true, finalized: true }))
+      call: vi.fn(async () => ({ data: { v3: { items: [activity()], pageInfo: { hasNextPage: false } } } })),
+      verify: vi.fn(async () => proof())
     });
     const result = await source.page(request);
     expect(result.complete).toBe(true);
     expect(result.events[0]).toMatchObject({ kind: "borrow", rawDelta: "-3000000", finality: "finalized" });
+    expect(JSON.parse(result.events[0].evidenceJson)).toMatchObject({ sourceEvidenceVersion: 2, effectProof: "canonical_aave_pool_log" });
+  });
+
+  it("rejects successful receipts without an exact governed Pool event", async () => {
+    for (const bad of [
+      proof({ logs: [] }),
+      proof({ logs: [borrowLog({ address: "0x2222222222222222222222222222222222222222" })] }),
+      proof({ logs: [borrowLog({ logIndex: 2 })] }),
+      proof({ logs: [borrowLog({ data: encodeAbiParameters([{ type: "address" }, { type: "uint256" }, { type: "uint8" }, { type: "uint256" }], [accountId.slice(5) as `0x${string}`, 2_000_000n, 2, 1n]) })] }),
+      proof({ logs: [borrowLog({ topics: encodeEventTopics({ abi: [borrowEvent], eventName: "Borrow", args: { reserve, onBehalfOf: "0x2222222222222222222222222222222222222222", referralCode: 0 } }) })] }),
+      proof({ blockTimestamp: 1n })
+    ]) {
+      const source = new BaseAaveSource({ call: vi.fn(async () => ({ data: { v3: { items: [activity()], pageInfo: { hasNextPage: false } } } })), verify: vi.fn(async () => bad) });
+      const result = await source.page(request);
+      expect(result.complete).toBe(false);
+      expect(result.events).toEqual([]);
+    }
+  });
+
+  it("returns an incomplete page for a fractional provider timestamp", async () => {
+    const source = new BaseAaveSource({ call: vi.fn(async () => ({ data: { v3: { items: [activity({ timestamp: "2026-09-20T12:00:00.123Z" })], pageInfo: { hasNextPage: false } } } })),
+      verify: vi.fn(async () => proof()) });
+    const result = await source.page(request);
+    expect(result.complete).toBe(false);
+    expect(result.events).toEqual([]);
+  });
+
+  it("matches each supported position effect to its account role and raw amount", async () => {
+    const wallet = accountId.slice(5) as `0x${string}`;
+    const other = "0x2222222222222222222222222222222222222222" as const;
+    const cases = [
+      { type: "Supply", kind: "supply", signature: "event Supply(address indexed reserve, address user, address indexed onBehalfOf, uint256 amount, uint16 indexed referralCode)",
+        indexed: { reserve, onBehalfOf: wallet, referralCode: 0 }, fields: [{ type: "address" }, { type: "uint256" }], values: [other, 3_000_000n], delta: "3000000" },
+      { type: "Withdraw", kind: "redeem", signature: "event Withdraw(address indexed reserve, address indexed user, address indexed to, uint256 amount)",
+        indexed: { reserve, user: wallet, to: other }, fields: [{ type: "uint256" }], values: [3_000_000n], delta: "-3000000" },
+      { type: "Repay", kind: "repay", signature: "event Repay(address indexed reserve, address indexed user, address indexed repayer, uint256 amount, bool useATokens)",
+        indexed: { reserve, user: wallet, repayer: other }, fields: [{ type: "uint256" }, { type: "bool" }], values: [3_000_000n, false], delta: "3000000" }
+    ] as const;
+    for (const item of cases) {
+      const event = parseAbiItem(item.signature);
+      const log = { address: market, logIndex: 1, topics: encodeEventTopics({ abi: [event], eventName: item.type, args: item.indexed }),
+        data: encodeAbiParameters(item.fields, item.values) };
+      const source = new BaseAaveSource({ call: vi.fn(async () => ({ data: { v3: { items: [activity({ __typename: item.type })], pageInfo: { hasNextPage: false } } } })),
+        verify: vi.fn(async () => proof({ logs: [log] })) });
+      const result = await source.page(request);
+      expect(result.complete).toBe(true);
+      expect(result.events[0]).toMatchObject({ kind: item.kind, rawDelta: item.delta });
+    }
   });
 
   it("uses distinct source event identities for two linked wallets in one transaction", async () => {
-    const call = vi.fn(async () => ({ data: { v3: { items: [{ txHash, timestamp: "2026-09-20T12:00:00Z", reserve: { underlyingToken: reserve, decimals: 6 }, amount: "3", market, __typename: "Borrow", logIndex: 1, blockNumber: 100, blockHash }], pageInfo: { hasNextPage: false } } } }));
-    const source = new BaseAaveSource({ call, verify: vi.fn(async () => ({ blockHash, receiptSuccess: true, finalized: true })) });
+    const call = vi.fn(async () => ({ data: { v3: { items: [activity()], pageInfo: { hasNextPage: false } } } }));
+    const source = new BaseAaveSource({ call, verify: vi.fn(async () => proof()) });
     const first = await source.page(request);
     const second = await source.page({ ...request, accountId: "8453:0x2222222222222222222222222222222222222222" });
-    expect(first.events[0].sourceEventId).not.toBe(second.events[0].sourceEventId);
+    expect(first.events).toHaveLength(1);
+    expect(second.complete).toBe(false);
   });
 
   it("excludes activity outside the requested coverage window", async () => {
-    const activity = (timestamp: string, logIndex: number) => ({ txHash, timestamp, reserve: { underlyingToken: reserve, decimals: 6 }, amount: "3", market, __typename: "Borrow", logIndex, blockNumber: 100, blockHash });
-    const verify = vi.fn(async () => ({ blockHash, receiptSuccess: true, finalized: true }));
+    const activityAt = (timestamp: string, logIndex: number) => activity({ timestamp, logIndex });
+    const verify = vi.fn(async () => proof({ logs: [borrowLog({ logIndex: 2 })] }));
     const source = new BaseAaveSource({
       call: vi.fn(async () => ({ data: { v3: { items: [
-        activity("2026-09-19T12:00:00Z", 1), activity("2026-09-20T12:00:00Z", 2), activity("2026-09-21T12:00:00Z", 3)
+        activityAt("2026-09-19T12:00:00Z", 1), activityAt("2026-09-20T12:00:00Z", 2), activityAt("2026-09-21T12:00:00Z", 3)
       ], pageInfo: { hasNextPage: false } } } })), verify
     });
     const result = await source.page(request);

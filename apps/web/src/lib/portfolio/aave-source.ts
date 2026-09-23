@@ -1,11 +1,12 @@
 import { AAVE_BASE_V3_MARKET, callAaveTool } from "@/lib/defi/aave";
 import type { AccountId, Completeness, HistoricalEvent, HistoricalEventSource, HistoryPage } from "@/lib/portfolio/types";
-import { createPublicClient, http } from "viem";
+import { createPublicClient, decodeEventLog, http, parseAbiItem } from "viem";
 import { base } from "viem/chains";
 
 const SOURCE_ID = "aave:v3:8453";
 type ToolCall = (name: string, args: Record<string, unknown>) => Promise<unknown>;
-type Verify = (hash: `0x${string}`, blockNumber: bigint) => Promise<{ blockHash: string | null; finalized: boolean; receiptSuccess: boolean }>;
+type PoolLog = { address: string; logIndex: number | null; topics: readonly unknown[]; data: `0x${string}` };
+type Verify = (hash: `0x${string}`, blockNumber: bigint) => Promise<{ blockHash: string | null; blockTimestamp?: bigint; finalized: boolean; receiptSuccess: boolean; logs?: PoolLog[] }>;
 type Options = { call?: ToolCall; now?: Date; verify?: Verify; confirmationDepth?: bigint };
 type Row = Record<string, unknown>;
 function record(value: unknown): Row | null { return value && typeof value === "object" && !Array.isArray(value) ? value as Row : null; }
@@ -26,6 +27,22 @@ function reserveOf(value: unknown): { assetId: string; decimals: number } | null
   return contract && Number.isInteger(decimals) && decimals >= 0 && decimals <= 36 ? { assetId: `8453:${contract}`, decimals } : null;
 }
 function governed(value: unknown): boolean { return address(value) === AAVE_BASE_V3_MARKET.toLowerCase(); }
+const POOL_EVENTS = {
+  supply: parseAbiItem("event Supply(address indexed reserve, address user, address indexed onBehalfOf, uint256 amount, uint16 indexed referralCode)"),
+  redeem: parseAbiItem("event Withdraw(address indexed reserve, address indexed user, address indexed to, uint256 amount)"),
+  borrow: parseAbiItem("event Borrow(address indexed reserve, address user, address indexed onBehalfOf, uint256 amount, uint8 interestRateMode, uint256 borrowRate, uint16 indexed referralCode)"),
+  repay: parseAbiItem("event Repay(address indexed reserve, address indexed user, address indexed repayer, uint256 amount, bool useATokens)")
+} as const;
+function matchesPoolEvent(log: PoolLog, kind: keyof typeof POOL_EVENTS, asset: string, wallet: string, amount: string, logIndex: number): boolean {
+  if (!governed(log.address) || log.logIndex !== logIndex) return false;
+  if (!log.topics.length || !log.topics.every((topic) => typeof topic === "string" && /^0x[0-9a-f]*$/i.test(topic))) return false;
+  try {
+    const decoded = decodeEventLog({ abi: [POOL_EVENTS[kind]], data: log.data, topics: log.topics as [`0x${string}`, ...`0x${string}`[]], strict: true });
+    const args = decoded.args as Record<string, unknown>;
+    const owner = kind === "supply" || kind === "borrow" ? args.onBehalfOf : args.user;
+    return address(args.reserve) === asset && address(owner) === wallet && args.amount === BigInt(amount);
+  } catch { return false; }
+}
 
 export async function readCurrentAaveLegs(accountId: AccountId, options: Options = {}): Promise<{ legs: Array<{ assetId: string; side: "supply" | "debt"; rawUnits: string; decimals: number; market: string; observedAt: string; sourceId: string }>; status: Completeness; reason: string | null }> {
   const unavailable = (reason: string, status: Completeness = "partial") => ({ legs: [], status, reason });
@@ -88,9 +105,11 @@ export class BaseAaveSource implements HistoricalEventSource {
       let proof: Awaited<ReturnType<Verify>>;
       try { proof = await (this.options.verify ?? ((h, n) => this.verifyRpc(h, n)))(txHash as `0x${string}`, BigInt(blockNumber)); }
       catch { return partial(events); }
-      const finalized = proof.blockHash?.toLowerCase() === blockHash && proof.finalized && proof.receiptSuccess;
+      const finalized = proof.blockHash?.toLowerCase() === blockHash && proof.finalized && proof.receiptSuccess
+        && proof.blockTimestamp !== undefined && BigInt(Date.parse(occurredAt)) === proof.blockTimestamp * 1000n
+        && Array.isArray(proof.logs) && proof.logs.some((log) => matchesPoolEvent(log, kind, reserve.assetId.slice(5), input.accountId.slice(5), amount, logIndex as number));
       if (!finalized) return partial(events);
-      events.push({ sourceId: SOURCE_ID, sourceName: "Aave V3 Base", sourceEventId: id, ingestionVersion: 1, accountId: input.accountId, assetId: reserve.assetId, rawDelta: kind === "redeem" || kind === "borrow" ? `-${amount}` : amount, decimals: reserve.decimals, kind, occurredAt, chainId: 8453, blockNumber, blockHash, txHash, logIndex: logIndex as number, finality: "finalized", completeness: "complete", groupId: txHash, counterpartyAccountId: null, evidenceJson: JSON.stringify({ market: AAVE_BASE_V3_MARKET, type: row.__typename, role: "protocol_activity" }) });
+      events.push({ sourceId: SOURCE_ID, sourceName: "Aave V3 Base", sourceEventId: id, ingestionVersion: 2, accountId: input.accountId, assetId: reserve.assetId, rawDelta: kind === "redeem" || kind === "borrow" ? `-${amount}` : amount, decimals: reserve.decimals, kind, occurredAt, chainId: 8453, blockNumber, blockHash, txHash, logIndex: logIndex as number, finality: "finalized", completeness: "complete", groupId: txHash, counterpartyAccountId: null, evidenceJson: JSON.stringify({ sourceEvidenceVersion: 2, effectProof: "canonical_aave_pool_log", market: AAVE_BASE_V3_MARKET, type: row.__typename, role: "protocol_activity" }) });
     }
     const complete = !info.hasNextPage;
     return { events, nextCursor: complete ? null : info.next as string, coveredThrough: complete ? input.through : input.from, complete, sourceId: SOURCE_ID };
@@ -99,6 +118,7 @@ export class BaseAaveSource implements HistoricalEventSource {
   private async verifyRpc(txHash: `0x${string}`, blockNumber: bigint): ReturnType<Verify> {
     const client = createPublicClient({ chain: base, transport: http() });
     const [receipt, block, tip] = await Promise.all([client.getTransactionReceipt({ hash: txHash }), client.getBlock({ blockNumber }), client.getBlockNumber()]);
-    return { blockHash: block.hash, receiptSuccess: receipt.status === "success" && receipt.blockHash === block.hash, finalized: tip >= blockNumber + (this.options.confirmationDepth ?? 20n) };
+    return { blockHash: block.hash, blockTimestamp: block.timestamp, receiptSuccess: receipt.status === "success" && receipt.blockHash === block.hash && receipt.blockNumber === blockNumber && receipt.transactionHash.toLowerCase() === txHash,
+      finalized: tip >= blockNumber + (this.options.confirmationDepth ?? 20n), logs: receipt.logs };
   }
 }
