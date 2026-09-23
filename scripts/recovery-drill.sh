@@ -29,7 +29,9 @@ VALUES ('recovery-registration-challenge','sha256:registration','recovery:test',
 INSERT INTO action_passkey_challenges (challenge_id,challenge_digest,subject_reference,session_reference,purpose,intent_id,step_index,call_fingerprint,policy_version,rp_id,origin,expires_at,consumed_at,created_at)
 VALUES ('recovery-challenge','sha256:recovery','recovery:test','recovery-session','intent_step','recovery-intent',0,'sha256:call',1,'app.aurel.test','https://app.aurel.test','2026-09-21T00:05:00.000Z','2026-09-21T00:01:00.000Z','2026-09-21T00:00:00.000Z');
 INSERT INTO action_passkey_authorizations (authorization_id,challenge_id,credential_id,subject_reference,purpose,intent_id,step_index,call_fingerprint,policy_version,authorized_at,expires_at)
-VALUES ('recovery-authorization','recovery-challenge','recovery-credential','recovery:test','intent_step','recovery-intent',0,'sha256:call',1,'2026-09-21T00:01:00.000Z','2026-09-21T00:03:00.000Z');"
+VALUES ('recovery-authorization','recovery-challenge','recovery-credential','recovery:test','intent_step','recovery-intent',0,'sha256:call',1,'2026-09-21T00:01:00.000Z','2026-09-21T00:03:00.000Z');
+INSERT INTO audit_events (audit_id,subject_reference,actor_type,actor_reference,action,target_type,target_reference,evidence_json,occurred_at)
+VALUES ('recovery-audit','recovery:test','customer','recovery:test','action_passkey_registration_pending','action_passkey_credential','recovery-pending-credential',json_object('challengeId','recovery-registration-challenge'),'2026-09-21T00:01:00.000Z');"
 source_db="$(find "$source_dir/v3/d1/miniflare-D1DatabaseObject" -type f -name '*.sqlite' ! -name 'metadata.sqlite' -print -quit)"
 if [[ -z "$source_db" ]]; then
   echo "Recovery drill failed: local D1 database was not created" >&2
@@ -66,10 +68,10 @@ for table in beta_access customer_feedback feature_flags incident_updates operat
   fi
 done
 
-evidence="$(pnpm exec wrangler d1 execute aurel-projections --local --persist-to "$restore_dir" --command "SELECT subject_reference,cohort,country_code,status,transaction_limit_usd FROM beta_access WHERE subject_reference='recovery:test'; SELECT consent_id,document_version FROM consent_receipts WHERE consent_id='recovery-consent'; SELECT credential_id || ':' || status AS credential_state FROM action_passkey_credentials WHERE credential_id IN ('recovery-credential','recovery-pending-credential'); SELECT challenge_id FROM action_passkey_challenges WHERE challenge_id IN ('recovery-challenge','recovery-registration-challenge'); SELECT authorization_id FROM action_passkey_authorizations WHERE authorization_id='recovery-authorization'; SELECT submission_phase,reported_hash FROM intent_prepared_calls WHERE intent_id='recovery-intent';")"
-if [[ "$evidence" != *"recovery:test"* || "$evidence" != *"recovery-consent"* || "$evidence" != *"recovery-credential:active"* || "$evidence" != *"recovery-pending-credential:pending"* || "$evidence" != *"recovery-challenge"* || "$evidence" != *"recovery-registration-challenge"* || "$evidence" != *"recovery-authorization"* || "$evidence" != *"awaiting_step_up"* ]]; then
-  echo "Recovery drill failed: retained beta, consent, or passkey evidence was not restored" >&2
+evidence="$(pnpm exec wrangler d1 execute aurel-projections --local --persist-to "$restore_dir" --command "SELECT subject_reference,cohort,country_code,status,transaction_limit_usd FROM beta_access WHERE subject_reference='recovery:test'; SELECT consent_id,document_version FROM consent_receipts WHERE consent_id='recovery-consent'; SELECT credential_id || ':' || status AS credential_state FROM action_passkey_credentials WHERE credential_id IN ('recovery-credential','recovery-pending-credential'); SELECT challenge_id FROM action_passkey_challenges WHERE challenge_id IN ('recovery-challenge','recovery-registration-challenge'); SELECT authorization_id FROM action_passkey_authorizations WHERE authorization_id='recovery-authorization'; SELECT audit_id || ':' || action || ':' || target_reference AS audit_evidence FROM audit_events WHERE audit_id='recovery-audit'; SELECT submission_phase,reported_hash FROM intent_prepared_calls WHERE intent_id='recovery-intent';")"
+if [[ "$evidence" != *"recovery:test"* || "$evidence" != *"recovery-consent"* || "$evidence" != *"recovery-credential:active"* || "$evidence" != *"recovery-pending-credential:pending"* || "$evidence" != *"recovery-challenge"* || "$evidence" != *"recovery-registration-challenge"* || "$evidence" != *"recovery-authorization"* || "$evidence" != *"recovery-audit:action_passkey_registration_pending:recovery-pending-credential"* || "$evidence" != *"awaiting_step_up"* ]]; then
+  echo "Recovery drill failed: retained beta, consent, passkey, or audit evidence was not restored" >&2
   exit 1
 fi
 
-echo "Recovery drill passed: migrations, export, clean restore, beta controls, consent, and passkey evidence verified in isolated D1 stores. Production was not accessed or changed."
+echo "Recovery drill passed: migrations, export, clean restore, beta controls, consent, passkey, and audit evidence verified in isolated D1 stores. Production was not accessed or changed."

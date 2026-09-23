@@ -128,6 +128,8 @@ A fresh local desktop/mobile browser run on this branch passed 42 cases with two
 
 Cold asset searches now start independent LI.FI snapshots for the selected networks concurrently, then apply the same screening, ranking, cursor, cache-capacity, and all-or-nothing checks. A regression observed the old sequential behavior fail before the change. The final source passed 866 web unit tests, typecheck, lint, and web build. This reduces serial waiting in a cold search; it is not a measured production latency claim or permission to execute a quoted route.
 
+The isolated D1 backup/restore drill now seeds a passkey-registration audit event and verifies its ID, action, and credential target after restore, alongside the pending and active credentials, consumed challenges, one-use authorization, beta control, and consent. The new assertion failed before the audit fixture was added and passed through migration `0026` afterward. This proves local restore of that evidence shape, not production backup freshness or an operator recovery exercise.
+
 ## Non-negotiable release rules
 
 - D1 projections are not customer balances, settlement records, provider entitlements, or a substitute for chain/provider reads.
