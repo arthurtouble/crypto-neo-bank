@@ -101,7 +101,10 @@ describe("authoritative portfolio chart", () => {
     expect(markup).toMatch(/Aave debt <strong class="sensitiveAmount">unavailable/);
     expect(markup).toContain("1 linked external wallet");
     expect(markup).toContain("Return unavailable");
-    expect(markup).toContain("Past 7 days");
+    expect(markup).toContain('aria-label="Portfolio history period"');
+    expect(markup).toContain(">7D</button>");
+    expect(markup).toContain(">30D</button>");
+    expect(markup).toContain(">90D</button>");
     expect(fixture.queryKey).toContain("subject-a");
   });
 });

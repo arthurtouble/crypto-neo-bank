@@ -34,6 +34,12 @@ describe("portfolio history read boundary", () => {
     expect(body.points).toHaveLength(7);
     expect(body.points.at(-1)?.day).toBe(new Date(utcMidnight - 86_400_000).toISOString().slice(0, 10));
   });
+  it.each([["30D", 30], ["90D", 90]] as const)("serves %s as completed UTC days without filling missing evidence", async (range, count) => {
+    const body = await readBody(await GET(request(range)));
+    expect(body.points).toHaveLength(count);
+    expect(body.points.at(-1)?.day).toBe(lastCompletedDay());
+    expect(body.points.every((point) => point.status === "partial" && point.netValueUsd === null && point.reasons.includes("missing_daily_result"))).toBe(true);
+  });
   it("rejects unauthenticated and invalid ranges", async () => {
     state.authorized = false;
     expect((await GET(request())).status).toBe(401);

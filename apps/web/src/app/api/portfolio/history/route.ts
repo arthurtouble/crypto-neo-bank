@@ -7,7 +7,7 @@ import { readCurrentAaveLegs } from "@/lib/portfolio/aave-source";
 import { currentPortfolioPublication } from "@/lib/portfolio/publication";
 import type { AccountId, Completeness, DayCoverage, HistoryPoint, PortfolioHistory } from "@/lib/portfolio/types";
 
-const RANGE_DAYS = { "7D": 7 } as const;
+const RANGE_DAYS = { "7D": 7, "30D": 30, "90D": 90 } as const;
 const REQUIRED_SOURCES = ["blockscout:8453", "aave:v3:8453"] as const;
 type DailyRow = { day: string; calculation_version: number; net_value_usd: string | null; twr_index: string | null; coverage_status: Completeness; coverage_json: string };
 type Checkpoint = { account_id: string; source_id: string; covered_from: string | null; covered_through: string | null; status: Completeness; ingestion_version: number };
@@ -99,7 +99,7 @@ export async function GET(request: Request) {
     const aaveStatus: Completeness = !accounts.length || aave.some((item) => item.status === "unavailable") ? "unavailable" : aave.some((item) => item.status !== "complete" || item.legs.length > 0) ? "partial" : "complete";
     const history: PortfolioHistory = { calculationVersion, points, coverage, externalWallets: accounts.filter((item) => item.origin === "linked_external").map((item) => item.accountId),
       currentAave: { suppliedUsd: aaveStatus === "complete" ? "0" : null, debtUsd: aaveStatus === "complete" ? "0" : null, status: aaveStatus }, observedAt: new Date().toISOString() };
-    return response({ ...history, returnWindow: { pricedDays: 7, scope: "recent_completed_utc_days", inceptionReturnAvailable: false }, sourceVersions: Object.fromEntries([...byCheckpoint].map(([key, item]) => [key, item.ingestion_version])),
+    return response({ ...history, returnWindow: { pricedDays: 90, scope: "recent_completed_utc_days", inceptionReturnAvailable: false }, sourceVersions: Object.fromEntries([...byCheckpoint].map(([key, item]) => [key, item.ingestion_version])),
       currentAave: { ...history.currentAave, legs: aave.flatMap((item) => item.legs.map((leg) => ({ accountId: item.accountId as AccountId, ...leg }))), observedAt: new Date().toISOString(), reason: aaveStatus === "partial" ? "missing_current_price" : aaveStatus === "unavailable" ? "aave_unavailable" : null }, traceId });
   } catch (error) {
     if (error instanceof AuthenticationError) return response({ error: "unauthorized", traceId }, 401);

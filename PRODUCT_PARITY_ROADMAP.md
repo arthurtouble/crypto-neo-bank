@@ -19,7 +19,7 @@ Networks are routing details. Aurel may reveal them when the customer must choos
 
 | Capability | Ether.fi Cash | Plasma One | KAST | Revolut pattern | Aurel status |
 | --- | --- | --- | --- | --- | --- |
-| One portfolio with value history | Portfolio and live borrow state | Stablecoin balance | Store/earn/move/spend account | Balance analytics and insights | **In progress:** live balances and a coverage-gated history chart; only the latest seven completed UTC days can currently be priced and published |
+| One portfolio with value history | Portfolio and live borrow state | Stablecoin balance | Store/earn/move/spend account | Balance analytics and insights | **In progress:** live balances and a coverage-gated chart for 7, 30, or 90 completed UTC days; unsupported assets and incomplete source history remain gaps |
 | Add digital assets from multiple networks | Supported token deposits and multichain top-up | Stablecoin transfers | Crypto and stablecoin deposits | Crypto deposit where eligible | **Partial:** wallet receive addresses and USDC route previews; no automatic cross-network deposit guarantee |
 | Withdraw to another network/address | Token withdrawal with Safe approvals | Wallet withdrawal | Stablecoin withdrawal | Crypto withdrawal where eligible | **Partial:** direct sends on supported Base assets and destination-aware route previews; cross-network submission is gated |
 | Swap/trade | 100+ tokenized crypto, metals, and stock assets; quote comparison | Stablecoin-focused | Deposit/swap BTC, ETH, SOL to USDC | Crypto, equities, commodities, FX | **Partial:** searchable screened LI.FI catalog and validated quote preview; signing stays disabled until an auditable execution plan and settlement verification are connected |
@@ -58,7 +58,7 @@ Use these labels consistently in navigation, quick actions, dialogs, receipts, s
 - [ ] Explicitly approved USDC routing from supported networks. Route discovery and quote preview exist; execution remains gated by the transaction-evidence boundary.
 - [x] Unified **Add Money**, **Send**, **Swap**, and **Withdraw** entry points.
 - [ ] Destination-aware USDC withdrawals to supported networks. Destination-aware previews exist; cross-network execution remains gated.
-- [ ] Portfolio value, period selector, line chart, allocation, and authority state. The coverage-gated line chart currently exposes only the latest seven completed UTC days; longer ranges require a wider independently priced publication window. Current allocation and balances remain separately sourced.
+- [ ] Portfolio value, period selector, line chart, allocation, and authority state. The chart offers 7, 30, and 90 completed UTC days, with source and price gaps shown explicitly. Inception history and complete Aave position valuation remain unavailable. Current allocation and balances remain separately sourced.
 - [x] Live markets list with source-wide server search, watchlist, truthful view-only states, and direct Swap entry for exact reviewed mappings. A public issuer catalog is separate from regulated eligibility and orders.
 - [x] Consistent Review, Confirm, Submitted, Complete, failure, and receipt states across direct sends, routed Add Money/Withdraw, Earn, Borrow, and Repay, with authenticated source-receipt reconciliation.
 
@@ -77,7 +77,7 @@ Use these labels consistently in navigation, quick actions, dialogs, receipts, s
 
 - [ ] Broader swap universe with multi-provider quote comparison. The supported-chain LI.FI catalog is searchable by name, symbol, and contract. Quotes are screened and reviewed, but execution is disabled; independent direct-provider fallbacks and audited route submission remain.
 - [ ] Jurisdiction- and eligibility-aware tokenized market execution.
-- [ ] Consolidated DeFi positions, claimable rewards, cost basis, realized/unrealized return, and tax export. Aave reads, source-reported Base rewards, bounded history ingestion, seven-day coverage-gated value publication, and evidence-aware tax-support exports are implemented. Reward claims and other protocol signing remain paused; broader protocols and complete cost-basis/performance accounting remain.
+- [ ] Consolidated DeFi positions, claimable rewards, cost basis, realized/unrealized return, and tax export. Aave reads, source-reported Base rewards, bounded history ingestion, 90-day coverage-gated value publication, and evidence-aware tax-support exports are implemented. Reward claims and other protocol signing remain paused; broader protocols and complete cost-basis/performance accounting remain.
 - [ ] Spend-from-yield and collateral-backed card modes only after provider and legal approval.
 - [ ] Membership rewards ledger backed by the rewards provider, with transparent caps and qualification history.
 - [ ] Joint, family, and business accounts only when ownership and authority are provider-enforced.

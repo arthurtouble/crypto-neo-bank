@@ -31,6 +31,17 @@ describe("independent portfolio price observations", () => {
     expect(prices).toEqual([expect.objectContaining({ assetId: USDC, day, usd: "1" })]);
   });
 
+  it("accepts a 90-day observed window without filling a missing close", async () => {
+    const days = Array.from({ length: 90 }, (_, index) => new Date(Date.parse("2026-09-22T00:00:00.000Z") - (90 - index) * 86_400_000).toISOString().slice(0, 10));
+    const missing = days[44];
+    const candles = days.filter((item) => item !== missing).map((item) => row("4500.12", Date.parse(`${item}T00:00:00.000Z`) / 1000));
+    const prices = await loadObservedUsdPrices([ETH], days, { fetcher: async () => Response.json({ error: [], result: { XETHZUSD: candles, last: timestamp } }), now });
+    expect(prices).toHaveLength(89);
+    expect(prices.some((item) => item.day === missing)).toBe(false);
+    expect(prices[0].day).toBe(days[0]);
+    expect(prices.at(-1)?.day).toBe(days.at(-1));
+  });
+
   it("drops unfinished, malformed, duplicate or wrong-pair observations", async () => {
     const fetcher: typeof fetch = async () => Response.json({ error: [], result: { XETHZUSD: [row("0"), row("4.2", Date.parse("2026-09-22T00:00:00.000Z") / 1000)], last: timestamp } });
     expect(await loadObservedUsdPrices([ETH], [day, "2026-09-22"], { fetcher, now })).toEqual([]);

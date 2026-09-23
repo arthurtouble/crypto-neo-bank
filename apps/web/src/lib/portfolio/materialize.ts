@@ -9,12 +9,13 @@ const REQUIRED_SOURCES = ["blockscout:8453", "aave:v3:8453"] as const;
 const MAX_ACCOUNTS = 4;
 const MAX_EVENTS = 1_000;
 const MAX_DAYS = 1_600;
-const PUBLISH_DAYS = 7;
+const PUBLISH_DAYS = 90;
+const QUANTITY_DAYS = 30; // Keep four two-asset accounts inside one atomic D1 publication.
 const RETURN_WINDOW = { pricedDays: PUBLISH_DAYS, scope: "recent_completed_utc_days", inceptionReturnAvailable: false } as const;
 // D1 paid Workers allow 1,000 queries per invocation; leave room for reads.
 const MAX_STATEMENTS = 800;
 // Increment when normalization, daily valuation, or basis semantics change.
-const CALCULATION_RULE_VERSION = 3;
+const CALCULATION_RULE_VERSION = 4;
 type Checkpoint = { account_id: string; source_id: string; cursor: string | null; covered_from: string | null; covered_through: string | null; status: string; ingestion_version: number; last_finalized_block: string | null; last_finalized_hash: string | null };
 type EventRow = { source_id: string; source_event_id: string; ingestion_version: number; account_id: string; asset_id: string; raw_delta: string; decimals: number; event_kind: HistoricalEvent["kind"]; occurred_at: string; chain_id: number | null; block_number: string | null; block_hash: string | null; tx_hash: string | null; log_index: number | null; finality: HistoricalEvent["finality"]; completeness: HistoricalEvent["completeness"]; group_id: string | null; counterparty_account_id: string | null; evidence_json: string };
 type Marker = { input_digest: string; calculation_version: number };
@@ -65,6 +66,7 @@ export async function materializePortfolioDaily(db: D1Database, subjectReference
   const through = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString();
   const days = dayList(through);
   const recent = days.slice(-PUBLISH_DAYS);
+  const quantityDays = new Set(recent.slice(-QUANTITY_DAYS));
   const accountPlaceholders = accounts.map(() => "?").join(",");
   const marker = await db.prepare("SELECT input_digest, calculation_version FROM portfolio_publications WHERE subject_reference = ?")
     .bind(subjectReference).first<Marker>();
@@ -137,7 +139,7 @@ export async function materializePortfolioDaily(db: D1Database, subjectReference
       sourceId, ingestionVersion: checkpointMap.get(`${accountId}|${sourceId}`)!.ingestion_version,
       eventStatus: protocolSeen && sourceId === "aave:v3:8453" ? "partial" : "complete", priceStatus: missingPrice ? "partial" : "complete",
       reason: protocolSeen && sourceId === "aave:v3:8453" ? "protocol_position_history_unavailable" : missingPrice ? "missing_price" : null });
-    if (recent.includes(day)) snapshots.set(day, [...balances.values()].filter((balance) => balance.raw !== 0n));
+    if (quantityDays.has(day)) snapshots.set(day, [...balances.values()].filter((balance) => balance.raw !== 0n));
   }
   if (index !== sortedEvents.length) throw new PortfolioMaterializeError("incomplete_event", "Historical event falls outside replay days.");
   const inputDigest = await digest({ calculationRuleVersion: CALCULATION_RULE_VERSION, accounts, through,

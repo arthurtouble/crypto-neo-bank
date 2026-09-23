@@ -35,7 +35,7 @@ Portfolio values combine token quantities with price data. A displayed total is 
 
 Unknown or unsupported assets are excluded rather than assigned a guess. A missing price should not be treated as zero value or proof that the token is worthless.
 
-Historical value is shown only for days with complete wallet activity, protocol coverage, and independent price evidence. The current chart covers the latest seven completed UTC days. Longer ranges are not offered yet, and Aurel does not calculate an inception return from this window. Current balances are not substituted for missing historical days.
+Historical value is shown only for days with complete wallet activity, protocol coverage, and independent price evidence. Choose 7, 30, or 90 completed UTC days. Aurel does not calculate an inception return from these windows. Missing days appear as gaps; current balances are not substituted for them. The daily price source currently covers ETH and USDC on Base. Other assets and incomplete Aave position history can leave gaps.
 
 If source history is being rebuilt, or a source has advanced beyond the last calculation, the prior chart value is hidden until a fresh calculation is published. Tax-support rows are likewise unavailable while their source evidence is stale. A documented acquisition or sale can support a tax lot without a daily closing price, but the export is not tax advice and may be incomplete.
 
