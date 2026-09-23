@@ -1,6 +1,7 @@
 import { getAddress, hexToBytes, parseUnits } from "viem";
 import { z } from "zod";
 import { assetId, catalogAssetSchema, parseAssetId, type CatalogAsset } from "@/lib/swap/assets";
+import { inspectLifiDiamondSwap, inspectLifiFeeForwarderCall } from "@/lib/swap/lifi-diamond-inspection";
 import {
   requireExactUnverifiedAcknowledgements, SwapQuoteError, type QuoteAdapter, type SwapQuoteInput, type ValidatedSwapQuote
 } from "@/lib/swap/quotes";
@@ -293,6 +294,8 @@ async function validateQuote(
   if (quote.type === "lifi" && (cursorAssetId !== assets.to.id || cursorDecimals !== assets.to.decimals
     || cursorAmount !== BigInt(quote.estimate.toAmount)
     || routeSteps.at(-1)?.toAmountMinRaw !== quote.estimate.toAmountMin)) return null;
+  if (quote.type === "lifi" && routeSteps[1].integratorFeePercent !== undefined
+    && routeSteps[1].integratorFeePercent !== routeSteps[0].integratorFeePercent) return null;
   if (quote.action.fromChainId !== assets.from.chainId || quote.action.toChainId !== assets.to.chainId) return null;
   if (!matchesProviderToken(quote.action.fromToken, assets.from) || !matchesProviderToken(quote.action.toToken, assets.to)) return null;
   if (BigInt(quote.action.fromAmount) !== rawAmount || quote.action.slippage > input.slippageBps / 10_000 + Number.EPSILON) return null;
@@ -323,6 +326,28 @@ async function validateQuote(
   try { hexToBytes(quote.transactionRequest.data as `0x${string}`); } catch { return null; }
   const transactionValue = unsignedTransactionValue(quote.transactionRequest.value);
   if (transactionValue === null || transactionValue !== (assets.from.address === null ? rawAmount : 0n)) return null;
+  if (quote.type === "lifi") {
+    // Quote integrity only. The nested targets and swap calldata remain unaudited;
+    // this check must never be used as execution or signing authority.
+    if (assets.from.chainId !== 8453 || !assets.from.address || !assets.to.address
+      || routeSteps.length !== 2 || !routeSteps[0].toAmountRaw) return null;
+    try {
+      const decoded = inspectLifiDiamondSwap({ data: quote.transactionRequest.data,
+        receiver: input.fromAddress, minimumOutputRaw: quote.estimate.toAmountMin });
+      const [fee, swap] = decoded.swaps;
+      const source = assets.from.address.toLowerCase();
+      const destination = assets.to.address.toLowerCase();
+      const net = BigInt(routeSteps[0].toAmountRaw);
+      if (decoded.swaps.length !== 2 || decoded.integrator !== "aurel"
+        || fee.sendingAssetId !== source || fee.receivingAssetId !== source
+        || fee.fromAmountRaw !== rawAmount.toString() || fee.requiresDeposit !== true
+        || fee.callTo !== fee.approveTo || swap.sendingAssetId !== source
+        || swap.receivingAssetId !== destination || swap.fromAmountRaw !== net.toString()
+        || swap.requiresDeposit !== false || swap.callTo !== swap.approveTo) return null;
+      inspectLifiFeeForwarderCall({ data: fee.callData, token: source,
+        expectedFeeRaw: (rawAmount - net).toString() });
+    } catch { return null; }
+  }
 
   let approvalTarget: string | null = null;
   if (quote.estimate.approvalAddress !== undefined) {
