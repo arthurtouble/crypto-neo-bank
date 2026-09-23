@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const state = vi.hoisted(() => ({ writes: [] as unknown[][], threshold: 10_000 }));
+const state = vi.hoisted(() => ({ writes: [] as unknown[][], threshold: 10_000, locked: 0, allowlist: 0,
+  daily: 25_000, newThreshold: 1_000, delay: 86_400, updateChanges: 1, lastUpdateSql: "" }));
 
 vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
   prepare(sql: string) {
@@ -8,13 +9,13 @@ vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
       return {
         async first() {
           if (sql.includes("FROM security_profiles")) return {
-            account_locked: 0, enforce_address_book: 0, daily_limit_usd: 25_000,
-            new_address_threshold_usd: 1_000, new_address_delay_seconds: 86_400,
+            account_locked: state.locked, enforce_address_book: state.allowlist, daily_limit_usd: state.daily,
+            new_address_threshold_usd: state.newThreshold, new_address_delay_seconds: state.delay,
             step_up_threshold_usd: state.threshold, updated_at: "2026-09-01T00:00:00Z"
           };
           return null;
         },
-        async run() { state.writes.push(values); return { meta: { changes: 1 } }; }
+        async run() { state.writes.push(values); if (sql.startsWith("UPDATE security_profiles")) state.lastUpdateSql = sql; return { meta: { changes: state.updateChanges } }; }
       };
     } };
   }
@@ -31,7 +32,8 @@ function request(stepUpThresholdUsd: number) {
   }));
 }
 
-beforeEach(() => { state.writes.length = 0; state.threshold = 10_000; });
+beforeEach(() => { state.writes.length = 0; state.threshold = 10_000; state.locked = 0; state.allowlist = 0;
+  state.daily = 25_000; state.newThreshold = 1_000; state.delay = 86_400; state.updateChanges = 1; state.lastUpdateSql = ""; });
 
 describe("security policy step-up floor", () => {
   it("rejects a request to raise the step-up threshold above 10k without writing", async () => {
@@ -63,5 +65,28 @@ describe("security policy step-up floor", () => {
     const response = await GET(new Request("https://aurel.test/api/security/policy"));
     expect(response.status).toBe(200);
     expect((await response.json() as { policy: { stepUpThresholdUsd: number } }).policy.stepUpThresholdUsd).toBe(10_000);
+  });
+
+  it.each([
+    ["unlock", { accountLocked: false }, { locked: 1 }],
+    ["disable saved destinations", { enforceAddressBook: false }, { allowlist: 1 }],
+    ["raise daily limit", { dailyLimitUsd: 30_000 }, {}],
+    ["raise new-recipient limit", { newAddressThresholdUsd: 2_000 }, {}],
+    ["shorten cooling", { newAddressDelayHours: 0 }, {}]
+  ] as const)("rejects %s without exact-action step-up", async (_label, input, setup) => {
+    Object.assign(state, setup);
+    const response = await PATCH(new Request("https://aurel.test/api/security/policy", { method: "PATCH", body: JSON.stringify(input) }));
+    expect(response.status).toBe(409);
+    expect((await response.json() as { error: string }).error).toBe("step_up_unavailable");
+    expect(state.writes).toHaveLength(0);
+  });
+
+  it("rejects a stale concurrent update before audit or analytics writes", async () => {
+    state.updateChanges = 0;
+    const response = await PATCH(new Request("https://aurel.test/api/security/policy", { method: "PATCH", body: JSON.stringify({ dailyLimitUsd: 20_000 }) }));
+    expect(response.status).toBe(409);
+    expect((await response.json() as { error: string }).error).toBe("security_policy_changed");
+    expect(state.lastUpdateSql).toContain("daily_limit_usd IS ?");
+    expect(state.writes).toHaveLength(1);
   });
 });

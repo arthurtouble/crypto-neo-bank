@@ -42,6 +42,8 @@ The chain or provider decides whether an action settles. Aurel records transacti
 
 These are product defaults, not universal promises. Availability and exact enforcement can depend on the action and authoritative data available at the time.
 
+An ordinary signed-in session may tighten transaction controls but cannot unlock an account or raise limits. Such changes need a separate verified recovery path, which is not self-service in the current private beta.
+
 ## Operations separation
 
 - Customer APIs require a verified customer identity.

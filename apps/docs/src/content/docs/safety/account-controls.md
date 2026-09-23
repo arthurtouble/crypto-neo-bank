@@ -5,9 +5,9 @@ sidebar:
   order: 2
 ---
 
-## Passkeys
+## Higher-risk actions
 
-Aurel requires a passkey before preparing some higher-risk actions. Keep your account recovery methods current.
+Aurel holds an in-app action when it requires approval that we cannot yet verify for that exact transaction on the server. Adding a passkey to sign-in alone does not lift that hold.
 
 ## Saved addresses
 
@@ -19,7 +19,7 @@ An address label is for recognition. It is not proof of identity or ownership.
 
 ## Review threshold
 
-Actions above your chosen threshold require an extra review step. If Aurel cannot determine a reliable US dollar value, it treats the action as higher risk instead of skipping the check.
+Actions at or above your chosen threshold, never higher than $10,000, require an extra review step. If Aurel cannot determine a reliable US dollar value, it treats the action as higher risk instead of skipping the check.
 
 The default high-value review starts at $25,000 of rolling 24-hour activity. Once cooling ends, Aurel compares the new preparation with the original instruction. The reviewed release expires after 15 minutes.
 
@@ -33,7 +33,7 @@ Price changes and unknown valuations make USD limits approximate. Conservative h
 
 The account lock stops Aurel from preparing new outgoing actions. It does not freeze the wallet, reverse submitted transactions, or prevent activity in another app.
 
-Use the lock when account access, a destination, or a recent prompt looks suspicious. Then secure the underlying identity and recovery methods as well. Unlocking should happen only after the concern is understood.
+Use the lock when account access, a destination, or a recent prompt looks suspicious. Then secure the underlying identity and recovery methods as well. An ordinary session cannot unlock the account or loosen saved-destination, cooling, or limit controls. Contact Support to begin identity review; do not assume a support case immediately restores access.
 
 ## Reserve warning
 

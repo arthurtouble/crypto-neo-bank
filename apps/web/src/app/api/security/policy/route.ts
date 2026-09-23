@@ -3,6 +3,7 @@ import { z } from "zod";
 import { AuthenticationError, requireVerifiedSubject } from "@/lib/auth/server";
 import { ensureSubjectProfile } from "@/lib/profile/ensure";
 import { writeAuditEvent } from "@/lib/security/audit";
+import { policyRelaxationReasons } from "@/lib/security/policy-changes";
 import { effectiveStepUpThresholdUsd, MAX_STEP_UP_THRESHOLD_USD } from "@/lib/transactions/policy";
 
 const updateSchema = z.object({
@@ -12,7 +13,7 @@ const updateSchema = z.object({
   newAddressThresholdUsd: z.number().min(0).max(1_000_000).optional(),
   newAddressDelayHours: z.number().int().min(0).max(168).optional(),
   stepUpThresholdUsd: z.number().min(100).max(MAX_STEP_UP_THRESHOLD_USD).optional()
-}).refine((value) => Object.keys(value).length > 0);
+}).strict().refine((value) => Object.keys(value).length > 0);
 
 type PolicyRow = { account_locked: number; enforce_address_book: number; daily_limit_usd: number; new_address_threshold_usd: number; new_address_delay_seconds: number; step_up_threshold_usd: number; updated_at: string };
 
@@ -51,9 +52,21 @@ export async function PATCH(request: Request) {
       newAddressDelaySeconds: input.newAddressDelayHours !== undefined ? input.newAddressDelayHours * 3600 : current.new_address_delay_seconds,
       stepUpThresholdUsd: input.stepUpThresholdUsd ?? effectiveStepUpThresholdUsd(current.step_up_threshold_usd)
     };
+    const relaxation = policyRelaxationReasons({
+      accountLocked: Boolean(current.account_locked), enforceAddressBook: Boolean(current.enforce_address_book),
+      dailyLimitUsd: current.daily_limit_usd, newAddressThresholdUsd: current.new_address_threshold_usd,
+      newAddressDelaySeconds: current.new_address_delay_seconds,
+      stepUpThresholdUsd: effectiveStepUpThresholdUsd(current.step_up_threshold_usd)
+    }, next);
+    if (relaxation.length) return Response.json({ error: "step_up_unavailable", traceId }, { status: 409, headers: { "Cache-Control": "no-store" } });
     const now = new Date().toISOString();
-    await env.PROJECTION_DB.prepare(`UPDATE security_profiles SET account_locked = ?, enforce_address_book = ?, daily_limit_usd = ?, new_address_threshold_usd = ?, new_address_delay_seconds = ?, step_up_threshold_usd = ?, updated_at = ? WHERE subject_reference = ?`)
-      .bind(next.accountLocked ? 1 : 0, next.enforceAddressBook ? 1 : 0, next.dailyLimitUsd, next.newAddressThresholdUsd, next.newAddressDelaySeconds, next.stepUpThresholdUsd, now, subject.subjectReference).run();
+    const result = await env.PROJECTION_DB.prepare(`UPDATE security_profiles SET account_locked = ?, enforce_address_book = ?, daily_limit_usd = ?, new_address_threshold_usd = ?, new_address_delay_seconds = ?, step_up_threshold_usd = ?, updated_at = ?
+      WHERE subject_reference = ? AND account_locked IS ? AND enforce_address_book IS ? AND daily_limit_usd IS ?
+        AND new_address_threshold_usd IS ? AND new_address_delay_seconds IS ? AND step_up_threshold_usd IS ?`)
+      .bind(next.accountLocked ? 1 : 0, next.enforceAddressBook ? 1 : 0, next.dailyLimitUsd, next.newAddressThresholdUsd, next.newAddressDelaySeconds, next.stepUpThresholdUsd, now,
+        subject.subjectReference, current.account_locked, current.enforce_address_book, current.daily_limit_usd,
+        current.new_address_threshold_usd, current.new_address_delay_seconds, current.step_up_threshold_usd).run();
+    if (result.meta.changes !== 1) return Response.json({ error: "security_policy_changed", traceId }, { status: 409, headers: { "Cache-Control": "no-store" } });
     await Promise.all([
       writeAuditEvent(env.PROJECTION_DB, { subjectReference: subject.subjectReference, actorType: "customer", actorReference: subject.subjectReference, action: "security.policy.updated", targetType: "security_profile", targetReference: subject.subjectReference, evidence: { changedFields: Object.keys(input) }, occurredAt: now }),
       env.PROJECTION_DB.prepare(`INSERT INTO product_events (event_id, subject_reference, session_reference, event_name, surface, properties_json, occurred_at)
