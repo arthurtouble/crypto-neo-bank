@@ -4,8 +4,8 @@ import type { PriceObservation } from "@/lib/swap/reminder-decisions";
 import { sourceInstantNs } from "@/lib/markets/source-instant";
 import { REVIEWED_PRICE_ALERT_PAIR as reviewed } from "@/lib/markets/alert-mapping";
 
-// This is a deliberately narrow, reviewed market-to-contract mapping. Kraken
-// ETH/USD is a market observation, not a price oracle or execution quote.
+// Research-only adapter until commercial market-data permission is documented.
+// This narrow market-to-contract mapping is not a price oracle or execution quote.
 const MAX_RESPONSE_BYTES = 128_000;
 const pricePattern = /^(?:0|[1-9]\d{0,59})(?:\.\d{1,18})?$/;
 const tradeSchema = z.object({

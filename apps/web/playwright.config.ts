@@ -3,7 +3,7 @@ import { defineConfig, devices } from "@playwright/test";
 // Keep the test server isolated from other local preview processes. Reusing an
 // unrelated server can make the browser pass or fail against the wrong build.
 const e2ePort = process.env.AUREL_E2E_PORT ?? "43173";
-const serverURL = `http://[::1]:${e2ePort}`;
+const serverURL = `http://localhost:${e2ePort}`;
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -14,7 +14,7 @@ export default defineConfig({
   reporter: [["list"], ["html", { outputFolder: "../../output/playwright-report", open: "never" }]],
   use: { baseURL: serverURL, trace: "retain-on-failure", screenshot: "only-on-failure" },
   webServer: {
-    command: `pnpm dev --host ::1 --port ${e2ePort}`,
+    command: `pnpm dev --host 127.0.0.1 --port ${e2ePort}`,
     url: serverURL,
     env: { ...process.env, PROVIDER_WEBHOOK_SECRET: "e2e-local-only-secret" },
     reuseExistingServer: false,
