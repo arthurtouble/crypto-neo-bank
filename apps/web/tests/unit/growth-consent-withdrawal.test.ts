@@ -18,10 +18,8 @@ function d1(db: DatabaseSync): D1Database {
 let sqlite: DatabaseSync;
 beforeEach(() => {
   sqlite = new DatabaseSync(":memory:");
-  sqlite.exec(`CREATE TABLE growth_applications (application_id TEXT PRIMARY KEY, marketing_consent INTEGER NOT NULL, beta_contact_consent INTEGER NOT NULL);
-    CREATE TABLE growth_subject_links (application_id TEXT PRIMARY KEY, subject_reference TEXT NOT NULL UNIQUE);
-    CREATE TABLE growth_consent_events (consent_event_id TEXT PRIMARY KEY, application_id TEXT,
-    subject_reference TEXT, purpose TEXT NOT NULL, action TEXT NOT NULL, notice_version TEXT NOT NULL, occurred_at TEXT NOT NULL);
+  sqlite.exec(`CREATE TABLE growth_consent_events (consent_event_id TEXT PRIMARY KEY,
+    subject_reference TEXT NOT NULL, purpose TEXT NOT NULL, action TEXT NOT NULL, notice_version TEXT NOT NULL, occurred_at TEXT NOT NULL);
     CREATE TABLE audit_events (audit_id TEXT PRIMARY KEY, subject_reference TEXT, actor_type TEXT NOT NULL,
     actor_reference TEXT NOT NULL, action TEXT NOT NULL, target_type TEXT NOT NULL, target_reference TEXT,
     evidence_json TEXT NOT NULL, occurred_at TEXT NOT NULL);`);
@@ -41,24 +39,18 @@ describe("marketing consent withdrawal", () => {
       .toMatchObject({ purpose: "marketing", action: "withdrawn", notice_version: "2026-09-22" });
   });
 
-  it("withdrawal suppresses the linked application ID as well as the account ID", async () => {
-    sqlite.exec(`INSERT INTO growth_applications VALUES ('application-1',1,1);
-      INSERT INTO growth_subject_links VALUES ('application-1','alice');
-      INSERT INTO growth_consent_events VALUES ('grant-1','application-1',NULL,'marketing','granted','2026-09-22','2026-09-20T00:00:00.000Z');`);
-    expect(await hasConsent(state.database!, "application-1", "marketing")).toBe(true);
+  it("withdrawal suppresses a prior subject grant even when audit fails", async () => {
+    sqlite.exec("INSERT INTO growth_consent_events VALUES ('grant-1','alice','marketing','granted','2026-09-22','2026-09-20T00:00:00.000Z')");
     expect(await hasConsent(state.database!, "alice", "marketing")).toBe(true);
     sqlite.exec("CREATE TRIGGER reject_audit BEFORE INSERT ON audit_events BEGIN SELECT RAISE(FAIL, 'audit unavailable'); END;");
     expect((await POST(new Request("https://aurel.test/api/growth/consent", { method: "POST",
       body: JSON.stringify({ purpose: "marketing", action: "withdrawn", noticeVersion: "2026-09-22" }) }))).status).toBe(200);
-    expect(await hasConsent(state.database!, "application-1", "marketing")).toBe(false);
     expect(await hasConsent(state.database!, "alice", "marketing")).toBe(false);
   });
 
   it("prefers withdrawal if grant and withdrawal share a timestamp", async () => {
-    sqlite.exec(`INSERT INTO growth_applications VALUES ('application-1',1,1);
-      INSERT INTO growth_subject_links VALUES ('application-1','alice');
-      INSERT INTO growth_consent_events VALUES ('grant-1','application-1',NULL,'marketing','granted','2026-09-22','2026-09-24T05:00:00.000Z');
-      INSERT INTO growth_consent_events VALUES ('withdraw-1',NULL,'alice','marketing','withdrawn','2026-09-22','2026-09-24T05:00:00.000Z');`);
-    expect(await hasConsent(state.database!, "application-1", "marketing")).toBe(false);
+    sqlite.exec(`INSERT INTO growth_consent_events VALUES ('grant-1','alice','marketing','granted','2026-09-22','2026-09-24T05:00:00.000Z');
+      INSERT INTO growth_consent_events VALUES ('withdraw-1','alice','marketing','withdrawn','2026-09-22','2026-09-24T05:00:00.000Z');`);
+    expect(await hasConsent(state.database!, "alice", "marketing")).toBe(false);
   });
 });

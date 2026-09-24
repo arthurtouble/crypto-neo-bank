@@ -9,6 +9,7 @@ const errors = []; const warnings = []; const now = Date.now();
 
 for (const item of content) {
   if (!item.owner || !item.audience || !Array.isArray(item.countries) || !item.disclosure || !item.reviewStatus || !item.reviewAt) errors.push(`${item.id}: incomplete content registration`);
+  if (item.reviewStatus !== "approved") errors.push(`${item.id}: content review is ${item.reviewStatus}`);
   const source = await readFile(resolve(root, item.file), "utf8").catch(() => null);
   if (source === null) { errors.push(`${item.id}: registered file is missing`); continue; }
   const lower = source.toLowerCase();

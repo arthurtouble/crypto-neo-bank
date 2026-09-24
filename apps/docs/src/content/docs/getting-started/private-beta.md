@@ -3,11 +3,11 @@ title: Private beta
 description: Invitations, cohorts, limits, feedback, and the rules for expanding access.
 ---
 
-Aurel uses small cohorts to test comprehension, reliability, recovery, and support before broad distribution. A polished interface is not enough evidence to open a mainnet financial product to everyone.
+Aurel uses small cohorts to test reliability, recovery, and support before expanding access. Anyone can join the global waitlist, but product access remains limited by country, capacity, and feature readiness.
 
 ## Current access mode
 
-The deployed product currently uses **preview mode**. Authenticated customers can explore implemented wallet and DeFi paths without an invitation. The complete invite-only control is implemented but remains off until the initial countries, beta terms, support coverage, and accountable operator are approved.
+The deployed product currently uses **preview mode**. Authenticated customers can explore implemented wallet and DeFi paths without an invitation. The invite-only control is implemented but remains off until the initial countries, beta terms, support coverage, and accountable operator are approved. The public waitlist is a separate, closed-by-default path.
 
 When invite mode is enabled, access requires:
 
@@ -45,4 +45,3 @@ Authenticated customers can send structured feedback from Settings. Feedback rec
 ## Expansion gates
 
 Access does not expand while there is an unexplained financial-state difference, unresolved Critical or High security issue, missing incident coverage, unsupported country exposure, or a misleading product claim. Customer count is never the sole reason to expand.
-

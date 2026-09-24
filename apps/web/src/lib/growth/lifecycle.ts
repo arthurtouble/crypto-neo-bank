@@ -4,7 +4,6 @@ export type LifecycleMessage = { recipientReference: string; purpose: "beta_oper
 export interface LifecycleMessenger { send(message: LifecycleMessage): Promise<{ providerReference: string; status: "accepted" | "rejected" }> }
 
 export const lifecycleTemplates = {
-  application_received: { version: "v1", purpose: "beta_operational", claimIds: [] },
   private_beta_invitation: { version: "v1", purpose: "beta_operational", claimIds: [] },
   invitation_expires_soon: { version: "v1", purpose: "beta_operational", claimIds: [] },
   onboarding_incomplete: { version: "v1", purpose: "beta_operational", claimIds: [] },
@@ -20,20 +19,9 @@ export class LocalLifecycleMessenger implements LifecycleMessenger {
 }
 
 export async function hasConsent(database: D1Database, recipientReference: string, purpose: LifecycleMessage["purpose"]) {
-  const column = purpose === "marketing" ? "marketing_consent" : "beta_contact_consent";
-  type ApplicationConsent = { application_id: string; subject_reference: string | null; consent: number };
-  const application = await database.prepare(`SELECT ga.application_id, gsl.subject_reference, ga.${column} AS consent
-    FROM growth_applications ga LEFT JOIN growth_subject_links gsl ON gsl.application_id = ga.application_id
-    WHERE ga.application_id = ?`).bind(recipientReference).first<ApplicationConsent>();
-  const linked = application ?? await database.prepare(`SELECT ga.application_id, gsl.subject_reference, ga.${column} AS consent
-    FROM growth_subject_links gsl JOIN growth_applications ga ON ga.application_id = gsl.application_id
-    WHERE gsl.subject_reference = ?`).bind(recipientReference).first<ApplicationConsent>();
-  if (!linked?.consent) return false;
-  const latest = await database.prepare(`SELECT action FROM growth_consent_events WHERE purpose = ?
-    AND (application_id = ? OR subject_reference = ?)
-    ORDER BY occurred_at DESC, (action = 'withdrawn') DESC LIMIT 1`)
-    .bind(purpose, linked.application_id, linked.subject_reference).first<{ action: string }>();
-  return !latest || latest.action === "granted";
+  const latest = await database.prepare("SELECT action FROM growth_consent_events WHERE subject_reference = ? AND purpose = ? ORDER BY occurred_at DESC, (action = 'withdrawn') DESC LIMIT 1")
+    .bind(recipientReference, purpose).first<{ action: string }>();
+  return latest?.action === "granted";
 }
 
 export async function sendLifecycleMessage(database: D1Database, messenger: LifecycleMessenger, raw: LifecycleMessage, actorReference: string) {
@@ -45,13 +33,13 @@ export async function sendLifecycleMessage(database: D1Database, messenger: Life
   if (message.purpose === "marketing") {
     const restricted = await database.prepare("SELECT status FROM beta_access WHERE subject_reference = ? AND status != 'active'").bind(message.recipientReference).first();
     if (restricted) throw new Error("Account messages take precedence over marketing.");
-    const recent = await database.prepare("SELECT COUNT(*) AS count FROM growth_communications WHERE purpose = 'marketing' AND (application_id = ? OR subject_reference = ?) AND created_at >= datetime('now', '-30 days') AND status != 'failed'").bind(message.recipientReference, message.recipientReference).first<{ count: number }>();
+    const recent = await database.prepare("SELECT COUNT(*) AS count FROM growth_communications WHERE purpose = 'marketing' AND subject_reference = ? AND created_at >= datetime('now', '-30 days') AND status != 'failed'").bind(message.recipientReference).first<{ count: number }>();
     if (Number(recent?.count ?? 0) >= 2) throw new Error("Marketing frequency cap reached.");
   }
-  const result = await messenger.send(message); const now = new Date().toISOString(); const isApplication = /^[0-9a-f-]{36}$/i.test(message.recipientReference);
+  const result = await messenger.send(message); const now = new Date().toISOString();
   await database.batch([
-    database.prepare(`INSERT INTO growth_communications (communication_id, application_id, subject_reference, purpose, template_key, template_version, idempotency_key, provider_reference, status, sent_at, delivered_at, failed_at, failure_code, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, ?)`).bind(crypto.randomUUID(), isApplication ? message.recipientReference : null, isApplication ? null : message.recipientReference, message.purpose, message.templateKey, message.templateVersion, message.idempotencyKey, result.providerReference, result.status, result.status === "accepted" ? now : null, now),
-    database.prepare(`INSERT INTO audit_events (audit_id, subject_reference, actor_type, actor_reference, action, target_type, target_reference, evidence_json, occurred_at) VALUES (?, ?, 'operator', ?, 'growth_communication_created', 'growth_communication', ?, ?, ?)`).bind(crypto.randomUUID(), isApplication ? null : message.recipientReference, actorReference, message.idempotencyKey, JSON.stringify({ purpose: message.purpose, templateKey: message.templateKey, templateVersion: message.templateVersion, status: result.status }), now)
+    database.prepare(`INSERT INTO growth_communications (communication_id, subject_reference, purpose, template_key, template_version, idempotency_key, provider_reference, status, sent_at, delivered_at, failed_at, failure_code, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, ?)`).bind(crypto.randomUUID(), message.recipientReference, message.purpose, message.templateKey, message.templateVersion, message.idempotencyKey, result.providerReference, result.status, result.status === "accepted" ? now : null, now),
+    database.prepare(`INSERT INTO audit_events (audit_id, subject_reference, actor_type, actor_reference, action, target_type, target_reference, evidence_json, occurred_at) VALUES (?, ?, 'operator', ?, 'growth_communication_created', 'growth_communication', ?, ?, ?)`).bind(crypto.randomUUID(), message.recipientReference, actorReference, message.idempotencyKey, JSON.stringify({ purpose: message.purpose, templateKey: message.templateKey, templateVersion: message.templateVersion, status: result.status }), now)
   ]);
   return result;
 }

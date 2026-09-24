@@ -34,5 +34,29 @@
     "approvedAt": "2026-09-22T00:00:00.000Z",
     "reviewAt": "2026-12-22T00:00:00.000Z",
     "status": "approved"
+  },
+  {
+    "id": "customer-controlled-signing-global-v1",
+    "copy": "You approve supported actions in your wallet",
+    "evidence": ["apps/web/src/components/wallet-workspace.tsx", "apps/docs/src/content/docs/getting-started/status.md"],
+    "surfaces": ["landing"],
+    "countries": ["GLOBAL"],
+    "requiredDisclosure": "Product access is limited by availability and eligibility.",
+    "approvedBy": null,
+    "approvedAt": null,
+    "reviewAt": "2026-12-23T00:00:00.000Z",
+    "status": "pending"
+  },
+  {
+    "id": "no-house-token-global-v1",
+    "copy": "No Aurel token",
+    "evidence": ["README.md"],
+    "surfaces": ["landing"],
+    "countries": ["GLOBAL"],
+    "requiredDisclosure": null,
+    "approvedBy": null,
+    "approvedAt": null,
+    "reviewAt": "2026-12-23T00:00:00.000Z",
+    "status": "pending"
   }
 ]

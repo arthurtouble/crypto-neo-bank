@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-export const allGrowthEvents = ["landing_viewed","product_tour_viewed","application_started","application_submitted","application_qualified","application_declined","invite_issued","invite_redeemed","onboarding_started","account_secured","wallet_ready","live_balance_viewed","first_value_completed","retained_30d","referral_unlocked","referral_issued","referral_redeemed"] as const;
-export const publicGrowthEvents = ["landing_viewed", "product_tour_viewed", "application_started"] as const;
+export const allGrowthEvents = ["landing_viewed","waitlist_viewed","waitlist_joined","invite_issued","invite_redeemed","onboarding_started","account_secured","wallet_ready","live_balance_viewed","first_value_completed","retained_30d","referral_unlocked","referral_issued","referral_redeemed"] as const;
+export const publicGrowthEvents = ["landing_viewed", "waitlist_viewed"] as const;
 
 const publicProperties = z
   .object({
@@ -29,7 +29,7 @@ export async function recordPublicEvents(database: D1Database, events: z.infer<t
     let campaignId: string | null = null; let contentId: string | null = null;
     if (event.campaignId) campaignId = await database.prepare("SELECT campaign_id FROM growth_campaigns WHERE campaign_id = ? AND status = 'active'").bind(event.campaignId).first<string>("campaign_id");
     if (event.contentId) contentId = event.contentId;
-    statements.push(database.prepare(`INSERT INTO growth_events (event_id, application_id, subject_reference, anonymous_session_id, event_name, surface, campaign_id, content_id, properties_json, occurred_at) VALUES (?, NULL, NULL, ?, ?, ?, ?, ?, ?, ?)`)
+    statements.push(database.prepare(`INSERT INTO growth_events (event_id, subject_reference, anonymous_session_id, event_name, surface, campaign_id, content_id, properties_json, occurred_at) VALUES (?, NULL, ?, ?, ?, ?, ?, ?, ?)`)
       .bind(crypto.randomUUID(), event.anonymousSessionId, event.eventName, event.surface, campaignId, contentId, JSON.stringify(event.properties), timestamp));
   }
   await database.batch(statements);
