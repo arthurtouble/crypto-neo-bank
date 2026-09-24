@@ -42,7 +42,7 @@ Put credentials in provider dashboards or a secret manager, never in this file o
 | Rewards | Informational boundary | Funded cashback/benefit program, eligibility, earning/reversal ledger, fulfilment and customer terms |
 | Notifications and support | Preferences, support intake, read-only assistant | Delivery provider, preference enforcement, staffed support, response targets, incident channel, assistant escalation/privacy review |
 
-Removed customer-facing features stay out of navigation. Goals, income planning, bill reminders, transfer schedules, price alerts, recurring swap reminders, waitlist/referrals, campaigns, growth experiments, and local-only communications reject new creation. Historical records and cancellation/archive paths remain where relevant. Valid obligations and security/audit evidence remain.
+Removed customer-facing features stay out of navigation. Goals, income planning, bill reminders, transfer schedules, price alerts, recurring swap reminders, waitlist/referrals, campaigns, growth experiments, and local-only communications reject new creation. The retired growth milestone scheduler is removed from the event Worker source; the previously deployed event Worker has not been changed by this branch. Historical records and cancellation/archive paths remain where relevant. Valid obligations and security/audit evidence remain.
 
 ## Platform and operations gates
 
