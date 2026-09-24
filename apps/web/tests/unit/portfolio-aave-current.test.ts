@@ -60,6 +60,18 @@ describe("canonical current Aave portfolio legs", () => {
     }
   });
 
+  it("logs a bounded failure stage without exposing the account address", async () => {
+    const logged = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      const { client } = chain({ fail: true });
+      const result = await readCurrentAaveLegs(accountId, { client: client as never, now: new Date(1_000_002_000) } as never);
+      expect(result.status).toBe("unavailable");
+      const event = JSON.parse(String(logged.mock.calls.at(-1)?.[0])) as Record<string, unknown>;
+      expect(event).toMatchObject({ event: "portfolio.aave.current.failed", stage: "market", errorName: "Error" });
+      expect(JSON.stringify(event)).not.toContain(accountId.slice(5));
+    } finally { logged.mockRestore(); }
+  });
+
   it("does not call an unsupported account or wrong chain a complete zero", async () => {
     const wrong = chain();
     wrong.client.getChainId.mockResolvedValueOnce(1);

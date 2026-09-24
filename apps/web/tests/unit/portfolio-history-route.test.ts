@@ -76,9 +76,15 @@ describe("portfolio history read boundary", () => {
 
   it("distinguishes a failed Aave read from missing account scope", async () => {
     state.aaveUnavailable = true;
-    const body = await readBody(await GET(request()));
-    expect(body.currentAave.reason).toBe("aave_unavailable");
-    expect(body.embeddedWalletCount).toBe(1);
+    const logged = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      const body = await readBody(await GET(request()));
+      expect(body.currentAave.reason).toBe("aave_unavailable");
+      expect(body.embeddedWalletCount).toBe(1);
+      const event = JSON.parse(String(logged.mock.calls.at(-1)?.[0])) as Record<string, unknown>;
+      expect(event).toMatchObject({ event: "portfolio.aave.current.unavailable", reason: "offline", accountCount: 1 });
+      expect(JSON.stringify(event)).not.toContain(wallet.slice(5));
+    } finally { logged.mockRestore(); }
   });
 
   it("serves complete days but nulls a missing-price day and segregates linked external wallets", async () => {

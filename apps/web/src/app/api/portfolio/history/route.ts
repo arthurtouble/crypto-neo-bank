@@ -97,6 +97,7 @@ export async function GET(request: Request) {
       catch { return { accountId: account.accountId, legs: [], status: "unavailable" as Completeness, reason: "aave_unavailable" }; }
     }));
     const aaveStatus: Completeness = !accounts.length || aave.some((item) => item.status === "unavailable") ? "unavailable" : aave.some((item) => item.status !== "complete" || item.legs.length > 0) ? "partial" : "complete";
+    if (accounts.length && aaveStatus === "unavailable") console.warn(JSON.stringify({ event: "portfolio.aave.current.unavailable", accountCount: accounts.length, reason: aave.find((item) => item.status === "unavailable")?.reason ?? "unknown" }));
     const history: PortfolioHistory = { calculationVersion, points, coverage, embeddedWalletCount: accounts.filter((item) => item.origin === "embedded").length, externalWallets: accounts.filter((item) => item.origin === "linked_external").map((item) => item.accountId),
       currentAave: { suppliedUsd: aaveStatus === "complete" ? "0" : null, debtUsd: aaveStatus === "complete" ? "0" : null, status: aaveStatus }, observedAt: new Date().toISOString() };
     return response({ ...history, returnWindow: { pricedDays: 90, scope: "recent_completed_utc_days", inceptionReturnAvailable: false }, sourceVersions: Object.fromEntries([...byCheckpoint].map(([key, item]) => [key, item.ingestion_version])),

@@ -56,6 +56,7 @@ export async function readCurrentAaveLegs(accountId: AccountId, options: Options
     "function getUserReserveData(address asset,address user) view returns (uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint40,bool)",
     "function getReserveConfigurationData(address asset) view returns (uint256,uint256,uint256,uint256,uint256,bool,bool,bool,bool,bool)"
   ]);
+  let stage = "chain";
   try {
     if (await client.getChainId() !== 8453) return unavailable("aave_chain_mismatch");
     const tip = await client.getBlockNumber();
@@ -70,14 +71,17 @@ export async function readCurrentAaveLegs(accountId: AccountId, options: Options
       return unavailable("aave_snapshot_stale");
     const read = (target: Address, functionName: string, args: readonly unknown[] = []): Promise<unknown> =>
       client.readContract({ address: target, abi, functionName, args, blockHash: block.hash, requireCanonical: true } as never);
+    stage = "market";
     const pool = await read(AAVE_BASE_PROTOCOL.provider, "getPool");
     const dataProvider = await read(AAVE_BASE_PROTOCOL.provider, "getPoolDataProvider");
     if (address(pool) !== AAVE_BASE_V3_MARKET.toLowerCase() || address(dataProvider) !== AAVE_BASE_PROTOCOL.dataProvider.toLowerCase())
       return unavailable("aave_market_changed");
+    stage = "reserves";
     const reserves = await read(AAVE_BASE_V3_MARKET, "getReservesList");
     if (!Array.isArray(reserves) || !reserves.length || reserves.length > 128
       || reserves.some((reserve) => !address(reserve) || address(reserve) === `0x${"0".repeat(40)}`)
       || new Set(reserves.map((reserve) => address(reserve))).size !== reserves.length) return unavailable("aave_reserve_coverage_incomplete", "partial");
+    stage = "positions";
     const positions = await Promise.all(reserves.map(async (reserve) => {
       const position = await read(AAVE_BASE_PROTOCOL.dataProvider, "getUserReserveData", [reserve, accountId.slice(5)]);
       if (!Array.isArray(position) || position.length !== 9 || position.slice(0, 3).some((value) => typeof value !== "bigint" || value < 0n))
@@ -96,6 +100,7 @@ export async function readCurrentAaveLegs(accountId: AccountId, options: Options
         ...(borrowed ? [{ ...common, side: "debt" as const, rawUnits: `-${borrowed}` }] : [])
       ];
     }));
+    stage = "canonical";
     const canonical = await client.getBlock({ blockNumber: block.number });
     if (canonical.hash?.toLowerCase() !== block.hash.toLowerCase() || canonical.timestamp !== block.timestamp)
       return unavailable("aave_block_changed");
@@ -103,7 +108,10 @@ export async function readCurrentAaveLegs(accountId: AccountId, options: Options
       return unavailable("aave_snapshot_stale");
     legs.push(...positions.flat());
     return { legs, status: "complete", reason: null };
-  } catch { return unavailable("aave_unavailable"); }
+  } catch (error) {
+    console.warn(JSON.stringify({ event: "portfolio.aave.current.failed", stage, errorName: error instanceof Error ? error.name : "unknown" }));
+    return unavailable("aave_unavailable");
+  }
 }
 
 export class BaseAaveSource implements HistoricalEventSource {
