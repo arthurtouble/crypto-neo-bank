@@ -44,14 +44,6 @@ export default defineConfig({
           { label: "Data and privacy", slug: "safety/data-and-privacy" },
           { label: "Report a security issue", slug: "safety/report-a-security-issue" }
         ] },
-        { label: "Operations", items: [
-          { label: "Private-beta operations", slug: "operations/private-beta" },
-          { label: "Provider events", slug: "operations/provider-events" },
-          { label: "Reliability and recovery", slug: "operations/reliability-and-recovery" },
-          { label: "Incident response", slug: "operations/incident-response" },
-          { label: "Release process", slug: "operations/release-process" },
-          { label: "Provider diligence", slug: "operations/provider-diligence" }
-        ] },
         { label: "Company", items: [
           { label: "Fees and alignment", slug: "company/fees-and-alignment" },
           { label: "Regulated services", slug: "company/regulated-services" }

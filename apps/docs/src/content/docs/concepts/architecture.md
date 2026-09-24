@@ -61,4 +61,4 @@ An abstraction is useful only when it preserves meaningful differences. A bank t
 
 Aura fails closed when a required security or eligibility fact is missing. It should not prepare a tokenized-market action without current eligibility data, treat an unknown transaction value as below a step-up threshold, or mark a routed transfer complete only because the source transaction succeeded.
 
-When a dependency is unavailable, the product should show the affected feature as unavailable and leave unaffected areas usable. See [Reliability and recovery](/operations/reliability-and-recovery/) for the operating model.
+When a dependency is unavailable, the product should show the affected feature as unavailable and leave unaffected areas usable. See [Sources of truth](/concepts/sources-of-truth/) for how Aura treats missing financial data.
