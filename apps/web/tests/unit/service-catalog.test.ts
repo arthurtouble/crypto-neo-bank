@@ -13,8 +13,10 @@ describe("money provider boundary", () => {
   });
 
   it("uses activated Bridge instructions and only the rails Bridge returned", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({ data: [{ id: "account-1", customer_id: "customer-1", status: "activated", source_deposit_instructions: { currency: "usd", payment_rails: ["ach_push", "wire"], bank_name: "Lead Bank", bank_beneficiary_name: "Test Member", bank_account_number: "123456789", bank_routing_number: "876543210" } }] })));
+    const fetcher = vi.fn().mockResolvedValue(Response.json({ data: [{ id: "account-1", customer_id: "customer-1", status: "activated", source_deposit_instructions: { currency: "usd", payment_rails: ["ach_push", "wire"], bank_name: "Lead Bank", bank_beneficiary_name: "Test Member", bank_account_number: "123456789", bank_routing_number: "876543210" } }] }));
+    vi.stubGlobal("fetch", fetcher);
     const account = await new BridgeRailAdapter("test-key").getUsdAccount("customer-1");
+    expect(fetcher.mock.calls[0][0]).toBe("https://api.bridge.xyz/v0/customers/customer-1/virtual_accounts?limit=100");
     expect(account.state).toBe("active");
     expect(account.depositInstructions).toMatchObject({ accountNumber: "123456789", routingNumber: "876543210", beneficiaryName: "Test Member" });
     expect(account.capabilities.find((item) => item.key === "ach")?.state).toBe("available");

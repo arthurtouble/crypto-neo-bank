@@ -35,7 +35,8 @@ export class BridgeRailAdapter {
   }
 
   async getUsdAccount(customerId: string): Promise<MoneyAccount> {
-    const result = await this.request<{ data?: BridgeVirtualAccount[] }>(`/customers/${encodeURIComponent(customerId)}/virtual_accounts`);
+    // Bridge defaults to ten results, which can hide an older active account.
+    const result = await this.request<{ data?: BridgeVirtualAccount[] }>(`/customers/${encodeURIComponent(customerId)}/virtual_accounts?limit=100`);
     if (!Array.isArray(result.data)) throw new Error("Bridge virtual account response is incomplete.");
     const account = result.data.find((item) => item.customer_id === customerId && item.status === "activated" && item.source_deposit_instructions?.currency?.toLowerCase() === "usd")
       ?? result.data.find((item) => item.customer_id === customerId && item.source_deposit_instructions?.currency?.toLowerCase() === "usd");
