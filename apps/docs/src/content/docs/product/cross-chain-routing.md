@@ -3,9 +3,9 @@ title: Cross-chain routes
 description: How to read route previews and what must happen before cross-chain transfers resume.
 ---
 
-Aurel Move Money can look across connected accounts for USD Coin and show possible routes. Its cross-network execution remains paused. The separate Swap screen uses LI.FI's embedded exchange and can offer cross-network routes through the connected wallet. Track those routes in Swap's **Activities** view; they do not pass through Aurel's Move Money controls or Activity ledger.
+Aurel Move Money can look across connected accounts for USD Coin and show possible routes. Its cross-network execution remains paused. The separate Swap screen can exchange curated assets across supported networks through LI.FI and the connected wallet. Keep Swap open to follow progress. These transactions do not pass through Aurel's Move Money controls or Activity ledger.
 
-The route-preview and governed-signing system described below is Aurel's separate, currently disabled API flow. It does not describe the LI.FI widget's execution process.
+The route-preview and governed-signing system described below is Aurel's separate, currently disabled API flow. It does not describe Swap's LI.FI SDK execution process.
 
 ## What a quote contains
 

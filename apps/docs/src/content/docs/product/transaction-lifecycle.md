@@ -5,7 +5,7 @@ description: What prepared, cooling, reviewed, submitted, confirmed, failed, and
 
 Activity is an evidence trail, not just a list of successful payments. Aurel records the states it observes so customers and operations can distinguish a request from a settled result.
 
-Swap currently uses LI.FI's embedded execution flow. Its transactions appear in Swap's **Activities** view, not in the Aurel Activity timeline described here.
+Swap currently uses LI.FI execution through the connected wallet. Its progress appears on the Swap screen while it is open; it does not appear in the Aurel Activity timeline described here.
 
 ## Standard lifecycle
 

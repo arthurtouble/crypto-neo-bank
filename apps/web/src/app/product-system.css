@@ -467,6 +467,40 @@
 .swapAssetBlock label { display: grid; gap: 8px; color: var(--muted); font-size: var(--type-label); font-weight: 650; }
 .swapAssetLabel { display: grid; justify-items: start; gap: 8px; color: var(--muted); font-size: var(--type-body-small); font-weight: 650; }
 .swapReviewButton { grid-column: 1 / -1; margin-top: 8px; }
+
+.aurelSwap { width: min(100%, 570px); margin: 24px auto 48px; }
+.aurelSwapCard { padding: 20px; border: 1px solid var(--line, #d8ded9); border-radius: 16px; background: var(--surface, #fff); box-shadow: 0 12px 36px rgba(14, 39, 26, .045); }
+.swapAmountRow { padding: 16px 18px; border: 1px solid var(--line, #d8ded9); border-radius: 12px; background: var(--surface-subtle, #f8faf8); }
+.swapAmountRow > label, .swapAmountRow > span { display: block; margin-bottom: 10px; font-size: 14px; font-weight: 600; }
+.swapAmountRow > div { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.swapAmountRow input, .swapAmountRow output { width: min(100%, 220px); min-width: 0; border: 0; outline: 0; background: transparent; color: inherit; font: 600 32px/1.2 var(--font-body, sans-serif); }
+.swapAmountRow input::placeholder { color: #87968a; }
+.swapAssetTrigger, .swapAssetList button { display: flex; align-items: center; gap: 10px; border: 0; background: transparent; color: inherit; cursor: pointer; text-align: left; }
+.swapAssetTrigger { padding: 7px 10px; border-radius: 9px; }
+.swapAssetTrigger:hover, .swapAssetList button:hover { background: rgba(18, 53, 36, .08); }
+.swapAssetTrigger:active, .swapAssetList button:active { transform: scale(.98); }
+.swapAssetTrigger strong, .swapAssetList strong { display: block; font-size: 16px; }
+.swapAssetTrigger small, .swapAssetList small { display: block; font-size: 12px; opacity: .68; }
+.swapAssetMark { display: grid; place-items: center; flex: 0 0 34px; height: 34px; border-radius: 50%; background: #cde6d4; color: #123524; font-size: 16px; font-weight: 700; }
+.swapReverse { display: block; position: relative; z-index: 1; width: 40px; height: 40px; margin: -5px auto; border: 3px solid var(--surface, #fff); border-radius: 12px; background: #123524; color: #fff; font-size: 21px; cursor: pointer; }
+.swapReverse:hover { background: #245d3d; }
+.swapQuoteDetails { margin: 18px 0; padding: 2px 0; border-top: 1px solid var(--line, #d8ded9); }
+.swapQuoteDetails > div { display: flex; justify-content: space-between; gap: 16px; margin-top: 12px; font-size: 14px; }
+.swapQuoteDetails span { opacity: .7; }
+.aurelSwapCard > .button { margin-top: 18px; min-height: 48px; }
+.swapError { color: #ad3131; } .swapProgress { color: #245d3d; }
+.swapFootnote { margin: 14px 6px; font-size: 13px; opacity: .65; }
+.swapTransaction { display: inline-block; margin-top: 10px; color: #245d3d; font-weight: 600; }
+.swapModalBackdrop { position: fixed; z-index: 1000; inset: 0; display: grid; place-items: center; padding: 20px; background: rgba(8, 25, 17, .52); }
+.swapAssetModal { width: min(100%, 440px); max-height: min(80vh, 620px); padding: 20px; border-radius: 16px; background: var(--surface, #fff); color: var(--text, #123524); box-shadow: 0 24px 80px rgba(0, 0, 0, .2); }
+.swapModalHeader { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.swapModalHeader h2 { margin: 0; font-size: 20px; }
+.swapModalHeader button { border: 0; background: transparent; color: inherit; font-size: 28px; cursor: pointer; }
+.swapAssetSearch { width: 100%; padding: 12px 14px; border: 1px solid var(--line, #d8ded9); border-radius: 9px; background: transparent; color: inherit; font: inherit; }
+.swapAssetList { max-height: 400px; overflow: auto; margin-top: 12px; }
+.swapAssetList button { width: 100%; padding: 11px 8px; border-radius: 9px; }
+.swapAssetList p { padding: 16px 8px; opacity: .65; }
+@media (max-width: 540px) { .aurelSwap { margin-top: 8px; } .aurelSwapCard { padding: 14px; } .swapAmountRow { padding: 12px; } .swapAmountRow input, .swapAmountRow output { font-size: 27px; } }
 .swapRiskCheck { display: flex; align-items: flex-start; gap: 10px; margin-top: 18px; color: var(--muted); font-size: var(--type-body-small); line-height: 1.5; cursor: pointer; }
 .swapRiskCheck input { width: 17px; height: 17px; flex: 0 0 auto; margin-top: 2px; accent-color: var(--accent); }
 .swapReviewAction { margin-top: 14px; }

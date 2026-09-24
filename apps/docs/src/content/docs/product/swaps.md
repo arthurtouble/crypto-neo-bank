@@ -3,7 +3,7 @@ title: Swap
 description: Exchange digital assets across supported networks.
 ---
 
-Swap uses LI.FI's embedded exchange. Search by asset name or contract address, choose what to send and receive, enter an amount, and review the available route before confirming in your wallet. The current app supports Ethereum, Base, Arbitrum, Optimism, and Polygon. An asset appearing in search does not guarantee that a route is available or that its contract is safe.
+Swap lets you exchange a curated set of assets on Ethereum, Base, Arbitrum, Optimism, and Polygon. Choose the assets, enter an amount, and review the live quote. LI.FI finds the route in the background. You do not need to choose a bridge or exchange.
 
 ## Before you exchange
 
@@ -13,6 +13,6 @@ Some assets need a separate token approval before the exchange transaction. Your
 
 ## Track an exchange
 
-Use **Activities** inside Swap to follow a submitted LI.FI route, including a cross-network route. A source-network transaction is not proof that the destination asset has arrived. If delivery is delayed, check the route there before trying again.
+Keep Swap open while a transaction is in progress. It shows LI.FI's route progress and a link to the source transaction. A source-network transaction is not proof that the destination asset has arrived. If delivery is delayed, check the transaction in your wallet and contact support before trying again.
 
-This development integration uses LI.FI's wallet and execution flow directly. Aurel's separate transaction-control and Activity system does not yet govern or record these widget exchanges. Balances and settlement remain onchain, not in Aurel's database.
+Your connected wallet signs approvals and transactions. Aurel's server validates the selected asset identities and linked wallet before requesting a quote, but this development flow does not yet use Aurel's separate transaction controls or Activity ledger. Balances and settlement remain onchain, not in Aurel's database.
