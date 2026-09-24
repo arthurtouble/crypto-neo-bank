@@ -6,7 +6,7 @@ Last reviewed: 24 September 2026. Branch: `codex/aura-product-simplification`. T
 
 Release public example-data browsing after its domain, privacy, accessibility, marketing, support, and monitoring gates pass. Activate each authenticated financial rail separately after its provider, security, funded-test, reconciliation, and operating gates pass. A feature flag or API key alone is not proof that a rail is ready. Provider and on-chain records remain authoritative; D1 is a projection and audit store. Missing authoritative values stay unavailable.
 
-An isolated Aura development Worker is deployed at `aura-dev.aurel-events.workers.dev` with a fresh D1 migrated through `0037_aura_tag_bank_consent.sql`. Its public example-data tour works; authenticated use still needs a development Privy secret and allowed origin. The original `aurel-financial-os` Worker and D1 were not changed. Its D1 still lists `0035_growth_waitlist_upgrade.sql`, `0036_aura_tags.sql`, and `0037_aura_tag_bank_consent.sql` as pending. Keep `direct_transfers`, `swaps`, `cross_chain`, and `defi_actions` disabled until each has an approved release record.
+An isolated Aura development Worker is deployed at `aura-dev.aurel-events.workers.dev` with a fresh D1 migrated through `0038_support_assistant_flag.sql`. Its public example-data tour works; authenticated use still needs a development Privy secret and allowed origin. The original `aurel-financial-os` Worker and D1 were not changed. Its D1 still needs Aura migrations applied before any future production release. Keep `direct_transfers`, `swaps`, `cross_chain`, and `defi_actions` disabled until each has an approved release record.
 
 ## Inputs needed from the owner
 
@@ -27,20 +27,20 @@ Put credentials in provider dashboards or a secret manager, never in this file o
 
 | Area | Current source state | Evidence before live use |
 | --- | --- | --- |
-| Public browse and landing | Aura pages with labeled fictional data; undeployed branch | Final-domain claims/footnotes, privacy/support links, accessibility and responsive check, analytics consent review |
+| Public browse and landing | Aura development Worker deployed; 45 desktop/mobile Playwright checks passed, one skipped; final claims review pending | Final-domain claims/footnotes, privacy/support links, accessibility and responsive check, analytics consent review |
 | Identity and recovery | Privy sign-in, invitation/country controls, wallet/passkey/recovery surfaces | Production Privy app/origins, sign-in and recovery rehearsal, session revocation and passcode capability confirmation, export safeguards |
 | Overview, activity and insights | Direct chain/provider reads with coverage labels; D1 intent evidence | Reliable RPC/indexer capacity, completeness and reconciliation sampling, valuation/price evidence, delayed/failed activity handling, statement source |
 | Crypto deposit and send | Address/tag UI and governed Base action foundations | Asset/network matrix, exact-call review, simulation, signing, fees/limits, funded rehearsals, settlement and support recovery |
 | Bridge bank deposit/payout | Preview boundary. An activated, customer-matched USD virtual account with complete instructions can be shown after Bridge connection; no outgoing execution exists | Approved Bridge program and scope, verified beneficiaries, execution/return states, signed webhook replay tests, reconciliation and support responsibility |
 | Aura tag public page | Crypto method; separate opt-in exposes activated Bridge bank instructions after connection; card unavailable | Recipient verification and consent, abuse controls, separate acquiring/payment-link program for card, confirmation/refund/dispute states |
 | Swap | LI.FI search/quotes and narrow governed review; financial flags off | Per-route calldata/allowance review, route matrix, expiry/slippage disclosure, source/destination confirmation, 100 test movements across published pairs, delayed-destination recovery |
-| Earn and borrow | Aave Base reads; writes paused; Sky/Morpho not connected | Selected markets/contracts and risk review, exact-call deposit/withdraw/borrow/repay, debt/health/liquidation disclosure, funded settlement and unwind. Release each protocol independently |
+| Earn and borrow | Aave Base reads and private same-block risk previews; exact-call builder and Pool effect verifier tested; signing paused; Sky/Morpho not connected | Connect governed preparation, simulation, action-bound step-up where required, sequential approval finality, customer signing, funded settlement and unwind. Release each protocol independently |
 | Invest | Discovery/eligibility boundary | Issuer and venue programs, country/product eligibility, price/order lifecycle, corporate actions/redemption, custody/statements and risk disclosure |
 | Cards | Issuer projection/read boundary and dispute entry | Bridge/Rain program, create/freeze/limits/countries/PIN/provision/terminate APIs, transaction feed, PCI-sensitive data boundary, chargeback lifecycle and reconciliation |
 | Rewards | Informational boundary | Funded cashback/benefit program, eligibility, earning/reversal ledger, fulfilment and customer terms |
 | Notifications and support | Preferences, support intake, read-only assistant | Delivery provider, preference enforcement, staffed support, response targets, incident channel, assistant escalation/privacy review |
 
-Removed customer-facing features stay out of navigation. Historical records, valid obligations, and security/audit evidence remain. Review legacy API writes and retention before disabling or deleting data.
+Removed customer-facing features stay out of navigation. Goals, income planning, bill reminders, transfer schedules, price alerts, recurring swap reminders, waitlist/referrals, campaigns, growth experiments, and local-only communications reject new creation. Historical records and cancellation/archive paths remain where relevant. Valid obligations and security/audit evidence remain.
 
 ## Platform and operations gates
 
@@ -48,7 +48,7 @@ Removed customer-facing features stay out of navigation. Historical records, val
 | --- | --- | --- |
 | Configuration | Dedicated production hostname/account; Privy app/origin; invite or approved access mode; Turnstile widget/action/hostname; operator Access; reviewed feature flags | Engineering/operations |
 | Secrets and webhooks | Production secrets installed through protected channel; least privilege and rotation owner; sandbox/production separation; signed webhook and replay tests | Engineering/provider owner |
-| D1 and recovery | Snapshot/export and integrity; migration `0036` on a staging copy; deploy order and forward-fix plan; restore drill and evidence retention | Engineering/operations |
+| D1 and recovery | Snapshot/export and integrity; Aura migrations `0036`–`0038` on a staging copy; deploy order and forward-fix plan; restore drill and evidence retention | Engineering/operations |
 | Edge and observability | Domain, WAF/rate limits, API schema validation, Access, logs/retention/export, alerts to an on-call receiver, version affinity before split traffic | Operations |
 | Security | Independent auth/passkey, wallet export, exact-call signing, webhook, abuse/PII, provider-boundary and frontend review; no unresolved high/critical finding | Security assessor |
 | Legal/product | Confirm entity and provider-specific countries/products; effective dated Terms/privacy/risk/routing disclosures, complaints/retention, responsibility matrix and sanctions/fraud handoff | Product/provider owner/reviewer |
