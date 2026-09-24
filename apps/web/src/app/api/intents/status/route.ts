@@ -1,7 +1,7 @@
 import { env } from "cloudflare:workers";
 import { z } from "zod";
 import { AuthenticationError, requireVerifiedSubject } from "@/lib/auth/server";
-import { BetaAccessError, betaMode, requireBetaAccess } from "@/lib/beta/access";
+import { BetaAccessError, betaMode, configuredCountries, requireBetaAccess } from "@/lib/beta/access";
 import { FeatureUnavailableError, requireFeature, type FeatureKey } from "@/lib/features/flags";
 import { WalletOwnershipError, requireLinkedEvmWallet } from "@/lib/auth/wallet";
 import { observeTransactionIdentity } from "@/lib/transactions/chain-observation";
@@ -129,8 +129,8 @@ export async function POST(request: Request) {
       const claimNow = new Date().toISOString();
       const claimed = await env.PROJECTION_DB.prepare(REPORTED_HASH_CLAIM_SQL)
         .bind(hash.toLowerCase(), claimNow, input.intentId, stepIndex, hash,
-          claimNow, subject.subjectReference, claimNow, betaMode(), feature).run();
-      if (claimed.meta.changes !== 1) return reply({ error: "hash_conflict", traceId }, 409);
+          claimNow, subject.subjectReference, claimNow, betaMode(), JSON.stringify(configuredCountries()), feature).run();
+      if (claimed.meta.changes !== 1) return await late("claim_unavailable");
       const observation = await observeTransactionIdentity(prepared.chain_id, hash);
       if (observation.status === "pending") return reply({ intentId: input.intentId, stepIndex, verificationState: "pending", traceId }, 202);
       const preparedCall: NormalizedPreparedCall = { chainId: prepared.chain_id, from: prepared.wallet_address as `0x${string}`, to: prepared.target_address as `0x${string}`, value: prepared.native_value, data: "0x", dataHash: prepared.calldata_hash as `0x${string}`, fingerprint: prepared.call_fingerprint as `0x${string}` };

@@ -30,6 +30,7 @@ const state = vi.hoisted(() => ({
   addressBook: [] as Array<{ address: string; available_at: string }>,
   intentUpdateAllowed: true,
   cancelBeforeClaim: false,
+  claimRejectedAtCommit: false,
   terminalAuditFails: false,
   submissionAuditFails: false,
   preparationEventFails: false,
@@ -132,6 +133,7 @@ vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
           if (query.includes("INSERT INTO operational_issues")) { state.issues.push(String(args[0])); return { meta: { changes: 1 } }; }
           if (query.includes("UPDATE intent_prepared_calls")) {
             if (query.includes("SET reported_hash") && state.cancelBeforeClaim) state.intent!.status = "cancelled";
+            if (query.includes("SET reported_hash") && state.claimRejectedAtCommit) return { meta: { changes: 0 } };
             if (query.includes("AND EXISTS (SELECT 1 FROM transaction_intents i") && !["reviewed", "submitted"].includes(String(state.intent?.status))) return { meta: { changes: 0 } };
             const step = Number(query.includes("'inconsistent'") ? args[2] : args[3]); const row = state.prepared.get(step);
             if (!row) return { meta: { changes: 0 } };
@@ -577,7 +579,7 @@ describe("reported transaction binding", () => {
   const report = (stepIndex = 0, transactionHash = txHash) => reportStatus(new Request("https://aurel.test/api/intents/status", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ intentId, stepIndex, status: "submitted", transactionHash }) }));
 
   beforeEach(async () => {
-    state.subject = "subject-a"; state.walletLinked = true; state.betaAllowed = true; state.featureAllowed = true; state.accountLocked = false; state.intentUpdateAllowed = true; state.cancelBeforeClaim = false; state.terminalAuditFails = false; state.submissionAuditFails = false; state.prepared.clear(); state.events.length = 0; state.issues.length = 0; state.candidates.clear(); state.candidateInsertFails = false;
+    state.subject = "subject-a"; state.walletLinked = true; state.betaAllowed = true; state.featureAllowed = true; state.accountLocked = false; state.intentUpdateAllowed = true; state.cancelBeforeClaim = false; state.claimRejectedAtCommit = false; state.terminalAuditFails = false; state.submissionAuditFails = false; state.prepared.clear(); state.events.length = 0; state.issues.length = 0; state.candidates.clear(); state.candidateInsertFails = false;
     state.intent = { intent_id: intentId, subject_reference: "subject-a", intent_type: "transfer", chain_id: 8453, wallet_reference: `wallet:${sender.toLowerCase()}`, request_json: JSON.stringify({ destination: recipient }), policy_result_json: JSON.stringify({ permitted: true }), status: "reviewed", expires_at: new Date(Date.now() + 60_000).toISOString() };
     const normalized = await normalizePreparedCall(call);
     state.prepared.set(0, { intent_id: intentId, step_index: 0, subject_reference: "subject-a", wallet_address: sender.toLowerCase(), chain_id: 8453, target_address: recipient.toLowerCase(), native_value: "100", calldata_hash: normalized.dataHash, call_fingerprint: normalized.fingerprint, semantic_action: "native_transfer", source_reference: "review-1", expected_effect_json: JSON.stringify({ type: "native_transfer", recipient, amountRaw: "100" }), expires_at: state.intent.expires_at, verification_state: "prepared", reported_hash: null });
@@ -636,6 +638,16 @@ describe("reported transaction binding", () => {
     expect(state.candidates.get(txHash)).toMatchObject({ intent_id: intentId, verification_state: "unindexed" });
     expect(state.intent?.status).toBe("reviewed");
     expect(state.prepared.get(0)?.reported_hash).toBeNull();
+  });
+
+  it("keeps a hash as observation-only when final claim controls change after the route checks", async () => {
+    state.claimRejectedAtCommit = true;
+    const response = await report();
+    expect(response.status).toBe(202);
+    expect(await response.json()).toMatchObject({ verificationState: "observationPending" });
+    expect(state.candidates.get(txHash)).toMatchObject({ intent_id: intentId, verification_state: "unindexed" });
+    expect(state.prepared.get(0)?.reported_hash).toBeNull();
+    expect(state.intent?.status).toBe("reviewed");
   });
 
   it.each(["review_expired", "account_locked", "access_revoked", "feature_disabled"] as const)(
@@ -852,11 +864,13 @@ describe("reported transaction binding", () => {
     expect(state.intent!.status).toBe("reviewed");
   });
 
-  it("refuses a hash when cancellation wins just before the hash claim", async () => {
+  it("observes but does not approve a hash when cancellation wins just before the claim", async () => {
     state.cancelBeforeClaim = true;
     const response = await report();
-    expect(response.status).toBe(409);
+    expect(response.status).toBe(202);
+    expect(await response.json()).toMatchObject({ verificationState: "observationPending" });
     expect(state.intent!.status).toBe("cancelled");
     expect(state.prepared.get(0)!.reported_hash).toBeNull();
+    expect(state.candidates.get(txHash)).toMatchObject({ verification_state: "unindexed" });
   });
 });
