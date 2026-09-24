@@ -1,12 +1,11 @@
-import { createPublicClient, http, type PublicClient } from "viem";
-import { base } from "viem/chains";
+import type { PublicClient } from "viem";
 
 export type HistoricalBlock = { number: bigint; hash: `0x${string}`; timestamp: bigint };
 export type HistoricalBlockResult =
   | { status: "complete"; day: string; block: HistoricalBlock; successor: HistoricalBlock }
   | { status: "unavailable"; day: string; reason: string };
 
-type Options = { client?: PublicClient; now?: Date; confirmationDepth?: bigint };
+type Options = { client: PublicClient; now?: Date; confirmationDepth?: bigint };
 const HASH = /^0x[0-9a-f]{64}$/i;
 
 function validBlock(value: unknown, expectedNumber: bigint): HistoricalBlock | null {
@@ -21,7 +20,7 @@ function sameBlock(a: HistoricalBlock, b: HistoricalBlock | null): boolean {
   return !!b && a.number === b.number && a.hash.toLowerCase() === b.hash.toLowerCase() && a.timestamp === b.timestamp;
 }
 
-export async function resolveHistoricalAaveBlock(day: string, options: Options = {}): Promise<HistoricalBlockResult> {
+export async function resolveHistoricalAaveBlock(day: string, options: Options): Promise<HistoricalBlockResult> {
   const unavailable = (reason: string): HistoricalBlockResult => ({ status: "unavailable", day, reason });
   if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return unavailable("invalid_day");
   const start = Date.parse(`${day}T00:00:00.000Z`);
@@ -29,7 +28,7 @@ export async function resolveHistoricalAaveBlock(day: string, options: Options =
   if (!Number.isFinite(start) || new Date(start).toISOString().slice(0, 10) !== day
     || !Number.isFinite(now) || start + 86_400_000 > now) return unavailable("incomplete_day");
   const midnight = BigInt((start + 86_400_000) / 1000);
-  const client = options.client ?? createPublicClient({ chain: base, transport: http("https://base-rpc.publicnode.com", { retryCount: 0, timeout: 12_000 }) });
+  const client = options.client;
   try {
     if (await client.getChainId() !== 8453) return unavailable("unsupported_chain");
     const tip = await client.getBlockNumber();

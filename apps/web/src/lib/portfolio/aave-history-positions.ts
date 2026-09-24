@@ -21,7 +21,12 @@ const normalizedAddress = (value: unknown): string | null => typeof value === "s
 export async function readHistoricalAaveLegs(accountId: string, day: string, options: Options = {}): Promise<Result> {
   const unavailable = (reason: string): Result => ({ status: "unavailable", day, legs: [], reason });
   if (!/^8453:0x[0-9a-f]{40}$/.test(accountId)) return unavailable("unsupported_account");
-  const client: PublicClient = options.client ?? createPublicClient({ chain: base, transport: http("https://base-rpc.publicnode.com", { retryCount: 0, timeout: 12_000 }) }) as PublicClient;
+  const archiveUrl = process.env.AUREL_BASE_ARCHIVE_RPC_URL;
+  let configured = false;
+  try { configured = !!archiveUrl && new URL(archiveUrl).protocol === "https:"; } catch { /* No archive source. */ }
+  if (!options.client && !configured) return unavailable("archive_unconfigured");
+  const client: PublicClient = options.client ?? createPublicClient({ chain: base,
+    transport: http(archiveUrl!, { retryCount: 0, timeout: 12_000 }) }) as PublicClient;
   const boundary = await resolveHistoricalAaveBlock(day, { ...options, client });
   if (boundary.status !== "complete") return unavailable(boundary.reason);
   const blockHash = boundary.block.hash;

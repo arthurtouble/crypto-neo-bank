@@ -46,6 +46,18 @@ function chain(options: { empty?: boolean; failed?: boolean; reorg?: boolean; no
 }
 
 describe("historical Aave raw position evidence", () => {
+  it("refuses an unconfigured or insecure archive source without making a network call", async () => {
+    const fetch = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("unexpected network"));
+    try {
+      for (const archiveUrl of ["", "http://example.test/archive", "not-a-url", "https://bad host"]) {
+        vi.stubEnv("AUREL_BASE_ARCHIVE_RPC_URL", archiveUrl);
+        const result = await readHistoricalAaveLegs(account, "2026-09-22", { now: new Date("2026-09-24") });
+        expect(result).toMatchObject({ status: "unavailable", reason: "archive_unconfigured", legs: [] });
+      }
+      expect(fetch).not.toHaveBeenCalled();
+    } finally { vi.unstubAllEnvs(); fetch.mockRestore(); }
+  });
+
   it("uses historical registered contracts and hash-pinned batches for supply and both debts", async () => {
     const { client, reads } = chain();
     const result = await readHistoricalAaveLegs(account, "2026-09-22", { client: client as never, now: new Date("2026-09-24") });
