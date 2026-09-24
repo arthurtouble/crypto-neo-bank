@@ -53,7 +53,7 @@ export function activityEventLabel(type: string) {
 }
 
 type ActivityExportRow = { createdAt: string; label: string; category: string; status: string; amount?: string; asset?: string; destination?: string; transactionHash?: string; chainId?: number; estimatedUsd?: number; source?: string; authority?: string };
-const activityExportScope = "Current displayed activity page; Aurel intents capped at latest 50; not complete historical or tax coverage";
+const activityExportScope = "Current displayed activity page; Aura intents capped at latest 50; not complete historical or tax coverage";
 
 function csvCell(value: string | number | undefined) {
   const raw = String(value ?? "");

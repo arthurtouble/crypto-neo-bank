@@ -31,7 +31,7 @@ export async function issuePendingRegistrationChallenge(db: D1Database, input: P
   if (!countries.length) throw new Error("Passkey registration requires a launch-country allowlist.");
   const userID = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(input.subjectReference)));
   const options = await generateRegistrationOptions({
-    rpName: "Aurel", rpID: input.rpId, userName: "Aurel account", userID,
+    rpName: "Aura", rpID: input.rpId, userName: "Aura account", userID,
     attestationType: "none", timeout: 300_000,
     authenticatorSelection: { residentKey: "required", userVerification: "required" },
     supportedAlgorithmIDs: [-7, -257]

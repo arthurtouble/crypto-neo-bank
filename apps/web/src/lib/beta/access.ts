@@ -46,7 +46,7 @@ export async function requireBetaAccess(database: D1Database, subjectReference: 
   const access = await getBetaAccess(database, subjectReference);
   if (!access.allowed) {
     if (access.status === "country_unavailable") throw new BetaAccessError("country_unavailable", "The private beta is not available in this country yet.");
-    throw new BetaAccessError(access.status === "suspended" ? "access_suspended" : "invite_required", access.status === "suspended" ? "This beta account is paused. Contact Aurel support." : "A valid private-beta invitation is required.");
+    throw new BetaAccessError(access.status === "suspended" ? "access_suspended" : "invite_required", access.status === "suspended" ? "This beta account is paused. Contact Aura support." : "A valid private-beta invitation is required.");
   }
   return access;
 }

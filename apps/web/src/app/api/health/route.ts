@@ -13,7 +13,7 @@ export async function GET() {
   return NextResponse.json({
     status,
     mode: process.env.PRODUCT_MODE ?? "mainnet-preview",
-    service: "aurel-web",
+    service: "aura-web",
     platform: "cloudflare-workers",
     financialDataAuthority: "providers-and-chains",
     dependencies: {
