@@ -1,9 +1,10 @@
 import { AAVE_BASE_PROTOCOL, AAVE_BASE_V3_MARKET, callAaveTool } from "@/lib/defi/aave";
 import type { AccountId, Completeness, HistoricalEvent, HistoricalEventSource, HistoryPage } from "@/lib/portfolio/types";
-import { createPublicClient, decodeEventLog, http, parseAbi, parseAbiItem, type Address, type PublicClient } from "viem";
+import { createPublicClient, decodeEventLog, decodeFunctionResult, encodeFunctionData, http, parseAbi, parseAbiItem, type Address, type PublicClient } from "viem";
 import { base } from "viem/chains";
 
 const SOURCE_ID = "aave:v3:8453";
+const MULTICALL3 = "0xcA11bde05977b3631167028862bE2a173976CA11";
 type ToolCall = (name: string, args: Record<string, unknown>) => Promise<unknown>;
 type PoolLog = { address: string; logIndex: number | null; topics: readonly unknown[]; data: `0x${string}` };
 type Verify = (hash: `0x${string}`, blockNumber: bigint) => Promise<{ blockHash: string | null; blockTimestamp?: bigint; finalized: boolean; receiptSuccess: boolean; logs?: PoolLog[] }>;
@@ -54,7 +55,8 @@ export async function readCurrentAaveLegs(accountId: AccountId, options: Options
     "function getPoolDataProvider() view returns (address)",
     "function getReservesList() view returns (address[])",
     "function getUserReserveData(address asset,address user) view returns (uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint40,bool)",
-    "function getReserveConfigurationData(address asset) view returns (uint256,uint256,uint256,uint256,uint256,bool,bool,bool,bool,bool)"
+    "function getReserveConfigurationData(address asset) view returns (uint256,uint256,uint256,uint256,uint256,bool,bool,bool,bool,bool)",
+    "function aggregate3((address target,bool allowFailure,bytes callData)[] calls) payable returns ((bool success,bytes returnData)[])"
   ]);
   let stage = "chain";
   try {
@@ -82,14 +84,27 @@ export async function readCurrentAaveLegs(accountId: AccountId, options: Options
       || reserves.some((reserve) => !address(reserve) || address(reserve) === `0x${"0".repeat(40)}`)
       || new Set(reserves.map((reserve) => address(reserve))).size !== reserves.length) return unavailable("aave_reserve_coverage_incomplete", "partial");
     stage = "positions";
-    const positions = await Promise.all(reserves.map(async (reserve) => {
-      const position = await read(AAVE_BASE_PROTOCOL.dataProvider, "getUserReserveData", [reserve, accountId.slice(5)]);
+    const calls = reserves.map((reserve) => ({ target: AAVE_BASE_PROTOCOL.dataProvider, allowFailure: true,
+      callData: encodeFunctionData({ abi, functionName: "getUserReserveData", args: [reserve as Address, accountId.slice(5) as Address] }) }));
+    const batch = await read(MULTICALL3, "aggregate3", [calls]);
+    if (!Array.isArray(batch) || batch.length !== reserves.length || batch.some((item) => !item || item.success !== true || typeof item.returnData !== "string" || !/^0x(?:[0-9a-f]{2})*$/i.test(item.returnData)))
+      return unavailable("aave_reserve_coverage_incomplete", "partial");
+    const balances = reserves.map((reserve, index) => {
+      const position = decodeFunctionResult({ abi, functionName: "getUserReserveData", data: batch[index].returnData as `0x${string}` });
       if (!Array.isArray(position) || position.length !== 9 || position.slice(0, 3).some((value) => typeof value !== "bigint" || value < 0n))
         throw new Error("Incomplete Aave reserve position.");
       const supplied = position[0] as bigint;
       const borrowed = (position[1] as bigint) + (position[2] as bigint);
-      if (!supplied && !borrowed) return [];
-      const config = await read(AAVE_BASE_PROTOCOL.dataProvider, "getReserveConfigurationData", [reserve]);
+      return { reserve, supplied, borrowed };
+    }).filter(({ supplied, borrowed }) => supplied || borrowed);
+    stage = "configurations";
+    const configCalls = balances.map(({ reserve }) => ({ target: AAVE_BASE_PROTOCOL.dataProvider, allowFailure: true,
+      callData: encodeFunctionData({ abi, functionName: "getReserveConfigurationData", args: [reserve as Address] }) }));
+    const configurations = configCalls.length ? await read(MULTICALL3, "aggregate3", [configCalls]) : [];
+    if (!Array.isArray(configurations) || configurations.length !== balances.length || configurations.some((item) => !item || item.success !== true || typeof item.returnData !== "string" || !/^0x(?:[0-9a-f]{2})*$/i.test(item.returnData)))
+      return unavailable("aave_reserve_coverage_incomplete", "partial");
+    const positions = balances.map(({ reserve, supplied, borrowed }, index) => {
+      const config = decodeFunctionResult({ abi, functionName: "getReserveConfigurationData", data: configurations[index].returnData as `0x${string}` });
       if (!Array.isArray(config) || config.length !== 10 || typeof config[0] !== "bigint" || config[0] < 0n || config[0] > 36n)
         throw new Error("Incomplete Aave reserve precision.");
       const decimals = Number(config[0]);
@@ -99,7 +114,7 @@ export async function readCurrentAaveLegs(accountId: AccountId, options: Options
         ...(supplied ? [{ ...common, side: "supply" as const, rawUnits: supplied.toString() }] : []),
         ...(borrowed ? [{ ...common, side: "debt" as const, rawUnits: `-${borrowed}` }] : [])
       ];
-    }));
+    });
     stage = "canonical";
     const canonical = await client.getBlock({ blockNumber: block.number });
     if (canonical.hash?.toLowerCase() !== block.hash.toLowerCase() || canonical.timestamp !== block.timestamp)
