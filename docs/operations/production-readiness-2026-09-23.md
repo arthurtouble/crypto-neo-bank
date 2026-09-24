@@ -1,5 +1,11 @@
 # Production readiness — 23 September 2026
 
+## 24 September reviewable-route boundary
+
+The quote endpoint previously attached a reviewable plan ID to any parsed LI.FI quote when account-level switches allowed review, even if its nested executable call was not among Aurel's governed routes. Preparation would still reject it, but the customer could begin an unusable review. The endpoint now runs the same exact-call integrity validator before retaining a plan; unsupported quotes remain metadata-only previews. Review rechecks the validator for same-network routes as well as bridges and direct Uniswap routes, including previously retained plans. Neither change enables a financial-action flag or authorizes signing.
+
+The change passed 1,186 web unit tests, nine readiness-script tests, workspace typechecks, lint, app and 49-page docs builds, 42 desktop/mobile browser cases with two intentional skips, and the isolated D1 recovery drill through migration `0034`. The intended Cloudflare account had no pending migrations; all four financial-action flags were `0` before rollout. App candidate `555a2ad4-e1d9-4970-b1c3-cafa1bf3a40d` and docs candidate `b29b7365-db40-4b2e-87fa-b80470aca807` passed preview checks, then received 100% of their approved workers.dev development traffic. Canonical app smoke and the updated docs page passed afterward, and remote D1 again showed all four flags at `0`. These public checks are unauthenticated; they do not prove an invited customer's review, a funded wallet, or a signature.
+
 ## 24 September direct-swap quote observation
 
 The opt-in, read-only mainnet test now quotes both directions of the reviewed Base USDC/WETH Uniswap V3 pool and checks that the retained router call survives Aurel's exact-plan validator. Both directions passed with current on-chain deployments and independent price observations. This tests a quote and its call shape, **not** a funded wallet, token approval, account controls, gas reserve, wallet signature, broadcast, or receipt settlement. The financial-action flags remain disabled. Controlled small-funds rehearsal and independent security review are still required before live swaps.

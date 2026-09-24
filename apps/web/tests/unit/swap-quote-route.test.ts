@@ -3,7 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const fixture = vi.hoisted(() => ({
   swapsEnabled: true, crossChainEnabled: true, betaMode: "invite" as "invite" | "preview", allowedCountries: ["US"] as string[],
   walletOwned: true, fromAvailable: true, toAvailable: true,
-  fromVerification: "verified" as "verified" | "unverified", quoteCalls: 0, savedPlans: 0, saveFails: false
+  fromVerification: "verified" as "verified" | "unverified", quoteCalls: 0, savedPlans: 0, saveFails: false,
+  integrityReject: false
 }));
 
 vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {} } }));
@@ -60,6 +61,9 @@ vi.mock("@/lib/swap/lifi", () => ({
 vi.mock("@/lib/swap/plans", () => ({
   saveSwapQuotePlan: async () => { fixture.savedPlans++; if (fixture.saveFails) throw Error("storage unavailable"); return "00000000-0000-4000-8000-000000000001"; }
 }));
+vi.mock("@/lib/swap/prepare-integrity", () => ({ assertSwapPrepareIntegrity: async () => {
+  if (fixture.integrityReject) throw new Error("route not reviewed");
+} }));
 
 import { POST } from "@/app/api/swap/quote/route";
 
@@ -76,6 +80,7 @@ describe("Swap quote API controls", () => {
     fixture.swapsEnabled = true; fixture.crossChainEnabled = true; fixture.betaMode = "invite"; fixture.allowedCountries = ["US"];
     fixture.walletOwned = true; fixture.fromAvailable = true;
     fixture.toAvailable = true; fixture.fromVerification = "verified"; fixture.quoteCalls = 0; fixture.savedPlans = 0; fixture.saveFails = false;
+    fixture.integrityReject = false;
   });
 
   it("returns preview-only cross-network metadata while execution is disabled", async () => {
@@ -148,6 +153,16 @@ describe("Swap quote API controls", () => {
     expect(JSON.stringify(body)).not.toContain("0x1234");
     expect(JSON.stringify(body)).not.toContain("sourceCall");
     expect(fixture.savedPlans).toBe(1);
+  });
+
+  it("keeps an unreviewed LI.FI call as a quote-only preview", async () => {
+    fixture.integrityReject = true;
+    const response = await post(base);
+    expect(response.status).toBe(200);
+    const body = await response.json() as { quotes: Array<Record<string, unknown>> };
+    expect(body.quotes[0]).toMatchObject({ quoteId: "q1" });
+    expect(body.quotes[0]).not.toHaveProperty("planId");
+    expect(fixture.savedPlans).toBe(0);
   });
 
   it("withholds quote metadata when its server-held plan cannot be saved", async () => {

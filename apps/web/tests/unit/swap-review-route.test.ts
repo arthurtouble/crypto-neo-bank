@@ -165,6 +165,15 @@ describe("Swap review boundary", () => {
     expect(fixture.bindCalls).toBe(0);
   });
 
+  it("refuses to review an unaudited same-network LI.FI route", async () => {
+    fixture.integrityReject = true;
+    const response = await post({ planId: "00000000-0000-4000-8000-000000000001", walletAddress: wallet });
+    expect(response.status).toBe(409);
+    expect(fixture.integrityCalls).toBe(1);
+    expect(fixture.bindCalls).toBe(0);
+    expect(fixture.intentStatus).toBeNull();
+  });
+
   it("rejects an account lock before persisting a review", async () => {
     fixture.locked = true;
     const response = await post({ planId: "00000000-0000-4000-8000-000000000001", walletAddress: wallet });
