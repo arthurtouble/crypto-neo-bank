@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { BETA_TERMS_VERSION, betaMode, configuredCountries, getBetaAccess } from "@/lib/beta/access";
+import { BETA_TERMS_VERSION, betaMode, configuredCountries, getBetaAccess, redeemBetaInvite, requireBetaAccess } from "@/lib/beta/access";
 
 describe("private-beta access policy", () => {
   const environment = process.env as Record<string, string | undefined>;
@@ -36,5 +36,26 @@ describe("private-beta access policy", () => {
   it("normalizes the launch-country allowlist", () => {
     environment.BETA_ALLOWED_COUNTRIES = " pt,US, ch ,";
     expect(configuredCountries()).toEqual(["PT", "US", "CH"]);
+  });
+
+  it("rechecks an active invitation against the current launch countries", async () => {
+    environment.BETA_ACCESS_MODE = "invite";
+    environment.BETA_ALLOWED_COUNTRIES = "PT,CH";
+    const row = { cohort: "founders", country_code: "PT", status: "active", transaction_limit_usd: 25_000, terms_version: BETA_TERMS_VERSION };
+    const database = { prepare: () => ({ bind: () => ({ first: async () => row }) }) } as unknown as D1Database;
+    await expect(requireBetaAccess(database, "subject-a")).resolves.toMatchObject({ allowed: true, countryCode: "PT" });
+    environment.BETA_ALLOWED_COUNTRIES = "CH";
+    await expect(getBetaAccess(database, "subject-a")).resolves.toMatchObject({ allowed: false, status: "country_unavailable", transactionLimitUsd: 0 });
+    await expect(requireBetaAccess(database, "subject-a")).rejects.toMatchObject({ code: "country_unavailable" });
+    environment.BETA_ALLOWED_COUNTRIES = "";
+    await expect(requireBetaAccess(database, "subject-a")).rejects.toMatchObject({ code: "country_unavailable" });
+  });
+
+  it("does not redeem an invitation when the launch-country list is empty", async () => {
+    environment.BETA_ACCESS_MODE = "invite";
+    environment.BETA_ALLOWED_COUNTRIES = "";
+    const database = { prepare: () => { throw new Error("No enrollment write or read should occur"); } } as unknown as D1Database;
+    await expect(redeemBetaInvite(database, { subjectReference: "subject-a", code: "AUREL-TEST", countryCode: "PT" }))
+      .rejects.toMatchObject({ code: "country_unavailable" });
   });
 });

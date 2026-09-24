@@ -117,7 +117,7 @@ vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
             if (state.intent?.status !== "reviewed" || state.accountLocked || state.prepared.has(step)
               || String(state.intent.expires_at) <= String(args[13])
               || query.includes("FROM feature_flags") && !state.featureAllowed
-              || query.includes("p.policy_version = ?") && state.policyVersion !== args[args.length - 2]
+              || query.includes("p.policy_version = ?") && state.policyVersion !== args[args.length - 3]
               || query.includes("b.status = 'active'") && state.betaMode === "invite" && !state.betaAllowed
               || query.includes("b.transaction_limit_usd") && (state.spentTodayUsd * 100 + Number(state.valuationCents)) > Math.min(state.dailyLimitUsd, state.betaLimitUsd) * 100
               || (step > 0 && state.prepared.get(step - 1)?.verification_state !== "confirmed")) return { meta: { changes: 0 } };
@@ -158,7 +158,7 @@ vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
 } } }));
 
 vi.mock("@/lib/auth/server", () => ({ AuthenticationError: class AuthenticationError extends Error {}, requireVerifiedSubject: async () => ({ subjectReference: state.subject, sessionReference: "session-a" }) }));
-vi.mock("@/lib/beta/access", () => { class BetaAccessError extends Error { code = "beta_access_denied"; } return { BetaAccessError, betaMode: () => state.betaMode, requireBetaAccess: async () => { if (!state.betaAllowed) throw new BetaAccessError("Beta denied"); return { transactionLimitUsd: state.betaLimitUsd, mode: state.betaMode }; } }; });
+vi.mock("@/lib/beta/access", () => { class BetaAccessError extends Error { code = "beta_access_denied"; } return { BetaAccessError, betaMode: () => state.betaMode, configuredCountries: () => ["PT"], requireBetaAccess: async () => { if (!state.betaAllowed) throw new BetaAccessError("Beta denied"); return { transactionLimitUsd: state.betaLimitUsd, mode: state.betaMode }; } }; });
 vi.mock("@/lib/features/flags", () => { class FeatureUnavailableError extends Error {} return { FeatureUnavailableError, requireFeature: async () => { if (!state.featureAllowed) throw new FeatureUnavailableError("Feature denied"); } }; });
 vi.mock("@/lib/security/rate-limit", () => ({ RateLimitError: class RateLimitError extends Error {}, enforceRateLimit: async () => undefined }));
 vi.mock("@/lib/auth/wallet", () => {
@@ -410,11 +410,12 @@ describe("intent preparation route", () => {
     expect(captured).not.toBeNull();
     expect(captured!.query).toMatch(/submission_phase[\s\S]*'legacy'/);
     expect(captured!.query).toMatch(/unixepoch\(\?\) BETWEEN unixepoch\('now'\) - 180 AND unixepoch\('now'\) \+ 60/);
-    const sqlFor = (mode: "preview" | "invite", observedAt?: string) => {
+    const sqlFor = (mode: "preview" | "invite", observedAt?: string, countries = ["PT"]) => {
       const bound = [...captured!.args];
       if (observedAt) bound[14] = observedAt;
-      bound[bound.length - 4] = mode;
-      bound[bound.length - 1] = mode;
+      bound[bound.length - 5] = mode;
+      bound[bound.length - 2] = mode;
+      bound[bound.length - 1] = JSON.stringify(countries);
       const sql = captured!.query.replace(/\?/g, () => {
         const value = bound.shift();
         return typeof value === "number" ? String(value) : `'${String(value).replaceAll("'", "''")}'`;
@@ -428,18 +429,18 @@ describe("intent preparation route", () => {
       CREATE TABLE transaction_intents (intent_id TEXT PRIMARY KEY, subject_reference TEXT, status TEXT, expires_at TEXT, created_at TEXT);
       CREATE TABLE feature_flags (flag_key TEXT PRIMARY KEY, enabled INTEGER, audience TEXT);
       CREATE TABLE security_profiles (subject_reference TEXT, account_locked INTEGER, daily_limit_usd REAL, policy_version INTEGER);
-      CREATE TABLE beta_access (subject_reference TEXT, status TEXT, transaction_limit_usd REAL);
+      CREATE TABLE beta_access (subject_reference TEXT, status TEXT, transaction_limit_usd REAL, country_code TEXT);
       CREATE TABLE intent_valuations (valuation_id TEXT, intent_id TEXT, usd_cents TEXT);
       CREATE TABLE intent_prepared_calls (intent_id TEXT, step_index INTEGER, subject_reference TEXT, wallet_address TEXT, chain_id INTEGER, target_address TEXT, native_value TEXT, calldata_hash TEXT, call_fingerprint TEXT, semantic_action TEXT, source_reference TEXT, expires_at TEXT, expected_effect_json TEXT, verification_state TEXT, created_at TEXT, submission_phase TEXT);
       INSERT INTO transaction_intents VALUES ('${current}', 'subject-a', 'reviewed', '${future}', datetime('now'));
       INSERT INTO transaction_intents VALUES ('peer', 'subject-a', 'reviewed', '${future}', datetime('now'${oldPeerIntent ? ",'-2 days'" : ""}));
       INSERT INTO security_profiles VALUES ('subject-a', 0, 25000, 1);
-      INSERT INTO beta_access VALUES ('subject-a', 'active', 25000);
+      INSERT INTO beta_access VALUES ('subject-a', 'active', 25000, 'PT');
       INSERT INTO feature_flags VALUES ('direct_transfers', 1, 'beta');
       INSERT INTO intent_prepared_calls VALUES ('peer', 0, 'subject-a', '${sender.toLowerCase()}', 8453, '${recipient.toLowerCase()}', '100', 'hash', 'fingerprint', 'native_transfer', 'review', '${future}', '{}', 'prepared', datetime('now'), 'legacy');
     `;
-    const run = (reservedCents: number, oldPeerIntent = false, mode: "preview" | "invite" = "preview", change = "", observedAt?: string) => spawnSync("sqlite3", [":memory:"], {
-      input: `${schema(oldPeerIntent)} INSERT INTO intent_valuations VALUES ('peer-value','peer','${reservedCents}'); ${change} ${sqlFor(mode, observedAt)}; SELECT COUNT(*) FROM intent_prepared_calls WHERE intent_id='${current}';`, encoding: "utf8"
+    const run = (reservedCents: number, oldPeerIntent = false, mode: "preview" | "invite" = "preview", change = "", observedAt?: string, countries = ["PT"]) => spawnSync("sqlite3", [":memory:"], {
+      input: `${schema(oldPeerIntent)} INSERT INTO intent_valuations VALUES ('peer-value','peer','${reservedCents}'); ${change} ${sqlFor(mode, observedAt, countries)}; SELECT COUNT(*) FROM intent_prepared_calls WHERE intent_id='${current}';`, encoding: "utf8"
     });
     const within = run(2_499_999);
     expect(within.status, within.stderr).toBe(0);
@@ -450,6 +451,8 @@ describe("intent preparation route", () => {
     const cooledIntent = run(2_500_000, true);
     expect(cooledIntent.status, cooledIntent.stderr).toBe(0);
     expect(cooledIntent.stdout.trim()).toBe("0");
+    expect(run(0, false, "invite", "", undefined, ["CH"]).stdout.trim()).toBe("0");
+    expect(run(0, false, "invite", "", undefined, []).stdout.trim()).toBe("0");
     for (const [mode, change] of [
       ["invite", "UPDATE beta_access SET status='suspended';"],
       ["invite", "UPDATE beta_access SET transaction_limit_usd=0;"],

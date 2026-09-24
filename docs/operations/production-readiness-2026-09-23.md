@@ -206,6 +206,8 @@ Documentation candidate `fad822fb-4b44-456e-9830-00c8bc5d1e18` was uploaded afte
 
 ## Non-negotiable release rules
 
+On 24 September, a private-beta access review found that an already-active invitation was not rechecked against the current launch-country list. The shared access gate now denies a removed or unconfigured country in invite mode, and direct-transfer preparation rechecks the same list inside its conditional D1 insert. The app shows a country-unavailable state without inviting a second redemption. Preview mode is unchanged. Regression tests cover an active invitation after country removal, an empty allowlist, and the final SQLite insert when a country is removed. The local checks passed 1,117 web unit tests, typecheck, lint, build, 42 desktop/mobile browser cases (two intentional skips), and a read-only mainnet probe. No migration was needed. Candidate `930f7c78-4c39-49c2-a3cd-ad080aed0920` passed parity smoke on its version URL, was deployed at 100% to the existing workers.dev development URL, and passed post-deployment smoke. A read-only D1 check before and after deployment confirmed all four financial-action flags remained `0`. The development Worker still runs `BETA_ACCESS_MODE=preview`; this change does not claim an invite-mode production rollout, an authenticated customer-country acceptance test, or real-money readiness.
+
 - D1 projections are not customer balances, settlement records, provider entitlements, or a substitute for chain/provider reads.
 - An indexed hash, successful receipt, quote, or token-list entry alone cannot complete or authorize a financial action.
 - A previously broadcast transaction must remain observable even if review expires or a kill switch closes; new preparation and signing must stop.

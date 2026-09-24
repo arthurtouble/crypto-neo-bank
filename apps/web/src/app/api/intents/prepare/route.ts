@@ -3,7 +3,7 @@ import { z } from "zod";
 import { createPublicClient, encodeFunctionData, erc20Abi, getAddress, http, isAddress, parseUnits } from "viem";
 import { BASE_ASSETS, HOME_CHAIN } from "@/config/chains";
 import { AuthenticationError, requireVerifiedSubject } from "@/lib/auth/server";
-import { BetaAccessError, requireBetaAccess } from "@/lib/beta/access";
+import { BetaAccessError, configuredCountries, requireBetaAccess } from "@/lib/beta/access";
 import { FeatureUnavailableError, requireFeature, type FeatureKey } from "@/lib/features/flags";
 import { WalletOwnershipError, requireLinkedEvmWallet } from "@/lib/auth/wallet";
 import { enforceRateLimit, RateLimitError } from "@/lib/security/rate-limit";
@@ -185,9 +185,10 @@ export async function POST(request: Request) {
           SELECT CAST(MIN(p.daily_limit_usd, CASE WHEN ? = 'preview' THEN ? ELSE b.transaction_limit_usd END) * 100 AS INTEGER)
           FROM security_profiles p LEFT JOIN beta_access b ON b.subject_reference = p.subject_reference
           WHERE p.subject_reference = i.subject_reference AND p.account_locked = 0 AND p.policy_version = ?
-            AND p.daily_limit_usd >= 0 AND (? = 'preview' OR (b.status = 'active' AND b.transaction_limit_usd >= 0))))`)
+            AND p.daily_limit_usd >= 0 AND (? = 'preview' OR (b.status = 'active' AND b.transaction_limit_usd >= 0
+              AND b.country_code IN (SELECT value FROM json_each(?))))))`)
       .bind(input.stepIndex, ownedAddress, call.chainId, call.to.toLowerCase(), call.value, call.dataHash, call.fingerprint, input.semanticAction, input.sourceReference, JSON.stringify(effect), commitAt, input.intentId, subject.subjectReference, commitAt, valuation.priceObservedAt, featureFor(intent.intent_type), input.stepIndex, input.stepIndex, input.stepIndex - 1,
-        subject.subjectReference, input.intentId, rollingStart, rollingStart, now, valuedCents, beta.mode, beta.transactionLimitUsd, profile.policy_version, beta.mode),
+        subject.subjectReference, input.intentId, rollingStart, rollingStart, now, valuedCents, beta.mode, beta.transactionLimitUsd, profile.policy_version, beta.mode, JSON.stringify(configuredCountries())),
       env.PROJECTION_DB.prepare(`INSERT INTO intent_events (event_id, intent_id, subject_reference, event_type, evidence_json, occurred_at)
         SELECT ?, ?, ?, 'call_prepared', ?, ? WHERE changes() = 1`)
         .bind(crypto.randomUUID(), input.intentId, subject.subjectReference, JSON.stringify({ stepIndex: input.stepIndex, fingerprint: call.fingerprint, semanticAction: input.semanticAction, simulation: simulationEvidence }), commitAt),

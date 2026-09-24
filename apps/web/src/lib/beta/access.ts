@@ -13,7 +13,7 @@ export class BetaAccessError extends Error {
 export type BetaAccess = {
   allowed: boolean;
   mode: BetaMode;
-  status: "preview" | "active" | "suspended" | "closed" | "not_enrolled";
+  status: "preview" | "active" | "suspended" | "closed" | "not_enrolled" | "country_unavailable";
   cohort: string;
   countryCode?: string;
   transactionLimitUsd: number;
@@ -36,22 +36,28 @@ export async function getBetaAccess(database: D1Database, subjectReference: stri
       cohort: string; country_code: string; status: "active" | "suspended" | "closed"; transaction_limit_usd: number; terms_version: string;
     }>();
   if (!row) return { allowed: false, mode, status: "not_enrolled", cohort: "", transactionLimitUsd: 0, termsVersion: BETA_TERMS_VERSION };
+  if (row.status === "active" && !configuredCountries().includes(row.country_code)) {
+    return { allowed: false, mode, status: "country_unavailable", cohort: row.cohort, countryCode: row.country_code, transactionLimitUsd: 0, termsVersion: row.terms_version };
+  }
   return { allowed: row.status === "active", mode, status: row.status, cohort: row.cohort, countryCode: row.country_code, transactionLimitUsd: row.transaction_limit_usd, termsVersion: row.terms_version };
 }
 
 export async function requireBetaAccess(database: D1Database, subjectReference: string): Promise<BetaAccess> {
   const access = await getBetaAccess(database, subjectReference);
-  if (!access.allowed) throw new BetaAccessError(access.status === "suspended" ? "access_suspended" : "invite_required", access.status === "suspended" ? "This beta account is paused. Contact Aurel support." : "A valid private-beta invitation is required.");
+  if (!access.allowed) {
+    if (access.status === "country_unavailable") throw new BetaAccessError("country_unavailable", "The private beta is not available in this country yet.");
+    throw new BetaAccessError(access.status === "suspended" ? "access_suspended" : "invite_required", access.status === "suspended" ? "This beta account is paused. Contact Aurel support." : "A valid private-beta invitation is required.");
+  }
   return access;
 }
 
 export async function redeemBetaInvite(database: D1Database, input: { subjectReference: string; code: string; countryCode: string }): Promise<BetaAccess> {
   const countryCode = input.countryCode.trim().toUpperCase();
   const globallyAllowed = configuredCountries();
-  if (globallyAllowed.length && !globallyAllowed.includes(countryCode)) throw new BetaAccessError("country_unavailable", "The private beta is not available in this country yet.");
+  if (betaMode() === "invite" && !globallyAllowed.includes(countryCode)) throw new BetaAccessError("country_unavailable", "The private beta is not available in this country yet.");
   await ensureSubjectProfile(database, input.subjectReference);
   const existing = await database.prepare("SELECT status FROM beta_access WHERE subject_reference = ?").bind(input.subjectReference).first<{ status: string }>();
-  if (existing?.status === "active") return getBetaAccess(database, input.subjectReference);
+  if (existing?.status === "active") return requireBetaAccess(database, input.subjectReference);
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(input.code.trim().toUpperCase()));
   const codeHash = [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
   const now = new Date().toISOString();
@@ -80,5 +86,5 @@ export async function redeemBetaInvite(database: D1Database, input: { subjectRef
       .bind(countryCode, now, input.subjectReference, input.subjectReference, codeHash)
   ]);
   if (!claimed.meta.changes) throw new BetaAccessError("invite_required", "This invitation was already used or is no longer available.");
-  return getBetaAccess(database, input.subjectReference);
+  return requireBetaAccess(database, input.subjectReference);
 }
