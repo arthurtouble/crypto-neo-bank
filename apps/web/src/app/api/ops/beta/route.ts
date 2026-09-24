@@ -11,7 +11,7 @@ async function hash(value: string) {
 
 function inviteCode() {
   const bytes = crypto.getRandomValues(new Uint8Array(9));
-  return `AUREL-${[...bytes].map((byte) => byte.toString(36).padStart(2, "0")).join("").toUpperCase()}`;
+  return `AURA-${[...bytes].map((byte) => byte.toString(36).padStart(2, "0")).join("").toUpperCase()}`;
 }
 
 function responseFor(error: unknown, traceId: string) {
@@ -48,4 +48,3 @@ export async function POST(request: Request) {
     return Response.json({ code, label: input.label, cohort: input.cohort, message: "Copy this code now. Aura stores only its hash.", traceId }, { status: 201, headers: { "Cache-Control": "no-store" } });
   } catch (error) { return responseFor(error, traceId); }
 }
-
