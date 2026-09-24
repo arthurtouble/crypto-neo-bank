@@ -7,11 +7,11 @@ sidebar:
 
 ## Direct transfers
 
-Aurel checks the supported network, asset, destination, amount, account settings, and review rules before asking your wallet to sign. A supported Base transfer is prepared as an exact call and checked again just before your wallet opens. If the transfer or your account controls changed, you need a new review. Higher-value actions that need step-up remain paused until Aurel can verify the step-up server-side.
+Aura checks the supported network, asset, destination, amount, account settings, and review rules before asking your wallet to sign. A supported Base transfer is prepared as an exact call and checked again just before your wallet opens. If the transfer or your account controls changed, you need a new review. Higher-value actions that need step-up remain paused until Aura can verify the step-up server-side.
 
 Saving an address does not prove that you control it. Check the full address independently.
 
-For a supported direct transfer, Aurel evaluates the account lock, network, asset, destination rules, cooling status, rolling amount, review threshold, step-up requirement, and required warnings. Passing those checks means Aurel may prepare the action. It does not certify the recipient or guarantee settlement.
+For a supported direct transfer, Aura evaluates the account lock, network, asset, destination rules, cooling status, rolling amount, review threshold, step-up requirement, and required warnings. Passing those checks means Aura may prepare the action. It does not certify the recipient or guarantee settlement.
 
 ### Before sending
 
@@ -26,7 +26,7 @@ A transaction sent to a valid but unintended address is usually irreversible.
 
 ## Add Money and Withdraw
 
-Move Money can search connected accounts and show a potential USD Coin route. Cross-network execution is currently paused. A route preview is not a prepared transfer, and it will not ask for a wallet signature while the exact approval and route plan cannot pass Aurel's checks.
+Move Money can search connected accounts and show a potential USD Coin route. Cross-network execution is currently paused. A route preview is not a prepared transfer, and it will not ask for a wallet signature while the exact approval and route plan cannot pass Aura's checks.
 
 Routes add dependencies that direct transfers do not have, including bridge contracts, relayers, liquidity, finality, and the destination chain.
 
@@ -36,18 +36,18 @@ See [Cross-chain routes](/product/cross-chain-routing/) for the complete lifecyc
 
 ## What confirmation means
 
-- **Reviewed** means Aurel’s checks passed. It does not mean the transaction was signed.
+- **Reviewed** means Aura’s checks passed. It does not mean the transaction was signed.
 - **Submitted** means a transaction hash exists.
-- **Confirmed** for a newly prepared transfer means Aurel matched the transaction and expected effect, checked the receipt against the canonical block, and waited for its finality threshold. Older receipt-only records are marked unverified.
+- **Confirmed** for a newly prepared transfer means Aura matched the transaction and expected effect, checked the receipt against the canonical block, and waited for its finality threshold. Older receipt-only records are marked unverified.
 - Destination delivery may still need separate confirmation for a cross-chain route.
 
 Quotes, gas, price impact, and timing can change before you sign.
 
 ## Limits and review
 
-The default rolling transaction limit is $25,000 over 24 hours for Aurel-prepared actions. A new saved destination has a 24-hour cooling period for transfers of $1,000 or more. Higher-value actions enter a review path and must be resubmitted with the same material instruction within the release window.
+The default rolling transaction limit is $25,000 over 24 hours for Aura-prepared actions. A new saved destination has a 24-hour cooling period for transfers of $1,000 or more. Higher-value actions enter a review path and must be resubmitted with the same material instruction within the release window.
 
-These controls only cover actions prepared through Aurel. They do not freeze the underlying wallet.
+These controls only cover actions prepared through Aura. They do not freeze the underlying wallet.
 
 ## If a transfer looks stuck
 

@@ -3,17 +3,17 @@ title: Architecture
 description: How the interface, policy layer, wallet, chains, protocols, and providers fit together.
 ---
 
-Aurel is built as a thin orchestration and policy layer. It does not try to become the ledger, custodian, bank, exchange, and benefits provider at once.
+Aura is built as a thin orchestration and policy layer. It does not try to become the ledger, custodian, bank, exchange, and benefits provider at once.
 
 ## The transaction path
 
 Most financial actions follow the same path:
 
 1. **The customer requests an action.** This may be a transfer, a protocol deposit, a repayment, or a cross-chain route.
-2. **Aurel prepares and checks it.** The server validates the network, asset, destination, account controls, limits, required disclosures, and the proposed transaction data.
+2. **Aura prepares and checks it.** The server validates the network, asset, destination, account controls, limits, required disclosures, and the proposed transaction data.
 3. **The wallet presents the transaction.** The customer sees the final wallet request and chooses whether to sign.
 4. **The chain or provider settles it.** The authoritative system accepts, rejects, or later updates the action.
-5. **Aurel observes the result.** The product records the transaction reference, checks supported receipts, and presents the updated state.
+5. **Aura observes the result.** The product records the transaction reference, checks supported receipts, and presents the updated state.
 
 Preparation is not settlement. A quote is not a transfer. A wallet prompt is not a signature. A submitted transaction is not necessarily final.
 
@@ -29,9 +29,9 @@ Privy supplies authentication and embedded-wallet infrastructure. Customers may 
 
 ### Policy layer
 
-Aurel evaluates product controls before it prepares a supported action. Examples include account lock, allowlisted networks and assets, saved-destination rules, cooling periods, rolling limits, and high-value review. Actions that require transaction-specific approval remain unavailable until Aurel can verify that approval for the exact instruction.
+Aura evaluates product controls before it prepares a supported action. Examples include account lock, allowlisted networks and assets, saved-destination rules, cooling periods, rolling limits, and high-value review. Actions that require transaction-specific approval remain unavailable until Aura can verify that approval for the exact instruction.
 
-The policy layer can refuse to prepare an action inside Aurel. It cannot stop a customer from using an exported wallet or another application.
+The policy layer can refuse to prepare an action inside Aura. It cannot stop a customer from using an exported wallet or another application.
 
 ### Public chains and protocols
 
@@ -59,6 +59,6 @@ An abstraction is useful only when it preserves meaningful differences. A bank t
 
 ## Failure philosophy
 
-Aurel fails closed when a required security or eligibility fact is missing. It should not prepare a tokenized-market action without current eligibility data, treat an unknown transaction value as below a step-up threshold, or mark a routed transfer complete only because the source transaction succeeded.
+Aura fails closed when a required security or eligibility fact is missing. It should not prepare a tokenized-market action without current eligibility data, treat an unknown transaction value as below a step-up threshold, or mark a routed transfer complete only because the source transaction succeeded.
 
 When a dependency is unavailable, the product should show the affected feature as unavailable and leave unaffected areas usable. See [Reliability and recovery](/operations/reliability-and-recovery/) for the operating model.

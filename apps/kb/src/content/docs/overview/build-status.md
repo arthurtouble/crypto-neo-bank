@@ -1,67 +1,36 @@
 ---
-title: Aurel build status
-description: Current implementation status across the product, platform, and external dependencies.
+title: Aura build status
+description: Current product implementation and external release dependencies.
 ---
 
-This is the execution checklist for the mainnet-first product. “Live” means the feature reads an authoritative provider or chain and never relies on an Aurel balance ledger. “Prepared” means the complete adapter, interface, state model, and simulation exist but a commercial provider or legal approval is still required.
+Last reviewed: 24 September 2026. This page describes the source branch; the deployed Worker may differ. The dated Aura design and implementation plan are in `docs/superpowers/` at the repository root.
 
-## Product spine
+## Implemented in this branch
 
-- [x] Cloudflare Workers and Static Assets deployment
-- [x] D1 for non-authoritative projections plus retained policy, audit, consent, and support evidence
-- [x] Provider-event Queue and dead-letter Queue
-- [x] Privy authentication UI
-- [x] Server-side Privy access-token verification boundary
-- [x] Base mainnet home-chain configuration
-- [x] Multichain EVM wallet configuration
-- [x] Embedded-wallet and external-wallet discovery
-- [x] Live Base ETH, USDC, and WETH balance reads
-- [x] Receive address and QR flow
-- [x] User-confirmed Base ETH/ERC-20 send flow
-- [x] Unified saved and recent recipient directory without bypassing address-book cooling
-- [x] Approval-required one-time and recurring transfer plans with pause/resume controls
-- [x] Transaction-intent API, policy evaluation, consent, and submission state
-- [x] Rebuildable provider/onchain portfolio view and searchable activity feed with receipts and CSV export
-- [x] Persistent activation journey and tested chain/asset support matrix
-- [x] Emergency lock, rolling limits, destination allowlist/cooling, and direct-send simulation
-- [x] Source-chain receipt reconciliation with resumable intent history
-- [x] Human support intake and operations escalation
-- [x] Product funnel and settlement-reliability telemetry
-- [x] Private-beta invitation, cohort, country, transaction-cap, feedback, and feature-control plane
-- [x] Public dependency and incident status surface with scheduled provider probes
+- Aura landing page, 12 customer sections, desktop/mobile navigation, and public browsing with labeled fictional data.
+- Privy sign-in, invitation and country checks, linked wallets, passkey and recovery surfaces, wallet export, and transaction policy controls.
+- Direct Base wallet reads and governed crypto-send preparation, simulation, customer signing, intent evidence, and reconciliation.
+- LI.FI asset search and route discovery through the server-held reviewed swap flow. Unsafe direct browser execution was removed.
+- Aave Base market, debt, position, and reward reads. Customer Aave writes remain paused.
+- Aura tag registration with a unique, non-transferable tag, verified linked receiving wallet, public opt-in, and public crypto payment page. Bank and card methods show unavailable until providers are connected.
+- Issuer-backed card projection read boundary, support cases, read-only assistant, coverage-aware transactions and insights, and security/privacy settings.
+- Local D1 migration `0036_aura_tags.sql`; no production migration or deployment has been performed.
 
-## Product workstreams
+The customer waitlist, markets lists, price alerts, goals, scheduled transfers, paycheck planning, external-wallet portfolio tracking, lifestyle concierge, and membership tiers have been removed from the UI. Historical database records, audit evidence, retained instructions, and security controls remain. Legacy routes redirect or close intake. Review historical API access and retention before deleting any stored records.
 
-- [x] Passkey/MFA, recovery, export, and current-session center
-- [x] Mainnet cross-chain USDC routing with LI.FI quote, exact approval, policy evaluation, and user signing
-- [x] Curated Base mainnet Earn market, preparation, and user-signing flow
-- [x] Aave collateral, borrow, repay, simulation, and health-factor flows
-- [x] Membership qualification and vendor-neutral entitlement engine
-- [x] Vendor-neutral rewards, lounge, eSIM, insurance, and concierge entitlement adapters
-- [x] Read-only AI concierge with deterministic transaction separation
-- [x] Feature-gated tokenized-asset framework
-- [x] Operations and reconciliation console
-- [x] Complete trust center and effective-dated disclosures
-- [x] Production observability, abuse controls, security tests, and recovery exercise
-- [x] Dev/prod environment policy, CI verification, candidate uploads, gradual-release runbook, and rollback path
-- [x] Managed Turnstile widget and canonical server validation for support intake, including action/hostname enforcement and single-use reset
-- [x] Five-minute operational reconciliation, explicit dead-letter evidence, and critical event escalation
-- [x] Read-only mainnet/LI.FI readiness, production smoke, and isolated D1 recovery automation
-- [x] CodeQL and high-severity dependency audit workflow
-- [x] Partner diligence, responsibility matrix, provider scorecard, acceptance protocol, and closed-beta plan
-- [x] Operator beta console, 30-day business telemetry, invite issuance, incident publication, and feature controls
-- [x] Customer communication templates, incident plan, data-retention schedule, fund-flow map, provider diligence packet, and external review scope
+## External or incomplete
 
-## Deliberately external
+| Area | Required before customer execution |
+| --- | --- |
+| Bridge bank deposits and payouts | Program approval, credentials, complete verified instructions, beneficiaries, execution, returns, and reconciliation |
+| Bridge/Rain cards | Issuer program, card creation and control mutations, wallet provisioning, transaction feed, dispute adapter |
+| Card payments on Aura tag pages | Acquiring/payment-link provider, recipient onboarding, payment state, refunds, and disputes |
+| Sky and Morpho vaults | Selected contracts, risk review, exact-call preparation, simulation, settlement, and support |
+| Aave writes | Governed execution plan, action-bound authorization, and verified effects |
+| Tokenized stocks and metals | Issuer, venue, eligibility, country controls, order execution, and disclosures |
+| Cashback and benefits | Funded provider program, eligibility, fulfilment, and transaction evidence |
+| Passcode and remote sessions | Supported identity-provider controls and recovery process |
+| Notifications | Connected delivery provider and preference enforcement |
+| Production release | Secrets, reviewed migration, security and marketing approvals, provider contracts, domain controls, staffed operations, and final smoke checks |
 
-- Bridge/Rain KYC, bank accounts, fiat rails, and cards remain behind provider interfaces.
-- Benefit activation requires signed vendor programs.
-- Tokenized securities remain disabled until issuer, venue, jurisdiction, and platform-role review.
-- Every mainnet write requires an explicit wallet confirmation; automated tests never broadcast value-moving transactions.
-- Membership qualification is presented as a current-balance projection until sufficient daily observations exist for a 30-day earned tier.
-- External-wallet history beyond Aurel-created intents is read directly from the relevant chain explorer; Aurel does not maintain a proprietary transaction ledger.
-- Verified portfolio performance publishes up to the last 90 completed UTC days, with 7-, 30-, and 90-day chart views. Incomplete source or price days appear as gaps; inception returns remain unavailable. Older documented transactions can inform tax-support lots, but an unpriced daily close does not supply a tax basis.
-- Portfolio source replays hold back prior chart and tax publications until a fresh version commits. If an explorer or protocol checkpoint advances, stale valuations and tax rows are hidden rather than carried forward.
-- A source checkpoint's ingestion version advances with each page. Event ingestion versions belong to the upstream source; they are different counters and must not be joined as if equivalent.
-- The LI.FI swap catalog and quotes are read-only preparation. Swap execution and approvals remain disabled until transaction-specific step-up and call verification are complete. Aave action signing and regulated securities orders remain gated.
-- Custom domain, WAF/API Shield rules, Access policy, log export, and version affinity require the production domain/account configuration.
+A provider, chain, or protocol is authoritative for balances and settlement. D1 projections never confer financial authority. Marketing copy remains pending the registered human claim review; user approval of the implementation plan is not evidence of legal or marketing signoff.

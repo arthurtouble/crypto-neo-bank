@@ -5,8 +5,8 @@ export default defineConfig({
   site: "https://aurel-docs.aurel-events.workers.dev",
   integrations: [
     starlight({
-      title: "Aurel",
-      description: "Clear guidance for using Aurel and understanding its safeguards.",
+      title: "Aura",
+      description: "Clear guidance for using Aura and understanding its safeguards.",
       favicon: "/favicon.svg",
       customCss: ["./src/styles/aurel.css"],
       pagefind: true,
@@ -14,8 +14,8 @@ export default defineConfig({
       pagination: true,
       tableOfContents: { minHeadingLevel: 2, maxHeadingLevel: 3 },
       sidebar: [
-        { label: "Start here", items: [{ label: "Welcome", slug: "" }, { label: "Product status", slug: "getting-started/status" }, { label: "Set up Aurel", slug: "getting-started/setup" }, { label: "Join the waitlist", slug: "getting-started/waitlist" }, { label: "Private beta", slug: "getting-started/private-beta" }] },
-        { label: "Understand Aurel", items: [
+        { label: "Start here", items: [{ label: "Welcome", slug: "" }, { label: "Product status", slug: "getting-started/status" }, { label: "Set up Aura", slug: "getting-started/setup" }, { label: "Private beta", slug: "getting-started/private-beta" }] },
+        { label: "Understand Aura", items: [
           { label: "Product principles", slug: "concepts/product-principles" },
           { label: "Architecture", slug: "concepts/architecture" },
           { label: "Sources of truth", slug: "concepts/sources-of-truth" },
@@ -25,10 +25,7 @@ export default defineConfig({
           { label: "Bank transfers", slug: "product/bank-transfers" },
           { label: "Wallets and assets", slug: "product/wallets-and-assets" },
           { label: "Send money", slug: "product/send-and-route" },
-          { label: "Recipients and schedules", slug: "product/recipients-and-schedules" },
-          { label: "Bills and subscriptions", slug: "product/bills-and-subscriptions" },
-          { label: "Direct deposit and Payday Plans", slug: "product/direct-deposit-and-payday" },
-          { label: "Insights and goals", slug: "product/insights-and-goals" },
+          { label: "Aura tag", slug: "product/aura-tag" },
           { label: "Cards and controls", slug: "product/cards-and-controls" },
           { label: "Networks and assets", slug: "product/networks-and-assets" },
           { label: "Cross-chain routes", slug: "product/cross-chain-routing" },
@@ -37,9 +34,7 @@ export default defineConfig({
         { label: "Build wealth", items: [
           { label: "Swap", slug: "product/swaps" },
           { label: "Earn and borrow", slug: "product/earn-and-borrow" },
-          { label: "Tokenized markets", slug: "product/tokenized-markets" },
-          { label: "Membership and benefits", slug: "product/membership-and-benefits" },
-          { label: "Concierge and support", slug: "product/concierge-and-support" }
+          { label: "Tokenized markets", slug: "product/tokenized-markets" }
         ] },
         { label: "Safety", items: [
           { label: "Security model", slug: "safety/security-model" },
@@ -59,8 +54,7 @@ export default defineConfig({
         ] },
         { label: "Company", items: [
           { label: "Fees and alignment", slug: "company/fees-and-alignment" },
-          { label: "Regulated services", slug: "company/regulated-services" },
-          { label: "Roadmap", slug: "company/roadmap" }
+          { label: "Regulated services", slug: "company/regulated-services" }
         ] },
         { label: "Legal", items: [{ autogenerate: { directory: "legal" } }] }
       ],

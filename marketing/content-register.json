@@ -1,13 +1,13 @@
 [
   {
-    "id": "landing-global-waitlist-v1",
+    "id": "aura-landing-v1",
     "file": "apps/web/src/app/page.tsx",
     "owner": "product",
-    "audience": "Global waitlist visitors; product access remains country-limited",
+    "audience": "Public Aura visitors; personal features remain country- and provider-limited",
     "countries": ["GLOBAL"],
-    "disclosure": "Join with email. Invites depend on eligibility and availability.",
-    "claimIds": ["customer-controlled-signing-global-v1"],
+    "disclosure": "Screens use fictional example values. Banking, cards, investing, and rewards depend on provider connections and eligibility; see linked availability footnotes.",
+    "claimIds": [],
     "reviewStatus": "pending",
-    "reviewAt": "2026-12-23T00:00:00.000Z"
+    "reviewAt": "2026-09-24T00:00:00.000Z"
   }
 ]

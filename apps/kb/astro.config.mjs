@@ -16,7 +16,7 @@ export default defineConfig({
       sidebar: [
         { label: "Start here", items: [
           { label: "Knowledge base", slug: "" },
-          { label: "Product overview", link: "/product-overview/" },
+          { label: "Aura build status", link: "/overview/build-status/" },
           { label: "Build status", slug: "overview/build-status" },
           { label: "Launch readiness", slug: "overview/launch-readiness" },
           { label: "Product implementation plan", slug: "overview/product-implementation-plan" }

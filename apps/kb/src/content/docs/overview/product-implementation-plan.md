@@ -3,6 +3,8 @@ title: Product and implementation plan
 description: Product strategy, scope, architecture, phases, and implementation requirements.
 ---
 
+> Historical implementation plan. The current Aura customer map and provider boundaries are in [build status](/overview/build-status/) and `docs/superpowers/specs/2026-09-24-aura-product-simplification-design.md`. Do not treat unchecked or speculative items below as product commitments.
+
 Research and planning date: 21 September 2026  
 Status: working product specification for review before implementation  
 Primary launch architecture: Privy + Bridge + direct, curated DeFi integrations  

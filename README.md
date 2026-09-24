@@ -1,93 +1,31 @@
-# Aurel
+# Aura
 
-Aurel is a Cloudflare-native, mainnet-first private financial interface built over user-controlled wallets, providers, and public chains. It is intentionally not a bank ledger: provider APIs and chains remain authoritative for customer balances and settlement.
+Aura is the customer-facing financial app in this repository. The existing infrastructure package names, deployment IDs, and historical records retain `aurel` where renaming them would change operational or legal meaning. No legal entity name has been changed.
 
-## What is implemented
+## Product
 
-- Premium marketing site and responsive private-client workspace.
-- Live Base ETH, USDC, and WETH portfolio reads plus authenticated Aurel intent history.
-- Direct Base ETH and supported-token sends with exact-call preparation and chain-evidence checks. Higher-value sends requiring transaction-specific step-up remain paused.
-- Searchable screened digital-asset catalog and live LI.FI same-chain/cross-network quote previews. Swap and cross-network signing remain disabled.
-- Read-only Aave positions, rewards, Earn, and Borrow previews. New protocol actions and claims remain disabled.
-- Privy authentication, embedded/external wallet support, MFA/recovery/export surfaces, and server-side token verification.
-- Membership projections, vendor-neutral benefit entitlements, and a read-only AI concierge.
-- Fail-closed tokenized-market eligibility, restricted operations/reconciliation, and an effective-dated trust center.
-- Rate-limited protected APIs, security headers, signed webhooks, replay protection, Queue handoff, and structured Cloudflare observability.
-- Managed Turnstile protection on support intake with server-side action and production-hostname validation.
-- Portfolio, Earn, Borrow, Move, activity, benefits, markets, security, settings, and documentation routes.
-- Credential-gated regulated-provider boundary; Bridge/Rain functions remain unavailable until a program is approved.
-- Normalized identity, wallet, compliance, fiat, card, membership, and chain contracts.
-- Interactive partner lab at `/app/sandbox` with new, funded, compliance-review, and failed-transfer scenarios.
-- Signed `/api/webhooks/provider` ingress, replay protection, Queue handoff, and retrying event consumer.
-- D1 schema separates rebuildable financial projections from retained Aurel policy, audit, consent, support, and recovery evidence.
-- `/api/health` endpoint exposing deployment mode and authority model.
-- Cloudflare Workers deployment through vinext, with logs and traces configured.
-- No internal authoritative balance or settlement store.
+Visitors can browse every section with fictional, labeled example data. Sign-in and the existing invitation, country, and policy controls protect personal data and financial actions. The customer navigation is Overview, Deposit, Send, Swap, Earn, Borrow, Invest, Cards, Rewards, Transactions, Insights, Settings, and Support.
 
-Read the internal [architecture](./apps/kb/src/content/docs/architecture/architecture.md) for source-of-truth rules, [partner integration](./apps/kb/src/content/docs/architecture/partner-integration.md) for Privy/provider activation, [partner diligence](./apps/kb/src/content/docs/compliance/partner-diligence.md) for the provider pack, and the [operations runbook](./apps/kb/src/content/docs/operations/operations-runbook.md) for recovery and incident procedures.
+Wallet and protocol balances come from public chains and providers. Fiat, card, and securities records come from connected providers. D1 stores projections, policies, audit evidence, consent, cases, and recovery records; it is not the authority for balances or settlement.
 
-## Documentation
-
-- `apps/docs` is the public customer documentation.
-- `apps/kb` is the internal knowledge base for product, architecture, operations, security, compliance, providers, and growth.
-- The internal site must remain behind Cloudflare Access. `robots.txt` and page metadata are indexing safeguards, not authorization.
-
-```bash
-pnpm docs:dev
-pnpm kb:dev
-pnpm docs:build
-pnpm kb:build
-```
+The current implementation supports public browsing, Privy authentication and wallet controls, direct Base reads, guarded crypto-send preparation, LI.FI route discovery through the governed swap flow, Aave position reads, support intake, and a public Aura tag page for opted-in members. The Aura tag page can expose a verified linked crypto address. Bank-transfer instructions, card payments, issuance and controls, securities execution, rewards fulfilment, and Aave writes require provider programs or transaction paths that are not connected. Their screens show that state clearly. See [current availability](./apps/docs/src/content/docs/getting-started/status.md).
 
 ## Local development
 
 ```bash
 pnpm install
 pnpm dev
-```
-
-Local development is the only development environment and uses isolated Miniflare state. The deployed Worker is production; there is no staging environment. The app defaults to mainnet-preview mode. Its production Privy app ID is a public build-time fallback; set `NEXT_PUBLIC_PRIVY_APP_ID` to override it for a separate local Privy application. Mainnet writes always require an explicit wallet confirmation.
-
-## Quality checks
-
-```bash
 pnpm typecheck
 pnpm lint
 pnpm test:unit
 pnpm test:e2e
-pnpm test:mainnet-readiness
-pnpm test:production
-pnpm test:recovery
 pnpm build
-pnpm deploy:dry-run
 ```
 
-## Cloudflare deployment
+The web app is in `apps/web`, public documentation is in `apps/docs`, and the internal knowledge base is in `apps/kb`. Cloudflare bindings are configured in `apps/web/wrangler.jsonc`; D1 migrations are in `infra/d1/migrations`. Local development uses isolated Miniflare state. The deployed Worker is a separate production environment, and this branch has not been deployed.
 
-The current mainnet-preview environment is deployed to Cloudflare:
+## Integration and release boundary
 
-- Web app: <https://aurel-financial-os.aurel-events.workers.dev>
-- Provider-event consumer: <https://aurel-provider-event-consumer.aurel-events.workers.dev>
-- Disposable projections: D1 database `aurel-projections` (EU jurisdiction)
-- Event transport: `aurel-provider-events` with `aurel-provider-events-dlq`
+The [architecture guide](./apps/kb/src/content/docs/architecture/architecture.md) explains source-of-truth rules. The [partner integration guide](./apps/kb/src/content/docs/architecture/partner-integration.md) and [operations runbook](./apps/kb/src/content/docs/operations/operations-runbook.md) cover provider activation, secrets, migrations, reconciliation, and recovery. Apply reviewed migrations and run release checks before any deployment. Never put provider credentials in `wrangler.jsonc`.
 
-Privy authentication and direct Base reads are live in this environment. The deployed Worker may lag the product-parity branch; do not infer branch features from this URL. The app can show live DeFi and cross-network previews, but Swap, cross-network submission, and Aave writes are paused until exact transaction plans and settlement evidence pass review. Fiat transfers, cards, regulated orders, and vendor-funded benefits remain unavailable until their respective partner programs and credentials are activated; the provider lab is clearly separated and illustrative.
-
-The D1 database and queues already have concrete production IDs in the Wrangler files. Before any release, inspect remote migration status, verify a backup, apply only reviewed backward-compatible migrations, and verify secrets and bindings. Exact commands are in the internal [partner integration guide](./apps/kb/src/content/docs/architecture/partner-integration.md).
-
-The web Worker configuration is in `apps/web/wrangler.jsonc`; the Queue consumer is in `apps/events/wrangler.jsonc`.
-
-```bash
-pnpm deploy
-pnpm events:deploy
-```
-
-Do not add provider credentials to `wrangler.jsonc`. Add Bridge, Rain, Privy server, Turnstile, RPC, and webhook secrets with Workers Secrets once those integrations are enabled. Development and production must use separate provider applications or programs.
-
-## Data rule
-
-An Aurel database must never become the source of truth for fiat balances, wallet balances, DeFi positions, loans, or card settlement. Financial projections are rebuildable; security policies, customer instructions, consent receipts, cases, and audit evidence are operational records that require retention and recovery even though they do not authorize or prove a balance.
-
-See [launch readiness](./apps/kb/src/content/docs/overview/launch-readiness.md) for the closed-beta gates, the [closed-beta plan](./apps/kb/src/content/docs/operations/closed-beta-plan.md) for cohort controls, the [acceptance test plan](./apps/kb/src/content/docs/operations/acceptance-test-plan.md) for funded-wallet evidence, and the [threat model](./apps/kb/src/content/docs/security/threat-model.md) for the security boundary.
-
-The dated [production-readiness ledger](./docs/operations/production-readiness-2026-09-23.md) distinguishes verified code from operator and provider release gates.
+Legacy growth and planning records remain stored for retention and recovery even though the corresponding customer-facing waitlist, goals, alerts, schedules, paycheck planning, and concierge UI have been removed.

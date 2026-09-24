@@ -24,4 +24,4 @@ For a product vulnerability, email **security@aurel.finance** once that address 
 - a password or one-time code; or
 - personal documents unless an approved support channel asks for them.
 
-Do not access other people’s data, move assets, interrupt service, or use social engineering while testing. Aurel does not yet operate a public bug-bounty program or promise a reward.
+Do not access other people’s data, move assets, interrupt service, or use social engineering while testing. Aura does not yet operate a public bug-bounty program or promise a reward.

@@ -1,18 +1,12 @@
 ---
 title: Swap
-description: Exchange digital assets across supported networks.
+description: How Aura searches assets and reviews cross-chain routes.
 ---
 
-Swap lets you exchange a curated set of assets on Ethereum, Base, Arbitrum, Optimism, and Polygon. Choose the assets, enter an amount, and review the live quote. LI.FI finds the route in the background. You do not need to choose a bridge or exchange.
+Aura searches supported assets and asks LI.FI for available swap and cross-chain routes. A quote is a time-sensitive proposal, not a completed transaction. Prices, fees, liquidity, and destination delivery can change before signing.
 
-## Before you exchange
+The governed swap flow checks asset identity, contract targets, approvals, account policy, and exact transaction calls before a wallet can be asked to sign. Some routes are unavailable because those checks or destination settlement evidence are incomplete. Aura does not send a raw provider transaction directly from an unreviewed browser quote.
 
-Check the asset contract, network, amount, minimum received, fees, and route. A familiar name or logo can be copied by an unrelated token. Prices and availability can change before you sign. If the quote changes or expires, review the new one.
+A token swap may require a separate onchain approval. Review each wallet prompt, including the spender and allowance. An approval can remain after a swap fails or is cancelled; you can revoke it separately. For cross-chain routes, source-chain confirmation does not establish that the destination asset arrived. Aura shows the route state until supported destination evidence is available.
 
-Some assets need a separate token approval before the exchange transaction. Your wallet will ask you to confirm each transaction. An approval can remain onchain if you do not complete the exchange; you can revoke it later. Aurel cannot sign for you.
-
-## Track an exchange
-
-Keep Swap open while a transaction is in progress. It shows LI.FI's route progress and a link to the source transaction. A source-network transaction is not proof that the destination asset has arrived. If delivery is delayed, check the transaction in your wallet and contact support before trying again.
-
-Your connected wallet signs approvals and transactions. Aurel's server validates the selected asset identities and linked wallet before requesting a quote, but this development flow does not yet use Aurel's separate transaction controls or Activity ledger. Balances and settlement remain onchain, not in Aurel's database.
+The wallet and chains remain authoritative for balances and transactions. [Check current availability](/getting-started/status/) before relying on a route.

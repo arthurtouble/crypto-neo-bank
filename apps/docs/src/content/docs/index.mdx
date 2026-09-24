@@ -1,96 +1,50 @@
 ---
-title: Aurel documentation
-description: Understand what Aurel does, how your wallet stays under your control, and which features are live.
+title: Aura documentation
+description: Understand Aura, its safeguards, and what is currently available.
 template: splash
 hero:
-  tagline: Learn how Aurel works, where your money sits, what each provider does, and which features are ready today.
+  tagline: Learn where your assets sit, what each provider does, and which actions are available.
   actions:
-    - text: Set up Aurel
+    - text: Get started
       link: /getting-started/setup/
       variant: primary
-    - text: See what is live
+    - text: Product status
       link: /getting-started/status/
       icon: open-book
 ---
 
 import { Card, CardGrid } from '@astrojs/starlight/components';
 
-## Start with the essentials
+## The essentials
 
 <CardGrid>
-  <Card title="You control the wallet" icon="key">
-    Aurel prepares actions. Your wallet shows the final request, and you choose whether to sign.
-  </Card>
-  <Card title="Balances come from the source" icon="database">
-    Aurel reads balances from the chain or provider. Our database is never the final record of what you own.
-  </Card>
-  <Card title="No Aurel token" icon="seti:lock">
-    Product choices are not designed to create demand for a house asset.
-  </Card>
-  <Card title="Mainnet means real value" icon="warning">
-    Aurel uses Base mainnet. Check the network, address, asset, and amount before every signature.
-  </Card>
+  <Card title="Explore first" icon="open-book">Browse Aura with clearly labeled fictional data before signing in.</Card>
+  <Card title="You control the wallet" icon="key">Your wallet shows the final request, and you choose whether to sign.</Card>
+  <Card title="Balances come from the source" icon="database">Chains and connected providers remain authoritative for balances and transactions.</Card>
+  <Card title="Mainnet means real value" icon="warning">Check the network, address, asset, and amount before every signature.</Card>
 </CardGrid>
 
-## What you can do
+## Use Aura
 
-- View Base assets held by your embedded or connected wallet.
-- Send supported assets after a policy and simulation check.
-- Review live Aave markets and positions. Aave signing is paused while transaction controls are completed.
-- Request a cross-chain USDC route when LI.FI can find one.
-- Set address, review, and account-lock preferences.
+- [Overview, wallet assets, and receiving crypto](/product/wallets-and-assets/)
+- [Send and saved recipients](/product/send-and-route/)
+- [Aura tag payment pages](/product/aura-tag/)
+- [Swap and cross-chain routes](/product/swaps/)
+- [Earn and Borrow](/product/earn-and-borrow/)
+- [Cards and issuer controls](/product/cards-and-controls/)
+- [Transactions and their status](/product/transaction-lifecycle/)
+- [Security and recovery](/safety/account-controls/)
+- [Current availability](/getting-started/status/)
 
-Bank accounts, payment cards, tokenized securities, insurance, and fulfilled travel benefits are not live. [See current product status](/getting-started/status/).
+Banking, cards, securities, rewards, and some transaction types require connected providers and eligibility. Their presence in the product does not mean they are active.
 
-## Explore the system
+## How Aura works
 
-<CardGrid>
-  <Card title="Architecture and authority" icon="puzzle">
-    See how Aurel, Privy, chains, protocols, routes, and future regulated providers divide responsibility. [Read the architecture](/concepts/architecture/).
-  </Card>
-  <Card title="Transactions and routes" icon="rocket">
-    Follow an action from preparation and policy review through wallet confirmation and settlement. [Understand transaction states](/product/transaction-lifecycle/).
-  </Card>
-  <Card title="Security and recovery" icon="shield-check">
-    Review default controls, the threat model, operational evidence, and recovery boundaries. [Open the security model](/safety/security-model/).
-  </Card>
-  <Card title="Regulated-service plan" icon="building">
-    Understand what a future banking or card partner would own and what remains Aurel's job. [Read about regulated services](/company/regulated-services/).
-  </Card>
-</CardGrid>
-
-## Product guide
-
-- [Wallets, deposits, portfolio values, recovery, and export](/product/wallets-and-assets/)
-- [Direct transfers and policy checks](/product/send-and-route/)
-- [Activity insights, categories, and planning goals](/product/insights-and-goals/)
-- [Bill reminders and provider-observed subscriptions](/product/bills-and-subscriptions/)
-- [Direct deposit and planning how incoming pay should be organized](/product/direct-deposit-and-payday/)
-- [Card setup, issuer boundaries, and controls](/product/cards-and-controls/)
-- [Supported networks, token contracts, and gas](/product/networks-and-assets/)
-- [Cross-chain USDC approvals, routes, and destination delivery](/product/cross-chain-routing/)
-- [Curated-asset swaps, provider comparison, and exact approvals](/product/swaps/)
-- [Aave supplying, borrowing, repayment, and liquidation risk](/product/earn-and-borrow/)
-- [Membership history, benefit states, and tier economics](/product/membership-and-benefits/)
-- [Tokenized-market listing and customer eligibility](/product/tokenized-markets/)
-- [Concierge, support, complaints, and security reports](/product/concierge-and-support/)
-
-## For security and operations
-
-- [Threat model](/safety/threat-model/)
-- [Data and privacy architecture](/safety/data-and-privacy/)
-- [Provider-event authentication and retry](/operations/provider-events/)
-- [Reliability, reconciliation, and recovery](/operations/reliability-and-recovery/)
-- [Production release process](/operations/release-process/)
-
-## For partners and diligence
-
-- [Provider responsibility map](/company/provider-responsibilities/)
-- [Fees, costs, revenue, and alignment](/company/fees-and-alignment/)
-- [Regulated-service onboarding model](/company/regulated-services/)
-- [Product roadmap and external dependencies](/company/roadmap/)
-- [Legal and policy center](/legal/)
+- [Sources of truth](/concepts/sources-of-truth/)
+- [Provider responsibilities](/company/provider-responsibilities/)
+- [Security model](/safety/security-model/)
+- [Risk disclosure](/legal/risk-disclosure/)
 
 :::caution[Real transactions]
-Aurel operates on public mainnets. A signed transaction can move real assets and may not be reversible.
+A signed mainnet transaction can move real assets and may not be reversible.
 :::

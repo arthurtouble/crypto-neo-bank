@@ -5,13 +5,13 @@ sidebar:
   order: 5
 ---
 
-Aurel can show a public tokenized-market catalog for research. Buying, selling, custody, and transfers of these instruments are not available in Aurel.
+Aura can show a public tokenized-market catalog for research. Buying, selling, custody, and transfers of these instruments are not available in Aura.
 
 The public catalog keeps issuer, instrument, network, and document references separate from a customer's permissions. For example, [xStocks describes its products as tracker certificates, not ownership of the underlying shares](https://docs.xstocks.fi/docs/product-legal-overview). A token address or familiar ticker does not change those rights.
 
-An asset trading onchain is not automatically lawful to distribute. Before Aurel lists a tokenized market, it must verify the issuer, holder rights, approved venue, eligible countries, identity rules, offering documents, transfer restrictions, custody model, liquidity, and pricing source.
+An asset trading onchain is not automatically lawful to distribute. Before Aura lists a tokenized market, it must verify the issuer, holder rights, approved venue, eligible countries, identity rules, offering documents, transfer restrictions, custody model, liquidity, and pricing source.
 
-Eligibility fails closed. If a required fact, document, country rule, or identity result is missing or out of date, Aurel will not show trading access.
+Eligibility fails closed. If a required fact, document, country rule, or identity result is missing or out of date, Aura will not show trading access.
 
 Future market access may require identity checks, investor classification, country restrictions, and provider agreements beyond ordinary wallet use.
 
@@ -34,15 +34,15 @@ A tokenized asset needs a documented record for:
 
 ## DeFi availability is not distribution approval
 
-A token may be visible in a wallet or tradable in a decentralized pool while remaining inappropriate or unlawful for Aurel to promote to a particular customer. Technical accessibility does not answer securities, sanctions, consumer-protection, marketing, or tax questions.
+A token may be visible in a wallet or tradable in a decentralized pool while remaining inappropriate or unlawful for Aura to promote to a particular customer. Technical accessibility does not answer securities, sanctions, consumer-protection, marketing, or tax questions.
 
-Privy can provide wallet access to a transaction. It does not replace the issuer, broker, venue, transfer agent, identity provider, or Aurel's listing review.
+Privy can provide wallet access to a transaction. It does not replace the issuer, broker, venue, transfer agent, identity provider, or Aura's listing review.
 
 ## Fail-closed eligibility
 
 Access remains unavailable when a required country rule, identity result, investor status, document, venue approval, or review date is missing or stale. A generic disclaimer does not cure missing eligibility.
 
-Aurel models quote, order, hold, and transfer permissions separately. A customer-specific decision must come from a contracted eligibility provider, match the exact customer and instrument, and include current identity, country, investor-class, document, and venue evidence. Private-beta access and ordinary Privy sign-in are not substitutes. The current provider adapter is unconnected, so it grants no permissions.
+Aura models quote, order, hold, and transfer permissions separately. A customer-specific decision must come from a contracted eligibility provider, match the exact customer and instrument, and include current identity, country, investor-class, document, and venue evidence. Private-beta access and ordinary Privy sign-in are not substitutes. The current provider adapter is unconnected, so it grants no permissions.
 
 The order boundary is also off by default. Even after a provider is connected, it requires a separate operations switch, contracted venue and legal references, verified payment and receiving wallets, and a fresh eligibility decision. The public catalog and a DeFi swap quote cannot bypass that boundary.
 
