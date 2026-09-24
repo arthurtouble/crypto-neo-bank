@@ -10,10 +10,8 @@ export function ProductAccessGate({ children }: { children: React.ReactNode }) {
 
   if (pathname === "/app/sandbox") return children;
 
-  if (!ready) {
-    return <div className="accessState" role="status"><span className="accessPulse" /><p>Establishing a secure session…</p></div>;
-  }
-
+  if (!ready && pathname === "/app/operations") return <div className="accessGate">Sign in for authorized operations.</div>;
+  if (!ready) return <ExampleProduct section={pathname?.split("/")[2] ?? "overview"} onSignIn={login} signInReady={false} />;
   if (!authenticated && pathname === "/app/operations") return <div className="accessGate">Sign in for authorized operations.</div>;
   if (!authenticated) return <ExampleProduct section={pathname?.split("/")[2] ?? "overview"} onSignIn={login} />;
 

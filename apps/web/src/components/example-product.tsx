@@ -71,7 +71,7 @@ const examples: Record<CustomerSection | "overview", Example> = {
   ] }
 };
 
-export function ExampleProduct({ section, onSignIn }: { section: string; onSignIn: () => void }) {
+export function ExampleProduct({ section, onSignIn, signInReady = true }: { section: string; onSignIn: () => void; signInReady?: boolean }) {
   const key = customerSections.includes(section as CustomerSection) ? section as CustomerSection : "overview";
   const example = examples[key];
   return <div className="exampleProduct">
@@ -80,6 +80,6 @@ export function ExampleProduct({ section, onSignIn }: { section: string; onSignI
     <div className="exampleGrid">{example.items.map((item) => <article className="panel exampleCard" key={item.label}>
       <span className="exampleLabel">Example data · {item.label}</span><strong>{item.value}</strong><p>{item.note}</p>
     </article>)}</div>
-    <div className="exampleNext"><button className="button primary" onClick={onSignIn}>Sign in to continue</button><Link href="/">About Aura</Link></div>
+    <div className="exampleNext"><button className="button primary" onClick={onSignIn} disabled={!signInReady}>Sign in to continue</button><Link href="/">About Aura</Link></div>
   </div>;
 }

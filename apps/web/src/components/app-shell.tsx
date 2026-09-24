@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Brand } from "./brand";
 import { icons } from "./icons";
 import { navigation } from "@/lib/product-map";
@@ -23,6 +23,11 @@ const iconByPage: Record<string, typeof icons.dashboard> = {
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(frame);
+  }, []);
 
   return (
     <div className="productShell">
@@ -46,7 +51,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {open && <button className="navScrim" aria-label="Close menu" onClick={() => setOpen(false)} />}
       <div className="productMain">
         <header className="productHeader">
-          <button className="menuButton" onClick={() => setOpen(true)} aria-label="Open navigation"><Menu size={20} /></button>
+          <button className="menuButton" onClick={() => setOpen(true)} aria-label="Open navigation" disabled={!mounted}><Menu size={20} /></button>
           <CommandMenu />
           <div className="headerRight"><span className="networkStatus"><i /> Secure Connection</span><ThemeToggle /><PrivyAccountButton /></div>
         </header>
