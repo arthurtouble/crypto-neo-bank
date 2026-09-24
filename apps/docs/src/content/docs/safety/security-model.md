@@ -53,7 +53,7 @@ An ordinary signed-in session may tighten transaction controls but cannot unlock
 - Customer APIs require a verified customer identity.
 - Operations APIs require a separate explicit subject allowlist. An empty allowlist grants no operator access.
 - Supported chains, assets, contracts, and direct-transfer destinations are checked before a wallet prompt.
-- The concierge is read-only and has no signing or administrative tool.
+- The support assistant is read-only and has no signing or administrative tool.
 - Production secrets stay in server-side Cloudflare bindings rather than browser variables or source control.
 - Provider events require signature and timestamp verification before queueing.
 

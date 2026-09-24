@@ -39,7 +39,7 @@ Cross-chain routes can depend on several contracts, liquidity sources, validator
 
 ## Insider and operations risk
 
-A malicious or mistaken operator could misuse access, alter configuration, mishandle a support case, or expose logs. Aura separates customer and operator authorization, keeps operator access allowlisted, limits the concierge to read-only tools, and keeps signing outside Aura.
+A malicious or mistaken operator could misuse access, alter configuration, mishandle a support case, or expose logs. Aura separates customer and operator authorization, keeps operator access allowlisted, limits the support assistant to read-only tools, and keeps signing outside Aura.
 
 This design reduces the power of an operator but does not eliminate the need for access review, logging, change control, incident response, and vendor oversight.
 
@@ -53,7 +53,7 @@ Cloudflare, Privy, RPC endpoints, LI.FI, Aave interfaces, or future regulated pr
 
 ## AI risk
 
-An AI assistant can hallucinate, misread context, or be manipulated by untrusted content. The concierge has no signing, transaction, or administrative tool. Its output is explanatory and cannot replace the authoritative transaction preview or eligibility decision.
+An AI assistant can hallucinate, misread context, or be manipulated by untrusted content. The support assistant has no signing, transaction, or administrative tool. Its output is explanatory and cannot replace the authoritative transaction preview or eligibility decision.
 
 ## Outside the boundary
 

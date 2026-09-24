@@ -11,17 +11,15 @@ An operator creates a labeled invitation for a named cohort, redemption count, o
 
 Redemption creates a subject-scoped access record containing cohort, country, status, terms version, accepted time, activation time, and transaction cap. An access record can be suspended without changing wallet ownership.
 
-The global waitlist is separate from product access. Authorized operators can view waitlist email addresses. An approximate IP country hint is displayed for context only; the operator checks eligibility through a separate approved process before issuing an invitation.
+The closed waitlist is separate from product access. Authorized operators can review historical waitlist records. An approximate IP country hint is context only; the operator checks eligibility through a separate approved process before issuing an invitation.
 
 ## Growth operations
 
-The growth workspace lists waitlist entries and lets an authorized operator issue a one-use invitation after recording a verified country and evidence reference. It also contains draft campaigns and experiments. Invitation codes are shown once and must be sent through an approved contact process.
-
-Campaigns and experiments begin as drafts. Experiments are limited to approved presentation and guidance changes; they cannot alter legal disclosures, access eligibility, transaction limits, authentication, recovery, security, or signing. Referrals remain disabled until a new redemption path is reviewed.
+Waitlist intake, referrals, campaigns, experiments, and public growth-event collection are retired. Historical records remain available to authorized operators for access evidence and data requests. Operators create invitations through the separate invitation controls; plaintext codes are shown once and must be sent through an approved contact process.
 
 ## Feature kill switches
 
-Feature flags are read by server APIs before transaction or concierge work begins. Changes create operator audit evidence. Current flags cover direct transfers, cross-chain routing, DeFi actions, concierge, membership preview, tokenized markets, fiat accounts, and cards.
+Feature flags are read by server APIs before transaction or support-assistant work begins. Changes create operator audit evidence. Current flags cover direct transfers, cross-chain routing, DeFi actions, the support assistant, membership preview, tokenized markets, fiat accounts, and cards.
 
 The browser may also hide an unavailable feature, but browser presentation is never the enforcement layer.
 

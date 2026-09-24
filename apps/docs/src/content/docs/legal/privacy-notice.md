@@ -19,8 +19,8 @@ Depending on the feature, Aurel may use:
 - security preferences, saved-address labels, review thresholds, and audit events;
 - transaction requests, policy results, status history, and provider receipts;
 - support messages, consent records, and complaint records;
-- a waitlist email address, an approximate country hint from trusted hosting metadata, invitation linkage, and a reference to separately checked eligibility evidence;
-- limited first-party campaign labels submitted with a waitlist signup;
+- historical waitlist email addresses, approximate country hints from trusted hosting metadata, invitation linkage, and references to separately checked eligibility evidence;
+- historical first-party campaign labels submitted with earlier waitlist signups;
 - device, browser, security, rate-limit, and diagnostic data; and
 - limited product analytics from an allowlist of event names.
 
@@ -28,7 +28,7 @@ Future regulated providers may collect identity documents, screening results, so
 
 ## Why we use it
 
-We expect to use data to run the waitlist, operate cohorts and invitations, provide and secure the service, authenticate users, apply requested safety settings, prepare and trace actions, prevent abuse, answer support cases, meet legal duties, manage providers, investigate incidents, and improve the product. Joining the waitlist is not consent to unrelated marketing.
+We expect to use data to preserve historical waitlist evidence, operate cohorts and invitations, provide and secure the service, authenticate users, apply requested safety settings, prepare and trace actions, prevent abuse, answer support cases, meet legal duties, manage providers, investigate incidents, and improve the product. Historical waitlist signup was not consent to unrelated marketing.
 
 The final notice will map each purpose to the lawful basis that applies in each launch country, such as performing a contract, complying with law, legitimate interests, or consent.
 
@@ -48,11 +48,11 @@ Providers may process data outside your country. Before launch, Aurel must ident
 
 ## Retention
 
-Aurel will keep data only for a defined business or legal need. The waitlist retention period must be approved and stated here before signups open. Campaign data is deleted or aggregated under that schedule. Security settings must survive a session. Transaction evidence, invitation evidence, consent, complaints, and provider events may require longer retention for investigations and legal duties. A deletion request for growth data does not delete public blockchain history, provider records, product access, or evidence Aurel must legally retain.
+Aurel will keep data only for a defined business or legal need. Retention periods for historical waitlist and campaign data must be approved before public launch; campaign data is deleted or aggregated under that schedule. Security settings must survive a session. Transaction evidence, invitation evidence, consent, complaints, and provider events may require longer retention for investigations and legal duties. A deletion request for growth data does not delete public blockchain history, provider records, product access, or evidence Aurel must legally retain.
 
 ## Your rights
 
-Depending on where you live, you may have rights to access, correct, delete, restrict, object to, or receive a copy of personal data; withdraw consent; and complain to a regulator. Authenticated customers can request a growth-data export or deletion in Settings. A contact route for people who joined the waitlist without an account must be published before signups open. Some rights have legal limits, especially for public blockchain records and records Aurel must retain.
+Depending on where you live, you may have rights to access, correct, delete, restrict, object to, or receive a copy of personal data; withdraw consent; and complain to a regulator. Authenticated customers can request a growth-data export or deletion in Settings. A contact route for people who joined the earlier waitlist without an account must be published before public launch. Some rights have legal limits, especially for public blockchain records and records Aurel must retain.
 
 ## Automated decisions
 
@@ -64,4 +64,4 @@ Aurel uses server-side session verification, restricted secrets, security prefer
 
 ## Contact and complaints
 
-The privacy email, controller address, representative, data protection officer where required, and relevant supervisory authority must be added before the waitlist opens. The waitlist remains closed until a usable data-request contact route is published.
+The privacy email, controller address, representative, data protection officer where required, and relevant supervisory authority must be added before public launch. The waitlist is closed; a usable data-request contact route is still required for historical records.

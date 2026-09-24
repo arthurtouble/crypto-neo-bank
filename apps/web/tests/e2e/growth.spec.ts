@@ -38,9 +38,9 @@ test("landing is accessible and fits common widths", async ({ page }) => {
   expect(results.violations.filter((violation) => ["serious", "critical"].includes(violation.impact ?? ""))).toEqual([]);
 });
 
-test("public growth telemetry rejects server-owned facts", async ({ request }) => {
+test("retired public growth telemetry cannot record facts", async ({ request }) => {
   const response = await request.post("/api/growth/events", { data: { events: [{ eventName: "invite_issued", anonymousSessionId: "f5ba9bbc-4318-4fcb-8649-c9b3be2c315e", surface: "/", properties: {} }] } });
-  expect(response.status()).toBe(400);
+  expect(response.status()).toBe(410);
 });
 
 test("growth operations and customer data endpoints fail closed", async ({ request }) => {
