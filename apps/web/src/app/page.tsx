@@ -4,7 +4,7 @@ import { ArrowRight, ChevronDown } from "lucide-react";
 import { Brand } from "@/components/brand";
 import { ThemeToggle } from "@/components/theme-toggle";
 
-const docs = "https://aurel-docs.aurel-events.workers.dev";
+const docs = process.env.NEXT_PUBLIC_DOCS_URL ?? "https://aurel-docs.aurel-events.workers.dev";
 const features = [
   { title: "A home for all your assets", text: "Cash, vaults, and investments together.", href: "/app", image: "overview" },
   { title: "Spend", text: "Card controls built around you.", href: "/app/cards", image: "cards" },

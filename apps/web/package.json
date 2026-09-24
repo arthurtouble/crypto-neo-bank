@@ -8,7 +8,7 @@
     "build": "vinext build",
     "preview": "vinext start",
     "deploy": "vinext-cloudflare deploy",
-    "deploy:dev": "vinext-cloudflare deploy --env dev",
+    "deploy:dev": "NEXT_PUBLIC_DOCS_URL=https://aura-dev-docs.aurel-events.workers.dev vinext-cloudflare deploy --env dev",
     "deploy:dry-run": "vinext-cloudflare deploy --dry-run",
     "release:upload": "vinext build && wrangler versions upload --tag candidate",
     "release:list": "wrangler versions list",

@@ -17,6 +17,7 @@
     "docs:dev": "pnpm --filter @aurel/docs dev",
     "docs:build": "pnpm --filter @aurel/docs build",
     "docs:deploy": "pnpm --filter @aurel/docs deploy",
+    "docs:deploy:dev": "pnpm --filter @aurel/docs deploy:dev",
     "kb:dev": "pnpm --filter @aurel/kb dev",
     "kb:build": "pnpm --filter @aurel/kb build",
     "kb:deploy": "pnpm --filter @aurel/kb deploy",

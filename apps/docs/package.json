@@ -8,6 +8,7 @@
     "build": "ASTRO_TELEMETRY_DISABLED=1 astro check && ASTRO_TELEMETRY_DISABLED=1 astro build",
     "preview": "ASTRO_TELEMETRY_DISABLED=1 astro preview",
     "deploy": "ASTRO_TELEMETRY_DISABLED=1 astro build && wrangler deploy",
+    "deploy:dev": "AURA_DOCS_SITE=https://aura-dev-docs.aurel-events.workers.dev ASTRO_TELEMETRY_DISABLED=1 astro build && wrangler deploy --env dev",
     "typecheck": "ASTRO_TELEMETRY_DISABLED=1 astro check"
   },
   "dependencies": {

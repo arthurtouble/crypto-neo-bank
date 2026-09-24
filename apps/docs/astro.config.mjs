@@ -2,7 +2,7 @@ import { defineConfig } from "astro/config";
 import starlight from "@astrojs/starlight";
 
 export default defineConfig({
-  site: "https://aurel-docs.aurel-events.workers.dev",
+  site: process.env.AURA_DOCS_SITE ?? "https://aurel-docs.aurel-events.workers.dev",
   integrations: [
     starlight({
       title: "Aura",

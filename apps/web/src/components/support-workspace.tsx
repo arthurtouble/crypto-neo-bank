@@ -4,7 +4,7 @@ import { usePrivy } from "@privy-io/react-auth";
 import { useState } from "react";
 import { SupportCasePanel } from "./support-case-panel";
 
-const docs = "https://aurel-docs.aurel-events.workers.dev";
+const docs = process.env.NEXT_PUBLIC_DOCS_URL ?? "https://aurel-docs.aurel-events.workers.dev";
 const questions = ["How do I receive crypto?", "How do transfer limits work?", "What is available now?"];
 
 type Message = { role: "assistant" | "user"; text: string };
