@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePrivy, useSendTransaction } from "@privy-io/react-auth";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { erc20Abi, formatUnits, parseUnits } from "viem";
+import { erc20Abi, parseUnits } from "viem";
 import { usePublicClient } from "wagmi";
 import { buildSkyCall, skyConversionLimit, skyVaultAbi, validateSkyCall, SKY_SUSDS, SKY_USDC, SKY_USDC_ACTIONS,
   type SkyAction } from "@/lib/defi/sky-call-policy";
+import { useSkyPosition } from "@/lib/defi/use-sky-position";
 
 type Call = ReturnType<typeof buildSkyCall>;
 type Prepared = { action: SkyAction; amountRaw: string; conversionLimitRaw: string;
@@ -27,19 +28,7 @@ export function SkyVaultCard({ walletAddress }: { walletAddress?: string }) {
   const [status, setStatus] = useState("");
   const [submitted, setSubmitted] = useState<Submitted | null>(null);
   const awaitingSettlement = Boolean(submitted && ["pending", "unavailable"].includes(submitted.status));
-  const position = useQuery({
-    queryKey: ["sky-vault", walletAddress], enabled: Boolean(walletAddress && client),
-    queryFn: async () => {
-      const owner = walletAddress as `0x${string}`;
-      const [usdc, shares] = await Promise.all([
-        client!.readContract({ address: SKY_USDC, abi: erc20Abi, functionName: "balanceOf", args: [owner] }),
-        client!.readContract({ address: SKY_SUSDS, abi: skyVaultAbi, functionName: "balanceOf", args: [owner] })
-      ]);
-      const assets = shares ? await client!.readContract({ address: SKY_SUSDS, abi: skyVaultAbi,
-        functionName: "convertToAssets", args: [shares] }) : 0n;
-      return { usdc: formatUnits(usdc, 6), susds: formatUnits(assets, 18) };
-    }, refetchInterval: 30_000
-  });
+  const position = useSkyPosition(walletAddress);
 
   async function prepare(chosen: { action: SkyAction; amount: string; sender: string }, token: string) {
     const response = await fetch("/api/defi/sky/action", { method: "POST", cache: "no-store",
