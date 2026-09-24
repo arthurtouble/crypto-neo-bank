@@ -134,7 +134,7 @@ vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
               || query.includes("b.status = 'active'") && state.betaMode === "invite" && !state.betaAllowed
               || query.includes("b.transaction_limit_usd") && (state.spentTodayUsd * 100 + Number(state.valuationCents)) > Math.min(state.dailyLimitUsd, state.betaLimitUsd) * 100
               || (step > 0 && state.prepared.get(step - 1)?.verification_state !== "confirmed")) return { meta: { changes: 0 } };
-            state.prepared.set(step, { intent_id: args[11], step_index: step, subject_reference: args[12], wallet_address: args[1], chain_id: args[2], target_address: args[3], native_value: args[4], calldata_hash: args[5], call_fingerprint: args[6], semantic_action: args[7], source_reference: args[8], expected_effect_json: args[9], expires_at: state.intent.expires_at, verification_state: "prepared", reported_hash: null });
+            state.prepared.set(step, { intent_id: args[11], step_index: step, subject_reference: args[12], wallet_address: args[1], chain_id: args[2], target_address: args[3], native_value: args[4], calldata_hash: args[5], call_fingerprint: args[6], semantic_action: args[7], source_reference: args[8], expected_effect_json: args[9], expires_at: state.intent.expires_at, verification_state: "prepared", submission_phase: query.includes("'awaiting_step_up'") ? "awaiting_step_up" : "legacy", reported_hash: null });
             return { meta: { changes: 1 } };
           }
           if (query.includes("INSERT INTO intent_events")) {
@@ -622,23 +622,69 @@ describe("intent preparation route", () => {
     expect(state.prepared.size).toBe(0);
   });
 
-  it("blocks a high-value prepare until step-up has server-verifiable attestation", async () => {
+  it("holds a high-value exact call without releasing it for wallet signing", async () => {
     state.valuationCents = "1000001";
     state.addressBook = [{ address: recipient, available_at: new Date(Date.now() - 60_000).toISOString() }];
     const response = await request(payload);
-    expect(response.status).toBe(403);
-    expect(await response.json()).toMatchObject({ error: "step_up_unavailable" });
-    expect(state.prepared.size).toBe(0);
+    expect(response.status).toBe(202);
+    const body = await response.json();
+    expect(body).toMatchObject({ intentId, status: "awaiting_step_up" });
+    expect(body).not.toHaveProperty("fingerprint");
+    expect(body).not.toHaveProperty("expiresAt");
+    expect(body).not.toHaveProperty("stepIndex");
+    expect(state.prepared.get(0)).toMatchObject({ submission_phase: "awaiting_step_up", reported_hash: null });
+    expect(state.valuations).toHaveLength(1);
+    expect((await request({ ...payload, recheck: true })).status).toBe(403);
   });
 
-  it("blocks preparation at the platform floor even with a legacy higher stored threshold", async () => {
+  it("does not store a held plan if its saved recipient disappears before the D1 write", async () => {
+    state.valuationCents = "1000001";
+    state.addressBook = [{ address: recipient, available_at: new Date(Date.now() - 60_000).toISOString() }];
+    expect((await request(payload)).status).toBe(202);
+    const captured = state.lastInsert!;
+    const db = new DatabaseSync(":memory:");
+    const future = new Date(Date.now() + 60_000).toISOString();
+    const past = new Date(Date.now() - 60_000).toISOString();
+    try {
+      db.exec(`CREATE TABLE transaction_intents (intent_id TEXT, subject_reference TEXT, status TEXT, expires_at TEXT, request_json TEXT, created_at TEXT);
+        CREATE TABLE intent_prepared_calls (intent_id TEXT, step_index INTEGER, subject_reference TEXT, wallet_address TEXT, chain_id INTEGER, target_address TEXT, native_value TEXT, calldata_hash TEXT, call_fingerprint TEXT, semantic_action TEXT, source_reference TEXT, expires_at TEXT, expected_effect_json TEXT, verification_state TEXT, created_at TEXT, submission_phase TEXT);
+        CREATE TABLE feature_flags (flag_key TEXT, enabled INTEGER, audience TEXT);
+        CREATE TABLE security_profiles (subject_reference TEXT, account_locked INTEGER, daily_limit_usd REAL, policy_version INTEGER);
+        CREATE TABLE beta_access (subject_reference TEXT, status TEXT, transaction_limit_usd REAL, country_code TEXT);
+        CREATE TABLE intent_valuations (valuation_id TEXT, intent_id TEXT, usd_cents TEXT);
+        CREATE TABLE address_book_entries (subject_reference TEXT, chain_family TEXT, address TEXT, available_at TEXT);`);
+      db.prepare("INSERT INTO transaction_intents VALUES (?,?,?,?,?,?)").run(intentId, "subject-a", "reviewed", future,
+        JSON.stringify({ destination: recipient }), past);
+      db.exec(`INSERT INTO feature_flags VALUES ('direct_transfers',1,'beta');
+        INSERT INTO security_profiles VALUES ('subject-a',0,25000,1);
+        INSERT INTO beta_access VALUES ('subject-a','active',25000,'PT');`);
+      const run = () => db.prepare(captured.query).run(...captured.args as Array<string | number>);
+      db.prepare("INSERT INTO address_book_entries VALUES (?,?,?,?)").run("subject-a", "evm", recipient, past);
+      expect(run().changes).toBe(1);
+      expect(db.prepare("SELECT submission_phase FROM intent_prepared_calls").get()).toMatchObject({ submission_phase: "awaiting_step_up" });
+      db.exec("DELETE FROM intent_prepared_calls; DELETE FROM address_book_entries");
+      expect(run().changes).toBe(0);
+      db.prepare("INSERT INTO address_book_entries VALUES (?,?,?,?)").run("subject-a", "evm", recipient, future);
+      expect(run().changes).toBe(0);
+    } finally { db.close(); }
+  });
+
+  it("rejects a later step for a high-value direct-transfer plan before the database trigger", async () => {
+    state.valuationCents = "1000001";
+    state.addressBook = [{ address: recipient, available_at: new Date(Date.now() - 60_000).toISOString() }];
+    state.prepared.set(0, { verification_state: "confirmed" });
+    const response = await request({ ...payload, stepIndex: 1 });
+    expect(response.status).toBe(409);
+    expect(state.prepared.has(1)).toBe(false);
+  });
+
+  it("holds preparation at the platform floor even with a legacy higher stored threshold", async () => {
     state.stepUpThresholdUsd = 20_000;
     state.valuationCents = "1000000";
     state.addressBook = [{ address: recipient, available_at: new Date(Date.now() - 60_000).toISOString() }];
     const response = await request(payload);
-    expect(response.status).toBe(403);
-    expect(await response.json()).toMatchObject({ error: "step_up_unavailable" });
-    expect(state.prepared.size).toBe(0);
+    expect(response.status).toBe(202);
+    expect(state.prepared.get(0)).toMatchObject({ submission_phase: "awaiting_step_up" });
   });
 
   it("blocks preparation when a stored step-up threshold is malformed", async () => {

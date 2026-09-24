@@ -4,7 +4,7 @@ This plan is **not** permission to enable a signing route. The verifier, challen
 
 ## Current sequencing gap
 
-`/api/intents/prepare` rejects a transfer requiring step-up before it persists an immutable `intent_prepared_calls` row. The challenge issuer requires that row. The wallet UI also exits on `requiresStepUp` before calling prepare. Connecting the existing pieces as they stand would make high-value authorization unreachable. The post-broadcast status/reconciliation route does not provide pre-sign authority, and browser-side simulation is not server evidence.
+`/api/intents/prepare` can now persist an exact high-value Base direct-transfer call in `awaiting_step_up` after the current policy, valuation, simulation, and fee checks. Its response does not release the call or return a signing fingerprint; the D1 trigger prevents changing its phase, hash, or verification state. The wallet UI still exits on `requiresStepUp` before calling prepare, and no public passkey or release route exists. The challenge issuer requires an active credential and approved country configuration, so the end-to-end authorization remains unavailable. The post-broadcast status/reconciliation route does not provide pre-sign authority, and browser-side simulation is not server evidence.
 
 ## Required order
 

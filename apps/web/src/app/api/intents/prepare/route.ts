@@ -87,11 +87,12 @@ export async function POST(request: Request) {
     const now = currentTime.toISOString();
     const rollingStart = new Date(currentTime.getTime() - 86_400_000).toISOString();
     if (intent.status !== "reviewed" || intent.expires_at <= now) return reply({ error: "intent_not_reviewed", traceId }, 409);
-    const policy = z.object({ permitted: z.literal(true) }).passthrough().safeParse(JSON.parse(intent.policy_result_json));
+    const policy = z.object({ permitted: z.literal(true), requiresStepUp: z.boolean().optional() }).passthrough().safeParse(JSON.parse(intent.policy_result_json));
     if (!policy.success) return reply({ error: "policy_not_permitted", traceId }, 403);
     await requireFeature(env.PROJECTION_DB, featureFor(intent.intent_type));
     const reviewed = z.object({ type: z.enum(["transfer", "swap", "bridge", "earn_supply", "earn_withdraw", "earn_claim", "borrow", "repay"]), chainId: z.number().int().positive(), destination: address, asset: z.string(), amount: z.string(), estimatedUsd: z.number().nonnegative().optional(), availableUsd: z.number().nonnegative().optional() }).passthrough().parse(JSON.parse(intent.request_json));
     if (reviewed.type !== intent.intent_type || reviewed.chainId !== intent.chain_id) return reply({ error: "review_mismatch", traceId }, 409);
+    if (intent.intent_type === "transfer" && input.stepIndex !== 0) return reply({ error: "prepare_conflict", traceId }, 409);
     const valuation = await valueTransfer(reviewed, { now: currentTime });
     const [securityRows, addressRows, spentRows] = await env.PROJECTION_DB.batch([
       env.PROJECTION_DB.prepare("SELECT account_locked, enforce_address_book, daily_limit_usd, new_address_threshold_usd, step_up_threshold_usd, new_address_delay_seconds, policy_version FROM security_profiles WHERE subject_reference = ?").bind(subject.subjectReference),
@@ -132,10 +133,11 @@ export async function POST(request: Request) {
       delaySeconds: profile.new_address_delay_seconds
     }, currentTime, valuation.usdCents);
     if (!decision.permitted) return reply({ error: "policy_not_permitted", findings: decision.findings.filter((finding) => finding.level === "block"), traceId }, 403);
-    // Enrollment or a browser-side MFA modal is not server-verifiable proof that
-    // this exact reviewed action passed step-up. Hold these calls until such an
-    // attestation is bound to the intent.
-    if (decision.requiresStepUp) return reply({ error: "step_up_unavailable", traceId }, 403);
+    if (!Number.isFinite(profile.step_up_threshold_usd) || profile.step_up_threshold_usd < 0)
+      return reply({ error: "step_up_unavailable", traceId }, 403);
+    // A high-value call may be persisted for exact-action authorization, but
+    // the database hold prevents hash reporting or wallet-signing release.
+    const heldForStepUp = decision.requiresStepUp || policy.data.requiresStepUp === true;
     const dailyLimitCents = Math.floor(Math.min(profile.daily_limit_usd, beta.transactionLimitUsd) * 100);
     const valuedCents = Number(valuation.usdCents);
     if (!Number.isSafeInteger(dailyLimitCents) || dailyLimitCents < 0 || !Number.isSafeInteger(valuedCents) || valuedCents < 0)
@@ -162,6 +164,7 @@ export async function POST(request: Request) {
     const priceAgeMs = Date.parse(commitAt) - Date.parse(valuation.priceObservedAt);
     if (!Number.isFinite(priceAgeMs) || priceAgeMs > 180_000 || priceAgeMs < -60_000) return reply({ error: "valuation_unavailable", traceId }, 503);
     if (input.recheck) {
+      if (heldForStepUp) return reply({ error: "step_up_unavailable", traceId }, 403);
       const current = await env.PROJECTION_DB.prepare(`SELECT c.intent_id FROM intent_prepared_calls c
         JOIN transaction_intents i ON i.intent_id = c.intent_id
         JOIN security_profiles s ON s.subject_reference = i.subject_reference AND s.account_locked = 0
@@ -215,11 +218,15 @@ export async function POST(request: Request) {
     const [result] = await env.PROJECTION_DB.batch([
       env.PROJECTION_DB.prepare(`INSERT INTO intent_prepared_calls
       (intent_id, step_index, subject_reference, wallet_address, chain_id, target_address, native_value, calldata_hash, call_fingerprint, semantic_action, source_reference, expires_at, expected_effect_json, verification_state, created_at, submission_phase)
-      SELECT i.intent_id, ?, i.subject_reference, ?, ?, ?, ?, ?, ?, ?, ?, i.expires_at, ?, 'prepared', ?, 'legacy'
+      SELECT i.intent_id, ?, i.subject_reference, ?, ?, ?, ?, ?, ?, ?, ?, i.expires_at, ?, 'prepared', ?, ${heldForStepUp ? "'awaiting_step_up'" : "'legacy'"}
       FROM transaction_intents i WHERE i.intent_id = ? AND i.subject_reference = ? AND i.status = 'reviewed' AND i.expires_at > ?
         AND unixepoch(?) BETWEEN unixepoch('now') - 180 AND unixepoch('now') + 60
         AND EXISTS (SELECT 1 FROM feature_flags f WHERE f.flag_key = ? AND f.enabled = 1 AND f.audience IN ('all', 'beta'))
         AND NOT EXISTS (SELECT 1 FROM security_profiles s WHERE s.subject_reference = i.subject_reference AND s.account_locked = 1)
+        ${heldForStepUp ? `AND EXISTS (SELECT 1 FROM address_book_entries saved
+          WHERE saved.subject_reference = i.subject_reference AND saved.chain_family = 'evm'
+            AND lower(saved.address) = lower(json_extract(i.request_json, '$.destination'))
+            AND saved.available_at <= strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))` : ""}
         AND NOT EXISTS (SELECT 1 FROM intent_prepared_calls p WHERE p.intent_id = i.intent_id AND p.step_index = ?)
         AND (? = 0 OR EXISTS (SELECT 1 FROM intent_prepared_calls prior WHERE prior.intent_id = i.intent_id AND prior.step_index = ? AND prior.verification_state = 'confirmed'))
         AND EXISTS (SELECT 1 FROM (
@@ -252,6 +259,7 @@ export async function POST(request: Request) {
           valuation.valuedAt, valuation.usdCents, valuation.policyVersion, Number(valuation.depegUncertainty))
     ]);
     if (result.meta.changes !== 1) return reply({ error: "prepare_conflict", traceId }, 409);
+    if (heldForStepUp) return reply({ intentId: input.intentId, status: "awaiting_step_up", traceId }, 202);
     return reply({ intentId: input.intentId, stepIndex: input.stepIndex, fingerprint: call.fingerprint, expiresAt: intent.expires_at, traceId }, 201);
   } catch (error) {
     if (error instanceof AuthenticationError) return reply({ error: "unauthorized", traceId }, 401);
