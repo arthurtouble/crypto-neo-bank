@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { makeSwapReviewKey, quoteIsFresh, displayRawAmount, formatEstimatedFeeUsd } from "@/lib/swap/review-model";
+import { makeSwapReviewKey, quoteIsFresh, displayRawAmount, formatEstimatedFeeUsd, orderSwapRoutes } from "@/lib/swap/review-model";
 
 describe("Swap review state", () => {
   const baseline = { fromAssetId: "8453:native", toAssetId: "1:native", amount: "1.2", walletAddress: "0x000000000000000000000000000000000000dEaD", slippageBps: 50 };
@@ -30,5 +30,14 @@ describe("Swap review state", () => {
     expect(formatEstimatedFeeUsd(0)).toBe("$0.00");
     expect(formatEstimatedFeeUsd(0.25)).toBe("$0.25");
     expect(formatEstimatedFeeUsd(null)).toBe("Unavailable");
+  });
+
+  it("offers reviewable routes before quote-only routes without changing either group’s provider order", () => {
+    const routes = [
+      { quoteId: "preview-a" }, { quoteId: "review-a", planId: "plan-a" },
+      { quoteId: "preview-b" }, { quoteId: "review-b", planId: "plan-b" }
+    ];
+    expect(orderSwapRoutes(routes).map((route) => route.quoteId)).toEqual(["review-a", "review-b", "preview-a", "preview-b"]);
+    expect(routes.map((route) => route.quoteId)).toEqual(["preview-a", "review-a", "preview-b", "review-b"]);
   });
 });

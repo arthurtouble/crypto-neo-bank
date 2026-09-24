@@ -11,7 +11,7 @@ import { SUPPORTED_CHAINS } from "@/config/chains";
 import type { AssetId, CatalogAsset } from "@/lib/swap/assets";
 import type { ValidatedSwapQuote } from "@/lib/swap/quotes";
 import { assetNetwork } from "@/lib/swap/picker-model";
-import { displayRawAmount, formatEstimatedFeeUsd, makeSwapReviewKey, quoteIsFresh } from "@/lib/swap/review-model";
+import { displayRawAmount, formatEstimatedFeeUsd, makeSwapReviewKey, orderSwapRoutes, quoteIsFresh } from "@/lib/swap/review-model";
 import { parseSwapDeepLink } from "@/lib/markets/swap-links";
 import { normalizePreparedCall, type PreparedCallInput } from "@/lib/transactions/evidence";
 import { SwapAssetPicker } from "./swap-asset-picker";
@@ -40,7 +40,7 @@ export function SwapRouteReview({ planId, fresh, walletAddress, busy, reviewAcce
   if (state === "prepared") return <div><p className="swapReviewStatus" role="status"><strong>Route Verified</strong><span>No swap has been submitted.{routeKind === "cross_chain" ? " Arrival on the other network may take a few minutes." : ""}</span></p>{onSubmit && <button className="button primary full swapReviewAction" type="button" disabled={busy} onClick={onSubmit}>{busy ? "Opening Wallet" : "Confirm Swap"}</button>}</div>;
   if (state === "approval_required") return <p className="swapReviewStatus" role="status"><strong>Token Approval Required</strong><span>No swap has been submitted. Find a new route to continue.</span></p>;
   if (state === "reviewed") return <p className="swapReviewStatus" role="status"><strong>Review Complete</strong><span>No swap has been submitted.</span></p>;
-  if (!planId) return <p className="swapReviewStatus">This route cannot be reviewed right now.</p>;
+  if (!planId) return <p className="swapReviewStatus">Quote only. Choose another route to review a swap.</p>;
   if (!walletAddress) return <p className="swapReviewStatus">Connect a wallet to review this route.</p>;
   return <button className="button primary full swapReviewAction" type="button" disabled={busy} onClick={onReview}>
     {busy ? <><LoaderCircle className="spin" size={16} /> Checking Route</> : "Review Swap"}
@@ -237,7 +237,8 @@ export function SwapWorkspace() {
   const liveReviewKey = useRef(reviewKey);
   useLayoutEffect(() => { liveReviewKey.current = reviewKey; }, [reviewKey]);
   const liveResult = result?.key === reviewKey ? result.data : null;
-  const quote = liveResult?.quotes.find((item) => item.quoteId === selectedQuoteId) ?? liveResult?.quotes[0] ?? null;
+  const routes = orderSwapRoutes(liveResult?.quotes ?? []);
+  const quote = routes.find((item) => item.quoteId === selectedQuoteId) ?? routes[0] ?? null;
   const freshQuote = quote && quoteIsFresh(quote.expiresAt, now) ? quote : null;
   const unverified = [source, destination].filter((asset): asset is CatalogAsset => Boolean(asset && asset.verification === "unverified"));
 
@@ -399,7 +400,7 @@ export function SwapWorkspace() {
     {unverified.length > 0 && <label className="swapRiskCheck"><input type="checkbox" checked={acknowledged} onChange={(event) => { setAcknowledged(event.target.checked); clearReview(); }} /><span>I checked the contract {unverified.length > 1 ? "addresses" : "address"} for {unverified.map((asset) => `${asset.symbol} on ${assetNetwork(asset.chainId)}`).join(" and ")}.</span></label>}
     {error && <p className="formError" role="alert">{error}</p>}
     {liveResult && <section className="swapQuotes" aria-label="Available swap routes"><div className="swapQuotesHeader"><h3>Available Routes</h3><span>{liveResult.quotes.length} found</span></div>
-      {liveResult.quotes.map((route) => <button type="button" className={`swapQuoteRow ${quote?.quoteId === route.quoteId ? "selected" : ""}`} key={route.planReference} onClick={() => { reviewVersion.current += 1; setSelectedQuoteId(route.quoteId); setReviewState("idle"); setReviewErrorText(null); }}><span><strong>{route.provider.replace(/^lifi:/, "")}</strong><small>{route.routeKind === "cross_chain" ? "Across networks" : "Same network"}</small></span><span><strong>{destination ? displayRawAmount(route.toAmountMinRaw, destination.decimals) : "—"} {destination?.symbol}</strong><small>{route.totalFeeUsd === null ? "Total fees unavailable" : `${formatEstimatedFeeUsd(route.totalFeeUsd)} estimated fees`}</small></span></button>)}
+      {routes.map((route) => <button type="button" className={`swapQuoteRow ${quote?.quoteId === route.quoteId ? "selected" : ""}`} key={route.planReference} onClick={() => { reviewVersion.current += 1; setSelectedQuoteId(route.quoteId); setReviewState("idle"); setReviewErrorText(null); }}><span><strong>{route.provider.replace(/^lifi:/, "")}</strong><small>{route.routeKind === "cross_chain" ? "Across networks" : "Same network"}{route.planId ? "" : " · Quote only"}</small></span><span><strong>{destination ? displayRawAmount(route.toAmountMinRaw, destination.decimals) : "—"} {destination?.symbol}</strong><small>{route.totalFeeUsd === null ? "Total fees unavailable" : `${formatEstimatedFeeUsd(route.totalFeeUsd)} estimated fees`}</small></span></button>)}
       {freshQuote && <div className="swapReview"><span>You Pay<strong>{amount} {source?.symbol}</strong></span><span>Minimum Received<strong>{destination ? displayRawAmount(freshQuote.toAmountMinRaw, destination.decimals) : "—"} {destination?.symbol}</strong></span><span>Estimated Fees<strong>{formatEstimatedFeeUsd(freshQuote.totalFeeUsd)}</strong></span><span>Price Impact<strong>{freshQuote.priceImpactPercent === null ? "Unavailable" : `${freshQuote.priceImpactPercent.toFixed(2)}%`}</strong></span></div>}
       <SwapRouteReview planId={freshQuote?.planId ?? null} fresh={Boolean(freshQuote)} walletAddress={address ?? null} busy={reviewing || submitting || approving || submissionUncertain || approvalUncertain || Boolean(approvalHash)}
         reviewAccessAvailable={liveResult.reviewAccessAvailable}

@@ -31,6 +31,15 @@ describe("swap route review", () => {
     }
   });
 
+  it("labels a planless route as a quote-only preview", () => {
+    const html = renderToStaticMarkup(createElement(SwapRouteReview, {
+      planId: null, fresh: true, walletAddress: "0xabc", busy: false,
+      state: "idle", onReview() {}
+    }));
+    expect(html).toContain("Quote only");
+    expect(html).not.toContain("Review Swap</button>");
+  });
+
   it("states clearly that a successful review is not an executed swap", () => {
     const html = renderToStaticMarkup(createElement(SwapRouteReview, {
       planId: "plan", fresh: true, walletAddress: "0xabc", busy: false,
