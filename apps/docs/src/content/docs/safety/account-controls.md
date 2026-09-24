@@ -13,6 +13,8 @@ Aurel holds an in-app action when it requires approval that we cannot yet verify
 
 Give trusted destinations clear names and check the full address independently. A newly saved address has a 24-hour cooling period by default.
 
+If Saved Destinations Only is on, adding a new destination needs extra identity verification. Until that review is available, Aurel will not save the new address. You can still rename an address already saved, and its original cooling period stays in place.
+
 For transfers of $1,000 or more, the cooling period blocks immediate use of a newly saved destination. Lower-value new destinations receive a warning unless saved-only mode is enabled. Adding, cooling, and removing a destination creates an audit event.
 
 An address label is for recognition. It is not proof of identity or ownership.

@@ -35,7 +35,7 @@ export function RecipientScheduleWorkspace() {
     const token = await getAccessToken();
     const response = await fetch(url, { ...init, headers: { ...(init?.headers ?? {}), ...(token ? { Authorization: `Bearer ${token}` } : {}) }, cache: "no-store" });
     const body = await response.json() as Record<string, unknown>;
-    if (!response.ok) throw new Error(typeof body.message === "string" ? body.message : "That request could not be completed.");
+    if (!response.ok) throw new Error(body.error === "step_up_unavailable" ? "Saved Destinations Only is on. Contact Support to add a new recipient." : typeof body.message === "string" ? body.message : "That request could not be completed.");
     return body;
   }
 

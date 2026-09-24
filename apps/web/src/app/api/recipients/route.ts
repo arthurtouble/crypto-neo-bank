@@ -1,10 +1,9 @@
 import { env } from "cloudflare:workers";
-import { getAddress } from "viem";
 import { z } from "zod";
 import { AuthenticationError, requireVerifiedSubject } from "@/lib/auth/server";
 import { ensureSubjectProfile } from "@/lib/profile/ensure";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
-import { writeAuditEvent } from "@/lib/security/audit";
+import { AddressStepUpUnavailableError, saveWalletAddress } from "@/lib/security/wallet-address-book";
 
 const createSchema = z.object({ kind: z.literal("wallet"), address: z.string().regex(/^0x[a-fA-F0-9]{40}$/), name: z.string().trim().min(1).max(48) });
 type WalletRow = { entry_id: string; address: string; label: string; available_at: string; last_used_at: string | null };
@@ -45,21 +44,12 @@ export async function POST(request: Request) {
     await enforceRateLimit(env.PROJECTION_DB, { namespace: "recipient_create", subject: subject.subjectReference, limit: 12, windowSeconds: 3600 });
     const input = createSchema.parse(await request.json());
     await ensureSubjectProfile(env.PROJECTION_DB, subject.subjectReference);
-    const profile = await env.PROJECTION_DB.prepare("SELECT new_address_delay_seconds FROM security_profiles WHERE subject_reference = ?").bind(subject.subjectReference).first<{ new_address_delay_seconds: number }>();
-    const now = new Date();
-    const availableAt = new Date(now.getTime() + (profile?.new_address_delay_seconds ?? 86_400) * 1000).toISOString();
-    const address = getAddress(input.address).toLowerCase();
-    const entryId = crypto.randomUUID();
-    await env.PROJECTION_DB.prepare(`INSERT INTO address_book_entries (entry_id, subject_reference, chain_family, address, label, created_at, available_at)
-      VALUES (?, ?, 'evm', ?, ?, ?, ?) ON CONFLICT(subject_reference, chain_family, address) DO UPDATE SET label = excluded.label`)
-      .bind(entryId, subject.subjectReference, address, input.name, now.toISOString(), availableAt).run();
-    const saved = await env.PROJECTION_DB.prepare("SELECT entry_id, available_at FROM address_book_entries WHERE subject_reference = ? AND chain_family = 'evm' AND address = ?").bind(subject.subjectReference, address).first<{ entry_id: string; available_at: string }>();
-    if (!saved) throw new Error("Saved recipient could not be re-read.");
-    await writeAuditEvent(env.PROJECTION_DB, { subjectReference: subject.subjectReference, actorType: "customer", actorReference: subject.subjectReference, action: "recipient.wallet.saved", targetType: "wallet_address", targetReference: address, evidence: { availableAt: saved.available_at } });
-    return Response.json({ recipient: { id: saved.entry_id, kind: "wallet", name: input.name, destination: address, verified: new Date(saved.available_at).getTime() <= Date.now(), availableAt: saved.available_at }, traceId }, { status: 201, headers: { "Cache-Control": "no-store" } });
+    const saved = await saveWalletAddress(env.PROJECTION_DB, subject.subjectReference, input.address, input.name);
+    return Response.json({ recipient: { id: saved.entry_id, kind: "wallet", name: saved.label, destination: saved.address, verified: new Date(saved.available_at).getTime() <= Date.now(), availableAt: saved.available_at }, traceId }, { status: 201, headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     if (error instanceof AuthenticationError) return Response.json({ error: "unauthorized", message: error.message, traceId }, { status: 401 });
     if (error instanceof z.ZodError) return Response.json({ error: "invalid_recipient", issues: error.issues, traceId }, { status: 400 });
+    if (error instanceof AddressStepUpUnavailableError) return Response.json({ error: "step_up_unavailable", traceId }, { status: 409, headers: { "Cache-Control": "no-store" } });
     console.error(JSON.stringify({ level: "error", event: "recipients.create.failed", traceId, message: error instanceof Error ? error.message : "unknown" }));
     return Response.json({ error: "recipient_create_unavailable", traceId }, { status: 503 });
   }

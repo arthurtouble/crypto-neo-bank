@@ -33,7 +33,7 @@ export function SecurityPolicyControls() {
     event.preventDefault(); setMessage(null);
     const response = await authenticatedFetch("/api/security/addresses", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ address, label }) });
     const body = await response.json() as { error?: string };
-    if (!response.ok) { setMessage(body.error === "invalid_address_entry" ? "Enter a valid EVM address and label." : "The destination could not be saved."); return; }
+    if (!response.ok) { setMessage(body.error === "invalid_address_entry" ? "Enter a valid wallet address and label." : body.error === "step_up_unavailable" ? "Saved Destinations Only is on. Contact Support to add a new destination." : "The destination could not be saved."); return; }
     setAddress(""); setLabel(""); setMessage("Destination saved. Its cooling period has started.");
     await queryClient.invalidateQueries({ queryKey: ["address-book", user?.id] });
   }
