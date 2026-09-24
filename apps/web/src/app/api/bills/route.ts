@@ -1,19 +1,7 @@
 import { env } from "cloudflare:workers";
 import { z } from "zod";
 import { AuthenticationError, requireVerifiedSubject } from "@/lib/auth/server";
-import { ensureSubjectProfile } from "@/lib/profile/ensure";
-import { enforceRateLimit } from "@/lib/security/rate-limit";
-import { writeAuditEvent } from "@/lib/security/audit";
-
-const createSchema = z.object({
-  name: z.string().trim().min(1).max(80),
-  category: z.enum(["housing", "utilities", "communications", "insurance", "subscriptions", "taxes", "other"]),
-  expectedAmount: z.string().regex(/^\d+(\.\d{1,2})?$/).refine((value) => Number(value) > 0).optional(),
-  currency: z.enum(["USD", "EUR", "GBP"]),
-  frequency: z.enum(["monthly", "quarterly", "yearly"]),
-  nextDueDate: z.string().date()
-});
-const updateSchema = z.object({ billId: z.string().uuid(), action: z.enum(["pause", "resume", "archive"]) });
+const updateSchema = z.object({ billId: z.string().uuid(), action: z.literal("archive") });
 type BillRow = { bill_id: string; name: string; category: string; expected_amount: string | null; currency: string; frequency: string; next_due_date: string; status: string; created_at: string; updated_at: string };
 type SubscriptionRow = { subscription_reference: string; provider: string; merchant_name: string; category: string | null; expected_amount: string | null; currency: string | null; cadence: string | null; next_expected_at: string | null; status: string; observed_at: string };
 
@@ -41,21 +29,11 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const traceId = crypto.randomUUID();
   try {
-    const subject = await requireVerifiedSubject(request);
-    await enforceRateLimit(env.PROJECTION_DB, { namespace: "bill_create", subject: subject.subjectReference, limit: 20, windowSeconds: 3600 });
-    const input = createSchema.parse(await request.json());
-    const due = new Date(`${input.nextDueDate}T23:59:59Z`);
-    if (due.getTime() < Date.now() - 86_400_000 || due.getTime() > Date.now() + 731 * 86_400_000) return Response.json({ error: "invalid_due_date", message: "Choose a date within the next two years.", traceId }, { status: 400 });
-    await ensureSubjectProfile(env.PROJECTION_DB, subject.subjectReference);
-    const billId = crypto.randomUUID(); const now = new Date().toISOString();
-    await env.PROJECTION_DB.prepare(`INSERT INTO bill_reminder_plans (bill_id, subject_reference, name, category, expected_amount, currency, frequency, next_due_date, status, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)`).bind(billId, subject.subjectReference, input.name, input.category, input.expectedAmount ?? null, input.currency, input.frequency, input.nextDueDate, now, now).run();
-    await writeAuditEvent(env.PROJECTION_DB, { subjectReference: subject.subjectReference, actorType: "customer", actorReference: subject.subjectReference, action: "bill.reminder.created", targetType: "bill_reminder", targetReference: billId, evidence: { frequency: input.frequency, nextDueDate: input.nextDueDate, paymentAuthority: false } });
-    return Response.json({ reminder: { billId, ...input, status: "active", createdAt: now, updatedAt: now }, traceId }, { status: 201, headers: { "Cache-Control": "no-store" } });
+    await requireVerifiedSubject(request);
+    return Response.json({ error: "bill_planning_retired", traceId }, { status: 410, headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     if (error instanceof AuthenticationError) return Response.json({ error: "unauthorized", message: error.message, traceId }, { status: 401 });
-    if (error instanceof z.ZodError) return Response.json({ error: "invalid_bill", issues: error.issues, traceId }, { status: 400 });
-    return Response.json({ error: "bill_create_unavailable", traceId }, { status: 503 });
+    return Response.json({ error: "bills_unavailable", traceId }, { status: 503 });
   }
 }
 
@@ -64,17 +42,20 @@ export async function PATCH(request: Request) {
   try {
     const subject = await requireVerifiedSubject(request);
     const input = updateSchema.parse(await request.json());
-    const row = await env.PROJECTION_DB.prepare("SELECT status FROM bill_reminder_plans WHERE bill_id = ? AND subject_reference = ?").bind(input.billId, subject.subjectReference).first<{ status: string }>();
-    if (!row) return Response.json({ error: "bill_not_found", traceId }, { status: 404 });
-    if ((input.action === "pause" && row.status !== "active") || (input.action === "resume" && row.status !== "paused")) return Response.json({ error: "invalid_bill_transition", traceId }, { status: 409 });
-    const status = input.action === "archive" ? "archived" : input.action === "pause" ? "paused" : "active";
-    await env.PROJECTION_DB.prepare("UPDATE bill_reminder_plans SET status = ?, updated_at = ? WHERE bill_id = ? AND subject_reference = ?").bind(status, new Date().toISOString(), input.billId, subject.subjectReference).run();
-    await writeAuditEvent(env.PROJECTION_DB, { subjectReference: subject.subjectReference, actorType: "customer", actorReference: subject.subjectReference, action: `bill.reminder.${input.action}`, targetType: "bill_reminder", targetReference: input.billId });
-    return Response.json({ updated: true, status, traceId }, { headers: { "Cache-Control": "no-store" } });
+    const now = new Date().toISOString();
+    const auditId = crypto.randomUUID();
+    const [updated] = await env.PROJECTION_DB.batch([
+      env.PROJECTION_DB.prepare("UPDATE bill_reminder_plans SET status = 'archived', updated_at = ? WHERE bill_id = ? AND subject_reference = ? AND status != 'archived'")
+        .bind(now, input.billId, subject.subjectReference),
+      env.PROJECTION_DB.prepare(`INSERT INTO audit_events (audit_id, subject_reference, actor_type, actor_reference, action, target_type, target_reference, evidence_json, occurred_at)
+        SELECT ?, ?, 'customer', ?, 'bill.reminder.archived', 'bill_reminder', ?, '{}', ? WHERE changes() = 1`)
+        .bind(auditId, subject.subjectReference, subject.subjectReference, input.billId, now)
+    ]);
+    if (!updated.meta.changes) return Response.json({ error: "bill_not_found", traceId }, { status: 404, headers: { "Cache-Control": "no-store" } });
+    return Response.json({ updated: true, status: "archived", traceId }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     if (error instanceof AuthenticationError) return Response.json({ error: "unauthorized", message: error.message, traceId }, { status: 401 });
     if (error instanceof z.ZodError) return Response.json({ error: "invalid_bill_update", issues: error.issues, traceId }, { status: 400 });
     return Response.json({ error: "bill_update_unavailable", traceId }, { status: 503 });
   }
 }
-

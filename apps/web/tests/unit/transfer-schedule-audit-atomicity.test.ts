@@ -33,8 +33,8 @@ function createRequest() {
     asset: "USDC", amount: "10", timeZone: "UTC", anchorLocal: tomorrow
   }) });
 }
-function pauseRequest() {
-  return new Request("https://aurel.test/api/transfer-schedules", { method: "PATCH", body: JSON.stringify({ scheduleId, action: "pause" }) });
+function cancelRequest() {
+  return new Request("https://aurel.test/api/transfer-schedules", { method: "PATCH", body: JSON.stringify({ scheduleId, action: "cancel" }) });
 }
 
 beforeEach(() => {
@@ -55,20 +55,30 @@ beforeEach(() => {
 });
 afterEach(() => { state.database = null; sqlite.close(); });
 
-describe("approval-required schedule audit atomicity", () => {
-  it("does not create a plan when the required audit write fails", async () => {
+describe("retired schedule audit atomicity", () => {
+  it("never creates a new plan", async () => {
     sqlite.exec("CREATE TRIGGER reject_schedule_audit BEFORE INSERT ON audit_events BEGIN SELECT RAISE(FAIL, 'audit unavailable'); END;");
-    expect((await POST(createRequest())).status).toBe(503);
+    expect((await POST(createRequest())).status).toBe(410);
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM transfer_schedules").get()).toMatchObject({ count: 0 });
   });
 
-  it("does not pause a plan or dismiss its reminder when the audit write fails", async () => {
+  it("does not cancel a plan or dismiss its reminder when the audit write fails", async () => {
     sqlite.prepare(`INSERT INTO transfer_schedules VALUES (?, 'alice', 'weekly', 'wallet', ?, 'Home', NULL, 'USDC', '10',
       '2026-10-01T12:00:00.000Z', 'approval_required', NULL, NULL, 'UTC', '2026-10-01T12:00', '2026-09-24T00:00:00.000Z', '2026-09-24T00:00:00.000Z')`).run(scheduleId, address);
     sqlite.prepare("INSERT INTO schedule_occurrences VALUES ('occ-1', ?, 'alice', 'due')").run(scheduleId);
     sqlite.exec("CREATE TRIGGER reject_schedule_audit BEFORE INSERT ON audit_events BEGIN SELECT RAISE(FAIL, 'audit unavailable'); END;");
-    expect((await PATCH(pauseRequest())).status).toBe(503);
+    expect((await PATCH(cancelRequest())).status).toBe(503);
     expect(sqlite.prepare("SELECT status FROM transfer_schedules WHERE schedule_id=?").get(scheduleId)).toMatchObject({ status: "approval_required" });
     expect(sqlite.prepare("SELECT reminder_state FROM schedule_occurrences WHERE occurrence_id='occ-1'").get()).toMatchObject({ reminder_state: "due" });
+  });
+
+  it("cancels an old plan and dismisses its reminders atomically", async () => {
+    sqlite.prepare(`INSERT INTO transfer_schedules VALUES (?, 'alice', 'weekly', 'wallet', ?, 'Home', NULL, 'USDC', '10',
+      '2026-10-01T12:00:00.000Z', 'approval_required', NULL, NULL, 'UTC', '2026-10-01T12:00', '2026-09-24T00:00:00.000Z', '2026-09-24T00:00:00.000Z')`).run(scheduleId, address);
+    sqlite.prepare("INSERT INTO schedule_occurrences VALUES ('occ-1', ?, 'alice', 'due')").run(scheduleId);
+    expect((await PATCH(cancelRequest())).status).toBe(200);
+    expect(sqlite.prepare("SELECT status FROM transfer_schedules WHERE schedule_id=?").get(scheduleId)).toMatchObject({ status: "cancelled" });
+    expect(sqlite.prepare("SELECT reminder_state FROM schedule_occurrences WHERE occurrence_id='occ-1'").get()).toMatchObject({ reminder_state: "dismissed" });
+    expect(sqlite.prepare("SELECT action FROM audit_events").get()).toMatchObject({ action: "transfer.schedule.cancel" });
   });
 });
