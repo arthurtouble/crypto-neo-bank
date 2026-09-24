@@ -5,8 +5,8 @@ export default defineConfig({
   site: "https://aurel-internal-kb.aurel-events.workers.dev",
   integrations: [
     starlight({
-      title: "Aurel internal",
-      description: "Internal product, architecture, operations, risk, compliance, and growth knowledge.",
+      title: "Aura internal",
+      description: "Internal product, architecture, operations, risk, and compliance knowledge.",
       favicon: "/favicon.svg",
       customCss: ["./src/styles/internal.css"],
       pagefind: true,
@@ -18,8 +18,7 @@ export default defineConfig({
           { label: "Knowledge base", slug: "" },
           { label: "Aura build status", link: "/overview/build-status/" },
           { label: "Build status", slug: "overview/build-status" },
-          { label: "Launch readiness", slug: "overview/launch-readiness" },
-          { label: "Product implementation plan", slug: "overview/product-implementation-plan" }
+          { label: "Launch readiness", slug: "overview/launch-readiness" }
         ] },
         { label: "Product and design", items: [
           { label: "Design system", slug: "product/design-system" },
