@@ -10,6 +10,8 @@ An isolated Aura development Worker is deployed at `aura-dev.aurel-events.worker
 
 On 24 September, workspace typechecks and a local D1 backup/restore drill passed through migration `0038`, preserving invitation, consent, passkey, authorization, and audit evidence. The marketing-claims check remains red because the Aura landing content register is `pending` human review; no approval was inferred from a passing build.
 
+The existing `aurel-internal-kb.aurel-events.workers.dev` serves internal runbooks without an Access challenge (anonymous HTTP 200 observed on 24 September). Its production and preview workers.dev URLs are enabled, and this Cloudflare account has no Zero Trust organization yet. Restrict or disable both URLs before sharing internal operational material. The isolated Aura development docs Worker is public and contains only customer-facing documentation.
+
 ## Inputs needed from the owner
 
 | Input | Why | Status |
