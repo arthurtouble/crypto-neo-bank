@@ -12,7 +12,7 @@ const wallet = "0x1111111111111111111111111111111111111111";
 const router = "0x2626664c2603336e57b271c5c0b26f421741e481";
 const token = "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
 
-function database(bridge = false) {
+function database(bridge = false, destinationChain: 1 | 42161 = 42161) {
   const db = new DatabaseSync(":memory:");
   db.exec("PRAGMA foreign_keys = ON");
   for (const file of readdirSync(migrationDirectory).filter((name) => name.endsWith(".sql")).sort())
@@ -33,7 +33,7 @@ function database(bridge = false) {
        from_amount_raw, recipient, slippage_bps, to_amount_min_raw, quote_id, step_id, tool_id, approval_spender,
        source_call_json, route_policy_version, catalog_version, observed_at, expires_at, fingerprint, intent_id)
       VALUES ('plan-a', 'subject-a', '${wallet}', '8453:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913',
-       '${bridge ? "42161:0xaf88d065e77c8cc2239327c5edb3a432268e5831" : "8453:0x4200000000000000000000000000000000000006"}', 8453, ${bridge ? 42161 : 8453}, '1000000', '${wallet}', 50,
+       '${bridge ? destinationChain === 1 ? "1:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48" : "42161:0xaf88d065e77c8cc2239327c5edb3a432268e5831" : "8453:0x4200000000000000000000000000000000000006"}', 8453, ${bridge ? destinationChain : 8453}, '1000000', '${wallet}', 50,
        '100', 'quote-a', 'quote-a', '${bridge ? "across" : "uniswap_v3_direct"}', '${router}',
        '{"chainId":8453,"from":"${wallet}","to":"${router}","value":"0","data":"0x1234"}',
        'policy', 'catalog', '${at}', '${expiry}', 'hash', 'intent-a');`);
@@ -51,6 +51,19 @@ function insert(db: DatabaseSync, amount = "1000000", subject = "subject-a") {
 }
 
 describe("separate swap approval migration", () => {
+  it("keeps the last signing gate valid for a reviewed Ethereum USDC bridge", () => {
+    const db = database(true, 1);
+    try {
+      insert(db);
+      const route = readFileSync(resolve(process.cwd(), "src/app/api/swap/approval/route.ts"), "utf8");
+      const sql = route.match(/const current = await env\.PROJECTION_DB\.prepare\(`([\s\S]*?)`\)/)?.[1];
+      expect(sql).toBeTruthy();
+      const call = db.prepare("SELECT call_json FROM swap_approval_requests").get()!.call_json as string;
+      expect(db.prepare(sql!).get(1, "PT", "approval-a", "subject-a", wallet, "plan-a", "intent-a",
+        approvalExpiry, call, "hash", token, router, "1000000", "subject-a", "intent-a", at, at, at, 100))
+        .toMatchObject({ approval_id: "approval-a" });
+    } finally { db.close(); }
+  });
   it.each([false, true])("requires live governance at the last approval signing gate (bridge=%s)", (bridge) => {
     const db = database(bridge);
     try {

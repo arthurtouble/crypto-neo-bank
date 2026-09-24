@@ -10,6 +10,7 @@ const router = "0x3333333333333333333333333333333333333333";
 const pool = "0x09aea4b2242abC8bb4BB78D537A67a245A7bEC64";
 const baseUsdc = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
 const arbUsdc = "0xaf88d065e77c8cc2239327c5edb3a432268e5831";
+const ethereumUsdc = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
 const hash = `0x${"a".repeat(64)}`;
 const blockHash = `0x${"b".repeat(64)}`;
 const word = (address: string) => padHex(address as `0x${string}`, { size: 32 });
@@ -52,6 +53,14 @@ async function fixture() {
 describe("Across source transaction evidence", () => {
   it("confirms only the finalized source deposit", async () => {
     expect(await verifyCrossChainSourceEffect(await fixture())).toEqual({ status: "confirmed-source" });
+  });
+
+  it("confirms a Base USDC deposit targeting Ethereum USDC", async () => {
+    const input = await fixture();
+    input.expected.destinationChainId = 1;
+    if (input.observed.status === "found") input.observed.receipt!.logs = [transfer(1_000_000n),
+      deposit({ destinationChainId: 1n, outputToken: ethereumUsdc })];
+    expect(await verifyCrossChainSourceEffect(input)).toEqual({ status: "confirmed-source" });
   });
 
   it("binds the observed transaction to the immutable prepared call", async () => {

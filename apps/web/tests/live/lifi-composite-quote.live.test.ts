@@ -20,6 +20,9 @@ const to: CatalogAsset = { id: "8453:0x4200000000000000000000000000000000000006"
 const arbitrumUsdc: CatalogAsset = { id: "42161:0xaf88d065e77c8cc2239327c5edb3a432268e5831", chainId: 42161,
   address: "0xaf88d065e77c8cc2239327c5edb3a432268e5831", symbol: "USDC", name: "USD Coin",
   decimals: 6, logoUrl: null, verification: "verified", eligibility: "eligible" };
+const ethereumUsdc: CatalogAsset = { id: "1:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", chainId: 1,
+  address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", symbol: "USDC", name: "USD Coin",
+  decimals: 6, logoUrl: null, verification: "verified", eligibility: "eligible" };
 
 describe.skipIf(process.env.AUREL_LIVE_READONLY !== "1")("LI.FI Base composite quote", () => {
   it("retains a current fee-plus-swap quote privately without authorizing execution", async () => {
@@ -50,18 +53,19 @@ describe.skipIf(process.env.AUREL_LIVE_READONLY !== "1")("LI.FI Base composite q
     expect(fee.distributions.length).toBeGreaterThan(0);
   }, 20_000);
 
-  it("retains the reviewed Base-to-Arbitrum fee-plus-Across shape without claiming settlement", async () => {
+  it.each([{ destination: arbitrumUsdc, network: "Arbitrum" }, { destination: ethereumUsdc, network: "Ethereum" }])(
+    "retains the reviewed Base-to-$network fee-plus-Across shape without claiming settlement", async ({ destination }) => {
     const adapter = createLifiQuoteAdapter({ policy: {
       allowedTools: new Set(["across", "feecollection"]), allowedExchanges: new Set(),
       allowedBridges: new Set(["across"]), allowedTargets: new Set([diamond]), allowedApprovalTargets: new Set([diamond])
     } });
-    const [result] = await adapter.quoteWithPlans({ fromAssetId: from.id, toAssetId: arbitrumUsdc.id,
-      amount: "100", fromAddress: wallet, slippageBps: 50 }, { from, to: arbitrumUsdc });
+    const [result] = await adapter.quoteWithPlans({ fromAssetId: from.id, toAssetId: destination.id,
+      amount: "100", fromAddress: wallet, slippageBps: 50 }, { from, to: destination });
     expect(result.quote).toMatchObject({ provider: "lifi:across", routeKind: "cross_chain" });
     expect(result.quote).not.toHaveProperty("sourceCall");
     expect(result.plan.routeSteps.map((step) => step.type)).toEqual(["protocol", "cross"]);
     const decoded = inspectLifiAcrossV4Call({ data: result.plan.sourceCall.data, recipient: wallet,
-      sourceToken: from.address!, destinationToken: arbitrumUsdc.address!, destinationChainId: 42161,
+      sourceToken: from.address!, destinationToken: destination.address!, destinationChainId: destination.chainId,
       sourceAmountRaw: result.plan.fromAmountRaw });
     const fee = inspectLifiFeeForwarderCall({ data: decoded.swaps[0].callData, token: from.address!,
       expectedFeeRaw: (BigInt(result.plan.fromAmountRaw) - BigInt(decoded.minimumBridgeAmountRaw)).toString() });
@@ -89,7 +93,7 @@ describe.skipIf(process.env.AUREL_LIVE_READONLY !== "1")("LI.FI Base composite q
       observed_at: plan.observedAt, expires_at: plan.expiresAt, fingerprint: plan.fingerprint,
       status: "active", intent_id: "observation"
     } satisfies StoredSwapQuotePlan;
-    const reviewed = await assertSwapPrepareIntegrity(retained, { from, to: arbitrumUsdc }, Date.now());
+    const reviewed = await assertSwapPrepareIntegrity(retained, { from, to: destination }, Date.now());
     expect(reviewed.sourceCall.to.toLowerCase()).toBe(diamond);
   }, 30_000);
 });

@@ -31,7 +31,9 @@ const call = `INSERT INTO intent_prepared_calls
     'prepared', '2026-09-23T00:00:00.000Z', 'released')`;
 
 describe("governed Swap prepared-call migration", () => {
-  it("permits only a bound, reviewed Base-to-Arbitrum LI.FI bridge source", () => {
+  it.each([{ chainId: 42161, destination: "42161:0xaf88d065e77c8cc2239327c5edb3a432268e5831" },
+    { chainId: 1, destination: "1:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48" }])(
+    "permits only a bound, reviewed Base-to-$chainId LI.FI bridge source", ({ chainId, destination }) => {
     const db = database();
     try {
       db.exec(`UPDATE transaction_intents SET intent_type = 'bridge', route_reference = 'swap-plan:plan-1'
@@ -43,12 +45,13 @@ describe("governed Swap prepared-call migration", () => {
           fingerprint, intent_id)
         VALUES ('plan-1', 'subject-a', '0x1111111111111111111111111111111111111111',
           '8453:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913',
-          '42161:0xaf88d065e77c8cc2239327c5edb3a432268e5831', 8453, 42161, '1000000',
+          '${destination}', 8453, ${chainId}, '1000000',
           '0x1111111111111111111111111111111111111111', 50, '900000', 'quote-1', 'quote-1',
           'across', '0x2222222222222222222222222222222222222222', '{}', 'v1', 'v1',
           '2026-09-23T00:00:00.000Z', '2026-09-23T00:05:00.000Z', 'fingerprint', 'intent-1');`);
       db.exec(call.replace("'swap', 'swap-plan:plan-1'", "'bridge', 'swap-plan:plan-1'")
-        .replace("'{\"type\":\"swap\"}'", "'{\"type\":\"bridge\",\"sourceAmountRaw\":\"1000000\",\"minimumOutputRaw\":\"900000\",\"destinationChainId\":42161,\"destinationAssetId\":\"42161:0xaf88d065e77c8cc2239327c5edb3a432268e5831\"}'"));
+        .replace("'{\"type\":\"swap\"}'", `'${JSON.stringify({ type: "bridge", sourceAmountRaw: "1000000",
+          minimumOutputRaw: "900000", destinationChainId: chainId, destinationAssetId: destination })}'`));
       expect(db.prepare("SELECT semantic_action FROM intent_prepared_calls").get())
         .toMatchObject({ semantic_action: "bridge" });
       db.exec(`INSERT INTO intent_observation_candidates

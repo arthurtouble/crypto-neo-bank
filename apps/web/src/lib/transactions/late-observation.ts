@@ -97,7 +97,8 @@ export async function reconcileLateObservations(db: D1Database, subjectReference
         if (!expectedEffect || typeof expectedEffect !== "object" || Array.isArray(expectedEffect))
           return { status: "inconsistent" as const, reason: "effect_schema" };
         const bridge = expectedEffect as Record<string, unknown>;
-        if (bridge.type !== "bridge" || bridge.sourceChainId !== 8453 || bridge.destinationChainId !== 42161
+        if (bridge.type !== "bridge" || bridge.sourceChainId !== 8453
+          || typeof bridge.destinationChainId !== "number" || ![1, 42161].includes(bridge.destinationChainId)
           || typeof bridge.wallet !== "string" || typeof bridge.recipient !== "string"
           || bridge.wallet.toLowerCase() !== row.wallet_address.toLowerCase()
           || bridge.recipient.toLowerCase() !== row.wallet_address.toLowerCase()

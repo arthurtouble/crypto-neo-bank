@@ -139,7 +139,7 @@ async function readBoundedJson(response: Response): Promise<unknown> {
 }
 
 function providerAddress(asset: CatalogAsset): string {
-  return asset.address ?? NATIVE_SENTINEL;
+  return asset.address ? getAddress(asset.address) : NATIVE_SENTINEL;
 }
 
 function matchesProviderToken(token: z.infer<typeof tokenSchema>, asset: CatalogAsset): boolean {
@@ -235,9 +235,10 @@ async function validateQuote(
     || quote.includedSteps.length !== 2 || quote.includedSteps[0].type !== "protocol"
     || quote.includedSteps[1].type !== (compositeCross ? "cross" : "swap")
     || quote.includedSteps.some((step) => !step.action || !step.estimate))) return null;
-  if (compositeCross && (assets.from.chainId !== 8453 || assets.to.chainId !== 42161
+  if (compositeCross && (assets.from.chainId !== 8453 || ![1, 42161].includes(assets.to.chainId)
     || assets.from.address?.toLowerCase() !== "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
-    || assets.to.address?.toLowerCase() !== "0xaf88d065e77c8cc2239327c5edb3a432268e5831"
+    || assets.to.address?.toLowerCase() !== (assets.to.chainId === 1
+      ? "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48" : "0xaf88d065e77c8cc2239327c5edb3a432268e5831")
     || quote.tool.toLowerCase() !== "across")) return null;
   if (!policy.allowedTools.has(quote.tool.toLowerCase())) return null;
   if (!(assets.from.chainId === assets.to.chainId ? policy.allowedExchanges : policy.allowedBridges).has(quote.tool.toLowerCase())) return null;

@@ -21,7 +21,7 @@ const inputSchema = z.object({ intentId: z.string().uuid(), planId: z.string().u
   walletAddress: z.string().refine(isAddress), recheck: z.boolean().optional() }).strict();
 const reviewedSchema = z.object({ type: z.enum(["swap", "bridge"]), walletAddress: z.string().refine(isAddress),
   chainId: z.literal(8453), asset: z.string(), amount: z.string(), amountRaw: z.string(),
-  destination: z.string().refine(isAddress), destinationChainId: z.union([z.literal(8453), z.literal(42161)]),
+  destination: z.string().refine(isAddress), destinationChainId: z.union([z.literal(8453), z.literal(42161), z.literal(1)]),
   destinationAssetId: z.string(), toAmountMinRaw: z.string(), planId: z.string().uuid() }).passthrough();
 type Intent = { intent_id: string; intent_type: string; chain_id: number; wallet_reference: string;
   route_reference: string | null; request_json: string; policy_result_json: string; status: string; expires_at: string };
@@ -55,7 +55,7 @@ export async function POST(request: Request) {
       || !(["swap", "bridge"].includes(intent.intent_type))
       || intent.chain_id !== 8453 || plan.source_chain_id !== 8453
       || !(intent.intent_type === "swap" && plan.destination_chain_id === 8453
-        || intent.intent_type === "bridge" && plan.destination_chain_id === 42161)
+        || intent.intent_type === "bridge" && [1, 42161].includes(plan.destination_chain_id))
       || intent.wallet_reference !== `wallet:${wallet}` || intent.route_reference !== `swap-plan:${plan.plan_id}`
       || intent.status !== "reviewed" || intent.expires_at <= now.toISOString())
       return reply({ error: "review_mismatch", traceId }, 409);

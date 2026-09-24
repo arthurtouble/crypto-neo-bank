@@ -12,7 +12,7 @@ export type SwapDestinationEvidence = {
     destinationToken: string | null;
     recipient: string;
     minimumAmountRaw: string;
-    /** Initial Across evidence profile: Base USDC <-> Arbitrum USDC, without messages or recipient changes. */
+    /** Reviewed Across USDC routes from Base, without messages or recipient changes. */
     across?: { sourceToken: string; sourceAmountRaw: string; depositor: string };
     /** Reviewed bridge-adapter event identity, never copied from the quote/status response. */
     bridgeLink?: {
@@ -48,10 +48,12 @@ const ZERO_WORD = `0x${"0".repeat(64)}`;
 const ACROSS_DEPOSIT_TOPIC = "0x32ed1a409ef04c7b0227189c3a103dc5ac10e775a15b785dcc510201f7c25ad3";
 const ACROSS_FILL_TOPIC = "0x44b559f101f8fbcc8a0ea43fa91a05a729a5ea6e14a7c75aa750374690137208";
 const ACROSS_POOLS: Readonly<Record<number, string>> = {
+  1: "0x5c7BCd6E7De5423a257D81B442095A1a6ced35C5",
   8453: "0x09aea4b2242abC8bb4BB78D537A67a245A7bEC64",
   42161: "0xe35e9842fceaCA96570B734083f4a58e8F7C5f2A"
 };
 const ACROSS_USDC: Readonly<Record<number, string>> = {
+  1: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
   8453: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
   42161: "0xaf88d065e77c8cc2239327c5edb3a432268e5831"
 };

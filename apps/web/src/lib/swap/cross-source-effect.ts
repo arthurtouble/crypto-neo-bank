@@ -11,6 +11,7 @@ type Expected = {
 type Result = { status: "pending" | "inconsistent" | "reorged" | "failed" | "confirmed-source"; reason?: string };
 const same = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
 const chains = {
+  1: { pool: "0x5c7BCd6E7De5423a257D81B442095A1a6ced35C5", usdc: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" },
   8453: { pool: "0x09aea4b2242abC8bb4BB78D537A67a245A7bEC64", usdc: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913" },
   42161: { pool: "0xe35e9842fceaCA96570B734083f4a58e8F7C5f2A", usdc: "0xaf88d065e77c8cc2239327c5edb3a432268e5831" }
 } as const;

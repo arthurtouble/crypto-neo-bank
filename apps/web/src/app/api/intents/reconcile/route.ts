@@ -29,8 +29,9 @@ const bridgeEffect = (value: unknown, plan: BridgePlan, intent: Intent, step: St
     || typeof effect.destinationAssetId !== "string" || typeof effect.sourceAmountRaw !== "string"
     || typeof effect.bridgeAmountRaw !== "string" || typeof effect.bridgeOutputRaw !== "string"
     || typeof effect.minimumOutputRaw !== "string" || typeof effect.quoteTimestamp !== "number"
-    || typeof effect.fillDeadline !== "number" || effect.sourceChainId !== 8453 || effect.destinationChainId !== 42161
-    || plan.source_chain_id !== 8453 || plan.destination_chain_id !== 42161 || plan.tool_id !== "across"
+    || typeof effect.fillDeadline !== "number" || effect.sourceChainId !== 8453
+    || ![1, 42161].includes(effect.destinationChainId as number)
+    || plan.source_chain_id !== 8453 || plan.destination_chain_id !== effect.destinationChainId || plan.tool_id !== "across"
     || !same(effect.wallet, step.wallet_address) || !same(effect.wallet, plan.wallet_address)
     || !same(effect.recipient, plan.recipient) || !same(effect.recipient, effect.wallet)
     || effect.sourceAmountRaw !== plan.from_amount_raw || effect.minimumOutputRaw !== plan.to_amount_min_raw
@@ -38,7 +39,9 @@ const bridgeEffect = (value: unknown, plan: BridgePlan, intent: Intent, step: St
     || intent.route_reference !== `swap-plan:${plan.plan_id}` || step.source_reference !== intent.route_reference
     || plan.intent_id !== intent.intent_id || plan.subject_reference !== intent.subject_reference
     || !/^8453:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913$/.test(plan.source_asset_id)
-    || plan.destination_asset_id !== "42161:0xaf88d065e77c8cc2239327c5edb3a432268e5831") return null;
+    || plan.destination_asset_id !== (plan.destination_chain_id === 1
+      ? "1:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+      : "42161:0xaf88d065e77c8cc2239327c5edb3a432268e5831")) return null;
   return effect as BridgeEffect;
 };
 

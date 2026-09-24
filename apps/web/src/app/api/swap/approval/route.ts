@@ -24,7 +24,7 @@ const recheckSchema = z.object({ approvalId: z.string().uuid(), walletAddress: z
   recheck: z.literal(true) }).strict();
 const reviewedSchema = z.object({ type: z.enum(["swap", "bridge"]), walletAddress: z.string().refine(isAddress),
   chainId: z.literal(8453), asset: z.string(), amount: z.string(), amountRaw: z.string(),
-  destination: z.string().refine(isAddress), destinationChainId: z.union([z.literal(8453), z.literal(42161)]),
+  destination: z.string().refine(isAddress), destinationChainId: z.union([z.literal(8453), z.literal(42161), z.literal(1)]),
   destinationAssetId: z.string(), toAmountMinRaw: z.string(), planId: z.string().uuid() }).passthrough();
 const reportSchema = z.object({ approvalId: z.string().uuid(),
   transactionHash: z.string().regex(/^0x[0-9a-fA-F]{64}$/) }).strict();
@@ -77,9 +77,11 @@ export async function POST(request: Request) {
     ]);
     if (prior) return reply({ error: "approval_already_prepared", traceId }, 409);
     const bridge = plan?.tool_id === "across" && plan.source_chain_id === 8453
-      && plan.destination_chain_id === 42161
+      && [1, 42161].includes(plan.destination_chain_id)
       && plan.source_asset_id === "8453:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
-      && plan.destination_asset_id === "42161:0xaf88d065e77c8cc2239327c5edb3a432268e5831";
+      && plan.destination_asset_id === (plan.destination_chain_id === 1
+        ? "1:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+        : "42161:0xaf88d065e77c8cc2239327c5edb3a432268e5831");
     if (!plan || !(isDirectUniswapPlan(plan) || bridge) || plan.intent_id !== activeIntentId
       || !intent || intent.intent_type !== (bridge ? "bridge" : "swap") || intent.status !== "reviewed"
       || intent.wallet_reference !== `wallet:${wallet}` || intent.expires_at <= now.toISOString()
@@ -195,7 +197,7 @@ export async function POST(request: Request) {
           ) reserved WHERE reserved.missing = 0 AND reserved.cents + ? <=
             CAST(MIN(s.daily_limit_usd, b.transaction_limit_usd) * 100 AS INTEGER))
           AND ((i.intent_type = 'swap' AND p.tool_id = 'uniswap_v3_direct' AND p.destination_chain_id = 8453)
-            OR (i.intent_type = 'bridge' AND p.tool_id = 'across' AND p.destination_chain_id = 42161
+            OR (i.intent_type = 'bridge' AND p.tool_id = 'across' AND p.destination_chain_id IN (1, 42161)
               AND p.recipient = p.wallet_address
               AND EXISTS (SELECT 1 FROM feature_flags c WHERE c.flag_key = 'cross_chain'
                 AND c.enabled = 1 AND c.audience IN ('all', 'beta'))))`)
@@ -225,9 +227,10 @@ export async function POST(request: Request) {
         AND p.status = 'active' AND i.status = 'reviewed' AND i.chain_id = 8453
         AND p.source_chain_id = 8453
         AND ((i.intent_type = 'swap' AND p.tool_id = 'uniswap_v3_direct' AND p.destination_chain_id = 8453)
-          OR (i.intent_type = 'bridge' AND p.tool_id = 'across' AND p.destination_chain_id = 42161
+          OR (i.intent_type = 'bridge' AND p.tool_id = 'across' AND p.destination_chain_id IN (1, 42161)
             AND p.source_asset_id = '8453:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913'
-            AND p.destination_asset_id = '42161:0xaf88d065e77c8cc2239327c5edb3a432268e5831'
+            AND ((p.destination_chain_id = 1 AND p.destination_asset_id = '1:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48')
+              OR (p.destination_chain_id = 42161 AND p.destination_asset_id = '42161:0xaf88d065e77c8cc2239327c5edb3a432268e5831'))
             AND p.recipient = p.wallet_address
             AND EXISTS (SELECT 1 FROM feature_flags cross_chain WHERE cross_chain.flag_key = 'cross_chain'
               AND cross_chain.enabled = 1 AND cross_chain.audience IN ('all', 'beta'))))

@@ -28,6 +28,7 @@ export type GovernedAcrossRoute = {
 
 const BASE_USDC = "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
 const ARBITRUM_USDC = "0xaf88d065e77c8cc2239327c5edb3a432268e5831";
+const ETHEREUM_USDC = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 const ZERO_BYTES32 = `0x${"00".repeat(32)}`;
 const ONE = 1_000_000_000_000_000_000n;
@@ -47,7 +48,7 @@ export function validateGovernedAcrossPlan(
   const observedMs = Date.parse(plan.observed_at);
   if (!Number.isSafeInteger(policy.nowMs) || policy.nowMs < 0
     || plan.status !== "active" || plan.route_policy_version !== policy.routePolicyVersion
-    || plan.tool_id !== "across" || plan.source_chain_id !== 8453 || plan.destination_chain_id !== 42161
+    || plan.tool_id !== "across" || plan.source_chain_id !== 8453 || ![1, 42161].includes(plan.destination_chain_id)
     || !Number.isFinite(expiresMs) || expiresMs <= policy.nowMs
     || !Number.isFinite(observedMs) || observedMs > policy.nowMs
     || !positive(plan.from_amount_raw) || !positive(plan.to_amount_min_raw))
@@ -56,7 +57,8 @@ export function validateGovernedAcrossPlan(
   const source = parseAssetId(plan.source_asset_id);
   const destination = parseAssetId(plan.destination_asset_id);
   if (source?.chainId !== 8453 || source.address !== BASE_USDC
-    || destination?.chainId !== 42161 || destination.address !== ARBITRUM_USDC
+    || destination?.chainId !== plan.destination_chain_id
+    || destination.address !== (plan.destination_chain_id === 1 ? ETHEREUM_USDC : ARBITRUM_USDC)
     || !same(plan.wallet_address, plan.recipient))
     throw new Error("Across assets or recipient are not reviewed.");
 
@@ -77,8 +79,8 @@ export function validateGovernedAcrossPlan(
     throw new Error("Across source approval is not reviewed.");
 
   const decoded = inspectLifiAcrossV4Call({ data: rawCall.data, recipient: plan.wallet_address,
-    sourceToken: BASE_USDC, destinationToken: ARBITRUM_USDC,
-    destinationChainId: 42161, sourceAmountRaw: plan.from_amount_raw });
+    sourceToken: BASE_USDC, destinationToken: plan.destination_chain_id === 1 ? ETHEREUM_USDC : ARBITRUM_USDC,
+    destinationChainId: plan.destination_chain_id, sourceAmountRaw: plan.from_amount_raw });
   const [fee] = decoded.swaps;
   const gross = BigInt(plan.from_amount_raw);
   const net = BigInt(decoded.minimumBridgeAmountRaw);
