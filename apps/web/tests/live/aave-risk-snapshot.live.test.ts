@@ -4,6 +4,7 @@ import { createPublicClient, http } from "viem";
 import { AAVE_BASE_ASSETS } from "@/lib/defi/aave";
 import { readAaveBaseRiskSnapshot } from "@/lib/defi/aave-risk-snapshot";
 import { readCurrentAaveLegs } from "@/lib/portfolio/aave-source";
+import { readHistoricalAaveLegs } from "@/lib/portfolio/aave-history-positions";
 
 // Explicitly opt in to read-only public mainnet calls. No wallet or signature is used.
 describe.skipIf(process.env.AUREL_LIVE_READONLY !== "1")("Aave Base read-only snapshot", () => {
@@ -37,4 +38,18 @@ describe.skipIf(process.env.AUREL_LIVE_READONLY !== "1")("Aave Base read-only sn
     expect(new Set(result.legs.map((leg) => leg.observedAt)).size).toBeLessThanOrEqual(1);
     expect(result.legs.every((leg) => BigInt(leg.rawUnits) !== 0n && leg.sourceId === "aave:v3:8453")).toBe(true);
   }, 90_000);
+
+  it("reads a completed UTC day's historical reserves from archive state", async () => {
+    const client = createPublicClient({ chain: base, transport: http(
+      process.env.AUREL_BASE_ARCHIVE_RPC_URL || "https://mainnet.base.org",
+      { retryCount: 0, timeout: 12_000 }
+    ) });
+    const day = process.env.AUREL_HISTORICAL_DAY || new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
+    const result = await readHistoricalAaveLegs("8453:0x000000000000000000000000000000000000dead", day,
+      { client: client as never });
+    expect(result.status, result.reason ?? "unknown").toBe("complete");
+    expect(result.blockHash).toMatch(/^0x[0-9a-f]{64}$/i);
+    expect(result.blockNumber).toMatch(/^[1-9]\d*$/);
+    expect(result.legs.every((leg) => BigInt(leg.rawUnits) !== 0n)).toBe(true);
+  }, 180_000);
 });
