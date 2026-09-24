@@ -86,7 +86,7 @@ export async function POST(request: Request) {
         SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', 1, ?, ?
         WHERE (SELECT COUNT(*) FROM price_alerts WHERE subject_reference = ? AND status != 'cancelled') < 100
           AND EXISTS (SELECT 1 FROM security_profiles WHERE subject_reference = ? AND account_locked = 0)
-          AND EXISTS (SELECT 1 FROM feature_flags WHERE flag_key = 'swaps' AND enabled = 1)
+          AND EXISTS (SELECT 1 FROM feature_flags WHERE flag_key = 'swaps' AND enabled = 1 AND audience IN ('all', 'beta'))
           AND (? = 'preview' OR EXISTS (SELECT 1 FROM beta_access WHERE subject_reference = ? AND status = 'active' AND country_code = ?))`)
         .bind(id, subject.subjectReference, pair.pairId, pair.baseAssetId, pair.quoteAssetId, pair.quoteCurrency, pair.mappingVersion,
           input.direction, input.threshold, input.hysteresisBps ?? 100, input.cooldownSeconds ?? 3600, now, now,
@@ -134,7 +134,7 @@ export async function PATCH(request: Request) {
         threshold_version = threshold_version + 1, armed = 0, last_triggered_at = NULL, updated_at = ?
         WHERE alert_id = ? AND subject_reference = ? AND threshold_version = ? AND status = ?
           AND (? = 0 OR (EXISTS (SELECT 1 FROM security_profiles WHERE subject_reference = ? AND account_locked = 0)
-            AND EXISTS (SELECT 1 FROM feature_flags WHERE flag_key = 'swaps' AND enabled = 1)
+            AND EXISTS (SELECT 1 FROM feature_flags WHERE flag_key = 'swaps' AND enabled = 1 AND audience IN ('all', 'beta'))
             AND (? = 'preview' OR EXISTS (SELECT 1 FROM beta_access WHERE subject_reference = ? AND status = 'active' AND country_code = ?))))`)
         .bind(input.direction ?? current.direction, input.threshold ?? current.threshold_decimal,
           input.hysteresisBps ?? current.hysteresis_bps, input.cooldownSeconds ?? current.cooldown_seconds,

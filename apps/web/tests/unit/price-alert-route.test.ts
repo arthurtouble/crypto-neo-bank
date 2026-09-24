@@ -49,7 +49,7 @@ let sqlite: DatabaseSync;
 beforeEach(() => {
   Object.assign(state, { subject: "alice", beta: true, mode: "invite", feature: true, catalogEligible: true, country: "PT", rate: true });
   sqlite = new DatabaseSync(":memory:");
-  sqlite.exec("PRAGMA foreign_keys=ON; CREATE TABLE subject_profiles(subject_reference TEXT PRIMARY KEY); CREATE TABLE security_profiles(subject_reference TEXT PRIMARY KEY, account_locked INTEGER NOT NULL); CREATE TABLE beta_access(subject_reference TEXT PRIMARY KEY,status TEXT NOT NULL,country_code TEXT NOT NULL); CREATE TABLE feature_flags(flag_key TEXT PRIMARY KEY,enabled INTEGER NOT NULL); CREATE TABLE audit_events(audit_id TEXT PRIMARY KEY,subject_reference TEXT,actor_type TEXT NOT NULL,actor_reference TEXT NOT NULL,action TEXT NOT NULL,target_type TEXT NOT NULL,target_reference TEXT,evidence_json TEXT NOT NULL,occurred_at TEXT NOT NULL); INSERT INTO subject_profiles VALUES ('alice'),('bob'); INSERT INTO security_profiles VALUES ('alice',0),('bob',0); INSERT INTO beta_access VALUES ('alice','active','PT'),('bob','active','PT'); INSERT INTO feature_flags VALUES ('swaps',1);");
+  sqlite.exec("PRAGMA foreign_keys=ON; CREATE TABLE subject_profiles(subject_reference TEXT PRIMARY KEY); CREATE TABLE security_profiles(subject_reference TEXT PRIMARY KEY, account_locked INTEGER NOT NULL); CREATE TABLE beta_access(subject_reference TEXT PRIMARY KEY,status TEXT NOT NULL,country_code TEXT NOT NULL); CREATE TABLE feature_flags(flag_key TEXT PRIMARY KEY,enabled INTEGER NOT NULL,audience TEXT NOT NULL); CREATE TABLE audit_events(audit_id TEXT PRIMARY KEY,subject_reference TEXT,actor_type TEXT NOT NULL,actor_reference TEXT NOT NULL,action TEXT NOT NULL,target_type TEXT NOT NULL,target_reference TEXT,evidence_json TEXT NOT NULL,occurred_at TEXT NOT NULL); INSERT INTO subject_profiles VALUES ('alice'),('bob'); INSERT INTO security_profiles VALUES ('alice',0),('bob',0); INSERT INTO beta_access VALUES ('alice','active','PT'),('bob','active','PT'); INSERT INTO feature_flags VALUES ('swaps',1,'beta');");
   sqlite.exec(readFileSync(resolve(process.cwd(), "../../infra/d1/migrations/0022_price_alerts_swap_reminders.sql"), "utf8"));
   state.database = d1(sqlite);
 });
@@ -147,6 +147,19 @@ describe("customer price alert API", () => {
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM audit_events").get()).toMatchObject({ count: 0 });
   });
 
+  it("does not create or reactivate an alert after Swap becomes operations-only", async () => {
+    const { alert } = await (await post(input())).json() as { alert: { alertId: string } };
+    expect((await patch({ alertId: alert.alertId, version: 1, action: "pause" })).status).toBe(200);
+    const database = state.database!;
+    state.database = { ...database, async batch(statements) {
+      sqlite.exec("UPDATE feature_flags SET audience='operations' WHERE flag_key='swaps'");
+      return database.batch(statements);
+    } } as D1Database;
+    expect((await post(input())).status).toBe(409);
+    expect((await patch({ alertId: alert.alertId, version: 2, action: "resume" })).status).toBe(409);
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM price_alerts").get()).toMatchObject({ count: 1 });
+    expect(sqlite.prepare("SELECT status FROM price_alerts WHERE alert_id=?").get(alert.alertId)).toMatchObject({ status: "paused" });
+  });
   it("keeps preview-mode alerts independent of invite records while still requiring the feature flag", async () => {
     state.mode = "preview";
     sqlite.exec("DELETE FROM beta_access WHERE subject_reference='alice'");

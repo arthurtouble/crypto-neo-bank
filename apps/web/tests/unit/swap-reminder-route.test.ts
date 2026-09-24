@@ -16,7 +16,7 @@ vi.mock("@/lib/beta/access", () => {
   class BetaAccessError extends Error { constructor(readonly code: string) { super(code); } }
   return { BetaAccessError, configuredCountries: () => ["PT"], requireBetaAccess: async () => {
     if (!state.beta) throw new BetaAccessError("invite_required");
-    return { countryCode: state.country };
+    return { mode: "invite", countryCode: state.country };
   } };
 });
 vi.mock("@/lib/features/flags", () => {
@@ -53,7 +53,7 @@ let sqlite: DatabaseSync;
 beforeEach(() => {
   Object.assign(state, { subject: "alice", beta: true, feature: true, crossChain: true, catalogEligible: true, country: "PT", rate: true });
   sqlite = new DatabaseSync(":memory:");
-  sqlite.exec("PRAGMA foreign_keys=ON; CREATE TABLE subject_profiles(subject_reference TEXT PRIMARY KEY); CREATE TABLE security_profiles(subject_reference TEXT PRIMARY KEY, account_locked INTEGER NOT NULL); CREATE TABLE audit_events(audit_id TEXT PRIMARY KEY,subject_reference TEXT,actor_type TEXT NOT NULL,actor_reference TEXT NOT NULL,action TEXT NOT NULL,target_type TEXT,target_reference TEXT,evidence_json TEXT NOT NULL,occurred_at TEXT NOT NULL); INSERT INTO subject_profiles VALUES ('alice'),('bob'); INSERT INTO security_profiles VALUES ('alice',0),('bob',0);");
+  sqlite.exec("PRAGMA foreign_keys=ON; CREATE TABLE subject_profiles(subject_reference TEXT PRIMARY KEY); CREATE TABLE security_profiles(subject_reference TEXT PRIMARY KEY, account_locked INTEGER NOT NULL); CREATE TABLE beta_access(subject_reference TEXT PRIMARY KEY,status TEXT NOT NULL,country_code TEXT NOT NULL); CREATE TABLE feature_flags(flag_key TEXT PRIMARY KEY,enabled INTEGER NOT NULL,audience TEXT NOT NULL); CREATE TABLE audit_events(audit_id TEXT PRIMARY KEY,subject_reference TEXT,actor_type TEXT NOT NULL,actor_reference TEXT NOT NULL,action TEXT NOT NULL,target_type TEXT,target_reference TEXT,evidence_json TEXT NOT NULL,occurred_at TEXT NOT NULL); INSERT INTO subject_profiles VALUES ('alice'),('bob'); INSERT INTO security_profiles VALUES ('alice',0),('bob',0); INSERT INTO beta_access VALUES ('alice','active','PT'),('bob','active','PT'); INSERT INTO feature_flags VALUES ('swaps',1,'beta'),('cross_chain',1,'beta');");
   sqlite.exec(readFileSync(resolve(process.cwd(), "../../infra/d1/migrations/0022_price_alerts_swap_reminders.sql"), "utf8"));
   state.database = d1(sqlite);
 });
@@ -120,5 +120,43 @@ describe("authenticated Swap reminder API", () => {
     sqlite.exec("UPDATE security_profiles SET account_locked=1 WHERE subject_reference='alice'");
     const disabledByLock = await (await dueGET(new Request("https://aurel.test/api/swap/reminders/due"))).json() as { occurrences: Array<{ canReview: boolean; disabledReason: string }> };
     expect(disabledByLock.occurrences[0]).toMatchObject({ canReview: false, disabledReason: "account_locked" });
+  });
+
+  it("does not save a reminder if access closes after the initial API check", async () => {
+    const database = state.database!;
+    for (const [close, reopen] of [
+      ["UPDATE security_profiles SET account_locked=1 WHERE subject_reference='alice'", "UPDATE security_profiles SET account_locked=0 WHERE subject_reference='alice'"],
+      ["UPDATE beta_access SET status='suspended' WHERE subject_reference='alice'", "UPDATE beta_access SET status='active' WHERE subject_reference='alice'"],
+      ["UPDATE beta_access SET country_code='US' WHERE subject_reference='alice'", "UPDATE beta_access SET country_code='PT' WHERE subject_reference='alice'"],
+      ["UPDATE feature_flags SET enabled=0 WHERE flag_key='swaps'", "UPDATE feature_flags SET enabled=1 WHERE flag_key='swaps'"],
+      ["UPDATE feature_flags SET audience='operations' WHERE flag_key='swaps'", "UPDATE feature_flags SET audience='beta' WHERE flag_key='swaps'"]
+    ]) {
+      state.database = { ...database, async batch(statements) { sqlite.exec(close); return database.batch(statements); } } as D1Database;
+      expect((await post(input())).status).toBe(409);
+      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM swap_reminder_plans").get()).toMatchObject({ count: 0 });
+      sqlite.exec(reopen);
+    }
+  });
+
+  it("does not resume a reminder if access closes before the write", async () => {
+    const created = (await (await post(input())).json() as { plan: { planId: string } }).plan;
+    expect((await patch({ planId: created.planId, version: 1, action: "pause" })).status).toBe(200);
+    const database = state.database!;
+    state.database = { ...database, async batch(statements) {
+      sqlite.exec("UPDATE feature_flags SET audience='operations' WHERE flag_key='swaps'");
+      return database.batch(statements);
+    } } as D1Database;
+    expect((await patch({ planId: created.planId, version: 2, action: "resume" })).status).toBe(409);
+    expect(sqlite.prepare("SELECT status,plan_version FROM swap_reminder_plans WHERE plan_id=?").get(created.planId)).toMatchObject({ status: "paused", plan_version: 2 });
+  });
+
+  it("does not save a cross-network reminder after that capability closes", async () => {
+    const database = state.database!;
+    state.database = { ...database, async batch(statements) {
+      sqlite.exec("UPDATE feature_flags SET enabled=0 WHERE flag_key='cross_chain'");
+      return database.batch(statements);
+    } } as D1Database;
+    expect((await post({ ...input(), toAssetId: "1:native" })).status).toBe(409);
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM swap_reminder_plans").get()).toMatchObject({ count: 0 });
   });
 });
