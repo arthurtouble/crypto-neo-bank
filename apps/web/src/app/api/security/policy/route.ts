@@ -2,7 +2,6 @@ import { env } from "cloudflare:workers";
 import { z } from "zod";
 import { AuthenticationError, requireVerifiedSubject } from "@/lib/auth/server";
 import { ensureSubjectProfile } from "@/lib/profile/ensure";
-import { writeAuditEvent } from "@/lib/security/audit";
 import { policyRelaxationReasons } from "@/lib/security/policy-changes";
 import { effectiveStepUpThresholdUsd, MAX_STEP_UP_THRESHOLD_USD } from "@/lib/transactions/policy";
 
@@ -62,19 +61,28 @@ export async function PATCH(request: Request) {
     }, next);
     if (relaxation.length) return Response.json({ error: "step_up_unavailable", traceId }, { status: 409, headers: { "Cache-Control": "no-store" } });
     const now = new Date().toISOString();
-    const result = await env.PROJECTION_DB.prepare(`UPDATE security_profiles SET account_locked = ?, enforce_address_book = ?, daily_limit_usd = ?, new_address_threshold_usd = ?, new_address_delay_seconds = ?, step_up_threshold_usd = ?, policy_version = policy_version + 1, updated_at = ?
-      WHERE subject_reference = ? AND account_locked IS ? AND enforce_address_book IS ? AND daily_limit_usd IS ?
-        AND new_address_threshold_usd IS ? AND new_address_delay_seconds IS ? AND step_up_threshold_usd IS ? AND policy_version IS ?`)
-      .bind(next.accountLocked ? 1 : 0, next.enforceAddressBook ? 1 : 0, next.dailyLimitUsd, next.newAddressThresholdUsd, next.newAddressDelaySeconds, next.stepUpThresholdUsd, now,
-        subject.subjectReference, current.account_locked, current.enforce_address_book, current.daily_limit_usd,
-        current.new_address_threshold_usd, current.new_address_delay_seconds, current.step_up_threshold_usd, current.policy_version).run();
-    if (result.meta.changes !== 1) return Response.json({ error: "security_policy_changed", traceId }, { status: 409, headers: { "Cache-Control": "no-store" } });
-    await Promise.all([
-      writeAuditEvent(env.PROJECTION_DB, { subjectReference: subject.subjectReference, actorType: "customer", actorReference: subject.subjectReference, action: "security.policy.updated", targetType: "security_profile", targetReference: subject.subjectReference, evidence: { changedFields: Object.keys(input) }, occurredAt: now }),
-      env.PROJECTION_DB.prepare(`INSERT INTO product_events (event_id, subject_reference, session_reference, event_name, surface, properties_json, occurred_at)
-        VALUES (?, ?, ?, 'security_updated', '/app/security', ?, ?)`)
-        .bind(crypto.randomUUID(), subject.subjectReference, subject.sessionReference, JSON.stringify({ changedFields: Object.keys(input) }), now).run()
+    const [result] = await env.PROJECTION_DB.batch([
+      env.PROJECTION_DB.prepare(`UPDATE security_profiles SET account_locked = ?, enforce_address_book = ?, daily_limit_usd = ?, new_address_threshold_usd = ?, new_address_delay_seconds = ?, step_up_threshold_usd = ?, policy_version = policy_version + 1, updated_at = ?
+        WHERE subject_reference = ? AND account_locked IS ? AND enforce_address_book IS ? AND daily_limit_usd IS ?
+          AND new_address_threshold_usd IS ? AND new_address_delay_seconds IS ? AND step_up_threshold_usd IS ? AND policy_version IS ?`)
+        .bind(next.accountLocked ? 1 : 0, next.enforceAddressBook ? 1 : 0, next.dailyLimitUsd, next.newAddressThresholdUsd, next.newAddressDelaySeconds, next.stepUpThresholdUsd, now,
+          subject.subjectReference, current.account_locked, current.enforce_address_book, current.daily_limit_usd,
+          current.new_address_threshold_usd, current.new_address_delay_seconds, current.step_up_threshold_usd, current.policy_version),
+      env.PROJECTION_DB.prepare(`INSERT INTO audit_events
+          (audit_id, subject_reference, actor_type, actor_reference, action, target_type, target_reference, evidence_json, occurred_at)
+        SELECT ?, ?, 'customer', ?, 'security.policy.updated', 'security_profile', ?, ?, ? WHERE changes() = 1`)
+        .bind(crypto.randomUUID(), subject.subjectReference, subject.subjectReference, subject.subjectReference,
+          JSON.stringify({ changedFields: Object.keys(input) }), now)
     ]);
+    if (result.meta.changes !== 1) return Response.json({ error: "security_policy_changed", traceId }, { status: 409, headers: { "Cache-Control": "no-store" } });
+    try {
+      await env.PROJECTION_DB.prepare(`INSERT INTO product_events (event_id, subject_reference, session_reference, event_name, surface, properties_json, occurred_at)
+        VALUES (?, ?, ?, 'security_updated', '/app/security', ?, ?)`)
+        .bind(crypto.randomUUID(), subject.subjectReference, subject.sessionReference, JSON.stringify({ changedFields: Object.keys(input) }), now).run();
+    } catch (error) {
+      console.warn(JSON.stringify({ level: "warn", event: "security.policy.analytics.failed", traceId,
+        errorName: error instanceof Error ? error.name : "unknown" }));
+    }
     return Response.json({ policy: { ...next, newAddressDelayHours: next.newAddressDelaySeconds / 3600, policyVersion: current.policy_version + 1, updatedAt: now }, traceId });
   } catch (error) {
     if (error instanceof AuthenticationError) return Response.json({ error: "unauthorized", message: error.message, traceId }, { status: 401 });

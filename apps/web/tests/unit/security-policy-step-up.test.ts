@@ -15,14 +15,20 @@ vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
           };
           return null;
         },
-        async run() { state.writes.push(values); if (sql.startsWith("UPDATE security_profiles")) state.lastUpdateSql = sql; return { meta: { changes: state.updateChanges } }; }
+        async run() {
+          if (sql.startsWith("UPDATE security_profiles")) { state.writes.push(values); state.lastUpdateSql = sql; }
+          return { meta: { changes: state.updateChanges } };
+        }
       };
     } };
+  }, async batch(statements: Array<{ run(): Promise<unknown> }>) {
+    const results = [];
+    for (const statement of statements) results.push(await statement.run());
+    return results;
   }
 } } }));
 vi.mock("@/lib/auth/server", () => ({ AuthenticationError: class extends Error {}, requireVerifiedSubject: async () => ({ subjectReference: "subject-a", sessionReference: "session-a" }) }));
 vi.mock("@/lib/profile/ensure", () => ({ ensureSubjectProfile: async () => undefined }));
-vi.mock("@/lib/security/audit", () => ({ writeAuditEvent: async () => undefined }));
 
 import { GET, PATCH } from "@/app/api/security/policy/route";
 
