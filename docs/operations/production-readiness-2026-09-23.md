@@ -1,5 +1,11 @@
 # Production readiness — 23 September 2026
 
+## 24 September read-only historical Aave foundation
+
+Commit `5d0079f` adds a server-only reader for one completed UTC day's Base Aave raw supply and debt. It proves the final confirmed block before midnight and its successor, resolves the historical Pool and data provider, scans every historical reserve in pinned batches, checks deployed code, and rechecks block identity after the scan. It is not connected to D1, public routes, or the chart; no historical USD value or return is published. The default public RPC is not a contracted archive source, and old state may be pruned. Acceptance still requires a reliable archive endpoint, independent token-balance reconciliation, complete wallet and price coverage, and review of historical contract variants.
+
+Verification for this isolated addition: 1,181 web unit tests passed, along with web typecheck, lint, and build. The read-only mainnet readiness probes passed for five chains, LI.FI, and current Aave contracts. The isolated local D1 recovery drill passed through migration `0034`; no remote D1 was changed. No migration, customer UI change, or deployed Worker behavior was added, so this source-only tranche was not rolled out or browser-tested again. The last deployed development Worker remains `ad0cdeb3-7b35-4a35-bfe5-b0e55326c13b` with the four financial-action flags disabled as last verified remotely. This turn did not re-query those flags. Production-origin/passkey assurance, live-money rehearsal, operator integrations, and independent release review remain open.
+
 ## 24 September linked consent withdrawal
 
 Commit `904bf9d` closes a marketing-consent identity gap. A customer withdrawal recorded against the linked Privy subject now suppresses lifecycle messages addressed by either that subject or the original private-access application ID. When a grant and withdrawal share an exact timestamp, withdrawal wins. The consent event itself is the durable authority: a secondary audit-table outage no longer returns failure after the withdrawal has already been stored or leaves the customer uncertain about the result. That audit failure is logged with a trace ID and bounded error type for operational follow-up. This change does not connect an external messaging provider or authorize marketing delivery.
