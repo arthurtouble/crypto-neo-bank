@@ -1,6 +1,6 @@
 "use client";
 
-import { useWallets } from "@privy-io/react-auth";
+import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { useQuery } from "@tanstack/react-query";
 import { Check, LoaderCircle, ShieldCheck } from "lucide-react";
 import { useMemo } from "react";
@@ -10,12 +10,14 @@ type MarketResponse = { market: string; chainId: number; name: string; reserves:
 
 /** Market information remains readable while unaudited execution plans are paused. */
 export function EarnWorkspace() {
+  const { getAccessToken } = usePrivy();
   const { wallets } = useWallets();
   const wallet = useMemo(() => wallets.find((item) => item.walletClientType === "privy") ?? wallets[0], [wallets]);
   const market = useQuery<MarketResponse>({
     queryKey: ["aave-base-market", wallet?.address],
     queryFn: async () => {
-      const response = await fetch(`/api/defi/aave/markets${wallet?.address ? `?address=${wallet.address}` : ""}`);
+      const token = wallet?.address ? await getAccessToken() : null;
+      const response = await fetch(`/api/defi/aave/markets${wallet?.address ? `?address=${wallet.address}` : ""}`, { headers: token ? { Authorization: `Bearer ${token}` } : undefined, cache: "no-store" });
       if (!response.ok) throw new Error("Live Aave market data is unavailable.");
       return response.json() as Promise<MarketResponse>;
     },

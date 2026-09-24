@@ -1,6 +1,6 @@
 "use client";
 
-import { useWallets } from "@privy-io/react-auth";
+import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { useQuery } from "@tanstack/react-query";
 import { ShieldAlert } from "lucide-react";
 import { useMemo } from "react";
@@ -11,12 +11,14 @@ type Position = { overview: { borrowGroups: number; healthFactor?: string; debts
 
 /** Position and market data remain visible; no wallet execution path exists. */
 export function BorrowWorkspace() {
+  const { getAccessToken } = usePrivy();
   const { wallets } = useWallets();
   const wallet = useMemo(() => wallets.find((item) => item.walletClientType === "privy") ?? wallets[0], [wallets]);
   const market = useQuery<Market>({
     queryKey: ["aave-borrow-market", wallet?.address],
     queryFn: async () => {
-      const response = await fetch(`/api/defi/aave/markets?address=${wallet?.address}`);
+      const token = await getAccessToken();
+      const response = await fetch(`/api/defi/aave/markets?address=${wallet?.address}`, { headers: token ? { Authorization: `Bearer ${token}` } : undefined, cache: "no-store" });
       if (!response.ok) throw new Error("Borrowing market unavailable.");
       return response.json();
     },
@@ -25,7 +27,8 @@ export function BorrowWorkspace() {
   const position = useQuery<Position>({
     queryKey: ["aave-position", wallet?.address],
     queryFn: async () => {
-      const response = await fetch(`/api/defi/aave/positions?address=${wallet?.address}`);
+      const token = await getAccessToken();
+      const response = await fetch(`/api/defi/aave/positions?address=${wallet?.address}`, { headers: token ? { Authorization: `Bearer ${token}` } : undefined, cache: "no-store" });
       if (!response.ok) throw new Error("Position unavailable.");
       return response.json();
     },

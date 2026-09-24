@@ -1,5 +1,6 @@
 "use client";
 
+import { usePrivy } from "@privy-io/react-auth";
 import { useQuery } from "@tanstack/react-query";
 import { ChartNoAxesCombined, CircleDollarSign, Gift, LoaderCircle, ShieldCheck } from "lucide-react";
 import Link from "next/link";
@@ -13,10 +14,12 @@ const amount = new Intl.NumberFormat(undefined, { maximumFractionDigits: 6 });
 
 /** Existing Aave positions remain readable; claim execution is not enabled. */
 export function DefiPositions({ address }: { address: string }) {
+  const { getAccessToken } = usePrivy();
   const query = useQuery<PositionResponse>({
     queryKey: ["defi-positions", address],
     queryFn: async () => {
-      const response = await fetch(`/api/defi/aave/positions?address=${address}`, { cache: "no-store" });
+      const token = await getAccessToken();
+      const response = await fetch(`/api/defi/aave/positions?address=${address}`, { headers: token ? { Authorization: `Bearer ${token}` } : undefined, cache: "no-store" });
       if (!response.ok) throw new Error("DeFi positions could not be loaded.");
       return response.json();
     }, refetchInterval: 30_000
