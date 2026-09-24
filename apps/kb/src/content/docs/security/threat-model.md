@@ -18,7 +18,7 @@ Customer signing authority remains in Privy customer-controlled wallets. Public 
 | Replay or forged webhook | HMAC, timestamp tolerance, stable event ID | Duplicate receipt record, Queue retry/DLQ, reconciliation |
 | Operator abuse | Explicit Privy-subject allowlist, deny by default, no operator signer | Append-only audit evidence and issue history |
 | Projection corruption | Never authorize from a projected balance; validate provider and chain state | Rebuild projections and reconcile authoritative sources |
-| Support social engineering | Never request recovery secrets; no concierge signing tools | Case audit trail, emergency lock, human escalation |
+| Support social engineering | Never request recovery secrets; no support-assistant signing tools | Case audit trail, emergency lock, human escalation |
 | Dependency compromise | Pinned critical dependencies, CI, narrow provider adapters | Disable affected feature, preserve unaffected read paths |
 | Cross-chain partial completion | Tested matrix, route disclosure, source/destination distinction | Persistent route reference, LI.FI/provider status recovery |
 

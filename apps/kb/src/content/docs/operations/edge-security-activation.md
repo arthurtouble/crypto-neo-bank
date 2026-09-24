@@ -36,7 +36,7 @@ Recommended initial edge ceilings, measured before enforcement:
 |---|---:|---|
 | `/api/beta/access` POST | 10 per IP / hour | Managed Challenge, then block repeated abuse |
 | `/api/support/cases` POST | 10 per IP / hour | Managed Challenge; application also enforces 5/customer/hour |
-| `/api/concierge` POST | 30 per customer/IP / minute | Block excess; application enforces 10/customer/minute |
+| `/api/support/assistant` POST | 30 per customer/IP / minute | Block excess; application enforces its customer limit |
 | `/api/routing/quote` POST | 60 per customer/IP / 10 minutes | Block excess; application enforces 30/customer/10 minutes |
 | `/api/webhooks/provider` POST | Contracted provider envelope | Rate high enough for retry bursts; never replace HMAC verification |
 | `/api/ops/*` | Low operator volume | Access policy first, then strict per-identity/IP limit |

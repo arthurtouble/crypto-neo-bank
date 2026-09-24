@@ -13,7 +13,7 @@ description: Required scope and evidence for independent security assessment.
 - Provider webhook authentication, replay prevention, queue retries, dead-letter processing and reconciliation.
 - D1 migrations, evidence integrity, backup/export/restore, log minimization and incident procedures.
 - CSP, security headers, Turnstile verification, abuse controls and API error behavior.
-- AI concierge isolation from signing, transactions, administration and individualized advice.
+- Support-assistant isolation from signing, transactions, administration and individualized advice.
 
 ## Required tests
 
