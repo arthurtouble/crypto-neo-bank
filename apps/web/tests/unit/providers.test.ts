@@ -6,7 +6,8 @@ import { reconcileSession } from "../../src/lib/reconciliation";
 describe("provider-neutral sandbox", () => {
   it("rebuilds a funded relationship exclusively from provider observations", async () => {
     const session = await buildDemoSession("funded");
-    expect(session.positions).toHaveLength(3);
+    expect(session.positions).toHaveLength(2);
+    expect(session.positions.map((position) => position.category)).not.toContain("connected");
     expect(session.compliance.status).toBe("approved");
     expect(session.wallets[0]?.control).toBe("embedded-noncustodial");
     expect(session.positions.every((position) => position.source.externalId && position.source.observedAt)).toBe(true);

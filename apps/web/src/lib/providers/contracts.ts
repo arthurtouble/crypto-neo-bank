@@ -12,13 +12,12 @@ export type SourceReference = {
 };
 
 export type MoneyObservation = { asset: string; amount: string; decimals: number; source: SourceReference };
-export type PositionObservation = MoneyObservation & { category: "liquid" | "productive" | "connected" | "borrowed"; protocol?: string; chain?: string };
+export type PositionObservation = MoneyObservation & { category: "liquid" | "productive" | "borrowed"; protocol?: string; chain?: string };
 export type CustomerProfile = { subjectReference: string; displayName: string; email: string; country: string };
 export type AuthSession = { sessionReference: string; subjectReference: string; assurance: "email" | "passkey" | "step_up"; expiresAt: string };
 export type WalletAccount = { walletReference: string; address: string; chain: string; control: "embedded-noncustodial" | "external-readonly" | "multisig"; recoveryReady: boolean };
 export type ComplianceCase = { caseReference: string; status: ComplianceStatus; provider: string; requiredActions: string[]; reviewedAt?: string };
 export type CardAccount = { cardReference: string; status: "not_eligible" | "eligible" | "pending" | "active" | "frozen"; lastFour?: string; network?: "visa" | "mastercard"; dailyLimit: string };
-export type Membership = { tier: "Essential" | "Plus" | "Black" | "Private"; score: number; qualifyingBalance: string; renewalAt: string; entitlements: Array<{ name: string; status: "available" | "planned" | "in_review" }> };
 
 export type ProductCommand =
   | { type: "create_wallet"; subjectReference: string }
@@ -46,5 +45,4 @@ export interface WalletAdapter extends PortfolioSourceAdapter { getWallets(subje
 export interface ComplianceAdapter { readonly name: string; getCase(subjectReference: string): Promise<ComplianceCase>; execute(command: Extract<ProductCommand, { type: "start_compliance" }>, idempotencyKey: string): Promise<ProviderCommandReceipt> }
 export interface FiatRailAdapter extends PortfolioSourceAdapter { execute(command: Extract<ProductCommand, { type: "deposit" }>, idempotencyKey: string): Promise<ProviderCommandReceipt> }
 export interface CardAdapter { readonly name: string; getCard(subjectReference: string): Promise<CardAccount>; execute(command: Extract<ProductCommand, { type: "issue_card" }>, idempotencyKey: string): Promise<ProviderCommandReceipt> }
-export interface MembershipAdapter { readonly name: string; getMembership(subjectReference: string): Promise<Membership> }
-export type ProviderRegistry = { identity: IdentityAdapter; wallet: WalletAdapter; compliance: ComplianceAdapter; fiat: FiatRailAdapter; card: CardAdapter; membership: MembershipAdapter };
+export type ProviderRegistry = { identity: IdentityAdapter; wallet: WalletAdapter; compliance: ComplianceAdapter; fiat: FiatRailAdapter; card: CardAdapter };

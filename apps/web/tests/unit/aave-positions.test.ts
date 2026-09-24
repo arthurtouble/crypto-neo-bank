@@ -8,6 +8,11 @@ describe("Aave position normalization", () => {
     expect(result.netWorthUsd).toBeUndefined();
   });
 
+  it("rejects incomplete position responses instead of reporting no debt", () => {
+    expect(() => normalizeAavePosition({ data: { v3: {} } }, { data: { v3: { markets: [] } } })).toThrow(/incomplete/i);
+    expect(() => normalizeAavePosition(null, null)).toThrow(/incomplete/i);
+  });
+
   it("uses source-reported portfolio metrics", () => {
     const result = normalizeAavePosition({ data: { v3: { supplies: [{ market: "base" }], borrows: [{ market: "base" }] } } }, { data: { v3: { marketsWithPosition: 1, markets: [{ healthFactor: "2.41", netWorthUSD: "1250.50" }] } } });
     expect(result.healthFactor).toBe("2.41");

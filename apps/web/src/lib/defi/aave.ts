@@ -184,9 +184,11 @@ function firstScalar(value: unknown, names: Set<string>): string | undefined {
 export function normalizeAavePosition(positions: unknown, summary: unknown) {
   const positionRoot = recordAt(positions, ["data", "v3"]);
   const summaryRoot = recordAt(summary, ["data", "v3"]);
-  const supplies = Array.isArray(positionRoot?.supplies) ? positionRoot.supplies : [];
-  const borrows = Array.isArray(positionRoot?.borrows) ? positionRoot.borrows : [];
-  const markets = Array.isArray(summaryRoot?.markets) ? summaryRoot.markets : [];
+  if (!Array.isArray(positionRoot?.supplies) || !Array.isArray(positionRoot?.borrows) || !Array.isArray(summaryRoot?.markets))
+    throw new Error("Incomplete Aave position response.");
+  const supplies = positionRoot.supplies;
+  const borrows = positionRoot.borrows;
+  const markets = summaryRoot.markets;
   const marketsWithPosition = typeof summaryRoot?.marketsWithPosition === "number" ? summaryRoot.marketsWithPosition : markets.length;
   return {
     marketsWithPosition,

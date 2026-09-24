@@ -1,4 +1,4 @@
-import type { AuthSession, CardAccount, CardAdapter, ComplianceAdapter, ComplianceCase, CustomerProfile, FiatRailAdapter, IdentityAdapter, Membership, MembershipAdapter, PositionObservation, ProductCommand, ProviderCommandReceipt, ProviderRegistry, WalletAccount, WalletAdapter } from "./contracts";
+import type { AuthSession, CardAccount, CardAdapter, ComplianceAdapter, ComplianceCase, CustomerProfile, FiatRailAdapter, IdentityAdapter, PositionObservation, ProductCommand, ProviderCommandReceipt, ProviderRegistry, WalletAccount, WalletAdapter } from "./contracts";
 import { getScenario, type DemoScenarioId } from "./scenarios";
 
 const observedAt = "2026-09-21T09:42:00.000Z";
@@ -22,8 +22,7 @@ export class DemoWalletAdapter implements WalletAdapter {
   constructor(private readonly scenarioId: DemoScenarioId) {}
   async getWallets(subjectReference: string): Promise<WalletAccount[]> { return getScenario(this.scenarioId).walletReady ? [{ walletReference: `wallet:${subjectReference}`, address: "0x91e2c6B8d2A91f4c08D9C7B08Ae37a10", chain: "Base", control: "embedded-noncustodial", recoveryReady: getScenario(this.scenarioId).recoveryReady }] : []; }
   async listPositions(subjectReference: string): Promise<PositionObservation[]> { const scenario = getScenario(this.scenarioId); if (!scenario.walletReady) return []; return [
-    { asset: "USDC", amount: scenario.productiveAmount, decimals: 6, category: "productive", protocol: "Aave V3", chain: "Base", source: { kind: "chain", name: this.name, externalId: `position:${subjectReference}:aave-v3-base`, observedAt, status: scenario.observationStatus } },
-    { asset: "USD", amount: scenario.connectedAmount, decimals: 2, category: "connected", chain: "Ethereum", source: { kind: "chain", name: this.name, externalId: `wallet:${subjectReference}:external`, observedAt, status: scenario.observationStatus } }
+    { asset: "USDC", amount: scenario.productiveAmount, decimals: 6, category: "productive", protocol: "Aave V3", chain: "Base", source: { kind: "chain", name: this.name, externalId: `position:${subjectReference}:aave-v3-base`, observedAt, status: scenario.observationStatus } }
   ]; }
   async execute(command: Extract<ProductCommand, { type: "create_wallet" | "withdraw" | "allocate" | "set_security_policy" }>, idempotencyKey: string) { return receipt(command, this.name, idempotencyKey, this.scenarioId); }
 }
@@ -49,10 +48,4 @@ export class DemoCardAdapter implements CardAdapter {
   async execute(command: Extract<ProductCommand, { type: "issue_card" }>, idempotencyKey: string) { return receipt(command, this.name, idempotencyKey, this.scenarioId); }
 }
 
-export class DemoMembershipAdapter implements MembershipAdapter {
-  readonly name = "aurel-membership-simulator";
-  constructor(private readonly scenarioId: DemoScenarioId) {}
-  async getMembership(): Promise<Membership> { return getScenario(this.scenarioId).membership; }
-}
-
-export function createDemoRegistry(scenarioId: DemoScenarioId): ProviderRegistry { return { identity: new DemoIdentityAdapter(scenarioId), wallet: new DemoWalletAdapter(scenarioId), compliance: new DemoComplianceAdapter(scenarioId), fiat: new DemoFiatAdapter(scenarioId), card: new DemoCardAdapter(scenarioId), membership: new DemoMembershipAdapter(scenarioId) }; }
+export function createDemoRegistry(scenarioId: DemoScenarioId): ProviderRegistry { return { identity: new DemoIdentityAdapter(scenarioId), wallet: new DemoWalletAdapter(scenarioId), compliance: new DemoComplianceAdapter(scenarioId), fiat: new DemoFiatAdapter(scenarioId), card: new DemoCardAdapter(scenarioId) }; }

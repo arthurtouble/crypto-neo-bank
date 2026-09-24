@@ -9,18 +9,17 @@ export type ProductSession = {
   wallets: Awaited<ReturnType<ProviderRegistry["wallet"]["getWallets"]>>;
   compliance: Awaited<ReturnType<ProviderRegistry["compliance"]["getCase"]>>;
   card: Awaited<ReturnType<ProviderRegistry["card"]["getCard"]>>;
-  membership: Awaited<ReturnType<ProviderRegistry["membership"]["getMembership"]>>;
   positions: PositionObservation[];
 };
 
 export async function buildDemoSession(scenarioId: DemoScenarioId, subjectReference = "demo-user-001"): Promise<ProductSession> {
   const providers = createDemoRegistry(scenarioId);
-  const [profile, auth, wallets, compliance, card, membership, fiatPositions, walletPositions] = await Promise.all([
+  const [profile, auth, wallets, compliance, card, fiatPositions, walletPositions] = await Promise.all([
     providers.identity.getProfile(subjectReference), providers.identity.getSession(subjectReference), providers.wallet.getWallets(subjectReference),
-    providers.compliance.getCase(subjectReference), providers.card.getCard(subjectReference), providers.membership.getMembership(subjectReference),
+    providers.compliance.getCase(subjectReference), providers.card.getCard(subjectReference),
     providers.fiat.listPositions(subjectReference), providers.wallet.listPositions(subjectReference)
   ]);
-  return { mode: "demo", scenario: getScenario(scenarioId), profile, auth, wallets, compliance, card, membership, positions: [...fiatPositions, ...walletPositions] };
+  return { mode: "demo", scenario: getScenario(scenarioId), profile, auth, wallets, compliance, card, positions: [...fiatPositions, ...walletPositions] };
 }
 
 export async function executeDemoCommand(scenarioId: DemoScenarioId, command: ProductCommand, idempotencyKey: string): Promise<ProviderCommandReceipt> {

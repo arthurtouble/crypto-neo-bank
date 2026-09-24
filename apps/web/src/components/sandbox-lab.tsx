@@ -68,7 +68,7 @@ export function SandboxLab({ initialSession, initialScenarios }: { initialSessio
   return (
     <div className="sandboxPage">
       <section className="pageIntro sandboxIntro">
-        <div><p className="eyebrow">PARTNER DEMONSTRATION</p><h1>Provider integration lab</h1><p>Exercise every product boundary before live Privy or Bridge credentials exist.</p></div>
+        <div><p className="eyebrow">PARTNER DEMONSTRATION</p><h1>Provider integration lab</h1><p>Explore simulated provider states and receipts. This lab never moves money.</p></div>
         <button className="button secondary" onClick={() => void loadSession(scenarioId)} disabled={loading}><RefreshCw size={15} /> Rebuild projection</button>
       </section>
 
@@ -84,7 +84,7 @@ export function SandboxLab({ initialSession, initialScenarios }: { initialSessio
           <div><span>Wallet</span><strong>{session.wallets.length ? "Ready" : "Not created"}</strong><small>{session.wallets[0]?.control ?? "Privy activation required"}</small></div>
           <div><span>Identity</span><strong>{session.compliance.status.replaceAll("_", " ")}</strong><small>{session.compliance.provider}</small></div>
           <div><span>Card</span><strong>{session.card.status.replaceAll("_", " ")}</strong><small>{session.card.lastFour ? `Visa •••• ${session.card.lastFour}` : "No issued card"}</small></div>
-          <div><span>Membership</span><strong>{session.membership.tier}</strong><small>{session.membership.score}/100 relationship score</small></div>
+          <div><span>Observations</span><strong>{session.positions.length}</strong><small>Provider and chain sources</small></div>
         </section>
 
         <div className="sandboxGrid">
