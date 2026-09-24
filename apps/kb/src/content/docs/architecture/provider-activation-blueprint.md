@@ -18,7 +18,7 @@ Preview mode may show complete workflows and eligibility gates, but never fabric
 | USD accounts, ACH, wire, FedNow, on/off-ramp | Bridge | Rain or Noah, subject to country and product scope | Transfers, account details, recipients, transfer review | Platform approval, customer mapping, KYC link, API key, webhooks |
 | Wallet login and signing | Privy | — | Aura account, receive, send, recovery, export | Already integrated; production configuration and monitoring |
 | Cross-network USDC | LI.FI | Socket or provider-native routing when contracted | Exchange with automatic source selection | LI.FI integrated; Socket requires production access, adapter work, route monitoring, and supported-pair policy |
-| Card issuing | Bridge card program / issuing partner | Rain | Card, controls, wallet provisioning | Issuer approval, cardholder KYC, program terms, disputes, auth webhooks |
+| Card issuing | Bridge through Stripe Issuing, subject to program approval | Rain | Card, controls, wallet provisioning | Issuer approval, cardholder KYC, program terms, disputes, auth webhooks |
 | Merchant rewards | Kard | Card-network rewards provider | Offers, reward history, activation | Program agreement, customer enrolment, transaction-match webhook |
 | Tag card payments | Acquiring or payment-link provider | — | Public Aura tag payment page | Merchant approval, hosted payment link, refunds, disputes, webhooks |
 | Tokenized stocks and metals | Eligible issuer and execution venue | — | Invest discovery and eligibility | Country/instrument approval, order lifecycle, custody and redemption records |
@@ -37,7 +37,9 @@ Preview mode may show complete workflows and eligibility gates, but never fabric
 
 Create a USD virtual account with an explicit destination configuration. Sync reusable ACH/wire instructions from Bridge. Mask instructions outside the authenticated detail view. Incoming-payment webhooks update Aura's projection; scheduled reconciliation re-reads the provider.
 
-The UI is already modeled around `setup_required`, `pending`, and `active`. Replace the preview account response with the Bridge adapter after adding the subject-to-customer mapping and secrets.
+The UI is modeled around `setup_required`, `pending`, and `active`. The read adapter is wired for `BRIDGE_MODE=live`: it requires a linked Bridge customer ID and API key, follows Bridge's customer virtual-account pagination, and returns only complete activated USD instructions. The mode does not enable outgoing transfers or webhooks. Verify the customer mapping, provider approval, and reconciliation before showing instructions.
+
+Bridge's [virtual-account API](https://apidocs.bridge.xyz/api-reference/virtual-accounts/list-virtual-accounts-by-customer) is the source of account status and instructions. Its older standalone [card-provisioning API is deprecated](https://apidocs.bridge.xyz/api-reference/cards/provision-a-card-account); a card program must use the currently approved issuing path and its actual control APIs.
 
 ### Transfers
 

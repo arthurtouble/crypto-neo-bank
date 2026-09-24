@@ -16,7 +16,7 @@ const commands: Array<{ label: string; detail: string; icon: typeof WalletCards;
   { label: "Deposit $5,000", detail: "Bridge rail adapter", icon: Landmark, build: () => ({ type: "deposit", subjectReference: "demo-user-001", amount: "5000.00", asset: "USD", rail: "bank" }) },
   { label: "Allocate $2,500", detail: "Privy signing + Aave adapter", icon: DatabaseZap, build: () => ({ type: "allocate", subjectReference: "demo-user-001", amount: "2500.00", asset: "USDC", strategyReference: "aave-v3-base" }) },
   { label: "Withdraw $1,000", detail: "Policy and signing review", icon: Send, build: () => ({ type: "withdraw", subjectReference: "demo-user-001", amount: "1000.00", asset: "USDC", destinationReference: "saved:operating-wallet" }) },
-  { label: "Request card", detail: "Bridge card adapter", icon: CreditCard, build: () => ({ type: "issue_card", subjectReference: "demo-user-001" }) },
+  { label: "Request card", detail: "Simulated issuer", icon: CreditCard, build: () => ({ type: "issue_card", subjectReference: "demo-user-001" }) },
   { label: "Enable transfer delay", detail: "Wallet policy adapter", icon: KeyRound, build: () => ({ type: "set_security_policy", subjectReference: "demo-user-001", policy: "transfer_delay", enabled: true }) }
 ];
 

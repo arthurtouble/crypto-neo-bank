@@ -15,12 +15,12 @@ The card workspace is designed for familiar controls:
 
 - Freeze and unfreeze
 - Daily and monthly spending limits
-- Funding priority
+- Allowed countries
 - PIN access
-- Apple Pay and Google Pay setup where supported
-- Statements
-- Replacement
-- Transaction disputes
+- Wallet provisioning where supported
+- Terminate card
+
+Card transactions link to support. An issuer dispute can start only after the issuer's dispute process is connected. Statements appear in Settings only when provided by the issuer.
 
 Each control stays unavailable until the connected issuer reports that the card and capability are ready **and** Aura has enabled the issuer's control API. Country, identity, sanctions, eligibility, and underwriting checks may apply.
 
