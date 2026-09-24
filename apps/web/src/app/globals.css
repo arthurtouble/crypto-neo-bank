@@ -142,7 +142,6 @@ button { color: inherit; }
 .activityList { display: grid; margin-top: 16px; }.activityRow { min-height: 62px; display: grid; grid-template-columns: 35px 1fr auto; gap: 12px; align-items: center; border-top: 1px solid var(--border); }.activityIcon { width: 31px; height: 31px; display: grid; place-items: center; border-radius: 50%; background: var(--stone-100); color: var(--ink-600); font-family: var(--font-technical); font-size: 11px; }.activityIcon.positive { color: var(--green-700); background: #e2eee8; }.activityRow strong,.activityRow small { display: block; }.activityRow > div:nth-child(2) strong { font-size: 10px; }.activityRow small { margin-top: 4px; color: var(--ink-500); font-size: 8px; }.activityAmount { text-align: right; }.activityAmount strong { font-family: var(--font-technical); font-size: 9px; }.activityList.expanded .activityRow { min-height: 78px; }
 .membershipCard { position: relative; min-height: 169px; padding: 21px; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; background: linear-gradient(135deg, #152c27, #07110f); color: white; border-radius: 8px; box-shadow: 0 20px 45px rgba(11,23,32,.18); }.membershipCard:before { content: ""; position: absolute; width: 230px; height: 230px; right: -120px; top: -130px; border: 1px solid rgba(255,255,255,.12); border-radius: 50%; box-shadow: 0 0 0 24px rgba(255,255,255,.025), 0 0 0 48px rgba(255,255,255,.02); }.membershipTop,.membershipBottom { position: relative; z-index: 1; display: flex; justify-content: space-between; font-family: var(--font-technical); font-size: 8px; letter-spacing: .12em; }.membershipCard > div:nth-child(2) { position: relative; z-index: 1; }.membershipCard small,.membershipCard strong { display: block; }.membershipCard small { margin-bottom: 5px; color: rgba(255,255,255,.45); font-family: var(--font-technical); font-size: 7px; letter-spacing: .1em; }.membershipCard strong { font-family: var(--font-technical); font-size: 9px; font-weight: 400; letter-spacing: .1em; }
 .progressPanel { min-height: 194px; }.progressPanel .panelHeading > span { font-family: var(--font-technical); color: var(--ink-500); font-size: 9px; }.progressTrack { height: 4px; margin: 22px 0 15px; background: var(--stone-200); }.progressTrack i { display: block; height: 100%; background: var(--brass-500); }.progressPanel p { color: var(--ink-600); font-size: 9px; line-height: 1.55; }.progressPanel a { display: flex; align-items: center; justify-content: space-between; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); color: var(--alpine-800); font-size: 10px; font-weight: 600; }
-.conciergeCard { min-height: 203px; padding: 23px; background: var(--stone-100); border: 1px solid var(--stone-300); border-radius: 8px; }.conciergeCard > span { display: flex; gap: 7px; color: var(--brass-500); font-family: var(--font-technical); font-size: 8px; letter-spacing: .09em; }.conciergeCard h3 { margin: 28px 0 8px; max-width: 190px; font-family: var(--font-editorial); font-size: 20px; font-weight: 520; }.conciergeCard p { color: var(--ink-600); font-size: 9px; line-height: 1.5; }.conciergeCard button { margin-top: 9px; padding: 0; display: flex; gap: 7px; align-items: center; color: var(--alpine-800); background: transparent; border: 0; font-size: 9px; font-weight: 600; }
 
 /* Section pages */
 .notice { display: flex; gap: 11px; align-items: flex-start; margin-bottom: 17px; padding: 14px 16px; border: 1px solid #ccdcd4; background: #eef4f1; color: var(--alpine-800); border-radius: 6px; font-size: 10px; line-height: 1.6; }.notice strong { margin-right: 4px; }
@@ -519,12 +518,11 @@ body {
 .bankDetails { display: grid; gap: 0; }.bankDetails > span { min-height: 57px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--hairline); color: var(--text-tertiary); font-size: 9px; }.bankDetails strong { color: var(--text); font-family: var(--font-technical); font-size: 9px; }
 .technicalDetails { margin-top: 13px; color: var(--text-tertiary); font-size: 8px; }.technicalDetails summary { cursor: pointer; }.technicalDetails span { display: block; margin-top: 8px; }
 .membershipKicker { color: var(--text-tertiary); font-size: 9px; }.benefitModal .benefitIcon { margin-bottom: 16px; }
-.conciergeServices { margin-bottom: 16px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }.conciergeServices > button { min-height: 105px; padding: 20px; display: grid; grid-template-columns: 28px 1fr; align-content: center; column-gap: 10px; border: 1px solid var(--hairline); color: var(--text); text-align: left; cursor: pointer; }.conciergeServices svg { grid-row: 1 / 3; color: var(--accent); }.conciergeServices strong { font-size: 10px; }.conciergeServices small { margin-top: 4px; color: var(--text-tertiary); font-size: 8px; }.requestTextarea { min-height: 110px; padding: 12px; resize: vertical; border: 1px solid var(--hairline-strong); border-radius: var(--radius-control); color: var(--text); background: var(--surface); font: inherit; font-size: 10px; }
-.securityPolicyPanel,.addressBookPanel,.membershipSummary,.conciergePrompts,.routePanel { padding: 25px; }.settingsGrid { grid-template-columns: minmax(0, 780px); }.settingRow { min-height: 62px; }
+.securityPolicyPanel,.addressBookPanel,.membershipSummary,.routePanel { padding: 25px; }.settingsGrid { grid-template-columns: minmax(0, 780px); }.settingRow { min-height: 62px; }
 .cardControlRow button.statusBadge { border: 0; cursor: pointer; }
 
 @media (max-width: 720px) {
-  .moneyHero { align-items: stretch; flex-direction: column; }.moneyGrid,.conciergeServices { grid-template-columns: 1fr; }.railRows > div { grid-template-columns: 24px 1fr auto; }.railRows small { display: none; }
+  .moneyHero { align-items: stretch; flex-direction: column; }.moneyGrid { grid-template-columns: 1fr; }.railRows > div { grid-template-columns: 24px 1fr auto; }.railRows small { display: none; }
 }
 .groupedNav { gap: 20px; }
 .navGroup { gap: 1px; }
@@ -584,7 +582,6 @@ body {
 .activityIcon,
 .strategyGlyph,
 .benefitIcon { border-radius: var(--radius-control); }
-.conciergeCard { border-radius: var(--radius-panel); }
 
 .dialogContent,
 .financialModal { border-radius: var(--radius-panel); }
@@ -878,8 +875,6 @@ html[data-theme="dark"] .themeToggle .moonIcon { display: block; }
 .sidebarFooter > button { color: var(--text); border-color: var(--hairline); border-radius: 12px; background: transparent; }
 .sidebarFooter small { color: var(--text-tertiary) !important; }
 .avatar { color: #ffffff; background: #1d6b5a; }
-.conciergeCard > span { color: #76552d; }
-html[data-theme="dark"] .conciergeCard > span { color: #d2a05c; }
 html[data-theme="dark"] .button.primary { color: #ffffff; background: #2d765f; border-color: #2d765f; }
 .productHeader { background: color-mix(in srgb, var(--canvas) 84%, transparent); backdrop-filter: saturate(180%) blur(18px); }
 .commandSearch { min-width: 250px; padding: 8px 10px; border: 0; border-radius: 9px; background: transparent; cursor: pointer; text-align: left; transition: background-color 140ms ease, color 140ms ease; }
@@ -1027,24 +1022,6 @@ html[data-theme="dark"] .button.primary { color: #ffffff; background: #2d765f; b
 .nextTier { padding-left: 24px; display: grid; gap: 5px; border-left: 1px solid var(--hairline); }
 .nextTier span, .nextTier small { color: var(--text-tertiary); font-size: 8px; line-height: 1.5; }
 .nextTier strong { font-size: 13px; }
-.conciergeLayout { display: grid; grid-template-columns: minmax(0, 1fr) 290px; gap: 18px; }
-.conciergePanel { padding: 0; overflow: hidden; }
-.conciergeHeader { min-height: 82px; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--hairline); }
-.conciergeHeader h2 { margin: 5px 0 0; font-size: 18px; }
-.conciergeHeader > span { display: flex; align-items: center; gap: 6px; color: var(--positive); font-size: 8px; }
-.conversation { min-height: 390px; max-height: 54vh; padding: 24px; display: flex; flex-direction: column; gap: 18px; overflow-y: auto; }
-.message { display: flex; align-items: flex-start; gap: 10px; }
-.message > span { width: 28px; height: 28px; flex: 0 0 auto; display: grid; place-items: center; border-radius: 50%; background: var(--surface-muted); color: var(--accent); }
-.message.user { flex-direction: row-reverse; }
-.message.user > span { color: var(--text-secondary); }
-.message p { max-width: 78%; margin: 0; padding: 11px 13px; border-radius: 3px 12px 12px 12px; background: var(--surface-muted); font-size: 10px; line-height: 1.65; white-space: pre-wrap; }
-.message.user p { border-radius: 12px 3px 12px 12px; color: white; background: var(--accent); }
-.conciergeComposer { margin: 0 18px 18px; padding: 11px 11px 11px 14px; display: flex; align-items: flex-end; gap: 10px; border: 1px solid var(--hairline-strong); border-radius: 13px; background: var(--surface); }
-.conciergeComposer textarea { min-height: 42px; max-height: 110px; flex: 1; resize: vertical; border: 0; outline: 0; color: var(--text); background: transparent; font: inherit; font-size: 10px; line-height: 1.5; }
-.conciergeComposer button { width: 34px; height: 34px; display: grid; place-items: center; border: 0; border-radius: 50%; color: white; background: var(--accent); cursor: pointer; }
-.conciergeComposer button:disabled { opacity: .4; }
-.conciergePrompts > button { width: 100%; padding: 14px 0; border: 0; border-top: 1px solid var(--hairline); color: var(--text); background: transparent; font-size: 9px; line-height: 1.5; text-align: left; cursor: pointer; }
-.conciergePrompts > button:first-of-type { margin-top: 18px; }
 
 @keyframes access-pulse { 70%, 100% { box-shadow: 0 0 0 12px transparent; } }
 @keyframes financial-modal-in { from { opacity: 0; transform: translateY(9px) scale(.985); } }
@@ -1147,7 +1124,6 @@ html[data-theme="dark"] .docsStatus.prepared { color: #e0b878; }
   .borrowHealth > div + div { padding-left: 0; border-left: 0; border-top: 1px solid var(--hairline); }
   .membershipSummary { grid-template-columns: 1fr auto; }
   .nextTier { grid-column: 1 / -1; padding: 18px 0 0; border-left: 0; border-top: 1px solid var(--hairline); }
-  .conciergeLayout { grid-template-columns: 1fr; }
   .message p { max-width: 88%; }
   .docsFacts { grid-template-columns: 1fr 1fr; }
   .docsFacts > div:nth-child(odd) { border-left: 0; }

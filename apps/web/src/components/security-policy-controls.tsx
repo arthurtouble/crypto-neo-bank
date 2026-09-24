@@ -56,7 +56,7 @@ export function SecurityPolicyControls() {
         <label><span><AlertOctagon size={17} /><b>Daily Transfer Limit</b></span><input type="number" min="100" step="100" value={dailyDraft ?? String(current.dailyLimitUsd)} onChange={(event) => setDailyDraft(event.target.value)} onBlur={() => { if (dailyDraft === null) return; const value = Number(dailyDraft); if (dailyDraft !== "" && value !== current.dailyLimitUsd) update.mutate({ dailyLimitUsd: value }); else setDailyDraft(null); }} /><em>USD</em></label>
         <label><span><Clock3 size={17} /><b>New Recipient Limit</b></span><input type="number" min="0" step="100" value={recipientDraft ?? String(current.newAddressThresholdUsd)} onChange={(event) => setRecipientDraft(event.target.value)} onBlur={() => { if (recipientDraft === null) return; const value = Number(recipientDraft); if (recipientDraft !== "" && value !== current.newAddressThresholdUsd) update.mutate({ newAddressThresholdUsd: value }); else setRecipientDraft(null); }} /><em>USD</em></label>
       </div>
-      <p className="sourceCaption">To unlock or raise a limit, <Link href="/app/concierge">contact Support</Link>.</p>
+      <p className="sourceCaption">To unlock or raise a limit, <Link href="/app/support">contact Support</Link>.</p>
       {message && <div className="securityMessage" role="status">{message}</div>}
     </section>
     <section className="panel addressBookPanel"><div className="panelHeading"><div><h2>Saved Destinations</h2><p className="sourceCaption">New destinations are ready after {current.newAddressDelayHours} hours.</p></div></div>

@@ -11,7 +11,6 @@ import {
   LockKeyhole,
   Settings2,
   ShieldCheck,
-  Sparkles,
   WalletCards
 } from "lucide-react";
 
@@ -28,6 +27,5 @@ export const icons = {
   received: ArrowDownLeft,
   lock: LockKeyhole,
   verified: BadgeCheck,
-  concierge: Sparkles,
   money: CircleDollarSign
 };

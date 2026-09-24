@@ -95,10 +95,7 @@
 .productShell .riskItem > strong,
 .productShell .progressPanel p,
 .productShell .progressPanel a,
-.productShell .progressPanel .panelHeading > span,
-.productShell .conciergeCard > span,
-.productShell .conciergeCard p,
-.productShell .conciergeCard button {
+.productShell .progressPanel .panelHeading > span {
   font-size: var(--type-label);
 }
 
@@ -541,7 +538,7 @@
 }
 @media (prefers-reduced-motion: reduce) { .priceAlertActions button { transition: none; } }
 
-/* Cards, benefits, and concierge */
+/* Cards and benefits */
 .productShell .membershipTop,
 .productShell .membershipBottom,
 .productShell .membershipCard small,
@@ -557,12 +554,6 @@
 .productShell .membershipScore small,
 .productShell .nextTier span,
 .productShell .nextTier small { font-size: var(--type-label); }
-.productShell .conciergeServices strong { font-size: var(--type-row-title); }
-.productShell .conciergeServices small { font-size: var(--type-label); }
-.productShell .conciergeHeader > span,
-.productShell .message p,
-.productShell .conciergeComposer textarea,
-.productShell .conciergePrompts > button { font-size: var(--type-body-small); }
 
 /* Insights and issuer-backed card controls */
 .insightsWorkspace { display: grid; gap: 12px; }
