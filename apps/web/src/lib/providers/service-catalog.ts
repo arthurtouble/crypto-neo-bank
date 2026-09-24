@@ -14,6 +14,15 @@ export type MoneyAccount = {
   accountName: string;
   accountNumberLastFour?: string;
   routingNumberLastFour?: string;
+  depositInstructions?: {
+    bankName: string;
+    bankAddress?: string;
+    beneficiaryName: string;
+    beneficiaryAddress?: string;
+    accountNumber: string;
+    routingNumber: string;
+    rails: Array<"ach" | "wire" | "fednow">;
+  };
   capabilities: MoneyCapability[];
 };
 

@@ -15,4 +15,11 @@ describe("Aura tags", () => {
       bank: { available: false }, card: { available: false }
     });
   });
+
+  it("shows bank instructions only after separate public consent and an active provider account", () => {
+    const row = { tag: "alice", display_name: "Alice", receiving_address: "0x000000000000000000000000000000000000dEaD", subject_reference: "privy-secret", public_bank_enabled: 1 };
+    const bank = { state: "active" as const, currency: "USD" as const, accountName: "Alice", capabilities: [], depositInstructions: { bankName: "Lead Bank", beneficiaryName: "Alice", accountNumber: "123456789", routingNumber: "876543210", rails: ["ach" as const] } };
+    expect(publicTagResponse(row, bank).bank).toMatchObject({ available: true, instructions: { accountNumber: "123456789" } });
+    expect(publicTagResponse({ ...row, public_bank_enabled: 0 }, bank).bank).toEqual({ available: false });
+  });
 });

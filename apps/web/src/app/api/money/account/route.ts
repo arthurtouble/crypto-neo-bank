@@ -9,7 +9,7 @@ export async function GET(request: Request) {
     let account = previewMoneyAccount();
     if (process.env.BRIDGE_MODE === "live") {
       const link = await env.PROJECTION_DB.prepare("SELECT external_customer_id FROM provider_customer_links WHERE subject_reference = ? AND provider = 'bridge' AND status = 'active'").bind(subject.subjectReference).first<{ external_customer_id: string }>();
-      if (link && process.env.BRIDGE_API_KEY) account = await new BridgeRailAdapter(process.env.BRIDGE_API_KEY, process.env.BRIDGE_API_BASE_URL).getUsdAccount(link.external_customer_id, "Aurel Member");
+      if (link && process.env.BRIDGE_API_KEY) account = await new BridgeRailAdapter(process.env.BRIDGE_API_KEY, process.env.BRIDGE_API_BASE_URL).getUsdAccount(link.external_customer_id);
     }
     return Response.json({
       account,

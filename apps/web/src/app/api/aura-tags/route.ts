@@ -7,15 +7,15 @@ import { requireLinkedEvmWallet, WalletOwnershipError } from "@/lib/auth/wallet"
 import { requireBetaAccess, BetaAccessError } from "@/lib/beta/access";
 import { enforceRateLimit, RateLimitError } from "@/lib/security/rate-limit";
 
-const inputSchema = z.object({ tag: z.string(), address: z.string(), displayName: z.string().trim().min(1).max(48).refine((value) => !/\p{C}/u.test(value)), publicEnabled: z.boolean() }).strict();
+const inputSchema = z.object({ tag: z.string(), address: z.string(), displayName: z.string().trim().min(1).max(48).refine((value) => !/\p{C}/u.test(value)), publicEnabled: z.boolean(), publicBankEnabled: z.boolean().default(false) }).strict();
 
 export async function GET(request: Request) {
   try {
     const subject = await requireVerifiedSubject(request);
     await requireBetaAccess(env.PROJECTION_DB, subject.subjectReference);
-    const row = await env.PROJECTION_DB.prepare("SELECT tag, receiving_address, display_name, public_enabled FROM aura_tags WHERE subject_reference = ? AND active = 1")
-      .bind(subject.subjectReference).first<{ tag: string; receiving_address: string; display_name: string; public_enabled: number }>();
-    return Response.json({ tag: row ? { tag: row.tag, address: row.receiving_address, displayName: row.display_name, publicEnabled: row.public_enabled === 1 } : null }, { headers: { "Cache-Control": "no-store" } });
+    const row = await env.PROJECTION_DB.prepare("SELECT tag, receiving_address, display_name, public_enabled, public_bank_enabled FROM aura_tags WHERE subject_reference = ? AND active = 1")
+      .bind(subject.subjectReference).first<{ tag: string; receiving_address: string; display_name: string; public_enabled: number; public_bank_enabled: number }>();
+    return Response.json({ tag: row ? { tag: row.tag, address: row.receiving_address, displayName: row.display_name, publicEnabled: row.public_enabled === 1, publicBankEnabled: row.public_bank_enabled === 1 } : null }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     if (error instanceof AuthenticationError) return Response.json({ error: "unauthorized" }, { status: 401 });
     if (error instanceof BetaAccessError) return Response.json({ error: error.code }, { status: 403 });
@@ -41,25 +41,25 @@ export async function PUT(request: Request) {
     const audit = env.PROJECTION_DB.prepare(`INSERT INTO audit_events
       (audit_id, subject_reference, actor_type, actor_reference, action, target_type, target_reference, evidence_json, occurred_at)
       VALUES (?, ?, 'customer', ?, 'aura_tag_saved', 'aura_tag', ?, ?, ?)`)
-      .bind(crypto.randomUUID(), subject.subjectReference, subject.subjectReference, tag, JSON.stringify({ previousTag: current?.tag ?? null, publicEnabled: input.publicEnabled, receivingAddress: address }), now);
+      .bind(crypto.randomUUID(), subject.subjectReference, subject.subjectReference, tag, JSON.stringify({ previousTag: current?.tag ?? null, publicEnabled: input.publicEnabled, publicBankEnabled: input.publicEnabled && input.publicBankEnabled, receivingAddress: address }), now);
     if (current?.tag === tag) {
       await env.PROJECTION_DB.batch([
-        env.PROJECTION_DB.prepare("UPDATE aura_tags SET receiving_address = ?, display_name = ?, public_enabled = ?, updated_at = ? WHERE tag = ? AND subject_reference = ? AND active = 1")
-          .bind(address, input.displayName, input.publicEnabled ? 1 : 0, now, tag, subject.subjectReference),
+        env.PROJECTION_DB.prepare("UPDATE aura_tags SET receiving_address = ?, display_name = ?, public_enabled = ?, public_bank_enabled = ?, updated_at = ? WHERE tag = ? AND subject_reference = ? AND active = 1")
+          .bind(address, input.displayName, input.publicEnabled ? 1 : 0, input.publicEnabled && input.publicBankEnabled ? 1 : 0, now, tag, subject.subjectReference),
         audit
       ]);
     } else {
       await env.PROJECTION_DB.batch([
-        env.PROJECTION_DB.prepare("UPDATE aura_tags SET active = 0, public_enabled = 0, updated_at = ? WHERE subject_reference = ? AND active = 1").bind(now, subject.subjectReference),
+        env.PROJECTION_DB.prepare("UPDATE aura_tags SET active = 0, public_enabled = 0, public_bank_enabled = 0, updated_at = ? WHERE subject_reference = ? AND active = 1").bind(now, subject.subjectReference),
         target
-          ? env.PROJECTION_DB.prepare("UPDATE aura_tags SET receiving_address = ?, display_name = ?, public_enabled = ?, active = 1, updated_at = ? WHERE tag = ? AND subject_reference = ?")
-            .bind(address, input.displayName, input.publicEnabled ? 1 : 0, now, tag, subject.subjectReference)
-          : env.PROJECTION_DB.prepare("INSERT INTO aura_tags (tag, subject_reference, receiving_address, display_name, public_enabled, active, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 1, ?, ?)")
-            .bind(tag, subject.subjectReference, address, input.displayName, input.publicEnabled ? 1 : 0, now, now),
+          ? env.PROJECTION_DB.prepare("UPDATE aura_tags SET receiving_address = ?, display_name = ?, public_enabled = ?, public_bank_enabled = ?, active = 1, updated_at = ? WHERE tag = ? AND subject_reference = ?")
+            .bind(address, input.displayName, input.publicEnabled ? 1 : 0, input.publicEnabled && input.publicBankEnabled ? 1 : 0, now, tag, subject.subjectReference)
+          : env.PROJECTION_DB.prepare("INSERT INTO aura_tags (tag, subject_reference, receiving_address, display_name, public_enabled, public_bank_enabled, active, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)")
+            .bind(tag, subject.subjectReference, address, input.displayName, input.publicEnabled ? 1 : 0, input.publicEnabled && input.publicBankEnabled ? 1 : 0, now, now),
         audit
       ]);
     }
-    return Response.json({ tag, address, displayName: input.displayName, publicEnabled: input.publicEnabled }, { headers: { "Cache-Control": "no-store" } });
+    return Response.json({ tag, address, displayName: input.displayName, publicEnabled: input.publicEnabled, publicBankEnabled: input.publicEnabled && input.publicBankEnabled }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     if (error instanceof AuthenticationError) return Response.json({ error: "unauthorized" }, { status: 401 });
     if (error instanceof BetaAccessError) return Response.json({ error: error.code }, { status: 403 });

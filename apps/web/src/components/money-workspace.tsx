@@ -22,13 +22,14 @@ export function MoneyWorkspace({ mode }: { mode: "deposit" | "send" }) {
     },
     enabled: Boolean(user)
   });
-  const active = account.data?.account.state === "active";
+  const instructions = account.data?.account.depositInstructions;
+  const active = account.data?.account.state === "active" && Boolean(instructions);
   return <div className="moneySimple">
     <WalletWorkspace key={`${mode}:${searchParams.toString()}`} mode={mode} />
     {mode === "deposit" ? <>
       <section className="panel exampleCard"><span className="exampleLabel">Bank transfer · Bridge</span><h2>Deposit from a bank</h2>
-        {active ? <p>Bridge has connected an account, but complete transfer instructions are not available here yet. Do not send funds using the masked details below. Bank deposits are confirmed by Bridge.</p> : <p>Bank deposits become available after Bridge account setup and verification.</p>}
-        {active && <div className="bankDetails"><span>Account name<strong>{account.data?.account.accountName}</strong></span><span>Account ending<strong>•••• {account.data?.account.accountNumberLastFour}</strong></span></div>}
+        {active ? <p>Use these Bridge instructions for a USD bank deposit. Availability and arrival depend on the listed payment rails. Bridge confirms the transfer.</p> : <p>Bank deposits become available after Bridge account setup and verification.</p>}
+        {instructions && <div className="bankDetails"><span>Bank<strong>{instructions.bankName}</strong></span><span>Beneficiary<strong>{instructions.beneficiaryName}</strong></span><span>Account number<strong>{instructions.accountNumber}</strong></span><span>Routing number<strong>{instructions.routingNumber}</strong></span><span>Accepted rails<strong>{instructions.rails.map((rail) => rail === "ach" ? "ACH push" : rail === "wire" ? "Wire" : "FedNow").join(", ")}</strong></span></div>}
         {account.isError && <p role="alert">{account.error.message}</p>}
       </section>
       <section className="panel exampleCard"><span className="exampleLabel">Aura tag</span><h2>Get paid with your tag</h2><p>Share a public payment page with crypto, bank, and card options. Each method shows its current availability.</p><Link className="button secondary" href="/app/settings#tag">Manage your tag</Link></section>

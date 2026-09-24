@@ -3,9 +3,18 @@ import { moneyCapabilities } from "./service-catalog";
 
 type BridgeVirtualAccount = {
   id: string;
+  customer_id?: string;
   status?: string;
-  source?: { currency?: string };
-  account?: { last_4?: string; routing_number_last_4?: string };
+  source_deposit_instructions?: {
+    currency?: string;
+    payment_rails?: string[];
+    bank_name?: string;
+    bank_address?: string;
+    bank_beneficiary_name?: string;
+    bank_beneficiary_address?: string;
+    bank_account_number?: string;
+    bank_routing_number?: string;
+  };
 };
 
 export class BridgeRailAdapter {
@@ -25,17 +34,29 @@ export class BridgeRailAdapter {
     return response.json() as Promise<T>;
   }
 
-  async getUsdAccount(customerId: string, displayName: string): Promise<MoneyAccount> {
-    const result = await this.request<{ data?: BridgeVirtualAccount[] } | BridgeVirtualAccount[]>(`/customers/${encodeURIComponent(customerId)}/virtual_accounts`);
-    const accounts = Array.isArray(result) ? result : result.data ?? [];
-    const account = accounts.find((item) => item.source?.currency?.toLowerCase() === "usd") ?? accounts[0];
+  async getUsdAccount(customerId: string): Promise<MoneyAccount> {
+    const result = await this.request<{ data?: BridgeVirtualAccount[] }>(`/customers/${encodeURIComponent(customerId)}/virtual_accounts`);
+    if (!Array.isArray(result.data)) throw new Error("Bridge virtual account response is incomplete.");
+    const account = result.data.find((item) => item.customer_id === customerId && item.status === "activated" && item.source_deposit_instructions?.currency?.toLowerCase() === "usd")
+      ?? result.data.find((item) => item.customer_id === customerId && item.source_deposit_instructions?.currency?.toLowerCase() === "usd");
+    const source = account?.source_deposit_instructions;
+    const complete = account?.status === "activated" && Boolean(source?.bank_name?.trim() && source.bank_beneficiary_name?.trim()
+      && source.bank_account_number?.trim() && source.bank_routing_number?.trim() && Array.isArray(source.payment_rails));
+    const rails = complete ? (["ach", "wire", "fednow"] as const).filter((key) => source!.payment_rails!.includes({ ach: "ach_push", wire: "wire", fednow: "fednow" }[key])) : [];
+    const instructions = complete && rails.length ? {
+      bankName: source!.bank_name!.trim(), bankAddress: source!.bank_address?.trim(),
+      beneficiaryName: source!.bank_beneficiary_name!.trim(), beneficiaryAddress: source!.bank_beneficiary_address?.trim(),
+      accountNumber: source!.bank_account_number!.trim(), routingNumber: source!.bank_routing_number!.trim(), rails: [...rails]
+    } : undefined;
     return {
-      state: account ? (account.status === "activated" || account.status === "active" ? "active" : "pending") : "setup_required",
+      state: account ? instructions ? "active" : "pending" : "setup_required",
       currency: "USD",
-      accountName: displayName,
-      accountNumberLastFour: account?.account?.last_4,
-      routingNumberLastFour: account?.account?.routing_number_last_4,
-      capabilities: moneyCapabilities.map((capability) => ({ ...capability, state: capability.key === "crypto" ? "available" : account ? "locked" : "setup_required" }))
+      accountName: instructions?.beneficiaryName ?? "Aura member",
+      accountNumberLastFour: instructions?.accountNumber.slice(-4),
+      routingNumberLastFour: instructions?.routingNumber.slice(-4),
+      depositInstructions: instructions,
+      capabilities: moneyCapabilities.map((capability) => ({ ...capability,
+        state: capability.key === "crypto" ? "available" : !account ? "setup_required" : instructions?.rails.includes(capability.key) ? "available" : "locked" }))
     };
   }
 }

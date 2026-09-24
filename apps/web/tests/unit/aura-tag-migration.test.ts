@@ -4,12 +4,14 @@ import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
 
 const migration = readFileSync(resolve(process.cwd(), "../../infra/d1/migrations/0036_aura_tags.sql"), "utf8");
+const bankConsentMigration = readFileSync(resolve(process.cwd(), "../../infra/d1/migrations/0037_aura_tag_bank_consent.sql"), "utf8");
 
 describe("Aura tag registry", () => {
   it("keeps old tags reserved and permits one active tag per owner", () => {
     const db = new DatabaseSync(":memory:");
     try {
       db.exec(migration);
+      db.exec(bankConsentMigration);
       const insert = db.prepare("INSERT INTO aura_tags (tag, subject_reference, receiving_address, display_name, public_enabled, active, created_at, updated_at) VALUES (?, ?, '0x000000000000000000000000000000000000dEaD', 'A', 1, 1, 'now', 'now')");
       insert.run("alice", "owner-a");
       expect(() => insert.run("alice2", "owner-a")).toThrow();
@@ -20,6 +22,7 @@ describe("Aura tag registry", () => {
         { tag: "alice", active: 0, public_enabled: 0 },
         { tag: "alice2", active: 1, public_enabled: 1 }
       ]);
+      expect(db.prepare("SELECT public_bank_enabled FROM aura_tags WHERE tag = 'alice2'").get()).toEqual({ public_bank_enabled: 0 });
       db.exec(migration);
     } finally { db.close(); }
   });
