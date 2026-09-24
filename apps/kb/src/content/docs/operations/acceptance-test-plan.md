@@ -13,7 +13,7 @@ description: Acceptance evidence required before expanding supported mainnet wor
 
 ## Automated preflight
 
-Run `pnpm test:mainnet-readiness` to verify chain IDs, allowlisted USDC contract code and a small read-only LI.FI route quote. Run `pnpm test:production` for production headers, health and unauthenticated access boundaries. Run `pnpm test:recovery` for an isolated D1 schema recovery drill.
+Run `pnpm test:mainnet-readiness` to verify chain IDs, allowlisted USDC contract code and a small read-only LI.FI route quote. Set `AURA_SMOKE_URL` to the exact deployment origin and run `pnpm test:deployment` for headers, health, guest browsing and unauthenticated access boundaries. Run `pnpm test:recovery` for an isolated D1 schema recovery drill.
 
 ## Human journeys
 

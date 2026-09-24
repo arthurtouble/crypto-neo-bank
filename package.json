@@ -25,7 +25,7 @@
     "test:e2e": "pnpm --filter @aurel/web test:e2e",
     "test:mainnet-readiness": "node scripts/mainnet-readiness.mjs",
     "test:live:readonly": "pnpm --filter @aurel/web test:live:readonly",
-    "test:production": "node scripts/production-smoke.mjs",
+    "test:deployment": "node scripts/deployment-smoke.mjs",
     "test:recovery": "bash scripts/recovery-drill.sh",
     "marketing:check": "node scripts/check-marketing-claims.mjs",
     "typecheck": "pnpm --filter @aurel/web typecheck",
