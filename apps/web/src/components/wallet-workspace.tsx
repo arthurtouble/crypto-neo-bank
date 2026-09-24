@@ -244,7 +244,7 @@ export function WalletWorkspace({ mode = "overview" }: { mode?: "overview" | "de
                 <span className={`assetToken token${index}`}>{row.symbol.slice(0, 1)}</span>
                 <span><strong>{row.name}</strong><small>{row.symbol}</small></span>
                 <span>{row.source}</span>
-                <span><i className={row.pending ? "sourceDot pending" : "sourceDot"} /> {row.pending ? "Reading" : "Observed now"}</span>
+                <span><i className={row.pending ? "sourceDot pending" : "sourceDot"} /> {row.pending ? "Reading" : row.value === undefined ? "Unavailable" : "Observed now"}</span>
                 <span className="sensitiveAmount"><strong>{amountText(row.value, row.decimals)}</strong><small>{row.symbol}</small></span>
               </button>
             ))}
