@@ -6,6 +6,7 @@ import { Check, LoaderCircle, ShieldCheck } from "lucide-react";
 import { useMemo } from "react";
 import type { AaveBaseReserve } from "@/lib/defi/aave";
 import { AaveActionPreview } from "./aave-action-preview";
+import { SkyVaultCard } from "./sky-vault-card";
 
 type MarketResponse = { market: string; chainId: number; name: string; reserves: AaveBaseReserve[]; observedAt: string; authority: string };
 
@@ -29,6 +30,7 @@ export function EarnWorkspace() {
     {market.isPending && <section className="panel walletLoading"><LoaderCircle className="spin" size={20} /><div><strong>Reading Base markets</strong><span>Loading current Aave liquidity and rates.</span></div></section>}
     {market.error && <div className="sandboxAlert error" role="alert">{market.error.message}</div>}
     <div className="strategyGrid">
+      <SkyVaultCard walletAddress={wallet?.address} />
       {market.data?.reserves.filter((reserve) => ["USDC", "WETH"].includes(reserve.symbol)).map((reserve) => <article className="panel strategyCard" key={reserve.symbol}>
         <div className="strategyTop"><span className="strategyGlyph">A3</span><span className="statusBadge neutral"><i /> Aave on Base</span></div>
         <p className="eyebrow">AAVE V3</p><h2>Earn with {reserve.symbol}</h2>
