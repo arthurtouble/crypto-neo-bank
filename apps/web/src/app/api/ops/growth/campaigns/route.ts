@@ -1,8 +1,25 @@
 import { env } from "cloudflare:workers";
-import { z } from "zod";
 import { AuthenticationError, AuthorizationError, requireOperationsAdmin } from "@/lib/auth/admin";
-import { writeAuditEvent } from "@/lib/security/audit";
 
-const schema = z.object({ slug: z.string().regex(/^[a-z0-9-]{2,80}$/), name: z.string().min(2).max(100), campaignType: z.enum(["founder","partner","content","creator","event","paid","referral"]), partnerLabel: z.string().max(100).nullable().optional(), approvedCountries: z.array(z.string().regex(/^[A-Z]{2}$/)).max(50), status: z.enum(["draft","active","paused","closed"]).default("draft"), fixedCostUsd: z.number().nonnegative().nullable().optional(), disclosureType: z.string().max(80).nullable().optional(), publishedAssetUrl: z.string().url().max(500).nullable().optional(), approvalEvidence: z.string().max(500).nullable().optional(), takedownAt: z.string().datetime().nullable().optional() }).strict();
-export async function GET(request: Request) { const traceId = crypto.randomUUID(); try { await requireOperationsAdmin(request); const rows = await env.PROJECTION_DB.prepare("SELECT * FROM growth_campaigns ORDER BY created_at DESC LIMIT 100").all(); return Response.json({ campaigns: rows.results, traceId }, { headers: { "Cache-Control": "no-store" } }); } catch (error) { if (error instanceof AuthenticationError) return Response.json({ error: "unauthorized", traceId }, { status: 401 }); if (error instanceof AuthorizationError) return Response.json({ error: "forbidden", traceId }, { status: 403 }); return Response.json({ error: "campaigns_unavailable", traceId }, { status: 503 }); } }
-export async function POST(request: Request) { const traceId = crypto.randomUUID(); try { const admin = await requireOperationsAdmin(request); const input = schema.parse(await request.json()); const id = crypto.randomUUID(); const now = new Date().toISOString(); await env.PROJECTION_DB.prepare(`INSERT INTO growth_campaigns (campaign_id, slug, name, campaign_type, partner_label, approved_countries_json, status, fixed_cost_usd, disclosure_type, published_asset_url, approval_evidence, takedown_at, created_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(id, input.slug, input.name, input.campaignType, input.partnerLabel ?? null, JSON.stringify(input.approvedCountries), input.status, input.fixedCostUsd ?? null, input.disclosureType ?? null, input.publishedAssetUrl ?? null, input.approvalEvidence ?? null, input.takedownAt ?? null, admin.subjectReference, now, now).run(); await writeAuditEvent(env.PROJECTION_DB, { actorType: "operator", actorReference: admin.subjectReference, action: "growth_campaign_created", targetType: "growth_campaign", targetReference: id, evidence: { slug: input.slug, status: input.status } }); return Response.json({ campaignId: id, waitlistUrl: `${new URL(request.url).origin}/waitlist?partner=${input.slug}&utm_campaign=${input.slug}`, traceId }, { status: 201 }); } catch (error) { if (error instanceof AuthenticationError) return Response.json({ error: "unauthorized", traceId }, { status: 401 }); if (error instanceof AuthorizationError) return Response.json({ error: "forbidden", traceId }, { status: 403 }); if (error instanceof z.ZodError) return Response.json({ error: "invalid_campaign", traceId }, { status: 400 }); return Response.json({ error: "campaign_create_failed", traceId }, { status: 503 }); } }
+const noStore = { "Cache-Control": "no-store" };
+export async function GET(request: Request) {
+  try {
+    await requireOperationsAdmin(request);
+    const rows = await env.PROJECTION_DB.prepare("SELECT * FROM growth_campaigns ORDER BY created_at DESC LIMIT 100").all();
+    return Response.json({ campaigns: rows.results }, { headers: noStore });
+  } catch (error) {
+    if (error instanceof AuthenticationError) return Response.json({ error: "unauthorized" }, { status: 401, headers: noStore });
+    if (error instanceof AuthorizationError) return Response.json({ error: "forbidden" }, { status: 403, headers: noStore });
+    return Response.json({ error: "campaigns_unavailable" }, { status: 503, headers: noStore });
+  }
+}
+export async function POST(request: Request) {
+  try {
+    await requireOperationsAdmin(request);
+    return Response.json({ error: "growth_campaigns_retired" }, { status: 410, headers: noStore });
+  } catch (error) {
+    if (error instanceof AuthenticationError) return Response.json({ error: "unauthorized" }, { status: 401, headers: noStore });
+    if (error instanceof AuthorizationError) return Response.json({ error: "forbidden" }, { status: 403, headers: noStore });
+    return Response.json({ error: "campaigns_unavailable" }, { status: 503, headers: noStore });
+  }
+}

@@ -6,7 +6,7 @@ vi.mock("cloudflare:workers", () => ({ env: { get PROJECTION_DB() { return state
 vi.mock("@/lib/auth/server", () => ({ AuthenticationError: class extends Error {}, requireVerifiedSubject: async () => ({ subjectReference: "alice" }) }));
 
 import { POST } from "@/app/api/growth/consent/route";
-import { hasConsent } from "@/lib/growth/lifecycle";
+import { hasConsent } from "@/lib/growth/consent-state";
 
 function d1(db: DatabaseSync): D1Database {
   return { prepare(sql: string) { return { bind(...args: unknown[]) {
