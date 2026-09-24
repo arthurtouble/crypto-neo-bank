@@ -6,6 +6,10 @@ const url = new URL(target);
 if (!/^https?:$/.test(url.protocol) || url.pathname !== "/" || url.search || url.hash)
   throw new Error("AURA_SMOKE_URL must be a deployment origin without a path or query.");
 const baseUrl = url.origin;
+const docsUrl = process.env.AURA_SMOKE_DOCS_URL ?? "https://aurel-docs.aurel-events.workers.dev";
+const docsOrigin = new URL(docsUrl);
+if (docsOrigin.protocol !== "https:" || docsOrigin.origin !== docsUrl)
+  throw new Error("AURA_SMOKE_DOCS_URL must be an HTTPS origin without a path or query.");
 let failures = 0;
 
 function assert(condition, message) {
@@ -27,7 +31,7 @@ assert(home.headers.get("content-security-policy")?.includes("frame-ancestors 'n
 
 const docs = await request("/docs");
 assert([301, 302, 307, 308].includes(docs.status), `documentation redirects to dedicated site (${docs.status})`);
-assert(docs.headers.get("location") === "https://aurel-docs.aurel-events.workers.dev", "documentation redirect uses the canonical docs origin");
+assert(docs.headers.get("location") === docsUrl, "documentation redirects to the selected docs origin");
 
 const health = await request("/api/health");
 const healthBody = await health.json().catch(() => ({}));

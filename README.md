@@ -22,7 +22,7 @@ pnpm test:e2e
 pnpm build
 ```
 
-For an already deployed environment, set `AURA_SMOKE_URL` to its exact origin and run `pnpm test:deployment`. The command has no default target.
+For an already deployed environment, set `AURA_SMOKE_URL` to its exact origin and run `pnpm test:deployment`. Set `AURA_SMOKE_DOCS_URL` when its docs origin differs from the current production docs origin. The command has no default app target.
 
 The web app is in `apps/web`, public documentation is in `apps/docs`, and the internal knowledge base is in `apps/kb`. Cloudflare bindings are configured in `apps/web/wrangler.jsonc`; D1 migrations are in `infra/d1/migrations`. Local development uses isolated Miniflare state. This branch is deployed only to the isolated [Aura development Worker](./docs/operations/aura-development-worker.md). The original Worker and D1 are separate.
 
