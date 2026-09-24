@@ -54,11 +54,6 @@ export default defineConfig({
           { label: "Responsibility matrix", slug: "compliance/compliance-responsibility-matrix" },
           { label: "Provider requirements", slug: "compliance/provider-requirements-matrix" },
           { label: "Partner diligence", slug: "compliance/partner-diligence" }
-        ] },
-        { label: "Growth", items: [
-          { label: "Go-to-market plan", slug: "growth/go-to-market-and-growth-plan" },
-          { label: "Growth implementation", slug: "growth/marketing-growth-implementation-spec" },
-          { label: "Growth operations runbook", slug: "growth/growth-operations-runbook" }
         ] }
       ],
       head: [

@@ -154,7 +154,7 @@ The focused tests and full 1,100-test web suite plus nine mainnet-readiness test
 
 This is the release ledger for the product-parity branch. A green build is not permission to move money. The appropriate near-term target is an invite-only engineering beta with designated testers and small funds, after its access policy is verified. Aurel is **not** approved for a public financial-service launch. Keep every action whose authority or evidence is missing disabled.
 
-The [approved product design](../../docs/superpowers/specs/2026-09-22-aurel-product-parity-design.md) defines the financial-authority and safety rules. The [roadmap](../../PRODUCT_PARITY_ROADMAP.md) describes customer-facing scope. This ledger distinguishes work that can be completed in code from evidence that requires an operator, partner, independent reviewer, or counsel.
+The [approved historical product design](../../docs/superpowers/specs/2026-09-22-aurel-product-parity-design.md) defines the financial-authority and safety rules. The [Aura release plan](./aura-production-release-plan.md) records current customer-facing scope and remaining gates. This ledger distinguishes work that can be completed in code from evidence that requires an operator, partner, independent reviewer, or counsel.
 
 ## Release decision
 
