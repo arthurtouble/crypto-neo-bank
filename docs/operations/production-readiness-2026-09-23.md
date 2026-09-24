@@ -1,5 +1,11 @@
 # Production readiness — 23 September 2026
 
+## 24 September Swap route-list clarity
+
+When a live quote response contains both reviewable and quote-only routes, the Swap screen now places reviewable routes first, preserving the provider's order within each group. It labels planless routes **Quote only** and does not offer them for review or signing. This changes presentation and default selection, not which exact calls pass server validation. In particular, the default USDC-to-native-ETH pair can remain quote-only; the reviewed direct pool is USDC/WETH, and this release does not disguise one asset as the other.
+
+Two regressions failed against the previous behavior and now pass. Verification passed 1,189 web unit tests, nine readiness-script checks, workspace typechecks, lint, app and 49-page docs builds, and 42 desktop/mobile browser cases with two intentional skips. The first browser run could not bind the local Cloudflare inspector port inside the shell sandbox; the identical run passed with local-port permission. No migration was added. App candidate `46c57fc6-cfd4-4920-9588-1d657cd2b600` and docs candidate `5d9d911a-953c-40af-9dee-c12ce3735e13` passed version-preview smoke and were promoted to 100% of the already approved workers.dev **development** URLs. Canonical app smoke and the docs page passed afterward. Read-only D1 checks returned `direct_transfers=0`, `swaps=0`, `cross_chain=0`, and `defi_actions=0` before and after promotion. There was no authenticated funded route review, wallet signature, or transaction. The release gates below remain open.
+
 ## 24 September verified-first Swap picker
 
 An authenticated check of the workers.dev development app found that opening the Swap asset picker without a search showed unverified, lookalike tokens ahead of familiar assets. The empty-search view now lists only Aurel-verified assets. Search remains open to the broader LI.FI asset universe, including an exact contract-address lookup, and labels unverified results. This is a discovery and presentation change, not token endorsement, route approval, or signing authority. The customer Swap guide reflects the distinction. The default USDC-to-native-ETH pair is still not among the narrow directly reviewed USDC/WETH execution paths; a visible pair does not imply it can be executed.
