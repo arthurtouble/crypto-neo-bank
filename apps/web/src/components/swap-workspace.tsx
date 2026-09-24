@@ -4,7 +4,7 @@ import { useConnectWallet, usePrivy, useSendTransaction, useWallets } from "@pri
 import { useQuery } from "@tanstack/react-query";
 import { ArrowDownUp, LoaderCircle } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useBalance, useReadContract } from "wagmi";
 import { erc20Abi, formatUnits, getAddress, parseUnits } from "viem";
 import { SUPPORTED_CHAINS } from "@/config/chains";
@@ -218,6 +218,8 @@ export function SwapWorkspace() {
     query: { enabled: Boolean(address && source?.address) } });
   const availableRaw = source?.address === null ? nativeBalance.data?.value : tokenBalance.data;
   const reviewKey = makeSwapReviewKey({ fromAssetId, toAssetId, amount, walletAddress: address ?? "", slippageBps });
+  const liveReviewKey = useRef(reviewKey);
+  useLayoutEffect(() => { liveReviewKey.current = reviewKey; }, [reviewKey]);
   const liveResult = result?.key === reviewKey ? result.data : null;
   const quote = liveResult?.quotes.find((item) => item.quoteId === selectedQuoteId) ?? liveResult?.quotes[0] ?? null;
   const freshQuote = quote && quoteIsFresh(quote.expiresAt, now) ? quote : null;
@@ -332,7 +334,7 @@ export function SwapWorkspace() {
       if (!token) throw new Error("Your secure session expired. Sign in again before swapping.");
       const result = await submitPreparedSwap({ prepared: preparedSwap.result, walletAddress: address,
         planId: preparedSwap.planId, reviewKey: preparedSwap.key, currentReviewKey: reviewKey, token,
-        isReviewCurrent: () => reviewVersion.current === version,
+        isReviewCurrent: () => reviewVersion.current === version && liveReviewKey.current === preparedSwap.key,
         send: (transaction) => { walletOpened = true; return sendTransaction(transaction, { address,
           uiOptions: { description: `Exchange ${amount} ${source?.symbol ?? "tokens"}. Review the request in your wallet.`,
             buttonText: "Confirm swap", successHeader: "Swap submitted", isCancellable: true } }); },
@@ -345,8 +347,10 @@ export function SwapWorkspace() {
           setSubmissionUncertain(true);
           setReviewErrorText(caught instanceof Error ? `${caught.message} Check your wallet activity before trying again.` : "Wallet confirmation did not return a hash. Check your wallet activity before trying again.");
         } else {
-          clearReview();
-          setError(caught instanceof Error ? caught.message : "Find a new route before continuing.");
+          if (reviewVersion.current === version) {
+            clearReview();
+            setError(caught instanceof Error ? caught.message : "Find a new route before continuing.");
+          }
         }
       }
     } finally { setSubmitting(false); }

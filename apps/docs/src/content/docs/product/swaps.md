@@ -25,7 +25,7 @@ LI.FI supplies cross-network and broader asset route data. For Base USDC and WET
 
 ## Before you confirm
 
-**Review Swap** checks the route against your account controls. If the route passes, Aurel prepares the exact wallet request and shows **Confirm Swap**. Your wallet asks you to approve that request; Aurel cannot sign it for you. A quote, a successful review, and a wallet request are not completed trades. After broadcast, the transaction remains pending until its on-chain result is verified.
+**Review Swap** checks the route against your account controls. If the route passes, Aurel prepares the exact wallet request and shows **Confirm Swap**. When you confirm, Aurel checks the route and your account controls again before opening your wallet. If anything has changed or the quote has expired, find a new route. Your wallet asks you to approve the request; Aurel cannot sign it for you. A quote, a successful review, and a wallet request are not completed trades. After broadcast, the transaction remains pending until its on-chain result is verified.
 
 If a token needs approval, your wallet asks you to approve only the amount for this trade. This is a separate transaction; it does not submit the swap. Some tokens need an existing approval reset to zero first. After the approval is confirmed, find a new route—Aurel never reuses the old quote. An approval may remain on chain if the swap fails or is never submitted, and you can revoke it separately. Finding a route does not mean it can be traded.
 

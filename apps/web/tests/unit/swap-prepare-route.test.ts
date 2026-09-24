@@ -233,6 +233,24 @@ describe("governed Swap preparation boundary", () => {
       db.exec("UPDATE feature_flags SET audience='beta' WHERE flag_key='swaps'");
       db.exec("UPDATE security_profiles SET account_locked=1 WHERE subject_reference='did:privy:owner'");
       expect(current()).toBeUndefined();
+      db.exec("UPDATE security_profiles SET account_locked=0, daily_limit_usd=0.5 WHERE subject_reference='did:privy:owner'");
+      expect(current()).toBeUndefined();
+      db.exec("UPDATE security_profiles SET daily_limit_usd=25000 WHERE subject_reference='did:privy:owner'");
+      db.exec(`UPDATE intent_prepared_calls SET reported_hash='0x${"a".repeat(64)}', verification_state='pending' WHERE intent_id='${intentId}'`);
+      expect(current()).toBeUndefined();
+    } finally { db.close(); }
+  });
+
+  it("the final recheck denies a plan that expires after its call was prepared", async () => {
+    expect((await post()).status).toBe(201);
+    const db = seededCommitDatabase();
+    try {
+      expect(db.prepare(fixture.inserted[0]).run(...fixture.insertValues[0] as Array<string | number | null>).changes).toBe(1);
+      expect((await post({ intentId, planId, walletAddress: wallet, recheck: true })).status).toBe(200);
+      const current = () => db.prepare(fixture.recheckQuery).get(...fixture.recheckValues as Array<string | number | null>);
+      expect(current()).toMatchObject({ intent_id: intentId });
+      db.exec(`UPDATE swap_quote_plans SET status='expired' WHERE plan_id='${planId}'`);
+      expect(current()).toBeUndefined();
     } finally { db.close(); }
   });
 
