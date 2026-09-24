@@ -12,10 +12,10 @@ function compact(address?: string) {
 }
 
 export function ClientIdentity() {
-  const { user } = usePrivy();
+  const { authenticated, user } = usePrivy();
   const { wallets } = useWallets();
   const wallet = useMemo(() => wallets.find((item) => item.walletClientType === "privy") ?? wallets[0], [wallets]);
-  const label = user?.email?.address ?? user?.google?.email ?? "Private client";
+  const label = authenticated ? user?.email?.address ?? user?.google?.email ?? "Aura account" : "Explore Aura";
 
-  return <div className="clientIdentity"><span className="avatar">{initials(label)}</span><span><strong>{label}</strong><small>{compact(wallet?.address)}</small></span></div>;
+  return <div className="clientIdentity"><span className="avatar">{initials(label)}</span><span><strong>{label}</strong><small>{authenticated ? compact(wallet?.address) : "Guest view"}</small></span></div>;
 }
