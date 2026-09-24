@@ -19,10 +19,13 @@ const change = z.object({ alertId: z.string().uuid(), version: z.number().int().
   .strict().refine((value) => value.action === "edit"
     ? [value.direction, value.threshold, value.hysteresisBps, value.cooldownSeconds].some((field) => field !== undefined)
     : [value.direction, value.threshold, value.hysteresisBps, value.cooldownSeconds].every((field) => field === undefined));
+const dismiss = z.object({ action: z.literal("dismiss"), occurrenceId: z.string().min(1).max(128) }).strict();
 
 type AlertRow = { alert_id: string; pair_id: string; base_asset_id: string; quote_asset_id: string; quote_currency: string; mapping_version: string;
   direction: "above" | "below"; threshold_decimal: string; hysteresis_bps: number; cooldown_seconds: number;
   status: "active" | "paused" | "cancelled"; threshold_version: number; created_at: string; updated_at: string };
+type TriggeredRow = { occurrence_id: string; alert_id: string; pair_id: string; direction: "above" | "below";
+  threshold_decimal: string; observed_price_decimal: string; source_observed_at: string };
 
 function json(body: unknown, status = 200, headers: Record<string, string> = {}) {
   return Response.json(body, { status, headers: { ...noStore, ...headers } });
@@ -60,10 +63,23 @@ export async function GET(request: Request) {
   const traceId = crypto.randomUUID();
   try {
     const subject = await requireVerifiedSubject(request);
-    const rows = await env.PROJECTION_DB.prepare("SELECT * FROM price_alerts WHERE subject_reference = ? AND status != 'cancelled' ORDER BY created_at DESC LIMIT 100")
-      .bind(subject.subjectReference).all<AlertRow>();
+    const [rows, triggered] = await Promise.all([
+      env.PROJECTION_DB.prepare("SELECT * FROM price_alerts WHERE subject_reference = ? AND status != 'cancelled' ORDER BY created_at DESC LIMIT 100")
+        .bind(subject.subjectReference).all<AlertRow>(),
+      env.PROJECTION_DB.prepare(`SELECT o.occurrence_id, o.alert_id, a.pair_id, a.direction, a.threshold_decimal,
+          o.observed_price_decimal, o.source_observed_at
+        FROM swap_reminder_occurrences o JOIN price_alerts a
+          ON a.alert_id = o.alert_id AND a.subject_reference = o.subject_reference
+        WHERE o.subject_reference = ? AND o.kind = 'alert' AND o.reminder_state = 'due'
+          AND a.status = 'active' AND o.threshold_version = a.threshold_version
+        ORDER BY o.source_observed_at DESC LIMIT 50`)
+        .bind(subject.subjectReference).all<TriggeredRow>()
+    ]);
     const planningAvailable = await featureEnabled(env.PROJECTION_DB, "swaps");
-    return json({ alerts: rows.results.map(present), planningAvailable, execution: "customer_review_required", delivery: "not_active", traceId });
+    return json({ alerts: rows.results.map(present), triggered: triggered.results.map((row) => ({
+      occurrenceId: row.occurrence_id, alertId: row.alert_id, pairId: row.pair_id, direction: row.direction,
+      threshold: row.threshold_decimal, observedPrice: row.observed_price_decimal, sourceObservedAt: row.source_observed_at
+    })), planningAvailable, execution: "customer_review_required", delivery: "not_active", traceId });
   } catch (error) { return failure(error, traceId, "read"); }
 }
 
@@ -108,7 +124,26 @@ export async function PATCH(request: Request) {
   try {
     const subject = await requireVerifiedSubject(request);
     await enforceRateLimit(env.PROJECTION_DB, { namespace: "price_alert_mutation", subject: subject.subjectReference, limit: 24, windowSeconds: 3600 });
-    const input = change.parse(await request.json());
+    const body = await request.json();
+    const dismissal = dismiss.safeParse(body);
+    if (dismissal.success) {
+      const now = new Date().toISOString();
+      const [updated] = await env.PROJECTION_DB.batch([
+        env.PROJECTION_DB.prepare(`UPDATE swap_reminder_occurrences SET reminder_state = 'dismissed', updated_at = ?
+          WHERE occurrence_id = ? AND subject_reference = ? AND kind = 'alert' AND reminder_state = 'due'
+            AND EXISTS (SELECT 1 FROM price_alerts a WHERE a.alert_id = swap_reminder_occurrences.alert_id
+              AND a.subject_reference = swap_reminder_occurrences.subject_reference AND a.status = 'active'
+              AND a.threshold_version = swap_reminder_occurrences.threshold_version)`)
+          .bind(now, dismissal.data.occurrenceId, subject.subjectReference),
+        env.PROJECTION_DB.prepare(`INSERT INTO audit_events (audit_id, subject_reference, actor_type, actor_reference, action, target_type, target_reference, evidence_json, occurred_at)
+          SELECT ?, ?, 'customer', ?, 'swap.alert.dismissed', 'swap_reminder_occurrence', ?, '{}', ? WHERE changes() = 1`)
+          .bind(crypto.randomUUID(), subject.subjectReference, subject.subjectReference, dismissal.data.occurrenceId, now)
+      ]);
+      return updated.meta.changes === 1
+        ? json({ dismissed: true, execution: "customer_review_required", traceId })
+        : json({ error: "occurrence_not_found", traceId }, 404);
+    }
+    const input = change.parse(body);
     const current = await env.PROJECTION_DB.prepare("SELECT * FROM price_alerts WHERE alert_id = ? AND subject_reference = ?")
       .bind(input.alertId, subject.subjectReference).first<AlertRow>();
     if (!current) return json({ error: "alert_not_found", traceId }, 404);

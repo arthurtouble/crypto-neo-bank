@@ -5,10 +5,14 @@ export function validAlertThreshold(value: string): boolean {
   return /^(?:0|[1-9]\d{0,59})(?:\.\d{1,18})?$/.test(value) && /[1-9]/.test(value);
 }
 
+export function alertPriceLabel(price: string): string {
+  const [whole, fraction] = price.split(".");
+  const formatted = `${whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}${fraction === undefined ? "" : `.${fraction}`}`;
+  return `$${formatted}`;
+}
+
 export function alertRuleLabel(direction: AlertDirection, threshold: string): string {
-  const [whole, fraction] = threshold.split(".");
-  const price = `${whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}${fraction === undefined ? "" : `.${fraction}`}`;
-  return `ETH ${direction} $${price}`;
+  return `ETH ${direction} ${alertPriceLabel(threshold)}`;
 }
 
 export function alertStateLabel(status: AlertStatus): string {

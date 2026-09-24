@@ -514,6 +514,9 @@
 .priceAlertsInactive { margin: 16px 0; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--surface-subtle); }
 .priceAlertsEmpty { margin: 20px 0 0; }
 .priceAlertList { margin: 0; padding: 0; list-style: none; }
+.priceAlertTriggers { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border); }
+.priceAlertTriggers h4 { margin: 0 0 6px; font-size: var(--type-row-title); }
+.priceAlertTriggers p { margin: 0 0 8px; }
 .priceAlertRow { min-height: 68px; padding: 12px 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--border); }
 .priceAlertRow > div:first-child { display: grid; gap: 4px; }
 .priceAlertRow strong { font-size: var(--type-body); }

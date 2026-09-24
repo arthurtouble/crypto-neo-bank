@@ -31,7 +31,7 @@ If a token needs approval, your wallet asks you to approve only the amount for t
 
 Swap confirmation is subject to account eligibility and availability. It is not currently enabled for customers.
 
-You can save a recurring Swap reminder. When it is due, Aurel can show it in the app and take you back to a fresh route review. It does not reuse an old quote or sign for you. You can also save an ETH/USD price-alert preference, but price checking and delivery are not active yet; saving an alert is not a promise that you will be notified. Neither a reminder nor an alert is an order.
+You can save a recurring Swap reminder. When it is due, Aurel can show it in the app and take you back to a fresh route review. It does not reuse an old quote or sign for you. You can also save an ETH/USD price-alert preference. If a trusted observation triggers an alert, Swap shows the observed price and time, and you can dismiss it. That price is not a live trading quote. Automated price checking and delivery are not active yet, so saving an alert is not a promise that you will be notified. Neither a reminder nor an alert is an order.
 
 Cross-network delivery needs separate destination evidence. A successful source transaction alone does not prove that the received asset arrived. Aurel checks the routing provider's status against finalized transactions on both networks and the amount credited to your wallet. If delivery is delayed, partial, refunded, or cannot be verified, the swap stays unresolved and is flagged for review. Do not send it again just because the destination balance has not updated.
 

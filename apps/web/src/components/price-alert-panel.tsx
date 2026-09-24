@@ -4,14 +4,16 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { usePrivy } from "@privy-io/react-auth";
 import { X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { alertListState, alertRuleLabel, alertStateLabel, validAlertThreshold, type AlertDirection, type AlertStatus } from "@/lib/swap/price-alert-view-model";
+import { alertListState, alertPriceLabel, alertRuleLabel, alertStateLabel, validAlertThreshold, type AlertDirection, type AlertStatus } from "@/lib/swap/price-alert-view-model";
 
 type PriceAlert = {
   alertId: string; pairId: "ETH/USD"; baseAssetId: string; quoteAssetId: string; quoteCurrency: "USD"; mappingVersion: string;
   direction: AlertDirection; threshold: string; hysteresisBps: number; cooldownSeconds: number; status: AlertStatus;
   thresholdVersion: number; createdAt: string; updatedAt: string;
 };
-type AlertResponse = { alerts: PriceAlert[]; planningAvailable: boolean; delivery: "not_active" };
+type TriggeredAlert = { occurrenceId: string; alertId: string; pairId: "ETH/USD"; direction: AlertDirection;
+  threshold: string; observedPrice: string; sourceObservedAt: string };
+type AlertResponse = { alerts: PriceAlert[]; triggered: TriggeredAlert[]; planningAvailable: boolean; delivery: "not_active" };
 type MutationAction = "pause" | "resume" | "cancel";
 
 function responseError(status: number): string {
@@ -41,10 +43,19 @@ export function PriceAlertRow({ alert, busy, planningAvailable = true, onEdit, o
   </li>;
 }
 
+export function TriggeredPriceAlertRow({ occurrence, busy = false, onDismiss }: { occurrence: TriggeredAlert; busy?: boolean; onDismiss?(): void }) {
+  return <li className="priceAlertRow">
+    <div><strong>ETH reached {alertPriceLabel(occurrence.observedPrice)}</strong>
+      <small>{alertRuleLabel(occurrence.direction, occurrence.threshold)} · Observed <time dateTime={occurrence.sourceObservedAt}>{new Date(occurrence.sourceObservedAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}</time></small></div>
+    {onDismiss && <div className="priceAlertActions"><button type="button" disabled={busy} onClick={onDismiss}>Dismiss</button></div>}
+  </li>;
+}
+
 export function PriceAlertPanel() {
   const { getAccessToken } = usePrivy();
   const newAlertButton = useRef<HTMLButtonElement>(null);
   const [alerts, setAlerts] = useState<PriceAlert[]>([]);
+  const [triggered, setTriggered] = useState<TriggeredAlert[]>([]);
   const [planningAvailable, setPlanningAvailable] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loaded, setLoaded] = useState(false);
@@ -68,7 +79,7 @@ export function PriceAlertPanel() {
 
   const refresh = useCallback(async (signal?: AbortSignal) => {
     const response = await request("GET", undefined, signal) as AlertResponse;
-    if (!signal?.aborted) { setAlerts(response.alerts); setPlanningAvailable(response.planningAvailable); setLoaded(true); }
+    if (!signal?.aborted) { setAlerts(response.alerts); setTriggered(response.triggered); setPlanningAvailable(response.planningAvailable); setLoaded(true); }
   }, [request]);
 
   useEffect(() => {
@@ -113,6 +124,16 @@ export function PriceAlertPanel() {
     } finally { setBusy(false); }
   }
 
+  async function dismiss(occurrence: TriggeredAlert) {
+    setBusy(true); setError(null); setNotice(null);
+    try {
+      const outcome = await commitAndRefresh(() => request("PATCH", { action: "dismiss", occurrenceId: occurrence.occurrenceId }), refresh);
+      setNotice("Alert dismissed.");
+      if (outcome === "refresh_failed") setError("Dismissed, but the list could not refresh. Try again.");
+    } catch (caught) { setError(caught instanceof Error ? caught.message : "Could not dismiss alert."); }
+    finally { setBusy(false); }
+  }
+
   return <section className="priceAlerts" aria-labelledby="priceAlertsTitle">
     <div className="priceAlertsHeading"><div><h3 id="priceAlertsTitle">Price Alerts</h3><p>Save an ETH price threshold to revisit later.</p></div>{planningAvailable && <button ref={newAlertButton} className="button secondary" type="button" onClick={openCreate} disabled={busy}>New Alert</button>}</div>
     <p className="priceAlertsInactive">{planningAvailable ? "Price monitoring and notifications are not active yet. No trade will be placed." : "Price alerts aren’t available for this account yet."}</p>
@@ -121,6 +142,8 @@ export function PriceAlertPanel() {
     {listState === "loading" ? <p role="status">Loading alerts…</p>
       : listState === "empty" ? <p className="priceAlertsEmpty">No saved alerts.</p>
       : listState === "populated" ? <ul className="priceAlertList">{alerts.map((alert) => <PriceAlertRow key={alert.alertId} alert={alert} busy={busy} planningAvailable={planningAvailable} onEdit={openEdit} onChange={(item, action) => void change(item, action)} />)}</ul> : null}
+    {triggered.length > 0 && <div className="priceAlertTriggers"><h4>Triggered</h4><p>Observed prices aren’t live quotes. Check the current route before swapping.</p>
+      <ul className="priceAlertList">{triggered.map((occurrence) => <TriggeredPriceAlertRow key={occurrence.occurrenceId} occurrence={occurrence} busy={busy} onDismiss={() => void dismiss(occurrence)} />)}</ul></div>}
     <Dialog.Root open={modal !== null} onOpenChange={(open) => { if (!open && !busy) setModal(null); }}>
       <Dialog.Portal><Dialog.Overlay className="swapPickerOverlay" /><Dialog.Content className="swapPickerDialog priceAlertDialog" onCloseAutoFocus={(event) => { event.preventDefault(); newAlertButton.current?.focus(); }}>
         <div className="swapPickerHeading"><Dialog.Title>{modal === "create" ? "New Price Alert" : "Edit Price Alert"}</Dialog.Title><Dialog.Close className="swapPickerClose" aria-label="Close" disabled={busy}><X size={18} /></Dialog.Close></div>

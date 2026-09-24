@@ -56,6 +56,41 @@ beforeEach(() => {
 afterEach(() => { state.database = null; sqlite.close(); });
 
 describe("customer price alert API", () => {
+  it("shows only this customer's current triggered alerts with the source price and time", async () => {
+    const created = await post(input());
+    const { alert } = await created.json() as { alert: { alertId: string } };
+    sqlite.prepare(`INSERT INTO swap_reminder_occurrences
+      (occurrence_id,subject_reference,kind,alert_id,threshold_version,crossing_observation_id,observed_price_decimal,source_observed_at,created_at)
+      VALUES ('alice-trigger','alice','alert',?,1,'trade-42','3501.25','2026-09-23T10:00:00.123456Z','2026-09-23T10:01:00Z')`).run(alert.alertId);
+    const own = await (await GET(new Request("https://aurel.test/api/swap/alerts"))).json() as { triggered: unknown[]; execution: string };
+    expect(own.triggered).toEqual([{ occurrenceId: "alice-trigger", alertId: alert.alertId, direction: "above", threshold: "3500.5",
+      observedPrice: "3501.25", sourceObservedAt: "2026-09-23T10:00:00.123456Z", pairId: "ETH/USD" }]);
+    expect(own.execution).toBe("customer_review_required");
+    state.subject = "bob";
+    expect((await (await GET(new Request("https://aurel.test/api/swap/alerts"))).json() as { triggered: unknown[] }).triggered).toEqual([]);
+    state.subject = "alice";
+    expect((await patch({ alertId: alert.alertId, version: 1, action: "edit", threshold: "3600" })).status).toBe(200);
+    expect((await (await GET(new Request("https://aurel.test/api/swap/alerts"))).json() as { triggered: unknown[] }).triggered).toEqual([]);
+  });
+
+  it("lets the owner dismiss a triggered alert without trading authority", async () => {
+    const { alert } = await (await post(input())).json() as { alert: { alertId: string } };
+    sqlite.prepare(`INSERT INTO swap_reminder_occurrences
+      (occurrence_id,subject_reference,kind,alert_id,threshold_version,crossing_observation_id,observed_price_decimal,source_observed_at,created_at)
+      VALUES ('trigger-1','alice','alert',?,1,'trade-1','3502','2026-09-23T10:00:00Z','2026-09-23T10:01:00Z')`).run(alert.alertId);
+    state.subject = "bob";
+    expect((await patch({ action: "dismiss", occurrenceId: "trigger-1" })).status).toBe(404);
+    state.subject = "alice";
+    state.feature = false;
+    sqlite.exec("UPDATE security_profiles SET account_locked=1 WHERE subject_reference='alice'");
+    const dismissed = await patch({ action: "dismiss", occurrenceId: "trigger-1" });
+    expect(dismissed.status).toBe(200);
+    expect(await dismissed.json()).toMatchObject({ dismissed: true, execution: "customer_review_required" });
+    expect(sqlite.prepare("SELECT reminder_state FROM swap_reminder_occurrences WHERE occurrence_id='trigger-1'").get()).toMatchObject({ reminder_state: "dismissed" });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM audit_events WHERE action='swap.alert.dismissed'").get()).toMatchObject({ count: 1 });
+    expect((await patch({ action: "dismiss", occurrenceId: "trigger-1" })).status).toBe(404);
+  });
+
   it("keeps a reviewed alert subject-bound and non-executable", async () => {
     const created = await post(input());
     expect(created.status).toBe(201);
