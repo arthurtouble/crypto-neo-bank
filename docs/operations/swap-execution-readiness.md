@@ -1,5 +1,7 @@
 # Swap execution readiness
 
+The development app's visible Swap screen now embeds the official LI.FI widget with Privy's connected Wagmi wallet. It lets the wallet approve and submit LI.FI-supported routes directly and shows progress in the widget's Activities view. This is separate from the governed `/api/swap/*` implementation described below: its database flags remain off, and its account transaction controls and Aurel Activity records do not apply to widget transactions. The widget has been built and visually verified on workers.dev, but no funded end-to-end transaction has been performed by the operator.
+
 This page describes what the current implementation can prove. It is not a launch approval.
 
 ## What works in code

@@ -1,4 +1,5 @@
 import dynamic from "next/dynamic";
+import { LifiSwapWorkspace as SwapWorkspace } from "./lifi-swap-workspace";
 
 const WalletWorkspace = dynamic(() => import("./wallet-workspace").then((module) => module.WalletWorkspace));
 const MoneyWorkspace = dynamic(() => import("./money-workspace").then((module) => module.MoneyWorkspace));
@@ -8,7 +9,6 @@ const BorrowWorkspace = dynamic(() => import("./borrow-workspace").then((module)
 const MembershipBenefits = dynamic(() => import("./membership-benefits").then((module) => module.MembershipBenefits));
 const ConciergeWorkspace = dynamic(() => import("./concierge-workspace").then((module) => module.ConciergeWorkspace));
 const ActivityWorkspace = dynamic(() => import("./activity-workspace").then((module) => module.ActivityWorkspace));
-const SwapWorkspace = dynamic(() => import("./swap-workspace").then((module) => module.SwapWorkspace));
 const MarketsWorkspace = dynamic(() => import("./markets-workspace").then((module) => module.MarketsWorkspace));
 const OperationsWorkspace = dynamic(() => import("./operations-workspace").then((module) => module.OperationsWorkspace));
 const SettingsWorkspace = dynamic(() => import("./settings-workspace").then((module) => module.SettingsWorkspace));
