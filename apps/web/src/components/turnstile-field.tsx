@@ -17,11 +17,11 @@ type TurnstileApi = {
   reset: (widgetId: TurnstileWidgetId) => void;
 };
 
-const productionSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+const configuredSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 const localTestSiteKey = "1x00000000000000000000AA";
 
 export function TurnstileField({ action, resetKey = 0 }: { action: string; resetKey?: number }) {
-  const siteKey = productionSiteKey || (process.env.NODE_ENV !== "production" ? localTestSiteKey : "");
+  const siteKey = process.env.NODE_ENV === "production" ? configuredSiteKey : localTestSiteKey;
   const container = useRef<HTMLDivElement>(null);
   const widgetId = useRef<TurnstileWidgetId | null>(null);
   const [token, setToken] = useState("");
