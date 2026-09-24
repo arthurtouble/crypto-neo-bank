@@ -29,7 +29,12 @@ export async function getCuratedLifiQuote(input: z.infer<typeof curatedQuoteInpu
   let response: Response;
   try { response = await fetcher(`https://li.quest/v1/quote?${params}`, { headers: process.env.LIFI_API_KEY ? { "x-lifi-api-key": process.env.LIFI_API_KEY } : undefined, signal: AbortSignal.timeout(15_000) }); }
   catch { throw new CuratedQuoteError("provider_unavailable", "Quotes are temporarily unavailable. Try again."); }
-  if (!response.ok) throw new CuratedQuoteError("no_route", "No route is available for this pair and amount.");
+  if (!response.ok) {
+    await response.body?.cancel();
+    if (response.status === 400 || response.status === 404) throw new CuratedQuoteError("no_route", "No route is available for this pair and amount.");
+    console.warn(JSON.stringify({ event: "swap.lifi_quote_rejected", status: response.status }));
+    throw new CuratedQuoteError("provider_unavailable", "Quotes are temporarily unavailable. Try again.");
+  }
   const quote = await response.json() as Record<string, unknown>;
   const action = quote.action as Record<string, unknown> | undefined;
   const fromToken = action?.fromToken as Record<string, unknown> | undefined;

@@ -37,4 +37,9 @@ describe("curated LI.FI swaps", () => {
       toToken: { chainId: 8453, address: "0x4200000000000000000000000000000000000006" } }, estimate: {}, transactionRequest: {} }));
     await expect(getCuratedLifiQuote(input, fetcher)).rejects.toMatchObject({ code: "invalid_quote" });
   });
+
+  it("does not tell customers a rate limit is an unavailable route", async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response("rate limited", { status: 429 }));
+    await expect(getCuratedLifiQuote(input, fetcher)).rejects.toMatchObject({ code: "provider_unavailable" });
+  });
 });
