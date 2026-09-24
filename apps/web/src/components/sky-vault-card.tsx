@@ -34,7 +34,7 @@ export function SkyVaultCard({ walletAddress }: { walletAddress?: string }) {
       ]);
       const assets = shares ? await client!.readContract({ address: SKY_SUSDS, abi: skyVaultAbi,
         functionName: "convertToAssets", args: [shares] }) : 0n;
-      return { usdc: formatUnits(usdc, 6), susds: formatUnits(assets, 18), shares: shares.toString() };
+      return { usdc: formatUnits(usdc, 6), susds: formatUnits(assets, 18) };
     }, refetchInterval: 30_000
   });
 
@@ -127,6 +127,6 @@ export function SkyVaultCard({ walletAddress }: { walletAddress?: string }) {
       {status && <p role="status">{status}</p>}{error && <p className="formError" role="alert">{error}</p>}
       {hash && <a href={`https://etherscan.io/tx/${hash}`} target="_blank" rel="noreferrer">View Ethereum transaction</a>}
     </form>
-    <p className="authorityFootnote">Onchain balances. Need USDC on Ethereum? <Link href="/app/swap?from=8453%3A0x833589fcd6edb6e08f4c7c32d4f71b54bda02913&to=1%3A0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48">Bridge from Base</Link>.</p>
+    <p className="authorityFootnote">Ethereum ETH pays network fees. Need USDC there? <Link href="/app/swap?from=8453%3A0x833589fcd6edb6e08f4c7c32d4f71b54bda02913&to=1%3A0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48">Bridge from Base</Link>.</p>
   </article>;
 }
