@@ -28,6 +28,8 @@ function mockClient(overrides: Record<string, unknown> = {}) {
     getAssetPrice: 100_000_000n,
     BASE_CURRENCY_UNIT: 100_000_000n,
     balanceOf: 400_000_000n,
+    walletBalanceOf: 300_000_000n,
+    allowance: 200_000_000n,
     getDebtCeiling: 0n,
     ...overrides
   };
@@ -42,6 +44,7 @@ function mockClient(overrides: Record<string, unknown> = {}) {
       if (functionName === "getUserReserveData") return args?.[0] === asset
         ? [200_000_000n, 0n, 100_000_000n, 0n, 100_000_000n, 0n, 0n, 0n, true]
         : [0n, 0n, 0n, 0n, 0n, 0n, 0n, 0n, false];
+      if (functionName === "balanceOf" && args?.[0] === user) return values.walletBalanceOf;
       return values[functionName];
     })
   };
@@ -61,8 +64,10 @@ describe("read-only Aave Base risk snapshot", () => {
       weightedCollateralBase: 160_000_000_000n });
     expect(input.reserve).toMatchObject({ priceBase: 100_000_000n, availableLiquidityRaw: 400_000_000n,
       supplyCapRemainingRaw: 1_499_999_997n, borrowCapRemainingRaw: 899_999_997n });
+    expect(input.wallet).toEqual({ balanceRaw: 300_000_000n, poolAllowanceRaw: 200_000_000n });
     expect(calls.filter((call) => call.functionName === "getUserReserveData")).toHaveLength(2);
     expect(calls.every((call) => call.blockHash === blockHash && call.requireCanonical === true && call.blockNumber === undefined)).toBe(true);
+    expect(calls).toContainEqual(expect.objectContaining({ functionName: "allowance", args: [user, "0xA238Dd80C259a72e81d7e4664a9801593F98d1c5"] }));
     expect(client.getBlock).toHaveBeenCalledTimes(2);
   });
 
@@ -111,6 +116,13 @@ describe("read-only Aave Base risk snapshot", () => {
     const reorg = mockClient();
     reorg.client.getBlock.mockResolvedValueOnce(block).mockResolvedValueOnce({ ...block, hash: `0x${"1".repeat(64)}` });
     await expect(readAaveBaseRiskSnapshot(reorg.client as never, request)).rejects.toThrow(/canonical|block/i);
+  });
+
+  it("fails closed when wallet balance or allowance is unavailable", async () => {
+    for (const overrides of [{ walletBalanceOf: undefined }, { allowance: undefined }]) {
+      const { client } = mockClient(overrides);
+      await expect(readAaveBaseRiskSnapshot(client as never, request)).rejects.toThrow();
+    }
   });
 
   it("fails closed when the RPC does not support canonical block-hash calls", async () => {

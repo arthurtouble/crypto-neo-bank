@@ -22,7 +22,8 @@ const ABI = parseAbi([
   "function getDebtCeiling(address asset) view returns (uint256)",
   "function BASE_CURRENCY_UNIT() view returns (uint256)",
   "function getAssetPrice(address asset) view returns (uint256)",
-  "function balanceOf(address account) view returns (uint256)"
+  "function balanceOf(address account) view returns (uint256)",
+  "function allowance(address owner,address spender) view returns (uint256)"
 ]);
 
 type Request = Pick<AaveRiskInput, "action" | "amountRaw" | "nowMs" | "maxAgeMs" | "minHealthFactorWad"> & {
@@ -56,7 +57,9 @@ function rayUnit(index: bigint): bigint {
 }
 
 /** Reads a disconnected, same-block risk input. No plan, simulation, or signing authority. */
-export async function readAaveBaseRiskSnapshot(client: PublicClient, request: Request): Promise<AaveRiskInput> {
+export async function readAaveBaseRiskSnapshot(client: PublicClient, request: Request): Promise<AaveRiskInput & {
+  wallet: { balanceRaw: bigint; poolAllowanceRaw: bigint };
+}> {
   if (await client.getChainId() !== 8453) throw new Error("Aave Base chain mismatch.");
   const user = address(request.user, "user");
   const asset = address(request.asset, "asset");
@@ -122,6 +125,8 @@ export async function readAaveBaseRiskSnapshot(client: PublicClient, request: Re
   const baseCurrencyUnit = uint(await read(ADDRESSES.oracle, "BASE_CURRENCY_UNIT"), "base currency unit");
   if (baseCurrencyUnit !== 100_000_000n || price === 0n) throw new Error("Aave oracle base or price unavailable.");
   const liquidity = uint(await read(asset, "balanceOf", [aToken]), "available liquidity");
+  const walletBalance = uint(await read(asset, "balanceOf", [user]), "wallet balance");
+  const poolAllowance = uint(await read(asset, "allowance", [user, activePool]), "Pool allowance");
   const paused = flag(await read(ADDRESSES.dataProvider, "getPaused", [asset]), "paused flag");
   const supplyCap = uint(caps[1], "supply cap");
   const borrowCap = uint(caps[0], "borrow cap");
@@ -149,6 +154,7 @@ export async function readAaveBaseRiskSnapshot(client: PublicClient, request: Re
     action: request.action, amountRaw: request.amountRaw, nowMs: request.nowMs,
     maxAgeMs: request.maxAgeMs, minHealthFactorWad: request.minHealthFactorWad,
     snapshot: { blockNumber, blockHash: block.hash, observedAtMs, complete: true },
+    wallet: { balanceRaw: walletBalance, poolAllowanceRaw: poolAllowance },
     reserve: {
       decimals, priceBase: price, liquidationThresholdBps: Number(liquidationThreshold),
       active: flag(configuration[8], "active flag"), paused,
