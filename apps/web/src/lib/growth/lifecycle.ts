@@ -21,10 +21,18 @@ export class LocalLifecycleMessenger implements LifecycleMessenger {
 
 export async function hasConsent(database: D1Database, recipientReference: string, purpose: LifecycleMessage["purpose"]) {
   const column = purpose === "marketing" ? "marketing_consent" : "beta_contact_consent";
-  const application = await database.prepare(`SELECT ${column} AS consent FROM growth_applications WHERE application_id = ?`).bind(recipientReference).first<{ consent: number }>();
-  const subjectApplication = application ?? await database.prepare(`SELECT ga.${column} AS consent FROM growth_subject_links gsl JOIN growth_applications ga ON ga.application_id = gsl.application_id WHERE gsl.subject_reference = ?`).bind(recipientReference).first<{ consent: number }>();
-  if (!subjectApplication?.consent) return false;
-  const latest = await database.prepare(`SELECT gce.action FROM growth_consent_events gce WHERE gce.purpose = ? AND (gce.application_id = ? OR gce.subject_reference = ?) ORDER BY gce.occurred_at DESC LIMIT 1`).bind(purpose, recipientReference, recipientReference).first<{ action: string }>();
+  type ApplicationConsent = { application_id: string; subject_reference: string | null; consent: number };
+  const application = await database.prepare(`SELECT ga.application_id, gsl.subject_reference, ga.${column} AS consent
+    FROM growth_applications ga LEFT JOIN growth_subject_links gsl ON gsl.application_id = ga.application_id
+    WHERE ga.application_id = ?`).bind(recipientReference).first<ApplicationConsent>();
+  const linked = application ?? await database.prepare(`SELECT ga.application_id, gsl.subject_reference, ga.${column} AS consent
+    FROM growth_subject_links gsl JOIN growth_applications ga ON ga.application_id = gsl.application_id
+    WHERE gsl.subject_reference = ?`).bind(recipientReference).first<ApplicationConsent>();
+  if (!linked?.consent) return false;
+  const latest = await database.prepare(`SELECT action FROM growth_consent_events WHERE purpose = ?
+    AND (application_id = ? OR subject_reference = ?)
+    ORDER BY occurred_at DESC, (action = 'withdrawn') DESC LIMIT 1`)
+    .bind(purpose, linked.application_id, linked.subject_reference).first<{ action: string }>();
   return !latest || latest.action === "granted";
 }
 
