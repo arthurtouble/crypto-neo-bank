@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     await enforceRateLimit(env.PROJECTION_DB, { namespace: "aave_action", subject: subject.subjectReference, limit: 20, windowSeconds: 60 });
     const input = actionSchema.parse(await request.json());
     await requireLinkedEvmWallet(subject.subjectReference, input.sender);
-    // The MCP may return executable calldata, but no Aurel-governed plan,
+    // The MCP may return executable calldata, but no Aura-governed plan,
     // action-bound step-up, or protocol-effect verifier exists yet.
     return Response.json({ error: "execution_unavailable", message: "This action isn't available yet.", traceId }, { status: 503, headers: { "Cache-Control": "no-store" } });
   } catch (error) {

@@ -223,7 +223,7 @@ function insertCandidate(candidates: Array<{ asset: CatalogAsset; key: SortKey }
 export async function getCatalogPage(
   input: { query: string; cursor?: string; chainIds: readonly number[] },
   dependencies: Dependencies = {}
-): Promise<{ assets: CatalogAsset[]; nextCursor: string | null; observedAt: string; source: "LI.FI" | "Aurel reviewed" }> {
+): Promise<{ assets: CatalogAsset[]; nextCursor: string | null; observedAt: string; source: "LI.FI" | "Aura reviewed" }> {
   const fetcher = dependencies.fetcher ?? fetch;
   const now = (dependencies.now ?? Date.now)();
   const registry = dependencies.registry ?? CATALOG_REGISTRY;
@@ -247,7 +247,7 @@ export async function getCatalogPage(
       return screening === "verified" && (!query || asset.symbol.toLowerCase().includes(query)
         || asset.name.toLowerCase().includes(query) || asset.address?.includes(query));
     });
-    return { assets, nextCursor: null, observedAt: new Date(now).toISOString(), source: "Aurel reviewed" };
+    return { assets, nextCursor: null, observedAt: new Date(now).toISOString(), source: "Aura reviewed" };
   }
   for (const current of snapshots) {
     observedTimes.push(current.observedAt);

@@ -4,7 +4,7 @@ import { AAVE_BASE_ASSETS, AAVE_BASE_V3_MARKET } from "./aave";
 
 // No provider-prepared call is executable merely because it decodes. This
 // deliberately narrow policy is a prerequisite for, not an activation of,
-// Aurel's still-disabled Aave action path.
+// Aura's still-disabled Aave action path.
 const poolAbi = [
   { type: "function", name: "supply", inputs: [{ type: "address", name: "asset" }, { type: "uint256", name: "amount" }, { type: "address", name: "onBehalfOf" }, { type: "uint16", name: "referralCode" }] },
   { type: "function", name: "withdraw", inputs: [{ type: "address", name: "asset" }, { type: "uint256", name: "amount" }, { type: "address", name: "to" }] },

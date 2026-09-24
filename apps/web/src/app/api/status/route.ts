@@ -27,7 +27,7 @@ export async function GET() {
       status: ["operational", "configured", "ok", "degraded", "unavailable"].includes(check.status) ? check.status : "unavailable",
       checkedAt: check.checked_at
     }));
-    components.unshift({ key: "aurel", label: "Aurel application", status: database ? "operational" : "unavailable", detail: "Product API and operational database", checkedAt: new Date().toISOString() });
+    components.unshift({ key: "aurel", label: "Aura application", status: database ? "operational" : "unavailable", detail: "Product API and operational database", checkedAt: new Date().toISOString() });
     components.push({ key: "privy", label: "Privy authentication", status: process.env.PRIVY_APP_SECRET ? "configured" : "unavailable", detail: "Verified when a customer authenticates", checkedAt: new Date().toISOString() });
     const degraded = components.some((component) => ["degraded", "unavailable"].includes(String(component.status)));
     return Response.json({ status: degraded ? "degraded" : "operational", components, incidents: incidents.results, observedAt: new Date().toISOString(), traceId }, { headers: { "Cache-Control": "public, max-age=0, s-maxage=60, stale-while-revalidate=120" } });

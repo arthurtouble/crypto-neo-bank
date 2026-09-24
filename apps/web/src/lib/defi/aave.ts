@@ -20,7 +20,7 @@ const mcpEnvelopeSchema = z.object({
 export async function callAaveTool<T>(name: string, args: Record<string, unknown>): Promise<T> {
   const response = await fetch(AAVE_MCP_URL, {
     method: "POST",
-    headers: { "Content-Type": "application/json", "User-Agent": "Aurel/1.0" },
+    headers: { "Content-Type": "application/json", "User-Agent": "Aura/1.0" },
     body: JSON.stringify({ jsonrpc: "2.0", id: crypto.randomUUID(), method: "tools/call", params: { name, arguments: args } }),
     signal: AbortSignal.timeout(12_000)
   });

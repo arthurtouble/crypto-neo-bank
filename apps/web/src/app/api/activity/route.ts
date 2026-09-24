@@ -31,7 +31,7 @@ export async function GET(request: Request) {
     const intents = result.results.map((row) => {
       let requestData: Record<string, unknown> = {};
       try { requestData = JSON.parse(row.request_json) as Record<string, unknown>; } catch { /* malformed historical projection */ }
-      return { intentId: row.intent_id, type: row.intent_type, status: row.status, transactionHash: row.transaction_hash ?? undefined, createdAt: row.created_at, updatedAt: row.updated_at, confirmedAt: row.confirmed_at ?? undefined, failureReason: row.failure_reason ?? undefined, chainId: row.chain_id, lastCheckedAt: row.last_checked_at ?? undefined, routeReference: row.route_reference ?? undefined, asset: typeof requestData.asset === "string" ? requestData.asset : undefined, amount: typeof requestData.amount === "string" ? requestData.amount : undefined, destination: typeof requestData.destination === "string" ? requestData.destination : undefined, estimatedUsd: typeof requestData.estimatedUsd === "number" ? requestData.estimatedUsd : undefined, events: eventsByIntent.get(row.intent_id) ?? [], source: "Aurel", sourceKind: "projection" as const, authority: "Aurel policy-intent audit projection" };
+      return { intentId: row.intent_id, type: row.intent_type, status: row.status, transactionHash: row.transaction_hash ?? undefined, createdAt: row.created_at, updatedAt: row.updated_at, confirmedAt: row.confirmed_at ?? undefined, failureReason: row.failure_reason ?? undefined, chainId: row.chain_id, lastCheckedAt: row.last_checked_at ?? undefined, routeReference: row.route_reference ?? undefined, asset: typeof requestData.asset === "string" ? requestData.asset : undefined, amount: typeof requestData.amount === "string" ? requestData.amount : undefined, destination: typeof requestData.destination === "string" ? requestData.destination : undefined, estimatedUsd: typeof requestData.estimatedUsd === "number" ? requestData.estimatedUsd : undefined, events: eventsByIntent.get(row.intent_id) ?? [], source: "Aura", sourceKind: "projection" as const, authority: "Aura policy-intent audit projection" };
     });
     const localKeys = new Set(intents.filter((item) => item.transactionHash).map((item) => `${item.transactionHash?.toLowerCase()}:${item.type}`));
     const protocolIntents = protocol.items.filter((item) => !localKeys.has(`${item.transactionHash.toLowerCase()}:${item.type}`)).map((item) => ({ ...item, intentId: item.id }));
@@ -41,9 +41,9 @@ export async function GET(request: Request) {
       intents: merged,
       observations,
       observedAt: new Date().toISOString(),
-      authority: "Aurel workflow evidence with source-reported Aave activity",
+      authority: "Aura workflow evidence with source-reported Aave activity",
       sources: {
-        aurel: { status: "available", count: intents.length, authority: "Aurel policy-intent audit projection" },
+        aurel: { status: "available", count: intents.length, authority: "Aura policy-intent audit projection" },
         aave: { status: protocol.sourceStatus, count: protocolIntents.length, partial: protocol.partial, authority: "Aave Protocol API and Base" }
       }
     }, { headers: { "Cache-Control": "no-store" } });

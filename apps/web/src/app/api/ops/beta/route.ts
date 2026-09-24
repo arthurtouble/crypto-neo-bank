@@ -45,7 +45,7 @@ export async function POST(request: Request) {
       (code_hash, label, cohort, status, max_redemptions, redemption_count, allowed_countries_json, expires_at, created_at, created_by)
       VALUES (?, ?, ?, 'active', ?, 0, ?, ?, ?, ?)`)
       .bind(codeHash, input.label, input.cohort, input.maxRedemptions, JSON.stringify(input.allowedCountries), input.expiresAt ?? null, new Date().toISOString(), admin.subjectReference).run();
-    return Response.json({ code, label: input.label, cohort: input.cohort, message: "Copy this code now. Aurel stores only its hash.", traceId }, { status: 201, headers: { "Cache-Control": "no-store" } });
+    return Response.json({ code, label: input.label, cohort: input.cohort, message: "Copy this code now. Aura stores only its hash.", traceId }, { status: 201, headers: { "Cache-Control": "no-store" } });
   } catch (error) { return responseFor(error, traceId); }
 }
 

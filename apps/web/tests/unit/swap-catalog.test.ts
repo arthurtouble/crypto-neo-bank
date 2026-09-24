@@ -206,7 +206,7 @@ describe("LI.FI catalog", () => {
     time += 301_000;
     offline = true;
     const fallback = await getCatalogPage({ query: "", chainIds: [8453] }, dependencies);
-    expect(fallback.source).toBe("Aurel reviewed");
+    expect(fallback.source).toBe("Aura reviewed");
     expect(fallback.assets.map((asset) => asset.symbol)).toEqual(["USDC"]);
   });
 
@@ -226,10 +226,10 @@ describe("LI.FI catalog", () => {
     await expect(resolveCatalogAsset(assetId(8453, LOOKALIKE), dependencies)).rejects.toBeInstanceOf(CatalogUnavailableError);
     const page = await getCatalogPage({ query: "USDC", chainIds: [8453] }, dependencies);
     expect(page.assets.map((asset) => asset.symbol)).toEqual(["USDC"]);
-    expect(page.source).toBe("Aurel reviewed");
+    expect(page.source).toBe("Aura reviewed");
     const allNetworks = await getCatalogPage({ query: "", chainIds: [1, 10, 137, 8453, 42161] }, dependencies);
     expect(allNetworks.assets.map((asset) => asset.symbol)).toEqual(["USDC", "WETH"]);
-    expect(allNetworks.source).toBe("Aurel reviewed");
+    expect(allNetworks.source).toBe("Aura reviewed");
   });
 
   it("rejects unsupported chains and oversized queries", async () => {

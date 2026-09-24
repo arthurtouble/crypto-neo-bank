@@ -26,11 +26,10 @@ export async function GET(request: Request) {
         estimatedUsd: typeof data.estimatedUsd === "number" ? data.estimatedUsd : undefined
       };
     });
-    return Response.json({ ...buildInsights(inputs, new Date(), days), observedAt: new Date().toISOString(), authority: "Derived from completed Aurel activity; providers and blockchains remain authoritative", traceId }, { headers: { "Cache-Control": "no-store" } });
+    return Response.json({ ...buildInsights(inputs, new Date(), days), observedAt: new Date().toISOString(), authority: "Derived from completed Aura activity; providers and blockchains remain authoritative", traceId }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     if (error instanceof AuthenticationError) return Response.json({ error: "unauthorized", message: error.message, traceId }, { status: 401 });
     console.error(JSON.stringify({ level: "error", event: "insights.read.failed", traceId, message: error instanceof Error ? error.message : "unknown" }));
     return Response.json({ error: "insights_unavailable", traceId }, { status: 503 });
   }
 }
-

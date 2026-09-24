@@ -3,7 +3,7 @@ title: Aura build status
 description: Current product implementation and external release dependencies.
 ---
 
-Last reviewed: 24 September 2026. This page describes the source branch; the deployed Worker may differ. The dated Aura design and implementation plan are in `docs/superpowers/` at the repository root.
+Last reviewed: 24 September 2026. The public tour is deployed to `aura-dev.aurel-events.workers.dev`; this page describes the source branch, which may have newer changes. The dated Aura design and implementation plan are in `docs/superpowers/` at the repository root.
 
 ## Implemented in this branch
 
@@ -14,7 +14,7 @@ Last reviewed: 24 September 2026. This page describes the source branch; the dep
 - Aave Base market, debt, position, and reward reads. Customer Aave writes remain paused.
 - Aura tag registration with a unique, non-transferable tag, verified linked receiving wallet, public opt-in, and public crypto payment page. A separate bank-detail opt-in exposes complete activated Bridge instructions only for the linked provider customer; without a connected Bridge program, the method is unavailable. Card payment remains unavailable.
 - Issuer-backed card projection read boundary, support cases, read-only assistant, coverage-aware transactions and insights, and security/privacy settings.
-- Local D1 migrations `0036_aura_tags.sql` and `0037_aura_tag_bank_consent.sql`; no production migration or deployment has been performed.
+- D1 migrations through `0037_aura_tag_bank_consent.sql` on the isolated development database; no production migration or deployment has been performed.
 
 The customer waitlist, markets lists, price alerts, goals, scheduled transfers, paycheck planning, external-wallet portfolio tracking, lifestyle concierge, and membership tiers have been removed from the UI. Historical database records, audit evidence, retained instructions, and security controls remain. Legacy routes redirect or close intake. Review historical API access and retention before deleting any stored records.
 
