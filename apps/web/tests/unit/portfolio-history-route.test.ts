@@ -12,7 +12,7 @@ vi.mock("@/lib/portfolio/aave-source", () => ({ readCurrentAaveLegs: async () =>
 
 import { GET } from "@/app/api/portfolio/history/route";
 
-type HistoryBody = { points: Array<{ day: string; netValueUsd: string | null; twrIndex: string | null; status: string; reasons: string[] }>; currentAave: { status: string }; externalWallets: string[]; calculationVersion: number };
+type HistoryBody = { points: Array<{ day: string; netValueUsd: string | null; twrIndex: string | null; status: string; reasons: string[] }>; currentAave: { status: string; reason: string | null }; embeddedWalletCount: number; externalWallets: string[]; calculationVersion: number };
 async function readBody(response: Response): Promise<HistoryBody> { return response.json() as Promise<HistoryBody>; }
 function request(range = "7D") { return new Request(`https://aurel.test/api/portfolio/history?range=${range}`); }
 function lastCompletedDay() { const now = new Date(); return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) - 86_400_000).toISOString().slice(0, 10); }
@@ -69,7 +69,16 @@ describe("portfolio history read boundary", () => {
     state.accounts = [];
     const body = await readBody(await GET(request()));
     expect(body.currentAave.status).toBe("unavailable");
+    expect(body.currentAave.reason).toBe("no_verified_account");
+    expect(body.embeddedWalletCount).toBe(0);
     expect(body.points.every((point) => point.netValueUsd === null)).toBe(true);
+  });
+
+  it("distinguishes a failed Aave read from missing account scope", async () => {
+    state.aaveUnavailable = true;
+    const body = await readBody(await GET(request()));
+    expect(body.currentAave.reason).toBe("aave_unavailable");
+    expect(body.embeddedWalletCount).toBe(1);
   });
 
   it("serves complete days but nulls a missing-price day and segregates linked external wallets", async () => {

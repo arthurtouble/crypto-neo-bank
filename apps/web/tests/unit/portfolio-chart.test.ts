@@ -24,6 +24,7 @@ const partial = (day: string, reason: string) => ({ day, netValueUsd: null, twrI
 const history = (points: PortfolioHistory["points"]): PortfolioHistory => ({
   calculationVersion: 3, points,
   currentAave: { suppliedUsd: null, debtUsd: null, status: "partial" },
+  embeddedWalletCount: 1,
   externalWallets: ["8453:0x1111111111111111111111111111111111111111"],
   coverage: [], observedAt: `${points.at(-1)?.day ?? "2026-09-22"}T12:00:00.000Z`
 });
@@ -108,5 +109,16 @@ describe("authoritative portfolio chart", () => {
     expect(markup).toContain(">30D</button>");
     expect(markup).toContain(">90D</button>");
     expect(fixture.queryKey).toContain("subject-a");
+  });
+
+  it("does not claim an Aurel wallet is included when none is server verified", () => {
+    const result = history([partial("2026-09-20", "missing_linked_account")]);
+    result.embeddedWalletCount = 0;
+    result.externalWallets = [];
+    result.currentAave = { suppliedUsd: null, debtUsd: null, status: "unavailable", reason: "no_verified_account" };
+    fixture.query = { data: result, isPending: false, error: null };
+    const markup = renderToStaticMarkup(React.createElement(PortfolioPerformance));
+    expect(markup).toContain("No verified wallet is included yet.");
+    expect(markup).not.toContain("Includes your Aurel wallet");
   });
 });

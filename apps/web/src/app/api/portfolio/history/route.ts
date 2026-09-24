@@ -97,10 +97,10 @@ export async function GET(request: Request) {
       catch { return { accountId: account.accountId, legs: [], status: "unavailable" as Completeness, reason: "aave_unavailable" }; }
     }));
     const aaveStatus: Completeness = !accounts.length || aave.some((item) => item.status === "unavailable") ? "unavailable" : aave.some((item) => item.status !== "complete" || item.legs.length > 0) ? "partial" : "complete";
-    const history: PortfolioHistory = { calculationVersion, points, coverage, externalWallets: accounts.filter((item) => item.origin === "linked_external").map((item) => item.accountId),
+    const history: PortfolioHistory = { calculationVersion, points, coverage, embeddedWalletCount: accounts.filter((item) => item.origin === "embedded").length, externalWallets: accounts.filter((item) => item.origin === "linked_external").map((item) => item.accountId),
       currentAave: { suppliedUsd: aaveStatus === "complete" ? "0" : null, debtUsd: aaveStatus === "complete" ? "0" : null, status: aaveStatus }, observedAt: new Date().toISOString() };
     return response({ ...history, returnWindow: { pricedDays: 90, scope: "recent_completed_utc_days", inceptionReturnAvailable: false }, sourceVersions: Object.fromEntries([...byCheckpoint].map(([key, item]) => [key, item.ingestion_version])),
-      currentAave: { ...history.currentAave, legs: aave.flatMap((item) => item.legs.map((leg) => ({ accountId: item.accountId as AccountId, ...leg }))), observedAt: new Date().toISOString(), reason: aaveStatus === "partial" ? "missing_current_price" : aaveStatus === "unavailable" ? "aave_unavailable" : null }, traceId });
+      currentAave: { ...history.currentAave, legs: aave.flatMap((item) => item.legs.map((leg) => ({ accountId: item.accountId as AccountId, ...leg }))), observedAt: new Date().toISOString(), reason: !accounts.length ? "no_verified_account" : aaveStatus === "partial" ? "missing_current_price" : aaveStatus === "unavailable" ? "aave_unavailable" : null }, traceId });
   } catch (error) {
     if (error instanceof AuthenticationError) return response({ error: "unauthorized", traceId }, 401);
     if (error instanceof BetaAccessError) return response({ error: error.code, traceId }, 403);

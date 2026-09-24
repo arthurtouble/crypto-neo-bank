@@ -92,7 +92,8 @@ export type BasisDisposal = {
 export type PortfolioHistory = {
   calculationVersion: number;
   points: HistoryPoint[];
-  currentAave: { suppliedUsd: string | null; debtUsd: string | null; status: Completeness };
+  currentAave: { suppliedUsd: string | null; debtUsd: string | null; status: Completeness; reason?: string | null };
+  embeddedWalletCount: number;
   externalWallets: AccountId[];
   coverage: DayCoverage[];
   observedAt: string;
