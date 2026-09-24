@@ -23,8 +23,6 @@
   "dependencies": {
     "@coinbase/wallet-sdk": "4.3.2",
     "@fontsource-variable/archivo": "latest",
-    "@lifi/sdk": "4.8.1",
-    "@lifi/sdk-provider-ethereum": "4.2.1",
     "@privy-io/node": "^0.34.0",
     "@privy-io/react-auth": "latest",
     "@privy-io/wagmi": "^4.0.17",

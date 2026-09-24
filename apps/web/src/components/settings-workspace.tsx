@@ -1,30 +1,37 @@
 "use client";
 
-import { Bell, BookOpen, Eye, EyeOff, Globe2 } from "lucide-react";
+import { usePrivy } from "@privy-io/react-auth";
+import { Bell, BookOpen, Eye, EyeOff, Fingerprint, KeyRound, MonitorSmartphone, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { FeedbackPanel } from "./feedback-panel";
 import { DataRightsPanel } from "./data-rights-panel";
+import { SecurityCenter } from "./security-center";
+import { AuraTagControls } from "./aura-tag-controls";
+import { ThemeToggle } from "./theme-toggle";
 
 export function SettingsWorkspace() {
+  const { user } = usePrivy();
   const [hidden, setHidden] = useState(false);
-  const [currency, setCurrency] = useState("USD");
-  const [securityNotices, setSecurityNotices] = useState(true);
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setHidden(localStorage.getItem("aurel-balance-privacy") === "hidden");
-      setCurrency(localStorage.getItem("aurel-base-currency") ?? "USD");
-      setSecurityNotices(localStorage.getItem("aurel-security-notices") !== "off");
-    }, 0);
+    const timer = window.setTimeout(() => setHidden(localStorage.getItem("aurel-balance-privacy") === "hidden"), 0);
     return () => window.clearTimeout(timer);
   }, []);
-  function privacy(value: boolean) { setHidden(value); localStorage.setItem("aurel-balance-privacy", value ? "hidden" : "visible"); document.documentElement.dataset.balancePrivacy = value ? "hidden" : "visible"; }
-  function baseCurrency(value: string) { setCurrency(value); localStorage.setItem("aurel-base-currency", value); }
-  function notices(value: boolean) { setSecurityNotices(value); localStorage.setItem("aurel-security-notices", value ? "on" : "off"); }
-  return <div className="settingsGrid"><section className="panel settingsPanel">
-    <div className="settingRow"><span className="settingIcon">{hidden ? <EyeOff size={17} /> : <Eye size={17} />}</span><div><strong>Balance Privacy</strong></div><button className="settingsToggle" onClick={() => privacy(!hidden)}>{hidden ? "Hidden" : "Visible"}</button></div>
-    <div className="settingRow"><span className="settingIcon"><Globe2 size={17} /></span><div><strong>Display Currency</strong></div><select value={currency} onChange={(event) => baseCurrency(event.target.value)}><option>USD</option><option>EUR</option><option>GBP</option></select></div>
-    <div className="settingRow"><span className="settingIcon"><Bell size={17} /></span><div><strong>Security Notices</strong></div><button className="settingsToggle" onClick={() => notices(!securityNotices)}>{securityNotices ? "On" : "Off"}</button></div>
-    <div className="settingRow"><span className="settingIcon"><BookOpen size={17} /></span><div><strong>Documents & Disclosures</strong></div><Link href="/docs">Open</Link></div>
+  function privacy(value: boolean) {
+    setHidden(value);
+    localStorage.setItem("aurel-balance-privacy", value ? "hidden" : "visible");
+    document.documentElement.dataset.balancePrivacy = value ? "hidden" : "visible";
+  }
+  return <div className="settingsGrid"><SecurityCenter /><AuraTagControls /><section className="panel settingsPanel">
+    <h2>Account and preferences</h2>
+    <div className="settingRow"><span className="settingIcon"><Fingerprint size={17} /></span><div><strong>Account details and sign-in</strong><small>{user?.email?.address ?? "Managed by Privy"}</small></div><span>Privy</span></div>
+    <div className="settingRow"><span className="settingIcon"><MonitorSmartphone size={17} /></span><div><strong>Sessions</strong><small>Current browser shown above; remote session management requires identity-provider support.</small></div><span>Current only</span></div>
+    <div className="settingRow"><span className="settingIcon"><KeyRound size={17} /></span><div><strong>Passcode</strong><small>Passkey and wallet recovery controls are shown above. A separate app passcode is not connected.</small></div><span>Unavailable</span></div>
+    <div className="settingRow"><span className="settingIcon"><ShieldCheck size={17} /></span><div><strong>Transfer limits and wealth protection</strong><small>Account lock, saved destinations, and limits are shown above.</small></div><span>Active controls</span></div>
+    <div className="settingRow"><span className="settingIcon">{hidden ? <EyeOff size={17} /> : <Eye size={17} />}</span><div><strong>Hide balances on this device</strong></div><button className="settingsToggle" onClick={() => privacy(!hidden)}>{hidden ? "Hidden" : "Visible"}</button></div>
+    <div className="settingRow"><span className="settingIcon"><Bell size={17} /></span><div><strong>Notifications</strong><small>Push and email delivery need a connected notification service.</small></div><span>Unavailable</span></div>
+    <div className="settingRow"><span className="settingIcon"><BookOpen size={17} /></span><div><strong>Documents and disclosures</strong></div><Link href="/docs">Open</Link></div>
+    <div className="settingRow"><span className="settingIcon"><BookOpen size={17} /></span><div><strong>Statements</strong><small>Issuer statements appear when a provider is connected.</small></div><span>Unavailable</span></div>
+    <div className="settingRow"><span className="settingIcon"><Eye size={17} /></span><div><strong>Theme</strong></div><ThemeToggle /></div>
   </section><DataRightsPanel /><FeedbackPanel /></div>;
 }

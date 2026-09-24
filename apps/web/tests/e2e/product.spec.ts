@@ -37,45 +37,6 @@ test("portfolio history gap layout stays readable in desktop and mobile themes w
   }
 });
 
-test("swap reminder controls fit desktop and mobile with reduced motion", async ({ page }) => {
-  const styles = `${readFileSync("src/app/globals.css", "utf8")}\n${readFileSync("src/app/product-system.css", "utf8")}`;
-  for (const width of [1280, 390]) {
-    await page.setViewportSize({ width, height: 844 });
-    await page.emulateMedia({ reducedMotion: "reduce" });
-    await page.setContent(`<meta name="viewport" content="width=device-width, initial-scale=1"><style>${styles}</style><div class="productShell"><main class="productContent"><section class="panel swapPanel"><section class="swapReminders" aria-labelledby="remindersTitle"><div class="swapRemindersHeading"><div><h3 id="remindersTitle">Swap reminders</h3><p>Reminders bring you back to review a live route. They never place a trade.</p></div><button class="button secondary">New reminder</button></div><form class="swapReminderForm"><strong>Remind me about this pair</strong><p>8453:native → 8453:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913</p><label>Amount<input aria-label="Reminder amount"></label><label>Repeat<select><option>Weekly</option></select></label><label>First reminder<input type="datetime-local"></label><button class="button secondary">Save reminder</button></form><h4>Due now</h4><ul class="swapReminderList"><li><div><strong>0.1 · 8453:native → 8453:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913</strong><small>Due today</small></div><button class="button secondary">Review Swap</button></li></ul></section></section></main></div>`);
-    await expect(page.getByRole("heading", { name: "Swap reminders" })).toBeVisible();
-    const dimensions = await page.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, clientWidth: document.documentElement.clientWidth }));
-    expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth + 1);
-    await page.keyboard.press("Tab");
-    await expect(page.getByRole("button", { name: "New reminder" })).toBeFocused();
-  }
-});
-
-test("price alert controls and dialog fit desktop and mobile with reduced motion", async ({ page }) => {
-  const styles = `${readFileSync("src/app/globals.css", "utf8")}\n${readFileSync("src/app/product-system.css", "utf8")}`;
-  for (const width of [1280, 390]) {
-    await page.setViewportSize({ width, height: 844 });
-    await page.emulateMedia({ reducedMotion: "reduce" });
-    await page.setContent(`<meta name="viewport" content="width=device-width, initial-scale=1"><style>${styles}</style><div class="productShell"><main class="productContent"><section class="panel swapPanel"><section class="priceAlerts" aria-labelledby="alertsTitle"><div class="priceAlertsHeading"><div><h3 id="alertsTitle">Price Alerts</h3><p>Save an ETH price threshold to revisit later.</p></div><button class="button secondary">New Alert</button></div><p class="priceAlertsInactive">Price monitoring and notifications are not active yet. No trade will be placed.</p><ul class="priceAlertList"><li class="priceAlertRow"><div><strong>ETH above $2,500</strong><small>Saved · Not monitoring</small></div><div class="priceAlertActions"><button>Edit</button><button>Pause</button><button>Remove</button></div></li></ul></section></section></main></div>`);
-    await expect(page.getByRole("heading", { name: "Price Alerts" })).toBeVisible();
-    await expect(page.getByText("Price monitoring and notifications are not active yet. No trade will be placed.")).toBeVisible();
-    await page.keyboard.press("Tab");
-    await expect(page.getByRole("button", { name: "New Alert" })).toBeFocused();
-    expect(await page.locator(".priceAlertActions button").first().evaluate((button) => Number.parseFloat(getComputedStyle(button).transitionDuration))).toBeLessThan(0.001);
-    const widthBefore = await page.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.clientWidth]);
-    expect(widthBefore[0]).toBeLessThanOrEqual(widthBefore[1] + 1);
-
-    await page.setContent(`<meta name="viewport" content="width=device-width, initial-scale=1"><style>${styles}</style><div class="productShell"><div class="swapPickerOverlay"></div><section class="swapPickerDialog priceAlertDialog" role="dialog" aria-modal="true" aria-labelledby="dialogTitle"><div class="swapPickerHeading"><h2 id="dialogTitle">New Price Alert</h2><button class="swapPickerClose" aria-label="Close">×</button></div><p>Monitoring and notifications are not active yet.</p><form class="priceAlertForm"><label for="direction">When ETH is</label><select id="direction"><option>Above</option></select><label for="threshold">Price in USD</label><input id="threshold" inputmode="decimal"><button class="button primary full">Save Alert</button></form></section></div>`);
-    await expect(page.getByRole("dialog", { name: "New Price Alert" })).toBeVisible();
-    await page.getByLabel("Price in USD").focus();
-    await expect(page.getByLabel("Price in USD")).toBeFocused();
-    const geometry = await page.locator(".priceAlertDialog").evaluate((dialog) => ({ width: dialog.getBoundingClientRect().width, left: dialog.getBoundingClientRect().left, right: dialog.getBoundingClientRect().right }));
-    expect(geometry.width).toBeLessThanOrEqual(width);
-    expect(geometry.left).toBeGreaterThanOrEqual(0);
-    expect(geometry.right).toBeLessThanOrEqual(width + 1);
-  }
-});
-
 test("partner sandbox exercises success and failure workflows", async ({ page }) => {
   test.setTimeout(60_000);
   await page.goto("/app/sandbox");
@@ -98,7 +59,7 @@ test("public landing page has no serious accessibility violations", async ({ pag
 test("mobile layout does not overflow and retains product entry", async ({ page }, testInfo) => {
   test.skip(!testInfo.project.name.includes("mobile"), "Mobile-only assertion");
   await page.goto("/");
-  await expect(page.getByRole("link", { name: "Join waitlist" }).first()).toBeVisible();
+  await expect(page.getByRole("link", { name: "Get Started" }).last()).toBeVisible();
   const dimensions = await page.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, clientWidth: document.documentElement.clientWidth }));
   expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth + 1);
 });
@@ -108,8 +69,29 @@ test("theme and private access gate remain usable", async ({ page }) => {
   await page.getByRole("button", { name: "Toggle color theme" }).last().click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", /light|dark/);
   await page.goto("/app");
-  await expect(page.getByRole("heading", { name: /wallet you control/ })).toBeVisible();
-  await expect(page.getByRole("button", { name: /Continue securely/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
+  await expect(page.getByText("Example data", { exact: true })).toBeVisible();
+  if (page.viewportSize()!.width < 800) await page.getByRole("button", { name: "Open navigation" }).click();
+  await page.getByRole("link", { name: "Borrow" }).click();
+  await expect(page.getByRole("heading", { name: "Borrow" })).toBeVisible();
+  await expect(page.getByText("Example data", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Sign in to continue/ })).toBeVisible();
+});
+
+test("every Aura section is browsable with labeled fictional data", async ({ page }) => {
+  test.setTimeout(90_000);
+  for (const section of ["deposit", "send", "swap", "earn", "borrow", "invest", "cards", "rewards", "transactions", "insights", "settings", "support"]) {
+    await page.goto(`/app/${section}`);
+    await expect(page.getByRole("heading", { name: section[0].toUpperCase() + section.slice(1), exact: true })).toBeVisible();
+    await expect(page.getByText("Example data", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Sign in to continue" })).toBeVisible();
+  }
+});
+
+test("unknown Aura tags do not expose recipient information", async ({ page }) => {
+  await page.goto("/pay/unknown_aura_tag");
+  await expect(page.getByRole("heading", { name: "Payment page unavailable" })).toBeVisible();
+  await expect(page.getByText("Bank transfer", { exact: true })).toHaveCount(0);
 });
 
 test("security headers are applied", async ({ request }) => {

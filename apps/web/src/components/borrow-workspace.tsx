@@ -34,7 +34,7 @@ export function BorrowWorkspace() {
   const healthFactor = findStringField(position.data, ["healthFactor"]);
 
   return <>
-    <div className="notice borrowNotice"><ShieldAlert size={18} /><span><strong>Borrow only against collateral you can afford to lose.</strong> Liquidation is automatic at the protocol level. Aurel cannot stop it or restore collateral.</span></div>
+    <div className="notice borrowNotice"><ShieldAlert size={18} /><span><strong>Borrow only against collateral you can afford to lose.</strong> Liquidation is automatic at the protocol level. Aura cannot stop it or restore collateral.</span></div>
     <div className="contentGrid"><section className="panel widePanel"><div className="panelHeading"><div><p className="eyebrow">AAVE V3 · BASE</p><h2>Collateral and debt</h2></div><span className="statusBadge neutral">Live protocol view</span></div>
       <div className="borrowHealth"><div><span>Current health factor</span><strong>{healthFactor ?? "No active debt"}</strong><small>Below 1.00 is liquidatable</small></div><div><span>Protocol</span><strong>Aave V3</strong><small>Onchain and noncustodial</small></div><div><span>Position source</span><strong>{position.isPending ? "Reading…" : "Observed"}</strong><small>Refreshed from Aave</small></div></div>
       <button className="button primary" disabled>Borrow and repay unavailable</button><p className="formWarning">Aave execution is paused until every call can be verified before signing.</p>

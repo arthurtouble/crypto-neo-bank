@@ -35,7 +35,7 @@ export class BridgeRailAdapter {
       accountName: displayName,
       accountNumberLastFour: account?.account?.last_4,
       routingNumberLastFour: account?.account?.routing_number_last_4,
-      capabilities: moneyCapabilities.map((capability) => ({ ...capability, state: account ? "available" : capability.state }))
+      capabilities: moneyCapabilities.map((capability) => ({ ...capability, state: capability.key === "crypto" ? "available" : account ? "locked" : "setup_required" }))
     };
   }
 }

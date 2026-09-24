@@ -1,24 +1,20 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
-test("landing is a clear path to the global waitlist", async ({ page }) => {
+test("landing introduces Aura and its provider boundaries", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("link", { name: "Join waitlist" })).toHaveCount(4);
+  await expect(page.getByRole("heading", { name: "Your Smart Account" })).toBeVisible();
+  await expect(page.getByText("Spend anywhere, invest in global markets, and get incredible rewards. All from one app.")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Get Started" })).toHaveCount(4);
   await expect(page.locator('a[href="/apply"], a[href="/tour"]')).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "What you can do" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "More is planned." })).toBeVisible();
-  await expect(page.locator(".landingStrip, .landingDocs, .landingFutureGrid")).toHaveCount(0);
-  await expect(page.locator('.landingHeader > nav a[href^="https://aurel-docs"]')).toHaveCount(1);
-  await expect(page.locator("#faq details")).toHaveCount(7);
-  for (const question of ["What can I do in Aurel?", "Is the waitlist free?", "Can I join from anywhere?", "Will I get an invitation?", "Who approves transactions?", "Are rewards available?", "How do you use my email?"]) {
-    await expect(page.locator("#faq summary").filter({ hasText: question })).toHaveCount(1);
+  for (const title of ["A home for all your assets", "Spend", "Earn", "Send", "Invest", "Borrow", "Rewards", "Security"]) {
+    await expect(page.getByRole("heading", { name: title, exact: true })).toHaveCount(1);
   }
-  await expect(page.getByRole("heading", { name: "Resources" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Getting started" })).toHaveAttribute("href", /getting-started\/setup/);
-  await expect(page.getByRole("link", { name: "Complaints" })).toHaveAttribute("href", /legal\/complaints/);
-  await page.locator("#faq summary").filter({ hasText: "Are rewards available?" }).click();
-  await expect(page.getByText("plans, not live features", { exact: false })).toBeVisible();
-  await expect(page.getByText(`© ${new Date().getFullYear()} Aurel`)).toBeVisible();
+  await expect(page.locator("#faq details")).toHaveCount(5);
+  await page.locator("#faq summary").filter({ hasText: "Are bank transfers, cards, and rewards available?" }).click();
+  await expect(page.getByText("These depend on provider connection", { exact: false })).toBeVisible();
+  await expect(page.locator("#footnotes li")).toHaveCount(4);
+  await expect(page.getByText(`© ${new Date().getFullYear()} Aura`)).toBeVisible();
 });
 
 test("mobile navigation keeps product, FAQ, and docs reachable", async ({ page }) => {
@@ -26,8 +22,8 @@ test("mobile navigation keeps product, FAQ, and docs reachable", async ({ page }
   await page.goto("/");
   await page.getByText("Menu", { exact: true }).click();
   const navigation = page.getByRole("navigation", { name: "Mobile navigation" });
-  await expect(navigation.getByRole("link", { name: "Product" })).toBeVisible();
-  await expect(navigation.getByRole("link", { name: "FAQ" })).toBeVisible();
+  await expect(navigation.getByRole("link", { name: "Features" })).toBeVisible();
+  await expect(navigation.getByRole("link", { name: "FAQs" })).toBeVisible();
   await expect(navigation.getByRole("link", { name: "Docs" })).toBeVisible();
 });
 

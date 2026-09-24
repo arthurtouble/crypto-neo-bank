@@ -27,10 +27,10 @@ export function EarnWorkspace() {
     {market.isPending && <section className="panel walletLoading"><LoaderCircle className="spin" size={20} /><div><strong>Reading Base markets</strong><span>Loading current Aave liquidity and rates.</span></div></section>}
     {market.error && <div className="sandboxAlert error" role="alert">{market.error.message}</div>}
     <div className="strategyGrid">
-      {market.data?.reserves.map((reserve) => <article className="panel strategyCard" key={reserve.symbol}>
+      {market.data?.reserves.filter((reserve) => ["USDC", "WETH"].includes(reserve.symbol)).map((reserve) => <article className="panel strategyCard" key={reserve.symbol}>
         <div className="strategyTop"><span className="strategyGlyph">A3</span><span className="statusBadge neutral"><i /> Read only</span></div>
         <p className="eyebrow">AAVE V3</p><h2>Earn with {reserve.symbol}</h2>
-        <p>Supply {reserve.symbol} directly to the governed Aave Base market. Aurel never takes custody or operates an intermediary vault.</p>
+        <p>Supply {reserve.symbol} directly to Aave on Base. Your wallet controls the position; Aura does not operate a vault.</p>
         <div className="strategyMetrics"><div><span>Supply APY</span><strong>{reserve.supplyApyPct}%</strong></div><div><span>Liquidity</span><strong>${(Number(reserve.availableLiquidity.usd) / 1_000_000).toFixed(1)}m</strong></div><div><span>Borrow APY</span><strong>{reserve.borrowApyPct}%</strong></div></div>
         <div className="exposureList"><span><Check size={13} /> Variable rate</span><span><Check size={13} /> Aave governance</span><span><Check size={13} /> Withdraw subject to liquidity</span></div>
         <button className="button primary full" disabled>Earn temporarily unavailable</button>

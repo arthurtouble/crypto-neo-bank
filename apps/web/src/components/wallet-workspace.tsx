@@ -1,15 +1,14 @@
 "use client";
 
-import { useConnectWallet, usePrivy, useSendTransaction, useWallets } from "@privy-io/react-auth";
+import { usePrivy, useSendTransaction, useWallets } from "@privy-io/react-auth";
 import { useQuery } from "@tanstack/react-query";
-import { Check, Copy, ExternalLink, LoaderCircle, Plus, QrCode, Send, WalletCards, X } from "lucide-react";
+import { Check, Copy, LoaderCircle, QrCode, Send, X } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { erc20Abi, formatUnits, isAddress, parseEther, parseUnits, encodeFunctionData, toHex } from "viem";
 import { useBalance, useReadContract } from "wagmi";
 import { BASE_ASSETS, HOME_CHAIN, SUPPORTED_CHAINS } from "@/config/chains";
-import { ExternalWalletBalances } from "./external-wallet-balances";
 import { DefiPositions } from "./defi-positions";
 import { TransactionProgress } from "./transaction-progress";
 import type { TransactionLifecycleStatus } from "@/lib/transactions/lifecycle";
@@ -29,14 +28,14 @@ function amountText(value: bigint | undefined, decimals: number) {
   return numeric.toLocaleString(undefined, { maximumFractionDigits: numeric < 1 ? 6 : 4 });
 }
 
-export function WalletWorkspace() {
+export function WalletWorkspace({ mode = "overview" }: { mode?: "overview" | "deposit" | "send" }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { getAccessToken } = usePrivy();
   const { wallets, ready } = useWallets();
-  const { connectWallet } = useConnectWallet();
   const { sendTransaction } = useSendTransaction();
   const requestedRecipient = searchParams.get("sendTo") ?? "";
+  const requestedTag = searchParams.get("tag");
   const requestedAsset = searchParams.get("asset");
   const initialAsset = requestedAsset && requestedAsset in BASE_ASSETS ? requestedAsset as AssetSymbol : "USDC";
   const [modal, setModal] = useState<Modal>(isAddress(requestedRecipient) ? "send" : null);
@@ -53,7 +52,6 @@ export function WalletWorkspace() {
   const [reviewedSourceAddress, setReviewedSourceAddress] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [receiveChainId, setReceiveChainId] = useState<number>(HOME_CHAIN.id);
-
   const embedded = useMemo(() => wallets.find((wallet) => wallet.walletClientType === "privy") ?? wallets[0], [wallets]);
   const address = embedded?.address as `0x${string}` | undefined;
   const transferKey = JSON.stringify([modal, address, asset, recipient, amount]);
@@ -62,7 +60,6 @@ export function WalletWorkspace() {
   useLayoutEffect(() => {
     if (liveTransferKey.current !== transferKey) { liveTransferKey.current = transferKey; transferRevision.current += 1; }
   }, [transferKey]);
-  const externalWallets = wallets.filter((wallet) => wallet.address !== embedded?.address);
   const eth = useBalance({ address, chainId: HOME_CHAIN.id, query: { enabled: Boolean(address) } });
   const usdc = useReadContract({ address: BASE_ASSETS.USDC.address, abi: erc20Abi, functionName: "balanceOf", args: address ? [address] : undefined, chainId: HOME_CHAIN.id, query: { enabled: Boolean(address) } });
   const weth = useReadContract({ address: BASE_ASSETS.WETH.address, abi: erc20Abi, functionName: "balanceOf", args: address ? [address] : undefined, chainId: HOME_CHAIN.id, query: { enabled: Boolean(address) } });
@@ -79,9 +76,9 @@ export function WalletWorkspace() {
   const savedRecipients = recipients.data?.recipients.filter((item) => item.kind === "wallet" && item.verified && !item.recent) ?? [];
 
   const rows = [
-    { ...BASE_ASSETS.USDC, value: usdc.data, source: "Aurel Account", pending: usdc.isPending },
-    { ...BASE_ASSETS.ETH, value: eth.data?.value, source: "Aurel Account", pending: eth.isPending },
-    { ...BASE_ASSETS.WETH, value: weth.data, source: "Aurel Account", pending: weth.isPending }
+    { ...BASE_ASSETS.USDC, value: usdc.data, source: "Aura Wallet", pending: usdc.isPending },
+    { ...BASE_ASSETS.ETH, value: eth.data?.value, source: "Aura Wallet", pending: eth.isPending },
+    { ...BASE_ASSETS.WETH, value: weth.data, source: "Aura Wallet", pending: weth.isPending }
   ];
 
   async function copyAddress() {
@@ -137,6 +134,14 @@ export function WalletWorkspace() {
     try {
       accessToken = await getAccessToken();
       if (!accessToken) throw new Error("Your secure session expired. Sign in again before sending.");
+      async function verifyTagRecipient() {
+        if (!requestedTag) return;
+        const response = await fetch(`/api/aura-tags/${encodeURIComponent(requestedTag)}`, { cache: "no-store" });
+        if (!response.ok) throw new Error("This Aura tag is no longer available. Find the recipient again.");
+        const tag = await response.json() as { crypto: { address: string } };
+        if (tag.crypto.address.toLowerCase() !== recipient.toLowerCase()) throw new Error("The Aura tag destination changed. Find the recipient again before signing.");
+      }
+      await verifyTagRecipient();
       const intentResponse = await fetch("/api/intents/evaluate", {
         method: "POST",
         headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
@@ -178,6 +183,7 @@ export function WalletWorkspace() {
         },
         isReviewCurrent: () => liveTransferKey.current === reviewedSelection && transferRevision.current === reviewedRevision,
         send: async () => {
+          await verifyTagRecipient();
           setFlowStatus("awaiting_confirmation");
           return sendTransaction(transaction, {
             address,
@@ -225,13 +231,13 @@ export function WalletWorkspace() {
       <div className="contentGrid">
         <section className="panel widePanel">
           <div className="panelHeading walletHeading">
-            <div><h2>Your Assets</h2></div>
-            <div className="walletActions"><button className="button secondary" disabled={sending || submissionUncertain} onClick={() => { if (!sending && !submissionUncertain) setModal("receive"); }}><QrCode size={16} /> Receive</button><button className="button primary" disabled={sending} onClick={() => openSend()}><Send size={16} /> Send</button></div>
+            <div><h2>{mode === "deposit" ? "Receive crypto" : mode === "send" ? "Send crypto" : "Cash and crypto"}</h2></div>
+            <div className="walletActions">{mode !== "send" && <button className="button secondary" disabled={sending || submissionUncertain} onClick={() => { if (!sending && !submissionUncertain) setModal("receive"); }}><QrCode size={16} /> Receive</button>}{mode !== "deposit" && <button className="button primary" disabled={sending} onClick={() => openSend()}><Send size={16} /> Send</button>}</div>
           </div>
           <div className="assetTable liveAssetTable">
             <div className="tableHead"><span>Asset</span><span>Source</span><span>Status</span><span>Balance</span></div>
             {rows.map((row, index) => (
-              <button className="tableRow assetActionRow" key={row.symbol} disabled={sending} onClick={() => openSend(row.symbol)}>
+              <button className="tableRow assetActionRow" key={row.symbol} disabled={sending || mode === "deposit"} onClick={() => openSend(row.symbol)}>
                 <span className={`assetToken token${index}`}>{row.symbol.slice(0, 1)}</span>
                 <span><strong>{row.name}</strong><small>{row.symbol}</small></span>
                 <span>{row.source}</span>
@@ -242,15 +248,8 @@ export function WalletWorkspace() {
           </div>
         </section>
 
-        <aside className="panel connectionPanel">
-          <h3>Your Account</h3>
-          <div className="walletConnection"><span><WalletCards size={18} /></span><div><strong>Aurel Wallet</strong><small>{shortAddress(address)}</small></div><i className="onlineDot" /></div>
-          {externalWallets.map((wallet) => <div className="walletConnection" key={wallet.address}><span><ExternalLink size={17} /></span><div><strong>Connected wallet</strong><small>{shortAddress(wallet.address)}</small></div><i className="onlineDot" /></div>)}
-          <button className="button secondary full" disabled={sending || submissionUncertain} onClick={() => connectWallet()}><Plus size={15} /> Connect external wallet</button>
-        </aside>
       </div>
-      <ExternalWalletBalances addresses={externalWallets.map((item) => item.address as `0x${string}`)} />
-      <DefiPositions address={address} />
+      {mode === "overview" && <DefiPositions address={address} />}
 
       {modal && <div className="modalBackdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && !sending && setModal(null)}>
         <section className="financialModal" role="dialog" aria-modal="true" aria-labelledby="wallet-modal-title">
@@ -262,7 +261,7 @@ export function WalletWorkspace() {
             <div className="receiveQr"><QRCodeSVG value={address} size={164} bgColor="transparent" fgColor="currentColor" level="M" /></div>
             <code className="addressBlock">{address}</code>
             <button className="button primary full" onClick={() => void copyAddress()}>{copied ? <Check size={16} /> : <Copy size={16} />}{copied ? "Copied" : "Copy address"}</button>
-            {receiveChainId !== HOME_CHAIN.id && <button className="button secondary full" onClick={() => { setModal(null); router.push("/app/transfers?digital=add#digital-money"); }}>Move Into Aurel Balance</button>}
+            {receiveChainId !== HOME_CHAIN.id && <button className="button secondary full" onClick={() => { setModal(null); router.push("/app/swap"); }}>Swap or bridge to Base</button>}
             <div className="modalRisk">Only send USDC on {SUPPORTED_CHAINS.find((chain) => chain.id === receiveChainId)?.name}. Funds sent elsewhere may not appear.</div>
             {receiveChainId !== HOME_CHAIN.id && <p className="authorityFootnote">Your USDC remains on the selected network until you review and approve a route into your Aurel balance.</p>}
           </> : <form onSubmit={(event) => void submitSend(event)}>

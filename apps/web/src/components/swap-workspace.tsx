@@ -16,8 +16,6 @@ import { parseSwapDeepLink } from "@/lib/markets/swap-links";
 import { normalizePreparedCall, type PreparedCallInput } from "@/lib/transactions/evidence";
 import { SwapAssetPicker } from "./swap-asset-picker";
 import { TransactionProgress } from "./transaction-progress";
-import { SwapReminderPanel } from "./swap-reminder-panel";
-import { PriceAlertPanel } from "./price-alert-panel";
 
 type SwapQuote = ValidatedSwapQuote & { planId?: string };
 type QuoteResponse = { quotes: SwapQuote[]; reviewAccessAvailable: boolean; observedAt: string; authority: string; error?: string; message?: string };
@@ -365,7 +363,7 @@ export function SwapWorkspace() {
             buttonText: "Confirm swap", successHeader: "Swap submitted", isCancellable: true } }); },
         onBroadcast: (hash) => { broadcasted = true; setSubmittedHash(hash); setSubmittedIntentId(preparedSwap.result.intentId); setReviewState("submitted"); }
       });
-      if (!result.reportRecorded) setReportWarning("Your swap was broadcast, but Aurel could not record it yet. Do not submit it again. Keep the transaction link and contact support.");
+      if (!result.reportRecorded) setReportWarning("Your swap was broadcast, but Aura could not record it yet. Do not submit it again. Keep the transaction link and contact support.");
     } catch (caught) {
       if (!broadcasted) {
         if (walletOpened) {
@@ -415,10 +413,5 @@ export function SwapWorkspace() {
     {submittedHash && <TransactionProgress action="Swap" status="submitted" intentId={submittedIntentId} hashes={[submittedHash]} chainId={8453}
       submittedDetail={reportWarning ?? "Waiting for independent confirmation. You can leave this screen."} />}
     {reportWarning && <p className="formError" role="alert">{reportWarning}</p>}
-    <PriceAlertPanel />
-    <SwapReminderPanel fromAssetId={fromAssetId} toAssetId={toAssetId} fromSymbol={source?.symbol} toSymbol={destination?.symbol} amount={amount} onReview={(saved) => {
-      setFromAssetId(saved.fromAssetId); setToAssetId(saved.toAssetId); setAmount(saved.amount); setAcknowledged(false); clearReview();
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }} />
   </section>;
 }

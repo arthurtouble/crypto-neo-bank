@@ -12,7 +12,7 @@ export default function PrivyAccountRuntime() {
       type="button"
       disabled={!ready}
       onClick={() => void (authenticated ? logout() : login())}
-      aria-label={authenticated ? "Log out of Aurel" : "Sign in to Aurel"}
+      aria-label={authenticated ? "Log out of Aura" : "Sign in to Aura"}
     >
       {authenticated ? <LogOut size={14} /> : <LogIn size={14} />}
       <span>{authenticated ? "Log out" : "Sign in"}</span>

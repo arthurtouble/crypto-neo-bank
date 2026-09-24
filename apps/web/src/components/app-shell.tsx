@@ -2,42 +2,23 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CircleHelp, Menu, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { useState } from "react";
 import { Brand } from "./brand";
 import { icons } from "./icons";
+import { navigation } from "@/lib/product-map";
 import { CommandMenu } from "./command-menu";
 import { ThemeToggle } from "./theme-toggle";
 import { PrivyAccountButton } from "./privy-account-button";
 import { ClientIdentity } from "./client-identity";
 
-const navigation = [
-  { group: "Portfolio", items: [
-    { label: "Overview", href: "/app", icon: icons.dashboard },
-    { label: "Move Money", href: "/app/transfers", icon: icons.card },
-    { label: "Portfolio", href: "/app/assets", icon: icons.assets },
-    { label: "Activity", href: "/app/activity", icon: icons.activity },
-    { label: "Insights", href: "/app/insights", icon: icons.earn },
-    { label: "Goals", href: "/app/goals", icon: icons.benefits }
-  ]},
-  { group: "Invest", items: [
-    { label: "Swap", href: "/app/exchange", icon: icons.activity },
-    { label: "Earn", href: "/app/earn", icon: icons.earn },
-    { label: "Borrow", href: "/app/borrow", icon: icons.earn },
-    { label: "Markets", href: "/app/markets", icon: icons.assets }
-  ]},
-  { group: "Services", items: [
-    { label: "Card", href: "/app/card", icon: icons.card },
-    { label: "Benefits", href: "/app/benefits", icon: icons.benefits },
-    { label: "Concierge", href: "/app/concierge", icon: icons.security }
-  ]}
-];
-
-const secondary = [
-  { label: "Security", href: "/app/security", icon: icons.security },
-  { label: "Settings", href: "/app/settings", icon: icons.settings },
-  { label: "System status", href: "/app/status", icon: icons.activity }
-];
+const iconByPage: Record<string, typeof icons.dashboard> = {
+  Overview: icons.dashboard, Deposit: icons.received, Send: icons.sent,
+  Swap: icons.activity, Earn: icons.earn, Borrow: icons.money,
+  Invest: icons.assets, Cards: icons.card, Rewards: icons.benefits,
+  Transactions: icons.activity, Insights: icons.earn, Settings: icons.settings,
+  Support: icons.security
+};
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -50,23 +31,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <Brand compact />
           <button className="mobileClose" onClick={() => setOpen(false)} aria-label="Close navigation"><X size={20} /></button>
         </div>
-        <div className="environmentLabel"><span /> Account Protected</div>
+        <div className="environmentLabel"><span /> Aura</div>
         <nav className="sideNav groupedNav" aria-label="Primary">
           {navigation.map((group) => <div className="navGroup" key={group.group}><p>{group.group}</p>{group.items.map((item) => {
-            const Icon = item.icon;
+            const Icon = iconByPage[item.label];
             const active = pathname === item.href;
             return <Link key={item.href} href={item.href} className={active ? "active" : ""} onClick={() => setOpen(false)}><Icon size={18} /><span>{item.label}</span></Link>;
           })}</div>)}
         </nav>
-        <div className="sideRule" />
-        <nav className="sideNav secondaryNav" aria-label="Account">
-          {secondary.map((item) => {
-            const Icon = item.icon;
-            return <Link key={item.href} href={item.href} className={pathname === item.href ? "active" : ""} onClick={() => setOpen(false)}><Icon size={18} /><span>{item.label}</span></Link>;
-          })}
-        </nav>
         <div className="sidebarFooter">
-          <Link href="/docs"><CircleHelp size={17} /> Documentation</Link>
           <ClientIdentity />
         </div>
       </aside>

@@ -22,7 +22,7 @@ export default function Web3RuntimeProvider({ children }: { children: React.Reac
         appearance: {
           theme: "light",
           accentColor: "#123524",
-          landingHeader: "Welcome to Aurel",
+          landingHeader: "Welcome to Aura",
           loginMessage: "Secure access to your private digital wealth relationship."
         },
         embeddedWallets: {

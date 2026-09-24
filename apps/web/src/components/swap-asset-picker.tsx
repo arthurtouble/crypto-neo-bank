@@ -73,7 +73,7 @@ export function SwapAssetPicker({ value, onSelect, excludedId, label }: Props) {
       {riskAsset ? <div className="swapPickerRisk">
         <strong>{riskAsset.name} · {assetNetwork(riskAsset.chainId)}</strong>
         <code>{riskAsset.address ?? "Native asset"}</code>
-        <p>This contract is not verified by Aurel. Check the address before you continue.</p>
+        <p>This contract is not verified by Aura. Check the address before you continue.</p>
         <div className="swapPickerActions"><button type="button" className="button secondary" onClick={() => setRiskAsset(null)}>Back</button><button type="button" className="button primary" onClick={() => { onSelect(riskAsset.id); setOpen(false); setRiskAsset(null); }}>Select Asset</button></div>
       </div> : <>
         <label className="swapPickerSearch"><Search size={18} /><span className="srOnly">Search assets or contract address</span><input autoFocus value={search} onChange={(event) => { setSearch(event.target.value); setActive(0); setRiskAsset(null); }} placeholder="Search name or contract" onKeyDown={(event) => {

@@ -1,8 +1,8 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { SectionPage } from "@/components/section-page";
+import { customerSections, legacySectionDestination, type CustomerSection } from "@/lib/product-map";
 
-const sections = ["transfers", "assets", "exchange", "earn", "borrow", "markets", "card", "activity", "insights", "goals", "benefits", "concierge", "security", "settings", "status", "operations"] as const;
-type Section = (typeof sections)[number];
+const sections = [...customerSections, "operations"] as const;
 
 export function generateStaticParams() {
   return sections.map((section) => ({ section }));
@@ -10,6 +10,8 @@ export function generateStaticParams() {
 
 export default async function ProductSectionPage({ params }: { params: Promise<{ section: string }> }) {
   const { section } = await params;
-  if (!sections.includes(section as Section)) notFound();
-  return <SectionPage section={section as Section} />;
+  const oldDestination = legacySectionDestination(section);
+  if (oldDestination) redirect(oldDestination);
+  if (!sections.includes(section as CustomerSection | "operations")) notFound();
+  return <SectionPage section={section as CustomerSection | "operations"} />;
 }

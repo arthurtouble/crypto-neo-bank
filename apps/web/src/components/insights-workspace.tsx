@@ -44,7 +44,7 @@ export function InsightsWorkspace() {
         {query.data.totals.unvalued > 0 && <p className="authorityFootnote">{query.data.totals.unvalued} completed action{query.data.totals.unvalued === 1 ? "" : "s"} could not be valued in dollars and is excluded.</p>}
       </>}
     </section>
-    <p className="authorityFootnote">Insights use completed Aurel activity. They are not a bank statement or tax report.</p>
+    <p className="authorityFootnote">Insights use completed Aura activity. They are not a bank statement or tax report.</p>
   </div>;
 }
 

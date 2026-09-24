@@ -17,7 +17,7 @@ export default defineConfig({
     command: `pnpm dev --host 127.0.0.1 --port ${e2ePort}`,
     url: serverURL,
     env: { ...process.env, PROVIDER_WEBHOOK_SECRET: "e2e-local-only-secret" },
-    reuseExistingServer: false,
+    reuseExistingServer: process.env.AUREL_E2E_USE_EXISTING === "1",
     timeout: 120_000
   },
   projects: [
