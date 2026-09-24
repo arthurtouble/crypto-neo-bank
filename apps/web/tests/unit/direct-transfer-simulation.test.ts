@@ -33,6 +33,20 @@ async function token() {
 }
 
 describe("disconnected direct-transfer simulation", () => {
+  it("samples the freshness clock after retrieving the latest block", async () => {
+    const client = rpc();
+    const clock = vi.fn(() => nowMs);
+    client.getBlock.mockImplementationOnce(async () => {
+      expect(clock).not.toHaveBeenCalled();
+      return block;
+    });
+    const call = await native();
+    await expect(simulateBaseDirectTransfer(client as unknown as PublicClient, {
+      call, effect: { type: "native_transfer", recipient, amountRaw: "1000" }, nowMs: clock, maxAgeMs: 30_000
+    })).resolves.toMatchObject({ simulationSucceeded: true });
+    expect(clock).toHaveBeenCalledOnce();
+  });
+
   it("simulates the exact native call at a canonical Base block without claiming signing readiness", async () => {
     const client = rpc();
     client.call.mockResolvedValueOnce({ data: "0x" });

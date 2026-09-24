@@ -9,7 +9,7 @@ type DirectTransferEffect =
 type Request = {
   call: NormalizedPreparedCall;
   effect: DirectTransferEffect;
-  nowMs: number;
+  nowMs: number | (() => number);
   maxAgeMs: number;
 };
 
@@ -35,7 +35,8 @@ export async function simulateBaseDirectTransfer(client: PublicClient, request: 
     if (call.data.toLowerCase() !== expectedData.toLowerCase())
       throw new Error("Token transfer calldata does not match its expected effect.");
   }
-  if (!Number.isSafeInteger(request.nowMs) || !Number.isSafeInteger(request.maxAgeMs) || request.maxAgeMs <= 0)
+  if (!(typeof request.nowMs === "function" || Number.isSafeInteger(request.nowMs))
+    || !Number.isSafeInteger(request.maxAgeMs) || request.maxAgeMs <= 0)
     throw new Error("Invalid simulation clock or freshness window.");
   if (await client.getChainId() !== 8453) throw new Error("Base RPC chain mismatch.");
   const block = await client.getBlock({ blockTag: "latest" });
@@ -43,8 +44,9 @@ export async function simulateBaseDirectTransfer(client: PublicClient, request: 
     || block.hash === `0x${"0".repeat(64)}`)
     throw new Error("Canonical simulation block unavailable.");
   const observedAtMs = Number(block.timestamp) * 1_000;
-  if (!Number.isSafeInteger(observedAtMs) || observedAtMs > request.nowMs
-    || request.nowMs - observedAtMs > request.maxAgeMs)
+  const nowMs = typeof request.nowMs === "function" ? request.nowMs() : request.nowMs;
+  if (!Number.isSafeInteger(nowMs) || !Number.isSafeInteger(observedAtMs) || observedAtMs > nowMs
+    || nowMs - observedAtMs > request.maxAgeMs)
     throw new Error("Simulation block is stale or invalid.");
   const result = await client.call({ account: normalized.from, to: normalized.to,
     value: BigInt(normalized.value), data: normalized.data,

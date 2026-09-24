@@ -146,7 +146,7 @@ export async function POST(request: Request) {
     let simulationEvidence: Record<string, string>;
     try {
       const client = createPublicClient({ transport: http(HOME_CHAIN.rpcUrls.default.http[0]) });
-      const simulation = await simulateBaseDirectTransfer(client, { call, effect, nowMs: Date.now(), maxAgeMs: 30_000 });
+      const simulation = await simulateBaseDirectTransfer(client, { call, effect, nowMs: Date.now, maxAgeMs: 30_000 });
       const fees = await observeBaseDirectTransferFeeBudget(client, { call, simulation,
         amountRaw: effect.amountRaw, nativeAsset: effect.type === "native_transfer", nowMs: Date.now(), maxAgeMs: 30_000 });
       const evidenceAgeMs = Date.now() - simulation.observedAtMs;
