@@ -26,7 +26,7 @@ const reviewedSchema = z.object({ type: z.enum(["swap", "bridge"]), walletAddres
 type Intent = { intent_id: string; intent_type: string; chain_id: number; wallet_reference: string;
   route_reference: string | null; request_json: string; policy_result_json: string; status: string; expires_at: string };
 type Profile = { account_locked: number; enforce_address_book: number; daily_limit_usd: number;
-  new_address_threshold_usd: number; step_up_threshold_usd: number; new_address_delay_seconds: number };
+  new_address_threshold_usd: number; step_up_threshold_usd: number; new_address_delay_seconds: number; policy_version: number };
 
 function reply(body: Record<string, unknown>, status: number) {
   return Response.json(body, { status, headers: { "Cache-Control": "no-store" } });
@@ -101,7 +101,7 @@ export async function POST(request: Request) {
     const rollingStart = new Date(now.getTime() - 86_400_000).toISOString();
     const [profile, spending] = await Promise.all([
       env.PROJECTION_DB.prepare(`SELECT account_locked, enforce_address_book, daily_limit_usd,
-        new_address_threshold_usd, step_up_threshold_usd, new_address_delay_seconds
+        new_address_threshold_usd, step_up_threshold_usd, new_address_delay_seconds, policy_version
         FROM security_profiles WHERE subject_reference = ?`).bind(subject.subjectReference).first<Profile>(),
       env.PROJECTION_DB.prepare(`SELECT COALESCE(SUM(CAST(v.usd_cents AS INTEGER)), 0) AS spent_cents,
         SUM(CASE WHEN v.valuation_id IS NULL THEN 1 ELSE 0 END) AS missing
@@ -117,6 +117,8 @@ export async function POST(request: Request) {
         .first<{ spent_cents: number; missing: number }>()
     ]);
     if (!profile || profile.account_locked) return reply({ error: "account_locked", traceId }, 403);
+    if (!Number.isSafeInteger(profile.policy_version) || profile.policy_version < 1)
+      return reply({ error: "policy_unavailable", traceId }, 503);
     const spentCents = spending?.spent_cents ?? 0;
     const valuedCents = Number(valuation.usdCents);
     const limitCents = Math.floor(Math.min(profile.daily_limit_usd, beta.transactionLimitUsd) * 100);
@@ -138,6 +140,9 @@ export async function POST(request: Request) {
     // return a signable call against the time captured before those awaits.
     const at = new Date().toISOString();
     if (intent.expires_at <= at || plan.expires_at <= at) return reply({ error: "quote_expired", traceId }, 409);
+    const priceAgeMs = Date.parse(at) - Date.parse(valuation.priceObservedAt);
+    if (!Number.isFinite(priceAgeMs) || priceAgeMs > 180_000 || priceAgeMs < -60_000)
+      return reply({ error: "valuation_unavailable", traceId }, 503);
     const expectedEffect = "expectedSourceEffect" in governed
       ? { type: "bridge", ...governed.expectedSourceEffect,
         recipient: governed.expectedDestinationEffect.recipient,
@@ -164,7 +169,9 @@ export async function POST(request: Request) {
           AND i.expires_at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
           AND p.plan_id = ? AND p.status = 'active'
           AND p.expires_at > ? AND p.expires_at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+          AND unixepoch(?) BETWEEN unixepoch('now') - 180 AND unixepoch('now') + 60
           AND p.wallet_address = ? AND p.source_chain_id = 8453
+          AND s.policy_version = ?
           AND p.destination_chain_id = ? AND p.fingerprint = ? AND p.route_policy_version = ?
           AND (? = 'swap' OR EXISTS (SELECT 1 FROM feature_flags cross_feature
             WHERE cross_feature.flag_key = 'cross_chain' AND cross_feature.enabled = 1
@@ -186,7 +193,8 @@ export async function POST(request: Request) {
         .bind(wallet, call.to.toLowerCase(), call.value, call.dataHash, call.fingerprint,
           semanticAction, JSON.stringify(expectedEffect), at, beta.countryCode,
           input.intentId, subject.subjectReference, semanticAction, `wallet:${wallet}`, at, input.planId, at,
-          wallet, plan.destination_chain_id, plan.fingerprint, plan.route_policy_version, semanticAction,
+          valuation.priceObservedAt,
+          wallet, profile.policy_version, plan.destination_chain_id, plan.fingerprint, plan.route_policy_version, semanticAction,
           subject.subjectReference, input.intentId, rollingStart, rollingStart, at, valuedCents),
       env.PROJECTION_DB.prepare(`INSERT INTO intent_events (event_id, intent_id, subject_reference,
         event_type, evidence_json, occurred_at)
