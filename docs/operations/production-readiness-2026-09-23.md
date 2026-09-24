@@ -1,5 +1,9 @@
 # Production readiness — 23 September 2026
 
+## 24 September preview-plan minimization
+
+Preview-only Swap quotes no longer persist a server-held transaction plan or return a plan ID. Review-eligible accounts still receive a short-lived plan under the existing invitation, country, wallet, and financial-action controls. A red-green regression covered disabled flags, preview access, and a failed D1 save; the full 1,105-test unit suite, typecheck, lint, and web build passed. Worker version `425da288-acfa-41c4-93cd-e8ab98f717a2` passed candidate smoke and was deployed to 100% of the existing workers.dev development URL. Post-deployment parity smoke passed. Read-only mainnet and live-provider checks passed; a remote D1 read confirmed `direct_transfers`, `swaps`, `cross_chain`, and `defi_actions` remain disabled. No authenticated real quote or signed transaction was exercised. This is a development preview, not a production financial-service release.
+
 ## 24 September development UI follow-up
 
 An authenticated development-browser inspection found that Swap reminders exposed internal asset IDs and offered creation controls even while the `swaps` capability was disabled. The authenticated alert and reminder list endpoints now report whether planning is available while still returning saved instructions. The UI displays asset/network labels, suppresses unavailable create/edit/resume controls, and does not request due reminders while swaps are disabled. Server-side mutation gates remain authoritative. No financial feature was enabled.
