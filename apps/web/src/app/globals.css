@@ -1007,6 +1007,9 @@ html[data-theme="dark"] .button.primary { color: #ffffff; background: #2d765f; b
 .borrowHealth span { color: var(--text-tertiary); font-size: 9px; }
 .borrowHealth strong { font-family: var(--font-technical); font-size: 18px; font-weight: 400; }
 .borrowHealth small, .rateRow small, .riskFineprint { color: var(--text-tertiary); font-size: 8px; }
+.debtSummary { margin: 0 0 24px; }
+.debtSummary h3 { margin: 0 0 12px; font-size: 1rem; }
+.debtSummary > small { display: block; margin-top: 12px; color: var(--text-tertiary); font-size: .8rem; line-height: 1.5; }
 .rateRow { min-height: 58px; display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--hairline); }
 .rateRow:first-of-type { margin-top: 18px; }
 .rateRow span { display: grid; gap: 4px; }

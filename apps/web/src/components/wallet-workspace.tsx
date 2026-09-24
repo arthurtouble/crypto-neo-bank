@@ -158,11 +158,11 @@ export function WalletWorkspace({ mode = "overview" }: { mode?: "overview" | "de
       const intent = await intentResponse.json() as { intentId?: string; decision?: { requiresStepUp?: boolean; findings: Array<{ level: string; message: string }> }; message?: string };
       if (!intentResponse.ok || !intent.intentId) {
         const blocked = intent.decision?.findings.find((finding) => finding.level === "block");
-        throw new Error(blocked?.message ?? intent.message ?? "Aurel’s transaction policy could not approve this action.");
+        throw new Error(blocked?.message ?? intent.message ?? "Aura’s transaction policy could not approve this action.");
       }
       reviewedIntentId = intent.intentId;
       setIntentId(intent.intentId);
-      if (intent.decision?.requiresStepUp) throw new Error("This higher-risk transfer is unavailable until Aurel can verify step-up for this exact action.");
+      if (intent.decision?.requiresStepUp) throw new Error("This higher-risk transfer is unavailable until Aura can verify step-up for this exact action.");
       const result = await submitPreparedTransfer({
         accessToken, intentId: intent.intentId,
         step: {
@@ -188,7 +188,7 @@ export function WalletWorkspace({ mode = "overview" }: { mode?: "overview" | "de
           return sendTransaction(transaction, {
             address,
             uiOptions: {
-              description: `Send ${amount} ${asset} from your Aurel Account to ${shortAddress(recipient)}.`,
+              description: `Send ${amount} ${asset} from your Aura account to ${shortAddress(recipient)}.`,
               buttonText: "Confirm transfer",
               successHeader: "Transfer submitted",
               isCancellable: true
@@ -199,7 +199,7 @@ export function WalletWorkspace({ mode = "overview" }: { mode?: "overview" | "de
       setHash(result.hash);
       setSubmittedSummary(reviewedSummary);
       setFlowStatus("submitted");
-      if (!result.reportRecorded) setError("The transfer was broadcast, but Aurel could not record its hash yet. Do not send it again; contact support with the transaction link.");
+      if (!result.reportRecorded) setError("The transfer was broadcast, but Aura could not record its hash yet. Do not send it again; contact support with the transaction link.");
       await Promise.allSettled([eth.refetch(), usdc.refetch(), weth.refetch()]);
     } catch (sendError) {
       const uncertain = sendError instanceof WalletOutcomeUnknownError;
@@ -263,14 +263,14 @@ export function WalletWorkspace({ mode = "overview" }: { mode?: "overview" | "de
             <button className="button primary full" onClick={() => void copyAddress()}>{copied ? <Check size={16} /> : <Copy size={16} />}{copied ? "Copied" : "Copy address"}</button>
             {receiveChainId !== HOME_CHAIN.id && <button className="button secondary full" onClick={() => { setModal(null); router.push("/app/swap"); }}>Swap or bridge to Base</button>}
             <div className="modalRisk">Only send USDC on {SUPPORTED_CHAINS.find((chain) => chain.id === receiveChainId)?.name}. Funds sent elsewhere may not appear.</div>
-            {receiveChainId !== HOME_CHAIN.id && <p className="authorityFootnote">Your USDC remains on the selected network until you review and approve a route into your Aurel balance.</p>}
+            {receiveChainId !== HOME_CHAIN.id && <p className="authorityFootnote">Your USDC remains on the selected network until you review and approve a route into your Aura balance.</p>}
           </> : <form onSubmit={(event) => void submitSend(event)}>
             <h2 id="wallet-modal-title">Send</h2>
             <label className="fieldLabel">Asset<select value={asset} disabled={sending || submissionUncertain || Boolean(hash)} onChange={(event) => setAsset(event.target.value as AssetSymbol)}>{Object.keys(BASE_ASSETS).map((symbol) => <option key={symbol}>{symbol}</option>)}</select></label>
             <label className="fieldLabel">Amount<input inputMode="decimal" placeholder="0.00" value={amount} disabled={sending || submissionUncertain || Boolean(hash)} onChange={(event) => setAmount(event.target.value)} /></label>
             {savedRecipients.length > 0 && <label className="fieldLabel">Saved Recipient<select value={savedRecipients.some((item) => item.destination === recipient) ? recipient : ""} disabled={sending || submissionUncertain || Boolean(hash)} onChange={(event) => setRecipient(event.target.value)}><option value="">Enter another address</option>{savedRecipients.map((item) => <option key={item.id} value={item.destination}>{item.name} · {item.detail}</option>)}</select></label>}
             <label className="fieldLabel">Destination<input autoComplete="off" spellCheck={false} placeholder="0x…" value={recipient} disabled={sending || submissionUncertain || Boolean(hash)} onChange={(event) => setRecipient(event.target.value.trim())} /></label>
-            <div className="transactionSummary"><span>From<strong>Aurel Account</strong></span><span>Account<strong>{shortAddress(reviewedSourceAddress ?? address)}</strong></span><span>Review<strong>You Confirm</strong></span></div>
+            <div className="transactionSummary"><span>From<strong>Aura account</strong></span><span>Account<strong>{shortAddress(reviewedSourceAddress ?? address)}</strong></span><span>Review<strong>You Confirm</strong></span></div>
             {flowStatus && <TransactionProgress action="Transfer" status={flowStatus} stage={submissionUncertain ? "Check Wallet Activity" : submittedSummary ? `Transfer: ${submittedSummary}` : undefined} error={error} intentId={intentId} hashes={hash ? [hash] : []} chainId={HOME_CHAIN.id} onConfirmed={() => { void Promise.all([eth.refetch(), usdc.refetch(), weth.refetch()]); }} />}
             {!flowStatus && error && <p className="formError" role="alert">{error}</p>}
             <button className="button primary full" disabled={sending || Boolean(hash) || submissionUncertain}>{sending ? <LoaderCircle className="spin" size={16} /> : <Send size={16} />}{hash ? "Transfer Submitted" : submissionUncertain ? "Check Wallet Activity" : sending ? "Awaiting Confirmation" : "Review Transfer"}</button>

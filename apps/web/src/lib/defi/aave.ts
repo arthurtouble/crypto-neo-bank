@@ -189,11 +189,19 @@ export function normalizeAavePosition(positions: unknown, summary: unknown) {
   const supplies = positionRoot.supplies;
   const borrows = positionRoot.borrows;
   const markets = summaryRoot.markets;
+  const debts = borrows.filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object" && !Array.isArray(item)
+    && String((item as Record<string, unknown>).market).toLowerCase() === AAVE_BASE_V3_MARKET.toLowerCase()).map((item) => {
+    if (typeof item.symbol !== "string" || typeof item.balance !== "string" || typeof item.balanceUsd !== "string"
+      || !/^\d+(?:\.\d+)?$/.test(item.balance) || !/^\d+(?:\.\d+)?$/.test(item.balanceUsd))
+      throw new Error("Incomplete Aave debt response.");
+    return { symbol: item.symbol, amount: item.balance, usd: item.balanceUsd };
+  });
   const marketsWithPosition = typeof summaryRoot?.marketsWithPosition === "number" ? summaryRoot.marketsWithPosition : markets.length;
   return {
     marketsWithPosition,
     supplyGroups: supplies.length,
     borrowGroups: borrows.length,
+    debts,
     healthFactor: firstScalar(summaryRoot, new Set(["healthFactor", "health_factor"])),
     netWorthUsd: firstScalar(summaryRoot, new Set(["netWorthUSD", "netWorthUsd", "net_worth_usd"]))
   };

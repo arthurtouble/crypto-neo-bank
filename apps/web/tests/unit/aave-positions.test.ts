@@ -21,6 +21,15 @@ describe("Aave position normalization", () => {
     expect(result.borrowGroups).toBe(1);
   });
 
+  it("shows governed Base debt from Aave without treating incomplete rows as zero", () => {
+    const positions = { data: { v3: { supplies: [], borrows: [
+      { market: "0xA238Dd80C259a72e81d7e4664a9801593F98d1c5", symbol: "USDC", balance: "24.18", balanceUsd: "24.17" }
+    ] } } };
+    const summary = { data: { v3: { markets: [] } } };
+    expect(normalizeAavePosition(positions, summary).debts).toEqual([{ symbol: "USDC", amount: "24.18", usd: "24.17" }]);
+    expect(() => normalizeAavePosition({ data: { v3: { supplies: [], borrows: [{ market: "0xA238Dd80C259a72e81d7e4664a9801593F98d1c5", symbol: "USDC" }] } } }, summary)).toThrow(/incomplete/i);
+  });
+
   it("normalizes source-reported Base rewards without reading another chain", () => {
     const result = normalizeAaveBaseRewards({ data: { v3: { partial: true, rewards: [
       { chainId: 10, claimable: [{ amount: { amount: { value: "99" }, usd: "99" }, currency: { symbol: "OP", name: "Optimism", address: "0x0000000000000000000000000000000000000001" } }] },
