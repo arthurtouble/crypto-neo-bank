@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const state = vi.hoisted(() => ({ authorized: true, beta: true, feature: true, locked: false, cooled: true, status: "approval_required", scheduleType: "one_time", dueAt: "2026-01-01T09:00:00.000Z", nextRunAt: "2026-01-01T09:00:00.000Z", occurrence: false, inserts: 0, seenDue: new Set<string>(), scheduleInsertValues: [] as unknown[] }));
-vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: { prepare(sql: string) {
+vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: { async batch(statements: Array<{ run(): Promise<unknown> }>) { return Promise.all(statements.map((statement) => statement.run())); }, prepare(sql: string) {
   const query = { values: [] as unknown[], bind(...values: unknown[]) { this.values = values; return this; },
     async first() {
       if (sql.includes("schedule_occurrences") && sql.includes("JOIN")) return state.occurrence ? { occurrence_id: "occ-1", schedule_id: "sched-1", subject_reference: "subject-a", due_at: state.dueAt, reminder_state: "due", status: state.status, destination_kind: "wallet", provider: null, destination_reference: "0x1111111111111111111111111111111111111111", asset: "USDC", amount: "10" } : null;

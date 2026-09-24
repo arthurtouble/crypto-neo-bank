@@ -3,7 +3,6 @@ import { z } from "zod";
 import { AuthenticationError, requireVerifiedSubject } from "@/lib/auth/server";
 import { ensureSubjectProfile } from "@/lib/profile/ensure";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
-import { writeAuditEvent } from "@/lib/security/audit";
 import { BetaAccessError, requireBetaAccess } from "@/lib/beta/access";
 import { FeatureUnavailableError, requireFeature } from "@/lib/features/flags";
 import { nextOccurrence } from "@/lib/schedules/recurrence";
@@ -64,11 +63,15 @@ export async function POST(request: Request) {
     if (new Date(saved.available_at) > new Date()) return Response.json({ error: "recipient_cooling", message: "This recipient is still in its security cooling period.", availableAt: saved.available_at, traceId }, { status: 409 });
     const now = new Date().toISOString();
     const scheduleId = crypto.randomUUID();
-    await env.PROJECTION_DB.prepare(`INSERT INTO transfer_schedules
+    await env.PROJECTION_DB.batch([env.PROJECTION_DB.prepare(`INSERT INTO transfer_schedules
       (schedule_id, subject_reference, schedule_type, destination_kind, destination_reference, destination_label, rail, asset, amount, next_run_at, status, provider, provider_schedule_reference, time_zone, anchor_local, created_at, updated_at)
       VALUES (?, ?, ?, 'wallet', ?, ?, NULL, ?, ?, ?, 'approval_required', NULL, NULL, ?, ?, ?, ?)`)
-      .bind(scheduleId, subject.subjectReference, input.scheduleType, address, input.destinationLabel, input.asset, input.amount, nextRunAt.toISOString(), input.timeZone, input.anchorLocal, now, now).run();
-    await writeAuditEvent(env.PROJECTION_DB, { subjectReference: subject.subjectReference, actorType: "customer", actorReference: subject.subjectReference, action: "transfer.schedule.created", targetType: "transfer_schedule", targetReference: scheduleId, evidence: { scheduleType: input.scheduleType, nextRunAt: nextRunAt.toISOString(), execution: "approval_required" } });
+      .bind(scheduleId, subject.subjectReference, input.scheduleType, address, input.destinationLabel, input.asset, input.amount, nextRunAt.toISOString(), input.timeZone, input.anchorLocal, now, now),
+    env.PROJECTION_DB.prepare(`INSERT INTO audit_events
+      (audit_id, subject_reference, actor_type, actor_reference, action, target_type, target_reference, evidence_json, occurred_at)
+      VALUES (?, ?, 'customer', ?, 'transfer.schedule.created', 'transfer_schedule', ?, ?, ?)`)
+      .bind(crypto.randomUUID(), subject.subjectReference, subject.subjectReference, scheduleId,
+        JSON.stringify({ scheduleType: input.scheduleType, nextRunAt: nextRunAt.toISOString(), execution: "approval_required" }), now)]);
     return Response.json({ schedule: { scheduleId, ...input, nextRunAt: nextRunAt.toISOString(), status: "approval_required" }, traceId }, { status: 201, headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     if (error instanceof AuthenticationError) return Response.json({ error: "unauthorized", message: error.message, traceId }, { status: 401 });
@@ -102,12 +105,20 @@ export async function PATCH(request: Request) {
       nextRunAt = nextOccurrence({ scheduleType: row.schedule_type, timeZone: row.time_zone, anchorLocal: row.anchor_local, after: new Date(now) })?.toISOString() ?? null;
       if (!nextRunAt) return Response.json({ error: "schedule_elapsed", message: "This one-time review time has passed. Create a new schedule.", traceId }, { status: 409 });
     }
-    const updated = await env.PROJECTION_DB.prepare("UPDATE transfer_schedules SET status = ?, next_run_at = COALESCE(?, next_run_at), updated_at = ? WHERE schedule_id = ? AND subject_reference = ? AND status = ? AND provider IS NULL")
-      .bind(status, nextRunAt, now, input.scheduleId, subject.subjectReference, row.status).run();
+    const auditId = crypto.randomUUID();
+    const [updated] = await env.PROJECTION_DB.batch([
+      env.PROJECTION_DB.prepare("UPDATE transfer_schedules SET status = ?, next_run_at = COALESCE(?, next_run_at), updated_at = ? WHERE schedule_id = ? AND subject_reference = ? AND status = ? AND provider IS NULL")
+        .bind(status, nextRunAt, now, input.scheduleId, subject.subjectReference, row.status),
+      env.PROJECTION_DB.prepare(`INSERT INTO audit_events
+        (audit_id, subject_reference, actor_type, actor_reference, action, target_type, target_reference, evidence_json, occurred_at)
+        SELECT ?, ?, 'customer', ?, ?, 'transfer_schedule', ?, '{}', ? WHERE changes() = 1`)
+        .bind(auditId, subject.subjectReference, subject.subjectReference, `transfer.schedule.${input.action}`, input.scheduleId, now),
+      env.PROJECTION_DB.prepare(`UPDATE schedule_occurrences SET reminder_state = 'dismissed'
+        WHERE schedule_id = ? AND subject_reference = ? AND reminder_state != 'dismissed'
+        AND EXISTS (SELECT 1 FROM audit_events WHERE audit_id = ?)`)
+        .bind(input.scheduleId, subject.subjectReference, auditId)
+    ]);
     if (!updated.meta.changes) return Response.json({ error: "schedule_changed", message: "This schedule changed. Refresh before trying again.", traceId }, { status: 409 });
-    await env.PROJECTION_DB.prepare("UPDATE schedule_occurrences SET reminder_state = 'dismissed' WHERE schedule_id = ? AND subject_reference = ? AND reminder_state != 'dismissed'")
-      .bind(input.scheduleId, subject.subjectReference).run();
-    await writeAuditEvent(env.PROJECTION_DB, { subjectReference: subject.subjectReference, actorType: "customer", actorReference: subject.subjectReference, action: `transfer.schedule.${input.action}`, targetType: "transfer_schedule", targetReference: input.scheduleId });
     return Response.json({ updated: true, status, nextRunAt, traceId }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     if (error instanceof AuthenticationError) return Response.json({ error: "unauthorized", message: error.message, traceId }, { status: 401 });
