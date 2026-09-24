@@ -8,6 +8,8 @@ Release public example-data browsing after its domain, privacy, accessibility, m
 
 An isolated Aura development Worker is deployed at `aura-dev.aurel-events.workers.dev` with a fresh D1 migrated through `0038_support_assistant_flag.sql`. Its public example-data tour works; authenticated use still needs a development Privy secret and allowed origin. The original `aurel-financial-os` Worker and D1 were not changed. Its D1 still needs Aura migrations applied before any future production release. Keep `direct_transfers`, `swaps`, `cross_chain`, and `defi_actions` disabled until each has an approved release record.
 
+On 24 September, workspace typechecks and a local D1 backup/restore drill passed through migration `0038`, preserving invitation, consent, passkey, authorization, and audit evidence. The marketing-claims check remains red because the Aura landing content register is `pending` human review; no approval was inferred from a passing build.
+
 ## Inputs needed from the owner
 
 | Input | Why | Status |
