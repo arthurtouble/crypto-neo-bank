@@ -121,16 +121,33 @@ export async function submitPreparedApproval(input: {
 }
 
 export async function submitPreparedSwap(input: {
-  prepared: PreparedSwap; walletAddress: string; reviewKey: string; currentReviewKey: string; token: string;
+  prepared: PreparedSwap; planId: string; walletAddress: string; reviewKey: string; currentReviewKey: string; token: string;
+  isReviewCurrent: () => boolean;
   send: (call: { chainId: number; to: `0x${string}`; value: bigint; data: `0x${string}` }) => Promise<{ hash: string }>;
   onBroadcast?: (hash: string) => void;
 }): Promise<{ hash: string; reportRecorded: boolean }> {
   const { prepared } = input;
   if (prepared.state !== "prepared" || prepared.stepIndex !== 0 || input.reviewKey !== input.currentReviewKey
+    || !input.isReviewCurrent()
     || !quoteIsFresh(prepared.expiresAt) || prepared.call.chainId !== 8453
     || getAddress(prepared.call.from) !== getAddress(input.walletAddress)) throw new Error("This swap changed. Find a new route before continuing.");
   const call = await normalizePreparedCall(prepared.call);
   if (call.fingerprint !== prepared.fingerprint) throw new Error("This swap changed. Find a new route before continuing.");
+  const recheck = await fetch("/api/swap/prepare", { method: "POST", cache: "no-store",
+    headers: { Authorization: `Bearer ${input.token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ intentId: prepared.intentId, planId: input.planId,
+      walletAddress: input.walletAddress, recheck: true }) });
+  if (!recheck.ok) throw new Error("This swap changed or expired. Find a new route before continuing.");
+  const latest = await recheck.json() as Partial<PreparedSwap>;
+  if (latest.intentId !== prepared.intentId || latest.stepIndex !== prepared.stepIndex
+    || latest.fingerprint !== prepared.fingerprint || !latest.call || latest.expiresAt !== prepared.expiresAt
+    || !quoteIsFresh(latest.expiresAt)) throw new Error("This swap changed or expired. Find a new route before continuing.");
+  const checkedCall = await normalizePreparedCall(latest.call);
+  if (checkedCall.fingerprint !== call.fingerprint || checkedCall.from !== call.from
+    || checkedCall.to !== call.to || checkedCall.value !== call.value || checkedCall.data !== call.data)
+    throw new Error("This swap changed or expired. Find a new route before continuing.");
+  if (!input.isReviewCurrent() || !quoteIsFresh(prepared.expiresAt))
+    throw new Error("This swap changed or expired. Find a new route before continuing.");
   const sent = await input.send({ chainId: call.chainId, to: call.to, value: BigInt(call.value), data: call.data });
   input.onBroadcast?.(sent.hash);
   let reportRecorded = false;
@@ -307,22 +324,30 @@ export function SwapWorkspace() {
       || submittedIntentId === preparedSwap.result.intentId && Boolean(submittedHash)
       || preparedSwap.planId !== freshQuote.planId) return;
     setReviewErrorText(null); setReportWarning(null); setSubmitting(true);
+    const version = reviewVersion.current;
     let broadcasted = false;
+    let walletOpened = false;
     try {
       const token = await getAccessToken();
       if (!token) throw new Error("Your secure session expired. Sign in again before swapping.");
       const result = await submitPreparedSwap({ prepared: preparedSwap.result, walletAddress: address,
-        reviewKey: preparedSwap.key, currentReviewKey: reviewKey, token,
-        send: (transaction) => sendTransaction(transaction, { address,
+        planId: preparedSwap.planId, reviewKey: preparedSwap.key, currentReviewKey: reviewKey, token,
+        isReviewCurrent: () => reviewVersion.current === version,
+        send: (transaction) => { walletOpened = true; return sendTransaction(transaction, { address,
           uiOptions: { description: `Exchange ${amount} ${source?.symbol ?? "tokens"}. Review the request in your wallet.`,
-            buttonText: "Confirm swap", successHeader: "Swap submitted", isCancellable: true } }),
+            buttonText: "Confirm swap", successHeader: "Swap submitted", isCancellable: true } }); },
         onBroadcast: (hash) => { broadcasted = true; setSubmittedHash(hash); setSubmittedIntentId(preparedSwap.result.intentId); setReviewState("submitted"); }
       });
       if (!result.reportRecorded) setReportWarning("Your swap was broadcast, but Aurel could not record it yet. Do not submit it again. Keep the transaction link and contact support.");
     } catch (caught) {
       if (!broadcasted) {
-        setSubmissionUncertain(true);
-        setReviewErrorText(caught instanceof Error ? `${caught.message} Check your wallet activity before trying again.` : "Wallet confirmation did not return a hash. Check your wallet activity before trying again.");
+        if (walletOpened) {
+          setSubmissionUncertain(true);
+          setReviewErrorText(caught instanceof Error ? `${caught.message} Check your wallet activity before trying again.` : "Wallet confirmation did not return a hash. Check your wallet activity before trying again.");
+        } else {
+          clearReview();
+          setError(caught instanceof Error ? caught.message : "Find a new route before continuing.");
+        }
       }
     } finally { setSubmitting(false); }
   }

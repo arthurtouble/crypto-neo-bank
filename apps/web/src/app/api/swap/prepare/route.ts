@@ -18,7 +18,7 @@ import { evaluateTransactionPolicy } from "@/lib/transactions/policy";
 import { ValuationError, valueSwapSource } from "@/lib/transactions/valuation";
 
 const inputSchema = z.object({ intentId: z.string().uuid(), planId: z.string().uuid(),
-  walletAddress: z.string().refine(isAddress) }).strict();
+  walletAddress: z.string().refine(isAddress), recheck: z.boolean().optional() }).strict();
 const reviewedSchema = z.object({ type: z.enum(["swap", "bridge"]), walletAddress: z.string().refine(isAddress),
   chainId: z.literal(8453), asset: z.string(), amount: z.string(), amountRaw: z.string(),
   destination: z.string().refine(isAddress), destinationChainId: z.union([z.literal(8453), z.literal(42161)]),
@@ -151,6 +151,56 @@ export async function POST(request: Request) {
         sourceAmountRaw: plan.from_amount_raw, minimumOutputRaw: plan.to_amount_min_raw }
       : { type: "swap", ...governed.expectedEffect };
     const semanticAction = bridge ? "bridge" : "swap";
+    if (input.recheck) {
+      const current = await env.PROJECTION_DB.prepare(`SELECT c.intent_id FROM intent_prepared_calls c
+        JOIN transaction_intents i ON i.intent_id = c.intent_id
+        JOIN swap_quote_plans p ON p.intent_id = i.intent_id AND p.plan_id = ?
+        JOIN security_profiles s ON s.subject_reference = i.subject_reference AND s.account_locked = 0
+          AND s.policy_version = ?
+        JOIN beta_access b ON b.subject_reference = i.subject_reference AND b.status = 'active'
+          AND b.country_code = ?
+        JOIN feature_flags f ON f.flag_key = 'swaps' AND f.enabled = 1 AND f.audience IN ('all', 'beta')
+        WHERE c.intent_id = ? AND c.step_index = 0 AND c.subject_reference = ?
+          AND c.semantic_action = ? AND c.submission_phase = 'released'
+          AND c.verification_state = 'prepared' AND c.reported_hash IS NULL
+          AND c.wallet_address = ? AND c.chain_id = 8453 AND c.target_address = ?
+          AND c.native_value = ? AND c.calldata_hash = ? AND c.call_fingerprint = ?
+          AND c.source_reference = 'swap-plan:' || p.plan_id AND c.expires_at = i.expires_at
+          AND c.expires_at > ? AND c.expires_at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+          AND i.subject_reference = ? AND i.intent_type = ? AND i.status = 'reviewed'
+          AND i.wallet_reference = ? AND i.route_reference = c.source_reference
+          AND p.status = 'active' AND p.wallet_address = ? AND p.source_chain_id = 8453
+          AND p.destination_chain_id = ? AND p.fingerprint = ? AND p.route_policy_version = ?
+          AND p.expires_at > ? AND p.expires_at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+          AND unixepoch(?) BETWEEN unixepoch('now') - 180 AND unixepoch('now') + 60
+          AND (? = 'swap' OR EXISTS (SELECT 1 FROM feature_flags cross_feature
+            WHERE cross_feature.flag_key = 'cross_chain' AND cross_feature.enabled = 1
+              AND cross_feature.audience IN ('all', 'beta')))
+          AND EXISTS (SELECT 1 FROM (
+            SELECT COALESCE(SUM(CAST(v.usd_cents AS INTEGER)), 0) AS cents,
+              COALESCE(SUM(CASE WHEN v.valuation_id IS NULL THEN 1 ELSE 0 END), 0) AS missing
+            FROM transaction_intents spending LEFT JOIN intent_valuations v ON v.rowid =
+              (SELECT MAX(v2.rowid) FROM intent_valuations v2 WHERE v2.intent_id = spending.intent_id)
+            WHERE spending.subject_reference = ? AND spending.intent_id != ?
+              AND (spending.created_at >= ? OR EXISTS (SELECT 1 FROM intent_prepared_calls recent
+                WHERE recent.intent_id = spending.intent_id AND recent.created_at >= ?))
+              AND (spending.status IN ('submitted', 'confirmed') OR EXISTS (
+                SELECT 1 FROM intent_prepared_calls reserved_call WHERE reserved_call.intent_id = spending.intent_id
+                  AND reserved_call.expires_at > ? AND reserved_call.verification_state != 'failed'))
+          ) reserved WHERE reserved.missing = 0 AND reserved.cents + ? <=
+            CAST(MIN(s.daily_limit_usd, b.transaction_limit_usd) * 100 AS INTEGER))`)
+        .bind(input.planId, profile.policy_version, beta.countryCode, input.intentId,
+          subject.subjectReference, semanticAction, wallet, call.to.toLowerCase(), call.value,
+          call.dataHash, call.fingerprint, at, subject.subjectReference, semanticAction,
+          `wallet:${wallet}`, wallet, plan.destination_chain_id, plan.fingerprint,
+          plan.route_policy_version, at, valuation.priceObservedAt, semanticAction,
+          subject.subjectReference, input.intentId, rollingStart, rollingStart, at, valuedCents)
+        .first<{ intent_id: string }>();
+      if (!current) return reply({ error: "prepare_conflict", traceId }, 409);
+      return reply({ intentId: input.intentId, stepIndex: 0, fingerprint: call.fingerprint,
+        call: { chainId: call.chainId, from: call.from, to: call.to, value: call.value, data: call.data },
+        expiresAt: intent.expires_at, traceId }, 200);
+    }
     const [insert] = await env.PROJECTION_DB.batch([
       env.PROJECTION_DB.prepare(`INSERT INTO intent_prepared_calls
         (intent_id, step_index, subject_reference, wallet_address, chain_id, target_address, native_value,

@@ -13,12 +13,17 @@ const fixture = vi.hoisted(() => ({
   planIntent: "00000000-0000-4000-8000-000000000002", intentStatus: "reviewed", intentType: "swap", locked: false,
   allowance: "sufficient", routeValid: true, simulationValid: true, changes: 1,
   expiryAt: "", advanceAfterSimulation: false, simulationAdvanceMs: 60_000, priceAgeMs: 0, bridge: false,
-  countries: ["US"] as string[], inserted: [] as string[], insertValues: [] as unknown[][], simulationCalls: 0
+  countries: ["US"] as string[], inserted: [] as string[], insertValues: [] as unknown[][], simulationCalls: 0,
+  recheckAvailable: true, recheckQuery: "", recheckValues: [] as unknown[]
 }));
 
 vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
   prepare(sql: string) { return { bind(...values: unknown[]) { return {
     async first() {
+      if (sql.startsWith("SELECT c.intent_id FROM intent_prepared_calls")) {
+        fixture.recheckQuery = sql; fixture.recheckValues = values;
+        return fixture.recheckAvailable ? { intent_id: intentId } : null;
+      }
       if (sql.includes("FROM transaction_intents") && sql.includes("WHERE intent_id =")) return {
         intent_id: intentId, intent_type: fixture.intentType, chain_id: 8453,
         wallet_reference: `wallet:${wallet}`, route_reference: `swap-plan:${planId}`,
@@ -130,6 +135,7 @@ describe("governed Swap preparation boundary", () => {
     locked: false, allowance: "sufficient", routeValid: true, simulationValid: true, changes: 1,
     countries: ["US"], inserted: [], insertValues: [], simulationCalls: 0, advanceAfterSimulation: false,
     simulationAdvanceMs: 60_000, priceAgeMs: 0, bridge: false,
+    recheckAvailable: true, recheckQuery: "", recheckValues: [],
     expiryAt: new Date(Date.now() + 45_000).toISOString() }); });
   afterEach(() => vi.useRealTimers());
 
@@ -187,6 +193,47 @@ describe("governed Swap preparation boundary", () => {
     const response = await post();
     expect(response.status).toBe(409);
     expect(JSON.stringify(await response.json())).not.toContain("0x1234");
+  });
+
+  it("rechecks an existing exact call without preparing another one", async () => {
+    const response = await post({ intentId, planId, walletAddress: wallet, recheck: true });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ intentId, stepIndex: 0, call: { data: "0x1234" } });
+    expect(fixture.inserted).toHaveLength(0);
+    expect(fixture.simulationCalls).toBe(1);
+    expect(fixture.recheckQuery).toContain("c.call_fingerprint = ?");
+  });
+
+  it("does not return calldata when the stored call is no longer releasable", async () => {
+    fixture.recheckAvailable = false;
+    const response = await post({ intentId, planId, walletAddress: wallet, recheck: true });
+    expect(response.status).toBe(409);
+    expect(JSON.stringify(await response.json())).not.toContain("0x1234");
+    expect(fixture.inserted).toHaveLength(0);
+  });
+
+  it("the final recheck denies an exact call after a policy, access, or flag change", async () => {
+    expect((await post()).status).toBe(201);
+    const db = seededCommitDatabase();
+    try {
+      expect(db.prepare(fixture.inserted[0]).run(...fixture.insertValues[0] as Array<string | number | null>).changes).toBe(1);
+      expect((await post({ intentId, planId, walletAddress: wallet, recheck: true })).status).toBe(200);
+      const current = () => db.prepare(fixture.recheckQuery).get(...fixture.recheckValues as Array<string | number | null>);
+      expect(current()).toMatchObject({ intent_id: intentId });
+      db.exec("UPDATE security_profiles SET policy_version=policy_version+1 WHERE subject_reference='did:privy:owner'");
+      expect(current()).toBeUndefined();
+      db.exec("UPDATE security_profiles SET policy_version=1 WHERE subject_reference='did:privy:owner'");
+      db.exec("UPDATE beta_access SET status='suspended' WHERE subject_reference='did:privy:owner'");
+      expect(current()).toBeUndefined();
+      db.exec("UPDATE beta_access SET status='active' WHERE subject_reference='did:privy:owner'");
+      db.exec("UPDATE feature_flags SET enabled=0 WHERE flag_key='swaps'");
+      expect(current()).toBeUndefined();
+      db.exec("UPDATE feature_flags SET enabled=1, audience='operations' WHERE flag_key='swaps'");
+      expect(current()).toBeUndefined();
+      db.exec("UPDATE feature_flags SET audience='beta' WHERE flag_key='swaps'");
+      db.exec("UPDATE security_profiles SET account_locked=1 WHERE subject_reference='did:privy:owner'");
+      expect(current()).toBeUndefined();
+    } finally { db.close(); }
   });
 
   it("does not prepare a quote that expires during network simulation", async () => {

@@ -63,23 +63,60 @@ describe("swap route review request", () => {
   it("submits only an exact, fresh server-prepared call and reports its hash", async () => {
     const call = { chainId: 8453, from: input.walletAddress, to: "0x000000000000000000000000000000000000bEEF", value: "0", data: "0x1234" };
     const normalized = await normalizePreparedCall(call);
+    const expiresAt = new Date(Date.now() + 60_000).toISOString();
     const sent: unknown[] = [];
     const reports: unknown[] = [];
     vi.stubGlobal("fetch", async (url: string, init: RequestInit) => {
       reports.push({ url, body: JSON.parse(String(init.body)) });
+      if (url === "/api/swap/prepare") return Response.json({ intentId: "00000000-0000-4000-8000-000000000001",
+        stepIndex: 0, fingerprint: normalized.fingerprint, call, expiresAt });
       return Response.json({ verificationState: "pending" }, { status: 202 });
     });
     const result = await submitPreparedSwap({
       prepared: { state: "prepared", intentId: "00000000-0000-4000-8000-000000000001", stepIndex: 0,
-        fingerprint: normalized.fingerprint, call, expiresAt: new Date(Date.now() + 60_000).toISOString() },
-      walletAddress: input.walletAddress, reviewKey: "selection", currentReviewKey: "selection", token: input.token,
+        fingerprint: normalized.fingerprint, call, expiresAt },
+      planId: input.planId, walletAddress: input.walletAddress, reviewKey: "selection", currentReviewKey: "selection", token: input.token,
+      isReviewCurrent: () => true,
       send: async (transaction) => { sent.push(transaction); return { hash: `0x${"ab".repeat(32)}` }; }
     });
     expect(result).toEqual({ hash: `0x${"ab".repeat(32)}`, reportRecorded: true });
     expect(sent).toEqual([{ chainId: 8453, to: normalized.to, value: 0n, data: normalized.data }]);
-    expect(reports).toEqual([{ url: "/api/intents/status", body: {
+    expect(reports).toEqual([{ url: "/api/swap/prepare", body: {
+      intentId: "00000000-0000-4000-8000-000000000001", planId: input.planId,
+      walletAddress: input.walletAddress, recheck: true
+    } }, { url: "/api/intents/status", body: {
       intentId: "00000000-0000-4000-8000-000000000001", stepIndex: 0, status: "submitted", transactionHash: `0x${"ab".repeat(32)}`
     } }]);
+  });
+
+  it("does not open the wallet if final server recheck denies the prepared swap", async () => {
+    const call = { chainId: 8453, from: input.walletAddress, to: "0x000000000000000000000000000000000000bEEF", value: "0", data: "0x1234" };
+    const normalized = await normalizePreparedCall(call);
+    const send = vi.fn();
+    vi.stubGlobal("fetch", async () => Response.json({ error: "prepare_conflict" }, { status: 409 }));
+    await expect(submitPreparedSwap({ prepared: { state: "prepared", intentId: "00000000-0000-4000-8000-000000000001", stepIndex: 0,
+      fingerprint: normalized.fingerprint, call, expiresAt: new Date(Date.now() + 60_000).toISOString() },
+      planId: input.planId, walletAddress: input.walletAddress, reviewKey: "selection", currentReviewKey: "selection",
+      token: input.token, isReviewCurrent: () => true, send })).rejects.toThrow(/changed|expired/i);
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it("does not open the wallet if the selected route changes during server recheck", async () => {
+    const call = { chainId: 8453, from: input.walletAddress, to: "0x000000000000000000000000000000000000bEEF", value: "0", data: "0x1234" };
+    const normalized = await normalizePreparedCall(call);
+    const expiresAt = new Date(Date.now() + 60_000).toISOString();
+    let selected = true;
+    const send = vi.fn();
+    vi.stubGlobal("fetch", async () => {
+      selected = false;
+      return Response.json({ intentId: "00000000-0000-4000-8000-000000000001", stepIndex: 0,
+        fingerprint: normalized.fingerprint, call, expiresAt });
+    });
+    await expect(submitPreparedSwap({ prepared: { state: "prepared", intentId: "00000000-0000-4000-8000-000000000001",
+      stepIndex: 0, fingerprint: normalized.fingerprint, call, expiresAt }, planId: input.planId,
+      walletAddress: input.walletAddress, reviewKey: "selection", currentReviewKey: "selection", token: input.token,
+      isReviewCurrent: () => selected, send })).rejects.toThrow(/changed/i);
+    expect(send).not.toHaveBeenCalled();
   });
 
   it.each(["fingerprint", "wallet", "chain", "review", "expiry"])("refuses %s mismatch before opening wallet", async (kind) => {
@@ -92,17 +129,23 @@ describe("swap route review request", () => {
     if (kind === "chain") prepared.call = { ...call, chainId: 1 };
     if (kind === "expiry") prepared.expiresAt = new Date(Date.now() - 1_000).toISOString();
     await expect(submitPreparedSwap({ prepared, walletAddress: kind === "wallet" ? "0x0000000000000000000000000000000000000001" : input.walletAddress,
-      reviewKey: "selection", currentReviewKey: kind === "review" ? "changed" : "selection", token: input.token, send })).rejects.toThrow();
+      planId: input.planId, reviewKey: "selection", currentReviewKey: kind === "review" ? "changed" : "selection", token: input.token,
+      isReviewCurrent: () => true, send })).rejects.toThrow();
     expect(send).not.toHaveBeenCalled();
   });
 
   it("retains a broadcast hash if status reporting fails", async () => {
     const call = { chainId: 8453, from: input.walletAddress, to: "0x000000000000000000000000000000000000bEEF", value: "0", data: "0x1234" };
     const normalized = await normalizePreparedCall(call);
-    vi.stubGlobal("fetch", async () => Response.json({ error: "status_unavailable" }, { status: 503 }));
+    const expiresAt = new Date(Date.now() + 60_000).toISOString();
+    vi.stubGlobal("fetch", async (url: string) => url === "/api/swap/prepare"
+      ? Response.json({ intentId: "00000000-0000-4000-8000-000000000001", stepIndex: 0,
+        fingerprint: normalized.fingerprint, call, expiresAt })
+      : Response.json({ error: "status_unavailable" }, { status: 503 }));
     const result = await submitPreparedSwap({ prepared: { state: "prepared", intentId: "00000000-0000-4000-8000-000000000001", stepIndex: 0,
-      fingerprint: normalized.fingerprint, call, expiresAt: new Date(Date.now() + 60_000).toISOString() },
-      walletAddress: input.walletAddress, reviewKey: "selection", currentReviewKey: "selection", token: input.token,
+      fingerprint: normalized.fingerprint, call, expiresAt },
+      planId: input.planId, walletAddress: input.walletAddress, reviewKey: "selection", currentReviewKey: "selection", token: input.token,
+      isReviewCurrent: () => true,
       send: async () => ({ hash: `0x${"ab".repeat(32)}` }) });
     expect(result).toEqual({ hash: `0x${"ab".repeat(32)}`, reportRecorded: false });
   });
