@@ -82,8 +82,10 @@ describe("Swap quote API controls", () => {
     fixture.swapsEnabled = false; fixture.crossChainEnabled = false;
     const response = await post(base);
     expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({ reviewAccessAvailable: false, quotes: [{ quoteId: "q1" }] });
-    expect(fixture.savedPlans).toBe(1);
+    const body = await response.json() as { reviewAccessAvailable: boolean; quotes: Array<Record<string, unknown>> };
+    expect(body).toMatchObject({ reviewAccessAvailable: false, quotes: [{ quoteId: "q1" }] });
+    expect(body.quotes[0]).not.toHaveProperty("planId");
+    expect(fixture.savedPlans).toBe(0);
   });
 
   it("marks an enabled route as reviewable without returning a signable call", async () => {
@@ -98,7 +100,18 @@ describe("Swap quote API controls", () => {
     fixture.betaMode = "preview";
     const response = await post(base);
     expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({ reviewAccessAvailable: false });
+    const body = await response.json() as { reviewAccessAvailable: boolean; quotes: Array<Record<string, unknown>> };
+    expect(body.reviewAccessAvailable).toBe(false);
+    expect(body.quotes[0]).not.toHaveProperty("planId");
+    expect(fixture.savedPlans).toBe(0);
+  });
+
+  it("does not depend on plan storage for a preview-only quote", async () => {
+    fixture.swapsEnabled = false;
+    fixture.saveFails = true;
+    const response = await post(base);
+    expect(response.status).toBe(200);
+    expect(fixture.savedPlans).toBe(0);
   });
 
 

@@ -36,9 +36,11 @@ export async function POST(request: Request) {
     const planned = isDirectUniswapPair(from.id, to.id)
       ? [await buildDirectUniswapPlan(normalized, { from, to })]
       : await getSwapQuotePlans(normalized, { from, to });
-    const quotes = await Promise.all(planned.map(async ({ quote, plan }) => ({
-      ...quote, planId: await saveSwapQuotePlan(env.PROJECTION_DB, subject.subjectReference, fromAddress, plan)
-    })));
+    const quotes = reviewAccessAvailable
+      ? await Promise.all(planned.map(async ({ quote, plan }) => ({
+          ...quote, planId: await saveSwapQuotePlan(env.PROJECTION_DB, subject.subjectReference, fromAddress, plan)
+        })))
+      : planned.map(({ quote }) => quote);
     return reply({ quotes, reviewAccessAvailable, observedAt: new Date().toISOString(), authority: "Quote metadata; not execution authority" });
   } catch (error) {
     if (error instanceof AuthenticationError) return reply({ error: "unauthorized", message: error.message, traceId }, 401);
