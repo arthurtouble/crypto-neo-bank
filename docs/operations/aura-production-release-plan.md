@@ -27,7 +27,7 @@ Put credentials in provider dashboards or a secret manager, never in this file o
 
 | Area | Current source state | Evidence before live use |
 | --- | --- | --- |
-| Public browse and landing | Aura development Worker deployed; 45 desktop/mobile Playwright checks passed, one skipped; final claims review pending | Final-domain claims/footnotes, privacy/support links, accessibility and responsive check, analytics consent review |
+| Public browse and landing | Aura development Worker deployed; 45 desktop/mobile Playwright checks passed, one skipped; guest examples remain browsable while Privy initializes; final claims review pending | Final-domain claims/footnotes, privacy/support links, accessibility and responsive check, analytics consent review |
 | Identity and recovery | Privy sign-in, invitation/country controls, wallet/passkey/recovery surfaces | Production Privy app/origins, sign-in and recovery rehearsal, session revocation and passcode capability confirmation, export safeguards |
 | Overview, activity and insights | Direct chain/provider reads with coverage labels; D1 intent evidence | Reliable RPC/indexer capacity, completeness and reconciliation sampling, valuation/price evidence, delayed/failed activity handling, statement source |
 | Crypto deposit and send | Address/tag UI and governed Base action foundations | Asset/network matrix, exact-call review, simulation, signing, fees/limits, funded rehearsals, settlement and support recovery |
