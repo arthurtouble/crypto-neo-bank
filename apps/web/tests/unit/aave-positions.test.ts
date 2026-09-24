@@ -13,12 +13,22 @@ describe("Aave position normalization", () => {
     expect(() => normalizeAavePosition(null, null)).toThrow(/incomplete/i);
   });
 
-  it("uses source-reported portfolio metrics", () => {
-    const result = normalizeAavePosition({ data: { v3: { supplies: [{ market: "base" }], borrows: [{ market: "base" }] } } }, { data: { v3: { marketsWithPosition: 1, markets: [{ healthFactor: "2.41", netWorthUSD: "1250.50" }] } } });
+  it("uses only the governed Base market metrics", () => {
+    const market = "0xA238Dd80C259a72e81d7e4664a9801593F98d1c5";
+    const result = normalizeAavePosition({ data: { v3: { supplies: [{ market }], borrows: [{ market, symbol: "USDC", balance: "20", balanceUsd: "20" }] } } }, { data: { v3: { marketsWithPosition: 1, markets: [{ market, healthFactor: "2.41", netWorthUSD: "1250.50" }] } } });
     expect(result.healthFactor).toBe("2.41");
     expect(result.netWorthUsd).toBe("1250.50");
     expect(result.supplyGroups).toBe(1);
     expect(result.borrowGroups).toBe(1);
+  });
+
+  it("does not report another market's debt or health as Base debt", () => {
+    const other = "0x1111111111111111111111111111111111111111";
+    const result = normalizeAavePosition({ data: { v3: { supplies: [], borrows: [{ market: other, symbol: "USDC", balance: "20", balanceUsd: "20" }] } } },
+      { data: { v3: { marketsWithPosition: 1, markets: [{ market: other, healthFactor: "1.01", netWorthUSD: "100" }] } } });
+    expect(result).toMatchObject({ marketsWithPosition: 0, supplyGroups: 0, borrowGroups: 0, debts: [] });
+    expect(result.healthFactor).toBeUndefined();
+    expect(result.netWorthUsd).toBeUndefined();
   });
 
   it("shows governed Base debt from Aave without treating incomplete rows as zero", () => {
