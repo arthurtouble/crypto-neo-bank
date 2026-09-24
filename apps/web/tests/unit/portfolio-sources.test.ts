@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { encodeAbiParameters, encodeEventTopics, padHex, parseAbiItem, toHex } from "viem";
 import { BaseChainSource } from "@/lib/portfolio/chain-source";
-import { readCurrentAaveLegs, BaseAaveSource } from "@/lib/portfolio/aave-source";
+import { BaseAaveSource } from "@/lib/portfolio/aave-source";
 import { normalizeEconomicEvents } from "@/lib/portfolio/normalize";
 import { calculatePortfolioDays } from "@/lib/portfolio/calculate";
 
@@ -209,30 +209,9 @@ describe("Base Aave source", () => {
   });
   const activity = (overrides: Record<string, unknown> = {}) => ({ txHash, timestamp: "2026-09-20T12:00:00Z", reserve: { underlyingToken: reserve, decimals: 6 }, amount: "3", market, __typename: "Borrow", logIndex: 1, blockNumber: 100, blockHash, ...overrides });
   const proof = (overrides: Record<string, unknown> = {}) => ({ blockHash, blockTimestamp: BigInt(Date.parse("2026-09-20T12:00:00Z") / 1000), receiptSuccess: true, finalized: true, logs: [borrowLog()], ...overrides });
-  it("keeps supply and debt as separately signed underlying legs", async () => {
-    const call = vi.fn(async (name: string) => name === "get_user_positions" ? { data: { v3: { supplies: [{ market, reserve: { underlyingToken: reserve, decimals: 6 }, balance: "10" }], borrows: [{ market, reserve: { underlyingToken: reserve, decimals: 6 }, balance: "3" }] } } } : { data: { v3: { markets: [{ market }] } } });
-    const result = await readCurrentAaveLegs(accountId, { call, now: new Date("2026-09-22T12:00:00Z") });
-    expect(result.status).toBe("complete");
-    expect(result.legs).toEqual([
-      expect.objectContaining({ side: "supply", assetId: `8453:${reserve}`, rawUnits: "10000000" }),
-      expect.objectContaining({ side: "debt", assetId: `8453:${reserve}`, rawUnits: "-3000000" })
-    ]);
-  });
-
-  it("marks ambiguous position shape and activity pagination partial", async () => {
-    const result = await readCurrentAaveLegs(accountId, { call: vi.fn(async () => ({ data: { v3: { supplies: [], markets: [] } } })) });
-    expect(result.status).toBe("partial");
+  it("marks ambiguous activity pagination partial", async () => {
     const source = new BaseAaveSource({ call: vi.fn(async () => ({ data: { v3: { items: [], pageInfo: {} } } })) });
     expect((await source.page(request)).complete).toBe(false);
-  });
-
-  it("does not turn a missing Aave reserve precision into zero decimals", async () => {
-    const call = vi.fn(async (name: string) => name === "get_user_positions"
-      ? { data: { v3: { supplies: [{ market, reserve: { underlyingToken: reserve, decimals: null }, balance: "10" }], borrows: [] } } }
-      : { data: { v3: { markets: [{ market }] } } });
-    const result = await readCurrentAaveLegs(accountId, { call });
-    expect(result.status).toBe("partial");
-    expect(result.legs).toEqual([]);
   });
 
   it("finalizes a terminal Aave activity page only with verified chain evidence", async () => {

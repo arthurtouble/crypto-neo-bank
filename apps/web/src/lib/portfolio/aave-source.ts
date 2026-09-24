@@ -1,13 +1,13 @@
-import { AAVE_BASE_V3_MARKET, callAaveTool } from "@/lib/defi/aave";
+import { AAVE_BASE_PROTOCOL, AAVE_BASE_V3_MARKET, callAaveTool } from "@/lib/defi/aave";
 import type { AccountId, Completeness, HistoricalEvent, HistoricalEventSource, HistoryPage } from "@/lib/portfolio/types";
-import { createPublicClient, decodeEventLog, http, parseAbiItem } from "viem";
+import { createPublicClient, decodeEventLog, http, parseAbi, parseAbiItem, type Address, type PublicClient } from "viem";
 import { base } from "viem/chains";
 
 const SOURCE_ID = "aave:v3:8453";
 type ToolCall = (name: string, args: Record<string, unknown>) => Promise<unknown>;
 type PoolLog = { address: string; logIndex: number | null; topics: readonly unknown[]; data: `0x${string}` };
 type Verify = (hash: `0x${string}`, blockNumber: bigint) => Promise<{ blockHash: string | null; blockTimestamp?: bigint; finalized: boolean; receiptSuccess: boolean; logs?: PoolLog[] }>;
-type Options = { call?: ToolCall; now?: Date; verify?: Verify; confirmationDepth?: bigint };
+type Options = { call?: ToolCall; client?: PublicClient; now?: Date; verify?: Verify; confirmationDepth?: bigint };
 type Row = Record<string, unknown>;
 function record(value: unknown): Row | null { return value && typeof value === "object" && !Array.isArray(value) ? value as Row : null; }
 function v3(value: unknown): Row | null { return record(record(record(value)?.data)?.v3); }
@@ -45,29 +45,65 @@ function matchesPoolEvent(log: PoolLog, kind: keyof typeof POOL_EVENTS, asset: s
 }
 
 export async function readCurrentAaveLegs(accountId: AccountId, options: Options = {}): Promise<{ legs: Array<{ assetId: string; side: "supply" | "debt"; rawUnits: string; decimals: number; market: string; observedAt: string; sourceId: string }>; status: Completeness; reason: string | null }> {
-  const unavailable = (reason: string, status: Completeness = "partial") => ({ legs: [], status, reason });
-  if (!/^8453:0x[a-f0-9]{40}$/.test(accountId)) return unavailable("unsupported_account", "unavailable");
-  const call = options.call ?? callAaveTool;
-  let positions: Row | null; let summary: Row | null;
-  try {
-    [positions, summary] = await Promise.all([
-      call("get_user_positions", { user: accountId.slice(5), version: "v3", chainId: 8453 }).then(v3),
-      call("get_user_summary", { user: accountId.slice(5), version: "v3", chainId: 8453 }).then(v3)
-    ]);
-  } catch { return unavailable("aave_unavailable", "unavailable"); }
-  if (!positions || !summary || !Array.isArray(positions.supplies) || !Array.isArray(positions.borrows) || !Array.isArray(summary.markets) || !summary.markets.some((item) => governed(record(item)?.market))) return unavailable("aave_position_incomplete");
+  const unavailable = (reason: string, status: Completeness = "unavailable") => ({ legs: [], status, reason });
+  if (!/^8453:0x[a-f0-9]{40}$/.test(accountId)) return unavailable("unsupported_account");
+  const client = options.client ?? createPublicClient({ chain: base, transport: http("https://base-rpc.publicnode.com", { retryCount: 0, timeout: 12_000 }) });
   const legs: Array<{ assetId: string; side: "supply" | "debt"; rawUnits: string; decimals: number; market: string; observedAt: string; sourceId: string }> = [];
-  const observedAt = (options.now ?? new Date()).toISOString();
-  for (const [key, side] of [["supplies", "supply"], ["borrows", "debt"]] as const) {
-    for (const item of positions[key] as unknown[]) {
-      const row = record(item);
-      const reserve = reserveOf(row?.reserve);
-      const amount = reserve ? rawAmount(row?.balance, reserve.decimals) : null;
-      if (!row || !governed(row.market) || !reserve || amount === null) return unavailable("aave_position_incomplete");
-      legs.push({ assetId: reserve.assetId, side, rawUnits: side === "debt" && amount !== "0" ? `-${amount}` : amount, decimals: reserve.decimals, market: AAVE_BASE_V3_MARKET.toLowerCase(), observedAt, sourceId: SOURCE_ID });
-    }
-  }
-  return { legs, status: "complete", reason: null };
+  const abi = parseAbi([
+    "function getPool() view returns (address)",
+    "function getPoolDataProvider() view returns (address)",
+    "function getReservesList() view returns (address[])",
+    "function getUserReserveData(address asset,address user) view returns (uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint40,bool)",
+    "function getReserveConfigurationData(address asset) view returns (uint256,uint256,uint256,uint256,uint256,bool,bool,bool,bool,bool)"
+  ]);
+  try {
+    if (await client.getChainId() !== 8453) return unavailable("aave_chain_mismatch");
+    const tip = await client.getBlockNumber();
+    const depth = options.confirmationDepth ?? 20n;
+    if (depth < 1n || tip < depth) return unavailable("aave_finality_unavailable");
+    const block = await client.getBlock({ blockNumber: tip - depth });
+    if (block.number !== tip - depth || !block.hash || !/^0x[\da-f]{64}$/i.test(block.hash)
+      || /^0x0{64}$/i.test(block.hash)) return unavailable("aave_block_unavailable");
+    const observedAtMs = Number(block.timestamp) * 1000;
+    const nowMs = (options.now ?? new Date()).getTime();
+    if (!Number.isSafeInteger(observedAtMs) || !Number.isFinite(nowMs) || observedAtMs > nowMs || nowMs - observedAtMs > 300_000)
+      return unavailable("aave_snapshot_stale");
+    const read = (target: Address, functionName: string, args: readonly unknown[] = []): Promise<unknown> =>
+      client.readContract({ address: target, abi, functionName, args, blockHash: block.hash, requireCanonical: true } as never);
+    const pool = await read(AAVE_BASE_PROTOCOL.provider, "getPool");
+    const dataProvider = await read(AAVE_BASE_PROTOCOL.provider, "getPoolDataProvider");
+    if (address(pool) !== AAVE_BASE_V3_MARKET.toLowerCase() || address(dataProvider) !== AAVE_BASE_PROTOCOL.dataProvider.toLowerCase())
+      return unavailable("aave_market_changed");
+    const reserves = await read(AAVE_BASE_V3_MARKET, "getReservesList");
+    if (!Array.isArray(reserves) || !reserves.length || reserves.length > 128
+      || reserves.some((reserve) => !address(reserve) || address(reserve) === `0x${"0".repeat(40)}`)
+      || new Set(reserves.map((reserve) => address(reserve))).size !== reserves.length) return unavailable("aave_reserve_coverage_incomplete", "partial");
+    const positions = await Promise.all(reserves.map(async (reserve) => {
+      const position = await read(AAVE_BASE_PROTOCOL.dataProvider, "getUserReserveData", [reserve, accountId.slice(5)]);
+      if (!Array.isArray(position) || position.length !== 9 || position.slice(0, 3).some((value) => typeof value !== "bigint" || value < 0n))
+        throw new Error("Incomplete Aave reserve position.");
+      const supplied = position[0] as bigint;
+      const borrowed = (position[1] as bigint) + (position[2] as bigint);
+      if (!supplied && !borrowed) return [];
+      const config = await read(AAVE_BASE_PROTOCOL.dataProvider, "getReserveConfigurationData", [reserve]);
+      if (!Array.isArray(config) || config.length !== 10 || typeof config[0] !== "bigint" || config[0] < 0n || config[0] > 36n)
+        throw new Error("Incomplete Aave reserve precision.");
+      const decimals = Number(config[0]);
+      const common = { assetId: `8453:${address(reserve)}`, decimals, market: AAVE_BASE_V3_MARKET.toLowerCase(),
+        observedAt: new Date(observedAtMs).toISOString(), sourceId: SOURCE_ID };
+      return [
+        ...(supplied ? [{ ...common, side: "supply" as const, rawUnits: supplied.toString() }] : []),
+        ...(borrowed ? [{ ...common, side: "debt" as const, rawUnits: `-${borrowed}` }] : [])
+      ];
+    }));
+    const canonical = await client.getBlock({ blockNumber: block.number });
+    if (canonical.hash?.toLowerCase() !== block.hash.toLowerCase() || canonical.timestamp !== block.timestamp)
+      return unavailable("aave_block_changed");
+    if ((options.now ?? new Date()).getTime() - observedAtMs > 300_000)
+      return unavailable("aave_snapshot_stale");
+    legs.push(...positions.flat());
+    return { legs, status: "complete", reason: null };
+  } catch { return unavailable("aave_unavailable"); }
 }
 
 export class BaseAaveSource implements HistoricalEventSource {
