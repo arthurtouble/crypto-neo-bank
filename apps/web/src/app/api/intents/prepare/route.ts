@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
 import { z } from "zod";
-import { encodeFunctionData, erc20Abi, getAddress, isAddress, parseUnits } from "viem";
+import { createPublicClient, encodeFunctionData, erc20Abi, getAddress, http, isAddress, parseUnits } from "viem";
 import { BASE_ASSETS, HOME_CHAIN } from "@/config/chains";
 import { AuthenticationError, requireVerifiedSubject } from "@/lib/auth/server";
 import { BetaAccessError, requireBetaAccess } from "@/lib/beta/access";
@@ -8,6 +8,8 @@ import { FeatureUnavailableError, requireFeature, type FeatureKey } from "@/lib/
 import { WalletOwnershipError, requireLinkedEvmWallet } from "@/lib/auth/wallet";
 import { enforceRateLimit, RateLimitError } from "@/lib/security/rate-limit";
 import { normalizePreparedCall, type PreparedCallInput } from "@/lib/transactions/evidence";
+import { simulateBaseDirectTransfer } from "@/lib/transactions/direct-transfer-simulation";
+import { observeBaseDirectTransferFeeBudget } from "@/lib/transactions/direct-transfer-fee-budget";
 import { evaluateTransactionPolicy } from "@/lib/transactions/policy";
 import { ValuationError, valueTransfer } from "@/lib/transactions/valuation";
 
@@ -140,11 +142,27 @@ export async function POST(request: Request) {
     if (intent.wallet_reference !== `wallet:${ownedAddress}` || input.call.chainId !== intent.chain_id) return reply({ error: "call_not_reviewed", traceId }, 409);
     const effect = validatePreparedAction({ ...input, intentType: intent.intent_type, reviewedDestination: reviewed.destination, reviewedAsset: reviewed.asset, reviewedAmount: reviewed.amount });
     const call = await normalizePreparedCall(input.call);
+    if (effect.type === "erc20_approval") return reply({ error: "call_not_reviewed", traceId }, 400);
+    let simulationEvidence: Record<string, string>;
+    try {
+      const client = createPublicClient({ transport: http(HOME_CHAIN.rpcUrls.default.http[0]) });
+      const simulation = await simulateBaseDirectTransfer(client, { call, effect, nowMs: Date.now(), maxAgeMs: 30_000 });
+      const fees = await observeBaseDirectTransferFeeBudget(client, { call, simulation,
+        amountRaw: effect.amountRaw, nativeAsset: effect.type === "native_transfer", nowMs: Date.now(), maxAgeMs: 30_000 });
+      const evidenceAgeMs = Date.now() - simulation.observedAtMs;
+      if (evidenceAgeMs < 0 || evidenceAgeMs > 30_000) throw new Error("Simulation evidence expired before preparation.");
+      simulationEvidence = { blockNumber: simulation.blockNumber.toString(), blockHash: simulation.blockHash,
+        fingerprint: call.fingerprint, gasLimitRaw: fees.gasLimitRaw, requiredEthRaw: fees.requiredEthRaw };
+    } catch {
+      return reply({ error: "simulation_unavailable", traceId }, 503);
+    }
+    const commitAt = new Date().toISOString();
     const [result] = await env.PROJECTION_DB.batch([
       env.PROJECTION_DB.prepare(`INSERT INTO intent_prepared_calls
       (intent_id, step_index, subject_reference, wallet_address, chain_id, target_address, native_value, calldata_hash, call_fingerprint, semantic_action, source_reference, expires_at, expected_effect_json, verification_state, created_at, submission_phase)
       SELECT i.intent_id, ?, i.subject_reference, ?, ?, ?, ?, ?, ?, ?, ?, i.expires_at, ?, 'prepared', ?, 'legacy'
       FROM transaction_intents i WHERE i.intent_id = ? AND i.subject_reference = ? AND i.status = 'reviewed' AND i.expires_at > ?
+        AND EXISTS (SELECT 1 FROM feature_flags f WHERE f.flag_key = ? AND f.enabled = 1 AND f.audience IN ('all', 'beta'))
         AND NOT EXISTS (SELECT 1 FROM security_profiles s WHERE s.subject_reference = i.subject_reference AND s.account_locked = 1)
         AND NOT EXISTS (SELECT 1 FROM intent_prepared_calls p WHERE p.intent_id = i.intent_id AND p.step_index = ?)
         AND (? = 0 OR EXISTS (SELECT 1 FROM intent_prepared_calls prior WHERE prior.intent_id = i.intent_id AND prior.step_index = ? AND prior.verification_state = 'confirmed'))
@@ -160,11 +178,11 @@ export async function POST(request: Request) {
               SELECT 1 FROM intent_prepared_calls reserved_call WHERE reserved_call.intent_id = spending.intent_id
                 AND reserved_call.expires_at > ? AND reserved_call.verification_state != 'failed'))
         ) reserved_spend WHERE reserved_spend.missing = 0 AND reserved_spend.cents + ? <= ?)`)
-      .bind(input.stepIndex, ownedAddress, call.chainId, call.to.toLowerCase(), call.value, call.dataHash, call.fingerprint, input.semanticAction, input.sourceReference, JSON.stringify(effect), now, input.intentId, subject.subjectReference, now, input.stepIndex, input.stepIndex, input.stepIndex - 1,
+      .bind(input.stepIndex, ownedAddress, call.chainId, call.to.toLowerCase(), call.value, call.dataHash, call.fingerprint, input.semanticAction, input.sourceReference, JSON.stringify(effect), commitAt, input.intentId, subject.subjectReference, commitAt, featureFor(intent.intent_type), input.stepIndex, input.stepIndex, input.stepIndex - 1,
         subject.subjectReference, input.intentId, rollingStart, rollingStart, now, valuedCents, dailyLimitCents),
       env.PROJECTION_DB.prepare(`INSERT INTO intent_events (event_id, intent_id, subject_reference, event_type, evidence_json, occurred_at)
         SELECT ?, ?, ?, 'call_prepared', ?, ? WHERE changes() = 1`)
-        .bind(crypto.randomUUID(), input.intentId, subject.subjectReference, JSON.stringify({ stepIndex: input.stepIndex, fingerprint: call.fingerprint, semanticAction: input.semanticAction }), now),
+        .bind(crypto.randomUUID(), input.intentId, subject.subjectReference, JSON.stringify({ stepIndex: input.stepIndex, fingerprint: call.fingerprint, semanticAction: input.semanticAction, simulation: simulationEvidence }), commitAt),
       env.PROJECTION_DB.prepare(`INSERT INTO intent_valuations
         (valuation_id, intent_id, asset_id, raw_units, decimals, price_usd, market_price_usd, price_source, price_observed_at, valued_at, usd_cents, policy_version, depeg_uncertainty)
         SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? WHERE changes() = 1`)

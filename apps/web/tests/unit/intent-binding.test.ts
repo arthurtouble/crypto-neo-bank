@@ -15,6 +15,11 @@ const state = vi.hoisted(() => ({
   lastInsert: null as null | { query: string; args: unknown[] },
   valuationFails: false,
   valuationCents: "1",
+  simulationFails: false,
+  feeBudgetFails: false,
+  staleDuringFeeBudget: false,
+  expireDuringSimulation: false,
+  disableDuringSimulation: false,
   valuations: [] as Array<unknown>,
   addressBook: [] as Array<{ address: string; available_at: string }>,
   intentUpdateAllowed: true,
@@ -103,8 +108,11 @@ vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
             state.lastInsert = { query, args };
             const step = Number(args[0]);
             if (state.atomicReservationExceeded && query.includes("reserved_spend")) return { meta: { changes: 0 } };
-            if (state.intent?.status !== "reviewed" || state.accountLocked || state.prepared.has(step) || (step > 0 && state.prepared.get(step - 1)?.verification_state !== "confirmed")) return { meta: { changes: 0 } };
-            state.prepared.set(step, { intent_id: args[12], step_index: step, subject_reference: args[13], wallet_address: args[1], chain_id: args[2], target_address: args[3], native_value: args[4], calldata_hash: args[5], call_fingerprint: args[6], semantic_action: args[7], source_reference: args[8], expected_effect_json: args[9], expires_at: state.intent.expires_at, verification_state: "prepared", reported_hash: null });
+            if (state.intent?.status !== "reviewed" || state.accountLocked || state.prepared.has(step)
+              || String(state.intent.expires_at) <= String(args[13])
+              || query.includes("FROM feature_flags") && !state.featureAllowed
+              || (step > 0 && state.prepared.get(step - 1)?.verification_state !== "confirmed")) return { meta: { changes: 0 } };
+            state.prepared.set(step, { intent_id: args[11], step_index: step, subject_reference: args[12], wallet_address: args[1], chain_id: args[2], target_address: args[3], native_value: args[4], calldata_hash: args[5], call_fingerprint: args[6], semantic_action: args[7], source_reference: args[8], expected_effect_json: args[9], expires_at: state.intent.expires_at, verification_state: "prepared", reported_hash: null });
             return { meta: { changes: 1 } };
           }
           if (query.includes("INSERT INTO intent_events")) {
@@ -155,6 +163,28 @@ vi.mock("@/lib/transactions/valuation", () => {
     return { assetId: "eip155:8453/slip44:60", rawUnits: "100", decimals: 18, priceUsd: "2000", marketPriceUsd: "2000", priceSource: "kraken:ETHUSD:1m:high", priceObservedAt: new Date().toISOString(), valuedAt: new Date().toISOString(), usdCents: state.valuationCents, policyVersion: 1, depegUncertainty: false };
   } };
 });
+vi.mock("@/lib/transactions/direct-transfer-simulation", () => ({
+  simulateBaseDirectTransfer: async (_client: unknown, input: { call: { fingerprint: string }; effect: { type: string; amountRaw: string } }) => {
+    if (state.simulationFails) throw new Error("canonical call unavailable");
+    if (input.effect.type !== "native_transfer" || input.effect.amountRaw !== "100") throw new Error("wrong simulation input");
+    if (state.expireDuringSimulation) {
+      state.intent!.expires_at = new Date().toISOString();
+      await new Promise((resolve) => setTimeout(resolve, 5));
+    }
+    if (state.disableDuringSimulation) state.featureAllowed = false;
+    return { chainId: 8453, blockNumber: 42n, blockHash: `0x${"a".repeat(64)}`, observedAtMs: Date.now(),
+      fingerprint: input.call.fingerprint, simulationSucceeded: true, assetBalanceRaw: "1000000", assetBalanceObserved: true };
+  }
+}));
+vi.mock("@/lib/transactions/direct-transfer-fee-budget", () => ({
+  observeBaseDirectTransferFeeBudget: async (_client: unknown, input: { amountRaw: string; nativeAsset: boolean; simulation: { observedAtMs: number } }) => {
+    if (state.feeBudgetFails) throw new Error("fee reserve unavailable");
+    if (input.amountRaw !== "100" || !input.nativeAsset) throw new Error("wrong fee-budget input");
+    if (state.staleDuringFeeBudget) input.simulation.observedAtMs = Date.now() - 31_000;
+    return { blockHash: `0x${"a".repeat(64)}`, gasLimitRaw: "27250", requiredEthRaw: "546100",
+      estimatedReserveSufficient: true };
+  }
+}));
 
 import { POST as prepare, validatePreparedAction } from "@/app/api/intents/prepare/route";
 import { observeTransaction, observeTransactionIdentity } from "@/lib/transactions/chain-observation";
@@ -278,7 +308,7 @@ describe("intent preparation route", () => {
   async function request(body: unknown) { return prepare(new Request("https://aurel.test/api/intents/prepare", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })); }
 
   beforeEach(() => {
-    state.subject = "subject-a"; state.walletLinked = true; state.betaAllowed = true; state.featureAllowed = true; state.accountLocked = false; state.dailyLimitUsd = 25_000; state.stepUpThresholdUsd = 10_000; state.spentTodayUsd = 0; state.spentMissing = false; state.atomicReservationExceeded = false; state.lastInsert = null; state.valuationFails = false; state.valuationCents = "1"; state.valuations.length = 0; state.addressBook = []; state.intentUpdateAllowed = true; state.preparationEventFails = false; state.prepared.clear(); state.events.length = 0; state.issues.length = 0;
+    state.subject = "subject-a"; state.walletLinked = true; state.betaAllowed = true; state.featureAllowed = true; state.accountLocked = false; state.dailyLimitUsd = 25_000; state.stepUpThresholdUsd = 10_000; state.spentTodayUsd = 0; state.spentMissing = false; state.atomicReservationExceeded = false; state.lastInsert = null; state.valuationFails = false; state.valuationCents = "1"; state.simulationFails = false; state.feeBudgetFails = false; state.staleDuringFeeBudget = false; state.expireDuringSimulation = false; state.disableDuringSimulation = false; state.valuations.length = 0; state.addressBook = []; state.intentUpdateAllowed = true; state.preparationEventFails = false; state.prepared.clear(); state.events.length = 0; state.issues.length = 0;
     state.intent = { intent_id: intentId, subject_reference: "subject-a", intent_type: "transfer", chain_id: 8453, wallet_reference: `wallet:${sender.toLowerCase()}`, request_json: JSON.stringify({ type: "transfer", chainId: 8453, destination: recipient, asset: "ETH", amount: "0.0000000000000001", estimatedUsd: 20 }), policy_result_json: JSON.stringify({ permitted: true }), status: "reviewed", expires_at: new Date(Date.now() + 60_000).toISOString() };
   });
 
@@ -289,6 +319,43 @@ describe("intent preparation route", () => {
     expect(state.prepared.get(0)).toMatchObject({ chain_id: 8453, native_value: "100", semantic_action: "native_transfer" });
     expect(state.valuations).toHaveLength(1);
     expect((await request(payload)).status).toBe(409);
+  });
+
+  it("does not prepare a transfer when the canonical server simulation fails", async () => {
+    state.simulationFails = true;
+    const response = await request(payload);
+    expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({ error: "simulation_unavailable" });
+    expect(state.prepared.size).toBe(0);
+    expect(state.valuations).toHaveLength(0);
+  });
+
+  it("does not prepare a transfer when its gas reserve cannot be proven", async () => {
+    state.feeBudgetFails = true;
+    const response = await request(payload);
+    expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({ error: "simulation_unavailable" });
+    expect(state.prepared.size).toBe(0);
+    expect(state.valuations).toHaveLength(0);
+  });
+
+  it("does not persist a simulation that becomes stale during fee checks", async () => {
+    state.staleDuringFeeBudget = true;
+    const response = await request(payload);
+    expect(response.status).toBe(503);
+    expect(state.prepared.size).toBe(0);
+  });
+
+  it("does not prepare an intent that expires during server simulation", async () => {
+    state.expireDuringSimulation = true;
+    expect((await request(payload)).status).toBe(409);
+    expect(state.prepared.size).toBe(0);
+  });
+
+  it("does not prepare when the transfer feature is switched off during simulation", async () => {
+    state.disableDuringSimulation = true;
+    expect((await request(payload)).status).toBe(409);
+    expect(state.prepared.size).toBe(0);
   });
 
   it("does not retain a prepared call if its event cannot be persisted", async () => {
@@ -322,12 +389,14 @@ describe("intent preparation route", () => {
     const current = state.intent!.intent_id as string;
     const schema = (oldPeerIntent: boolean) => `
       CREATE TABLE transaction_intents (intent_id TEXT PRIMARY KEY, subject_reference TEXT, status TEXT, expires_at TEXT, created_at TEXT);
+      CREATE TABLE feature_flags (flag_key TEXT PRIMARY KEY, enabled INTEGER, audience TEXT);
       CREATE TABLE security_profiles (subject_reference TEXT, account_locked INTEGER);
       CREATE TABLE intent_valuations (valuation_id TEXT, intent_id TEXT, usd_cents TEXT);
       CREATE TABLE intent_prepared_calls (intent_id TEXT, step_index INTEGER, subject_reference TEXT, wallet_address TEXT, chain_id INTEGER, target_address TEXT, native_value TEXT, calldata_hash TEXT, call_fingerprint TEXT, semantic_action TEXT, source_reference TEXT, expires_at TEXT, expected_effect_json TEXT, verification_state TEXT, created_at TEXT, submission_phase TEXT);
       INSERT INTO transaction_intents VALUES ('${current}', 'subject-a', 'reviewed', '${future}', datetime('now'));
       INSERT INTO transaction_intents VALUES ('peer', 'subject-a', 'reviewed', '${future}', datetime('now'${oldPeerIntent ? ",'-2 days'" : ""}));
       INSERT INTO security_profiles VALUES ('subject-a', 0);
+      INSERT INTO feature_flags VALUES ('direct_transfers', 1, 'beta');
       INSERT INTO intent_prepared_calls VALUES ('peer', 0, 'subject-a', '${sender.toLowerCase()}', 8453, '${recipient.toLowerCase()}', '100', 'hash', 'fingerprint', 'native_transfer', 'review', '${future}', '{}', 'prepared', datetime('now'), 'legacy');
     `;
     const run = (reservedCents: number, oldPeerIntent = false) => spawnSync("sqlite3", [":memory:"], {

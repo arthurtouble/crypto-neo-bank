@@ -2,7 +2,7 @@ import { decodeFunctionData, encodeFunctionData, decodeFunctionResult, erc20Abi,
 import { normalizePreparedCall, type NormalizedPreparedCall } from "./evidence";
 
 const ORACLE = "0x420000000000000000000000000000000000000F";
-const ORACLE_ABI = parseAbi(["function getL1FeeUpperBound(uint256) view returns (uint256)"]);
+const ORACLE_ABI = parseAbi(["function getL1FeeUpperBound(uint256) view returns (uint256)", "function getOperatorFee(uint256) view returns (uint256)"]);
 
 type Simulation = {
   chainId: 8453;
@@ -86,18 +86,24 @@ export async function observeBaseDirectTransferFeeBudget(client: PublicClient, r
   if (!l1Result.data) throw new Error("Base L1 fee oracle unavailable.");
   const l1FeeUpperBound = decodeFunctionResult({ abi: ORACLE_ABI,
     functionName: "getL1FeeUpperBound", data: l1Result.data });
+  const operatorResult = await client.call({ to: ORACLE,
+    data: encodeFunctionData({ abi: ORACLE_ABI, functionName: "getOperatorFee", args: [gasLimit] }),
+    blockHash: simulation.blockHash, requireCanonical: true });
+  if (!operatorResult.data) throw new Error("Base operator fee oracle unavailable.");
+  const operatorFee = decodeFunctionResult({ abi: ORACLE_ABI,
+    functionName: "getOperatorFee", data: operatorResult.data });
   const ethBalance = await client.getBalance({ address: normalized.from,
     blockHash: simulation.blockHash, requireCanonical: true });
   const canonical = await client.getBlock({ blockNumber: simulation.blockNumber });
   if (canonical.hash?.toLowerCase() !== simulation.blockHash.toLowerCase()
     || canonical.timestamp !== block.timestamp) throw new Error("Canonical simulation block changed.");
-  const requiredEth = (request.nativeAsset ? amount : 0n) + gasLimit * fees.maxFeePerGas + l1FeeUpperBound;
+  const requiredEth = (request.nativeAsset ? amount : 0n) + gasLimit * fees.maxFeePerGas + l1FeeUpperBound + operatorFee;
   if (ethBalance < requiredEth) throw new Error("Insufficient ETH balance for transfer and estimated fees.");
   return {
     chainId: 8453 as const, blockNumber: simulation.blockNumber, blockHash: simulation.blockHash,
     fingerprint: normalized.fingerprint, gasEstimateRaw: gasEstimate.toString(), gasLimitRaw: gasLimit.toString(),
     maxFeePerGasRaw: fees.maxFeePerGas.toString(), maxPriorityFeePerGasRaw: fees.maxPriorityFeePerGas.toString(),
-    l1FeeUpperBoundRaw: l1FeeUpperBound.toString(), estimatedTransactionSizeBytesRaw: transactionSizeBytes.toString(),
+    l1FeeUpperBoundRaw: l1FeeUpperBound.toString(), operatorFeeRaw: operatorFee.toString(), estimatedTransactionSizeBytesRaw: transactionSizeBytes.toString(),
     requiredEthRaw: requiredEth.toString(), ethBalanceRaw: ethBalance.toString(),
     estimatedReserveSufficient: true as const, signingReady: false as const
   };

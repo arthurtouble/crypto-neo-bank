@@ -7,12 +7,12 @@ const from = "0x000000000000000000000000000000000000dEaD";
 const recipient = "0x0000000000000000000000000000000000000001";
 const blockHash = `0x${"a".repeat(64)}` as const;
 const oracle = "0x420000000000000000000000000000000000000F";
-const oracleAbi = parseAbi(["function getL1FeeUpperBound(uint256) view returns (uint256)"]);
+const oracleAbi = parseAbi(["function getL1FeeUpperBound(uint256) view returns (uint256)", "function getOperatorFee(uint256) view returns (uint256)"]);
 const proof = { chainId: 8453 as const, blockNumber: 42n, blockHash, observedAtMs: 1_000_000_000,
   simulationSucceeded: true as const, assetBalanceRaw: "1000", assetBalanceObserved: true as const,
   balanceAndGasProven: false as const, signingReady: false as const };
 
-function rpc(ethBalance = 1_000_000_000n) {
+function rpc(ethBalance = 1_000_000_000n, operatorFee = 0n) {
   return {
     getChainId: vi.fn(async () => 8453),
     getBlock: vi.fn(async () => ({ number: 42n, hash: blockHash, timestamp: 1_000_000n,
@@ -30,8 +30,9 @@ function rpc(ethBalance = 1_000_000_000n) {
         throw new Error("unexpected token call");
       }
       const decoded = decodeFunctionData({ abi: oracleAbi, data });
-      if (decoded.functionName !== "getL1FeeUpperBound") throw new Error("unexpected selector");
-      return { data: encodeFunctionResult({ abi: oracleAbi, functionName: "getL1FeeUpperBound", result: 100n }) };
+      if (decoded.functionName === "getL1FeeUpperBound") return { data: encodeFunctionResult({ abi: oracleAbi, functionName: "getL1FeeUpperBound", result: 100n }) };
+      if (decoded.functionName === "getOperatorFee") return { data: encodeFunctionResult({ abi: oracleAbi, functionName: "getOperatorFee", result: operatorFee }) };
+      throw new Error("unexpected selector");
     })
   };
 }
@@ -64,6 +65,15 @@ describe("disconnected Base transfer fee budget", () => {
       call, simulation: { ...proof, fingerprint: call.fingerprint }, amountRaw: "1000", nativeAsset: true,
       nowMs: 1_000_002_000, maxAgeMs: 30_000
     })).rejects.toThrow(/fee|balance/i);
+  });
+
+  it("includes a nonzero Base operator fee in the required ETH reserve", async () => {
+    const call = await native();
+    const result = await observeBaseDirectTransferFeeBudget(rpc(547_100n, 1_000n) as unknown as PublicClient, {
+      call, simulation: { ...proof, fingerprint: call.fingerprint }, amountRaw: "1000", nativeAsset: true,
+      nowMs: 1_000_002_000, maxAgeMs: 30_000
+    });
+    expect(result).toMatchObject({ operatorFeeRaw: "1000", requiredEthRaw: "547100", estimatedReserveSufficient: true });
   });
 
   it("rejects a changed simulation fingerprint before querying fees", async () => {
