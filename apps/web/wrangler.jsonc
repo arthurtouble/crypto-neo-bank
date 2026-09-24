@@ -46,6 +46,36 @@
   "ai": {
     "binding": "AI"
   },
+  "env": {
+    "dev": {
+      "name": "aura-dev",
+      "vars": {
+        "PRODUCT_ENVIRONMENT": "development",
+        "PRODUCT_MODE": "mainnet-preview",
+        "BRIDGE_MODE": "preview",
+        "BRIDGE_API_BASE_URL": "https://api.bridge.xyz/v0",
+        "NEXT_PUBLIC_PRIVY_APP_ID": "cmub5evr4013l0cjs0w5dijlb",
+        "NEXT_PUBLIC_TURNSTILE_SITE_KEY": "0x4AAAAAAE_LD5ONaf0OITS8",
+        "TURNSTILE_HOSTNAMES": "aura-dev.aurel-events.workers.dev",
+        "ADMIN_PRIVY_SUBJECTS": "",
+        "BETA_ACCESS_MODE": "preview",
+        "BETA_ALLOWED_COUNTRIES": "",
+        "GROWTH_WAITLIST_MODE": "closed",
+        "GROWTH_REFERRALS_ENABLED": "false",
+        "REQUIRE_CF_ACCESS": "false",
+        "PROVIDER_WEBHOOK_TOLERANCE_SECONDS": "300"
+      },
+      "d1_databases": [{
+        "binding": "PROJECTION_DB",
+        "database_name": "aura-dev-projections",
+        "database_id": "27acaa63-44c8-4422-9b32-f4f78c35aabd",
+        "migrations_dir": "../../infra/d1/migrations"
+      }],
+      "queues": { "producers": [{ "binding": "PROVIDER_EVENTS", "queue": "aura-dev-provider-events" }] },
+      "ai": { "binding": "AI" },
+      "observability": { "enabled": true, "logs": { "enabled": true, "head_sampling_rate": 1 }, "traces": { "enabled": true, "head_sampling_rate": 0.01 } }
+    }
+  },
   "observability": {
     "enabled": true,
     "logs": {

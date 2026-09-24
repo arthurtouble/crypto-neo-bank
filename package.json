@@ -7,6 +7,7 @@
     "build": "pnpm --filter @aurel/web build",
     "preview": "pnpm --filter @aurel/web preview",
     "deploy": "pnpm --filter @aurel/web deploy",
+    "deploy:dev": "pnpm --filter @aurel/web deploy:dev",
     "deploy:dry-run": "pnpm --filter @aurel/web deploy:dry-run",
     "release:upload": "pnpm --filter @aurel/web release:upload",
     "release:list": "pnpm --filter @aurel/web release:list",

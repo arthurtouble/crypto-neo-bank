@@ -6,13 +6,13 @@ Last reviewed: 24 September 2026. Branch: `codex/aura-product-simplification`. T
 
 Release public example-data browsing after its domain, privacy, accessibility, marketing, support, and monitoring gates pass. Activate each authenticated financial rail separately after its provider, security, funded-test, reconciliation, and operating gates pass. A feature flag or API key alone is not proof that a rail is ready. Provider and on-chain records remain authoritative; D1 is a projection and audit store. Missing authoritative values stay unavailable.
 
-The checked-in Worker configuration still points to a workers.dev preview origin, a development Privy app ID, preview access mode, and preview Bridge mode. This branch has not been deployed; migrations `0036_aura_tags.sql` and `0037_aura_tag_bank_consent.sql` have not been applied remotely. The existing development D1 also lists `0035_growth_waitlist_upgrade.sql` as pending. Keep `direct_transfers`, `swaps`, `cross_chain`, and `defi_actions` disabled until each has an approved release record.
+An isolated Aura development Worker is deployed at `aura-dev.aurel-events.workers.dev` with a fresh D1 migrated through `0037_aura_tag_bank_consent.sql`. Its public example-data tour works; authenticated use still needs a development Privy secret and allowed origin. The original `aurel-financial-os` Worker and D1 were not changed. Its D1 still lists `0035_growth_waitlist_upgrade.sql`, `0036_aura_tags.sql`, and `0037_aura_tag_bank_consent.sql` as pending. Keep `direct_transfers`, `swaps`, `cross_chain`, and `defi_actions` disabled until each has an approved release record.
 
 ## Inputs needed from the owner
 
 | Input | Why | Status |
 | --- | --- | --- |
-| Access to the Cloudflare account owning `aurel-events.workers.dev` | A stable Aura-named `workers.dev` development Worker can be created there. The local Wrangler CLI was authenticated through the embedded browser and resolves to the Crypto Neo Bank account. | Available for development preparation |
+| Access to the Cloudflare account owning `aurel-events.workers.dev` | The local Wrangler CLI was authenticated through the embedded browser and an isolated Aura development Worker, database, and queue were created. | Complete for development |
 | A domain controlled in a Cloudflare zone, or approval to buy/register one | Final production HTTPS origin, Privy allowed origin, passkey RP ID, Turnstile hostname, DNS and edge policy. A custom subdomain requires a parent domain; `workers.dev` is sufficient for development. | No production domain yet |
 | Registered and customer contracting entity | Terms, provider contracts, disputes, customer support identity. Keep the existing legal name until verified. | Unverified |
 | Initial countries, assets, networks and services each provider authorizes | Provider-specific eligibility and release scope. DeFi or delegated KYC alone does not prove worldwide availability. | No approved program scope supplied |
