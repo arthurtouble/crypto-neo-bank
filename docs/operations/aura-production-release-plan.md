@@ -12,7 +12,8 @@ The checked-in Worker configuration still points to a workers.dev preview origin
 
 | Input | Why | Status |
 | --- | --- | --- |
-| A domain controlled in a Cloudflare zone, or approval to buy/register one | Stable HTTPS origin, Privy allowed origin, passkey RP ID, Turnstile hostname, DNS and edge policy. A subdomain requires a parent domain. | No domain yet; current CLI is not authenticated |
+| Access to the Cloudflare account owning `aurel-events.workers.dev` | A stable Aura-named `workers.dev` development Worker can be created there. The local Wrangler CLI is unauthenticated; the two connected Cloudflare API accounts do not list the existing Aurel Worker. | Account connection needed for development deployment |
+| A domain controlled in a Cloudflare zone, or approval to buy/register one | Final production HTTPS origin, Privy allowed origin, passkey RP ID, Turnstile hostname, DNS and edge policy. A custom subdomain requires a parent domain; `workers.dev` is sufficient for development. | No production domain yet |
 | Registered and customer contracting entity | Terms, provider contracts, disputes, customer support identity. Keep the existing legal name until verified. | Unverified |
 | Initial countries, assets, networks and services each provider authorizes | Provider-specific eligibility and release scope. DeFi or delegated KYC alone does not prove worldwide availability. | No approved program scope supplied |
 | Privy, Bridge, Rain, acquiring/payment-link, securities/metals, rewards, delivery and support program contacts | Production access and responsibility boundaries | No production programs yet |
