@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { encodeFunctionData, maxUint256 } from "viem";
-import { validateAaveCall } from "@/lib/defi/aave-call-policy";
+import { buildAaveBaseCall, validateAaveCall } from "@/lib/defi/aave-call-policy";
 
 const wallet = "0x2222222222222222222222222222222222222222";
 const other = "0x3333333333333333333333333333333333333333";
@@ -26,6 +26,17 @@ function call(action: "supply" | "withdraw" | "borrow" | "repay", args: readonly
 }
 
 describe("Aave Base exact-call policy", () => {
+  it.each(["supply", "withdraw", "borrow", "repay", "approve"] as const)("builds only an exact governed %s call", (action) => {
+    const built = buildAaveBaseCall({ action, wallet, asset: usdc, amountRaw: amount });
+    expect(built).toMatchObject({ chainId: 8453, from: wallet, to: action === "approve" ? usdc : pool, value: "0" });
+    expect(validateAaveCall({ action, wallet, asset: usdc, amountRaw: amount, transaction: built }).amountRaw).toBe(amount.toString());
+  });
+
+  it("never builds an unbounded approval or zero amount", () => {
+    expect(() => buildAaveBaseCall({ action: "approve", wallet, asset: usdc, amountRaw: maxUint256 })).toThrow();
+    expect(() => buildAaveBaseCall({ action: "supply", wallet, asset: usdc, amountRaw: 0n })).toThrow();
+    expect(() => buildAaveBaseCall({ action: "borrow", wallet: other, asset: other, amountRaw: amount })).toThrow();
+  });
   it.each([
     ["supply", [usdc, amount, wallet, 0]],
     ["withdraw", [usdc, amount, wallet]],

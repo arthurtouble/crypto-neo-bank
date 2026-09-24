@@ -1,4 +1,4 @@
-import { decodeFunctionData, getAddress, isAddress, maxUint256 } from "viem";
+import { decodeFunctionData, encodeFunctionData, getAddress, isAddress, maxUint256 } from "viem";
 import { z } from "zod";
 import { AAVE_BASE_ASSETS, AAVE_BASE_V3_MARKET } from "./aave";
 
@@ -22,6 +22,29 @@ const transactionSchema = z.strictObject({
 });
 
 export type AaveCallAction = "supply" | "withdraw" | "borrow" | "repay" | "approve";
+
+/** Build the narrow call Aura can review; no provider-supplied calldata enters signing. */
+export function buildAaveBaseCall(input: { action: AaveCallAction; wallet: string; asset: string; amountRaw: bigint }) {
+  if (!isAddress(input.wallet) || !isAddress(input.asset) || input.amountRaw <= 0n || input.amountRaw >= maxUint256)
+    throw new Error("Invalid Aave call identity or amount.");
+  const wallet = getAddress(input.wallet);
+  const asset = getAddress(input.asset);
+  if (!Object.values(AAVE_BASE_ASSETS).some((governed) => getAddress(governed) === asset))
+    throw new Error("Aave asset is not governed.");
+  const pool = getAddress(AAVE_BASE_V3_MARKET);
+  const data = input.action === "approve"
+    ? encodeFunctionData({ abi: approvalAbi, functionName: "approve", args: [pool, input.amountRaw] })
+    : input.action === "supply"
+      ? encodeFunctionData({ abi: poolAbi, functionName: "supply", args: [asset, input.amountRaw, wallet, 0] })
+      : input.action === "withdraw"
+        ? encodeFunctionData({ abi: poolAbi, functionName: "withdraw", args: [asset, input.amountRaw, wallet] })
+        : input.action === "borrow"
+          ? encodeFunctionData({ abi: poolAbi, functionName: "borrow", args: [asset, input.amountRaw, 2n, 0, wallet] })
+          : encodeFunctionData({ abi: poolAbi, functionName: "repay", args: [asset, input.amountRaw, 2n, wallet] });
+  const transaction = { chainId: 8453 as const, from: wallet, to: input.action === "approve" ? asset : pool, data, value: "0" as const };
+  validateAaveCall({ ...input, transaction });
+  return transaction;
+}
 
 export function validateAaveCall(input: {
   action: AaveCallAction;
