@@ -28,6 +28,7 @@ export class BridgeRailAdapter {
   private async request<T>(path: string, init?: RequestInit): Promise<T> {
     const response = await fetch(`${this.baseUrl}${path}`, {
       ...init,
+      signal: init?.signal ?? AbortSignal.timeout(12_000),
       headers: { "Api-Key": this.apiKey, "Content-Type": "application/json", ...(init?.headers ?? {}) }
     });
     if (!response.ok) throw new Error(`Bridge request failed (${response.status}).`);
@@ -35,11 +36,33 @@ export class BridgeRailAdapter {
   }
 
   async getUsdAccount(customerId: string): Promise<MoneyAccount> {
-    // Bridge defaults to ten results, which can hide an older active account.
-    const result = await this.request<{ data?: BridgeVirtualAccount[] }>(`/customers/${encodeURIComponent(customerId)}/virtual_accounts?limit=100`);
-    if (!Array.isArray(result.data)) throw new Error("Bridge virtual account response is incomplete.");
-    const account = result.data.find((item) => item.customer_id === customerId && item.status === "activated" && item.source_deposit_instructions?.currency?.toLowerCase() === "usd")
-      ?? result.data.find((item) => item.customer_id === customerId && item.source_deposit_instructions?.currency?.toLowerCase() === "usd");
+    // Bridge lists newest first, with at most 100 records per page. An older
+    // activated USD account must not disappear behind newer accounts.
+    let account: BridgeVirtualAccount | undefined;
+    let cursor: string | undefined;
+    let foundUsable = false;
+    const seen = new Set<string>();
+    for (let page = 0; page < 20; page++) {
+      const query = new URLSearchParams({ limit: "100", ...(cursor ? { starting_after: cursor } : {}) });
+      const result = await this.request<{ data?: BridgeVirtualAccount[] }>(`/customers/${encodeURIComponent(customerId)}/virtual_accounts?${query}`);
+      if (!Array.isArray(result.data)) throw new Error("Bridge virtual account response is incomplete.");
+      for (const item of result.data) {
+        if (item.customer_id !== customerId || item.source_deposit_instructions?.currency?.toLowerCase() !== "usd") continue;
+        const source = item.source_deposit_instructions;
+        const usable = item.status === "activated" && Boolean(source.bank_name?.trim() && source.bank_beneficiary_name?.trim()
+          && source.bank_account_number?.trim() && source.bank_routing_number?.trim()
+          && source.payment_rails?.some((rail) => ["ach_push", "wire", "fednow"].includes(rail)));
+        if (usable) { account = item; foundUsable = true; break; }
+        if (!account && item.status !== "deactivated") account = item;
+      }
+      if (foundUsable) break;
+      if (result.data.length === 0) break;
+      const lastId = result.data.at(-1)?.id;
+      if (!lastId || seen.has(lastId)) throw new Error("Bridge virtual account cursor is incomplete.");
+      seen.add(lastId);
+      cursor = lastId;
+      if (page === 19) throw new Error("Bridge virtual account list exceeds review limit.");
+    }
     const source = account?.source_deposit_instructions;
     const complete = account?.status === "activated" && Boolean(source?.bank_name?.trim() && source.bank_beneficiary_name?.trim()
       && source.bank_account_number?.trim() && source.bank_routing_number?.trim() && Array.isArray(source.payment_rails));
