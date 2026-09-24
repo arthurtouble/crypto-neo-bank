@@ -62,8 +62,11 @@ export function AaveActionPreview({ walletAddress, actions, symbols }: {
     const response = await fetch("/api/defi/aave/action", { method: "POST", cache: "no-store",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       body: JSON.stringify(chosen) });
-    if (!response.ok) throw new Error(response.status === 503 ? "Aave actions are unavailable right now." : "This Aave action could not be prepared.");
-    const result = await response.json() as Prepared;
+    const result = await response.json() as Prepared & { error?: string };
+    if (!response.ok) throw new Error(result.error === "access_unavailable" || result.error === "invite_required"
+      ? "An active Aura invitation is needed before using Aave."
+      : result.error === "account_locked" ? "Your account is locked. Unlock it before using Aave."
+        : response.status === 503 ? "Aave actions are unavailable right now." : "This Aave action could not be prepared.");
     const raw = parseUnits(chosen.amount, chosen.symbol === "USDC" ? 6 : 18);
     const asset = AAVE_BASE_ASSETS[chosen.symbol];
     if (result.action !== chosen.action || result.symbol !== chosen.symbol || result.amountRaw !== raw.toString()

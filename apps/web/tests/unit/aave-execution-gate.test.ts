@@ -2,13 +2,16 @@ import { describe, expect, it, vi } from "vitest";
 import { validateAaveCall } from "@/lib/defi/aave-call-policy";
 import { AAVE_BASE_ASSETS } from "@/lib/defi/aave";
 
-const state = vi.hoisted(() => ({ locked: false }));
+const state = vi.hoisted(() => ({ locked: false, invited: true }));
 vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
   prepare: () => ({ bind: () => ({ first: async () => ({ account_locked: Number(state.locked) }) }) })
 } } }));
 vi.mock("@/lib/profile/ensure", () => ({ ensureSubjectProfile: async () => undefined }));
 vi.mock("@/lib/auth/server", () => ({ AuthenticationError: class extends Error {}, requireVerifiedSubject: async () => ({ subjectReference: "subject-a" }) }));
-vi.mock("@/lib/beta/access", () => ({ BetaAccessError: class extends Error {}, requireBetaAccess: async () => undefined }));
+vi.mock("@/lib/beta/access", () => ({ BetaAccessError: class extends Error {}, configuredCountries: () => ["PT"],
+  requireBetaAccess: async () => state.invited
+    ? { mode: "invite", status: "active", countryCode: "PT" }
+    : { mode: "preview", status: "preview" } }));
 vi.mock("@/lib/security/rate-limit", () => ({ RateLimitError: class extends Error {}, enforceRateLimit: async () => undefined }));
 vi.mock("@/lib/auth/wallet", () => ({ WalletOwnershipError: class extends Error {}, requireLinkedEvmWallet: async () => "0x2222222222222222222222222222222222222222" }));
 
@@ -41,6 +44,14 @@ describe("Aave self-custodial action boundary", () => {
     state.locked = true;
     expect((await post({ action: "borrow", sender, symbol: "USDC", amount: "1" })).status).toBe(403);
     state.locked = false;
+  });
+
+  it("does not release a wallet call to a preview account", async () => {
+    state.invited = false;
+    const response = await post({ action: "supply", sender, symbol: "USDC", amount: "1" });
+    expect(response.status).toBe(403);
+    expect(await response.json()).toMatchObject({ error: "access_unavailable" });
+    state.invited = true;
   });
 
   it("keeps rewards claims unavailable until their distributor is verified", async () => {

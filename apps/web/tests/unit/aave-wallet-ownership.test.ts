@@ -8,7 +8,8 @@ vi.mock("@/lib/auth/server", () => ({
 }));
 vi.mock("@/lib/beta/access", () => ({
   BetaAccessError: class BetaAccessError extends Error {},
-  requireBetaAccess: async () => undefined
+  configuredCountries: () => ["PT"],
+  requireBetaAccess: async () => ({ mode: "invite", status: "active", countryCode: "PT" })
 }));
 vi.mock("@/lib/features/flags", () => ({
   FeatureUnavailableError: class FeatureUnavailableError extends Error {},

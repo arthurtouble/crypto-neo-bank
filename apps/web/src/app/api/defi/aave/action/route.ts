@@ -2,7 +2,7 @@ import { env } from "cloudflare:workers";
 import { getAddress, isAddress, parseUnits } from "viem";
 import { z } from "zod";
 import { AuthenticationError, requireVerifiedSubject } from "@/lib/auth/server";
-import { BetaAccessError, requireBetaAccess } from "@/lib/beta/access";
+import { BetaAccessError, configuredCountries, requireBetaAccess } from "@/lib/beta/access";
 import { WalletOwnershipError, requireLinkedEvmWallet } from "@/lib/auth/wallet";
 import { ensureSubjectProfile } from "@/lib/profile/ensure";
 import { enforceRateLimit, RateLimitError } from "@/lib/security/rate-limit";
@@ -23,7 +23,9 @@ export async function POST(request: Request) {
   const traceId = crypto.randomUUID();
   try {
     const subject = await requireVerifiedSubject(request);
-    await requireBetaAccess(env.PROJECTION_DB, subject.subjectReference);
+    const access = await requireBetaAccess(env.PROJECTION_DB, subject.subjectReference);
+    if (access.mode !== "invite" || access.status !== "active" || !access.countryCode
+      || !configuredCountries().includes(access.countryCode)) return reply({ error: "access_unavailable", traceId }, 403);
     await enforceRateLimit(env.PROJECTION_DB, { namespace: "aave_action", subject: subject.subjectReference, limit: 20, windowSeconds: 60 });
     const input = schema.parse(await request.json());
     const wallet = await requireLinkedEvmWallet(subject.subjectReference, input.sender);
