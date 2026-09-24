@@ -1,5 +1,6 @@
-import { decodeEventLog, erc20Abi, isAddress } from "viem";
+import { decodeEventLog, erc20Abi, isAddress, parseAbiItem } from "viem";
 import { z } from "zod";
+import { AAVE_BASE_ASSETS, AAVE_BASE_V3_MARKET } from "@/lib/defi/aave";
 import { normalizePreparedCall } from "./evidence";
 import type { ChainObservation } from "./chain-observation";
 
@@ -8,8 +9,19 @@ const amount = z.string().regex(/^[1-9]\d*$/);
 const effectSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("native_transfer"), recipient: address, amountRaw: amount }).strict(),
   z.object({ type: z.literal("erc20_transfer"), token: address, recipient: address, amountRaw: amount }).strict(),
-  z.object({ type: z.literal("erc20_approval"), token: address, spender: address, amountRaw: amount }).strict()
+  z.object({ type: z.literal("erc20_approval"), token: address, spender: address, amountRaw: amount }).strict(),
+  z.object({ type: z.literal("earn_supply"), asset: address, amountRaw: amount }).strict(),
+  z.object({ type: z.literal("earn_withdraw"), asset: address, amountRaw: amount }).strict(),
+  z.object({ type: z.literal("borrow"), asset: address, amountRaw: amount }).strict(),
+  z.object({ type: z.literal("repay"), asset: address, amountRaw: amount }).strict()
 ]);
+
+const aaveEvents = {
+  earn_supply: parseAbiItem("event Supply(address indexed reserve, address user, address indexed onBehalfOf, uint256 amount, uint16 indexed referralCode)"),
+  earn_withdraw: parseAbiItem("event Withdraw(address indexed reserve, address indexed user, address indexed to, uint256 amount)"),
+  borrow: parseAbiItem("event Borrow(address indexed reserve, address user, address indexed onBehalfOf, uint256 amount, uint8 interestRateMode, uint256 borrowRate, uint16 indexed referralCode)"),
+  repay: parseAbiItem("event Repay(address indexed reserve, address indexed user, address indexed repayer, uint256 amount, bool useATokens)")
+} as const;
 
 export type PreparedEffectEvidence = {
   chainId: number;
@@ -54,6 +66,32 @@ export async function verifyExpectedEffect(prepared: PreparedEffectEvidence, obs
   const parsed = effectSchema.safeParse(prepared.expectedEffect);
   if (!parsed.success || parsed.data.type !== prepared.semanticAction) return { status: "inconsistent", reason: "effect_schema" };
   const effect = parsed.data;
+  if ("asset" in effect) {
+    const action = effect.type as keyof typeof aaveEvents;
+    if (prepared.chainId !== 8453 || normalized.value !== "0" || !sameAddress(normalized.to, AAVE_BASE_V3_MARKET)
+      || !Object.values(AAVE_BASE_ASSETS).some((asset) => sameAddress(asset, effect.asset)))
+      return { status: "inconsistent", reason: "aave_call_identity" };
+    for (const log of receipt.logs) {
+      if (!sameAddress(log.address, AAVE_BASE_V3_MARKET)) continue;
+      try {
+        const decoded = decodeEventLog({ abi: [aaveEvents[action]], data: log.data as `0x${string}`,
+          topics: log.topics as [`0x${string}`, ...`0x${string}`[]], strict: true });
+        const args = decoded.args as Record<string, unknown>;
+        if (!sameAddress(String(args.reserve), effect.asset) || args.amount !== BigInt(effect.amountRaw)) continue;
+        const actorMatches = action === "earn_supply" || action === "borrow"
+          ? sameAddress(String(args.user), prepared.walletAddress) && sameAddress(String(args.onBehalfOf), prepared.walletAddress)
+          : action === "earn_withdraw"
+            ? sameAddress(String(args.user), prepared.walletAddress) && sameAddress(String(args.to), prepared.walletAddress)
+            : sameAddress(String(args.user), prepared.walletAddress) && sameAddress(String(args.repayer), prepared.walletAddress);
+        if (!actorMatches) continue;
+        if ((action === "earn_supply" || action === "borrow") && BigInt(String(args.referralCode)) !== 0n) continue;
+        if (action === "borrow" && BigInt(String(args.interestRateMode)) !== 2n) continue;
+        if (action === "repay" && args.useATokens !== false) continue;
+        return { status: "confirmed" };
+      } catch { /* This log is not the reviewed Aave Pool event. */ }
+    }
+    return { status: "inconsistent", reason: "expected_aave_log_missing" };
+  }
   if (effect.type === "native_transfer") {
     if (!sameAddress(effect.recipient, normalized.to) || BigInt(effect.amountRaw) !== BigInt(normalized.value) || normalized.data !== "0x") return { status: "inconsistent", reason: "native_effect" };
     return { status: "confirmed" };
