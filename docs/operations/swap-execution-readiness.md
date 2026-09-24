@@ -15,6 +15,8 @@ This page describes what the current implementation can prove. It is not a launc
 
 ## Live-route finding, 23 September 2026
 
+On 24 September, an opt-in read-only mainnet probe called the direct Uniswap quote builder for both Base USDC → WETH and WETH → USDC. Both live quotes passed the governed-pool, deployed-code, price-divergence, retained-plan, and exact router-call revalidation checks. The observation used a non-customer address with no signing or balance requirement. It did **not** test allowance, source funds, gas reserve, on-chain simulation of a funded account, wallet confirmation, receipt reconciliation, or a cross-network route. The existing `swaps` flag remains disabled; this probe is not a launch approval.
+
 A read-only LI.FI Base USDC-to-WETH quote returned `nordstern` as its cheapest tool. Restricting the public quote to `uniswap` returned no route; LI.FI's public Base tool list did not include a `uniswap` key. Restricting to `sushiswap` returned a route, but its nested router call is not the audited Uniswap shape. Those LI.FI routes remain denied. A separate direct Uniswap V3 path is now implemented for Base USDC/WETH only, using the official Base factory, QuoterV2, and SwapRouter02 addresses and an independently checked pool. It has not yet been exercised end to end with a customer wallet and real funds.
 
 LI.FI's unauthenticated public API can be used for initial testing. An API key may raise limits, but it does not remove the need to review each executable route and on-chain effect. LI.FI is the quote and route provider, not Aurel's authorization or settlement authority.

@@ -1,5 +1,9 @@
 # Production readiness — 23 September 2026
 
+## 24 September direct-swap quote observation
+
+The opt-in, read-only mainnet test now quotes both directions of the reviewed Base USDC/WETH Uniswap V3 pool and checks that the retained router call survives Aurel's exact-plan validator. Both directions passed with current on-chain deployments and independent price observations. This tests a quote and its call shape, **not** a funded wallet, token approval, account controls, gas reserve, wallet signature, broadcast, or receipt settlement. The financial-action flags remain disabled. Controlled small-funds rehearsal and independent security review are still required before live swaps.
+
 ## 24 September read-only historical Aave foundation
 
 Commit `5d0079f` adds a server-only reader for one completed UTC day's Base Aave raw supply and debt. It proves the final confirmed block before midnight and its successor, resolves the historical Pool and data provider, scans every historical reserve in pinned batches, checks deployed code, and rechecks block identity after the scan. It is not connected to D1, public routes, or the chart; no historical USD value or return is published. A follow-up fail-closed change requires an injected client or HTTPS archive RPC setting; it no longer silently falls back to the pruned public endpoint. Acceptance still requires a reliable contracted archive endpoint, independent token-balance reconciliation across historical versions, complete wallet and price coverage, and review of historical contract variants.
