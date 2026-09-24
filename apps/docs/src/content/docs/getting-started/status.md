@@ -5,7 +5,7 @@ sidebar:
   order: 1
 ---
 
-Aura is a browsable product preview. Every section can be explored without signing in, using clearly labeled fictional data. Personal records and financial actions require authentication and applicable invitation, country, and security checks. The current deployed site may lag this source branch.
+Aura is a browsable product preview. Every section can be explored without signing in, using clearly labeled fictional data. Personal records and financial actions require authentication and applicable invitation, country, and security checks. The current Aura development site uses this branch; it is not a production release.
 
 | Area | Current capability | Boundary |
 | --- | --- | --- |
@@ -13,7 +13,7 @@ Aura is a browsable product preview. Every section can be explored without signi
 | Deposit | Crypto receiving address and Aura tag page | Bank instructions require an active Bridge account and complete provider details |
 | Send | Governed Base crypto transfer preparation and saved addresses | Wallet signing, policy, simulation, and settlement checks apply; bank payout execution is not connected |
 | Swap | LI.FI asset search and route discovery through Aura's reviewed flow | A route is shown only when policy and exact-call preparation permit it; execution can remain paused |
-| Earn and Borrow | Curated Aave market and position reads | New supply, withdrawal, borrowing, and repayment are paused until governed execution is ready; Sky and Morpho are not connected |
+| Earn and Borrow | Curated Aave market and position reads, plus a private read-only risk preview | New supply, withdrawal, borrowing, and repayment are paused until governed execution is ready; Sky and Morpho are not connected |
 | Invest | Supported crypto routes | Tokenized stocks and metals require eligibility and a connected execution provider |
 | Cards | Issuer-backed card projection, when available | Issuance, freeze, limits, countries, PIN, wallet provisioning, termination, and disputes need Bridge/Rain program and control adapters |
 | Rewards | Availability information | Cashback and benefits need a contracted and funded provider program |
