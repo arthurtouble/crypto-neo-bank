@@ -7,7 +7,7 @@ Swap lets you search supported digital assets by name or contract address. The s
 
 ## Find an asset
 
-Select **You Pay** or **You Receive**, then search by name, symbol, or contract address. A verified label means Aurel has reviewed that exact contract. Other contracts are marked **Unverified** and require an explicit address check before a quote request. An asset can disappear from search or quoting if its source data is unavailable or its status changes.
+Select **You Pay** or **You Receive**. The initial list shows verified assets; search by name, symbol, or contract address to see more. A verified label means Aurel has reviewed that exact contract. Other contracts are marked **Unverified** and require an explicit address check before a quote request. An asset can disappear from search or quoting if its source data is unavailable or its status changes.
 
 Markets prices and Swap routes come from different sources. A market opens Swap only when Aurel has mapped that market to a specific contract and confirmed that the asset remains visible. A price on Markets is not an executable quote.
 

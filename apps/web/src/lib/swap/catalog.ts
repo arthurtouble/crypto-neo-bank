@@ -255,6 +255,7 @@ export async function getCatalogPage(
     for (const item of current.assets) {
       const screening = screenAsset(item, registry);
       if (screening === "denied" || screening === "regulated") continue;
+      if (!query && screening !== "verified") continue;
       if (query && !item.symbol.toLowerCase().includes(query) && !item.name.toLowerCase().includes(query)
         && !item.address?.toLowerCase().includes(query)) continue;
       const asset = { ...item, verification: screening };

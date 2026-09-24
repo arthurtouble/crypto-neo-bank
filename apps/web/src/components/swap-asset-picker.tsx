@@ -83,6 +83,7 @@ export function SwapAssetPicker({ value, onSelect, excludedId, label }: Props) {
         }} /></label>
         <div className="swapPickerResults" aria-live="polite">
           {pages.data?.pages[0]?.source === "Aurel reviewed" && <div className="swapPickerState">Live asset search is unavailable. Showing reviewed assets only.</div>}
+          {!debounced && !pages.isPending && !pages.isError && <div className="swapPickerState">Verified Assets</div>}
           {pages.isPending ? <div className="swapPickerState"><LoaderCircle className="spin" size={17} /> Loading assets</div>
             : pages.isError ? <div className="swapPickerState">Assets are unavailable. <button type="button" onClick={() => void pages.refetch()}>Try Again</button></div>
               : assets.length === 0 ? <div className="swapPickerState">No matching assets</div>

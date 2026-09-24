@@ -52,6 +52,18 @@ describe("LI.FI catalog", () => {
     expect(screenAsset({ id: assetId(8453, REGULATED) }, registry)).toBe("regulated");
   });
 
+  it("opens on reviewed assets while explicit search still finds an unverified contract", async () => {
+    const fetcher = source({ 8453: [
+      token(LOOKALIKE, "USDC", "USD Coin copy"), token(USDC, "USDC", "USD Coin")
+    ] });
+    const dependencies = { fetcher, registry, cache: createCatalogCache() };
+    const initial = await getCatalogPage({ query: "", chainIds: [8453] }, dependencies);
+    expect(initial.assets.map((item) => item.id)).toEqual([assetId(8453, USDC)]);
+    expect(initial.nextCursor).toBeNull();
+    const searched = await getCatalogPage({ query: LOOKALIKE, chainIds: [8453] }, dependencies);
+    expect(searched.assets).toMatchObject([{ id: assetId(8453, LOOKALIKE), verification: "unverified" }]);
+  });
+
   it("recognizes LI.FI native sentinels and the direct chain-map response form", async () => {
     const fetcher: typeof fetch = async () => Response.json({ "8453": [
       token("0x0000000000000000000000000000000000000000", "ETH", "Ether", 8453, 18),
@@ -84,17 +96,17 @@ describe("LI.FI catalog", () => {
     const fetcher = source({ 8453: Array.from({ length: 35 }, (_, index) => token(`0x${(index + 10).toString(16).padStart(40, "0")}`, `TOKEN${index}`)) }, requests);
     let time = 1_000_000;
     const dependencies = { fetcher, registry, now: () => time, cache: createCatalogCache() };
-    const first = await getCatalogPage({ query: "", chainIds: [8453] }, dependencies);
+    const first = await getCatalogPage({ query: "TOKEN", chainIds: [8453] }, dependencies);
     expect(first.assets).toHaveLength(30);
     expect(first.nextCursor).toBeTruthy();
     expect(requests).toHaveLength(1);
     expect(new URL(requests[0]).searchParams.get("minPriceUSD")).toBe("0");
-    const second = await getCatalogPage({ query: "", chainIds: [8453], cursor: first.nextCursor! }, dependencies);
+    const second = await getCatalogPage({ query: "TOKEN", chainIds: [8453], cursor: first.nextCursor! }, dependencies);
     expect(second.assets).toHaveLength(5);
     expect(second.nextCursor).toBeNull();
     expect(requests).toHaveLength(1);
     time += 301_000;
-    await expect(getCatalogPage({ query: "", chainIds: [8453], cursor: first.nextCursor! }, dependencies)).rejects.toMatchObject({ code: "stale_cursor" });
+    await expect(getCatalogPage({ query: "TOKEN", chainIds: [8453], cursor: first.nextCursor! }, dependencies)).rejects.toMatchObject({ code: "stale_cursor" });
   });
 
   it("does not retain a pending provider request across searches", async () => {
