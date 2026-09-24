@@ -2,7 +2,7 @@ type SiteverifyResult = { success?: boolean; action?: string; hostname?: string;
 
 export async function verifyTurnstile(input: { token?: string; remoteIp?: string | null; expectedAction: string }): Promise<{ configured: boolean; valid: boolean }> {
   const secret = process.env.TURNSTILE_SECRET;
-  if (!secret) return { configured: false, valid: true };
+  if (!secret) return { configured: false, valid: (process.env.PRODUCT_ENVIRONMENT as string | undefined) === "development" };
 
   const expectedHostnames = new Set((process.env.TURNSTILE_HOSTNAMES ?? "").split(",").map((hostname) => hostname.trim()).filter(Boolean));
   if (!input.token || input.token.length > 2048 || expectedHostnames.size === 0) return { configured: true, valid: false };
