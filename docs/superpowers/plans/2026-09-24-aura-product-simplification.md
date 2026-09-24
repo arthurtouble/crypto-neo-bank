@@ -1,7 +1,7 @@
 # Aura product simplification implementation plan
 
 Date: 2026-09-24
-Status: For review; implementation starts after approval
+Status: Approved for implementation on 24 September 2026; delivery evidence and remaining gates are in [the release plan](../../operations/aura-production-release-plan.md)
 Design: [Aura product simplification](../specs/2026-09-24-aura-product-simplification-design.md)
 
 ## 1. Inventory and regression baseline
@@ -43,10 +43,10 @@ Design: [Aura product simplification](../specs/2026-09-24-aura-product-simplific
 - Redesign `app/page.tsx` and its CSS against the exact requested section order and copy. Use Aura-owned screen imagery with visibly fictional data. Adjust card radius, label scale, spacing, mobile sticky CTA safe area, and responsive layout while retaining design tokens.
 - Remove `/waitlist` from public navigation and retire the public sign-up endpoint after confirming it has no required caller; retain historical entries and restricted operator access until retention review. Update customer docs, README, metadata, status/claims footnotes, and internal product references. Keep unverified legal-party names and operational identifiers.
 - Run marketing claim checks, typecheck, lint, unit and e2e suites, docs build, migration/recovery checks, and desktop/mobile Playwright plus keyboard/accessibility review at 320, 768, 1024, 1440px. Fix concrete regressions, inspect final diff for unsafe feature activation and data deletion, then commit documentation and verification changes.
-- Final delivery: branch name, commit list, tests and screenshots, migration instructions for later review, known unavailable integrations, and explicit note that nothing was deployed.
+- Final delivery: branch name, commit list, tests and screenshots, migration instructions for later review, known unavailable integrations, and explicit distinction between isolated development deployment and production release.
 
 ## Hold points
 
-- Plan approval before implementation.
+- Plan approval was received before implementation.
 - No production migration or deployment. A migration file is reviewable code only.
 - Card acquiring/payment links, bank movement, securities orders, rewards payout, Sky/Morpho actions, and any paused Aave or swap write stay unavailable until a connected provider and existing security/release gates prove them safe.

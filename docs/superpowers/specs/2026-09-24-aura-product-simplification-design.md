@@ -1,7 +1,7 @@
 # Aura product simplification design
 
 Date: 2026-09-24
-Status: For review
+Status: Approved for implementation on 24 September 2026; production release gates remain in [the release plan](../../operations/aura-production-release-plan.md)
 Branch: `codex/aura-product-simplification` at `1a8508da2bab4cab9847ba7789aefa408cb12275`
 
 ## Outcome and boundaries
