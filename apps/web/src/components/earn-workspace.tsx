@@ -9,7 +9,6 @@ import { AaveActionPreview } from "./aave-action-preview";
 
 type MarketResponse = { market: string; chainId: number; name: string; reserves: AaveBaseReserve[]; observedAt: string; authority: string };
 
-/** Market information remains readable while unaudited execution plans are paused. */
 export function EarnWorkspace() {
   const { getAccessToken } = usePrivy();
   const { wallets } = useWallets();
@@ -31,7 +30,7 @@ export function EarnWorkspace() {
     {market.error && <div className="sandboxAlert error" role="alert">{market.error.message}</div>}
     <div className="strategyGrid">
       {market.data?.reserves.filter((reserve) => ["USDC", "WETH"].includes(reserve.symbol)).map((reserve) => <article className="panel strategyCard" key={reserve.symbol}>
-        <div className="strategyTop"><span className="strategyGlyph">A3</span><span className="statusBadge neutral"><i /> Read only</span></div>
+        <div className="strategyTop"><span className="strategyGlyph">A3</span><span className="statusBadge neutral"><i /> Aave on Base</span></div>
         <p className="eyebrow">AAVE V3</p><h2>Earn with {reserve.symbol}</h2>
         <p>Supply {reserve.symbol} directly to Aave on Base. Your wallet controls the position; Aura does not operate a vault.</p>
         <div className="strategyMetrics"><div><span>Supply APY</span><strong>{reserve.supplyApyPct}%</strong></div><div><span>Liquidity</span><strong>${(Number(reserve.availableLiquidity.usd) / 1_000_000).toFixed(1)}m</strong></div><div><span>Borrow APY</span><strong>{reserve.borrowApyPct}%</strong></div></div>
@@ -39,6 +38,6 @@ export function EarnWorkspace() {
         <AaveActionPreview walletAddress={wallet?.address} actions={["supply", "withdraw"]} symbols={[reserve.symbol]} />
       </article>)}
     </div>
-    {market.data && <p className="authorityFootnote">Observed {new Date(market.data.observedAt).toLocaleTimeString()} · Authority: {market.data.authority} · Spot APY is not a forecast. New Aave actions are paused until every call can be verified before signing.</p>}
+    {market.data && <p className="authorityFootnote">Observed {new Date(market.data.observedAt).toLocaleTimeString()} · Authority: {market.data.authority} · Spot APY is not a forecast.</p>}
   </>;
 }
