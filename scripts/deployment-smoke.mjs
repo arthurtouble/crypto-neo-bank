@@ -60,7 +60,7 @@ for (const path of ["/api/portfolio/history?range=7D", "/api/portfolio/tax-suppo
   assert([401, 403].includes(response.status), `${path} rejects unauthenticated account reads (${response.status})`);
   assert(response.headers.get("cache-control")?.includes("no-store"), `${path} does not cache account responses`);
 }
-for (const path of ["/api/portfolio/refresh", "/api/swap/quote", "/api/intents/evaluate", "/api/intents/prepare", "/api/defi/aave/preview", "/api/defi/aave/action", "/api/defi/aave/receipt"]) {
+for (const path of ["/api/portfolio/refresh", "/api/swap/quote", "/api/intents/evaluate", "/api/intents/prepare", "/api/defi/aave/preview", "/api/defi/aave/action", "/api/defi/aave/receipt", "/api/defi/sky/action"]) {
   const response = await request(path, { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
   assert([401, 403].includes(response.status), `${path} rejects unauthenticated actions (${response.status})`);
   assert(response.headers.get("cache-control")?.includes("no-store"), `${path} does not cache action responses`);
