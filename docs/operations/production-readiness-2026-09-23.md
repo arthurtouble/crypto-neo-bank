@@ -1,5 +1,11 @@
 # Production readiness — 23 September 2026
 
+## 24 September approval-required schedule audit atomicity
+
+Commit `06cb4a9` makes approval-required schedule creation and status changes atomic with their required audit events. Previously, an audit failure could return `503` after a plan had been created, paused, resumed, or cancelled; a pause could also dismiss its reminder before that failure. The route now commits the plan change, audit, and reminder dismissal in one D1 batch, and only dismisses reminders after a successful conditional status change. No timer, automatic payment, provider action, migration, or signing authority was added. Real-SQLite tests reproduced the partial writes before the fix and verify rollback afterward.
+
+Verification passed 1,171 web unit tests, nine readiness-script tests, workspace typechecks, lint, web build, and 42 desktop/mobile browser cases with two intentional skips. The existing isolated D1 recovery drill through migration `0034` passed earlier in this development session; it did not exercise a customer schedule. Candidate Worker `b0654a7a-833f-4f7d-bee9-d7c6d7928423` passed public preview smoke, was promoted to 100% of the approved workers.dev development app, and passed canonical smoke. Remote D1 confirmed `direct_transfers`, `swaps`, `cross_chain`, and `defi_actions` still disabled. The smoke is unauthenticated and cannot validate an invited customer's schedule, a provider rail, or a wallet signature; production release gates remain open.
+
 ## 24 September saved-destination authority
 
 Commit `7eba8ab` makes Security and Recipients use one wallet-address write path. A duplicate save now returns the persisted ID and original cooling deadline instead of a new phantom ID. A required audit write and the address change commit together; audit failure rolls back additions, renames, and deletions. When Saved Destinations Only is enforced, a new address is rejected because Aurel has no approved exact-action step-up route; an existing address can still be renamed without resetting its cooling period. The two app surfaces explain that denial, and the customer security guide reflects it. No migration or signing authority was added.
