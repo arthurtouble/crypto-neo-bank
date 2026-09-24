@@ -13,7 +13,8 @@ export type AavePreviewRequest = {
 };
 
 /** A preview is informational. Execution must repeat these reads at preparation and release. */
-export async function previewAaveBaseAction(client: PublicClient, request: AavePreviewRequest, nowMs = Date.now()) {
+export async function previewAaveBaseAction(client: PublicClient, request: AavePreviewRequest, now: () => number = Date.now) {
+  const nowMs = now();
   const decimals = request.symbol === "USDC" ? 6 : 18;
   if (!/^\d+(?:\.\d+)?$/.test(request.amount) || request.amount.length > 40)
     throw new Error("Enter a valid amount.");
@@ -38,7 +39,7 @@ export async function previewAaveBaseAction(client: PublicClient, request: AaveP
       call: buildAaveBaseCall({ action: request.action, wallet: request.sender,
         asset: AAVE_BASE_ASSETS[request.symbol], amountRaw }),
       blockNumber: input.snapshot.blockNumber, blockHash: input.snapshot.blockHash as `0x${string}`,
-      observedAtMs: input.snapshot.observedAtMs, now: () => nowMs
+      observedAtMs: input.snapshot.observedAtMs, now
     });
   }
   return {

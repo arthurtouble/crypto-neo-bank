@@ -25,7 +25,7 @@ const baseSnapshot = {
 describe("Aave Base action preview", () => {
   it("derives exact raw units and approval need from a canonical snapshot without calldata", async () => {
     snapshot.mockResolvedValue(baseSnapshot);
-    const result = await previewAaveBaseAction({} as never, input, now);
+    const result = await previewAaveBaseAction({} as never, input, () => now);
     expect(snapshot).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
       user: address, amountRaw: 1_500_000n, action: "supply", maxAgeMs: 30_000
     }));
@@ -37,10 +37,10 @@ describe("Aave Base action preview", () => {
 
   it("rejects unsupported precision, max mode, and insufficient wallet balance", async () => {
     snapshot.mockResolvedValue(baseSnapshot);
-    await expect(previewAaveBaseAction({} as never, { ...input, amount: "1.0000001" }, now)).rejects.toThrow(/amount/i);
-    await expect(previewAaveBaseAction({} as never, { ...input, amount: "0" }, now)).rejects.toThrow(/amount/i);
+    await expect(previewAaveBaseAction({} as never, { ...input, amount: "1.0000001" }, () => now)).rejects.toThrow(/amount/i);
+    await expect(previewAaveBaseAction({} as never, { ...input, amount: "0" }, () => now)).rejects.toThrow(/amount/i);
     snapshot.mockResolvedValue({ ...baseSnapshot, wallet: { balanceRaw: 1_000_000n, poolAllowanceRaw: 2_000_000n } });
-    await expect(previewAaveBaseAction({} as never, input, now)).rejects.toThrow(/balance/i);
+    await expect(previewAaveBaseAction({} as never, input, () => now)).rejects.toThrow(/balance/i);
   });
 
   it("does not require token approval for a withdrawal or borrow", async () => {
@@ -48,7 +48,7 @@ describe("Aave Base action preview", () => {
     snapshot.mockResolvedValue({ ...baseSnapshot, action: "withdraw", account: { ...baseSnapshot.account,
       weightedCollateralBase: 160_000_000n, assetCollateralBalanceRaw: 2_000_000n },
       wallet: { balanceRaw: 0n, poolAllowanceRaw: 0n } });
-    const result = await previewAaveBaseAction({} as never, { ...input, action: "withdraw" }, now);
+    const result = await previewAaveBaseAction({} as never, { ...input, action: "withdraw" }, () => now);
     expect(result.approvalRequired).toBe(false);
     expect(result.simulation).toBe("passed");
     expect(simulate).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
@@ -60,6 +60,17 @@ describe("Aave Base action preview", () => {
   it("does not return a usable preview when the exact same-block call reverts", async () => {
     snapshot.mockResolvedValue({ ...baseSnapshot, wallet: { ...baseSnapshot.wallet, poolAllowanceRaw: 2_000_000n } });
     simulate.mockRejectedValue(new Error("Aave call simulation failed."));
-    await expect(previewAaveBaseAction({} as never, input, now)).rejects.toThrow(/simulation failed/i);
+    await expect(previewAaveBaseAction({} as never, input, () => now)).rejects.toThrow(/simulation failed/i);
+  });
+
+  it("gives simulation a live clock so slow RPC responses expire", async () => {
+    let clock = now;
+    snapshot.mockResolvedValue({ ...baseSnapshot, wallet: { ...baseSnapshot.wallet, poolAllowanceRaw: 2_000_000n } });
+    simulate.mockImplementation(async (_client, call) => {
+      expect(call.now()).toBe(now);
+      clock += 31_000;
+      expect(call.now()).toBe(now + 31_000);
+    });
+    await previewAaveBaseAction({} as never, input, () => clock);
   });
 });
