@@ -1,5 +1,11 @@
 # Production readiness — 23 September 2026
 
+## 24 September security-policy audit atomicity
+
+Commit `c8a7d5f` closes a split-write failure in customer security settings. Previously a tightening could commit and then return `503` if the separate durable audit write failed, leaving the customer unsure whether the limit changed. The compare-and-set policy update and required audit event now execute in one D1 batch; audit failure rolls the policy change back. Optional product analytics runs only after that commit and can fail without misreporting the security result. Real SQLite regression tests reproduced the original partial commit and verify rollback and the analytics-outage case. Existing policy-relaxation denials and version checks remain in force; this does not create a passkey release route.
+
+The final code passed 1,164 web unit tests, nine readiness-script checks, workspace typechecks, lint, web build, 42 desktop/mobile browser cases with two intentional skips, and the isolated D1 backup/restore drill through migration `0034`. No migration was added. Candidate Worker `c1681518-7607-46f9-aac7-24d23db431d4` passed public preview smoke before promotion to 100% of the workers.dev development app, and the canonical URL passed smoke afterward. Remote D1 confirmed `direct_transfers`, `swaps`, `cross_chain`, and `defi_actions` still disabled. The public smoke is unauthenticated; it does not replace a real customer security-setting rehearsal or independent assessment. Production origin/RP ID, enrollment/recovery assurance, and high-value action-bound release remain open.
+
 ## 24 September triggered-alert inbox
 
 Commit `2f98493` lets the authenticated Swap screen show already-triggered ETH/USD alert occurrences with the accepted provider-observed price and source time. The read joins each occurrence to its owner, active alert, and current threshold version; old or superseded occurrences do not reappear. The owner can dismiss a due occurrence through a conditional, audited, subject-scoped D1 write, including while Swap planning is disabled or the account is locked. This is an in-app record, not live price monitoring, email/push delivery, a quote, or trading authority. No timer, wallet call, or schema migration was added. The observed price can differ from a later executable route.
