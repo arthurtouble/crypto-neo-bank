@@ -13,8 +13,8 @@ export async function POST(request: Request) {
   try {
     const subject = await requireVerifiedSubject(request);
     await requireBetaAccess(env.PROJECTION_DB, subject.subjectReference);
-    await requireFeature(env.PROJECTION_DB, "concierge");
-    await enforceRateLimit(env.PROJECTION_DB, { namespace: "concierge", subject: subject.subjectReference, limit: 10, windowSeconds: 60 });
+    await requireFeature(env.PROJECTION_DB, "support_assistant");
+    await enforceRateLimit(env.PROJECTION_DB, { namespace: "support_assistant", subject: subject.subjectReference, limit: 10, windowSeconds: 60 });
     const { question } = requestSchema.parse(await request.json());
     const result = await env.AI.run("@cf/meta/llama-3.3-70b-instruct-fp8-fast", {
       messages: [{ role: "system", content: SYSTEM }, { role: "user", content: question }],
@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     if (error instanceof BetaAccessError) return Response.json({ error: error.code, message: error.message, traceId }, { status: 403 });
     if (error instanceof FeatureUnavailableError) return Response.json({ error: "feature_unavailable", message: error.message, traceId }, { status: 503 });
     if (error instanceof z.ZodError) return Response.json({ error: "invalid_question", traceId }, { status: 400 });
-    console.error(JSON.stringify({ level: "error", event: "concierge.failed", traceId, message: error instanceof Error ? error.message : "unknown" }));
-    return Response.json({ error: "concierge_unavailable", message: "The assistant is temporarily unavailable.", traceId }, { status: 503 });
+    console.error(JSON.stringify({ level: "error", event: "support.assistant.failed", traceId, message: error instanceof Error ? error.message : "unknown" }));
+    return Response.json({ error: "assistant_unavailable", message: "The assistant is temporarily unavailable.", traceId }, { status: 503 });
   }
 }

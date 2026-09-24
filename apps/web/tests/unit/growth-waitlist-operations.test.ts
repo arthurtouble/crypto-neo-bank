@@ -27,7 +27,6 @@ vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
 const listRoute = () => import("@/app/api/ops/growth/waitlist/route").catch(() => null);
 const inviteRoute = () => import("@/app/api/ops/growth/waitlist/[waitlistId]/invite/route").catch(() => null);
 const inviteId = "00000000-0000-4000-8000-000000000001";
-const context = { params: Promise.resolve({ waitlistId: inviteId }) };
 const inviteRequest = (body: unknown) => new Request(`https://aurel.test/api/ops/growth/waitlist/${inviteId}/invite`, { method: "POST", body: JSON.stringify(body) });
 
 beforeEach(() => {
@@ -47,7 +46,7 @@ describe("operator waitlist", () => {
   it("does not expose the list or invite to an unauthenticated visitor", async () => {
     state.authorized = false;
     expect((await (await listRoute())?.GET(new Request("https://aurel.test/api/ops/growth/waitlist")))?.status).toBe(401);
-    expect((await (await inviteRoute())?.POST(inviteRequest({ verifiedCountry: "PT", eligibilityEvidence: "review-1" }), context))?.status).toBe(401);
+    expect((await (await inviteRoute())?.POST(inviteRequest({ verifiedCountry: "PT", eligibilityEvidence: "review-1" })))?.status).toBe(401);
     expect(state.batchCalls).toBe(0);
   });
 
@@ -74,30 +73,10 @@ describe("operator waitlist", () => {
     expect((await (await listRoute())?.GET(new Request("https://aurel.test/api/ops/growth/waitlist?cursor=bad")))?.status).toBe(400);
   });
 
-  it("requires independently checked country evidence", async () => {
+  it("keeps historical operator reads but issues no new waitlist invites", async () => {
     const route = await inviteRoute();
-    expect((await route?.POST(inviteRequest({ verifiedCountry: "PT" }), context))?.status).toBe(400);
-    expect((await route?.POST(inviteRequest({ verifiedCountry: "US", eligibilityEvidence: "review-1" }), context))?.status).toBe(409);
+    const first = await route?.POST(inviteRequest({ verifiedCountry: "PT", eligibilityEvidence: "review-1" }));
+    expect(first?.status).toBe(410);
     expect(state.batchCalls).toBe(0);
-  });
-
-  it("does not use a PT IP hint to permit a US invite", async () => {
-    const route = await inviteRoute();
-    expect((await route?.POST(inviteRequest({ verifiedCountry: "US", eligibilityEvidence: "review-1" }), context))?.status).toBe(409);
-    expect(state.inviteIssued).toBe(false);
-  });
-
-  it("issues one invite for an allowed, evidenced country", async () => {
-    const route = await inviteRoute();
-    const first = await route?.POST(inviteRequest({ verifiedCountry: "PT", eligibilityEvidence: "review-1" }), context);
-    expect(first?.status).toBe(201);
-    expect((await first?.json() as { code: string }).code).toMatch(/^AUREL-/);
-    expect((await route?.POST(inviteRequest({ verifiedCountry: "PT", eligibilityEvidence: "review-1" }), context))?.status).toBe(409);
-    expect(state.batchCalls).toBe(1);
-  });
-
-  it("returns 404 for a missing waitlist entry", async () => {
-    state.row = null;
-    expect((await (await inviteRoute())?.POST(inviteRequest({ verifiedCountry: "PT", eligibilityEvidence: "review-1" }), context))?.status).toBe(404);
   });
 });

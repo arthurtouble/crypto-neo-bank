@@ -20,7 +20,7 @@ export function SupportWorkspace() {
     try {
       const token = await getAccessToken();
       if (!token) throw new Error("Sign in again to ask the assistant.");
-      const response = await fetch("/api/concierge", { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ question: value.trim() }) });
+      const response = await fetch("/api/support/assistant", { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ question: value.trim() }) });
       const body = await response.json() as { response?: string };
       if (!response.ok || !body.response) throw new Error("The assistant is unavailable. You can still contact support below.");
       setMessages((items) => [...items, { role: "assistant", text: body.response! }]);
