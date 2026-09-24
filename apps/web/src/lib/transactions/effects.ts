@@ -1,6 +1,7 @@
 import { decodeEventLog, erc20Abi, isAddress, parseAbiItem } from "viem";
 import { z } from "zod";
 import { AAVE_BASE_ASSETS, AAVE_BASE_V3_MARKET } from "@/lib/defi/aave";
+import { skyConversionLimit, SKY_SUSDS, SKY_USDC, SKY_USDC_ACTIONS } from "@/lib/defi/sky-call-policy";
 import { normalizePreparedCall } from "./evidence";
 import type { ChainObservation } from "./chain-observation";
 
@@ -13,7 +14,9 @@ const effectSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("earn_supply"), asset: address, amountRaw: amount }).strict(),
   z.object({ type: z.literal("earn_withdraw"), asset: address, amountRaw: amount }).strict(),
   z.object({ type: z.literal("borrow"), asset: address, amountRaw: amount }).strict(),
-  z.object({ type: z.literal("repay"), asset: address, amountRaw: amount }).strict()
+  z.object({ type: z.literal("repay"), asset: address, amountRaw: amount }).strict(),
+  z.object({ type: z.literal("sky_deposit"), amountRaw: amount }).strict(),
+  z.object({ type: z.literal("sky_withdraw"), amountRaw: amount }).strict()
 ]);
 
 const aaveEvents = {
@@ -21,6 +24,10 @@ const aaveEvents = {
   earn_withdraw: parseAbiItem("event Withdraw(address indexed reserve, address indexed user, address indexed to, uint256 amount)"),
   borrow: parseAbiItem("event Borrow(address indexed reserve, address user, address indexed onBehalfOf, uint256 amount, uint8 interestRateMode, uint256 borrowRate, uint16 indexed referralCode)"),
   repay: parseAbiItem("event Repay(address indexed reserve, address indexed user, address indexed repayer, uint256 amount, bool useATokens)")
+} as const;
+const skyEvents = {
+  sky_deposit: parseAbiItem("event Deposit(address indexed sender, address indexed owner, uint256 assets, uint256 shares)"),
+  sky_withdraw: parseAbiItem("event Withdraw(address indexed sender, address indexed receiver, address indexed owner, uint256 assets, uint256 shares)")
 } as const;
 
 export type PreparedEffectEvidence = {
@@ -66,6 +73,40 @@ export async function verifyExpectedEffect(prepared: PreparedEffectEvidence, obs
   const parsed = effectSchema.safeParse(prepared.expectedEffect);
   if (!parsed.success || parsed.data.type !== prepared.semanticAction) return { status: "inconsistent", reason: "effect_schema" };
   const effect = parsed.data;
+  if (effect.type === "sky_deposit" || effect.type === "sky_withdraw") {
+    if (prepared.chainId !== 1 || normalized.value !== "0" || !sameAddress(normalized.to, SKY_USDC_ACTIONS))
+      return { status: "inconsistent", reason: "sky_call_identity" };
+    const amountRaw = BigInt(effect.amountRaw);
+    let usdcAmount = 0n;
+    let vaultEvents = 0;
+    for (const log of receipt.logs) {
+      if (sameAddress(log.address, SKY_USDC)) {
+        try {
+          const decoded = decodeEventLog({ abi: erc20Abi, eventName: "Transfer", data: log.data as `0x${string}`,
+            topics: log.topics as [`0x${string}`, ...`0x${string}`[]], strict: true });
+          if (effect.type === "sky_deposit"
+            ? sameAddress(decoded.args.from, prepared.walletAddress) && sameAddress(decoded.args.to, SKY_USDC_ACTIONS)
+            : sameAddress(decoded.args.to, prepared.walletAddress)) usdcAmount += decoded.args.value;
+        } catch { /* Other USDC logs are not the wallet's reviewed transfer. */ }
+      }
+      if (!sameAddress(log.address, SKY_SUSDS)) continue;
+      try {
+        const decoded = decodeEventLog({ abi: [skyEvents[effect.type]], data: log.data as `0x${string}`,
+          topics: log.topics as [`0x${string}`, ...`0x${string}`[]], strict: true });
+        if (effect.type === "sky_deposit" && decoded.eventName === "Deposit"
+          && sameAddress(decoded.args.sender, SKY_USDC_ACTIONS)
+          && sameAddress(decoded.args.owner, prepared.walletAddress)
+          && decoded.args.assets >= skyConversionLimit("deposit", amountRaw) && decoded.args.shares > 0n) vaultEvents++;
+        if (effect.type === "sky_withdraw" && decoded.eventName === "Withdraw"
+          && sameAddress(decoded.args.sender, SKY_USDC_ACTIONS) && sameAddress(decoded.args.receiver, SKY_USDC_ACTIONS)
+          && sameAddress(decoded.args.owner, prepared.walletAddress)
+          && decoded.args.assets <= skyConversionLimit("withdraw", amountRaw)
+          && decoded.args.assets > 0n && decoded.args.shares > 0n) vaultEvents++;
+      } catch { /* Other vault logs do not prove this action. */ }
+    }
+    return usdcAmount === amountRaw && vaultEvents === 1 ? { status: "confirmed" }
+      : { status: "inconsistent", reason: "expected_sky_effect_missing" };
+  }
   if ("asset" in effect) {
     const action = effect.type as keyof typeof aaveEvents;
     if (prepared.chainId !== 8453 || normalized.value !== "0" || !sameAddress(normalized.to, AAVE_BASE_V3_MARKET)
