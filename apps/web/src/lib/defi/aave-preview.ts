@@ -1,7 +1,9 @@
 import { parseUnits, type PublicClient } from "viem";
 import { AAVE_BASE_ASSETS } from "./aave";
+import { buildAaveBaseCall } from "./aave-call-policy";
 import { assessAaveActionRisk, type AaveRiskAction } from "./aave-risk-gate";
 import { readAaveBaseRiskSnapshot } from "./aave-risk-snapshot";
+import { simulateAaveBaseCall } from "./aave-simulation";
 
 export type AavePreviewRequest = {
   action: AaveRiskAction;
@@ -29,11 +31,21 @@ export async function previewAaveBaseAction(client: PublicClient, request: AaveP
   if (["supply", "repay"].includes(request.action) && input.wallet.balanceRaw < amountRaw)
     throw new Error("Wallet balance is insufficient.");
   const risk = assessAaveActionRisk(input);
+  const approvalRequired = ["supply", "repay"].includes(request.action) && input.wallet.poolAllowanceRaw < amountRaw;
+  if (!approvalRequired) {
+    await simulateAaveBaseCall(client, {
+      action: request.action, wallet: request.sender, asset: AAVE_BASE_ASSETS[request.symbol], amountRaw,
+      call: buildAaveBaseCall({ action: request.action, wallet: request.sender,
+        asset: AAVE_BASE_ASSETS[request.symbol], amountRaw }),
+      blockNumber: input.snapshot.blockNumber, blockHash: input.snapshot.blockHash as `0x${string}`,
+      observedAtMs: input.snapshot.observedAtMs, now: () => nowMs
+    });
+  }
   return {
     action: request.action, symbol: request.symbol, amount: request.amount, amountRaw: amountRaw.toString(),
     chainId: 8453, market: "Aave V3", assetAddress: AAVE_BASE_ASSETS[request.symbol],
     walletBalanceRaw: input.wallet.balanceRaw.toString(),
-    approvalRequired: ["supply", "repay"].includes(request.action) && input.wallet.poolAllowanceRaw < amountRaw,
+    approvalRequired, simulation: approvalRequired ? "after_approval" as const : "passed" as const,
     blockNumber: input.snapshot.blockNumber.toString(), observedAt: new Date(input.snapshot.observedAtMs).toISOString(),
     valueBase: risk.valueBase.toString(), debtStatus: risk.debtStatus,
     postHealthFactor: risk.postHealthFactorWad === null ? null : Number(risk.postHealthFactorWad) / 1e18,

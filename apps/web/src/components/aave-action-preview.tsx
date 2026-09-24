@@ -7,7 +7,7 @@ type Action = "supply" | "withdraw" | "borrow" | "repay";
 type Symbol = "USDC" | "WETH";
 type Preview = { action: Action; symbol: Symbol; amount: string; observedAt: string;
   postHealthFactor: number | null; debtStatus: "none" | "positive" | "unresolved";
-  approvalRequired: boolean; executionAvailable: false };
+  approvalRequired: boolean; simulation: "passed" | "after_approval"; executionAvailable: false };
 
 const labels: Record<Action, string> = { supply: "Supply", withdraw: "Withdraw", borrow: "Borrow", repay: "Repay" };
 
@@ -54,6 +54,7 @@ export function AaveActionPreview({ walletAddress, actions, symbols }: {
       <strong>{labels[preview.action]} {preview.amount} {preview.symbol}</strong>
       <span>{preview.debtStatus === "none" ? "No debt after this action" : preview.postHealthFactor === null ? "Final debt requires settlement" : `Estimated health factor ${preview.postHealthFactor.toFixed(2)}`}</span>
       {preview.approvalRequired && <span>An exact token approval would be needed first.</span>}
+      {preview.simulation === "passed" && <span>The exact call passed a same-block revert check.</span>}
       <small>Observed {new Date(preview.observedAt).toLocaleTimeString()} · Preview only; no transaction was prepared.</small>
     </div>}
   </form>;
