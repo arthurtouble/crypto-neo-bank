@@ -113,7 +113,10 @@ export function WalletWorkspace({ mode = "overview" }: { mode?: "overview" | "de
     if (!amount || Number(amount) <= 0) return setError("Enter an amount greater than zero.");
 
     const definition = BASE_ASSETS[asset];
-    const rawAmount = asset === "ETH" ? parseEther(amount) : parseUnits(amount, definition.decimals);
+    let rawAmount: bigint;
+    try { rawAmount = asset === "ETH" ? parseEther(amount) : parseUnits(amount, definition.decimals); }
+    catch { return setError(`Enter a valid ${asset} amount.`); }
+    if (rawAmount <= 0n) return setError("Enter an amount greater than zero.");
     const transaction = asset === "ETH"
       ? { to: recipient as `0x${string}`, value: rawAmount, chainId: HOME_CHAIN.id }
       : {

@@ -23,7 +23,7 @@ export default function Web3RuntimeProvider({ children }: { children: React.Reac
           theme: "light",
           accentColor: "#123524",
           landingHeader: "Welcome to Aura",
-          loginMessage: "Secure access to your private digital wealth relationship."
+          loginMessage: "Sign in to your Aura account."
         },
         embeddedWallets: {
           ethereum: { createOnLogin: "users-without-wallets" },

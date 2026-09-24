@@ -50,12 +50,15 @@
         "BRIDGE_API_BASE_URL": "https://api.bridge.xyz/v0",
         "NEXT_PUBLIC_PRIVY_APP_ID": "cmub5evr4013l0cjs0w5dijlb",
         "NEXT_PUBLIC_TURNSTILE_SITE_KEY": "1x00000000000000000000AA",
-        "TURNSTILE_HOSTNAMES": "aura-dev.aurel-events.workers.dev",
+        "TURNSTILE_HOSTNAMES": "aura-dev.aurel-events.workers.dev,localhost",
         "ADMIN_PRIVY_SUBJECTS": "",
         "BETA_ACCESS_MODE": "preview",
         "BETA_ALLOWED_COUNTRIES": "",
         "REQUIRE_CF_ACCESS": "false",
         "PROVIDER_WEBHOOK_TOLERANCE_SECONDS": "300"
+      },
+      "secrets": {
+        "required": ["TURNSTILE_SECRET"]
       },
       "d1_databases": [{
         "binding": "PROJECTION_DB",

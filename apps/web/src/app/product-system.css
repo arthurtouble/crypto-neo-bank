@@ -613,11 +613,8 @@
 .cardLimitGrid strong { color: var(--text); font-size: var(--type-row-title); }
 .cardControlPanel { grid-column: 1 / -1; }
 .cardControlList { margin-top: 16px; display: grid; grid-template-columns: 1fr 1fr; column-gap: 22px; }
-.cardControlList button { min-height: 66px; display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; align-items: center; gap: 12px; border: 0; border-top: 1px solid var(--border); background: transparent; color: var(--text); text-align: left; }
-.cardControlList button:not(:disabled) { cursor: pointer; }
-.cardControlList button:not(:disabled):hover { color: var(--accent); background: color-mix(in srgb, var(--accent) 4%, transparent); }
-.cardControlList button:disabled { color: var(--muted); }
-.cardControlList button > span { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 50%; background: var(--surface-subtle); }
+.cardControlList > div { min-height: 66px; display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; align-items: center; gap: 12px; border-top: 1px solid var(--border); color: var(--muted); }
+.cardControlList > div > span { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 50%; background: var(--surface-subtle); }
 .cardControlList strong { font-size: var(--type-row-title); }
 .cardControlList em { font-size: var(--type-caption); font-style: normal; font-weight: 650; }
 .cardAuthority { grid-column: 1 / -1; margin: -6px 2px 0; }

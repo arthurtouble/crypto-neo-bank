@@ -37,6 +37,8 @@ export function AaveActionPreview({ walletAddress, actions, symbols }: {
   const [phase, setPhase] = useState("");
   const [approvalHash, setApprovalHash] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState<Submitted | null>(null);
+  const [outcomeUnknown, setOutcomeUnknown] = useState(false);
+  const awaitingReceipt = Boolean(submitted && !["confirmed", "failed", "inconsistent"].includes(submitted.status));
   const selection = JSON.stringify([walletAddress, action, symbol, amount]);
   const liveSelection = useRef(selection);
   useEffect(() => { liveSelection.current = selection; }, [selection]);
@@ -77,10 +79,12 @@ export function AaveActionPreview({ walletAddress, actions, symbols }: {
   }
 
   async function execute() {
-    if (!walletAddress || !publicClient || busy || !amount.trim()) return;
+    if (!walletAddress || !publicClient || busy || awaitingReceipt || outcomeUnknown || !amount.trim()) return;
     const chosen = { action, symbol, amount, sender: walletAddress };
     const selected = selection;
     setBusy(true); setError(""); setApprovalHash(null); setSubmitted(null); setPhase("Preparing wallet call…");
+    let poolWalletOpened = false;
+    let poolHashKnown = false;
     try {
       const token = await getAccessToken();
       if (!token) throw new Error("Your session expired. Sign in again.");
@@ -114,15 +118,20 @@ export function AaveActionPreview({ walletAddress, actions, symbols }: {
       }
       if (liveSelection.current !== selected) throw new Error("Aave action changed. Review it again.");
       setPhase("Confirm Aave action in Privy…");
+      poolWalletOpened = true;
       const sent = await sendTransaction({ to: result.poolCall.to as `0x${string}`,
         data: result.poolCall.data, value: 0n, chainId: 8453 }, { address: walletAddress,
         uiOptions: { description: `${labels[chosen.action]} ${chosen.amount} ${chosen.symbol} with Aave on Base.`,
           buttonText: `Confirm ${labels[chosen.action].toLowerCase()}`, successHeader: "Transaction submitted", isCancellable: true } });
       if (!/^0x[a-fA-F0-9]{64}$/.test(sent.hash)) throw new Error("Wallet returned no usable transaction hash. Check wallet activity before retrying.");
+      poolHashKnown = true;
       setSubmitted({ ...chosen, hash: sent.hash, status: "submitted" });
       setPhase("");
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Aave action unavailable. Check your wallet before retrying.");
+      if (poolWalletOpened && !poolHashKnown) {
+        setOutcomeUnknown(true);
+        setError("The wallet may have sent this Aave transaction. Check wallet activity before trying again.");
+      } else setError(reason instanceof Error ? reason.message : "Aave action unavailable. Check your wallet before retrying.");
       setPhase("");
     } finally { setBusy(false); }
   }
@@ -148,6 +157,8 @@ export function AaveActionPreview({ walletAddress, actions, symbols }: {
         if (evidence.status === "confirmed") {
           await queryClient.invalidateQueries({ queryKey: ["aave-position"] });
           await queryClient.invalidateQueries({ queryKey: ["aave-base-market"] });
+          await queryClient.invalidateQueries({ queryKey: ["aave-borrow-market"] });
+          await queryClient.invalidateQueries({ queryKey: ["defi-positions"] });
         }
         if (!["confirmed", "failed", "inconsistent"].includes(evidence.status)) timer = setTimeout(poll, 8_000);
       } catch {
@@ -172,8 +183,8 @@ export function AaveActionPreview({ walletAddress, actions, symbols }: {
     </div>
     <div className="aavePreviewButtons">
       <button className="button secondary" type="submit" disabled={busy || !walletAddress || !amount.trim()}>{busy && !phase ? "Checking…" : "Preview risk"}</button>
-      <button className="button primary" type="button" disabled={busy || !walletAddress || !amount.trim()}
-        onClick={() => void execute()}>{busy ? "Working…" : `Continue ${labels[action].toLowerCase()} in wallet`}</button>
+      <button className="button primary" type="button" disabled={busy || awaitingReceipt || outcomeUnknown || !walletAddress || !amount.trim()}
+        onClick={() => void execute()}>{busy ? "Working…" : outcomeUnknown ? "Check wallet activity" : awaitingReceipt ? "Waiting for transaction" : `Continue ${labels[action].toLowerCase()} in wallet`}</button>
     </div>
     {phase && <p role="status">{phase}</p>}
     {error && <p className="formError" role="alert">{error}</p>}

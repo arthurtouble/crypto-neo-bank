@@ -10,7 +10,6 @@ import { AaveActionPreview } from "./aave-action-preview";
 type Market = { market: string; reserves: AaveBaseReserve[]; observedAt: string };
 type Position = { overview: { borrowGroups: number; healthFactor?: string; debts: Array<{ symbol: string; amount: string; usd: string }> }; observedAt: string };
 
-/** Position and market data remain visible; no wallet execution path exists. */
 export function BorrowWorkspace() {
   const { getAccessToken } = usePrivy();
   const { wallets } = useWallets();

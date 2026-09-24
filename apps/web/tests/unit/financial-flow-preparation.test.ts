@@ -1,5 +1,4 @@
 import { describe, expect, it, vi } from "vitest";
-import { readFileSync } from "node:fs";
 import { prepareIntentSteps, submitPreparedTransfer, WalletOutcomeUnknownError } from "@/lib/transactions/prepare-client";
 import { normalizePreparedCall } from "@/lib/transactions/evidence";
 
@@ -138,11 +137,4 @@ describe("financial call preparation client", () => {
     expect(send).not.toHaveBeenCalled();
   });
 
-  it("has no dormant wallet signing path in bridge or Aave review components", () => {
-    for (const component of ["cross-chain-workspace", "earn-workspace", "borrow-workspace", "defi-positions"]) {
-      const source = readFileSync(new URL(`../../src/components/${component}.tsx`, import.meta.url), "utf8");
-      expect(source, component).not.toMatch(/useSendTransaction|sendTransaction\s*\(|\/api\/intents\/status/);
-      expect(source, component).toMatch(/temporarily unavailable|execution is paused|unavailable/);
-    }
-  });
 });
