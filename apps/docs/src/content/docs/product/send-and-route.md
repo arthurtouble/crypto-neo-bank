@@ -7,7 +7,7 @@ sidebar:
 
 ## Direct transfers
 
-Aurel checks the supported network, asset, destination, amount, account settings, and review rules before asking your wallet to sign. A supported Base transfer is prepared as an exact call and checked against the transaction the network sees. Higher-value actions that need step-up remain paused until Aurel can verify the step-up server-side.
+Aurel checks the supported network, asset, destination, amount, account settings, and review rules before asking your wallet to sign. A supported Base transfer is prepared as an exact call and checked again just before your wallet opens. If the transfer or your account controls changed, you need a new review. Higher-value actions that need step-up remain paused until Aurel can verify the step-up server-side.
 
 Saving an address does not prove that you control it. Check the full address independently.
 

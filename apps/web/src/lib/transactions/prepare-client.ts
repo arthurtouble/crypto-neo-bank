@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { normalizePreparedCall, type PreparedCallInput } from "./evidence";
 
+export class WalletOutcomeUnknownError extends Error {}
+
 export type PreparedStepInput = {
   call: PreparedCallInput;
   semanticAction: string;
@@ -54,6 +56,7 @@ type TransferSubmission = {
   intentId: string;
   step: PreparedStepInput;
   simulate: () => Promise<unknown>;
+  isReviewCurrent: () => boolean;
   send: () => Promise<{ hash: string }>;
   fetcher?: typeof fetch;
 };
@@ -66,18 +69,34 @@ export async function submitPreparedTransfer(input: TransferSubmission): Promise
   if (prepared?.stepIndex !== 0) throw new Error("The prepared transfer step is invalid.");
   const expected = await normalizePreparedCall(input.step.call);
   if (prepared.fingerprint.toLowerCase() !== expected.fingerprint.toLowerCase()) throw new Error("The prepared transaction did not match this exact call.");
-  const { hash } = await input.send();
+  if (!input.isReviewCurrent()) throw new Error("This transfer changed. Review it again before continuing.");
+  const recheck = await (input.fetcher ?? fetch)("/api/intents/prepare", {
+    method: "POST", cache: "no-store",
+    headers: { Authorization: `Bearer ${input.accessToken}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ intentId: input.intentId, stepIndex: 0,
+      call: { ...input.step.call, value: String(input.step.call.value) },
+      semanticAction: input.step.semanticAction, sourceReference: input.step.sourceReference,
+      expectedEffect: input.step.expectedEffect, recheck: true })
+  });
+  if (!recheck.ok) throw new Error("This transfer changed or expired. Review it again before continuing.");
+  const checked = preparedResponse.parse(await recheck.json());
+  if (checked.intentId !== input.intentId || checked.stepIndex !== 0
+    || checked.fingerprint.toLowerCase() !== expected.fingerprint.toLowerCase()
+    || !input.isReviewCurrent()) throw new Error("This transfer changed or expired. Review it again before continuing.");
+  let hash: string;
+  try { ({ hash } = await input.send()); }
+  catch { throw new WalletOutcomeUnknownError("Your wallet did not return a transaction hash. Check its activity before trying again."); }
+  if (!/^0x[a-fA-F0-9]{64}$/.test(hash))
+    throw new WalletOutcomeUnknownError("Your wallet did not return a valid transaction hash. Check its activity before trying again.");
   let reportRecorded = false;
   try {
-    if (/^0x[a-fA-F0-9]{64}$/.test(hash)) {
-      const response = await (input.fetcher ?? fetch)("/api/intents/status", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${input.accessToken}`, "Content-Type": "application/json" },
-        cache: "no-store",
-        body: JSON.stringify({ intentId: input.intentId, stepIndex: prepared.stepIndex, status: "submitted", transactionHash: hash })
-      });
-      reportRecorded = response.ok;
-    }
+    const response = await (input.fetcher ?? fetch)("/api/intents/status", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${input.accessToken}`, "Content-Type": "application/json" },
+      cache: "no-store",
+      body: JSON.stringify({ intentId: input.intentId, stepIndex: prepared.stepIndex, status: "submitted", transactionHash: hash })
+    });
+    reportRecorded = response.ok;
   } catch { /* A broadcast hash must not be discarded or represented as a failed send. */ }
   return { hash, stepIndex: 0, reportRecorded };
 }

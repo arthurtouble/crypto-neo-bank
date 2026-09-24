@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { spawnSync } from "node:child_process";
+import { DatabaseSync } from "node:sqlite";
 
 const state = vi.hoisted(() => ({
   subject: "subject-a",
@@ -16,6 +17,7 @@ const state = vi.hoisted(() => ({
   spentMissing: false,
   atomicReservationExceeded: false,
   lastInsert: null as null | { query: string; args: unknown[] },
+  lastRecheck: null as null | { query: string; args: unknown[] },
   valuationFails: false,
   valuationCents: "1",
   simulationFails: false,
@@ -90,6 +92,16 @@ vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
       return {
         query,
         async first() {
+          if (query.includes("SELECT c.intent_id FROM intent_prepared_calls c")) {
+            state.lastRecheck = { query, args };
+            const row = state.prepared.get(0);
+            return state.intent?.intent_id === args[1] && state.intent?.subject_reference === args[2]
+              && state.intent?.status === "reviewed" && row?.reported_hash == null
+              && row?.call_fingerprint === args[7] && state.featureAllowed && !state.accountLocked
+              && state.policyVersion === args[0] && !state.atomicReservationExceeded
+              && state.spentTodayUsd * 100 + Number(state.valuationCents) <= Math.min(state.dailyLimitUsd, state.betaLimitUsd) * 100
+              ? { intent_id: args[1] } : null;
+          }
           if (query.includes("FROM intent_observation_candidates")) return state.candidates.get(String(args[1]).toLowerCase()) ?? null;
           if (query.includes("SELECT 1 AS reported FROM intent_prepared_calls")) {
             return [...state.prepared.values()].some((step) => step.intent_id === args[0] && step.subject_reference === args[1] && step.reported_hash) ? { reported: 1 } : null;
@@ -321,7 +333,7 @@ describe("intent preparation route", () => {
   async function request(body: unknown) { return prepare(new Request("https://aurel.test/api/intents/prepare", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })); }
 
   beforeEach(() => {
-    state.subject = "subject-a"; state.walletLinked = true; state.betaAllowed = true; state.betaMode = "preview"; state.betaLimitUsd = 25_000; state.featureAllowed = true; state.accountLocked = false; state.dailyLimitUsd = 25_000; state.policyVersion = 1; state.stepUpThresholdUsd = 10_000; state.spentTodayUsd = 0; state.spentMissing = false; state.atomicReservationExceeded = false; state.lastInsert = null; state.valuationFails = false; state.valuationCents = "1"; state.simulationFails = false; state.feeBudgetFails = false; state.staleDuringFeeBudget = false; state.expireDuringSimulation = false; state.disableDuringSimulation = false; state.revokeBetaDuringSimulation = false; state.tightenPolicyDuringSimulation = false; state.stalePriceDuringSimulation = false; state.valuations.length = 0; state.addressBook = []; state.intentUpdateAllowed = true; state.preparationEventFails = false; state.prepared.clear(); state.events.length = 0; state.issues.length = 0;
+    state.subject = "subject-a"; state.walletLinked = true; state.betaAllowed = true; state.betaMode = "preview"; state.betaLimitUsd = 25_000; state.featureAllowed = true; state.accountLocked = false; state.dailyLimitUsd = 25_000; state.policyVersion = 1; state.stepUpThresholdUsd = 10_000; state.spentTodayUsd = 0; state.spentMissing = false; state.atomicReservationExceeded = false; state.lastInsert = null; state.lastRecheck = null; state.valuationFails = false; state.valuationCents = "1"; state.simulationFails = false; state.feeBudgetFails = false; state.staleDuringFeeBudget = false; state.expireDuringSimulation = false; state.disableDuringSimulation = false; state.revokeBetaDuringSimulation = false; state.tightenPolicyDuringSimulation = false; state.stalePriceDuringSimulation = false; state.valuations.length = 0; state.addressBook = []; state.intentUpdateAllowed = true; state.preparationEventFails = false; state.prepared.clear(); state.events.length = 0; state.issues.length = 0;
     state.intent = { intent_id: intentId, subject_reference: "subject-a", intent_type: "transfer", chain_id: 8453, wallet_reference: `wallet:${sender.toLowerCase()}`, request_json: JSON.stringify({ type: "transfer", chainId: 8453, destination: recipient, asset: "ETH", amount: "0.0000000000000001", estimatedUsd: 20 }), policy_result_json: JSON.stringify({ permitted: true }), status: "reviewed", expires_at: new Date(Date.now() + 60_000).toISOString() };
   });
 
@@ -332,6 +344,73 @@ describe("intent preparation route", () => {
     expect(state.prepared.get(0)).toMatchObject({ chain_id: 8453, native_value: "100", semantic_action: "native_transfer" });
     expect(state.valuations).toHaveLength(1);
     expect((await request(payload)).status).toBe(409);
+  });
+
+  it("rechecks the existing exact transfer without preparing another call", async () => {
+    expect((await request(payload)).status).toBe(201);
+    const checked = await request({ ...payload, recheck: true });
+    expect(checked.status).toBe(200);
+    expect(await checked.json()).toMatchObject({ intentId, stepIndex: 0,
+      fingerprint: (await normalizePreparedCall(payload.call)).fingerprint });
+    expect(state.prepared.size).toBe(1);
+    expect(state.valuations).toHaveLength(1);
+    state.dailyLimitUsd = 0;
+    expect((await request({ ...payload, recheck: true })).status).not.toBe(200);
+  });
+
+  it("enforces the last transfer gate against live SQLite controls", async () => {
+    expect((await request(payload)).status).toBe(201);
+    expect((await request({ ...payload, recheck: true })).status).toBe(200);
+    const captured = state.lastRecheck!;
+    const row = state.prepared.get(0)!;
+    const db = new DatabaseSync(":memory:");
+    const future = new Date(Date.now() + 60_000).toISOString();
+    const past = new Date(Date.now() - 60_000).toISOString();
+    try {
+      db.exec(`CREATE TABLE transaction_intents (intent_id TEXT, subject_reference TEXT, intent_type TEXT,
+        status TEXT, wallet_reference TEXT, chain_id INTEGER, expires_at TEXT, created_at TEXT);
+        CREATE TABLE intent_prepared_calls (intent_id TEXT, step_index INTEGER, subject_reference TEXT,
+        wallet_address TEXT, chain_id INTEGER, target_address TEXT, native_value TEXT, calldata_hash TEXT,
+        call_fingerprint TEXT, semantic_action TEXT, source_reference TEXT, expected_effect_json TEXT,
+        verification_state TEXT, submission_phase TEXT, reported_hash TEXT, expires_at TEXT, created_at TEXT);
+        CREATE TABLE security_profiles (subject_reference TEXT, account_locked INTEGER, policy_version INTEGER, daily_limit_usd REAL);
+        CREATE TABLE beta_access (subject_reference TEXT, status TEXT, country_code TEXT, transaction_limit_usd REAL);
+        CREATE TABLE feature_flags (flag_key TEXT, enabled INTEGER, audience TEXT);
+        CREATE TABLE address_book_entries (subject_reference TEXT, chain_family TEXT, address TEXT, available_at TEXT);
+        CREATE TABLE intent_valuations (valuation_id TEXT, intent_id TEXT, usd_cents TEXT);`);
+      db.prepare("INSERT INTO transaction_intents VALUES (?,?,?,?,?,?,?,?)").run(intentId, "subject-a", "transfer",
+        "reviewed", `wallet:${sender.toLowerCase()}`, 8453, future, past);
+      db.prepare("INSERT INTO intent_prepared_calls VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)").run(intentId, 0,
+        "subject-a", sender.toLowerCase(), 8453, recipient.toLowerCase(), "100", row.calldata_hash as string,
+        row.call_fingerprint as string, "native_transfer", "review-1", JSON.stringify(payload.expectedEffect),
+        "prepared", "legacy", null, future, past);
+      db.exec(`INSERT INTO security_profiles VALUES ('subject-a',0,1,25000);
+        INSERT INTO beta_access VALUES ('subject-a','active','PT',25000);
+        INSERT INTO feature_flags VALUES ('direct_transfers',1,'beta');`);
+      const args = [...captured.args] as Array<string | number | bigint | null>;
+      const check = () => db.prepare(captured.query).get(...args);
+      expect(check()).toMatchObject({ intent_id: intentId });
+      db.prepare("INSERT INTO address_book_entries VALUES (?,?,?,?)").run("subject-a", "evm", recipient,
+        new Date(Date.now() + 86_400_000).toISOString());
+      expect(check()).toBeUndefined();
+      db.exec("DELETE FROM address_book_entries");
+      args[17] = 1; // The reviewed policy required a saved destination.
+      db.prepare("INSERT INTO address_book_entries VALUES (?,?,?,?)").run("subject-a", "evm", recipient, past);
+      expect(check()).toMatchObject({ intent_id: intentId });
+      db.exec("DELETE FROM address_book_entries");
+      expect(check()).toBeUndefined();
+      args[17] = 0;
+      db.exec("UPDATE security_profiles SET account_locked=1");
+      expect(check()).toBeUndefined();
+      db.exec("UPDATE security_profiles SET account_locked=0, daily_limit_usd=0");
+      expect(check()).toBeUndefined();
+      db.exec("UPDATE security_profiles SET daily_limit_usd=25000, policy_version=2");
+      expect(check()).toBeUndefined();
+      db.exec("UPDATE security_profiles SET policy_version=1; UPDATE feature_flags SET enabled=0");
+      expect(check()).toBeUndefined();
+      db.exec("UPDATE feature_flags SET enabled=1; UPDATE intent_prepared_calls SET reported_hash='0xabc'");
+      expect(check()).toBeUndefined();
+    } finally { db.close(); }
   });
 
   it("does not prepare a transfer when the canonical server simulation fails", async () => {

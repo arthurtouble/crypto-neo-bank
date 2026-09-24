@@ -27,7 +27,8 @@ const prepareSchema = z.object({
   call: z.object({ chainId: z.number().int().positive(), from: address, to: address, value: z.string().regex(/^\d+$/), data: z.string().regex(/^0x(?:[a-fA-F0-9]{2})*$/) }).strict(),
   semanticAction: z.enum(["native_transfer", "erc20_transfer", "erc20_approval"]),
   sourceReference: z.string().trim().min(1).max(200),
-  expectedEffect: effectSchema
+  expectedEffect: effectSchema,
+  recheck: z.literal(true).optional()
 }).strict();
 
 type Effect = z.infer<typeof effectSchema>;
@@ -160,6 +161,57 @@ export async function POST(request: Request) {
     const commitAt = new Date().toISOString();
     const priceAgeMs = Date.parse(commitAt) - Date.parse(valuation.priceObservedAt);
     if (!Number.isFinite(priceAgeMs) || priceAgeMs > 180_000 || priceAgeMs < -60_000) return reply({ error: "valuation_unavailable", traceId }, 503);
+    if (input.recheck) {
+      const current = await env.PROJECTION_DB.prepare(`SELECT c.intent_id FROM intent_prepared_calls c
+        JOIN transaction_intents i ON i.intent_id = c.intent_id
+        JOIN security_profiles s ON s.subject_reference = i.subject_reference AND s.account_locked = 0
+          AND s.policy_version = ?
+        LEFT JOIN beta_access b ON b.subject_reference = i.subject_reference
+        JOIN feature_flags f ON f.flag_key = 'direct_transfers' AND f.enabled = 1
+          AND f.audience IN ('all', 'beta')
+        WHERE c.intent_id = ? AND c.step_index = 0 AND c.subject_reference = ?
+          AND c.wallet_address = ? AND c.chain_id = 8453 AND c.target_address = ?
+          AND c.native_value = ? AND c.calldata_hash = ? AND c.call_fingerprint = ?
+          AND c.semantic_action = ? AND c.source_reference = ? AND c.expected_effect_json = ?
+          AND c.verification_state = 'prepared' AND c.submission_phase = 'legacy'
+          AND c.reported_hash IS NULL AND c.expires_at = i.expires_at
+          AND c.expires_at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+          AND i.subject_reference = ? AND i.intent_type = 'transfer' AND i.status = 'reviewed'
+          AND i.wallet_reference = ? AND i.chain_id = 8453
+          AND unixepoch(?) BETWEEN unixepoch('now') - 180 AND unixepoch('now') + 60
+          AND (? = 'preview' OR (b.status = 'active' AND b.country_code IN (SELECT value FROM json_each(?))))
+          AND NOT EXISTS (SELECT 1 FROM address_book_entries cooling WHERE cooling.subject_reference = i.subject_reference
+            AND cooling.chain_family = 'evm' AND lower(cooling.address) = lower(?)
+            AND cooling.available_at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+          AND (? = 0 OR EXISTS (SELECT 1 FROM address_book_entries saved
+            WHERE saved.subject_reference = i.subject_reference AND saved.chain_family = 'evm'
+              AND lower(saved.address) = lower(?)
+              AND saved.available_at <= strftime('%Y-%m-%dT%H:%M:%fZ', 'now')))
+          AND EXISTS (SELECT 1 FROM (
+            SELECT COALESCE(SUM(CAST(v.usd_cents AS INTEGER)), 0) AS cents,
+              COALESCE(SUM(CASE WHEN v.valuation_id IS NULL THEN 1 ELSE 0 END), 0) AS missing
+            FROM transaction_intents spending LEFT JOIN intent_valuations v ON v.rowid =
+              (SELECT MAX(v2.rowid) FROM intent_valuations v2 WHERE v2.intent_id = spending.intent_id)
+            WHERE spending.subject_reference = ? AND spending.intent_id != ?
+              AND (spending.created_at >= ? OR EXISTS (SELECT 1 FROM intent_prepared_calls recent
+                WHERE recent.intent_id = spending.intent_id AND recent.created_at >= ?))
+              AND (spending.status IN ('submitted', 'confirmed') OR EXISTS (
+                SELECT 1 FROM intent_prepared_calls reserved_call WHERE reserved_call.intent_id = spending.intent_id
+                  AND reserved_call.expires_at > ? AND reserved_call.verification_state != 'failed'))
+          ) reserved WHERE reserved.missing = 0 AND reserved.cents + ? <=
+            CAST(MIN(s.daily_limit_usd, CASE WHEN ? = 'preview' THEN ? ELSE b.transaction_limit_usd END) * 100 AS INTEGER))`)
+        .bind(profile.policy_version, input.intentId, subject.subjectReference, ownedAddress,
+          call.to.toLowerCase(), call.value, call.dataHash, call.fingerprint, input.semanticAction,
+          input.sourceReference, JSON.stringify(effect), subject.subjectReference, `wallet:${ownedAddress}`,
+          valuation.priceObservedAt, beta.mode, JSON.stringify(configuredCountries()), reviewed.destination,
+          Number(Boolean(profile.enforce_address_book) || valuedCents >= Math.ceil(profile.new_address_threshold_usd * 100)),
+          reviewed.destination, subject.subjectReference,
+          input.intentId, rollingStart, rollingStart, commitAt, valuedCents, beta.mode, beta.transactionLimitUsd)
+        .first<{ intent_id: string }>();
+      if (!current) return reply({ error: "prepare_conflict", traceId }, 409);
+      return reply({ intentId: input.intentId, stepIndex: 0, fingerprint: call.fingerprint,
+        expiresAt: intent.expires_at, traceId }, 200);
+    }
     const [result] = await env.PROJECTION_DB.batch([
       env.PROJECTION_DB.prepare(`INSERT INTO intent_prepared_calls
       (intent_id, step_index, subject_reference, wallet_address, chain_id, target_address, native_value, calldata_hash, call_fingerprint, semantic_action, source_reference, expires_at, expected_effect_json, verification_state, created_at, submission_phase)

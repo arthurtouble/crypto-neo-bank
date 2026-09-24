@@ -4,7 +4,7 @@ import { useConnectWallet, usePrivy, useSendTransaction, useWallets } from "@pri
 import { useQuery } from "@tanstack/react-query";
 import { Check, Copy, ExternalLink, LoaderCircle, Plus, QrCode, Send, WalletCards, X } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
-import { useMemo, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { erc20Abi, formatUnits, isAddress, parseEther, parseUnits, encodeFunctionData, toHex } from "viem";
 import { useBalance, useReadContract } from "wagmi";
@@ -13,7 +13,7 @@ import { ExternalWalletBalances } from "./external-wallet-balances";
 import { DefiPositions } from "./defi-positions";
 import { TransactionProgress } from "./transaction-progress";
 import type { TransactionLifecycleStatus } from "@/lib/transactions/lifecycle";
-import { submitPreparedTransfer } from "@/lib/transactions/prepare-client";
+import { submitPreparedTransfer, WalletOutcomeUnknownError } from "@/lib/transactions/prepare-client";
 
 type AssetSymbol = keyof typeof BASE_ASSETS;
 type Modal = "receive" | "send" | null;
@@ -48,11 +48,20 @@ export function WalletWorkspace() {
   const [hash, setHash] = useState<string | null>(null);
   const [intentId, setIntentId] = useState<string | null>(null);
   const [flowStatus, setFlowStatus] = useState<TransactionLifecycleStatus | null>(null);
+  const [submissionUncertain, setSubmissionUncertain] = useState(false);
+  const [submittedSummary, setSubmittedSummary] = useState<string | null>(null);
+  const [reviewedSourceAddress, setReviewedSourceAddress] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [receiveChainId, setReceiveChainId] = useState<number>(HOME_CHAIN.id);
 
   const embedded = useMemo(() => wallets.find((wallet) => wallet.walletClientType === "privy") ?? wallets[0], [wallets]);
   const address = embedded?.address as `0x${string}` | undefined;
+  const transferKey = JSON.stringify([modal, address, asset, recipient, amount]);
+  const liveTransferKey = useRef(transferKey);
+  const transferRevision = useRef(0);
+  useLayoutEffect(() => {
+    if (liveTransferKey.current !== transferKey) { liveTransferKey.current = transferKey; transferRevision.current += 1; }
+  }, [transferKey]);
   const externalWallets = wallets.filter((wallet) => wallet.address !== embedded?.address);
   const eth = useBalance({ address, chainId: HOME_CHAIN.id, query: { enabled: Boolean(address) } });
   const usdc = useReadContract({ address: BASE_ASSETS.USDC.address, abi: erc20Abi, functionName: "balanceOf", args: address ? [address] : undefined, chainId: HOME_CHAIN.id, query: { enabled: Boolean(address) } });
@@ -83,6 +92,8 @@ export function WalletWorkspace() {
   }
 
   function openSend(symbol: AssetSymbol = "USDC") {
+    if (sending) return;
+    if (submissionUncertain) { setModal("send"); return; }
     setAsset(symbol);
     setRecipient("");
     setAmount("");
@@ -90,6 +101,9 @@ export function WalletWorkspace() {
     setHash(null);
     setIntentId(null);
     setFlowStatus(null);
+    setSubmissionUncertain(false);
+    setSubmittedSummary(null);
+    setReviewedSourceAddress(null);
     setModal("send");
   }
 
@@ -111,8 +125,12 @@ export function WalletWorkspace() {
           chainId: HOME_CHAIN.id,
           data: encodeFunctionData({ abi: erc20Abi, functionName: "transfer", args: [recipient as `0x${string}`, rawAmount] })
         };
+    const reviewedSelection = transferKey;
+    const reviewedRevision = transferRevision.current;
+    const reviewedSummary = `${amount} ${asset} from ${shortAddress(address)} to ${shortAddress(recipient)}`;
 
     setSending(true);
+    setReviewedSourceAddress(address);
     setFlowStatus("reviewing");
     let reviewedIntentId: string | undefined;
     let accessToken: string | null = null;
@@ -158,6 +176,7 @@ export function WalletWorkspace() {
           await provider.request({ method: "eth_estimateGas", params: [simulation] });
           if (asset !== "ETH") await provider.request({ method: "eth_call", params: [simulation, "latest"] });
         },
+        isReviewCurrent: () => liveTransferKey.current === reviewedSelection && transferRevision.current === reviewedRevision,
         send: async () => {
           setFlowStatus("awaiting_confirmation");
           return sendTransaction(transaction, {
@@ -172,26 +191,33 @@ export function WalletWorkspace() {
         }
       });
       setHash(result.hash);
+      setSubmittedSummary(reviewedSummary);
       setFlowStatus("submitted");
       if (!result.reportRecorded) setError("The transfer was broadcast, but Aurel could not record its hash yet. Do not send it again; contact support with the transaction link.");
       await Promise.allSettled([eth.refetch(), usdc.refetch(), weth.refetch()]);
     } catch (sendError) {
-      if (reviewedIntentId && accessToken) {
+      const uncertain = sendError instanceof WalletOutcomeUnknownError;
+      if (!uncertain && reviewedIntentId && accessToken) {
         await fetch("/api/intents/status", {
           method: "POST",
           headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
           body: JSON.stringify({ intentId: reviewedIntentId, status: "cancelled" })
         }).catch(() => undefined);
       }
-      setError(sendError instanceof Error ? sendError.message : "The transaction was not submitted.");
-      setFlowStatus("failed");
+      if (uncertain || liveTransferKey.current === reviewedSelection && transferRevision.current === reviewedRevision) {
+        setError(sendError instanceof Error ? sendError.message : "Review this transfer again before continuing.");
+        setFlowStatus(uncertain ? "awaiting_confirmation" : null);
+        setSubmissionUncertain(uncertain);
+        if (uncertain) setSubmittedSummary(reviewedSummary);
+        else setReviewedSourceAddress(null);
+      }
     } finally {
       setSending(false);
     }
   }
 
   if (!ready || !address) {
-    return <section className="panel walletLoading"><LoaderCircle className="spin" size={20} /><div><strong>Preparing your account</strong></div></section>;
+    return <section className="panel walletLoading"><LoaderCircle className="spin" size={20} /><div><strong>Preparing your account</strong>{(sending || submissionUncertain) && <p role="alert">A transfer from {reviewedSourceAddress ? shortAddress(reviewedSourceAddress) : "your wallet"} may be pending. Check that wallet’s activity before trying again.</p>}</div></section>;
   }
 
   return (
@@ -200,12 +226,12 @@ export function WalletWorkspace() {
         <section className="panel widePanel">
           <div className="panelHeading walletHeading">
             <div><h2>Your Assets</h2></div>
-            <div className="walletActions"><button className="button secondary" onClick={() => setModal("receive")}><QrCode size={16} /> Receive</button><button className="button primary" onClick={() => openSend()}><Send size={16} /> Send</button></div>
+            <div className="walletActions"><button className="button secondary" disabled={sending || submissionUncertain} onClick={() => { if (!sending && !submissionUncertain) setModal("receive"); }}><QrCode size={16} /> Receive</button><button className="button primary" disabled={sending} onClick={() => openSend()}><Send size={16} /> Send</button></div>
           </div>
           <div className="assetTable liveAssetTable">
             <div className="tableHead"><span>Asset</span><span>Source</span><span>Status</span><span>Balance</span></div>
             {rows.map((row, index) => (
-              <button className="tableRow assetActionRow" key={row.symbol} onClick={() => openSend(row.symbol)}>
+              <button className="tableRow assetActionRow" key={row.symbol} disabled={sending} onClick={() => openSend(row.symbol)}>
                 <span className={`assetToken token${index}`}>{row.symbol.slice(0, 1)}</span>
                 <span><strong>{row.name}</strong><small>{row.symbol}</small></span>
                 <span>{row.source}</span>
@@ -220,15 +246,15 @@ export function WalletWorkspace() {
           <h3>Your Account</h3>
           <div className="walletConnection"><span><WalletCards size={18} /></span><div><strong>Aurel Wallet</strong><small>{shortAddress(address)}</small></div><i className="onlineDot" /></div>
           {externalWallets.map((wallet) => <div className="walletConnection" key={wallet.address}><span><ExternalLink size={17} /></span><div><strong>Connected wallet</strong><small>{shortAddress(wallet.address)}</small></div><i className="onlineDot" /></div>)}
-          <button className="button secondary full" onClick={() => connectWallet()}><Plus size={15} /> Connect external wallet</button>
+          <button className="button secondary full" disabled={sending || submissionUncertain} onClick={() => connectWallet()}><Plus size={15} /> Connect external wallet</button>
         </aside>
       </div>
       <ExternalWalletBalances addresses={externalWallets.map((item) => item.address as `0x${string}`)} />
       <DefiPositions address={address} />
 
-      {modal && <div className="modalBackdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && setModal(null)}>
+      {modal && <div className="modalBackdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && !sending && setModal(null)}>
         <section className="financialModal" role="dialog" aria-modal="true" aria-labelledby="wallet-modal-title">
-          <button className="modalClose" onClick={() => setModal(null)} aria-label="Close"><X size={18} /></button>
+          <button className="modalClose" onClick={() => setModal(null)} aria-label="Close" disabled={sending}><X size={18} /></button>
           {modal === "receive" ? <>
             <h2 id="wallet-modal-title">Add USD Coin</h2>
             <p>Choose where you are sending from, then copy your address.</p>
@@ -241,13 +267,14 @@ export function WalletWorkspace() {
             {receiveChainId !== HOME_CHAIN.id && <p className="authorityFootnote">Your USDC remains on the selected network until you review and approve a route into your Aurel balance.</p>}
           </> : <form onSubmit={(event) => void submitSend(event)}>
             <h2 id="wallet-modal-title">Send</h2>
-            <label className="fieldLabel">Asset<select value={asset} onChange={(event) => setAsset(event.target.value as AssetSymbol)}>{Object.keys(BASE_ASSETS).map((symbol) => <option key={symbol}>{symbol}</option>)}</select></label>
-            <label className="fieldLabel">Amount<input inputMode="decimal" placeholder="0.00" value={amount} onChange={(event) => setAmount(event.target.value)} /></label>
-            {savedRecipients.length > 0 && <label className="fieldLabel">Saved Recipient<select value={savedRecipients.some((item) => item.destination === recipient) ? recipient : ""} onChange={(event) => setRecipient(event.target.value)}><option value="">Enter another address</option>{savedRecipients.map((item) => <option key={item.id} value={item.destination}>{item.name} · {item.detail}</option>)}</select></label>}
-            <label className="fieldLabel">Destination<input autoComplete="off" spellCheck={false} placeholder="0x…" value={recipient} onChange={(event) => setRecipient(event.target.value.trim())} /></label>
-            <div className="transactionSummary"><span>From<strong>Aurel Account</strong></span><span>Account<strong>{shortAddress(address)}</strong></span><span>Review<strong>You Confirm</strong></span></div>
-            {flowStatus && <TransactionProgress action="Transfer" status={flowStatus} error={error} intentId={intentId} hashes={hash ? [hash] : []} chainId={HOME_CHAIN.id} onConfirmed={() => { void Promise.all([eth.refetch(), usdc.refetch(), weth.refetch()]); }} />}
-            <button className="button primary full" disabled={sending || Boolean(hash)}>{sending ? <LoaderCircle className="spin" size={16} /> : <Send size={16} />}{hash ? "Transfer Submitted" : sending ? "Awaiting Confirmation" : "Review Transfer"}</button>
+            <label className="fieldLabel">Asset<select value={asset} disabled={sending || submissionUncertain || Boolean(hash)} onChange={(event) => setAsset(event.target.value as AssetSymbol)}>{Object.keys(BASE_ASSETS).map((symbol) => <option key={symbol}>{symbol}</option>)}</select></label>
+            <label className="fieldLabel">Amount<input inputMode="decimal" placeholder="0.00" value={amount} disabled={sending || submissionUncertain || Boolean(hash)} onChange={(event) => setAmount(event.target.value)} /></label>
+            {savedRecipients.length > 0 && <label className="fieldLabel">Saved Recipient<select value={savedRecipients.some((item) => item.destination === recipient) ? recipient : ""} disabled={sending || submissionUncertain || Boolean(hash)} onChange={(event) => setRecipient(event.target.value)}><option value="">Enter another address</option>{savedRecipients.map((item) => <option key={item.id} value={item.destination}>{item.name} · {item.detail}</option>)}</select></label>}
+            <label className="fieldLabel">Destination<input autoComplete="off" spellCheck={false} placeholder="0x…" value={recipient} disabled={sending || submissionUncertain || Boolean(hash)} onChange={(event) => setRecipient(event.target.value.trim())} /></label>
+            <div className="transactionSummary"><span>From<strong>Aurel Account</strong></span><span>Account<strong>{shortAddress(reviewedSourceAddress ?? address)}</strong></span><span>Review<strong>You Confirm</strong></span></div>
+            {flowStatus && <TransactionProgress action="Transfer" status={flowStatus} stage={submissionUncertain ? "Check Wallet Activity" : submittedSummary ? `Transfer: ${submittedSummary}` : undefined} error={error} intentId={intentId} hashes={hash ? [hash] : []} chainId={HOME_CHAIN.id} onConfirmed={() => { void Promise.all([eth.refetch(), usdc.refetch(), weth.refetch()]); }} />}
+            {!flowStatus && error && <p className="formError" role="alert">{error}</p>}
+            <button className="button primary full" disabled={sending || Boolean(hash) || submissionUncertain}>{sending ? <LoaderCircle className="spin" size={16} /> : <Send size={16} />}{hash ? "Transfer Submitted" : submissionUncertain ? "Check Wallet Activity" : sending ? "Awaiting Confirmation" : "Review Transfer"}</button>
           </form>}
         </section>
       </div>}
