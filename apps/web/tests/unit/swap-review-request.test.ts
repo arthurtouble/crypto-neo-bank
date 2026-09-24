@@ -155,18 +155,42 @@ describe("swap route review request", () => {
       to: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", value: "0", data: "0x095ea7b3" };
     const normalized = await normalizePreparedCall(call);
     const reports: unknown[] = [];
+    const expiresAt = new Date(Date.now() + 60_000).toISOString();
     vi.stubGlobal("fetch", async (url: string, init: RequestInit) => {
       reports.push({ url, method: init.method, body: JSON.parse(String(init.body)) });
+      if (init.method === "POST") return Response.json({ approvalId: "approval-1", kind: "approve", amountRaw: "1000000",
+        spender: "0x2626664c2603336e57b271c5c0b26f421741e481", fingerprint: normalized.fingerprint, call, expiresAt });
       return Response.json({ status: "pending" }, { status: 202 });
     });
     const result = await submitPreparedApproval({ prepared: { state: "approval_required", approvalId: "approval-1",
       kind: "approve", amountRaw: "1000000", spender: "0x2626664c2603336e57b271c5c0b26f421741e481",
-      fingerprint: normalized.fingerprint, call, expiresAt: new Date(Date.now() + 60_000).toISOString() },
-      walletAddress: input.walletAddress, token: input.token,
+      fingerprint: normalized.fingerprint, call, expiresAt },
+      walletAddress: input.walletAddress, token: input.token, isReviewCurrent: () => true,
       send: async (transaction) => { expect(transaction).toEqual({ chainId: 8453, to: normalized.to, value: 0n, data: normalized.data });
         return { hash: `0x${"ab".repeat(32)}` }; } });
     expect(result.reportRecorded).toBe(true);
-    expect(reports).toEqual([{ url: "/api/swap/approval", method: "PATCH",
+    expect(reports).toEqual([{ url: "/api/swap/approval", method: "POST",
+      body: { approvalId: "approval-1", walletAddress: input.walletAddress, recheck: true } },
+    { url: "/api/swap/approval", method: "PATCH",
       body: { approvalId: "approval-1", transactionHash: `0x${"ab".repeat(32)}` } }]);
+  });
+
+  it("does not open the wallet when approval recheck fails or selection changes", async () => {
+    const call = { chainId: 8453, from: input.walletAddress,
+      to: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", value: "0", data: "0x095ea7b3" };
+    const normalized = await normalizePreparedCall(call);
+    const prepared = { state: "approval_required" as const, approvalId: "approval-1", kind: "approve" as const,
+      amountRaw: "1000000", spender: "0x2626664c2603336e57b271c5c0b26f421741e481",
+      fingerprint: normalized.fingerprint, call, expiresAt: new Date(Date.now() + 60_000).toISOString() };
+    const send = vi.fn(async () => ({ hash: `0x${"ab".repeat(32)}` }));
+    vi.stubGlobal("fetch", async () => Response.json({ error: "approval_conflict" }, { status: 409 }));
+    await expect(submitPreparedApproval({ prepared, walletAddress: input.walletAddress, token: input.token,
+      isReviewCurrent: () => true, send })).rejects.toThrow();
+    expect(send).not.toHaveBeenCalled();
+    vi.stubGlobal("fetch", async () => { current = false; return Response.json(prepared); });
+    let current = true;
+    await expect(submitPreparedApproval({ prepared, walletAddress: input.walletAddress, token: input.token,
+      isReviewCurrent: () => current, send })).rejects.toThrow();
+    expect(send).not.toHaveBeenCalled();
   });
 });

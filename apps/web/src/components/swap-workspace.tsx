@@ -99,15 +99,31 @@ export async function requestSwapRouteReview(input: { token: string; planId: str
 
 export async function submitPreparedApproval(input: {
   prepared: PreparedApproval; walletAddress: string; token: string;
+  isReviewCurrent: () => boolean;
   send: (call: { chainId: number; to: `0x${string}`; value: bigint; data: `0x${string}` }) => Promise<{ hash: string }>;
   onBroadcast?: (hash: string) => void;
 }): Promise<{ hash: string; reportRecorded: boolean }> {
   const { prepared } = input;
-  if (!quoteIsFresh(prepared.expiresAt) || prepared.call.chainId !== 8453
+  if (!input.isReviewCurrent() || !quoteIsFresh(prepared.expiresAt) || prepared.call.chainId !== 8453
     || getAddress(prepared.call.from) !== getAddress(input.walletAddress)
     || prepared.call.value !== "0") throw new Error("This approval expired. Find a new route.");
   const call = await normalizePreparedCall(prepared.call);
   if (call.fingerprint !== prepared.fingerprint) throw new Error("This approval changed. Find a new route.");
+  const recheck = await fetch("/api/swap/approval", { method: "POST", cache: "no-store",
+    headers: { Authorization: `Bearer ${input.token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ approvalId: prepared.approvalId, walletAddress: input.walletAddress, recheck: true }) });
+  if (!recheck.ok) throw new Error("This approval changed or expired. Find a new route before continuing.");
+  const latest = await recheck.json() as Partial<PreparedApproval>;
+  if (latest.approvalId !== prepared.approvalId || latest.kind !== prepared.kind
+    || latest.amountRaw !== prepared.amountRaw || latest.spender?.toLowerCase() !== prepared.spender.toLowerCase()
+    || latest.fingerprint !== prepared.fingerprint || latest.expiresAt !== prepared.expiresAt
+    || !latest.call || !quoteIsFresh(latest.expiresAt))
+    throw new Error("This approval changed or expired. Find a new route before continuing.");
+  const checkedCall = await normalizePreparedCall(latest.call);
+  if (checkedCall.fingerprint !== call.fingerprint || checkedCall.from !== call.from
+    || checkedCall.to !== call.to || checkedCall.value !== call.value || checkedCall.data !== call.data
+    || !input.isReviewCurrent() || !quoteIsFresh(prepared.expiresAt))
+    throw new Error("This approval changed or expired. Find a new route before continuing.");
   const sent = await input.send({ chainId: call.chainId, to: call.to, value: 0n, data: call.data });
   input.onBroadcast?.(sent.hash);
   let reportRecorded = false;
@@ -277,24 +293,32 @@ export function SwapWorkspace() {
   async function confirmApproval() {
     if (!preparedApproval || !address || approving || approvalUncertain || approvalHash) return;
     setReviewErrorText(null); setApproving(true);
+    const version = reviewVersion.current;
+    const approvalKey = reviewKey;
     let broadcasted = false;
+    let walletOpened = false;
     try {
       const token = await getAccessToken();
       if (!token) throw new Error("Your secure session expired. Sign in again before approving.");
       const result = await submitPreparedApproval({ prepared: preparedApproval, walletAddress: address, token,
-        send: (transaction) => sendTransaction(transaction, { address,
+        isReviewCurrent: () => reviewVersion.current === version && liveReviewKey.current === approvalKey,
+        send: (transaction) => { walletOpened = true; return sendTransaction(transaction, { address,
           uiOptions: { description: preparedApproval.kind === "reset_required"
             ? `Reset your existing ${source?.symbol ?? "token"} approval. This does not submit a swap.`
             : `Approve exactly ${amount} ${source?.symbol ?? "tokens"} for this swap. This does not submit the swap.`,
           buttonText: preparedApproval.kind === "reset_required" ? "Reset approval" : "Approve token",
-          successHeader: "Approval submitted", isCancellable: true } }),
+          successHeader: "Approval submitted", isCancellable: true } }); },
         onBroadcast: (hash) => { broadcasted = true; setApprovalHash(hash); setApprovalTrackingId(preparedApproval.approvalId); setApprovalStatus("pending"); }
       });
       if (!result.reportRecorded) setReviewErrorText("The approval was broadcast, but we could not record it yet. Keep the transaction link and do not approve again.");
     } catch (caught) {
-      if (!broadcasted) { setApprovalUncertain(true); setReviewErrorText(caught instanceof Error
-        ? `${caught.message} Check your wallet activity before trying again.`
-        : "The wallet did not return a hash. Check your wallet activity before trying again."); }
+      if (!broadcasted) {
+        if (walletOpened) { setApprovalUncertain(true); setReviewErrorText(caught instanceof Error
+          ? `${caught.message} Check your wallet activity before trying again.`
+          : "The wallet did not return a hash. Check your wallet activity before trying again."); }
+        else if (reviewVersion.current === version) { clearReview();
+          setError(caught instanceof Error ? caught.message : "Find a new route before continuing."); }
+      }
     } finally { setApproving(false); }
   }
 

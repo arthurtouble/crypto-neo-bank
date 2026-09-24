@@ -5,8 +5,8 @@ import { describe, expect, it } from "vitest";
 import { encodeFunctionData, erc20Abi } from "viem";
 
 const migrationDirectory = resolve(process.cwd(), "../../infra/d1/migrations");
-const at = "2026-09-23T00:00:00.000Z";
-const expiry = "2026-09-23T00:00:45.000Z";
+const at = new Date(Date.now() - 60_000).toISOString();
+const expiry = new Date(Date.now() + 45_000).toISOString();
 const approvalExpiry = expiry;
 const wallet = "0x1111111111111111111111111111111111111111";
 const router = "0x2626664c2603336e57b271c5c0b26f421741e481";
@@ -20,10 +20,10 @@ function database(bridge = false) {
   db.exec(`INSERT INTO subject_profiles (subject_reference, privy_user_reference, created_at, updated_at)
       VALUES ('subject-a', 'subject-a', '${at}', '${at}');
     INSERT INTO wallet_references (wallet_reference, subject_reference, provider, address, chain_family, control_model, observed_at)
-      VALUES ('wallet-a', 'subject-a', 'privy', '${wallet}', 'evm', 'customer', '${at}');
+      VALUES ('wallet:${wallet}', 'subject-a', 'privy', '${wallet}', 'evm', 'customer', '${at}');
     INSERT INTO transaction_intents (intent_id, subject_reference, wallet_reference, intent_type, chain_id, request_json,
       policy_result_json, disclosure_version, status, created_at, updated_at, expires_at, route_reference)
-      VALUES ('intent-a', 'subject-a', 'wallet-a', '${bridge ? "bridge" : "swap"}', 8453, '{}', '{"permitted":true}', 'v1', 'reviewed', '${at}', '${at}', '${expiry}', 'swap-plan:plan-a');
+      VALUES ('intent-a', 'subject-a', 'wallet:${wallet}', '${bridge ? "bridge" : "swap"}', 8453, '{}', '{"permitted":true}', 'v1', 'reviewed', '${at}', '${at}', '${expiry}', 'swap-plan:plan-a');
     INSERT INTO security_profiles (subject_reference, updated_at) VALUES ('subject-a', '${at}');
     INSERT INTO beta_access (subject_reference, cohort, country_code, status, terms_version, terms_accepted_at, activated_at, updated_at)
       VALUES ('subject-a', 'test', 'PT', 'active', 'v1', '${at}', '${at}', '${at}');
@@ -51,6 +51,36 @@ function insert(db: DatabaseSync, amount = "1000000", subject = "subject-a") {
 }
 
 describe("separate swap approval migration", () => {
+  it.each([false, true])("requires live governance at the last approval signing gate (bridge=%s)", (bridge) => {
+    const db = database(bridge);
+    try {
+      insert(db);
+      const route = readFileSync(resolve(process.cwd(), "src/app/api/swap/approval/route.ts"), "utf8");
+      const sql = route.match(/const current = await env\.PROJECTION_DB\.prepare\(`([\s\S]*?)`\)/)?.[1];
+      expect(sql).toBeTruthy();
+      const args = [1, "PT", "approval-a", "subject-a", wallet, "plan-a", "intent-a", approvalExpiry,
+        db.prepare("SELECT call_json FROM swap_approval_requests").get()!.call_json as string,
+        "hash", token, router, "1000000", "subject-a", "intent-a", at, at, at, 100];
+      const allowed = () => db.prepare(sql!).get(...args);
+      expect(allowed()).toMatchObject({ approval_id: "approval-a" });
+      db.exec("UPDATE security_profiles SET account_locked = 1 WHERE subject_reference = 'subject-a'");
+      expect(allowed()).toBeUndefined();
+      db.exec("UPDATE security_profiles SET account_locked = 0 WHERE subject_reference = 'subject-a'");
+      db.exec("UPDATE security_profiles SET daily_limit_usd = 0 WHERE subject_reference = 'subject-a'");
+      expect(allowed()).toBeUndefined();
+      db.exec("UPDATE security_profiles SET daily_limit_usd = 1000 WHERE subject_reference = 'subject-a'");
+      db.exec("UPDATE security_profiles SET policy_version = 2 WHERE subject_reference = 'subject-a'");
+      expect(allowed()).toBeUndefined();
+      db.exec("UPDATE security_profiles SET policy_version = 1 WHERE subject_reference = 'subject-a'");
+      db.exec("UPDATE feature_flags SET enabled = 0 WHERE flag_key = 'swaps'");
+      expect(allowed()).toBeUndefined();
+      db.exec("UPDATE feature_flags SET enabled = 1 WHERE flag_key = 'swaps'");
+      if (bridge) {
+        db.exec("UPDATE feature_flags SET enabled = 0 WHERE flag_key = 'cross_chain'");
+        expect(allowed()).toBeUndefined();
+      }
+    } finally { db.close(); }
+  });
   it("accepts an exact approval for a reviewed LI.FI bridge and nothing beyond the source amount", () => {
     const db = database(true);
     try {
