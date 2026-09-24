@@ -58,7 +58,7 @@ Use these labels consistently in navigation, quick actions, dialogs, receipts, s
 - [ ] Explicitly approved USDC routing from supported networks. Route discovery and quote preview exist; execution remains gated by the transaction-evidence boundary.
 - [x] Unified **Add Money**, **Send**, **Swap**, and **Withdraw** entry points.
 - [ ] Destination-aware USDC withdrawals to supported networks. Destination-aware previews exist; cross-network execution remains gated.
-- [ ] Portfolio value, period selector, line chart, allocation, and authority state. The chart offers 7, 30, and 90 completed UTC days, with source and price gaps shown explicitly. Inception history and complete Aave position valuation remain unavailable. Current allocation and balances remain separately sourced.
+- [ ] Portfolio value, period selector, line chart, allocation, and authority state. The chart offers 7, 30, and 90 completed UTC days, with source and price gaps shown explicitly. A server-only, read-only historical Aave raw snapshot reader now exists, but archive-source acceptance, reconciliation, complete pricing, and chart integration remain unavailable. Inception history remains unavailable. Current allocation and balances remain separately sourced.
 - [x] Live markets list with source-wide server search, watchlist, truthful view-only states, and direct Swap entry for exact reviewed mappings. A public issuer catalog is separate from regulated eligibility and orders.
 - [x] Consistent Review, Confirm, Submitted, Complete, failure, and receipt states across direct sends, routed Add Money/Withdraw, Earn, Borrow, and Repay, with authenticated source-receipt reconciliation.
 
