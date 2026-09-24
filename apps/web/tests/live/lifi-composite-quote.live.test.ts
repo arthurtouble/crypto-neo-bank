@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createLifiQuoteAdapter } from "@/lib/swap/lifi";
-import { inspectLifiDiamondSwap, inspectLifiFeeForwarderCall } from "@/lib/swap/lifi-diamond-inspection";
+import { inspectLifiAcrossV4Call, inspectLifiDiamondSwap, inspectLifiFeeForwarderCall } from "@/lib/swap/lifi-diamond-inspection";
 import type { CatalogAsset } from "@/lib/swap/assets";
 
 const diamond = "0x1231deb6f5749ef6ce6943a275a1d3e7486f4eae";
@@ -14,6 +14,9 @@ const from: CatalogAsset = { id: "8453:0x833589fcd6edb6e08f4c7c32d4f71b54bda0291
 const to: CatalogAsset = { id: "8453:0x4200000000000000000000000000000000000006", chainId: 8453,
   address: "0x4200000000000000000000000000000000000006", symbol: "WETH", name: "Wrapped Ether",
   decimals: 18, logoUrl: null, verification: "verified", eligibility: "eligible" };
+const arbitrumUsdc: CatalogAsset = { id: "42161:0xaf88d065e77c8cc2239327c5edb3a432268e5831", chainId: 42161,
+  address: "0xaf88d065e77c8cc2239327c5edb3a432268e5831", symbol: "USDC", name: "USD Coin",
+  decimals: 6, logoUrl: null, verification: "verified", eligibility: "eligible" };
 
 describe.skipIf(process.env.AUREL_LIVE_READONLY !== "1")("LI.FI Base composite quote", () => {
   it("retains a current fee-plus-swap quote privately without authorizing execution", async () => {
@@ -43,4 +46,21 @@ describe.skipIf(process.env.AUREL_LIVE_READONLY !== "1")("LI.FI Base composite q
       token: from.address!, expectedFeeRaw });
     expect(fee.distributions.length).toBeGreaterThan(0);
   }, 20_000);
+
+  it("retains the reviewed Base-to-Arbitrum fee-plus-Across shape without claiming settlement", async () => {
+    const adapter = createLifiQuoteAdapter({ policy: {
+      allowedTools: new Set(["across", "feecollection"]), allowedExchanges: new Set(),
+      allowedBridges: new Set(["across"]), allowedTargets: new Set([diamond]), allowedApprovalTargets: new Set([diamond])
+    } });
+    const [result] = await adapter.quoteWithPlans({ fromAssetId: from.id, toAssetId: arbitrumUsdc.id,
+      amount: "100", fromAddress: wallet, slippageBps: 50 }, { from, to: arbitrumUsdc });
+    expect(result.quote).toMatchObject({ provider: "lifi:across", routeKind: "cross_chain" });
+    expect(result.quote).not.toHaveProperty("sourceCall");
+    expect(result.plan.routeSteps.map((step) => step.type)).toEqual(["protocol", "cross"]);
+    const decoded = inspectLifiAcrossV4Call({ data: result.plan.sourceCall.data, recipient: wallet,
+      sourceToken: from.address!, destinationToken: arbitrumUsdc.address!, destinationChainId: 42161,
+      sourceAmountRaw: result.plan.fromAmountRaw });
+    expect(decoded.swaps).toHaveLength(1);
+    expect(decoded.minimumBridgeAmountRaw).toBe(result.plan.routeSteps[0].toAmountRaw);
+  }, 30_000);
 });

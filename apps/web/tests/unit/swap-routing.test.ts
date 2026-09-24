@@ -163,6 +163,26 @@ function acrossCompositeAdapter(payload: unknown) {
 describe("LI.FI Across V4 quote preview", () => {
   const input = { fromAssetId: baseUsdc.id, toAssetId: arbitrumUsdc.id,
     amount: "1", fromAddress: wallet, slippageBps: 50 };
+  it("accepts a zero destination gas estimate without broadening the executable route", async () => {
+    const quote = acrossCompositeQuote();
+    (quote.includedSteps[1].action as typeof quote.includedSteps[1]["action"] & {
+      destinationGasConsumption?: string
+    }).destinationGasConsumption = "0";
+    const [result] = await acrossCompositeAdapter(quote).quoteWithPlans(input,
+      { from: baseUsdc, to: arbitrumUsdc });
+    expect(result.quote).toMatchObject({ provider: "lifi:across", routeKind: "cross_chain" });
+    expect(result.plan.routeSteps.map((step) => step.type)).toEqual(["protocol", "cross"]);
+  });
+
+  it("rejects a nonzero destination gas estimate", async () => {
+    const quote = acrossCompositeQuote();
+    (quote.includedSteps[1].action as typeof quote.includedSteps[1]["action"] & {
+      destinationGasConsumption?: string
+    }).destinationGasConsumption = "1";
+    await expect(acrossCompositeAdapter(quote).quoteWithPlans(input,
+      { from: baseUsdc, to: arbitrumUsdc })).rejects.toMatchObject({ code: "no_live_route" });
+  });
+
   it("retains the exact fee and bridge call privately while previewing a reviewed cross-network route", async () => {
     const [result] = await acrossCompositeAdapter(acrossCompositeQuote()).quoteWithPlans(input,
       { from: baseUsdc, to: arbitrumUsdc });

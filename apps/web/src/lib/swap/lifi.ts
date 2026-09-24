@@ -26,6 +26,7 @@ const actionSchema = z.object({
 }).strict();
 const nestedActionSchema = actionSchema.extend({
   jitoBundle: z.boolean().optional(), integratorId: z.string().max(80).optional(),
+  destinationGasConsumption: z.literal("0").optional(),
   integratorFees: z.object({ feePercent: z.number().finite().min(0).max(1) }).passthrough().optional()
 });
 const nestedEstimateSchema = z.object({
