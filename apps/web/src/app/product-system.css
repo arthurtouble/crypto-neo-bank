@@ -564,9 +564,9 @@
 .productShell .conciergeComposer textarea,
 .productShell .conciergePrompts > button { font-size: var(--type-body-small); }
 
-/* Insights, goals, and issuer-backed card controls */
+/* Insights and issuer-backed card controls */
 .insightsWorkspace { display: grid; gap: 12px; }
-.insightsSummary, .goalsPanel { padding: 28px; }
+.insightsSummary { padding: 28px; }
 .insightMetrics { margin: 22px 0 30px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid var(--border); border-radius: var(--radius-panel); overflow: hidden; }
 .insightMetrics article { min-height: 108px; padding: 20px; display: grid; align-content: space-between; gap: 14px; border-right: 1px solid var(--border); background: var(--surface); }
 .insightMetrics article:last-child { border-right: 0; }
@@ -591,8 +591,6 @@
 .goalCard > b { margin-top: 12px; font-family: "Archivo Variable", "Satoshi", system-ui, sans-serif; font-size: 24px; letter-spacing: -.025em; }
 .goalCard > p { margin: -7px 0 4px; color: var(--muted); font-size: var(--type-label); }
 .goalCard > button { justify-self: start; }
-.goalsEmpty { min-height: 300px; }
-.goalsEmpty .button { margin-top: 8px; }
 .optionalLabel { color: var(--muted); font-weight: 500; }
 .financialModal form { display: grid; gap: 15px; }
 
@@ -626,36 +624,6 @@
 .cardControlList em { font-size: var(--type-caption); font-style: normal; font-weight: 650; }
 .cardAuthority { grid-column: 1 / -1; margin: -6px 2px 0; }
 .cardWorkspaceLoading { min-height: 260px; display: flex; align-items: center; justify-content: center; gap: 9px; }
-
-/* Direct deposit and planning-only payday allocations */
-.paydayPanel { margin-top: 20px; padding: 28px; }
-.paydayGrid { margin-top: 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 1px; border: 1px solid var(--border); background: var(--border); }
-.directDepositCard, .incomePlanCard { min-height: 190px; padding: 22px; background: var(--surface); }
-.directDepositCard { display: grid; grid-template-columns: 38px minmax(0, 1fr); align-content: start; gap: 12px; }
-.directDepositCard > span, .incomePlanHeader > span { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 50%; background: var(--accent-soft); color: var(--accent); }
-.directDepositCard h3, .incomePlanCard h3 { margin: 0; font-size: var(--type-row-title); }
-.directDepositCard p, .incomePlanCard p { margin: 4px 0 0; color: var(--muted); font-size: var(--type-label); line-height: var(--leading-body); }
-.directDepositCard .button { grid-column: 2; align-self: end; justify-self: start; margin-top: 18px; }
-.incomePlanCard { display: flex; flex-direction: column; }
-.incomePlanHeader { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; gap: 12px; align-items: start; }
-.incomePlanHeader .iconButton { width: 34px; height: 34px; display: grid; place-items: center; border: 1px solid var(--border); border-radius: var(--radius-control); }
-.incomePlanCard > .button { align-self: flex-start; margin: auto 0 0 50px; }
-.incomeAllocationBars { margin: 20px 0 16px 50px; display: grid; gap: 9px; }
-.incomeAllocationBars span { position: relative; min-height: 25px; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; overflow: hidden; padding: 0 8px; color: var(--muted); font-size: var(--type-caption); border-radius: 4px; background: var(--surface-subtle); }
-.incomeAllocationBars i { position: absolute; inset: 0 auto 0 0; width: var(--share); background: color-mix(in srgb, var(--accent) 16%, transparent); }
-.incomeAllocationBars strong, .incomeAllocationBars span { z-index: 1; }
-.incomeAllocationBars strong { color: var(--text); }
-.incomePlanFoot { margin: auto 0 0 50px; display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--muted); font-size: var(--type-caption); }
-.incomePlanFoot button { display: inline-flex; align-items: center; gap: 5px; padding: 0; border: 0; background: transparent; color: var(--accent); font-weight: 650; cursor: pointer; }
-.incomePlanModal { width: min(520px, 100%); }
-.incomePlanFields { margin-top: 16px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-.incomePlanFields .fieldLabel { position: relative; }
-.incomePlanFields .fieldLabel input { padding-right: 34px; }
-.incomePlanFields .fieldLabel small { position: absolute; right: 12px; bottom: 13px; color: var(--muted); }
-.allocationTotal { min-height: 42px; margin: 10px 0 0; padding: 0 12px; display: flex; align-items: center; justify-content: space-between; border-radius: var(--radius-control); font-size: var(--type-label); }
-.allocationTotal.valid { color: var(--success); background: color-mix(in srgb, var(--success) 9%, transparent); }
-.allocationTotal.invalid { color: var(--danger); background: color-mix(in srgb, var(--danger) 8%, transparent); }
-.previewPaycheck { margin-top: 12px; }
 
 /* Security, settings, status, and setup */
 .productShell .securityChecklist > div,
@@ -811,7 +779,7 @@
 }
 
 @media (max-width: 520px) {
-  .insightsSummary, .goalsPanel, .cardOverview, .cardControlPanel { padding: 22px 18px; }
+  .insightsSummary, .cardOverview, .cardControlPanel { padding: 22px 18px; }
   .insightMetrics { grid-template-columns: 1fr; }
   .insightMetrics article { min-height: 86px; border-right: 0; border-bottom: 1px solid var(--border); }
   .insightMetrics article:last-child { border-bottom: 0; }
