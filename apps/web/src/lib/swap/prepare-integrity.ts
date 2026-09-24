@@ -10,7 +10,7 @@ const address = z.string().refine(isAddress);
 const configSchema = z.object({
   diamond: address, feeForwarder: address, feeRecipients: z.array(address).min(1).max(8),
   routerSpenders: z.array(z.object({ router: address, spender: address,
-    feeTiers: z.array(z.number().int().min(1).max(1_000_000)).min(1).max(8) }).strict()).min(1).max(8)
+    feeTiers: z.array(z.number().int().min(1).max(1_000_000)).min(1).max(8) }).strict()).max(8)
 }).strict();
 
 const configuredSet = (name: string) => new Set((process.env[name] ?? "").split(",")

@@ -106,7 +106,8 @@ export function validateGovernedAcrossPlan(
   const steps: unknown = JSON.parse(plan.route_steps_json);
   const economics: unknown = JSON.parse(plan.economics_json ?? "null");
   if (!Array.isArray(steps) || steps.length !== 2 || !object(steps[0]) || !object(steps[1])
-    || steps[0].type !== "protocol" || steps[0].tool !== "feecollection"
+    || steps[0].type !== "protocol" || typeof steps[0].tool !== "string"
+    || steps[0].tool.toLowerCase() !== "feecollection"
     || steps[0].fromAssetId !== plan.source_asset_id || steps[0].toAssetId !== plan.source_asset_id
     || steps[0].fromAmountRaw !== plan.from_amount_raw || steps[0].toAmountRaw !== net.toString()
     || steps[1].type !== "cross" || steps[1].tool !== "across"

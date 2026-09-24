@@ -77,6 +77,9 @@ describe("stored Swap preparation integrity", () => {
   });
 
   it("rebinds a reviewed bridge to the bridge allowlist and the retained fingerprint", async () => {
+    vi.stubEnv("AUREL_SWAP_EXECUTION_POLICY", JSON.stringify({ diamond,
+      feeForwarder: "0x3333333333333333333333333333333333333333",
+      feeRecipients: ["0x4444444444444444444444444444444444444444"], routerSpenders: [] }));
     vi.stubEnv("AUREL_LIFI_ALLOWED_TOOLS", "across,feecollection");
     vi.stubEnv("AUREL_LIFI_ALLOWED_EXCHANGES", "");
     vi.stubEnv("AUREL_LIFI_ALLOWED_BRIDGES", "across");

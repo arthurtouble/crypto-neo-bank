@@ -83,6 +83,14 @@ describe("governed LI.FI Across V4 route", () => {
       minimumOutputRaw: "980000" });
   });
 
+  it("accepts LI.FI's feeCollection tool casing in a retained quote", () => {
+    const retained = plan();
+    const steps = JSON.parse(retained.route_steps_json);
+    steps[0].tool = "feeCollection";
+    retained.route_steps_json = JSON.stringify(steps);
+    expect(validateGovernedAcrossPlan(retained, policy).expectedSourceEffect.feeRaw).toBe("2500");
+  });
+
   it("denies changed fee recipients, fee calldata, fee target, or extra executable calls", () => {
     for (const bad of [plan({ feeRecipient: wallet }), plan({ feeAmount: 2_501n }),
       plan({ feeCall: "0x12345678" }), plan({ feeTarget: wallet }), plan({ feeSpender: wallet }),
