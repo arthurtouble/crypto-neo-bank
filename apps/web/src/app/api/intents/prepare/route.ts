@@ -93,7 +93,7 @@ export async function POST(request: Request) {
     if (reviewed.type !== intent.intent_type || reviewed.chainId !== intent.chain_id) return reply({ error: "review_mismatch", traceId }, 409);
     const valuation = await valueTransfer(reviewed, { now: currentTime });
     const [securityRows, addressRows, spentRows] = await env.PROJECTION_DB.batch([
-      env.PROJECTION_DB.prepare("SELECT account_locked, enforce_address_book, daily_limit_usd, new_address_threshold_usd, step_up_threshold_usd, new_address_delay_seconds FROM security_profiles WHERE subject_reference = ?").bind(subject.subjectReference),
+      env.PROJECTION_DB.prepare("SELECT account_locked, enforce_address_book, daily_limit_usd, new_address_threshold_usd, step_up_threshold_usd, new_address_delay_seconds, policy_version FROM security_profiles WHERE subject_reference = ?").bind(subject.subjectReference),
       env.PROJECTION_DB.prepare("SELECT address, available_at FROM address_book_entries WHERE subject_reference = ? AND chain_family = 'evm'").bind(subject.subjectReference),
       env.PROJECTION_DB.prepare(`SELECT COALESCE(SUM(CAST(v.usd_cents AS INTEGER)), 0) AS spent_cents,
           SUM(CASE WHEN v.valuation_id IS NULL THEN 1 ELSE 0 END) AS missing
@@ -107,8 +107,9 @@ export async function POST(request: Request) {
               AND p.expires_at > ? AND p.verification_state != 'failed'))`)
         .bind(subject.subjectReference, input.intentId, rollingStart, rollingStart, now)
     ]);
-    const profile = securityRows.results[0] as unknown as { account_locked: number; enforce_address_book: number; daily_limit_usd: number; new_address_threshold_usd: number; step_up_threshold_usd: number; new_address_delay_seconds: number } | undefined;
+    const profile = securityRows.results[0] as unknown as { account_locked: number; enforce_address_book: number; daily_limit_usd: number; new_address_threshold_usd: number; step_up_threshold_usd: number; new_address_delay_seconds: number; policy_version: number } | undefined;
     if (!profile || profile.account_locked) return reply({ error: "account_locked", traceId }, 403);
+    if (!Number.isSafeInteger(profile.policy_version) || profile.policy_version < 1) return reply({ error: "policy_unavailable", traceId }, 503);
     const saved = addressRows.results as unknown as Array<{ address: string; available_at: string }>;
     const spending = spentRows.results[0] as unknown as { spent_cents: number; missing: number } | undefined;
     const spentCents = spending?.spent_cents ?? 0;
@@ -157,11 +158,14 @@ export async function POST(request: Request) {
       return reply({ error: "simulation_unavailable", traceId }, 503);
     }
     const commitAt = new Date().toISOString();
+    const priceAgeMs = Date.parse(commitAt) - Date.parse(valuation.priceObservedAt);
+    if (!Number.isFinite(priceAgeMs) || priceAgeMs > 180_000 || priceAgeMs < -60_000) return reply({ error: "valuation_unavailable", traceId }, 503);
     const [result] = await env.PROJECTION_DB.batch([
       env.PROJECTION_DB.prepare(`INSERT INTO intent_prepared_calls
       (intent_id, step_index, subject_reference, wallet_address, chain_id, target_address, native_value, calldata_hash, call_fingerprint, semantic_action, source_reference, expires_at, expected_effect_json, verification_state, created_at, submission_phase)
       SELECT i.intent_id, ?, i.subject_reference, ?, ?, ?, ?, ?, ?, ?, ?, i.expires_at, ?, 'prepared', ?, 'legacy'
       FROM transaction_intents i WHERE i.intent_id = ? AND i.subject_reference = ? AND i.status = 'reviewed' AND i.expires_at > ?
+        AND unixepoch(?) BETWEEN unixepoch('now') - 180 AND unixepoch('now') + 60
         AND EXISTS (SELECT 1 FROM feature_flags f WHERE f.flag_key = ? AND f.enabled = 1 AND f.audience IN ('all', 'beta'))
         AND NOT EXISTS (SELECT 1 FROM security_profiles s WHERE s.subject_reference = i.subject_reference AND s.account_locked = 1)
         AND NOT EXISTS (SELECT 1 FROM intent_prepared_calls p WHERE p.intent_id = i.intent_id AND p.step_index = ?)
@@ -177,9 +181,13 @@ export async function POST(request: Request) {
             AND (spending.status IN ('submitted', 'confirmed') OR EXISTS (
               SELECT 1 FROM intent_prepared_calls reserved_call WHERE reserved_call.intent_id = spending.intent_id
                 AND reserved_call.expires_at > ? AND reserved_call.verification_state != 'failed'))
-        ) reserved_spend WHERE reserved_spend.missing = 0 AND reserved_spend.cents + ? <= ?)`)
-      .bind(input.stepIndex, ownedAddress, call.chainId, call.to.toLowerCase(), call.value, call.dataHash, call.fingerprint, input.semanticAction, input.sourceReference, JSON.stringify(effect), commitAt, input.intentId, subject.subjectReference, commitAt, featureFor(intent.intent_type), input.stepIndex, input.stepIndex, input.stepIndex - 1,
-        subject.subjectReference, input.intentId, rollingStart, rollingStart, now, valuedCents, dailyLimitCents),
+        ) reserved_spend WHERE reserved_spend.missing = 0 AND reserved_spend.cents + ? <= (
+          SELECT CAST(MIN(p.daily_limit_usd, CASE WHEN ? = 'preview' THEN ? ELSE b.transaction_limit_usd END) * 100 AS INTEGER)
+          FROM security_profiles p LEFT JOIN beta_access b ON b.subject_reference = p.subject_reference
+          WHERE p.subject_reference = i.subject_reference AND p.account_locked = 0 AND p.policy_version = ?
+            AND p.daily_limit_usd >= 0 AND (? = 'preview' OR (b.status = 'active' AND b.transaction_limit_usd >= 0))))`)
+      .bind(input.stepIndex, ownedAddress, call.chainId, call.to.toLowerCase(), call.value, call.dataHash, call.fingerprint, input.semanticAction, input.sourceReference, JSON.stringify(effect), commitAt, input.intentId, subject.subjectReference, commitAt, valuation.priceObservedAt, featureFor(intent.intent_type), input.stepIndex, input.stepIndex, input.stepIndex - 1,
+        subject.subjectReference, input.intentId, rollingStart, rollingStart, now, valuedCents, beta.mode, beta.transactionLimitUsd, profile.policy_version, beta.mode),
       env.PROJECTION_DB.prepare(`INSERT INTO intent_events (event_id, intent_id, subject_reference, event_type, evidence_json, occurred_at)
         SELECT ?, ?, ?, 'call_prepared', ?, ? WHERE changes() = 1`)
         .bind(crypto.randomUUID(), input.intentId, subject.subjectReference, JSON.stringify({ stepIndex: input.stepIndex, fingerprint: call.fingerprint, semanticAction: input.semanticAction, simulation: simulationEvidence }), commitAt),

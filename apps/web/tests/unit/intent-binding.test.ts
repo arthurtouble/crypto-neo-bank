@@ -5,9 +5,12 @@ const state = vi.hoisted(() => ({
   subject: "subject-a",
   walletLinked: true,
   betaAllowed: true,
+  betaMode: "preview" as "preview" | "invite",
+  betaLimitUsd: 25_000,
   featureAllowed: true,
   accountLocked: false,
   dailyLimitUsd: 25_000,
+  policyVersion: 1,
   stepUpThresholdUsd: 10_000,
   spentTodayUsd: 0,
   spentMissing: false,
@@ -20,6 +23,9 @@ const state = vi.hoisted(() => ({
   staleDuringFeeBudget: false,
   expireDuringSimulation: false,
   disableDuringSimulation: false,
+  revokeBetaDuringSimulation: false,
+  tightenPolicyDuringSimulation: false,
+  stalePriceDuringSimulation: false,
   valuations: [] as Array<unknown>,
   addressBook: [] as Array<{ address: string; available_at: string }>,
   intentUpdateAllowed: true,
@@ -76,7 +82,7 @@ vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
       }
       return [changed ?? { meta: { changes: 0 } }, { meta: { changes: changed?.meta.changes ?? 0 } }, { meta: { changes: changed?.meta.changes ?? 0 } }];
     }
-    return statements.map((statement) => ({ results: statement.query.includes("security_profiles") ? [{ account_locked: state.accountLocked ? 1 : 0, enforce_address_book: 0, daily_limit_usd: state.dailyLimitUsd, new_address_threshold_usd: 1_000, step_up_threshold_usd: state.stepUpThresholdUsd, new_address_delay_seconds: 86_400 }] : statement.query.includes("address_book_entries") ? state.addressBook : [{ spent_cents: state.spentTodayUsd * 100, missing: state.spentMissing ? 1 : 0 }] }));
+    return statements.map((statement) => ({ results: statement.query.includes("security_profiles") ? [{ account_locked: state.accountLocked ? 1 : 0, enforce_address_book: 0, daily_limit_usd: state.dailyLimitUsd, new_address_threshold_usd: 1_000, step_up_threshold_usd: state.stepUpThresholdUsd, new_address_delay_seconds: 86_400, policy_version: state.policyVersion }] : statement.query.includes("address_book_entries") ? state.addressBook : [{ spent_cents: state.spentTodayUsd * 100, missing: state.spentMissing ? 1 : 0 }] }));
   },
   prepare(query: string) {
     return { bind(...args: unknown[]) {
@@ -111,6 +117,9 @@ vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
             if (state.intent?.status !== "reviewed" || state.accountLocked || state.prepared.has(step)
               || String(state.intent.expires_at) <= String(args[13])
               || query.includes("FROM feature_flags") && !state.featureAllowed
+              || query.includes("p.policy_version = ?") && state.policyVersion !== args[args.length - 2]
+              || query.includes("b.status = 'active'") && state.betaMode === "invite" && !state.betaAllowed
+              || query.includes("b.transaction_limit_usd") && (state.spentTodayUsd * 100 + Number(state.valuationCents)) > Math.min(state.dailyLimitUsd, state.betaLimitUsd) * 100
               || (step > 0 && state.prepared.get(step - 1)?.verification_state !== "confirmed")) return { meta: { changes: 0 } };
             state.prepared.set(step, { intent_id: args[11], step_index: step, subject_reference: args[12], wallet_address: args[1], chain_id: args[2], target_address: args[3], native_value: args[4], calldata_hash: args[5], call_fingerprint: args[6], semantic_action: args[7], source_reference: args[8], expected_effect_json: args[9], expires_at: state.intent.expires_at, verification_state: "prepared", reported_hash: null });
             return { meta: { changes: 1 } };
@@ -149,7 +158,7 @@ vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
 } } }));
 
 vi.mock("@/lib/auth/server", () => ({ AuthenticationError: class AuthenticationError extends Error {}, requireVerifiedSubject: async () => ({ subjectReference: state.subject, sessionReference: "session-a" }) }));
-vi.mock("@/lib/beta/access", () => { class BetaAccessError extends Error { code = "beta_access_denied"; } return { BetaAccessError, betaMode: () => "preview", requireBetaAccess: async () => { if (!state.betaAllowed) throw new BetaAccessError("Beta denied"); return { transactionLimitUsd: 25_000 }; } }; });
+vi.mock("@/lib/beta/access", () => { class BetaAccessError extends Error { code = "beta_access_denied"; } return { BetaAccessError, betaMode: () => state.betaMode, requireBetaAccess: async () => { if (!state.betaAllowed) throw new BetaAccessError("Beta denied"); return { transactionLimitUsd: state.betaLimitUsd, mode: state.betaMode }; } }; });
 vi.mock("@/lib/features/flags", () => { class FeatureUnavailableError extends Error {} return { FeatureUnavailableError, requireFeature: async () => { if (!state.featureAllowed) throw new FeatureUnavailableError("Feature denied"); } }; });
 vi.mock("@/lib/security/rate-limit", () => ({ RateLimitError: class RateLimitError extends Error {}, enforceRateLimit: async () => undefined }));
 vi.mock("@/lib/auth/wallet", () => {
@@ -160,7 +169,7 @@ vi.mock("@/lib/transactions/valuation", () => {
   class ValuationError extends Error {}
   return { ValuationError, valueTransfer: async () => {
     if (state.valuationFails) throw new ValuationError("Price unavailable");
-    return { assetId: "eip155:8453/slip44:60", rawUnits: "100", decimals: 18, priceUsd: "2000", marketPriceUsd: "2000", priceSource: "kraken:ETHUSD:1m:high", priceObservedAt: new Date().toISOString(), valuedAt: new Date().toISOString(), usdCents: state.valuationCents, policyVersion: 1, depegUncertainty: false };
+    return { assetId: "eip155:8453/slip44:60", rawUnits: "100", decimals: 18, priceUsd: "2000", marketPriceUsd: "2000", priceSource: "kraken:ETHUSD:1m:high", priceObservedAt: new Date(Date.now() - (state.stalePriceDuringSimulation ? 181_000 : 0)).toISOString(), valuedAt: new Date().toISOString(), usdCents: state.valuationCents, policyVersion: 1, depegUncertainty: false };
   } };
 });
 vi.mock("@/lib/transactions/direct-transfer-simulation", () => ({
@@ -172,6 +181,8 @@ vi.mock("@/lib/transactions/direct-transfer-simulation", () => ({
       await new Promise((resolve) => setTimeout(resolve, 5));
     }
     if (state.disableDuringSimulation) state.featureAllowed = false;
+    if (state.revokeBetaDuringSimulation) state.betaAllowed = false;
+    if (state.tightenPolicyDuringSimulation) { state.policyVersion++; state.dailyLimitUsd = 0; }
     return { chainId: 8453, blockNumber: 42n, blockHash: `0x${"a".repeat(64)}`, observedAtMs: Date.now(),
       fingerprint: input.call.fingerprint, simulationSucceeded: true, assetBalanceRaw: "1000000", assetBalanceObserved: true };
   }
@@ -308,7 +319,7 @@ describe("intent preparation route", () => {
   async function request(body: unknown) { return prepare(new Request("https://aurel.test/api/intents/prepare", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })); }
 
   beforeEach(() => {
-    state.subject = "subject-a"; state.walletLinked = true; state.betaAllowed = true; state.featureAllowed = true; state.accountLocked = false; state.dailyLimitUsd = 25_000; state.stepUpThresholdUsd = 10_000; state.spentTodayUsd = 0; state.spentMissing = false; state.atomicReservationExceeded = false; state.lastInsert = null; state.valuationFails = false; state.valuationCents = "1"; state.simulationFails = false; state.feeBudgetFails = false; state.staleDuringFeeBudget = false; state.expireDuringSimulation = false; state.disableDuringSimulation = false; state.valuations.length = 0; state.addressBook = []; state.intentUpdateAllowed = true; state.preparationEventFails = false; state.prepared.clear(); state.events.length = 0; state.issues.length = 0;
+    state.subject = "subject-a"; state.walletLinked = true; state.betaAllowed = true; state.betaMode = "preview"; state.betaLimitUsd = 25_000; state.featureAllowed = true; state.accountLocked = false; state.dailyLimitUsd = 25_000; state.policyVersion = 1; state.stepUpThresholdUsd = 10_000; state.spentTodayUsd = 0; state.spentMissing = false; state.atomicReservationExceeded = false; state.lastInsert = null; state.valuationFails = false; state.valuationCents = "1"; state.simulationFails = false; state.feeBudgetFails = false; state.staleDuringFeeBudget = false; state.expireDuringSimulation = false; state.disableDuringSimulation = false; state.revokeBetaDuringSimulation = false; state.tightenPolicyDuringSimulation = false; state.stalePriceDuringSimulation = false; state.valuations.length = 0; state.addressBook = []; state.intentUpdateAllowed = true; state.preparationEventFails = false; state.prepared.clear(); state.events.length = 0; state.issues.length = 0;
     state.intent = { intent_id: intentId, subject_reference: "subject-a", intent_type: "transfer", chain_id: 8453, wallet_reference: `wallet:${sender.toLowerCase()}`, request_json: JSON.stringify({ type: "transfer", chainId: 8453, destination: recipient, asset: "ETH", amount: "0.0000000000000001", estimatedUsd: 20 }), policy_result_json: JSON.stringify({ permitted: true }), status: "reviewed", expires_at: new Date(Date.now() + 60_000).toISOString() };
   });
 
@@ -358,6 +369,25 @@ describe("intent preparation route", () => {
     expect(state.prepared.size).toBe(0);
   });
 
+  it("does not prepare after private-beta access is revoked during simulation", async () => {
+    state.betaMode = "invite";
+    state.revokeBetaDuringSimulation = true;
+    expect((await request(payload)).status).toBe(409);
+    expect(state.prepared.size).toBe(0);
+  });
+
+  it("does not prepare after the security policy tightens during simulation", async () => {
+    state.tightenPolicyDuringSimulation = true;
+    expect((await request(payload)).status).toBe(409);
+    expect(state.prepared.size).toBe(0);
+  });
+
+  it("does not prepare when price evidence is stale at commit", async () => {
+    state.stalePriceDuringSimulation = true;
+    expect((await request(payload)).status).toBe(503);
+    expect(state.prepared.size).toBe(0);
+  });
+
   it("does not retain a prepared call if its event cannot be persisted", async () => {
     state.preparationEventFails = true;
     expect((await request(payload)).status).toBe(503);
@@ -379,28 +409,37 @@ describe("intent preparation route", () => {
     const captured = state.lastInsert;
     expect(captured).not.toBeNull();
     expect(captured!.query).toMatch(/submission_phase[\s\S]*'legacy'/);
-    const bound = [...captured!.args];
-    const sql = captured!.query.replace(/\?/g, () => {
-      const value = bound.shift();
-      return typeof value === "number" ? String(value) : `'${String(value).replaceAll("'", "''")}'`;
-    });
-    expect(bound).toHaveLength(0);
+    expect(captured!.query).toMatch(/unixepoch\(\?\) BETWEEN unixepoch\('now'\) - 180 AND unixepoch\('now'\) \+ 60/);
+    const sqlFor = (mode: "preview" | "invite", observedAt?: string) => {
+      const bound = [...captured!.args];
+      if (observedAt) bound[14] = observedAt;
+      bound[bound.length - 4] = mode;
+      bound[bound.length - 1] = mode;
+      const sql = captured!.query.replace(/\?/g, () => {
+        const value = bound.shift();
+        return typeof value === "number" ? String(value) : `'${String(value).replaceAll("'", "''")}'`;
+      });
+      expect(bound).toHaveLength(0);
+      return sql;
+    };
     const future = new Date(Date.now() + 60_000).toISOString();
     const current = state.intent!.intent_id as string;
     const schema = (oldPeerIntent: boolean) => `
       CREATE TABLE transaction_intents (intent_id TEXT PRIMARY KEY, subject_reference TEXT, status TEXT, expires_at TEXT, created_at TEXT);
       CREATE TABLE feature_flags (flag_key TEXT PRIMARY KEY, enabled INTEGER, audience TEXT);
-      CREATE TABLE security_profiles (subject_reference TEXT, account_locked INTEGER);
+      CREATE TABLE security_profiles (subject_reference TEXT, account_locked INTEGER, daily_limit_usd REAL, policy_version INTEGER);
+      CREATE TABLE beta_access (subject_reference TEXT, status TEXT, transaction_limit_usd REAL);
       CREATE TABLE intent_valuations (valuation_id TEXT, intent_id TEXT, usd_cents TEXT);
       CREATE TABLE intent_prepared_calls (intent_id TEXT, step_index INTEGER, subject_reference TEXT, wallet_address TEXT, chain_id INTEGER, target_address TEXT, native_value TEXT, calldata_hash TEXT, call_fingerprint TEXT, semantic_action TEXT, source_reference TEXT, expires_at TEXT, expected_effect_json TEXT, verification_state TEXT, created_at TEXT, submission_phase TEXT);
       INSERT INTO transaction_intents VALUES ('${current}', 'subject-a', 'reviewed', '${future}', datetime('now'));
       INSERT INTO transaction_intents VALUES ('peer', 'subject-a', 'reviewed', '${future}', datetime('now'${oldPeerIntent ? ",'-2 days'" : ""}));
-      INSERT INTO security_profiles VALUES ('subject-a', 0);
+      INSERT INTO security_profiles VALUES ('subject-a', 0, 25000, 1);
+      INSERT INTO beta_access VALUES ('subject-a', 'active', 25000);
       INSERT INTO feature_flags VALUES ('direct_transfers', 1, 'beta');
       INSERT INTO intent_prepared_calls VALUES ('peer', 0, 'subject-a', '${sender.toLowerCase()}', 8453, '${recipient.toLowerCase()}', '100', 'hash', 'fingerprint', 'native_transfer', 'review', '${future}', '{}', 'prepared', datetime('now'), 'legacy');
     `;
-    const run = (reservedCents: number, oldPeerIntent = false) => spawnSync("sqlite3", [":memory:"], {
-      input: `${schema(oldPeerIntent)} INSERT INTO intent_valuations VALUES ('peer-value','peer','${reservedCents}'); ${sql}; SELECT COUNT(*) FROM intent_prepared_calls WHERE intent_id='${current}';`, encoding: "utf8"
+    const run = (reservedCents: number, oldPeerIntent = false, mode: "preview" | "invite" = "preview", change = "", observedAt?: string) => spawnSync("sqlite3", [":memory:"], {
+      input: `${schema(oldPeerIntent)} INSERT INTO intent_valuations VALUES ('peer-value','peer','${reservedCents}'); ${change} ${sqlFor(mode, observedAt)}; SELECT COUNT(*) FROM intent_prepared_calls WHERE intent_id='${current}';`, encoding: "utf8"
     });
     const within = run(2_499_999);
     expect(within.status, within.stderr).toBe(0);
@@ -411,6 +450,25 @@ describe("intent preparation route", () => {
     const cooledIntent = run(2_500_000, true);
     expect(cooledIntent.status, cooledIntent.stderr).toBe(0);
     expect(cooledIntent.stdout.trim()).toBe("0");
+    for (const [mode, change] of [
+      ["invite", "UPDATE beta_access SET status='suspended';"],
+      ["invite", "UPDATE beta_access SET transaction_limit_usd=0;"],
+      ["preview", "UPDATE security_profiles SET policy_version=2;"],
+      ["preview", "UPDATE security_profiles SET daily_limit_usd=0;"]
+    ] as const) {
+      const denied = run(0, false, mode, change);
+      expect(denied.status, denied.stderr).toBe(0);
+      expect(denied.stdout.trim()).toBe("0");
+    }
+    const staleAtCommit = run(0, false, "preview", "", new Date(Date.now() - 181_000).toISOString());
+    expect(staleAtCommit.status, staleAtCommit.stderr).toBe(0);
+    expect(staleAtCommit.stdout.trim()).toBe("0");
+    const oneCentLimit = run(0, false, "preview", "UPDATE security_profiles SET daily_limit_usd=0.01;");
+    expect(oneCentLimit.status, oneCentLimit.stderr).toBe(0);
+    expect(oneCentLimit.stdout.trim()).toBe("1");
+    const belowOneCent = run(0, false, "preview", "UPDATE security_profiles SET daily_limit_usd=0.009;");
+    expect(belowOneCent.status, belowOneCent.stderr).toBe(0);
+    expect(belowOneCent.stdout.trim()).toBe("0");
   });
 
   it("does not prepare another subject's intent", async () => {
