@@ -1,0 +1,2 @@
+# Empty LIFI_API_KEY= in .env.example; gitleaks read the next line as its value.
+d0d5bc7c8660298f23229df2f22010d7f84098ab:apps/web/.env.example:generic-api-key:23
