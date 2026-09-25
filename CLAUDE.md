@@ -51,4 +51,6 @@ CI (`.github/workflows/ci.yml`) runs lint, `typecheck:all`, `test:unit`, build, 
 
 ## Claude Code on the web
 
-`.claude/hooks/session-start.sh` runs `pnpm install` at session start. Chromium is preinstalled; don't run `playwright install`.
+`.claude/hooks/session-start.sh` runs at session start: `pnpm install`, the `sqlite3` CLI (migration unit tests shell out to it), and an alias so this repo's Playwright can launch the image's preinstalled headless Chromium. Don't run `playwright install`; downloads are blocked.
+
+In the container, the first e2e test to open `/app/sandbox` can time out while the dev server cold-compiles that route; the rerun passes and CI retries twice. Re-run before treating it as a regression.
