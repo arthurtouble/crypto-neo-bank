@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+const httpErrors = await vi.hoisted(() => import("@/lib/http/errors"));
 
 const fixture = vi.hoisted(() => ({
-  swapsEnabled: true, crossChainEnabled: true, betaMode: "invite" as "invite" | "preview", allowedCountries: ["US"] as string[],
+  swapsEnabled: true, crossChainEnabled: true,
   walletOwned: true, fromAvailable: true, toAvailable: true,
   fromVerification: "verified" as "verified" | "unverified", quoteCalls: 0, savedPlans: 0, saveFails: false,
   integrityReject: false
@@ -9,16 +10,11 @@ const fixture = vi.hoisted(() => ({
 
 vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {} } }));
 vi.mock("@/lib/auth/server", () => ({
-  AuthenticationError: class AuthenticationError extends Error {},
+  AuthenticationError: httpErrors.AuthenticationError,
   requireVerifiedSubject: async () => ({ subjectReference: "did:privy:owner" })
 }));
-vi.mock("@/lib/beta/access", () => ({
-  BetaAccessError: class BetaAccessError extends Error { code = "beta_required"; },
-  configuredCountries: () => fixture.allowedCountries,
-  requireBetaAccess: async () => ({ mode: fixture.betaMode, status: fixture.betaMode === "invite" ? "active" : "preview", countryCode: fixture.betaMode === "invite" ? "US" : undefined })
-}));
 vi.mock("@/lib/security/rate-limit", () => ({
-  RateLimitError: class RateLimitError extends Error { retryAfterSeconds = 30; }, enforceRateLimit: async () => undefined
+  RateLimitError: httpErrors.RateLimitError, enforceRateLimit: async () => undefined
 }));
 vi.mock("@/lib/features/flags", () => {
   class FeatureUnavailableError extends Error { constructor(readonly feature: string) { super(); } }
@@ -32,7 +28,7 @@ vi.mock("@/lib/features/flags", () => {
   };
 });
 vi.mock("@/lib/auth/wallet", () => {
-  class WalletOwnershipError extends Error {}
+  const WalletOwnershipError = httpErrors.WalletOwnershipError;
   return {
     WalletOwnershipError,
     requireLinkedEvmWallet: async (_subject: string, address: string) => {
@@ -67,6 +63,7 @@ vi.mock("@/lib/swap/prepare-integrity", () => ({ assertSwapPrepareIntegrity: asy
 
 import { POST } from "@/app/api/swap/quote/route";
 
+
 const base = {
   fromAssetId: "8453:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
   toAssetId: "1:native", amount: "1", fromAddress: "0x1111111111111111111111111111111111111111", slippageBps: 50
@@ -77,7 +74,7 @@ function post(body: Record<string, unknown>) {
 
 describe("Swap quote API controls", () => {
   beforeEach(() => {
-    fixture.swapsEnabled = true; fixture.crossChainEnabled = true; fixture.betaMode = "invite"; fixture.allowedCountries = ["US"];
+    fixture.swapsEnabled = true; fixture.crossChainEnabled = true;
     fixture.walletOwned = true; fixture.fromAvailable = true;
     fixture.toAvailable = true; fixture.fromVerification = "verified"; fixture.quoteCalls = 0; fixture.savedPlans = 0; fixture.saveFails = false;
     fixture.integrityReject = false;
@@ -101,8 +98,8 @@ describe("Swap quote API controls", () => {
     expect(JSON.stringify(body)).not.toContain("0x1234");
   });
 
-  it("keeps public-preview accounts in quote-only mode even if financial switches are enabled", async () => {
-    fixture.betaMode = "preview";
+  it("keeps cross-network quotes quote-only while the cross-network switch is off", async () => {
+    fixture.crossChainEnabled = false;
     const response = await post(base);
     expect(response.status).toBe(200);
     const body = await response.json() as { reviewAccessAvailable: boolean; quotes: Array<Record<string, unknown>> };

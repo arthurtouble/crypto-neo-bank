@@ -25,8 +25,6 @@ function database(bridge = false, destinationChain: 1 | 42161 = 42161) {
       policy_result_json, disclosure_version, status, created_at, updated_at, expires_at, route_reference)
       VALUES ('intent-a', 'subject-a', 'wallet:${wallet}', '${bridge ? "bridge" : "swap"}', 8453, '{}', '{"permitted":true}', 'v1', 'reviewed', '${at}', '${at}', '${expiry}', 'swap-plan:plan-a');
     INSERT INTO security_profiles (subject_reference, updated_at) VALUES ('subject-a', '${at}');
-    INSERT INTO beta_access (subject_reference, cohort, country_code, status, terms_version, terms_accepted_at, activated_at, updated_at)
-      VALUES ('subject-a', 'test', 'PT', 'active', 'v1', '${at}', '${at}', '${at}');
     UPDATE feature_flags SET enabled = 1 WHERE flag_key IN ('swaps', 'cross_chain');
     INSERT INTO swap_quote_plans
       (plan_id, subject_reference, wallet_address, source_asset_id, destination_asset_id, source_chain_id, destination_chain_id,
@@ -59,7 +57,7 @@ describe("separate swap approval migration", () => {
       const sql = route.match(/const current = await env\.PROJECTION_DB\.prepare\(`([\s\S]*?)`\)/)?.[1];
       expect(sql).toBeTruthy();
       const call = db.prepare("SELECT call_json FROM swap_approval_requests").get()!.call_json as string;
-      expect(db.prepare(sql!).get(1, "PT", "approval-a", "subject-a", wallet, "plan-a", "intent-a",
+      expect(db.prepare(sql!).get(1, "approval-a", "subject-a", wallet, "plan-a", "intent-a",
         approvalExpiry, call, "hash", token, router, "1000000", "subject-a", "intent-a", at, at, at, 100))
         .toMatchObject({ approval_id: "approval-a" });
     } finally { db.close(); }
@@ -71,7 +69,7 @@ describe("separate swap approval migration", () => {
       const route = readFileSync(resolve(process.cwd(), "src/app/api/swap/approval/route.ts"), "utf8");
       const sql = route.match(/const current = await env\.PROJECTION_DB\.prepare\(`([\s\S]*?)`\)/)?.[1];
       expect(sql).toBeTruthy();
-      const args = [1, "PT", "approval-a", "subject-a", wallet, "plan-a", "intent-a", approvalExpiry,
+      const args = [1, "approval-a", "subject-a", wallet, "plan-a", "intent-a", approvalExpiry,
         db.prepare("SELECT call_json FROM swap_approval_requests").get()!.call_json as string,
         "hash", token, router, "1000000", "subject-a", "intent-a", at, at, at, 100];
       const allowed = () => db.prepare(sql!).get(...args);

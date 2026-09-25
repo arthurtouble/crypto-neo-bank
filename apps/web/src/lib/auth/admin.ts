@@ -1,8 +1,6 @@
-import { AuthenticationError, requireVerifiedSubject, type VerifiedSubject } from "./server";
+import { AuthenticationError, AuthorizationError } from "@/lib/http/errors";
+import { requireVerifiedSubject, type VerifiedSubject } from "./server";
 
-export class AuthorizationError extends Error {
-  constructor(message = "Operations access is restricted.") { super(message); this.name = "AuthorizationError"; }
-}
 
 export async function requireOperationsAdmin(request: Request): Promise<VerifiedSubject> {
   const subject = await requireVerifiedSubject(request);
@@ -14,4 +12,4 @@ export async function requireOperationsAdmin(request: Request): Promise<Verified
   return subject;
 }
 
-export { AuthenticationError };
+export { AuthenticationError, AuthorizationError };

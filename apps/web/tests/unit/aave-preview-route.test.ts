@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+const httpErrors = await vi.hoisted(() => import("@/lib/http/errors"));
 
 const state = vi.hoisted(() => ({
-  AuthenticationError: class AuthenticationError extends Error {},
-  WalletOwnershipError: class WalletOwnershipError extends Error {},
+  AuthenticationError: httpErrors.AuthenticationError,
+  WalletOwnershipError: httpErrors.WalletOwnershipError,
   authenticated: false,
   linked: false,
   previewCalls: 0
@@ -12,11 +13,11 @@ vi.mock("@/lib/auth/server", () => ({ AuthenticationError: state.AuthenticationE
   requireVerifiedSubject: async () => { if (!state.authenticated) throw new state.AuthenticationError(); return { subjectReference: "subject-a" }; } }));
 vi.mock("@/lib/auth/wallet", () => ({ WalletOwnershipError: state.WalletOwnershipError,
   requireLinkedEvmWallet: async () => { if (!state.linked) throw new state.WalletOwnershipError(); return "0x2222222222222222222222222222222222222222"; } }));
-vi.mock("@/lib/beta/access", () => ({ BetaAccessError: class BetaAccessError extends Error {}, requireBetaAccess: async () => undefined }));
-vi.mock("@/lib/security/rate-limit", () => ({ RateLimitError: class RateLimitError extends Error {}, enforceRateLimit: async () => undefined }));
+vi.mock("@/lib/security/rate-limit", () => ({ RateLimitError: httpErrors.RateLimitError, enforceRateLimit: async () => undefined }));
 vi.mock("@/lib/defi/aave-preview", () => ({ previewAaveBaseAction: async () => { state.previewCalls++; return { executionAvailable: false, amountRaw: "1000000" }; } }));
 
 import { POST } from "@/app/api/defi/aave/preview/route";
+
 
 const body = { action: "supply", sender: "0x2222222222222222222222222222222222222222", symbol: "USDC", amount: "1" };
 const request = () => new Request("https://aura.test/api/defi/aave/preview", { method: "POST", body: JSON.stringify(body) });

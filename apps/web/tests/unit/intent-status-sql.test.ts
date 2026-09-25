@@ -7,18 +7,17 @@ function database() {
   db.exec(`CREATE TABLE transaction_intents (intent_id TEXT PRIMARY KEY, subject_reference TEXT NOT NULL, intent_type TEXT NOT NULL, status TEXT NOT NULL, transaction_hash TEXT, failure_reason TEXT, updated_at TEXT, expires_at TEXT);
     CREATE TABLE intent_prepared_calls (intent_id TEXT NOT NULL, step_index INTEGER NOT NULL, subject_reference TEXT NOT NULL, reported_hash TEXT, verification_state TEXT NOT NULL, updated_at TEXT, submission_phase TEXT DEFAULT 'legacy', expires_at TEXT);
     CREATE TABLE security_profiles (subject_reference TEXT PRIMARY KEY, account_locked INTEGER NOT NULL);
-    CREATE TABLE beta_access (subject_reference TEXT PRIMARY KEY, status TEXT NOT NULL, country_code TEXT NOT NULL);
     CREATE TABLE feature_flags (flag_key TEXT PRIMARY KEY, enabled INTEGER NOT NULL, audience TEXT NOT NULL);
     CREATE TABLE intent_events (event_id TEXT PRIMARY KEY, intent_id TEXT NOT NULL, subject_reference TEXT NOT NULL, event_type TEXT NOT NULL, evidence_json TEXT, occurred_at TEXT);
     CREATE TABLE product_events (event_id TEXT PRIMARY KEY, subject_reference TEXT NOT NULL, session_reference TEXT NOT NULL, event_name TEXT NOT NULL, surface TEXT NOT NULL, properties_json TEXT, occurred_at TEXT);`);
   db.prepare("INSERT INTO transaction_intents VALUES (?, ?, ?, ?, ?, ?, ?, ?)").run("intent-a", "subject-a", "transfer", "reviewed", null, null, "2026-09-01T00:00:00.000Z", "2026-09-01T00:10:00.000Z");
   db.prepare("INSERT INTO intent_prepared_calls (intent_id, step_index, subject_reference, reported_hash, verification_state, updated_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?)").run("intent-a", 0, "subject-a", null, "prepared", "2026-09-01T00:00:00.000Z", "2026-09-01T00:10:00.000Z");
-  db.exec("INSERT INTO security_profiles VALUES ('subject-a', 0); INSERT INTO beta_access VALUES ('subject-a', 'active', 'PT'); INSERT INTO feature_flags VALUES ('direct_transfers', 1, 'beta')");
+  db.exec("INSERT INTO security_profiles VALUES ('subject-a', 0);INSERT INTO feature_flags VALUES ('direct_transfers', 1, 'all')");
   return db;
 }
 
-function claim(db: DatabaseSync, now: string, hash = `0x${"a".repeat(64)}`, feature = "direct_transfers", countries = ["PT"], mode = "invite") {
-  return db.prepare(REPORTED_HASH_CLAIM_SQL).run(hash, now, "intent-a", 0, hash, now, "subject-a", now, mode, JSON.stringify(countries), feature);
+function claim(db: DatabaseSync, now: string, hash = `0x${"a".repeat(64)}`, feature = "direct_transfers") {
+  return db.prepare(REPORTED_HASH_CLAIM_SQL).run(hash, now, "intent-a", 0, hash, now, "subject-a", now, feature);
 }
 
 function terminalBatch(db: DatabaseSync, now: string) {
@@ -68,32 +67,22 @@ describe("intent terminal SQL", () => {
     } finally { db.close(); }
   });
 
-  it.each(["feature", "lock", "beta", "expiry"] as const)("cannot claim a hash after %s control closes", (control) => {
+  it.each(["feature", "lock", "expiry"] as const)("cannot claim a hash after %s control closes", (control) => {
     const db = database();
     try {
       if (control === "feature") db.exec("UPDATE feature_flags SET enabled = 0");
       if (control === "lock") db.exec("UPDATE security_profiles SET account_locked = 1");
-      if (control === "beta") db.exec("UPDATE beta_access SET status = 'suspended'");
       if (control === "expiry") db.exec("UPDATE intent_prepared_calls SET expires_at = '2026-09-01T00:01:00.000Z'");
       expect(claim(db, "2026-09-01T00:02:00.000Z").changes).toBe(0);
       expect(db.prepare("SELECT reported_hash FROM intent_prepared_calls").get()).toMatchObject({ reported_hash: null });
     } finally { db.close(); }
   });
 
-  it("rejects an ordinary hash claim when the active invitation's country is removed", () => {
+  it("claims a hash for any unlocked customer with the feature enabled", () => {
     const db = database();
     try {
-      expect(claim(db, "2026-09-01T00:02:00.000Z", undefined, undefined, ["CH"]).changes).toBe(0);
-      expect(claim(db, "2026-09-01T00:02:00.000Z", undefined, undefined, []).changes).toBe(0);
-      expect(db.prepare("SELECT reported_hash FROM intent_prepared_calls").get()).toMatchObject({ reported_hash: null });
-    } finally { db.close(); }
-  });
-
-  it("keeps the development preview claim independent of invitation data", () => {
-    const db = database();
-    try {
-      db.exec("DELETE FROM beta_access");
-      expect(claim(db, "2026-09-01T00:02:00.000Z", undefined, undefined, [], "preview").changes).toBe(1);
+      expect(claim(db, "2026-09-01T00:02:00.000Z").changes).toBe(1);
+      expect(db.prepare("SELECT verification_state FROM intent_prepared_calls").get()).toMatchObject({ verification_state: "pending" });
     } finally { db.close(); }
   });
 
@@ -120,12 +109,12 @@ describe("intent terminal SQL", () => {
   it("requires both Swap and cross-network controls when claiming a bridge hash", () => {
     const db = database();
     try {
-      db.exec("UPDATE transaction_intents SET intent_type = 'bridge'; INSERT INTO feature_flags VALUES ('cross_chain', 1, 'beta')");
+      db.exec("UPDATE transaction_intents SET intent_type = 'bridge'; INSERT INTO feature_flags VALUES ('cross_chain', 1, 'all')");
       expect(claim(db, "2026-09-01T00:02:00.000Z", undefined, "cross_chain").changes).toBe(0);
-      db.exec("INSERT INTO feature_flags VALUES ('swaps', 1, 'beta')");
+      db.exec("INSERT INTO feature_flags VALUES ('swaps', 1, 'all')");
       db.exec("UPDATE feature_flags SET audience = 'operations' WHERE flag_key = 'swaps'");
       expect(claim(db, "2026-09-01T00:02:00.000Z", undefined, "cross_chain").changes).toBe(0);
-      db.exec("UPDATE feature_flags SET audience = 'beta' WHERE flag_key = 'swaps'");
+      db.exec("UPDATE feature_flags SET audience = 'all' WHERE flag_key = 'swaps'");
       expect(claim(db, "2026-09-01T00:02:00.000Z", undefined, "cross_chain").changes).toBe(1);
     } finally { db.close(); }
   });

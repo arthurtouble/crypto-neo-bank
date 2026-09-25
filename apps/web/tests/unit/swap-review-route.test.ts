@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+const httpErrors = await vi.hoisted(() => import("@/lib/http/errors"));
 
 const wallet = "0x1111111111111111111111111111111111111111";
 const source = "8453:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
@@ -8,7 +9,7 @@ const fixture = vi.hoisted(() => ({
   swapsEnabled: true, walletOwned: true, planAvailable: true, unverified: false, stepUp: false, locked: false, bindSucceeds: true,
   crossChain: false, integrityReject: false, integrityCalls: 0,
   recipient: "0x1111111111111111111111111111111111111111",
-  callTo: "0x3333333333333333333333333333333333333333", countries: ["US"] as string[],
+  callTo: "0x3333333333333333333333333333333333333333",
   valuationCalls: 0, balanceCalls: 0, bindCalls: 0, intentStatus: null as null | string, statements: [] as string[]
 }));
 
@@ -31,28 +32,24 @@ vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
   }
 } } }));
 vi.mock("@/lib/auth/server", () => ({
-  AuthenticationError: class AuthenticationError extends Error {},
+  AuthenticationError: httpErrors.AuthenticationError,
   requireVerifiedSubject: async () => ({ subjectReference: "did:privy:owner", sessionReference: "s1" })
 }));
 vi.mock("@/lib/auth/wallet", () => ({
-  WalletOwnershipError: class WalletOwnershipError extends Error {},
+  WalletOwnershipError: httpErrors.WalletOwnershipError,
   requireLinkedEvmWallet: async (_subject: string, address: string) => {
     if (!fixture.walletOwned) throw new Error("unlinked");
     return address.toLowerCase();
   }
 }));
-vi.mock("@/lib/beta/access", () => ({
-  BetaAccessError: class BetaAccessError extends Error {}, configuredCountries: () => fixture.countries,
-  requireBetaAccess: async () => ({ mode: "invite", status: "active", countryCode: "US", transactionLimitUsd: 25_000 })
-}));
 vi.mock("@/lib/features/flags", () => {
-  class FeatureUnavailableError extends Error {}
+  const FeatureUnavailableError = httpErrors.FeatureUnavailableError;
   return { FeatureUnavailableError, requireFeature: async (_db: unknown, feature: string) => {
     if (feature === "swaps" && !fixture.swapsEnabled) throw new FeatureUnavailableError("swaps disabled");
   } };
 });
 vi.mock("@/lib/security/rate-limit", () => ({
-  RateLimitError: class RateLimitError extends Error {}, enforceRateLimit: async () => undefined
+  RateLimitError: httpErrors.RateLimitError, enforceRateLimit: async () => undefined
 }));
 vi.mock("@/lib/profile/ensure", () => ({ ensureSubjectProfile: async () => undefined }));
 vi.mock("@/lib/swap/plans", () => ({
@@ -91,6 +88,7 @@ vi.mock("@/lib/transactions/policy", () => ({
 
 import { POST } from "@/app/api/swap/review/route";
 
+
 function post(body: Record<string, unknown>) {
   return POST(new Request("https://aurel.test/api/swap/review", { method: "POST", body: JSON.stringify(body) }));
 }
@@ -99,7 +97,7 @@ describe("Swap review boundary", () => {
   beforeEach(() => { Object.assign(fixture, { swapsEnabled: true, walletOwned: true, planAvailable: true, unverified: false,
     stepUp: false, locked: false, bindSucceeds: true, recipient: wallet,
     crossChain: false, integrityReject: false, integrityCalls: 0,
-    callTo: "0x3333333333333333333333333333333333333333", countries: ["US"],
+    callTo: "0x3333333333333333333333333333333333333333",
     valuationCalls: 0, balanceCalls: 0, bindCalls: 0, intentStatus: null, statements: [] });
     vi.stubEnv("AUREL_SWAP_ALLOWED_TARGETS", "0x3333333333333333333333333333333333333333");
   });
@@ -140,13 +138,6 @@ describe("Swap review boundary", () => {
     const response = await post({ planId: "00000000-0000-4000-8000-000000000001", walletAddress: wallet });
     expect(response.status).toBe(409);
     expect(fixture.valuationCalls).toBe(0);
-  });
-
-  it("requires an explicit country allowlist for financial reviews", async () => {
-    fixture.countries = [];
-    const response = await post({ planId: "00000000-0000-4000-8000-000000000001", walletAddress: wallet });
-    expect(response.status).toBe(403);
-    expect(fixture.intentStatus).toBeNull();
   });
 
   it("rejects a stored source call aimed at a target no longer allowed", async () => {

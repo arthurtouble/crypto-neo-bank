@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+const httpErrors = await vi.hoisted(() => import("@/lib/http/errors"));
 
 const state = vi.hoisted(() => ({ writes: [] as unknown[][], threshold: 10_000, locked: 0, allowlist: 0, version: 4,
   daily: 25_000, newThreshold: 1_000, delay: 86_400, updateChanges: 1, lastUpdateSql: "" }));
@@ -15,6 +16,7 @@ vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
           };
           return null;
         },
+        async all() { return { results: [] }; },
         async run() {
           if (sql.startsWith("UPDATE security_profiles")) { state.writes.push(values); state.lastUpdateSql = sql; }
           return { meta: { changes: state.updateChanges } };
@@ -27,10 +29,11 @@ vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
     return results;
   }
 } } }));
-vi.mock("@/lib/auth/server", () => ({ AuthenticationError: class extends Error {}, requireVerifiedSubject: async () => ({ subjectReference: "subject-a", sessionReference: "session-a" }) }));
+vi.mock("@/lib/auth/server", () => ({ AuthenticationError: httpErrors.AuthenticationError, requireVerifiedSubject: async () => ({ subjectReference: "subject-a", sessionReference: "session-a" }) }));
 vi.mock("@/lib/profile/ensure", () => ({ ensureSubjectProfile: async () => undefined }));
 
 import { GET, PATCH } from "@/app/api/security/policy/route";
+
 
 function request(stepUpThresholdUsd: number) {
   return PATCH(new Request("https://aurel.test/api/security/policy", {

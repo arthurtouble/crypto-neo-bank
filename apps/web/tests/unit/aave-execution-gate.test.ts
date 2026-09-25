@@ -1,22 +1,22 @@
 import { describe, expect, it, vi } from "vitest";
+const httpErrors = await vi.hoisted(() => import("@/lib/http/errors"));
 import { validateAaveCall } from "@/lib/defi/aave-call-policy";
 import { AAVE_BASE_ASSETS } from "@/lib/defi/aave";
 
-const state = vi.hoisted(() => ({ locked: false, invited: true }));
+const state = vi.hoisted(() => ({ locked: false, defiEnabled: true }));
 vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
   prepare: () => ({ bind: () => ({ first: async () => ({ account_locked: Number(state.locked) }) }) })
 } } }));
 vi.mock("@/lib/profile/ensure", () => ({ ensureSubjectProfile: async () => undefined }));
-vi.mock("@/lib/auth/server", () => ({ AuthenticationError: class extends Error {}, requireVerifiedSubject: async () => ({ subjectReference: "subject-a" }) }));
-vi.mock("@/lib/beta/access", () => ({ BetaAccessError: class extends Error {}, configuredCountries: () => ["PT"],
-  requireBetaAccess: async () => state.invited
-    ? { mode: "invite", status: "active", countryCode: "PT" }
-    : { mode: "preview", status: "preview" } }));
-vi.mock("@/lib/security/rate-limit", () => ({ RateLimitError: class extends Error {}, enforceRateLimit: async () => undefined }));
-vi.mock("@/lib/auth/wallet", () => ({ WalletOwnershipError: class extends Error {}, requireLinkedEvmWallet: async () => "0x2222222222222222222222222222222222222222" }));
+vi.mock("@/lib/features/flags", () => ({ FeatureUnavailableError: httpErrors.FeatureUnavailableError,
+  requireFeature: async (_db: unknown, key: string) => { if (!state.defiEnabled) throw new httpErrors.FeatureUnavailableError(key); } }));
+vi.mock("@/lib/auth/server", () => ({ AuthenticationError: httpErrors.AuthenticationError, requireVerifiedSubject: async () => ({ subjectReference: "subject-a" }) }));
+vi.mock("@/lib/security/rate-limit", () => ({ RateLimitError: httpErrors.RateLimitError, enforceRateLimit: async () => undefined }));
+vi.mock("@/lib/auth/wallet", () => ({ WalletOwnershipError: httpErrors.WalletOwnershipError, requireLinkedEvmWallet: async () => "0x2222222222222222222222222222222222222222" }));
 
 import { POST as action } from "@/app/api/defi/aave/action/route";
 import { POST as rewards } from "@/app/api/defi/aave/rewards/route";
+
 
 const sender = "0x2222222222222222222222222222222222222222";
 const post = (body: unknown) => action(new Request("https://aura.test/api/defi/aave/action", { method: "POST", body: JSON.stringify(body) }));
@@ -46,12 +46,12 @@ describe("Aave self-custodial action boundary", () => {
     state.locked = false;
   });
 
-  it("does not release a wallet call to a preview account", async () => {
-    state.invited = false;
+  it("does not release a wallet call while DeFi actions are switched off", async () => {
+    state.defiEnabled = false;
     const response = await post({ action: "supply", sender, symbol: "USDC", amount: "1" });
-    expect(response.status).toBe(403);
-    expect(await response.json()).toMatchObject({ error: "access_unavailable" });
-    state.invited = true;
+    expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({ error: "feature_unavailable" });
+    state.defiEnabled = true;
   });
 
   it("keeps rewards claims unavailable until their distributor is verified", async () => {

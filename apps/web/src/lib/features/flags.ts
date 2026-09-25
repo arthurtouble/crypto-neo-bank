@@ -1,3 +1,5 @@
+import { FeatureUnavailableError } from "@/lib/http/errors";
+
 export const featureKeys = ["direct_transfers", "swaps", "cross_chain", "defi_actions", "support_assistant", "tokenized_markets", "fiat_accounts", "payment_cards"] as const;
 export type FeatureKey = (typeof featureKeys)[number];
 
@@ -12,13 +14,11 @@ const safeDefaults: Record<FeatureKey, boolean> = {
   payment_cards: false
 };
 
-export class FeatureUnavailableError extends Error {
-  constructor(public feature: FeatureKey) { super("This feature is temporarily unavailable."); this.name = "FeatureUnavailableError"; }
-}
+export { FeatureUnavailableError };
 
 export async function featureEnabled(database: D1Database, key: FeatureKey): Promise<boolean> {
   const row = await database.prepare("SELECT enabled, audience FROM feature_flags WHERE flag_key = ?").bind(key).first<{ enabled: number; audience: string }>();
-  return row ? Boolean(row.enabled) && (row.audience === "all" || row.audience === "beta") : safeDefaults[key];
+  return row ? Boolean(row.enabled) && row.audience === "all" : safeDefaults[key];
 }
 
 export async function requireFeature(database: D1Database, key: FeatureKey): Promise<void> {

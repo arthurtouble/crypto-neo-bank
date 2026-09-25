@@ -1,0 +1,7 @@
+# Default gitleaks rules plus narrow allowlists for known false positives.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "D1 migration file names such as 0042_privacy_and_flag_vocabulary.sql are not secrets"
+regexes = ['''\d{4}_[a-z0-9_]+\.sql''']

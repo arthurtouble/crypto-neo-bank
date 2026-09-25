@@ -53,7 +53,7 @@ function reviewError(code: string | undefined): string {
     case "valuation_unavailable": case "spent_value_unavailable": return "We can't check this swap safely right now. Try again later.";
     case "policy_not_permitted": case "review_period_required": case "step_up_unavailable": return "This swap can't be reviewed with your current transaction settings.";
     case "wallet_not_linked": return "Connect a wallet linked to your account.";
-    case "feature_unavailable": case "access_unavailable": return "Swaps aren't available for this account yet.";
+    case "feature_unavailable": return "Swaps aren't available right now.";
     default: return "We couldn't review this route. Try again.";
   }
 }
@@ -64,7 +64,7 @@ export function swapQuoteErrorText(code: string | undefined): string {
     case "quote_unavailable": return "Routes are temporarily unavailable. Try again shortly.";
     case "unsupported_chain": return "This asset pair cannot be swapped right now.";
     case "asset_unavailable": return "This asset or amount is not available for swapping right now.";
-    case "feature_unavailable": case "access_unavailable": return "Swaps aren't available for this account yet.";
+    case "feature_unavailable": return "Swaps aren't available right now.";
     default: return "We couldn't find a route. Try again.";
   }
 }

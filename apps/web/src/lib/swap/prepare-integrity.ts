@@ -3,14 +3,11 @@ import { z } from "zod";
 import type { CatalogAsset } from "./assets";
 import { isDirectUniswapPlan, validateDirectUniswapPlan } from "./direct-uniswap";
 import { validateGovernedAcrossPlan } from "./governed-across-route";
-import { validateGovernedSameChainPlan } from "./governed-route";
 import type { StoredSwapQuotePlan } from "./plans";
 
 const address = z.string().refine(isAddress);
 const configSchema = z.object({
-  diamond: address, feeForwarder: address, feeRecipients: z.array(address).min(1).max(8),
-  routerSpenders: z.array(z.object({ router: address, spender: address,
-    feeTiers: z.array(z.number().int().min(1).max(1_000_000)).min(1).max(8) }).strict()).max(8)
+  diamond: address, feeForwarder: address, feeRecipients: z.array(address).min(1).max(8)
 }).strict();
 
 const configuredSet = (name: string) => new Set((process.env[name] ?? "").split(",")
@@ -21,20 +18,20 @@ async function sha256(value: string): Promise<`0x${string}`> {
   return `0x${Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("")}`;
 }
 
-/** The retained LI.FI proposal must still match every current operator and catalog input. */
+/** The retained LI.FI proposal must still match every current operator and catalog input.
+ * LI.FI plans are cross-network (Across) only; Base swaps use the direct Uniswap path. */
 export async function assertSwapPrepareIntegrity(plan: StoredSwapQuotePlan, assets: {
   from: CatalogAsset; to: CatalogAsset
 }, nowMs: number) {
   if (isDirectUniswapPlan(plan)) return validateDirectUniswapPlan(plan, assets, nowMs);
   const configured = configSchema.parse(JSON.parse(process.env.AUREL_SWAP_EXECUTION_POLICY ?? "null"));
   const allowedTools = configuredSet("AUREL_LIFI_ALLOWED_TOOLS");
-  const allowedExchanges = configuredSet("AUREL_LIFI_ALLOWED_EXCHANGES");
   const allowedBridges = configuredSet("AUREL_LIFI_ALLOWED_BRIDGES");
   const allowedTargets = configuredSet("AUREL_SWAP_ALLOWED_TARGETS");
   const allowedSpenders = configuredSet("AUREL_SWAP_ALLOWED_SPENDERS");
   const diamond = getAddress(configured.diamond);
-  const isBridge = plan.source_chain_id !== plan.destination_chain_id;
-  if (!allowedTools.has(plan.tool_id) || !(isBridge ? allowedBridges : allowedExchanges).has(plan.tool_id)
+  if (plan.source_chain_id === plan.destination_chain_id) throw new Error("Swap route is not approved by current policy.");
+  if (!allowedTools.has(plan.tool_id) || !allowedBridges.has(plan.tool_id)
     || !allowedTargets.has(diamond.toLowerCase()) || !allowedSpenders.has(diamond.toLowerCase())
     || !plan.approval_spender || getAddress(plan.approval_spender) !== diamond
     || assets.from.id !== plan.source_asset_id || assets.to.id !== plan.destination_asset_id
@@ -42,7 +39,7 @@ export async function assertSwapPrepareIntegrity(plan: StoredSwapQuotePlan, asse
     || assets.from.eligibility !== "eligible" || assets.to.eligibility !== "eligible")
     throw new Error("Swap route is not approved by current policy.");
   const currentPolicyVersion = await sha256(JSON.stringify([
-    allowedTools, allowedExchanges, allowedBridges, allowedTargets, allowedSpenders
+    allowedTools, allowedBridges, allowedTargets, allowedSpenders
   ].map((set) => [...set].map((item) => item.toLowerCase()).sort())));
   if (plan.route_policy_version !== currentPolicyVersion
     || plan.catalog_version !== await sha256(JSON.stringify([assets.from, assets.to])))
@@ -65,22 +62,9 @@ export async function assertSwapPrepareIntegrity(plan: StoredSwapQuotePlan, asse
     plan.expires_at, currentPolicyVersion, plan.catalog_version, steps, economics
   ]));
   if (routeHash !== plan.fingerprint) throw new Error("Swap plan fingerprint changed.");
-  if (isBridge) {
-    const route = validateGovernedAcrossPlan(plan, { nowMs, routePolicyVersion: currentPolicyVersion, diamond,
-      feeForwarder: getAddress(configured.feeForwarder),
-      feeRecipients: new Set(configured.feeRecipients.map((value) => value.toLowerCase())),
-      maxGasLimit: 2_000_000n, maxGasPriceWei: 100_000_000_000n });
-    return { ...route, reviewedSpender: diamond };
-  }
-  const route = validateGovernedSameChainPlan(plan, {
-    nowMs, routePolicyVersion: currentPolicyVersion, diamond,
-    allowedToolIds: new Set([...allowedTools].filter((tool) => allowedExchanges.has(tool))),
-    routerSpenders: configured.routerSpenders.map(({ router, spender, feeTiers }) => ({
-      router: getAddress(router), spender: getAddress(spender), feeTiers: new Set(feeTiers)
-    })),
+  const route = validateGovernedAcrossPlan(plan, { nowMs, routePolicyVersion: currentPolicyVersion, diamond,
     feeForwarder: getAddress(configured.feeForwarder),
     feeRecipients: new Set(configured.feeRecipients.map((value) => value.toLowerCase())),
-    maxGasLimit: 2_000_000n, maxGasPriceWei: 100_000_000_000n
-  });
+    maxGasLimit: 2_000_000n, maxGasPriceWei: 100_000_000_000n });
   return { ...route, reviewedSpender: diamond };
 }

@@ -1,13 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+const httpErrors = await vi.hoisted(() => import("@/lib/http/errors"));
 import { spawnSync } from "node:child_process";
 import { DatabaseSync } from "node:sqlite";
 
 const state = vi.hoisted(() => ({
   subject: "subject-a",
   walletLinked: true,
-  betaAllowed: true,
-  betaMode: "preview" as "preview" | "invite",
-  betaLimitUsd: 25_000,
   featureAllowed: true,
   accountLocked: false,
   dailyLimitUsd: 25_000,
@@ -25,7 +23,6 @@ const state = vi.hoisted(() => ({
   staleDuringFeeBudget: false,
   expireDuringSimulation: false,
   disableDuringSimulation: false,
-  revokeBetaDuringSimulation: false,
   tightenPolicyDuringSimulation: false,
   stalePriceDuringSimulation: false,
   valuations: [] as Array<unknown>,
@@ -99,7 +96,7 @@ vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
               && state.intent?.status === "reviewed" && row?.reported_hash == null
               && row?.call_fingerprint === args[7] && state.featureAllowed && !state.accountLocked
               && state.policyVersion === args[0] && !state.atomicReservationExceeded
-              && state.spentTodayUsd * 100 + Number(state.valuationCents) <= Math.min(state.dailyLimitUsd, state.betaLimitUsd) * 100
+              && state.spentTodayUsd * 100 + Number(state.valuationCents) <= state.dailyLimitUsd * 100
               ? { intent_id: args[1] } : null;
           }
           if (query.includes("FROM intent_observation_candidates")) return state.candidates.get(String(args[1]).toLowerCase()) ?? null;
@@ -130,9 +127,8 @@ vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
             if (state.intent?.status !== "reviewed" || state.accountLocked || state.prepared.has(step)
               || String(state.intent.expires_at) <= String(args[13])
               || query.includes("FROM feature_flags") && !state.featureAllowed
-              || query.includes("p.policy_version = ?") && state.policyVersion !== args[args.length - 3]
-              || query.includes("b.status = 'active'") && state.betaMode === "invite" && !state.betaAllowed
-              || query.includes("b.transaction_limit_usd") && (state.spentTodayUsd * 100 + Number(state.valuationCents)) > Math.min(state.dailyLimitUsd, state.betaLimitUsd) * 100
+              || query.includes("p.policy_version = ?") && state.policyVersion !== args[args.length - 1]
+              || query.includes("p.daily_limit_usd * 100") && (state.spentTodayUsd * 100 + Number(state.valuationCents)) > state.dailyLimitUsd * 100
               || (step > 0 && state.prepared.get(step - 1)?.verification_state !== "confirmed")) return { meta: { changes: 0 } };
             state.prepared.set(step, { intent_id: args[11], step_index: step, subject_reference: args[12], wallet_address: args[1], chain_id: args[2], target_address: args[3], native_value: args[4], calldata_hash: args[5], call_fingerprint: args[6], semantic_action: args[7], source_reference: args[8], expected_effect_json: args[9], expires_at: state.intent.expires_at, verification_state: "prepared", submission_phase: query.includes("'awaiting_step_up'") ? "awaiting_step_up" : "legacy", reported_hash: null });
             return { meta: { changes: 1 } };
@@ -171,12 +167,11 @@ vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
   }
 } } }));
 
-vi.mock("@/lib/auth/server", () => ({ AuthenticationError: class AuthenticationError extends Error {}, requireVerifiedSubject: async () => ({ subjectReference: state.subject, sessionReference: "session-a" }) }));
-vi.mock("@/lib/beta/access", () => { class BetaAccessError extends Error { code = "beta_access_denied"; } return { BetaAccessError, betaMode: () => state.betaMode, configuredCountries: () => ["PT"], requireBetaAccess: async () => { if (!state.betaAllowed) throw new BetaAccessError("Beta denied"); return { transactionLimitUsd: state.betaLimitUsd, mode: state.betaMode }; } }; });
-vi.mock("@/lib/features/flags", () => { class FeatureUnavailableError extends Error {} return { FeatureUnavailableError, requireFeature: async () => { if (!state.featureAllowed) throw new FeatureUnavailableError("Feature denied"); } }; });
-vi.mock("@/lib/security/rate-limit", () => ({ RateLimitError: class RateLimitError extends Error {}, enforceRateLimit: async () => undefined }));
+vi.mock("@/lib/auth/server", () => ({ AuthenticationError: httpErrors.AuthenticationError, requireVerifiedSubject: async () => ({ subjectReference: state.subject, sessionReference: "session-a" }) }));
+vi.mock("@/lib/features/flags", () => { const FeatureUnavailableError = httpErrors.FeatureUnavailableError; return { FeatureUnavailableError, requireFeature: async () => { if (!state.featureAllowed) throw new FeatureUnavailableError("Feature denied"); } }; });
+vi.mock("@/lib/security/rate-limit", () => ({ RateLimitError: httpErrors.RateLimitError, enforceRateLimit: async () => undefined }));
 vi.mock("@/lib/auth/wallet", () => {
-  class WalletOwnershipError extends Error {}
+  const WalletOwnershipError = httpErrors.WalletOwnershipError;
   return { WalletOwnershipError, requireLinkedEvmWallet: async (_subject: string, address: string) => { if (!state.walletLinked) throw new WalletOwnershipError("Wallet denied"); return address.toLowerCase(); } };
 });
 vi.mock("@/lib/transactions/valuation", () => {
@@ -195,7 +190,6 @@ vi.mock("@/lib/transactions/direct-transfer-simulation", () => ({
       await new Promise((resolve) => setTimeout(resolve, 5));
     }
     if (state.disableDuringSimulation) state.featureAllowed = false;
-    if (state.revokeBetaDuringSimulation) state.betaAllowed = false;
     if (state.tightenPolicyDuringSimulation) { state.policyVersion++; state.dailyLimitUsd = 0; }
     return { chainId: 8453, blockNumber: 42n, blockHash: `0x${"a".repeat(64)}`, observedAtMs: Date.now(),
       fingerprint: input.call.fingerprint, simulationSucceeded: true, assetBalanceRaw: "1000000", assetBalanceObserved: true };
@@ -215,6 +209,7 @@ import { POST as prepare, validatePreparedAction } from "@/app/api/intents/prepa
 import { observeTransaction, observeTransactionIdentity } from "@/lib/transactions/chain-observation";
 import { normalizePreparedCall } from "@/lib/transactions/evidence";
 import { POST as reportStatus } from "@/app/api/intents/status/route";
+
 
 const sender = "0x000000000000000000000000000000000000dEaD";
 const recipient = "0x0000000000000000000000000000000000000001";
@@ -333,7 +328,7 @@ describe("intent preparation route", () => {
   async function request(body: unknown) { return prepare(new Request("https://aurel.test/api/intents/prepare", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })); }
 
   beforeEach(() => {
-    state.subject = "subject-a"; state.walletLinked = true; state.betaAllowed = true; state.betaMode = "preview"; state.betaLimitUsd = 25_000; state.featureAllowed = true; state.accountLocked = false; state.dailyLimitUsd = 25_000; state.policyVersion = 1; state.stepUpThresholdUsd = 10_000; state.spentTodayUsd = 0; state.spentMissing = false; state.atomicReservationExceeded = false; state.lastInsert = null; state.lastRecheck = null; state.valuationFails = false; state.valuationCents = "1"; state.simulationFails = false; state.feeBudgetFails = false; state.staleDuringFeeBudget = false; state.expireDuringSimulation = false; state.disableDuringSimulation = false; state.revokeBetaDuringSimulation = false; state.tightenPolicyDuringSimulation = false; state.stalePriceDuringSimulation = false; state.valuations.length = 0; state.addressBook = []; state.intentUpdateAllowed = true; state.preparationEventFails = false; state.prepared.clear(); state.events.length = 0; state.issues.length = 0;
+    state.subject = "subject-a"; state.walletLinked = true; state.featureAllowed = true; state.accountLocked = false; state.dailyLimitUsd = 25_000; state.policyVersion = 1; state.stepUpThresholdUsd = 10_000; state.spentTodayUsd = 0; state.spentMissing = false; state.atomicReservationExceeded = false; state.lastInsert = null; state.lastRecheck = null; state.valuationFails = false; state.valuationCents = "1"; state.simulationFails = false; state.feeBudgetFails = false; state.staleDuringFeeBudget = false; state.expireDuringSimulation = false; state.disableDuringSimulation = false; state.tightenPolicyDuringSimulation = false; state.stalePriceDuringSimulation = false; state.valuations.length = 0; state.addressBook = []; state.intentUpdateAllowed = true; state.preparationEventFails = false; state.prepared.clear(); state.events.length = 0; state.issues.length = 0;
     state.intent = { intent_id: intentId, subject_reference: "subject-a", intent_type: "transfer", chain_id: 8453, wallet_reference: `wallet:${sender.toLowerCase()}`, request_json: JSON.stringify({ type: "transfer", chainId: 8453, destination: recipient, asset: "ETH", amount: "0.0000000000000001", estimatedUsd: 20 }), policy_result_json: JSON.stringify({ permitted: true }), status: "reviewed", expires_at: new Date(Date.now() + 60_000).toISOString() };
   });
 
@@ -374,7 +369,6 @@ describe("intent preparation route", () => {
         call_fingerprint TEXT, semantic_action TEXT, source_reference TEXT, expected_effect_json TEXT,
         verification_state TEXT, submission_phase TEXT, reported_hash TEXT, expires_at TEXT, created_at TEXT);
         CREATE TABLE security_profiles (subject_reference TEXT, account_locked INTEGER, policy_version INTEGER, daily_limit_usd REAL);
-        CREATE TABLE beta_access (subject_reference TEXT, status TEXT, country_code TEXT, transaction_limit_usd REAL);
         CREATE TABLE feature_flags (flag_key TEXT, enabled INTEGER, audience TEXT);
         CREATE TABLE address_book_entries (subject_reference TEXT, chain_family TEXT, address TEXT, available_at TEXT);
         CREATE TABLE intent_valuations (valuation_id TEXT, intent_id TEXT, usd_cents TEXT);`);
@@ -385,8 +379,7 @@ describe("intent preparation route", () => {
         row.call_fingerprint as string, "native_transfer", "review-1", JSON.stringify(payload.expectedEffect),
         "prepared", "legacy", null, future, past);
       db.exec(`INSERT INTO security_profiles VALUES ('subject-a',0,1,25000);
-        INSERT INTO beta_access VALUES ('subject-a','active','PT',25000);
-        INSERT INTO feature_flags VALUES ('direct_transfers',1,'beta');`);
+        INSERT INTO feature_flags VALUES ('direct_transfers',1,'all');`);
       const args = [...captured.args] as Array<string | number | bigint | null>;
       const check = () => db.prepare(captured.query).get(...args);
       expect(check()).toMatchObject({ intent_id: intentId });
@@ -394,12 +387,12 @@ describe("intent preparation route", () => {
         new Date(Date.now() + 86_400_000).toISOString());
       expect(check()).toBeUndefined();
       db.exec("DELETE FROM address_book_entries");
-      args[17] = 1; // The reviewed policy required a saved destination.
+      args[15] = 1; // The reviewed policy required a saved destination.
       db.prepare("INSERT INTO address_book_entries VALUES (?,?,?,?)").run("subject-a", "evm", recipient, past);
       expect(check()).toMatchObject({ intent_id: intentId });
       db.exec("DELETE FROM address_book_entries");
       expect(check()).toBeUndefined();
-      args[17] = 0;
+      args[15] = 0;
       db.exec("UPDATE security_profiles SET account_locked=1");
       expect(check()).toBeUndefined();
       db.exec("UPDATE security_profiles SET account_locked=0, daily_limit_usd=0");
@@ -450,13 +443,6 @@ describe("intent preparation route", () => {
     expect(state.prepared.size).toBe(0);
   });
 
-  it("does not prepare after private-beta access is revoked during simulation", async () => {
-    state.betaMode = "invite";
-    state.revokeBetaDuringSimulation = true;
-    expect((await request(payload)).status).toBe(409);
-    expect(state.prepared.size).toBe(0);
-  });
-
   it("does not prepare after the security policy tightens during simulation", async () => {
     state.tightenPolicyDuringSimulation = true;
     expect((await request(payload)).status).toBe(409);
@@ -491,12 +477,9 @@ describe("intent preparation route", () => {
     expect(captured).not.toBeNull();
     expect(captured!.query).toMatch(/submission_phase[\s\S]*'legacy'/);
     expect(captured!.query).toMatch(/unixepoch\(\?\) BETWEEN unixepoch\('now'\) - 180 AND unixepoch\('now'\) \+ 60/);
-    const sqlFor = (mode: "preview" | "invite", observedAt?: string, countries = ["PT"]) => {
+    const sqlFor = (observedAt?: string) => {
       const bound = [...captured!.args];
       if (observedAt) bound[14] = observedAt;
-      bound[bound.length - 5] = mode;
-      bound[bound.length - 2] = mode;
-      bound[bound.length - 1] = JSON.stringify(countries);
       const sql = captured!.query.replace(/\?/g, () => {
         const value = bound.shift();
         return typeof value === "number" ? String(value) : `'${String(value).replaceAll("'", "''")}'`;
@@ -510,18 +493,16 @@ describe("intent preparation route", () => {
       CREATE TABLE transaction_intents (intent_id TEXT PRIMARY KEY, subject_reference TEXT, status TEXT, expires_at TEXT, created_at TEXT);
       CREATE TABLE feature_flags (flag_key TEXT PRIMARY KEY, enabled INTEGER, audience TEXT);
       CREATE TABLE security_profiles (subject_reference TEXT, account_locked INTEGER, daily_limit_usd REAL, policy_version INTEGER);
-      CREATE TABLE beta_access (subject_reference TEXT, status TEXT, transaction_limit_usd REAL, country_code TEXT);
       CREATE TABLE intent_valuations (valuation_id TEXT, intent_id TEXT, usd_cents TEXT);
       CREATE TABLE intent_prepared_calls (intent_id TEXT, step_index INTEGER, subject_reference TEXT, wallet_address TEXT, chain_id INTEGER, target_address TEXT, native_value TEXT, calldata_hash TEXT, call_fingerprint TEXT, semantic_action TEXT, source_reference TEXT, expires_at TEXT, expected_effect_json TEXT, verification_state TEXT, created_at TEXT, submission_phase TEXT);
       INSERT INTO transaction_intents VALUES ('${current}', 'subject-a', 'reviewed', '${future}', datetime('now'));
       INSERT INTO transaction_intents VALUES ('peer', 'subject-a', 'reviewed', '${future}', datetime('now'${oldPeerIntent ? ",'-2 days'" : ""}));
       INSERT INTO security_profiles VALUES ('subject-a', 0, 25000, 1);
-      INSERT INTO beta_access VALUES ('subject-a', 'active', 25000, 'PT');
-      INSERT INTO feature_flags VALUES ('direct_transfers', 1, 'beta');
+      INSERT INTO feature_flags VALUES ('direct_transfers', 1, 'all');
       INSERT INTO intent_prepared_calls VALUES ('peer', 0, 'subject-a', '${sender.toLowerCase()}', 8453, '${recipient.toLowerCase()}', '100', 'hash', 'fingerprint', 'native_transfer', 'review', '${future}', '{}', 'prepared', datetime('now'), 'legacy');
     `;
-    const run = (reservedCents: number, oldPeerIntent = false, mode: "preview" | "invite" = "preview", change = "", observedAt?: string, countries = ["PT"]) => spawnSync("sqlite3", [":memory:"], {
-      input: `${schema(oldPeerIntent)} INSERT INTO intent_valuations VALUES ('peer-value','peer','${reservedCents}'); ${change} ${sqlFor(mode, observedAt, countries)}; SELECT COUNT(*) FROM intent_prepared_calls WHERE intent_id='${current}';`, encoding: "utf8"
+    const run = (reservedCents: number, oldPeerIntent = false, change = "", observedAt?: string) => spawnSync("sqlite3", [":memory:"], {
+      input: `${schema(oldPeerIntent)} INSERT INTO intent_valuations VALUES ('peer-value','peer','${reservedCents}'); ${change} ${sqlFor(observedAt)}; SELECT COUNT(*) FROM intent_prepared_calls WHERE intent_id='${current}';`, encoding: "utf8"
     });
     const within = run(2_499_999);
     expect(within.status, within.stderr).toBe(0);
@@ -532,25 +513,22 @@ describe("intent preparation route", () => {
     const cooledIntent = run(2_500_000, true);
     expect(cooledIntent.status, cooledIntent.stderr).toBe(0);
     expect(cooledIntent.stdout.trim()).toBe("0");
-    expect(run(0, false, "invite", "", undefined, ["CH"]).stdout.trim()).toBe("0");
-    expect(run(0, false, "invite", "", undefined, []).stdout.trim()).toBe("0");
-    for (const [mode, change] of [
-      ["invite", "UPDATE beta_access SET status='suspended';"],
-      ["invite", "UPDATE beta_access SET transaction_limit_usd=0;"],
-      ["preview", "UPDATE security_profiles SET policy_version=2;"],
-      ["preview", "UPDATE security_profiles SET daily_limit_usd=0;"]
-    ] as const) {
-      const denied = run(0, false, mode, change);
+    for (const change of [
+      "UPDATE security_profiles SET policy_version=2;",
+      "UPDATE security_profiles SET daily_limit_usd=0;",
+      "UPDATE security_profiles SET account_locked=1;"
+    ]) {
+      const denied = run(0, false, change);
       expect(denied.status, denied.stderr).toBe(0);
       expect(denied.stdout.trim()).toBe("0");
     }
-    const staleAtCommit = run(0, false, "preview", "", new Date(Date.now() - 181_000).toISOString());
+    const staleAtCommit = run(0, false, "", new Date(Date.now() - 181_000).toISOString());
     expect(staleAtCommit.status, staleAtCommit.stderr).toBe(0);
     expect(staleAtCommit.stdout.trim()).toBe("0");
-    const oneCentLimit = run(0, false, "preview", "UPDATE security_profiles SET daily_limit_usd=0.01;");
+    const oneCentLimit = run(0, false, "UPDATE security_profiles SET daily_limit_usd=0.01;");
     expect(oneCentLimit.status, oneCentLimit.stderr).toBe(0);
     expect(oneCentLimit.stdout.trim()).toBe("1");
-    const belowOneCent = run(0, false, "preview", "UPDATE security_profiles SET daily_limit_usd=0.009;");
+    const belowOneCent = run(0, false, "UPDATE security_profiles SET daily_limit_usd=0.009;");
     expect(belowOneCent.status, belowOneCent.stderr).toBe(0);
     expect(belowOneCent.stdout.trim()).toBe("0");
   });
@@ -650,14 +628,13 @@ describe("intent preparation route", () => {
         CREATE TABLE intent_prepared_calls (intent_id TEXT, step_index INTEGER, subject_reference TEXT, wallet_address TEXT, chain_id INTEGER, target_address TEXT, native_value TEXT, calldata_hash TEXT, call_fingerprint TEXT, semantic_action TEXT, source_reference TEXT, expires_at TEXT, expected_effect_json TEXT, verification_state TEXT, created_at TEXT, submission_phase TEXT);
         CREATE TABLE feature_flags (flag_key TEXT, enabled INTEGER, audience TEXT);
         CREATE TABLE security_profiles (subject_reference TEXT, account_locked INTEGER, daily_limit_usd REAL, policy_version INTEGER);
-        CREATE TABLE beta_access (subject_reference TEXT, status TEXT, transaction_limit_usd REAL, country_code TEXT);
-        CREATE TABLE intent_valuations (valuation_id TEXT, intent_id TEXT, usd_cents TEXT);
+          CREATE TABLE intent_valuations (valuation_id TEXT, intent_id TEXT, usd_cents TEXT);
         CREATE TABLE address_book_entries (subject_reference TEXT, chain_family TEXT, address TEXT, available_at TEXT);`);
       db.prepare("INSERT INTO transaction_intents VALUES (?,?,?,?,?,?)").run(intentId, "subject-a", "reviewed", future,
         JSON.stringify({ destination: recipient }), past);
-      db.exec(`INSERT INTO feature_flags VALUES ('direct_transfers',1,'beta');
+      db.exec(`INSERT INTO feature_flags VALUES ('direct_transfers',1,'all');
         INSERT INTO security_profiles VALUES ('subject-a',0,25000,1);
-        INSERT INTO beta_access VALUES ('subject-a','active',25000,'PT');`);
+`);
       const run = () => db.prepare(captured.query).run(...captured.args as Array<string | number>);
       db.prepare("INSERT INTO address_book_entries VALUES (?,?,?,?)").run("subject-a", "evm", recipient, past);
       expect(run().changes).toBe(1);
@@ -704,7 +681,7 @@ describe("reported transaction binding", () => {
   const report = (stepIndex = 0, transactionHash = txHash) => reportStatus(new Request("https://aurel.test/api/intents/status", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ intentId, stepIndex, status: "submitted", transactionHash }) }));
 
   beforeEach(async () => {
-    state.subject = "subject-a"; state.walletLinked = true; state.betaAllowed = true; state.featureAllowed = true; state.accountLocked = false; state.intentUpdateAllowed = true; state.cancelBeforeClaim = false; state.claimRejectedAtCommit = false; state.terminalAuditFails = false; state.submissionAuditFails = false; state.prepared.clear(); state.events.length = 0; state.issues.length = 0; state.candidates.clear(); state.candidateInsertFails = false;
+    state.subject = "subject-a"; state.walletLinked = true; state.featureAllowed = true; state.accountLocked = false; state.intentUpdateAllowed = true; state.cancelBeforeClaim = false; state.claimRejectedAtCommit = false; state.terminalAuditFails = false; state.submissionAuditFails = false; state.prepared.clear(); state.events.length = 0; state.issues.length = 0; state.candidates.clear(); state.candidateInsertFails = false;
     state.intent = { intent_id: intentId, subject_reference: "subject-a", intent_type: "transfer", chain_id: 8453, wallet_reference: `wallet:${sender.toLowerCase()}`, request_json: JSON.stringify({ destination: recipient }), policy_result_json: JSON.stringify({ permitted: true }), status: "reviewed", expires_at: new Date(Date.now() + 60_000).toISOString() };
     const normalized = await normalizePreparedCall(call);
     state.prepared.set(0, { intent_id: intentId, step_index: 0, subject_reference: "subject-a", wallet_address: sender.toLowerCase(), chain_id: 8453, target_address: recipient.toLowerCase(), native_value: "100", calldata_hash: normalized.dataHash, call_fingerprint: normalized.fingerprint, semantic_action: "native_transfer", source_reference: "review-1", expected_effect_json: JSON.stringify({ type: "native_transfer", recipient, amountRaw: "100" }), expires_at: state.intent.expires_at, verification_state: "prepared", reported_hash: null });
@@ -775,14 +752,13 @@ describe("reported transaction binding", () => {
     expect(state.intent?.status).toBe("reviewed");
   });
 
-  it.each(["review_expired", "account_locked", "access_revoked", "feature_disabled"] as const)(
+  it.each(["review_expired", "account_locked", "feature_disabled"] as const)(
     "records a late prepared Base swap after %s without creating a submission", async (control) => {
       state.intent!.intent_type = "swap";
       state.prepared.get(0)!.semantic_action = "swap";
       state.prepared.get(0)!.submission_phase = "released";
       if (control === "review_expired") state.intent!.expires_at = new Date(Date.now() - 1_000).toISOString();
       if (control === "account_locked") state.accountLocked = true;
-      if (control === "access_revoked") state.betaAllowed = false;
       if (control === "feature_disabled") state.featureAllowed = false;
       const response = await report();
       expect(response.status).toBe(202);
@@ -793,14 +769,13 @@ describe("reported transaction binding", () => {
     }
   );
 
-  it.each(["review_expired", "account_locked", "access_revoked", "feature_disabled"] as const)(
+  it.each(["review_expired", "account_locked", "feature_disabled"] as const)(
     "keeps a late released bridge hash as observation only after %s", async (control) => {
       state.intent!.intent_type = "bridge";
       state.prepared.get(0)!.semantic_action = "bridge";
       state.prepared.get(0)!.submission_phase = "released";
       if (control === "review_expired") state.intent!.expires_at = new Date(Date.now() - 1_000).toISOString();
       if (control === "account_locked") state.accountLocked = true;
-      if (control === "access_revoked") state.betaAllowed = false;
       if (control === "feature_disabled") state.featureAllowed = false;
       const response = await report();
       expect(response.status).toBe(202);
@@ -844,18 +819,16 @@ describe("reported transaction binding", () => {
     expect(state.candidates.size).toBe(0);
   });
 
-  it("records a held-step hash only as observation after beta access is revoked", async () => {
+  it("records a held-step hash only as observation", async () => {
     state.prepared.get(0)!.submission_phase = "awaiting_step_up";
-    state.betaAllowed = false;
     const response = await report();
     expect(response.status).toBe(202);
     expect(state.intent?.status).toBe("reviewed");
     expect(state.prepared.get(0)?.reported_hash).toBeNull();
   });
 
-  it.each(["wallet", "beta", "feature"] as const)("records a late hash when %s access closes without creating submission", async (control) => {
+  it.each(["wallet", "feature"] as const)("records a late hash when %s access closes without creating submission", async (control) => {
     if (control === "wallet") state.walletLinked = false;
-    if (control === "beta") state.betaAllowed = false;
     if (control === "feature") state.featureAllowed = false;
     expect((await report()).status).toBe(202);
     expect(state.candidates.size).toBe(1);

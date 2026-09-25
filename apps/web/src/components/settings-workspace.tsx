@@ -1,10 +1,11 @@
 "use client";
 
 import { usePrivy } from "@privy-io/react-auth";
-import { Bell, BookOpen, Eye, EyeOff, Fingerprint, KeyRound, MonitorSmartphone, ShieldCheck } from "lucide-react";
+import { BookOpen, Eye, EyeOff, Fingerprint, KeyRound, MonitorSmartphone, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { FeedbackPanel } from "./feedback-panel";
+import { NotificationPreferences } from "./notification-preferences";
 import { DataRightsPanel } from "./data-rights-panel";
 import { SecurityCenter } from "./security-center";
 import { AuraTagControls } from "./aura-tag-controls";
@@ -29,7 +30,7 @@ export function SettingsWorkspace() {
     <div className="settingRow"><span className="settingIcon"><KeyRound size={17} /></span><div><strong>Passcode</strong><small>Passkey and wallet recovery controls are shown above. A separate app passcode is not connected.</small></div><span>Unavailable</span></div>
     <div className="settingRow"><span className="settingIcon"><ShieldCheck size={17} /></span><div><strong>Transfer limits and wealth protection</strong><small>Account lock, saved destinations, and limits are shown above.</small></div><span>Active controls</span></div>
     <div className="settingRow"><span className="settingIcon">{hidden ? <EyeOff size={17} /> : <Eye size={17} />}</span><div><strong>Hide balances on this device</strong></div><button className="settingsToggle" onClick={() => privacy(!hidden)}>{hidden ? "Hidden" : "Visible"}</button></div>
-    <div className="settingRow"><span className="settingIcon"><Bell size={17} /></span><div><strong>Notifications</strong><small>Push and email delivery need a connected notification service.</small></div><span>Unavailable</span></div>
+    <NotificationPreferences />
     <div className="settingRow"><span className="settingIcon"><BookOpen size={17} /></span><div><strong>Documents and disclosures</strong></div><Link href="/docs">Open</Link></div>
     <div className="settingRow"><span className="settingIcon"><BookOpen size={17} /></span><div><strong>Statements</strong><small>Issuer statements appear when a provider is connected.</small></div><span>Unavailable</span></div>
     <div className="settingRow"><span className="settingIcon"><Eye size={17} /></span><div><strong>Theme</strong></div><ThemeToggle /></div>

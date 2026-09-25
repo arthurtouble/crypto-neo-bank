@@ -1,19 +1,19 @@
 ---
 title: Fees and alignment
-description: Current costs, future revenue, and Aurel’s no-token position.
+description: Current costs, future revenue, and Aura’s no-token position.
 sidebar:
   order: 1
 ---
 
-Aurel does not currently charge a product fee and does not add a LI.FI integrator fee.
+Aura does not currently charge a product fee and does not add a LI.FI integrator fee.
 
 You may still pay network gas, protocol interest, bridge or exchange costs, price impact, and provider charges. The relevant screen should show known costs before you sign.
 
-Before Aurel activates a subscription, spread, interchange share, referral payment, asset-based fee, or benefit charge, it will disclose the amount or calculation and any conflict it creates.
+Before Aura activates a subscription, spread, interchange share, referral payment, asset-based fee, or benefit charge, it will disclose the amount or calculation and any conflict it creates.
 
-Aurel has no house token. A product should be included because it is useful, understandable, liquid enough, operationally reliable, and suitable for the customer—not because it creates demand for an Aurel asset.
+Aura has no house token. A product should be included because it is useful, understandable, liquid enough, operationally reliable, and suitable for the customer—not because it creates demand for an Aura asset.
 
-## Costs that can exist without an Aurel fee
+## Costs that can exist without an Aura fee
 
 | Cost | Where it comes from |
 | --- | --- |
@@ -24,11 +24,11 @@ Aurel has no house token. A product should be included because it is useful, und
 | Token approval gas | A separate ERC-20 approval transaction |
 | Provider fee | A future banking, card, trading, or benefit provider |
 
-Known costs should appear before signing. Some costs are estimates and can change before execution. A zero Aurel fee does not mean an action is free.
+Known costs should appear before signing. Some costs are estimates and can change before execution. A zero Aura fee does not mean an action is free.
 
 ## Potential revenue model
 
-Aurel may eventually use a mix of:
+Aura may eventually use a mix of:
 
 - a transparent paid membership;
 - a disclosed share of card interchange;
@@ -39,9 +39,9 @@ Aurel may eventually use a mix of:
 
 Any revenue stream must be reviewed for legal treatment, customer value, conflicts, unit economics, refunds, and country availability before activation.
 
-## What Aurel should avoid
+## What Aura should avoid
 
-Aurel should not depend on hidden spread, opaque yield skimming, unlimited token emissions, or presenting referral economics as independent advice. Asset-based pricing can create an incentive to maximize balances even when a product is unsuitable, so it requires especially clear justification and disclosure.
+Aura should not depend on hidden spread, opaque yield skimming, unlimited token emissions, or presenting referral economics as independent advice. Asset-based pricing can create an incentive to maximize balances even when a product is unsuitable, so it requires especially clear justification and disclosure.
 
 ## Rewards are costs
 

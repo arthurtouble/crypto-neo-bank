@@ -1,6 +1,5 @@
 import { generateAuthenticationOptions, type AuthenticationResponseJSON,
   type PublicKeyCredentialRequestOptionsJSON } from "@simplewebauthn/server";
-import { configuredCountries } from "@/lib/beta/access";
 import { verifyPendingPasskeyPossession, type VerifiedActionPasskeyAssertion } from "./action-passkey-assertion";
 import { validateActionPasskeyOrigin } from "./action-passkey-origin";
 
@@ -14,13 +13,10 @@ type Binding = {
   now: Date;
 };
 
-function validateBinding(input: Binding): string[] {
+function validateBinding(input: Binding): void {
   validateActionPasskeyOrigin(input.origin, input.rpId, input.deploymentMode);
   if (!input.subjectReference || !input.sessionReference || !/^[A-Za-z0-9_-]+$/.test(input.credentialId)
     || !Number.isFinite(input.now.getTime())) throw new Error("Invalid passkey possession binding.");
-  const countries = configuredCountries();
-  if (!countries.length) throw new Error("Passkey possession requires a launch-country allowlist.");
-  return countries;
 }
 
 async function digest(value: string): Promise<string> {
@@ -36,7 +32,7 @@ async function possessionBinding(credentialId: string): Promise<string> {
 export async function issuePendingPasskeyPossessionChallenge(db: D1Database, input: Binding): Promise<{
   challengeId: string; challenge: string; expiresAt: string; options: PublicKeyCredentialRequestOptionsJSON;
 }> {
-  const countries = validateBinding(input);
+  validateBinding(input);
   const options = await generateAuthenticationOptions({ rpID: input.rpId,
     allowCredentials: [{ id: input.credentialId }], userVerification: "required", timeout: 120_000 });
   const challengeId = crypto.randomUUID();
@@ -48,13 +44,10 @@ export async function issuePendingPasskeyPossessionChallenge(db: D1Database, inp
     SELECT ?, ?, k.subject_reference, ?, 'credential_change', ?, k.rp_id, ?, ?, ?
     FROM action_passkey_credentials k
     JOIN security_profiles p ON p.subject_reference = k.subject_reference
-    JOIN beta_access b ON b.subject_reference = k.subject_reference
     WHERE k.credential_id = ? AND k.subject_reference = ? AND k.rp_id = ? AND k.status = 'pending'
-      AND p.account_locked = 0 AND b.status = 'active'
-      AND b.country_code IN (SELECT value FROM json_each(?))`)
+      AND p.account_locked = 0`)
     .bind(challengeId, await digest(options.challenge), input.sessionReference, await possessionBinding(input.credentialId),
-      input.origin, expiresAt, now, input.credentialId, input.subjectReference, input.rpId,
-      JSON.stringify(countries)).run();
+      input.origin, expiresAt, now, input.credentialId, input.subjectReference, input.rpId).run();
   if (result.meta.changes !== 1) throw new Error("Pending passkey possession is unavailable for this credential.");
   return { challengeId, challenge: options.challenge, expiresAt, options };
 }
@@ -63,7 +56,7 @@ export async function issuePendingPasskeyPossessionChallenge(db: D1Database, inp
 async function storePendingPasskeyPossession(db: D1Database, input: Binding & {
   challengeId: string; verified: VerifiedActionPasskeyAssertion;
 }): Promise<void> {
-  const countries = validateBinding(input);
+  validateBinding(input);
   if (!input.challengeId || input.verified.credentialId !== input.credentialId
     || input.verified.origin !== input.origin || input.verified.rpId !== input.rpId
     || !/^sha256:[a-f0-9]{64}$/.test(input.verified.challengeDigest)
@@ -77,15 +70,13 @@ async function storePendingPasskeyPossession(db: D1Database, input: Binding & {
         AND consumed_at IS NULL AND created_at <= ? AND expires_at > ?
         AND EXISTS (SELECT 1 FROM security_profiles p WHERE p.subject_reference = action_passkey_challenges.subject_reference
           AND p.account_locked = 0)
-        AND EXISTS (SELECT 1 FROM beta_access b WHERE b.subject_reference = action_passkey_challenges.subject_reference
-          AND b.status = 'active' AND b.country_code IN (SELECT value FROM json_each(?)))
         AND EXISTS (SELECT 1 FROM action_passkey_credentials k
           WHERE k.credential_id = ? AND k.subject_reference = action_passkey_challenges.subject_reference
             AND k.rp_id = action_passkey_challenges.rp_id AND k.status = 'pending'
             AND (? > k.sign_count OR (? = 0 AND k.sign_count = 0)))`)
       .bind(now, input.challengeId, input.verified.challengeDigest, input.subjectReference,
         input.sessionReference, await possessionBinding(input.credentialId), input.rpId, input.origin, now, now,
-        JSON.stringify(countries), input.credentialId, input.verified.newCounter, input.verified.newCounter),
+        input.credentialId, input.verified.newCounter, input.verified.newCounter),
     db.prepare(`UPDATE action_passkey_credentials
       SET sign_count = ?, counter_risk = CASE WHEN ? = 0 THEN 'zero' ELSE 'none' END
       WHERE credential_id = ? AND subject_reference = ? AND rp_id = ? AND status = 'pending'

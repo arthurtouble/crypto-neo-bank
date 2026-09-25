@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+const httpErrors = await vi.hoisted(() => import("@/lib/http/errors"));
 
 const state = vi.hoisted(() => ({ subject: "subject-a", queries: [] as Array<{ sql: string; binds: unknown[] }> }));
 
@@ -12,11 +13,12 @@ vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
     } };
   }
 } } }));
-vi.mock("@/lib/auth/server", () => ({ AuthenticationError: class extends Error {}, requireVerifiedSubject: async () => ({ subjectReference: state.subject }) }));
-vi.mock("@/lib/security/rate-limit", () => ({ RateLimitError: class extends Error {}, enforceRateLimit: async () => undefined }));
+vi.mock("@/lib/auth/server", () => ({ AuthenticationError: httpErrors.AuthenticationError, requireVerifiedSubject: async () => ({ subjectReference: state.subject }) }));
+vi.mock("@/lib/security/rate-limit", () => ({ RateLimitError: httpErrors.RateLimitError, enforceRateLimit: async () => undefined }));
 vi.mock("@/lib/defi/aave", () => ({ getAaveBaseActivity: async () => ({ items: [], partial: false, sourceStatus: "none" }) }));
 
 import { GET } from "@/app/api/activity/route";
+
 
 describe("Activity late transfer observations", () => {
   it("returns subject-owned observations separately from approved intents", async () => {

@@ -1,24 +1,30 @@
 ---
 title: Cookie notice
-description: Browser storage and similar technologies used by Aurel.
+description: The cookies and browser storage Aura uses.
 sidebar:
   order: 6
 ---
 
-**Status:** Pre-launch draft for counsel review
+**Version:** 2026-09-25 · **Status:** Pre-launch draft for counsel review
 
-Aurel expects to use only storage needed to run and protect the product unless you make another choice.
+Aura uses only storage needed to run and protect the service. It does not use advertising or cross-site tracking cookies.
 
-## Essential storage
+## What Aura stores
 
-Essential cookies or browser storage may keep a secure session, remember theme and balance-privacy preferences, maintain wallet or authentication state, prevent abuse, and support Cloudflare and Privy security functions.
+| Name | Set by | Purpose | Lasts |
+| --- | --- | --- | --- |
+| `aurel-theme` | Aura (local storage) | Your light or dark theme | Until you clear it |
+| `aurel-balance-privacy` | Aura (local storage) | Whether balances are hidden on this device | Until you clear it |
+| Privy session and wallet storage | Privy | Keeps you signed in and your embedded wallet available | Session or as set by Privy |
+| Turnstile | Cloudflare | Checks that support requests come from a person | Minutes |
+| Cloudflare security cookies | Cloudflare | Protects Aura from abuse and attacks | Up to a day |
 
-These technologies are necessary for the service requested and may not have an off switch inside Aurel. You can block them in your browser, but sign-in or core features may stop working.
+These are necessary for the service you asked for, so there is no off switch inside Aura. You can block them in your browser, but signing in and core features may stop working.
 
-## Analytics
+## Product analytics
 
-Aurel currently records a small allowlist of product events for reliability and product improvement. Before any non-essential cookie or tracking technology is used, Aurel must identify it, document its provider, purpose, duration, and country use, and obtain consent where required.
+When you are signed in, Aura records a short list of product events on its own servers (for example, "transaction prepared" or "support opened") to improve reliability. This uses no cookies and no third-party analytics service. Deleting your data in Settings erases these events.
 
-## Final inventory
+## Changes
 
-The production cookie and local-storage inventory, lifetimes, provider names, consent control, and contact details must be completed and tested before launch.
+If Aura ever adds a non-essential cookie, this notice will name it, and Aura will ask for consent first where the law requires.

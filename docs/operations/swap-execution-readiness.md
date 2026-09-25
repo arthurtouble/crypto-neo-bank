@@ -1,14 +1,14 @@
 # Swap execution readiness
 
-The development app's visible Swap screen uses Aura's asset picker and governed `/api/swap/*` review, approval, preparation, and status paths. The server checks the linked wallet and obtains LI.FI quotes; only the narrow decoded, reviewed calls described below can receive a preparation ID. `swaps` and `cross_chain` are enabled only in isolated `aura-dev-projections` for invited test accounts. Production flags remain off. No funded end-to-end transaction has been performed by the operator.
+The development app's visible Swap screen uses Aura's asset picker and governed `/api/swap/*` review, approval, preparation, and status paths. The server checks the linked wallet and obtains LI.FI quotes; only the narrow decoded, reviewed calls described below can receive a preparation ID. `swaps` and `cross_chain` are enabled only in isolated `aura-dev-projections`. Production flags remain off. No funded end-to-end transaction has been performed by the operator.
 
 This page describes what the current implementation can prove. It is not a launch approval.
 
 ## What works in code
 
 - LI.FI quotes are fetched without a required API key. Base USDC/WETH can also be quoted directly from the reviewed Uniswap V3 0.01% pool. A review-eligible quote is retained as a short-lived, server-held plan; preview-only quotes are not persisted. Quote metadata alone never authorizes a wallet call.
-- Quote lookup can return preview-only routes with no plan ID. Even when an invited account is eligible for review, the exact retained route must pass the current governed-call validator before it gets a plan ID; an unaudited LI.FI route stays a preview. Review runs that validator again, before creating an intent. Approval, preparation, and submission remain gated by account, country, and financial-action checks.
-- Review binds one plan to one authenticated customer, linked wallet, invite, country, independent USD valuation, source balance, and transaction policy.
+- Quote lookup can return preview-only routes with no plan ID. Even when the `swaps` switch allows review, the exact retained route must pass the current governed-call validator before it gets a plan ID; an unaudited LI.FI route stays a preview. Review runs that validator again, before creating an intent. Approval, preparation, and submission remain gated by account lock, daily limit, and feature-switch checks.
+- Review binds one plan to one authenticated customer, linked wallet, independent USD valuation, source balance, and transaction policy.
 - Preparation releases only an exact, decoded Base ERC-20 source call with sufficient existing allowance. The direct Uniswap route uses SwapRouter02 `multicall(deadline, [exactInputSingle])` for USDC/WETH at fee tier 100. The LI.FI bridge route is limited to Base USDC → Arbitrum or Ethereum USDC through a reviewed Across V4 call. Both routes bind the recipient and minimum output to the review, and recheck route policy, catalog, account controls, rolling limit, source balance, gas reserve, and on-chain simulation. Unknown calls fail closed.
 - If allowance is insufficient, a separate exact-amount ERC-20 approval (or zero reset) can be prepared and tracked. Approval confirmation requires its own canonical, finalized on-chain event. It never confirms the swap or renews an expired quote; the customer must find a fresh route afterward. Approval may persist on chain even if Aurel's record expires.
 - The customer must still confirm any released call in their own wallet. The server does not hold a signing key.
@@ -35,7 +35,7 @@ The isolated Aura development D1 is migrated through `0038_support_assistant_fla
 
 1. Rehearse small self-owned Base USDC/WETH and Base-USDC → Arbitrum-USDC transactions. Cover zero allowance, exact approval, an existing nonzero insufficient allowance, fresh re-quote, rejection, quote expiry, source revert, destination delay, partial/refund status, reorg, account lock, and lost-response recovery. A source receipt alone must never mark a bridge complete.
 2. Have an independent reviewer assess the deployed contract mapping, LI.FI fee forwarder and recipient allowlist, canonical calldata decoder, approval flow, simulation, route economics, status parser, Across event linkage, and receipt verifiers. Confirm legal eligibility of launch jurisdictions and assets.
-3. Only after those checks, make a separate decision about broader beta or production availability. Other bridge tools, assets, tokenized securities, and arbitrary token routes need separate contract/effect audits; a quote in the picker does not make an asset signable.
+3. Only after those checks, make a separate decision about production availability. Other bridge tools, assets, tokenized securities, and arbitrary token routes need separate contract/effect audits; a quote in the picker does not make an asset signable.
 
 Aurel uses LI.FI as the route provider, including when LI.FI selects Across as the underlying bridge. No direct Across Swap API integration or key is planned. See [LI.FI's contract architecture](https://github.com/lifinance/contracts) and [Across event changes](https://docs.across.to/guides/migration/non-evm/indexers).
 

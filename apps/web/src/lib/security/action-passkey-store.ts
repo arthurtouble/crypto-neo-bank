@@ -1,5 +1,4 @@
 import type { VerifiedActionPasskeyAssertion } from "@/lib/security/action-passkey-assertion";
-import { configuredCountries } from "@/lib/beta/access";
 import { VALUATION_POLICY_VERSION } from "@/lib/transactions/valuation";
 
 type ActionPasskeyEvidence = {
@@ -30,8 +29,6 @@ export async function consumeVerifiedActionPasskey(
       !Number.isFinite(input.now.getTime())) {
     throw new Error("Passkey evidence is invalid.");
   }
-  const allowedCountries = configuredCountries();
-  if (!allowedCountries.length) throw new Error("Passkey authorization is not available without a launch-country allowlist.");
   const now = input.now.toISOString();
   const rollingStart = new Date(input.now.getTime() - 86_400_000).toISOString();
   const valuationFreshSince = new Date(input.now.getTime() - 180_000).toISOString();
@@ -46,11 +43,8 @@ export async function consumeVerifiedActionPasskey(
         AND EXISTS (SELECT 1 FROM security_profiles p
           WHERE p.subject_reference = action_passkey_challenges.subject_reference
             AND p.account_locked = 0 AND p.policy_version = action_passkey_challenges.policy_version)
-        AND EXISTS (SELECT 1 FROM beta_access b
-          WHERE b.subject_reference = action_passkey_challenges.subject_reference
-            AND b.status = 'active' AND b.country_code IN (SELECT value FROM json_each(?)))
         AND EXISTS (SELECT 1 FROM feature_flags f
-          WHERE f.flag_key = 'direct_transfers' AND f.enabled = 1 AND f.audience IN ('all', 'beta'))
+          WHERE f.flag_key = 'direct_transfers' AND f.enabled = 1 AND f.audience = 'all')
         AND EXISTS (SELECT 1 FROM transaction_intents i
           WHERE i.intent_id = action_passkey_challenges.intent_id
             AND i.subject_reference = action_passkey_challenges.subject_reference
@@ -98,10 +92,9 @@ export async function consumeVerifiedActionPasskey(
             AND v.price_observed_at >= ? AND v.price_observed_at <= ?
             AND v.valued_at >= ? AND v.valued_at <= ?
             AND v.valued_at >= v.price_observed_at
-            AND EXISTS (SELECT 1 FROM security_profiles p JOIN beta_access b
-              ON b.subject_reference = p.subject_reference
+            AND EXISTS (SELECT 1 FROM security_profiles p
               WHERE p.subject_reference = action_passkey_challenges.subject_reference
-                AND p.daily_limit_usd >= 0 AND b.transaction_limit_usd >= 0
+                AND p.daily_limit_usd >= 0
                 AND EXISTS (SELECT 1 FROM (
                   SELECT COALESCE(SUM(CAST(spent_value.usd_cents AS INTEGER)), 0) AS cents,
                     COALESCE(SUM(CASE WHEN spent_value.valuation_id IS NULL
@@ -120,7 +113,7 @@ export async function consumeVerifiedActionPasskey(
                         AND reserved_call.expires_at > ? AND reserved_call.verification_state != 'failed'))
                 ) reserved_spend WHERE reserved_spend.missing = 0
                   AND reserved_spend.cents + CAST(v.usd_cents AS INTEGER)
-                    <= CAST(MIN(p.daily_limit_usd, b.transaction_limit_usd) * 100 AS INTEGER))))
+                    <= CAST(p.daily_limit_usd * 100 AS INTEGER))))
         AND EXISTS (SELECT 1 FROM action_passkey_credentials k
           WHERE k.credential_id = ? AND k.subject_reference = action_passkey_challenges.subject_reference
             AND k.rp_id = action_passkey_challenges.rp_id AND k.status = 'active'
@@ -128,7 +121,7 @@ export async function consumeVerifiedActionPasskey(
       .bind(now, input.challengeId, input.challengeDigest, input.subjectReference,
         input.sessionReference, input.intentId, input.stepIndex, input.callFingerprint,
         input.policyVersion, input.rpId, input.origin, now, now,
-        JSON.stringify(allowedCountries), now, now, now, now,
+        now, now, now, now,
         VALUATION_POLICY_VERSION, valuationFreshSince, now, valuationFreshSince, now,
         rollingStart, rollingStart, now,
         verified.credentialId, verified.newCounter, verified.newCounter),

@@ -15,7 +15,7 @@ dist/
 .env
 .env.*
 !.env.example
-.aura-dev-invite
+.aura-dev-*
 
 # Test and browser artifacts
 coverage/

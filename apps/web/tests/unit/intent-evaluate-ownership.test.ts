@@ -1,20 +1,17 @@
 import { describe, expect, it, vi } from "vitest";
+const httpErrors = await vi.hoisted(() => import("@/lib/http/errors"));
 
 vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {} } }));
 vi.mock("@/lib/auth/server", () => ({
-  AuthenticationError: class AuthenticationError extends Error {},
+  AuthenticationError: httpErrors.AuthenticationError,
   requireVerifiedSubject: async () => ({ subjectReference: "did:privy:owner", sessionReference: "session-a" })
 }));
-vi.mock("@/lib/beta/access", () => ({
-  BetaAccessError: class BetaAccessError extends Error {},
-  requireBetaAccess: async () => ({ transactionLimitUsd: 25_000 })
-}));
 vi.mock("@/lib/security/rate-limit", () => ({
-  RateLimitError: class RateLimitError extends Error {},
+  RateLimitError: httpErrors.RateLimitError,
   enforceRateLimit: async () => undefined
 }));
 vi.mock("@/lib/auth/wallet", () => {
-  class WalletOwnershipError extends Error {}
+  const WalletOwnershipError = httpErrors.WalletOwnershipError;
   return {
     WalletOwnershipError,
     requireLinkedEvmWallet: async () => { throw new WalletOwnershipError("This wallet is not linked to your account."); }
@@ -22,6 +19,7 @@ vi.mock("@/lib/auth/wallet", () => {
 });
 
 import { POST } from "@/app/api/intents/evaluate/route";
+
 
 describe("intent evaluation wallet boundary", () => {
   it("rejects an unlinked wallet before evaluating policy or writing an intent", async () => {

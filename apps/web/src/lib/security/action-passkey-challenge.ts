@@ -1,4 +1,3 @@
-import { configuredCountries } from "@/lib/beta/access";
 import { VALUATION_POLICY_VERSION } from "@/lib/transactions/valuation";
 import { validateActionPasskeyOrigin } from "./action-passkey-origin";
 
@@ -28,9 +27,6 @@ export async function issueActionPasskeyChallenge(
       !Number.isFinite(input.now.getTime())) {
     throw new Error("Invalid passkey challenge binding.");
   }
-  const countries = configuredCountries();
-  if (!countries.length) throw new Error("Passkey challenge issuance requires a launch-country allowlist.");
-
   const bytes = crypto.getRandomValues(new Uint8Array(32));
   const challenge = btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
   const hash = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(challenge)));
@@ -53,7 +49,6 @@ export async function issueActionPasskeyChallenge(
       AND w.subject_reference = i.subject_reference AND w.chain_family = 'evm'
       AND lower(w.address) = lower(c.wallet_address)
     JOIN security_profiles p ON p.subject_reference = i.subject_reference
-    JOIN beta_access b ON b.subject_reference = i.subject_reference
     WHERE i.intent_id = ? AND i.subject_reference = ? AND i.intent_type = 'transfer'
       AND i.chain_id = 8453 AND i.status = 'reviewed' AND i.expires_at > ?
       AND (i.release_at IS NULL OR i.release_at <= ?)
@@ -65,9 +60,8 @@ export async function issueActionPasskeyChallenge(
       AND c.semantic_action IN ('native_transfer', 'erc20_transfer')
       AND lower(json_extract(c.expected_effect_json, '$.recipient')) = lower(json_extract(i.request_json, '$.destination'))
       AND p.account_locked = 0 AND p.policy_version = ?
-      AND b.status = 'active' AND b.country_code IN (SELECT value FROM json_each(?))
       AND EXISTS (SELECT 1 FROM feature_flags f WHERE f.flag_key = 'direct_transfers'
-        AND f.enabled = 1 AND f.audience IN ('all', 'beta'))
+        AND f.enabled = 1 AND f.audience = 'all')
       AND EXISTS (SELECT 1 FROM action_passkey_credentials k WHERE k.subject_reference = i.subject_reference
         AND k.rp_id = ? AND k.status = 'active')
       AND EXISTS (SELECT 1 FROM address_book_entries a WHERE a.subject_reference = i.subject_reference
@@ -82,11 +76,11 @@ export async function issueActionPasskeyChallenge(
           WHEN 'erc20_transfer' THEN '8453:' || lower(json_extract(c.expected_effect_json, '$.token')) ELSE '' END
         AND v.price_observed_at >= ? AND v.price_observed_at <= ?
         AND v.valued_at >= ? AND v.valued_at <= ? AND v.valued_at >= v.price_observed_at
-        AND p.daily_limit_usd >= 0 AND b.transaction_limit_usd >= 0
-        AND CAST(v.usd_cents AS INTEGER) <= CAST(MIN(p.daily_limit_usd, b.transaction_limit_usd) * 100 AS INTEGER))`)
+        AND p.daily_limit_usd >= 0
+        AND CAST(v.usd_cents AS INTEGER) <= CAST(p.daily_limit_usd * 100 AS INTEGER))`)
     .bind(challengeId, digest, input.sessionReference, input.rpId, input.origin, maxExpiry, now,
       input.intentId, input.subjectReference, now, now, input.stepIndex, input.callFingerprint,
-      now, input.policyVersion, JSON.stringify(countries), input.rpId, now,
+      now, input.policyVersion, input.rpId, now,
       VALUATION_POLICY_VERSION, freshSince, now, freshSince, now).run();
   if (result.meta.changes !== 1) throw new Error("This action is not eligible for a passkey challenge.");
   // The selected expiry is bounded by the reviewed intent and prepared call. It is

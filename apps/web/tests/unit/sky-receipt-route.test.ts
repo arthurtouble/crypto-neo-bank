@@ -1,15 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+const httpErrors = await vi.hoisted(() => import("@/lib/http/errors"));
 
 const state = vi.hoisted(() => ({ authenticated: false, linked: true }));
 vi.mock("@/lib/auth/server", () => {
-  class AuthenticationError extends Error {}
+  const AuthenticationError = httpErrors.AuthenticationError;
   return { AuthenticationError, requireVerifiedSubject: async () => {
     if (!state.authenticated) throw new AuthenticationError();
     return { subjectReference: "subject-a" };
   } };
 });
 vi.mock("@/lib/auth/wallet", () => {
-  class WalletOwnershipError extends Error {}
+  const WalletOwnershipError = httpErrors.WalletOwnershipError;
   return { WalletOwnershipError, requireLinkedEvmWallet: async (_subject: string, wallet: string) => {
     if (!state.linked) throw new WalletOwnershipError();
     return wallet;
@@ -18,6 +19,7 @@ vi.mock("@/lib/auth/wallet", () => {
 vi.mock("@/lib/transactions/chain-observation", () => ({ observeTransaction: async () => ({ status: "pending" }) }));
 
 import { POST } from "@/app/api/defi/sky/receipt/route";
+
 
 const request = (amount = "12.5") => new Request("https://aura.test/api/defi/sky/receipt", { method: "POST",
   body: JSON.stringify({ action: "deposit", sender: "0x1111111111111111111111111111111111111111",

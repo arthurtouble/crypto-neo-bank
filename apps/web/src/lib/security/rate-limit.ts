@@ -1,6 +1,6 @@
-export class RateLimitError extends Error {
-  constructor(public readonly retryAfterSeconds: number) { super("Too many requests. Try again shortly."); this.name = "RateLimitError"; }
-}
+import { RateLimitError } from "@/lib/http/errors";
+
+export { RateLimitError };
 
 export async function enforceRateLimit(db: D1Database, input: { namespace: string; subject: string; limit: number; windowSeconds: number; now?: number }) {
   const now = input.now ?? Date.now();

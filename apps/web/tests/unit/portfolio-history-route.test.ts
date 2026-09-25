@@ -1,22 +1,23 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+const httpErrors = await vi.hoisted(() => import("@/lib/http/errors"));
 
 const wallet = "8453:0x1111111111111111111111111111111111111111";
 const external = "8453:0x2222222222222222222222222222222222222222";
-const state = vi.hoisted(() => ({ authorized: true, betaAllowed: true, rebuildHeld: false, legacyEvidence: false, accounts: [] as Array<{ accountId: string; origin: string }>, rows: [] as Record<string, unknown>[], checkpoints: [] as Record<string, unknown>[], nonfinal: [] as Record<string, unknown>[], calls: [] as Array<{ sql: string; values: unknown[] }>, aaveUnavailable: false, markerVersion: 1 as number | null }));
+const state = vi.hoisted(() => ({ authorized: true, rebuildHeld: false, legacyEvidence: false, accounts: [] as Array<{ accountId: string; origin: string }>, rows: [] as Record<string, unknown>[], checkpoints: [] as Record<string, unknown>[], nonfinal: [] as Record<string, unknown>[], calls: [] as Array<{ sql: string; values: unknown[] }>, aaveUnavailable: false, markerVersion: 1 as number | null }));
 vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: { prepare(sql: string) { const query = { values: [] as unknown[], bind(...values: unknown[]) { this.values = values; state.calls.push({ sql, values }); return this; }, async first() { if (sql.includes("portfolio_publications")) return state.rebuildHeld || state.legacyEvidence && sql.includes("sourceEvidenceVersion") ? null : { calculation_version: state.markerVersion }; return { version: state.rows.length ? Math.max(...state.rows.map((row) => Number(row.calculation_version))) : null }; }, async all() { if (sql.includes("portfolio_daily_results")) return { results: state.rows.filter((row) => row.calculation_version === this.values[1]) }; if (sql.includes("portfolio_source_checkpoints")) return { results: state.checkpoints }; if (sql.includes("portfolio_events")) return { results: state.nonfinal }; return { results: [] }; } }; return query; } } } }));
-vi.mock("@/lib/auth/server", () => { class AuthenticationError extends Error {} return { AuthenticationError, requireVerifiedSubject: async () => { if (!state.authorized) throw new AuthenticationError(); return { subjectReference: "subject-a" }; } }; });
-vi.mock("@/lib/beta/access", () => { class BetaAccessError extends Error { code = "beta_access_required"; } return { BetaAccessError, requireBetaAccess: async () => { if (!state.betaAllowed) throw new BetaAccessError(); } }; });
-vi.mock("@/lib/security/rate-limit", () => ({ RateLimitError: class extends Error {}, enforceRateLimit: async () => undefined }));
+vi.mock("@/lib/auth/server", () => { const AuthenticationError = httpErrors.AuthenticationError; return { AuthenticationError, requireVerifiedSubject: async () => { if (!state.authorized) throw new AuthenticationError(); return { subjectReference: "subject-a" }; } }; });
+vi.mock("@/lib/security/rate-limit", () => ({ RateLimitError: httpErrors.RateLimitError, enforceRateLimit: async () => undefined }));
 vi.mock("@/lib/portfolio/accounts", () => ({ resolvePortfolioAccounts: async () => state.accounts }));
 vi.mock("@/lib/portfolio/aave-source", () => ({ readCurrentAaveLegs: async () => state.aaveUnavailable ? { legs: [], status: "unavailable", reason: "offline" } : { legs: [], status: "complete", reason: null } }));
 
 import { GET } from "@/app/api/portfolio/history/route";
 
+
 type HistoryBody = { points: Array<{ day: string; netValueUsd: string | null; twrIndex: string | null; status: string; reasons: string[] }>; currentAave: { status: string; reason: string | null }; embeddedWalletCount: number; externalWallets: string[]; calculationVersion: number };
 async function readBody(response: Response): Promise<HistoryBody> { return response.json() as Promise<HistoryBody>; }
 function request(range = "7D") { return new Request(`https://aurel.test/api/portfolio/history?range=${range}`); }
 function lastCompletedDay() { const now = new Date(); return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) - 86_400_000).toISOString().slice(0, 10); }
-beforeEach(() => { state.authorized = true; state.betaAllowed = true; state.rebuildHeld = false; state.legacyEvidence = false; state.accounts = [{ accountId: wallet, origin: "embedded" }]; state.rows = []; state.checkpoints = []; state.nonfinal = []; state.calls = []; state.aaveUnavailable = false; state.markerVersion = 1; });
+beforeEach(() => { state.authorized = true; state.rebuildHeld = false; state.legacyEvidence = false; state.accounts = [{ accountId: wallet, origin: "embedded" }]; state.rows = []; state.checkpoints = []; state.nonfinal = []; state.calls = []; state.aaveUnavailable = false; state.markerVersion = 1; });
 
 describe("portfolio history read boundary", () => {
   it("hides a pre-upgrade publication despite complete old checkpoints", async () => {
@@ -46,12 +47,6 @@ describe("portfolio history read boundary", () => {
     state.authorized = true;
     expect((await GET(request("ALL"))).status).toBe(400);
     expect((await GET(request("1M"))).status).toBe(400);
-  });
-
-  it("enforces beta access before reading portfolio accounts", async () => {
-    state.betaAllowed = false;
-    expect((await GET(request())).status).toBe(403);
-    expect(state.calls).toEqual([]);
   });
 
   it("returns null-valued gap days and fresh Aave unavailability, never today's modeled balance", async () => {

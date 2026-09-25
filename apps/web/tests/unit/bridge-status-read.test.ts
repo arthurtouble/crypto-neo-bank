@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+const httpErrors = await vi.hoisted(() => import("@/lib/http/errors"));
 
 const intentId = "00000000-0000-4000-8000-000000000001";
 const fixture = vi.hoisted(() => ({ source: "confirmed", destination: "partial", status: "submitted" }));
@@ -12,10 +13,11 @@ vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
       destination_transaction_hash: `0x${"b".repeat(64)}` };
   } }; } }; }
 } } }));
-vi.mock("@/lib/auth/server", () => ({ AuthenticationError: class AuthenticationError extends Error {},
+vi.mock("@/lib/auth/server", () => ({ AuthenticationError: httpErrors.AuthenticationError,
   requireVerifiedSubject: async () => ({ subjectReference: "subject-a" }) }));
 
 import { GET } from "@/app/api/intents/status/route";
+
 
 describe("bridge status", () => {
   beforeEach(() => { fixture.source = "confirmed"; fixture.destination = "partial"; fixture.status = "submitted"; });

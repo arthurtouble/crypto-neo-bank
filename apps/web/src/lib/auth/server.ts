@@ -1,5 +1,6 @@
 import { PrivyClient } from "@privy-io/node";
 import { PRIVY_APP_ID } from "@/config/client";
+import { AuthenticationError } from "@/lib/http/errors";
 
 export type VerifiedSubject = {
   subjectReference: string;
@@ -7,12 +8,7 @@ export type VerifiedSubject = {
   expiresAt: number;
 };
 
-export class AuthenticationError extends Error {
-  constructor(message = "A valid Privy session is required.") {
-    super(message);
-    this.name = "AuthenticationError";
-  }
-}
+export { AuthenticationError };
 
 export async function requireVerifiedSubject(request: Request): Promise<VerifiedSubject> {
   const token = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");

@@ -4,22 +4,26 @@ type ProviderEventMessage = {
   payloadSha256: string;
 };
 
+import { applyProviderEvent } from "@aurel/provider-projections";
 import { checkDependencies, recordDeadLetter, runScheduledReconciliation } from "./reconciliation";
 
 async function processMessage(env: Cloudflare.Env, message: Message<ProviderEventMessage>): Promise<void> {
   const { event } = message.body;
+  // Apply first: a failure here is retried and never marks the receipt processed.
+  const result = await applyProviderEvent(env.PROJECTION_DB, event);
   const subjectReference = event.subjectReference ?? `unresolved:${event.providerObjectId}`;
-  const refreshId = crypto.randomUUID();
+  const now = new Date().toISOString();
   await env.PROJECTION_DB.batch([
     env.PROJECTION_DB.prepare(`
       INSERT OR IGNORE INTO projection_refreshes
-      (refresh_id, event_id, subject_reference, source_name, source_external_id, requested_at, status)
-      VALUES (?, ?, ?, ?, ?, ?, 'queued')
-    `).bind(refreshId, event.id, subjectReference, event.provider, event.providerObjectId, new Date().toISOString()),
+      (refresh_id, event_id, subject_reference, source_name, source_external_id, requested_at, completed_at, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 'completed')
+    `).bind(crypto.randomUUID(), event.id, subjectReference, event.provider, event.providerObjectId, now, now),
     env.PROJECTION_DB.prepare("UPDATE webhook_receipts SET processing_status = 'processed', processed_at = ?, last_error = NULL WHERE event_id = ?")
-      .bind(new Date().toISOString(), event.id)
+      .bind(now, event.id)
   ]);
-  console.log(JSON.stringify({ message: "provider event processed", queueMessageId: message.id, eventId: event.id, provider: event.provider, eventType: event.type, attempt: message.attempts }));
+  console.log(JSON.stringify({ message: "provider event processed", queueMessageId: message.id, eventId: event.id, provider: event.provider,
+    eventType: event.type, attempt: message.attempts, projection: result }));
 }
 
 export default {
@@ -27,7 +31,7 @@ export default {
     return Response.json({ status: "ok", service: "aurel-provider-event-consumer", financialDataAuthority: "providers-and-chains" });
   },
   async queue(batch, env): Promise<void> {
-    if (batch.queue === "aurel-provider-events-dlq") {
+    if (batch.queue.endsWith("-provider-events-dlq")) {
       for (const message of batch.messages) {
         try {
           await recordDeadLetter(env.PROJECTION_DB, message);

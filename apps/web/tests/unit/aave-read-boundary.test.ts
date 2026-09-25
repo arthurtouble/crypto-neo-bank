@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+const httpErrors = await vi.hoisted(() => import("@/lib/http/errors"));
 
 const state = vi.hoisted(() => ({
-  AuthenticationError: class AuthenticationError extends Error {},
-  WalletOwnershipError: class WalletOwnershipError extends Error {},
+  AuthenticationError: httpErrors.AuthenticationError,
+  WalletOwnershipError: httpErrors.WalletOwnershipError,
   authenticated: false,
   linked: false,
   marketCalls: 0,
@@ -29,6 +30,7 @@ vi.mock("@/lib/defi/aave", () => ({
 
 import { GET as markets } from "@/app/api/defi/aave/markets/route";
 import { GET as positions } from "@/app/api/defi/aave/positions/route";
+
 
 const address = "0x2222222222222222222222222222222222222222";
 const request = (path: string) => new Request(`https://aura.test${path}`);

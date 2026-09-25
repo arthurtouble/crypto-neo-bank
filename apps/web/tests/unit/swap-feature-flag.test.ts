@@ -4,7 +4,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { featureEnabled, featureKeys, requireFeature, FeatureUnavailableError } from "@/lib/features/flags";
 
-function database(enabled: number | null, audience = "beta"): D1Database {
+function database(enabled: number | null, audience = "all"): D1Database {
   return {
     prepare: () => ({ bind: () => ({ first: async () => enabled === null ? null : { enabled, audience } }) })
   } as unknown as D1Database;

@@ -40,7 +40,6 @@ function d1(connection: DatabaseSync): D1Database {
 }
 
 beforeEach(() => {
-  vi.stubEnv("BETA_ALLOWED_COUNTRIES", "PT");
   sqlite = new DatabaseSync(":memory:");
   sqlite.exec("PRAGMA foreign_keys = ON");
   for (const file of readdirSync(root).filter((name) => name.endsWith(".sql")).sort())
@@ -49,8 +48,6 @@ beforeEach(() => {
       VALUES ('subject-a','subject-a','2026-09-23T00:00:00.000Z','2026-09-23T00:00:00.000Z');
     INSERT INTO security_profiles (subject_reference, updated_at)
       VALUES ('subject-a','2026-09-23T00:00:00.000Z');
-    INSERT INTO beta_access (subject_reference, cohort, country_code, status, transaction_limit_usd, terms_version, terms_accepted_at, activated_at, updated_at)
-      VALUES ('subject-a','test','PT','active',25000,'v1','2026-09-23T00:00:00.000Z','2026-09-23T00:00:00.000Z','2026-09-23T00:00:00.000Z');
     INSERT INTO action_passkey_challenges (challenge_id, challenge_digest, subject_reference, session_reference, purpose, rp_id, origin, expires_at, created_at)
       VALUES ('challenge-1','${digest}','subject-a','session-a','registration','app.aurel.test','https://app.aurel.test','2026-09-23T00:05:00.000Z','2026-09-23T00:00:00.000Z');`);
   database = d1(sqlite);
@@ -124,12 +121,8 @@ describe("pending action passkey registration store", () => {
     expect(count()).toBe(0);
   });
 
-  it("rechecks lock, beta, and country at consumption", async () => {
+  it("rechecks the account lock at consumption", async () => {
     sqlite.exec("UPDATE security_profiles SET account_locked=1");
-    await expect(storePendingActionPasskeyRegistration(database, input)).rejects.toThrow();
-    sqlite.exec("UPDATE security_profiles SET account_locked=0; UPDATE beta_access SET status='suspended'");
-    await expect(storePendingActionPasskeyRegistration(database, input)).rejects.toThrow();
-    sqlite.exec("UPDATE beta_access SET status='active', country_code='US'");
     await expect(storePendingActionPasskeyRegistration(database, input)).rejects.toThrow();
     expect(consumed()).toBeNull();
   });

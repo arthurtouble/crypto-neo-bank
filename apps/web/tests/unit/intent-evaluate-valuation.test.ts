@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+const httpErrors = await vi.hoisted(() => import("@/lib/http/errors"));
 
 const state = vi.hoisted(() => ({ writes: [] as Array<{ sql: string; values: unknown[] }>, spent: { spent_cents: 0, missing: 0 }, stepUpThresholdUsd: 10_000 }));
 vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
@@ -17,14 +18,14 @@ vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
     return [];
   }
 } } }));
-vi.mock("@/lib/auth/server", () => ({ AuthenticationError: class extends Error {}, requireVerifiedSubject: async () => ({ subjectReference: "subject-a", sessionReference: "session-a" }) }));
-vi.mock("@/lib/auth/wallet", () => ({ WalletOwnershipError: class extends Error {}, requireLinkedEvmWallet: async () => "0x2222222222222222222222222222222222222222" }));
-vi.mock("@/lib/beta/access", () => ({ BetaAccessError: class extends Error {}, requireBetaAccess: async () => ({ transactionLimitUsd: 25000 }) }));
-vi.mock("@/lib/security/rate-limit", () => ({ RateLimitError: class extends Error {}, enforceRateLimit: async () => undefined }));
+vi.mock("@/lib/auth/server", () => ({ AuthenticationError: httpErrors.AuthenticationError, requireVerifiedSubject: async () => ({ subjectReference: "subject-a", sessionReference: "session-a" }) }));
+vi.mock("@/lib/auth/wallet", () => ({ WalletOwnershipError: httpErrors.WalletOwnershipError, requireLinkedEvmWallet: async () => "0x2222222222222222222222222222222222222222" }));
+vi.mock("@/lib/security/rate-limit", () => ({ RateLimitError: httpErrors.RateLimitError, enforceRateLimit: async () => undefined }));
 vi.mock("@/lib/profile/ensure", () => ({ ensureSubjectProfile: async () => undefined }));
-vi.mock("@/lib/features/flags", () => ({ FeatureUnavailableError: class extends Error {}, requireFeature: async () => undefined }));
+vi.mock("@/lib/features/flags", () => ({ FeatureUnavailableError: httpErrors.FeatureUnavailableError, requireFeature: async () => undefined }));
 
 import { POST } from "@/app/api/intents/evaluate/route";
+
 
 function request(type = "transfer", asset = "USDC", amount = "30000") {
   return new Request("https://aurel.test/api/intents/evaluate", { method: "POST", body: JSON.stringify({

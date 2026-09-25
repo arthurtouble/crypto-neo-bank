@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+const httpErrors = await vi.hoisted(() => import("@/lib/http/errors"));
 import { DatabaseSync } from "node:sqlite";
 import { encodeEventTopics, erc20Abi } from "viem";
 import { verifyExpectedEffect } from "@/lib/transactions/effects";
@@ -113,7 +114,7 @@ vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
     } };
   }
 } } }));
-vi.mock("@/lib/auth/server", () => ({ AuthenticationError: class AuthenticationError extends Error {}, requireVerifiedSubject: async () => ({ subjectReference: routeState.subject }) }));
+vi.mock("@/lib/auth/server", () => ({ AuthenticationError: httpErrors.AuthenticationError, requireVerifiedSubject: async () => ({ subjectReference: routeState.subject }) }));
 vi.mock("@/lib/transactions/chain-observation", async (importOriginal) => ({ ...await importOriginal<typeof import("@/lib/transactions/chain-observation")>(), observeTransaction: async (_chainId: number, transactionHash: string) => {
   const observation = routeState.observations[transactionHash] ?? routeState.observation;
   if (observation instanceof Error) throw observation;
@@ -128,6 +129,7 @@ vi.mock("@/lib/swap/destination-evidence", async (importOriginal) => {
 vi.mock("@/lib/swap/lifi-status", () => ({ readLifiTransferStatus: async () => routeState.lifiStatus }));
 
 import { POST as reconcile } from "@/app/api/intents/reconcile/route";
+
 
 const sender = "0x000000000000000000000000000000000000dEaD";
 const recipient = "0x0000000000000000000000000000000000000001";

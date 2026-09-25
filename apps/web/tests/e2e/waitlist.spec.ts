@@ -9,6 +9,5 @@ test("old waitlist opens the browsable product", async ({ page }) => {
 
 test("closed public intake does not collect an email", async ({ request }) => {
   const response = await request.post("/api/growth/waitlist", { data: { email: "person@example.com" } });
-  expect(response.status()).toBe(410);
-  expect(await response.json()).toMatchObject({ error: "waitlist_closed" });
+  expect(response.status()).toBe(404);
 });

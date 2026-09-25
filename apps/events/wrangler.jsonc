@@ -36,5 +36,24 @@
     "enabled": true,
     "logs": { "enabled": true, "head_sampling_rate": 1 },
     "traces": { "enabled": true, "head_sampling_rate": 0.01 }
+  },
+  "env": {
+    "dev": {
+      "name": "aura-dev-provider-event-consumer",
+      "d1_databases": [{
+        "binding": "PROJECTION_DB",
+        "database_name": "aura-dev-projections",
+        "database_id": "27acaa63-44c8-4422-9b32-f4f78c35aabd",
+        "migrations_dir": "../../infra/d1/migrations"
+      }],
+      "queues": {
+        "consumers": [
+          { "queue": "aura-dev-provider-events", "max_batch_size": 10, "max_batch_timeout": 5, "max_retries": 5, "dead_letter_queue": "aura-dev-provider-events-dlq" },
+          { "queue": "aura-dev-provider-events-dlq", "max_batch_size": 10, "max_batch_timeout": 5, "max_retries": 2 }
+        ]
+      },
+      "triggers": { "crons": ["*/5 * * * *"] },
+      "observability": { "enabled": true, "logs": { "enabled": true, "head_sampling_rate": 1 }, "traces": { "enabled": true, "head_sampling_rate": 0.01 } }
+    }
   }
 }

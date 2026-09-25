@@ -5,7 +5,7 @@ sidebar:
   order: 8
 ---
 
-**Status:** Pre-launch draft for counsel review
+**Version:** 2026-09-25 · **Status:** Pre-launch draft for counsel review
 
 ## How to complain
 
@@ -15,10 +15,10 @@ The final complaints email and postal address must be added before launch.
 
 ## What happens next
 
-Aurel will:
+Aura will:
 
 1. acknowledge the complaint;
-2. identify whether Aurel or a provider owns the issue;
+2. identify whether Aura or a provider owns the issue;
 3. preserve relevant records;
 4. investigate fairly;
 5. explain the outcome and any remedy; and

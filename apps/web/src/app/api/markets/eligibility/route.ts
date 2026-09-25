@@ -1,16 +1,15 @@
 import { env } from "cloudflare:workers";
-import { AuthenticationError, requireVerifiedSubject } from "@/lib/auth/server";
-import { BetaAccessError, requireBetaAccess } from "@/lib/beta/access";
+import { requireVerifiedSubject } from "@/lib/auth/server";
+import { errorResponse, route } from "@/lib/http/route";
 import {
   evaluateRegulatedEligibility, type DocumentAcknowledgement, type InstrumentEligibilityPolicy
 } from "@/lib/markets/eligibility";
 import { createUnavailableEligibilityProvider, type EligibilityProvider } from "@/lib/markets/eligibility-provider";
 import { getXstocksCatalogPage } from "@/lib/markets/xstocks";
-import { enforceRateLimit, RateLimitError } from "@/lib/security/rate-limit";
+import { enforceRateLimit } from "@/lib/security/rate-limit";
 
 type Dependencies = {
   authenticate: (request: Request) => Promise<{ subjectReference: string }>;
-  requireAccess: (subjectReference: string) => Promise<unknown>;
   rateLimit: (subjectReference: string) => Promise<unknown>;
   resolvePolicy: (instrumentId: string) => Promise<InstrumentEligibilityPolicy | null>;
   provider: EligibilityProvider;
@@ -31,30 +30,24 @@ function parseRequest(request: Request): string {
 }
 
 export function createEligibilityHandler(dependencies: Dependencies) {
-  return async function getEligibility(request: Request) {
-    const traceId = crypto.randomUUID();
-    try {
-      const subject = await dependencies.authenticate(request);
-      await dependencies.requireAccess(subject.subjectReference);
-      await dependencies.rateLimit(subject.subjectReference);
-      const instrumentId = parseRequest(request);
-      const policy = await dependencies.resolvePolicy(instrumentId);
-      if (!policy) throw new EligibilityApiError("instrument_not_found");
-      const [providerDecision, acknowledgements] = await Promise.all([
-        dependencies.provider.evaluate({ subjectReference: subject.subjectReference, instrumentId }),
-        dependencies.acknowledgements(subject.subjectReference)
-      ]);
-      const result = evaluateRegulatedEligibility({ subjectReference: subject.subjectReference, instrumentId, policy, providerDecision, acknowledgements, now: dependencies.now() });
-      return Response.json({ ...result, authority: "Contracted eligibility provider decision plus reviewed instrument policy; authentication and profile fields are not eligibility" }, { headers: { "Cache-Control": "no-store" } });
-    } catch (error) {
-      if (error instanceof AuthenticationError) return Response.json({ error: "unauthorized", traceId }, { status: 401, headers: { "Cache-Control": "no-store" } });
-      if (error instanceof BetaAccessError) return Response.json({ error: error.code, traceId }, { status: 403, headers: { "Cache-Control": "no-store" } });
-      if (error instanceof RateLimitError) return Response.json({ error: "rate_limited", traceId }, { status: 429, headers: { "Cache-Control": "no-store", "Retry-After": String(error.retryAfterSeconds) } });
-      if (error instanceof EligibilityApiError) return Response.json({ error: error.code, traceId }, { status: error.code === "instrument_not_found" ? 404 : 400, headers: { "Cache-Control": "no-store" } });
-      console.error(JSON.stringify({ level: "error", event: "markets.eligibility.failed", traceId, message: error instanceof Error ? error.message : "unknown" }));
-      return Response.json({ error: "eligibility_unavailable", traceId }, { status: 503, headers: { "Cache-Control": "no-store" } });
-    }
-  };
+  return route("markets.eligibility", {
+    unavailable: "eligibility_unavailable",
+    onError: (error, context) => error instanceof EligibilityApiError
+      ? errorResponse(error.code === "instrument_not_found" ? 404 : 400, error.code, context)
+      : undefined
+  }, async (request: Request) => {
+    const subject = await dependencies.authenticate(request);
+    await dependencies.rateLimit(subject.subjectReference);
+    const instrumentId = parseRequest(request);
+    const policy = await dependencies.resolvePolicy(instrumentId);
+    if (!policy) throw new EligibilityApiError("instrument_not_found");
+    const [providerDecision, acknowledgements] = await Promise.all([
+      dependencies.provider.evaluate({ subjectReference: subject.subjectReference, instrumentId }),
+      dependencies.acknowledgements(subject.subjectReference)
+    ]);
+    const result = evaluateRegulatedEligibility({ subjectReference: subject.subjectReference, instrumentId, policy, providerDecision, acknowledgements, now: dependencies.now() });
+    return Response.json({ ...result, authority: "Contracted eligibility provider decision plus reviewed instrument policy; authentication and profile fields are not eligibility" });
+  });
 }
 
 async function resolvePublicPolicy(instrumentId: string): Promise<InstrumentEligibilityPolicy | null> {
@@ -79,7 +72,6 @@ async function readAcknowledgements(subjectReference: string): Promise<DocumentA
 
 export const GET = createEligibilityHandler({
   authenticate: requireVerifiedSubject,
-  requireAccess: (subjectReference) => requireBetaAccess(env.PROJECTION_DB, subjectReference),
   rateLimit: (subjectReference) => enforceRateLimit(env.PROJECTION_DB, { namespace: "markets_eligibility", subject: subjectReference, limit: 20, windowSeconds: 600 }),
   resolvePolicy: resolvePublicPolicy,
   provider: createUnavailableEligibilityProvider(), acknowledgements: readAcknowledgements, now: Date.now

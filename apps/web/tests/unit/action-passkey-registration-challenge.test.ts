@@ -11,7 +11,6 @@ let sqlite: DatabaseSync;
 let database: D1Database;
 
 beforeEach(() => {
-  vi.stubEnv("BETA_ALLOWED_COUNTRIES", "PT");
   sqlite = new DatabaseSync(":memory:");
   sqlite.exec("PRAGMA foreign_keys = ON");
   for (const file of readdirSync(root).filter((name) => name.endsWith(".sql")).sort())
@@ -20,8 +19,7 @@ beforeEach(() => {
       VALUES ('subject-a','subject-a','2026-09-23T00:00:00.000Z','2026-09-23T00:00:00.000Z');
     INSERT INTO security_profiles (subject_reference, updated_at)
       VALUES ('subject-a','2026-09-23T00:00:00.000Z');
-    INSERT INTO beta_access (subject_reference, cohort, country_code, status, transaction_limit_usd, terms_version, terms_accepted_at, activated_at, updated_at)
-      VALUES ('subject-a','test','PT','active',25000,'v1','2026-09-23T00:00:00.000Z','2026-09-23T00:00:00.000Z','2026-09-23T00:00:00.000Z');`);
+`);
   database = { prepare(sql: string) {
     let values: unknown[] = [];
     return { bind(...bound: unknown[]) { values = bound; return this; }, async run() {
@@ -57,21 +55,15 @@ describe("pending passkey registration challenge", () => {
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM action_passkey_challenges").get()).toMatchObject({ count: 0 });
   });
 
-  it("rejects a locked, suspended, or unavailable-country subject", async () => {
+  it("rejects a locked subject", async () => {
     sqlite.exec("UPDATE security_profiles SET account_locked=1");
-    await expect(issuePendingRegistrationChallenge(database, input)).rejects.toThrow();
-    sqlite.exec("UPDATE security_profiles SET account_locked=0; UPDATE beta_access SET status='suspended'");
-    await expect(issuePendingRegistrationChallenge(database, input)).rejects.toThrow();
-    sqlite.exec("UPDATE beta_access SET status='active', country_code='US'");
     await expect(issuePendingRegistrationChallenge(database, input)).rejects.toThrow();
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM action_passkey_challenges").get()).toMatchObject({ count: 0 });
   });
 
-  it("rejects a Worker host in production or an unconfigured country policy", async () => {
+  it("rejects a Worker host in production", async () => {
     const host = "aurel-financial-os.aurel-events.workers.dev";
     await expect(issuePendingRegistrationChallenge(database, { ...input, origin: `https://${host}`, rpId: host, deploymentMode: "production" })).rejects.toThrow();
-    vi.stubEnv("BETA_ALLOWED_COUNTRIES", "");
-    await expect(issuePendingRegistrationChallenge(database, input)).rejects.toThrow();
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM action_passkey_challenges").get()).toMatchObject({ count: 0 });
   });
 });
