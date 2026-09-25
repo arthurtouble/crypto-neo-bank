@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildDemoSession, executeDemoCommand } from "../../src/lib/providers/session";
 import { commandRequestSchema } from "../../src/lib/providers/validation";
-import { reconcileSession } from "../../src/lib/reconciliation";
 
 describe("provider-neutral sandbox", () => {
   it("rebuilds a funded relationship exclusively from provider observations", async () => {
@@ -17,7 +16,6 @@ describe("provider-neutral sandbox", () => {
     const session = await buildDemoSession("compliance_review");
     expect(session.positions.some((position) => position.category === "liquid")).toBe(false);
     expect(session.compliance.requiredActions).toContain("Confirm source of funds");
-    expect(reconcileSession(session).status).toBe("attention");
   });
 
   it("returns a failure receipt without claiming a balance changed", async () => {

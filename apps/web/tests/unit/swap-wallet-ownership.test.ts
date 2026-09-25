@@ -29,7 +29,7 @@ vi.mock("@/lib/swap/catalog", () => ({
   resolveCatalogAsset: async () => ({ id: "8453:native", chainId: 8453, verification: "verified", eligibility: "eligible" })
 }));
 vi.mock("@/lib/swap/lifi", () => ({
-  getSwapQuotes: async () => { fixture.quoteCalls++; return { quotes: [] }; }
+  getSwapQuotePlans: async () => { fixture.quoteCalls++; return []; }
 }));
 
 import { POST } from "@/app/api/swap/quote/route";

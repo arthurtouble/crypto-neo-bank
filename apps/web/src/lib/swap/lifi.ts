@@ -534,10 +534,6 @@ export function createLifiQuoteAdapter(dependencies: Dependencies = {}): LifiQuo
   });
 }
 
-export function getSwapQuotes(input: SwapQuoteInput, assets: { from: CatalogAsset; to: CatalogAsset }): Promise<ValidatedSwapQuote[]> {
-  return createLifiQuoteAdapter().quote(input, assets);
-}
-
 export function getSwapQuotePlans(input: SwapQuoteInput, assets: { from: CatalogAsset; to: CatalogAsset }): Promise<LifiQuoteWithPlan[]> {
   return createLifiQuoteAdapter().quoteWithPlans(input, assets);
 }
