@@ -12,7 +12,7 @@ Supported swaps use the governed preparation and intent record. LI.FI route disc
 1. **Request.** The customer enters the action, amount, network, destination, or protocol position.
 2. **Prepare.** Aura or the integrated protocol produces an unsigned transaction plan.
 3. **Validate.** The server checks product policy, supported contracts, account controls, and required disclosures.
-4. **Simulate.** Supported direct sends and the reviewed Swap route use gas estimation and a read-only execution call. Protocol screens may preview a position, but protocol signing is not currently enabled.
+4. **Simulate.** Supported direct sends and reviewed Swap routes use gas estimation and a read-only execution call. Aave previews the position; Sky checks the current balance and conversion limit before wallet signing.
 5. **Confirm.** The wallet presents the final transaction. The customer signs or cancels.
 6. **Submit.** A transaction hash exists and the source network has received the transaction.
 7. **Observe.** Aura checks the source receipt and, where relevant, the provider or destination state.

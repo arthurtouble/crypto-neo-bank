@@ -24,15 +24,11 @@ For a supported direct transfer, Aura evaluates the account lock, network, asset
 
 A transaction sent to a valid but unintended address is usually irreversible.
 
-## Add Money and Withdraw
+## Moving between networks
 
-Move Money can search connected accounts and show a potential USD Coin route. Cross-network execution is currently paused. A route preview is not a prepared transfer, and it will not ask for a wallet signature while the exact approval and route plan cannot pass Aura's checks.
+Swap can review supported USDC bridge routes. A quote is not a transfer. Aura prepares an exact approval or route call only after checking the current quote and account controls. Each step needs its own wallet confirmation. Source settlement and destination delivery are separate.
 
-Routes add dependencies that direct transfers do not have, including bridge contracts, relayers, liquidity, finality, and the destination chain.
-
-When execution becomes available, approvals and routes will be separate transactions. Each step must be freshly reviewed, simulated, and independently confirmed in order. An expired quote will need a new review.
-
-See [Cross-chain routes](/product/cross-chain-routing/) for the complete lifecycle and delayed-route guidance.
+See [Cross-chain routes](/product/cross-chain-routing/) for delayed-route guidance.
 
 ## What confirmation means
 

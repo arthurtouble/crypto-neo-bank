@@ -8,7 +8,7 @@ Visitors can browse every section with fictional, labeled example data. Sign-in 
 
 Wallet and protocol balances come from public chains and providers. Fiat, card, and securities records come from connected providers. D1 stores projections, policies, audit evidence, consent, cases, and recovery records; it is not the authority for balances or settlement.
 
-The current implementation supports public browsing, Privy authentication and wallet controls, direct Base reads, guarded crypto-send preparation, LI.FI route discovery through the governed swap flow, Aave position reads, support intake, and a public Aura tag page for opted-in members. The Aura tag page can expose a verified linked crypto address. Bank-transfer instructions, card payments, issuance and controls, securities execution, rewards fulfilment, and Aave writes require provider programs or transaction paths that are not connected. Their screens show that state clearly. See [current availability](./apps/docs/src/content/docs/getting-started/status.md).
+The development app supports Privy wallets, Base balances and sends, reviewed LI.FI swaps and bridges, Aave supply/withdraw/borrow/repay, and Ethereum USDC deposits into and withdrawals from Sky sUSDS. Chain and protocol records decide the result. The public Aura tag page can show an opted-in member's verified wallet address. Bridge bank transfers, cards, securities execution, and rewards need provider programs that are not connected. See [current availability](./apps/docs/src/content/docs/getting-started/status.md).
 
 ## Local development
 

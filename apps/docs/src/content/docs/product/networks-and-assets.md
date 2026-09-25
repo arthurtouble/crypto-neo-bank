@@ -3,16 +3,16 @@ title: Networks and assets
 description: The chains, tokens, contract addresses, and availability rules Aura supports.
 ---
 
-Aura hides network plumbing during ordinary use. Move Money can find eligible USD Coin held in a connected account and prepare the route into your Aura Account.
+Aura shows the network when you receive, send, swap, or use a vault.
 
-An address that looks the same on two networks does not make the balances interchangeable. Do not make a direct deposit from another network. Use **Move Money** so Aura can prepare the correct route, or follow the exact account details shown in Receive.
+The same wallet address can hold different balances on different networks. Check the network in Receive before sending. Use Swap to review a supported bridge route when funds need to move between networks.
 
 ## Current network scope
 
 | Network | Chain ID | Gas asset | Current scope |
 | --- | ---: | --- | --- |
 | Base | 8453 | ETH | Aura Account, direct sends, Aave V3, and routed native USDC |
-| Ethereum | 1 | ETH | Routed native USDC |
+| Ethereum | 1 | ETH | Routed native USDC and Sky sUSDS |
 | Arbitrum | 42161 | ETH | Routed native USDC |
 | Optimism | 10 | ETH | Routed native USDC |
 | Polygon | 137 | POL | Routed native USDC |

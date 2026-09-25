@@ -1,67 +1,24 @@
 ---
 title: Earn and borrow
-description: How Aura presents Aave positions and the risks behind them.
+description: Aave and Sky actions, positions, and risks.
 sidebar:
   order: 3
 ---
 
-Aura shows Aave V3 markets and positions using protocol data. Supplying, withdrawing, borrowing, repaying, and claiming rewards are currently read-only in Aura. We will enable signing only after the transaction plan, contract checks, account controls, and settlement verification have been independently tested. Until then, Aura will not ask you to sign an Aave transaction.
+Aura reads Aave V3 positions on Base and Sky sUSDS positions on Ethereum. The protocols and chains control balances, rates, debt, and settlement. The development app prepares Aave supply, withdrawal, borrow, and repay calls for eligible accounts. It also prepares Sky deposits and withdrawals: Sky converts Ethereum USDC to sUSDS during deposit and back to USDC during withdrawal. A funded end-to-end signing test is still pending.
 
 ## Earn
 
-Supplying an asset creates exposure to the Aave protocol. The displayed annual percentage yield is variable. It is not a bank deposit rate, guaranteed return, or insured balance. Withdrawals depend on market liquidity.
+Aave supply rates change with the market. Sky sUSDS grows through its conversion rate, which can also change. Neither is a bank deposit, insured balance, or guaranteed return. Withdrawals depend on contract operation and available liquidity. Review the asset, amount, approval, contract, network fee, and expected output in your wallet before signing.
+
+USDC on Base must move to Ethereum through a separate reviewed bridge transaction before it can enter Sky. A successful bridge source transaction does not by itself prove arrival on Ethereum.
 
 ## Borrow
 
-Borrowing creates debt against collateral. Prices, rates, and your health factor can change quickly. If your position crosses Aave’s liquidation boundary, the protocol can liquidate collateral automatically. Aura cannot pause or reverse that process.
+Aave debt accrues interest. Collateral prices, rates, and health factor can change before and after signing. If a position crosses Aave's liquidation boundary, the protocol can liquidate collateral; Aura cannot pause or reverse it. Repayment may need a token approval, and interest accrued during settlement can leave a small residual debt.
 
-## Claimable rewards
+## Rewards and position data
 
-Portfolio checks Aave's rewards interface for claimable rewards on the supported settlement network. A displayed reward amount and USD value come from Aave at the observation time; Aura does not calculate or promise them.
+Aura displays claimable Aave rewards reported by the protocol on the supported network. Claiming them in Aura is unavailable. A displayed reward is an observation, not a payment.
 
-Claiming rewards is not available in Aura yet. A displayed amount is an observation, not a payment or a promise that it can be claimed here.
-
-Some Aave reward programmes span networks or use external incentive systems. Aura only displays the supported network result in this workspace. A missing or unavailable source is not shown as an earned amount.
-
-## Before using a protocol
-
-Review the asset, amount, contract, expected change, health factor, approval amount, and network fee in your wallet before using a protocol. Keep enough native currency for future transactions. Aura's position preview is informational; it is not a transaction simulation or a guarantee of execution.
-
-Smart contracts, oracles, governance, liquidity, stablecoins, and Base can fail or behave unexpectedly. A preview helps you make a decision; it is not a promise of the outcome.
-
-## Position data
-
-Aura reads Aave market and customer-position data from Aave's interfaces and contracts. The protocol remains authoritative. Rates, collateral values, debt, available liquidity, and health factor can change between display, signature, and settlement.
-
-## Supplying
-
-Supplying transfers an asset into the protocol and creates a protocol position. The displayed APY is an annualized variable rate based on current conditions, not a fixed offer. Rewards, if any, can have separate eligibility and token risk.
-
-Withdrawing depends on the customer's position and available market liquidity. Collateral that supports debt may not be withdrawable without first improving the position.
-
-## Borrowing
-
-The amount a customer can borrow depends on collateral parameters, prices, existing debt, and protocol rules. Borrowed assets accrue interest. Variable rates can rise quickly.
-
-Health factor is a simplified risk indicator, not a safety guarantee. A sudden price move, oracle update, interest accrual, or parameter change can lead to liquidation before a customer reacts.
-
-## Repaying
-
-Repayment can require a token approval followed by the protocol transaction. The amount needed to clear a variable debt can change while the transaction is pending. A small residual balance may remain if the prepared amount no longer matches accrued debt.
-
-## Approvals
-
-An ERC-20 approval authorizes a contract to spend a token. Review the spender and amount in the wallet. Exact or limited approvals reduce exposure compared with unlimited approvals, but the approved protocol contract still presents risk.
-
-## Risk checklist
-
-- Smart-contract code or upgrades can fail.
-- Governance can change supported parameters.
-- Oracles can be delayed, manipulated, or behave unexpectedly.
-- Stablecoins and collateral can lose value.
-- Market liquidity can make withdrawal difficult.
-- Base can become congested or unavailable.
-- Liquidation can happen automatically and cannot be reversed by Aura.
-- Tax and legal treatment can differ by country and action.
-
-Aura does not choose a position for the customer or promise that protocol yield compensates for these risks.
+Position previews help with a decision but do not guarantee execution. Smart contracts, oracles, governance, stablecoins, liquidity, and networks can fail or change. Keep enough native gas for future transactions. Aura leaves a failed source read unavailable rather than showing zero.

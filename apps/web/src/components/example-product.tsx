@@ -26,7 +26,7 @@ const examples: Record<CustomerSection | "overview", Example> = {
   ] },
   earn: { title: "Earn", items: [
     { label: "Aave", value: "USDC", note: "Variable rate, protocol risk" },
-    { label: "Sky", value: "Unavailable", note: "Integration review needed" },
+    { label: "Sky", value: "USDC savings", note: "Ethereum USDC converts to sUSDS" },
     { label: "Morpho", value: "Unavailable", note: "Integration review needed" }
   ] },
   borrow: { title: "Borrow", items: [

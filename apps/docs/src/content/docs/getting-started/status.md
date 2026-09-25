@@ -9,11 +9,11 @@ Aura is a browsable product preview. Every section can be explored without signi
 
 | Area | Current capability | Boundary |
 | --- | --- | --- |
-| Overview | Base wallet balances and supported Aave positions | Chains and protocols are authoritative; values depend on live reads |
+| Overview | Base wallet balances, Aave positions, and Ethereum Sky sUSDS | Chains and protocols are authoritative; values depend on live reads |
 | Deposit | Crypto receiving address and Aura tag page | Bank instructions require an active Bridge account and complete provider details |
 | Send | Governed Base crypto transfer preparation and saved addresses | Wallet signing, policy, simulation, and settlement checks apply; bank payout execution is not connected |
-| Swap | LI.FI asset search and route discovery through Aura's reviewed flow | A route is shown only when policy and exact-call preparation permit it; execution can remain paused |
-| Earn and Borrow | Curated Aave market and position reads, plus a private read-only risk preview | New supply, withdrawal, borrowing, and repayment are paused until governed execution is ready; Sky and Morpho are not connected |
+| Swap | LI.FI asset search and reviewed Base swaps and USDC bridges | Only routes that pass exact-call checks can be prepared; destination delivery needs separate confirmation |
+| Earn and Borrow | Aave supply, withdrawal, borrowing, and repayment on Base; Sky USDC deposits and withdrawals on Ethereum | Wallet approval, network fees, and chain settlement apply; Morpho is not connected |
 | Invest | Supported crypto routes | Tokenized stocks and metals require eligibility and a connected execution provider |
 | Cards | Issuer-backed card projection, when available | Issuance, freeze, limits, countries, PIN, wallet provisioning, termination, and disputes need Bridge/Rain program and control adapters |
 | Rewards | Availability information | Cashback and benefits need a contracted and funded provider program |
@@ -25,4 +25,4 @@ A screen or database record is not proof that a regulated service is active. No 
 
 See [sources of truth](/concepts/sources-of-truth/), [account controls](/safety/account-controls/), and [provider responsibilities](/company/provider-responsibilities/).
 
-Last reviewed: 24 September 2026.
+Last reviewed: 25 September 2026.
