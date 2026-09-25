@@ -33,7 +33,23 @@ jobs:
       - uses: github/codeql-action/init@v3
         with:
           languages: javascript-typescript
+      # Code scanning is not enabled for this repository, so results are not
+      # uploaded; the job fails on any finding and keeps the SARIF as an artifact.
       - uses: github/codeql-action/analyze@v3
+        with:
+          upload: never
+          output: codeql-results
+      - name: Fail on CodeQL findings
+        run: |
+          count=$(jq '[.runs[].results[]] | length' codeql-results/*.sarif)
+          echo "CodeQL findings: $count"
+          jq -r '.runs[].results[] | "\(.ruleId): \(.message.text) (\(.locations[0].physicalLocation.artifactLocation.uri):\(.locations[0].physicalLocation.region.startLine))"' codeql-results/*.sarif
+          test "$count" -eq 0
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: codeql-results
+          path: codeql-results
 
   dependencies:
     runs-on: ubuntu-latest
