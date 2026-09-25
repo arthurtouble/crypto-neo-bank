@@ -10,8 +10,8 @@
     "cf-types": "wrangler types"
   },
   "devDependencies": {
-    "@types/node": "latest",
+    "@types/node": "26.6.2",
     "typescript": "^5.9.3",
-    "wrangler": "latest"
+    "wrangler": "4.136.3"
   }
 }
