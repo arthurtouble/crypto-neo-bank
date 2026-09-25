@@ -1,51 +1,53 @@
 ---
 title: Account controls
-description: Feature availability, saved recipients, daily limit, and account lock.
+description: The optional lock, daily limit, and recipient settings you can turn on, and what they cover.
 sidebar:
   order: 2
 ---
 
-## Feature availability
+Aura gives you a few optional controls. They're all off until you turn them on. When you change one, it applies right away, and Aura keeps a record of the change.
 
-Aura can switch each financial feature on or off for everyone: direct transfers, swaps, cross-network moves, Aave and Sky actions, tokenized markets, bank accounts, and cards. When a feature is off, Aura will not prepare new actions for it, Your wallet still works in other apps.
+## Your controls
 
-## Wallet provider rules
-
-If your wallet provider enforces its own rules, such as a spending limit or an address allowlist, Settings shows them next to Aura's controls. The provider applies them when it signs; change them with the provider.
-
-## Your settings
-
-You set these in Settings. Changes apply right away and are recorded.
-
-| Control | Default | What it does |
+| Control | Starts as | What it does |
 | --- | --- | --- |
-| Emergency lock | Off | Blocks every money movement through Aura |
+| Emergency lock | Off | Stops Aura preparing any money movement |
 | Daily limit | Off | Caps the US dollar value you send to other people in any 24 hours |
-| Saved recipients only | Off | Only lets you send to saved recipients |
-| Wait before new recipients | 4 hours | With saved recipients only on, a newly saved recipient can't receive until the wait ends |
+| Saved recipients only | Off | Lets you send only to recipients you've saved |
+| Wait before new recipients | 4 hours | When saved recipients only is on, a newly saved recipient can't receive until the wait ends |
 
-## Saved recipients
+## Emergency lock
 
-Give trusted recipients clear names and check the full address independently. A label is for recognition. It is not proof of identity or ownership. Adding and removing a recipient creates an audit event.
+Turn on the lock if something looks wrong: an unexpected prompt, a recipient you don't recognize, or signs someone else has access. Then secure your sign-in and recovery methods too.
+
+The lock stops Aura preparing any money movement. It doesn't freeze your wallet, reverse a transaction you already submitted, or stop activity in another app.
 
 ## Daily limit
 
-The daily limit counts sends and swaps that pay another address. Swaps and Earn moves within your own account don't count. If Aura cannot value an amount while a limit is set, it blocks the action instead of skipping the check. Price changes make USD limits approximate.
+The daily limit counts sends, and swaps that pay someone else. Swaps within your own account and Earn deposits and withdrawals don't count.
 
-## Account lock
+If you've set a limit and Aura can't work out the value of an amount, it blocks the action rather than skip the check. Prices move, so the dollar value is approximate.
 
-The lock stops Aura from preparing any money movement. It does not freeze the wallet, reverse submitted transactions, or prevent activity in another app.
+## Saved recipients
 
-Use the lock when account access, a recipient, or a recent prompt looks suspicious. Then secure your sign-in and recovery methods as well.
+Give recipients you trust clear names, and check each full address in a separate way before saving it. A name is there to help you recognize someone. It doesn't prove who owns the address.
 
-## Scope
+## When Aura switches a feature off
 
-Controls apply when Aura prepares a money movement. Provider freezes, gas charges, market movements, an exported key, and transactions created in another application remain outside their enforcement boundary.
+Aura can also switch a feature off for everyone, for example sends, swaps, or Earn. While a feature is off, Aura won't prepare new actions for it. Your wallet still works in other apps.
 
-## A practical routine
+## Wallet provider rules
+
+If your wallet provider applies its own rules, such as a spending limit or a list of allowed addresses, Settings shows them next to Aura's controls. The provider applies them when it signs. To change them, go to the provider.
+
+## What controls can't do
+
+Controls only apply when Aura prepares a money movement. They don't cover network fees, market moves, an exported key, or transactions you make in another app.
+
+## A simple routine
 
 1. Start with a small amount.
-2. Check the network and full address.
-3. Read the wallet prompt, not just the Aura summary.
-4. Verify the transaction on the correct block explorer.
-5. Treat unexpected prompts as suspicious and cancel them.
+2. Check the network and the full address.
+3. Read the wallet prompt, not just Aura's summary.
+4. Check the transaction on a block explorer.
+5. If a prompt surprises you, cancel it.

@@ -1,72 +1,72 @@
 ---
 title: Wallets and assets
-description: How Aura shows ownership, balances, and wallet authority.
+description: Your Aura account, where your balances come from, and how to keep access.
 sidebar:
   order: 1
 ---
 
-## Wallet authority
+## Your account is your wallet
 
-Your Aura account is a smart wallet on Base. It is controlled by your Privy sign-in, and its address is your deposit address. Aura does not hold a key that can move your assets.
+Your Aura account is a smart wallet on the Base network. You control it through your Privy sign-in, and its address is your deposit address. Aura never holds your funds or a key that can move them.
 
-The smart wallet signs an approval and the action it enables together, as one operation. Once fee sponsorship is set up, Aura covers the network fee on Base for actions it prepares, so you won't need ETH for gas there. That setup is not finished yet; until it is, your account uses your Privy wallet directly and you need gas.
+Privy, an independent company, handles sign-in, the key that signs for your wallet, recovery, and export. Aura only receives your public wallet address and your verified sign-in.
 
-For an available action, Aura prepares and checks the transaction before your wallet shows it. You sign or cancel. Preview-only features never request a signature.
+When you make a transaction, Aura prepares it and checks it first. Your wallet then shows it to you, and you sign or cancel. Features that aren't live never ask you to sign.
 
-Sign-in, signing, recovery, and export follow Privy's model. Aura receives the public wallet address and verified identity it needs to provide the product.
+A smart wallet can sign a token approval and the action it enables together, as one operation. Aura plans to cover network fees on Base for the actions it prepares, so you won't need ETH for them. That isn't set up yet. Until it is, you need a little ETH on Base.
 
-## Where balances come from
+## Where your balances come from
 
-The chain is the final record for onchain assets. Aura can cache or format that data for the interface, but an Aura database value does not override the chain.
+The blockchain is the final record of what you hold. Aura may keep a copy or format it for the screen, but its own records never override the blockchain.
 
-The main asset view currently reads:
+Your main balance view shows:
 
-| Asset | Network | Source |
-| --- | --- | --- |
-| ETH | Base | Native balance |
-| USDC | Base | Token contract |
-| WETH | Base | Token contract |
+| Asset | Network |
+| --- | --- |
+| ETH | Base |
+| USDC | Base |
+| WETH | Base |
 
-Balances can update at different times because the interface, RPC endpoint, indexer, and block explorer do not all observe a transaction simultaneously. For settlement, use the correct chain and transaction receipt as the primary evidence.
+Balances can update at slightly different times in Aura, in your wallet, and on a block explorer. To confirm a payment, check the transaction on the right network's block explorer.
 
-## Portfolio totals
+## Totals are estimates
 
-Portfolio values combine token quantities with price data. A displayed total is an estimate, not a redemption quote. Thin liquidity, stale prices, token restrictions, or a stablecoin depeg can make the realizable value different.
+Your total combines how much you hold with current prices. It's an estimate, not an offer to buy your assets. Thin markets, old prices, token restrictions, or a stablecoin losing its peg can all mean you'd get a different amount.
 
-Unknown or unsupported assets are excluded rather than assigned a guess. A missing price should not be treated as zero value or proof that the token is worthless.
+Aura leaves out assets it doesn't recognize rather than guessing their value. A missing price doesn't mean the token is worth nothing.
 
-## DeFi positions
+## Earn positions
 
-Portfolio reads your Aave V3 position directly from Aave and Base. It shows the source-reported active-market count, health factor, and net position when those fields are available.
+Aura reads your Aave position directly from Aave on Base. When the data is available, it shows how many markets you're in, your net position, and Aave's health factor. It reads your Sky savings from Ethereum.
 
-Aura also reads claimable rewards from Aave's rewards interface when available. Portfolio shows the source-reported reward and USD estimate without treating an unavailable response as a zero balance. Claiming in Aura is currently unavailable; a displayed reward is not a completed payment.
+If Aave reports rewards you can claim, Aura shows them. You can't claim them in Aura yet. A reward on screen isn't a payment.
 
-A current position still does not establish yield earned, cost basis, or a tax value. Aura leaves those figures unavailable until complete authoritative history can support them.
+A position doesn't tell you what you've earned, your cost basis, or a tax value. Aura leaves those blank until it has complete history to back them up.
 
-## Wallet recovery
+## Keeping access
 
-Recovery and export follow Privy’s customer controls. Aura support will never ask for a seed phrase, private key, recovery secret, or one-time code.
+Privy handles recovery and export. Aura support will never ask for a seed phrase, private key, recovery secret, or one-time code.
 
-Before relying on a wallet for significant value:
+Before you keep a large amount in your account:
 
-1. confirm the recovery methods shown by Privy;
-2. secure the email, device, passkey, or social account involved;
-3. understand how export changes the security boundary;
-4. test access from a recovery scenario with a small balance;
-5. keep public wallet addresses separate from private recovery material.
+1. check the recovery methods Privy offers you;
+2. secure the email, phone, device, or social account you sign in with;
+3. understand what exporting your key means;
+4. test recovery with a small balance;
+5. keep your public address separate from anything you use to recover access.
 
-Exporting your key gives you more portability and more direct responsibility. If you use it elsewhere, Aura's account lock, daily limit, and recipient settings don't apply.
+Exporting your key makes your wallet more portable, and puts more responsibility on you. If you use the key elsewhere, Aura's account lock, daily limit, and recipient settings don't apply.
 
-## Deposits
+## Adding money
 
-The wallet address may accept many EVM tokens that Aura does not support. Check the exact network and asset contract before sending. Aura does not automatically recover assets sent through the wrong network or contract.
+Your address can receive many tokens that Aura doesn't support. Check the network and the token contract before sending. Aura can't recover assets sent on the wrong network or in the wrong token.
 
-For a first deposit, start with a small amount and verify it on BaseScan before sending more.
+For your first deposit, send a small amount and check it on BaseScan before sending more.
 
 :::note[Public activity]
-The balance-privacy setting only hides numbers on your screen. It does not hide transactions or balances on a public blockchain.
+Hiding balances in Aura only hides them on your screen. Your balance and transactions are still public on the blockchain.
 :::
 
-## No deposit insurance claim
+## Not a bank deposit
 
-Onchain wallet assets and DeFi positions are not bank deposits merely because Aura presents them in a bank-like interface. Unless a specific future regulated product says otherwise in its own terms, do not assume deposit insurance, chargeback rights, or bank-style reversibility.
+Assets in your wallet and Earn positions aren't bank deposits, even though Aura looks like a banking app. Unless a specific regulated product says otherwise in its own terms, don't expect deposit insurance, chargebacks, or bank-style reversals.

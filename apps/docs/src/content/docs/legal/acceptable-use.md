@@ -9,16 +9,18 @@ sidebar:
 
 You may not use Aura to:
 
-- break a law, court order, sanction, or provider rule;
-- launder money, finance terrorism, evade tax, or conceal the source or ownership of funds;
+- break a law, court order, sanction, or a partner's rules;
+- launder money, finance terrorism, evade tax, or hide where funds came from or who owns them;
 - commit fraud, theft, market manipulation, deceptive trading, or abuse;
 - transact for a prohibited person, country, business, or controlled substance;
-- exploit, scan, disrupt, overload, or gain unauthorized access to Aura or another system;
-- distribute malware, steal credentials, impersonate another person, or use social engineering;
-- access another person’s data or wallet without clear authorization;
-- evade feature limits, security checks, eligibility rules, or account restrictions; or
+- attack, scan, disrupt, or overload Aura or another system, or get into it without permission;
+- spread malware, steal credentials, impersonate someone, or trick people into giving up access;
+- access another person's data or wallet without clear permission;
+- get around feature limits, security checks, eligibility rules, or account restrictions; or
 - use automated access in a way that harms the service or other customers.
 
-Aura may limit or suspend access, preserve evidence, reject a request, and report activity where required by law or provider contract. We will apply these measures proportionately where the law permits.
+If you do, we may limit or suspend your access, keep evidence, refuse a request, and report the activity where the law or a partner contract requires. We will act in proportion to the problem, where the law allows.
 
-Good-faith security research must follow [report a security issue](/safety/report-a-security-issue/).
+Aura never holds your funds, so these steps apply to your use of Aura. They do not freeze your wallet.
+
+If you are researching a security issue in good faith, follow [report a security issue](/safety/report-a-security-issue/).

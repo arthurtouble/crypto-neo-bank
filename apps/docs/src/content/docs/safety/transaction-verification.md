@@ -1,28 +1,30 @@
 ---
 title: Transaction verification
-description: What Aura checks before and after a money movement.
+description: What Aura checks before you sign, and after your transaction is sent.
 ---
 
-Aura builds each money movement on its server, and your wallet signs exactly that. After you submit it, Aura checks what the network recorded. These checks do not take control of your wallet or make a transaction reversible.
+Aura builds each money movement on its server, and your wallet signs exactly that. After you submit it, Aura checks what the network actually recorded. None of this gives Aura control of your wallet, and it doesn't make a transaction reversible.
 
-## Before signing
+## Before you sign
 
-Aura checks that the feature is on, your account is not locked, and the action fits your daily limit and recipient settings. Limits use a recent independent price, or the route's quoted value. If a limit is set and the value is unknown, the action stops rather than using an estimate from your browser.
+Aura checks that the feature is switched on and applies any controls you've set.
 
-Any token approval and the action it enables are signed together, as one operation. Swap quotes stay on Aura's server; the browser cannot change the transaction.
+If you have a daily limit, Aura values the amount in US dollars. Supported stablecoins count as $1. ETH uses a recent price from Kraken. Other assets use the value in the route's quote. If Aura can't find a value, it stops the action rather than use an estimate from your browser.
 
-## After submission
+Any token approval and the action it enables are signed together, as one operation. Swap quotes stay on Aura's server, so your browser can't change the transaction.
 
-A transaction hash means your wallet broadcast something. It does not prove the expected result. Aura checks that:
+## After you submit
 
-- the onchain operation came from your wallet and contains exactly the calls Aura prepared;
+A transaction hash means your wallet sent something. It doesn't prove the result you expected. Aura checks that:
+
+- the transaction came from your wallet and contains exactly what Aura prepared;
 - the network has finalized it;
-- the expected transfer, deposit, or withdrawal appears in that operation.
+- the expected transfer, deposit, or withdrawal happened.
 
-For a cross-network move, Aura also waits for LI.FI to report delivery and checks that at least the minimum amount reached your wallet on the other network.
+For a move between networks, Aura also waits for LI.FI to report delivery, and checks that at least the minimum amount reached your wallet on the other network.
 
-If Aura doesn't receive a hash in time, the action shows as **Not confirmed**, not failed. Check your wallet activity.
+If Aura doesn't get a transaction hash in time, the action shows as **Not confirmed**, not failed. Check your wallet's activity.
 
-## What these controls do not cover
+## What these checks don't cover
 
-You can still use your key outside Aura. Aura's controls do not freeze the wallet or apply to transactions made elsewhere. Always read the wallet prompt and check a new recipient through an independent channel.
+You can still use your key outside Aura. Aura's checks don't freeze your wallet or apply to transactions made elsewhere. Always read the wallet prompt, and check a new recipient in a separate way.

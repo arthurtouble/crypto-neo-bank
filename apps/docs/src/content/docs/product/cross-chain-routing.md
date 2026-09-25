@@ -1,12 +1,25 @@
 ---
 title: Cross-chain routes
-description: How cross-chain moves are quoted, signed, and tracked.
+description: How moves between networks are quoted, signed, and tracked.
 ---
 
-Swap can move a supported asset from one network to another. LI.FI finds the route and estimates output, fees, and timing. The quote expires after 45 seconds and is not a transfer.
+You can use Swap to move an asset from one network to another. This is how you deposit from, or withdraw to, a network other than Base.
 
-Aura checks the assets, networks, amount, recipient, price impact, and your account controls before your wallet opens. Any token approval and the route are signed together, as one operation.
+## Getting a quote
 
-The first network confirming shows the route started. It does not prove the asset arrived. Aura shows the move as on its way until LI.FI reports delivery and Aura sees at least the minimum amount reach your wallet on the other network.
+LI.FI finds the route. It chooses among third-party bridges and exchanges, and estimates what you'll receive, the fees, and the timing. A quote lasts 45 seconds. It isn't a transfer.
 
-If delivery looks delayed, check the transaction in Activity and on both networks' explorers before retrying. Repeating a route can send funds twice. Open a support case with the transaction hash if it stays unresolved. Never share a private key or recovery phrase.
+Before your wallet opens, Aura checks the assets, networks, amount, recipient, and price impact, and applies any controls you've set. Any token approval and the move itself are signed together, as one operation.
+
+## While it's moving
+
+When the first network confirms, the move has started. That doesn't mean it has arrived. Aura shows it as **On its way** until LI.FI reports delivery and Aura sees at least the minimum amount arrive in your wallet on the other network.
+
+## If it seems stuck
+
+1. Open the transaction in Transactions.
+2. Check it on both networks' block explorers.
+3. Don't repeat the move yet. Repeating it can send your funds twice.
+4. If it's still unresolved, open a support case with the transaction hash.
+
+Never share a private key or recovery phrase, including with Aura support.

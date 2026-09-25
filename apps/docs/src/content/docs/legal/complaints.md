@@ -1,6 +1,6 @@
 ---
 title: Complaints policy
-description: How customers can raise a complaint and what happens next.
+description: How to raise a complaint and what happens next.
 sidebar:
   order: 8
 ---
@@ -9,21 +9,30 @@ sidebar:
 
 ## How to complain
 
-Use the in-product support form and say that you want to make a complaint. Include what happened, the outcome you want, relevant dates, and any public transaction hash. Do not include a seed phrase, private key, recovery secret, or one-time code.
+Use the support form in the app and say that you want to make a complaint. Tell us:
 
-The final complaints email and postal address must be added before launch.
+- what happened;
+- the outcome you want;
+- the dates involved; and
+- any public transaction hash.
+
+Never include a seed phrase, private key, recovery secret, or one-time code.
+
+**[Placeholder: the complaints email and postal address must be added before launch.]**
 
 ## What happens next
 
-Aura will:
+We will:
 
-1. acknowledge the complaint;
-2. identify whether Aura or a provider owns the issue;
-3. preserve relevant records;
+1. acknowledge your complaint;
+2. work out whether the issue is ours or a partner's;
+3. keep the relevant records;
 4. investigate fairly;
 5. explain the outcome and any remedy; and
-6. tell you about escalation rights.
+6. tell you how to escalate if you're not satisfied.
 
-Target response times, mandatory time limits, provider handoffs, regulator or ombudsman routes, languages, and record-retention periods must be set for each launch country before this policy takes effect.
+**[Placeholder: target response times, mandatory time limits, partner handoffs, regulator or ombudsman routes, languages, and record-retention periods must be set for each launch country before this policy takes effect.]**
 
-Mark an issue urgent when funds may be at risk or you believe the account is compromised. An urgent label speeds triage; it does not guarantee recovery or transaction reversal.
+## Urgent issues
+
+Mark your case urgent if you think your funds are at risk or your account is compromised. We'll look at it sooner. Marking it urgent does not guarantee that funds can be recovered or a transaction reversed.

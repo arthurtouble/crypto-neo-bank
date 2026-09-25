@@ -1,52 +1,56 @@
 ---
 title: Fees and alignment
-description: Current costs, future revenue, and Aura’s no-token position.
+description: What you pay today, how Aura might earn money later, and why there's no Aura token.
 sidebar:
   order: 1
 ---
 
-Aura does not currently charge a product fee. Aura can add a LI.FI integrator fee to swaps; it is set to zero today, and any fee would appear in the quote before you sign.
+Aura doesn't charge a fee today.
 
-You may still pay network gas, bridge or exchange costs, price impact, and provider charges. The relevant screen should show known costs before you sign.
+Aura can add a fee to swaps through LI.FI. It's set to zero right now. If that changes, the fee will appear in the quote before you sign.
 
-Before Aura activates a subscription, spread, interchange share, referral payment, asset-based fee, or benefit charge, it will disclose the amount or calculation and any conflict it creates.
+## Costs you may still pay
 
-Aura has no house token. A product should be included because it is useful, understandable, liquid enough, operationally reliable, and suitable for the customer—not because it creates demand for an Aura asset.
-
-## Costs that can exist without an Aura fee
+A zero Aura fee doesn't make every action free.
 
 | Cost | Where it comes from |
 | --- | --- |
-| Network gas | The source blockchain, unless Aura covers it once fee sponsorship is set up |
-| Bridge or exchange fee | The selected cross-chain route |
-| Price impact or slippage | Available liquidity and market movement |
-| Provider fee | A future banking, card, trading, or benefit provider |
+| Network fee | The blockchain, unless Aura covers it once that's set up |
+| Bridge or exchange fee | The route LI.FI finds for your swap or move |
+| Price impact or slippage | Available liquidity and market moves |
+| Partner fee | A future bank, card, or rewards partner |
 
-Known costs should appear before signing. Some costs are estimates and can change before execution. A zero Aura fee does not mean an action is free.
+Aura shows the costs it knows about before you sign. Some are estimates and can change before the transaction goes through.
 
-## Potential revenue model
+## How Aura may earn money later
 
-Aura may eventually use a mix of:
+We may eventually use a mix of:
 
-- a transparent paid membership;
-- a disclosed share of card interchange;
-- provider or merchant-funded rewards;
+- a paid membership, with clear pricing;
+- a disclosed share of card fees paid by merchants;
+- rewards funded by partners or merchants;
 - clearly disclosed conversion or service fees;
-- enterprise or family-account subscriptions;
-- a carefully structured fee for premium support or reporting.
+- subscriptions for families or businesses;
+- fees for premium support or reporting.
 
-Any revenue stream must be reviewed for legal treatment, customer value, conflicts, unit economics, refunds, and country availability before activation.
+Before we turn any of these on, we'll tell you the amount or how it's calculated, and any conflict of interest it creates. Each one also needs a review of its legal treatment, value to you, refunds, and country availability.
 
-## What Aura should avoid
+## What we'll avoid
 
-Aura should not depend on hidden spread, opaque yield skimming, unlimited token emissions, or presenting referral economics as independent advice. Asset-based pricing can create an incentive to maximize balances even when a product is unsuitable, so it requires especially clear justification and disclosure.
+We don't want to rely on hidden spreads, quietly skimming yield, printing tokens, or dressing up referral payments as independent advice.
 
-## Rewards are costs
+Fees based on how much you hold can push a company to grow balances even when that isn't right for you. If we ever use them, we'll explain why clearly.
 
-Cashback, lounges, insurance, travel support, subscriptions, and eSIM allowances are not free product decoration. Someone funds them. Before launch, each benefit needs a provider price, usage cap, eligibility rule, geographic scope, fraud policy, expiration rule, and support owner.
+## No Aura token
 
-Projected membership does not create an entitlement until those terms and providers are active.
+Aura has no token of its own. An asset or partner should be in Aura because it's useful, understandable, liquid enough, reliable, and suitable for you. Not because it creates demand for something we own.
 
-## Changes
+## Rewards cost someone money
 
-When a fee changes, customers should see the amount or method, effective date, affected service, and available alternatives before the change applies. Transaction-specific costs remain visible in the relevant quote or preview.
+Cashback and other perks aren't free. Someone pays for them. Before we offer any, each needs a funded partner, a cost, usage limits, eligibility rules, the countries it covers, fraud rules, an expiry rule, and someone responsible for support.
+
+Nothing you see about rewards in the app is an entitlement until that's in place.
+
+## When fees change
+
+If a fee changes, we'll show you the amount or method, when it starts, which service it affects, and your alternatives, before it applies. Costs for a specific transaction always appear in its quote or review.

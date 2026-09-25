@@ -3,56 +3,58 @@ title: Activity and transaction states
 description: What submitted, on its way, complete, failed, and not confirmed mean.
 ---
 
-Activity is an evidence trail, not just a list of successful payments. Aura records what it observes so you can tell a request from a settled result. A quote alone does not create an Activity item.
+Transactions shows more than successful payments. It records what Aura saw at each step, so you can tell a request apart from a settled result. Getting a quote doesn't add anything to the list.
 
 ## How a money movement works
 
-1. **Request.** You choose the action, amount, network, and recipient or position.
-2. **Prepare.** Aura's server checks the feature, your account lock, limits, and recipient settings, then builds the exact transaction.
-3. **Sign.** Your wallet shows the request. Any approval and the action are signed together, as one operation. You can cancel.
-4. **Submit.** Your wallet reports the transaction hash to Aura.
-5. **Verify.** Aura reads the chain itself and checks the result.
+1. **You ask.** You choose the action, amount, network, and recipient or position.
+2. **Aura prepares it.** Aura's server checks that the feature is on, applies any controls you've set, and builds the exact transaction.
+3. **You sign.** Your wallet shows the transaction. Any approval and the action are signed together, as one operation. You can cancel.
+4. **Your wallet submits it.** It sends Aura the transaction hash.
+5. **Aura checks it.** Aura reads the blockchain itself and checks the result.
 
-## State meanings
+## What each status means
 
-| State | Meaning |
+| Status | Meaning |
 | --- | --- |
-| **Blocked** | Your controls or a feature switch stopped the request. Nothing was sent to your wallet. |
+| **Blocked** | A feature switch or one of your controls stopped the request. Nothing was sent to your wallet. |
 | **Submitted** | You signed and a transaction hash exists. Aura is still checking. |
-| **On its way** | A cross-network move left the first network. Delivery is not yet confirmed. |
-| **Complete** | The operation matches what you reviewed, the network finalized it, and the expected transfer or deposit appeared. Cross-network moves also need delivery. |
-| **Failed** | The network rejected it, the route failed, or the result didn't match what you reviewed. Activity shows the reason. |
-| **Not confirmed** | Aura didn't receive a transaction hash in time. If you confirmed it in your wallet, check your wallet activity. This is not shown as failed. |
+| **On its way** | A move between networks has left the first network. It hasn't arrived yet. |
+| **Complete** | The transaction matches what you reviewed, the network finalized it, and the expected transfer or deposit appeared. A move between networks must also arrive. |
+| **Failed** | The network rejected it, the route failed, or the result didn't match what you reviewed. Transactions shows the reason. |
+| **Not confirmed** | Aura didn't get a transaction hash in time. If you signed it in your wallet, check your wallet's activity. This isn't the same as failed. |
 
-A transaction hash proves only that a request was submitted. Aura compares the signed operation, its calls, and its effects with what it prepared before marking it complete. A receipt alone is not enough. Aura keeps checking until the network's finality threshold is reached, because a chain reorganization can undo earlier evidence.
+A transaction hash only proves something was submitted. Before Aura marks a transaction complete, it compares what was signed, and what it did, with what Aura prepared. A receipt alone isn't enough. Aura keeps checking until the network treats the transaction as final, because earlier blocks can occasionally be rewritten.
 
-Open an item in Activity to see its timeline. Entries come from an append-only record; the chain or provider still decides settlement.
+Open any item to see its timeline. The timeline is only ever added to, never edited. The blockchain or partner still decides whether it settled.
 
-For Aave, Activity can also read protocol history from an external source. The source stays visible on each record, so an Aura entry is never presented as a protocol observation. External history is not proof that Aura started or verified the action.
+Transactions can also show your Aave history from an outside source. Each record shows where it came from. Outside history doesn't mean Aura started or checked that transaction.
 
-## Exports and coverage
+## Exports
 
-The Export dialog describes the records in the current filtered view before creating a file. It shows how many rows have network receipts, how many came directly from the protocol source, and how many carry a source-reported or action-time USD estimate.
+Before it creates a file, the export dialog tells you what's in your current view. It shows how many rows have network receipts, how many came straight from the protocol, and how many have a US dollar estimate.
 
-- **Activity CSV** includes dates, amounts, statuses, sources and transaction hashes.
-- **Tax Support CSV** adds evidence authority and explicit placeholders for tax classification and cost basis.
+- **Activity CSV** includes dates, amounts, statuses, sources, and transaction hashes.
+- **Tax Support CSV** adds where each record came from, with clearly marked blanks for tax classification and cost basis.
 
-Aura does not infer a purchase price, disposal method, jurisdictional tax treatment, gain or loss when the evidence is incomplete. Missing cost basis stays **Unavailable**, and tax classification stays **Review required**. The file is supporting evidence, not a bank statement, tax return or tax advice.
+Aura doesn't guess a purchase price, gain or loss, or tax treatment when it doesn't have the evidence. Missing cost basis shows as **Unavailable**, and tax classification shows as **Review required**. The file supports your records. It isn't a bank statement, a tax return, or tax advice.
 
-Aave activity is paginated and can be temporarily unavailable. The export warns when the current protocol response is partial or missing instead of silently presenting the file as complete.
+Aave history comes in pages and can be temporarily unavailable. If the data is partial or missing, the export tells you. It won't pretend the file is complete.
 
-## Cross-network delivery
+## Moves between networks
 
-For a cross-network swap, the first network confirming does not prove delivery. Activity shows the first transaction and delivery separately. Aura marks it complete only after LI.FI reports delivery and Aura sees at least the minimum amount arrive. If less arrives, a refund is reported, or delivery fails, Activity says so.
+When you move an asset between networks, the first network confirming doesn't prove delivery. Transactions shows the first transaction and the delivery separately.
 
-A movement unresolved for more than 15 minutes is flagged for operations. That starts an investigation; it does not mean the movement failed.
+Aura marks the move complete only after LI.FI reports delivery and Aura sees at least the minimum amount arrive. If less arrives, a refund is reported, or delivery fails, Transactions tells you.
+
+If a move is unresolved for more than 15 minutes, our operations team is alerted. That starts an investigation. It doesn't mean the move failed.
 
 ## Replaced and repeated transactions
 
-A wallet may replace a pending transaction with another transaction using the same nonce. Network explorers may show the original as dropped or replaced. Aura should preserve the known history rather than rewriting it as though only one request existed.
+A wallet can replace a pending transaction with a new one. Block explorers may then show the original as dropped or replaced. Aura keeps the full history rather than rewriting it as one request.
 
-Before retrying any uncertain transaction, check the wallet activity and authoritative source. Repeating a transfer can produce two valid payments.
+Before retrying anything uncertain, check your wallet's activity and a block explorer. Repeating a transfer can mean paying twice.
 
-## What Aura cannot reverse
+## What Aura can't reverse
 
-Public-chain transactions are generally irreversible after settlement. Aura cannot recall funds sent to the wrong address, undo a protocol liquidation, or cancel a confirmed route. Product controls are designed to reduce preventable mistakes before signing.
+Blockchain transactions generally can't be reversed once settled. Aura can't recall funds sent to the wrong address, or cancel a confirmed move between networks. Aura's controls are there to help you catch mistakes before you sign.

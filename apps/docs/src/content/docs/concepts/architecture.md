@@ -1,64 +1,69 @@
 ---
 title: Architecture
-description: How the interface, account controls, wallet, chains, protocols, and providers fit together.
+description: How the app, your wallet, blockchains, protocols, and partners fit together.
 ---
 
-Aura is a thin layer that prepares, checks, and explains money movements. It does not try to become the ledger, custodian, bank, exchange, and benefits provider at once.
+Aura is a thin layer. It prepares money movements, checks them, and explains what happened. It doesn't try to be the ledger, the custodian, the bank, and the exchange all at once.
 
-## The transaction path
+## How a money movement works
 
-Most financial actions follow the same path:
+Every send, swap, move between networks, Earn deposit or withdrawal, and crypto purchase follows the same path:
 
-1. **You ask for it.** A send, swap, cross-chain move, Earn deposit or withdrawal, or investment.
-2. **Aura prepares and checks it.** The server checks the feature, your account lock, limits, and recipient settings, then builds the exact transaction.
-3. **Your wallet signs it.** Any approval and the action itself go out together, as one signature and one onchain operation.
-4. **The chain settles it.** The network accepts or rejects the operation.
-5. **Aura verifies the result.** Aura reads the chain itself. It marks the movement complete only when the operation matches what was prepared, is final, and shows the expected transfer or deposit. Cross-chain moves also need delivery on the other network.
+1. **You ask.** You choose what to do and how much.
+2. **Aura prepares and checks it.** Aura's server checks that the feature is on and applies any controls you've set. Then it builds the exact transaction.
+3. **You sign.** Your wallet shows the transaction. Any token approval and the action itself are signed together, as one operation.
+4. **The network settles it.** The blockchain accepts or rejects the operation.
+5. **Aura checks the result.** Aura reads the blockchain itself. It marks the movement complete only when the operation matches what was prepared, is final, and shows the expected transfer or deposit. A move between networks also has to arrive.
 
-Preparation is not settlement. A quote is not a transfer. A wallet prompt is not a signature. A submitted transaction is not necessarily final.
+Each step is separate. A quote isn't a transfer. A wallet prompt isn't a signature. A submitted transaction isn't necessarily final.
 
-## Main components
+## The main parts
 
-### Product interface
+### The app
 
-The web application is the customer-facing workspace. It presents balances, money movements, safety controls, documentation, and support. A mobile application can later use the same provider and policy interfaces.
+The web app is where you see balances, move money, set controls, and get support.
 
-### Identity and wallet infrastructure
+### Sign-in and your wallet
 
-Privy supplies sign-in and the wallet. Each customer has a smart wallet on Base, controlled by their Privy sign-in. It holds funds, signs batched operations, and can have gas paid by Aura's sponsor. Protected APIs verify the Privy access token on the server and derive the customer identity from that verified token.
+Privy runs sign-in and your wallet. Your account is a smart wallet on Base that you control through your Privy sign-in. It holds your funds and signs each action as one batched operation. Aura may cover its network fees on Base.
 
-### Account controls
+Aura's server checks your Privy sign-in on every request. It never trusts an identity your browser claims.
 
-Aura checks your controls before it prepares a money movement: the account lock, an optional daily limit, saved-recipients-only mode, and the wait before new recipients.
+### Your controls
 
-These checks can refuse a movement inside Aura. They cannot stop a customer from using an exported key or another app.
+If you turn them on, Aura applies your account lock, daily limit, saved-recipients-only mode, and the wait before new recipients. They're all off by default.
 
-### Public chains and protocols
+These checks can stop a movement inside Aura. They can't stop someone who uses an exported key or another app.
 
-Base is the home network. Supported chain RPC endpoints and protocol contracts supply balances, market state, positions, transaction receipts, and settlement. Earn uses Aave V3 on Base and Sky savings on Ethereum. LI.FI supplies routes for swaps and cross-chain moves between supported assets.
+### Blockchains and protocols
 
-### Rebuildable product data
+Base is the home network. Aura reads balances, positions, and transaction receipts directly from the networks and protocol contracts.
 
-Cloudflare D1 stores product projections, security preferences, transaction evidence, support records, and provider-event state. These records make the experience faster and operations auditable. They are not the authoritative financial ledger.
+- **Earn** uses Aave on Base and Sky savings on Ethereum.
+- **Swaps and moves between networks** use routes found by LI.FI, which chooses among third-party bridges and exchanges.
 
-### Event and operations layer
+### Aura's own records
 
-Cloudflare Queues handles accepted asynchronous provider events. Scheduled checks identify stuck money movements and event-processing problems. Structured Worker logs and traces support investigation.
+Aura keeps records such as your settings, the transactions it prepared and the checks it ran, and your support cases. They make the app fast and let us explain what happened. They are never the final word on your balance.
+
+### Background checks
+
+Aura runs scheduled checks that spot stuck movements and problems processing partner updates. Logs help us investigate.
 
 ## Why Cloudflare
 
-The product and APIs run on Cloudflare Workers. Static assets are delivered from the same platform. D1 holds application records, and Queues decouples provider-event intake from processing.
+Aura runs on Cloudflare. The app, its server, its database, and its background processing all run in one place.
 
-This keeps the operating surface small. It does not remove the need for backups, access control, migration review, observability, vendor monitoring, and tested incident procedures.
+That keeps things simple. We still need backups, access control, careful database changes, monitoring, and tested incident plans.
 
-## Provider abstraction
+## Room to change partners
 
-Provider-specific behavior sits behind explicit interfaces. The product should not assume that one wallet, route, card, or banking provider will be permanent.
+Aura keeps each partner behind a clear boundary, so we can change a wallet, route, card, or bank partner later.
 
-An abstraction is useful only when it preserves meaningful differences. A bank transfer and an onchain transaction should not be forced into identical states if their cancellation, dispute, or finality rules differ. Shared concepts are normalized; material provider behavior remains visible.
+We don't hide real differences, though. A bank transfer and a blockchain transaction have different rules for cancelling, disputes, and finality, and Aura shows them differently.
 
-## Failure philosophy
+## When something is missing, Aura stops
 
-Aura fails closed when a required security or eligibility fact is missing. It should not prepare a tokenized-market action without current eligibility data, treat an unknown value as within a daily limit, or mark a routed transfer complete only because the source transaction succeeded.
+If Aura is missing a fact it needs for safety, it doesn't guess. It won't treat an unknown value as within your daily limit. It won't mark a move between networks complete just because the first network confirmed it.
 
-When a dependency is unavailable, the product should show the affected feature as unavailable and leave unaffected areas usable. See [Sources of truth](/concepts/sources-of-truth/) for how Aura treats missing financial data.
+When a service Aura depends on is down, Aura shows the affected feature as unavailable and keeps the rest working. See [sources of truth](/concepts/sources-of-truth/).

@@ -1,52 +1,62 @@
 ---
 title: Data and privacy
-description: What Aura stores, what stays with providers or chains, and why each category exists.
+description: What Aura stores, what stays with partners or on the blockchain, and why.
 ---
 
-Aura minimizes authoritative financial data. It does not pretend that operating a secure product requires no data at all.
+Aura keeps as little financial data as it can, because your money lives on the blockchain, not with us. Running a safe service still means keeping some records. This page explains which ones and why. For the formal version, see the [privacy notice](/legal/privacy-notice/).
 
-## Data categories
+## What we keep
 
-| Category | Primary source | Aura treatment |
+| Data | Where it really lives | What Aura does with it |
 | --- | --- | --- |
-| Balances and protocol positions | Chain or provider | Read or cache for the interface; rebuildable from the authoritative source |
-| Customer identity | Privy | Store the verified provider subject needed to protect customer records |
-| Wallet references | Wallet and chain | Store your smart wallet address and network context; never a private key |
-| Security preferences | Customer instruction | Retain because controls must survive sessions and remain auditable |
-| Money movements and their checks | Aura plus chain/provider evidence | Retain the prepared transaction, status, hashes, and checks |
-| Future KYC records | Regulated provider | Avoid storing identity documents; consume the minimum status needed for access |
-| Support and complaints | Aura | Retain enough context to investigate and respond |
-| Consent and disclosures | Aura | Record which material version and action were shown or accepted |
-| Notification choices | Customer instruction | Retain until changed or deleted; applied once delivery is connected |
-| Card, benefit, and wallet-rule records | Issuer, benefit provider, or wallet provider | Store the status the provider reports, with source and time; rebuildable by replaying provider events |
-| Product analytics | Aura | Accept only allowlisted event names; never use analytics as a balance source |
-| Provider webhook receipts | Provider and Aura | Retain idempotently for retry, reconciliation, and incident evidence |
+| Balances and Earn positions | The blockchain | Reads them and may keep a copy. Can always be rebuilt |
+| Who you are | Privy | Keeps the verified account reference it needs to protect your records |
+| Your wallet address | The blockchain | Keeps your account address and network. Never a private key |
+| Your security settings | Your choices | Keeps them so they last between sessions, with a record of changes |
+| Money movements | Aura, plus blockchain evidence | Keeps the transaction Aura prepared, its status, hashes, and checks |
+| Identity verification, once live | Our partner | Doesn't keep your documents. Uses only the status it needs |
+| Support and complaints | Aura | Keeps enough to investigate and reply |
+| Consent and documents you accepted | Aura | Records which version you saw or accepted, and when |
+| Notification choices | Your choices | Keeps them until you change or delete them |
+| Card, reward, and wallet-rule records, once live | The card issuer, reward partner, or wallet provider | Keeps the status the partner reports, with its source and time |
+| Product analytics | Aura | Accepts only a fixed list of events. Never used for balances |
+| Partner updates | The partner and Aura | Keeps them so we can retry, reconcile, and investigate |
 
-## Public-chain privacy
+## Blockchains are public
 
-Public blockchain addresses and transactions are visible to anyone. Hiding a balance in the Aura interface is a local display preference; it does not make onchain activity private.
+Anyone can see blockchain addresses and transactions. Hiding your balance in Aura only hides it on your screen. It doesn't make your activity private.
 
-Connecting identity, wallet addresses, transaction patterns, device information, and support records can reveal more than any single item. Aura should limit access and collection even when some underlying data is public.
+Put together, your identity, addresses, transaction patterns, device, and support history can reveal more than any one of them. So we limit who can see and collect this data, even when some of it is already public.
 
 ## Identity documents
 
-Future regulated providers may collect identity, sanctions, source-of-funds, and other onboarding information. The intended architecture keeps the original documents with the provider and stores only the references or eligibility state Aura needs.
+When bank transfers or cards go live, our partners may collect identity, sanctions, source-of-funds, and other onboarding information. We plan for the partner to keep the original documents, with Aura storing only the references or status it needs.
 
-The final integration and contracts determine the exact allocation. Aura remains responsible for accurately explaining who receives the data and why.
+The final contracts will set exactly who holds what. Whatever they say, we'll tell you clearly who receives your data and why.
 
-## Retention
+## How long we keep things
 
-Different records need different retention periods. Security evidence and complaint records may need to remain longer than product analytics. Data should not be kept indefinitely merely because storage is inexpensive.
+Different records need different retention periods. Security and complaint records may need to be kept longer than analytics. We don't keep data forever just because storage is cheap.
 
-Every Aura table that holds customer data is classified as erasable or retained, with a reason, and a test fails if a new table is left unclassified. Preferences, analytics, feedback, the public Aura tag, and rebuildable provider and portfolio history are erasable. Money movements, security settings, consent, and support cases are retained as evidence. Jurisdiction-specific periods and a legal-hold procedure must be set before launch.
+Every table in Aura that holds your data is labeled as erasable or kept, with a reason. An automated test fails if a new one is missing a label.
+
+- **Erasable:** preferences, analytics, feedback, your public Aura tag, and history we can rebuild from partners and the blockchain.
+- **Kept as evidence:** money movements, security settings, consent, and support cases.
+
+Retention periods for each country, and a process for legal holds, will be set before launch.
 
 ## Logs and analytics
 
-Logs support reliability and incident investigation. They should avoid secrets, wallet signing material, full identity documents, and unnecessary transaction context. External log export requires documented access and retention controls.
+Logs help us keep Aura reliable and investigate incidents. They should never contain secrets, signing material, identity documents, or transaction details we don't need.
 
-Product analytics should answer bounded questions such as whether customers finish onboarding or encounter an error. Event names are allowlisted and rate limited. Analytics does not determine account balances or transaction settlement.
+Analytics answer narrow questions, like whether people finish setup or hit an error. Only a fixed list of events is accepted, and they're rate limited. Analytics never decide balances or settlement.
 
-## Customer rights
+## Your choices
 
-In Settings → Data & Privacy you can request an export of everything Aura holds about your account, request deletion of erasable data, and turn product-update emails on or off. The [Privacy notice](/legal/privacy-notice/) explains data categories, purposes, recipients, retention, international transfers, and your rights. Entity details, governing law, and privacy contacts must be finalized before launch.
+In **Settings → Data & Privacy** you can:
 
+- export everything Aura holds about your account;
+- delete the data that can be erased; and
+- turn product-update emails on or off.
+
+The [privacy notice](/legal/privacy-notice/) covers data categories, purposes, recipients, retention, international transfers, and your rights. Our entity details, governing law, and privacy contacts will be finalized before launch.

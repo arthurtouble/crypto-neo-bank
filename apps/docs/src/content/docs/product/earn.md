@@ -1,20 +1,35 @@
 ---
 title: Earn
-description: Aave and Sky actions, positions, and risks.
+description: Earn a variable return with Aave on Base and Sky savings on Ethereum.
 sidebar:
   order: 3
 ---
 
-Aura reads Aave V3 positions on Base and Sky sUSDS positions on Ethereum. The protocols and chains control balances, rates, debt, and settlement. The development app prepares Aave supply and withdrawal on Base, and Sky deposits and withdrawals on Ethereum. Sky converts Ethereum USDC to sUSDS on deposit and back to USDC on withdrawal. No funded transaction has been signed yet.
+Earn lets you put assets to work in two independent protocols:
 
-## Earn
+- **Aave on Base.** Supply a supported asset to Aave's lending market and withdraw it when you like.
+- **Sky savings on Ethereum.** Deposit USDC, which becomes sUSDS, Sky's savings token. When you withdraw, it turns back into USDC. Aura uses Spark's conversion contract for this.
 
-Aave supply rates change with the market. Sky sUSDS grows through its conversion rate, which can also change. Neither is a bank deposit, insured balance, or guaranteed return. Withdrawals depend on contract operation and available liquidity. Any approval and the deposit are signed together, as one operation. Review the asset, amount, and network in your wallet before signing. Aura marks a deposit or withdrawal complete only after it sees the protocol's own record of it onchain.
+Aura doesn't hold your deposit. It stays in your wallet's position with the protocol. The protocol and the network decide balances, rates, and settlement. Earn is switched off until it has been tested with real funds.
 
-USDC on Base must first move to Ethereum with a separate cross-chain move before it can enter Sky. Wait until that move shows complete.
+## How returns work
+
+Aave's rate moves with supply and demand. Sky's savings rate can also change. Either can fall to zero.
+
+Neither is a bank deposit, insured, or guaranteed. Getting your money out depends on the protocol working and having enough available to withdraw.
+
+## Depositing and withdrawing
+
+Any token approval and the deposit are signed together, as one operation. Check the asset, amount, and network in your wallet before you sign.
+
+Aura marks a deposit or withdrawal complete only after it sees the protocol's own record of it on the blockchain.
+
+Sky runs on Ethereum. To use it with USDC on Base, first move your USDC to Ethereum with Swap. Wait until that move shows complete.
 
 ## Rewards and position data
 
-Aura displays claimable Aave rewards reported by the protocol on the supported network. Claiming them in Aura is unavailable. A displayed reward is an observation, not a payment.
+If Aave reports rewards you can claim, Aura shows them. You can't claim them in Aura yet. A reward on screen isn't a payment.
 
-Position previews help with a decision but do not guarantee execution. Smart contracts, oracles, governance, stablecoins, liquidity, and networks can fail or change. Aura leaves a failed source read unavailable rather than showing zero.
+Previews help you decide. They don't guarantee the result. Smart contracts, price feeds, governance, stablecoins, liquidity, and networks can fail or change. If Aura can't read a position, it shows it as unavailable, never as zero.
+
+See the [risk disclosure](/legal/risk-disclosure/).

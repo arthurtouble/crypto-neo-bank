@@ -1,12 +1,18 @@
 ---
 title: Aura tag
-description: Receive crypto through a public Aura payment page.
+description: A public name and payment page for receiving crypto.
 ---
 
-An Aura tag is a public name you can share as a payment page. Members can choose a tag in Settings and decide whether the page is visible. The page displays a linked wallet address only while that wallet is still verified on the account.
+An Aura tag is a short public name, like `@sam`, that people can use to pay you. You choose it in Settings, and you decide whether its payment page is public. When your page is public, people using Aura can also enter your tag in Send.
 
-A visitor does not need an Aura account to open the page. They can copy the crypto address or scan its QR code. Check the network and asset before sending. A payment sent to an unsupported network or token may not appear in Aura.
+## The payment page
 
-The page also shows bank-transfer and card-payment methods. Bank transfer requires complete instructions from a connected banking provider. Card payment requires an acquiring or payment-link provider. Neither method is operational until that connection exists, and the page labels it unavailable.
+Anyone can open your page, with or without an Aura account. They can copy your Base address or scan its QR code.
 
-Changing a tag removes the old public page. Old tags are not reassigned to another customer, so an old link cannot silently start pointing at someone else.
+The page shows an address only while that address is still verified on your account. Anyone paying you should check that they're sending on Base, and that you can use the asset. A payment on another network, or in a token Aura doesn't support, may not show in Aura.
+
+The page also lists bank transfer and card payment. Neither is available yet, and the page says so. Bank transfer needs an approved bank partner. Card payment needs a card payment partner.
+
+## Changing your tag
+
+When you change your tag, the old page stops working. Old tags are never given to someone else, so an old link can't quietly start paying a stranger.

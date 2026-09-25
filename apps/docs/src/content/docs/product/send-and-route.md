@@ -1,48 +1,53 @@
 ---
-title: Send and route
-description: Direct transfers, cross-chain routes, checks, and confirmation.
+title: Send money
+description: Send assets on Base to an address or an Aura tag, and what each status means.
 sidebar:
   order: 2
 ---
 
-## Direct transfers
+You can send assets on Base from your Aura account to any Base address or to a public Aura tag.
 
-You can send assets on Base from your Aura account. Before your wallet opens, Aura checks your account lock, daily limit, and recipient settings, then builds the exact transaction. Passing these checks does not certify the recipient or guarantee settlement.
+Before your wallet opens, Aura checks that sending is switched on and applies any controls you've set. Then it builds the exact transaction for you to sign. These checks don't vouch for the recipient, and they don't guarantee the payment settles.
 
-Saving an address does not prove that you control it. Check the full address independently.
+## Before you send
 
-### Before sending
+- Confirm with the recipient that they can receive on Base.
+- Check the full address with them in a separate way, such as a call or another app.
+- Check the token contract, not just its symbol.
+- Send a small test amount to someone new.
+- Read the wallet prompt before you sign.
 
-- Confirm the chain with the recipient.
-- Compare the full address through an independent channel.
-- Review the token contract, not only its symbol.
-- Use a small test when the destination is new.
-- Read the wallet prompt before signing.
+A payment sent to the wrong but valid address usually can't be reversed.
 
-A transaction sent to a valid but unintended address is usually irreversible.
+Saving an address doesn't prove who controls it. A saved name is just a label for you.
 
-## Moving between networks
+## Sending to another network
 
-Use Swap to move an asset to another network. A quote is not a transfer. Any approval and the route are signed together. Leaving the first network and arriving on the second are separate steps.
+To send an asset to another network, use Swap. See [cross-chain routes](/product/cross-chain-routing/).
 
-See [Cross-chain routes](/product/cross-chain-routing/) for delayed-route guidance.
+## What the status means
 
-## What confirmation means
+- **Submitted** means you signed and a transaction hash exists.
+- **Complete** means Aura matched the transaction to what you reviewed, waited for the network to finalize it, and found the expected transfer.
 
-- **Submitted** means your wallet signed and a transaction hash exists.
-- **Complete** means Aura matched the onchain operation to what you reviewed, waited for the network to finalize it, and found the expected transfer.
-- For a cross-chain route, Aura also waits for delivery on the other network.
+Fees and timing can change before you sign.
 
-Quotes, gas, price impact, and timing can change before you sign.
+## Your controls
 
-## Your limits
+In Settings you can:
 
-In Settings you can set a daily limit, allow sends only to saved recipients, and set a wait before a new saved recipient can receive (4 hours by default). The daily limit is off by default. Changes apply right away.
+- set a daily limit;
+- send only to saved recipients;
+- set a wait before a newly saved recipient can receive. It's 4 hours unless you change it.
 
-These controls only cover sends prepared through Aura. They do not bind a key you export and use elsewhere.
+All of these are off until you turn them on, and changes apply right away.
 
-## If a transfer looks stuck
+They only cover sends Aura prepares. They don't apply if you export your key and use it somewhere else.
 
-Check the transaction hash on the correct network's explorer. A pending, replaced, reverted, and confirmed transaction need different responses. Do not send the same payment again until you know whether the first instruction settled.
+## If a payment looks stuck
 
-For a route, source confirmation is only one step. Check the destination network's explorer as well. Support can investigate evidence but cannot reverse a confirmed chain transaction.
+Look up the transaction hash on a Base block explorer. A transaction can be pending, replaced, reverted, or confirmed, and each needs a different response.
+
+Don't send the same payment again until you know what happened to the first one.
+
+Support can look into it with you, but can't reverse a confirmed transaction.

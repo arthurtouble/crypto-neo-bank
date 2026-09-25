@@ -1,32 +1,41 @@
 ---
 title: Bank transfers
-description: Adding and withdrawing dollars through Aura.
+description: Moving dollars between a bank and Aura, once our bank partner approves it.
 ---
 
-Aura is preparing personal USD account details for eligible customers. Once enabled, the Transfers area will support ACH, domestic wires, FedNow where available, and international wires supported by the banking provider.
+:::note[Not available yet]
+Bank transfers are built but not live. They're waiting for approval from Bridge, our bank partner.
+:::
 
-## Set up bank transfers
+Once live, you'll be able to get personal US dollar account details, add dollars from a bank, and send dollars to a bank. Bridge will verify your identity and hold the bank relationship. Aura shows you what Bridge reports.
 
-Bank account details appear only after the provider approves the customer. The setup flow may ask for identity information, address, tax information, intended use, and source of funds. Larger or unusual transfers can require more information.
+## Setting up
 
-Aura does not invent or locally maintain account balances. The banking provider remains the source for account details, incoming payments, transfer state, returns, and refunds.
+You'll see account details only after Bridge approves you. Bridge may ask for:
 
-## Add dollars
+- your identity and address;
+- tax information;
+- how you plan to use the account; and
+- where your money comes from.
 
-An active account receives reusable payment instructions. The sender must use the exact account name, routing details, reference, and supported transfer type shown in the app. Incoming dollars can be converted and delivered according to the account configuration once the service is active.
+Larger or unusual transfers can need more information.
 
-Do not send money to placeholder or preview details. Aura shows real instructions only after provider activation.
+## Adding dollars
 
-Once active, the same provider-issued details can be used for eligible payroll deposits. Aura does not promise early availability; posting time depends on when the employer, payroll processor, and banking provider submit and release the payment.
+Once your account is active, you'll get payment details you can reuse. The sender must use the exact account name, routing details, reference, and transfer type shown in the app.
 
-## Send to a bank
+Never send money to example or preview details. Aura shows real details only after Bridge activates your account.
 
-The app collects the transfer type, amount, recipient, and purpose before showing a final review. A submitted request can still be held, returned, or rejected by a bank or provider. Estimated delivery time is not a guarantee.
+You'll also be able to use these details for your paycheck. When the money arrives depends on your employer, their payroll provider, and Bridge. Aura doesn't promise early pay.
 
-## Transfer states
+## Sending to a bank
 
-Bank transfers may move through `review`, `processing`, `sent`, `completed`, `returned`, or `failed`. Aura displays the provider's latest state and keeps its own copy only for support and reconciliation.
+You'll choose the recipient, amount, and transfer type, then see a final review. A bank or Bridge can still hold, return, or reject a transfer after you submit it. Delivery times are estimates.
+
+## Where your balance comes from
+
+Aura doesn't keep its own bank balance for you. Bridge is the source for your account details, incoming payments, transfer status, returns, and refunds. Aura keeps a copy only to help with support.
 
 ## Availability
 
-Countries, currencies, limits, and transfer methods depend on provider approval and can change. The app checks availability before showing account details or allowing submission.
+Countries, currencies, limits, and transfer types will depend on Bridge's approval, and can change. Aura checks availability before it shows account details or lets you send.

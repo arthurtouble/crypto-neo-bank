@@ -3,8 +3,15 @@ title: Access and availability
 description: Who can use Aura and what decides whether an action is available.
 ---
 
-Anyone can browse Aura with fictional example data, and anyone can sign in. Personal records need a verified session. There is no invitation or waitlist.
+Anyone can browse Aura with example data, and anyone can sign in.
 
-Financial actions depend on what Aura has switched on and on your own account controls. Each time you prepare an action, Aura checks that the feature is currently available, that your account is not locked, that the amount fits your rolling daily limit, and the transaction policy for the destination. You still confirm every transaction in your wallet.
+Before Aura prepares a money movement, it checks that:
 
-Signing in does not activate bank transfers, cards, securities, rewards, or a provider service that is not connected. [See product status](/getting-started/status/).
+- the feature is switched on;
+- your account isn't locked, if you've turned on the lock;
+- the amount fits your daily limit, if you've set one; and
+- the recipient meets your recipient settings, if you've turned them on.
+
+Your controls are all off until you choose to use them. You still sign every transaction yourself.
+
+Signing in doesn't turn on bank transfers, cards, rewards, or any other feature that needs a partner. [See what's available now](/getting-started/status/).
