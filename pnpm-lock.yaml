@@ -34,6 +34,10 @@ importers:
         version: 4.136.3(@types/node@26.6.2)(bufferutil@4.1.0)(utf-8-validate@5.0.10)
 
   apps/events:
+    dependencies:
+      '@aurel/provider-projections':
+        specifier: workspace:*
+        version: link:../../packages/provider-projections
     devDependencies:
       '@types/node':
         specifier: 26.6.2
@@ -47,6 +51,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@aurel/provider-projections':
+        specifier: workspace:*
+        version: link:../../packages/provider-projections
       '@coinbase/wallet-sdk':
         specifier: 4.3.2
         version: 4.3.2
@@ -156,6 +163,16 @@ importers:
       wrangler:
         specifier: 4.136.3
         version: 4.136.3(@types/node@26.6.2)(bufferutil@4.1.0)(utf-8-validate@5.0.10)
+
+  packages/provider-projections:
+    dependencies:
+      zod:
+        specifier: 4.6.5
+        version: 4.6.5
+    devDependencies:
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
 
 packages:
 

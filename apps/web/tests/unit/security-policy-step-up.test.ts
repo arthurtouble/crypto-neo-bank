@@ -16,6 +16,7 @@ vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
           };
           return null;
         },
+        async all() { return { results: [] }; },
         async run() {
           if (sql.startsWith("UPDATE security_profiles")) { state.writes.push(values); state.lastUpdateSql = sql; }
           return { meta: { changes: state.updateChanges } };

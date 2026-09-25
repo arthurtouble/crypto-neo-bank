@@ -1,4 +1,5 @@
 import { env } from "cloudflare:workers";
+import { readWalletPolicies } from "@aurel/provider-projections";
 import { z } from "zod";
 import { requireVerifiedSubject } from "@/lib/auth/server";
 import { ensureSubjectProfile } from "@/lib/profile/ensure";
@@ -27,7 +28,9 @@ export const GET = route("security.policy.get", { unavailable: "security_policy_
   const row = await env.PROJECTION_DB.prepare("SELECT * FROM security_profiles WHERE subject_reference = ?").bind(subject.subjectReference).first<PolicyRow>();
   if (!row) throw new Error("Security profile was not initialized.");
   if (!Number.isSafeInteger(row.policy_version) || row.policy_version < 1) throw new Error("Security policy version is unavailable.");
-  return Response.json({ policy: serialize(row), traceId }, { headers: { "Cache-Control": "no-store" } });
+  // Signer-enforced rules reported by the wallet provider, shown alongside Aura's own controls.
+  const walletPolicies = await readWalletPolicies(env.PROJECTION_DB, subject.subjectReference);
+  return Response.json({ policy: serialize(row), walletPolicies, traceId }, { headers: { "Cache-Control": "no-store" } });
 });
 
 export const PATCH = route("security.policy.patch", { unavailable: "security_policy_update_unavailable", invalid: "invalid_security_policy" }, async (request: Request, { traceId }) => {

@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 type Policy = { accountLocked: boolean; enforceAddressBook: boolean; dailyLimitUsd: number; newAddressThresholdUsd: number; newAddressDelayHours: number; stepUpThresholdUsd: number; updatedAt: string };
+type WalletPolicy = { policyId: string; policyType: string; enabled: boolean; updatedAt: string };
 type Entry = { entryId: string; address: string; label: string; createdAt: string; availableAt: string; lastUsedAt?: string };
 
 function short(value: string) { return `${value.slice(0, 7)}…${value.slice(-5)}`; }
@@ -25,7 +26,7 @@ export function SecurityPolicyControls() {
     return fetch(url, { ...init, headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(init?.headers ?? {}) } });
   }
 
-  const policy = useQuery<{ policy: Policy }>({ queryKey: ["security-policy", user?.id], queryFn: async () => { const response = await authenticatedFetch("/api/security/policy", { cache: "no-store" }); if (!response.ok) throw new Error("Security controls are unavailable."); return response.json(); }, enabled: Boolean(user) });
+  const policy = useQuery<{ policy: Policy; walletPolicies?: WalletPolicy[] }>({ queryKey: ["security-policy", user?.id], queryFn: async () => { const response = await authenticatedFetch("/api/security/policy", { cache: "no-store" }); if (!response.ok) throw new Error("Security controls are unavailable."); return response.json(); }, enabled: Boolean(user) });
   const addresses = useQuery<{ entries: Entry[] }>({ queryKey: ["address-book", user?.id], queryFn: async () => { const response = await authenticatedFetch("/api/security/addresses", { cache: "no-store" }); if (!response.ok) throw new Error("Address book is unavailable."); return response.json(); }, enabled: Boolean(user) });
   const update = useMutation({ mutationFn: async (changes: Partial<Policy>) => { const response = await authenticatedFetch("/api/security/policy", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(changes) }); const body = await response.json() as { policy?: Policy; error?: string }; if (!response.ok) throw new Error(body.error ?? "The policy could not be updated."); return body; }, onMutate: () => setMessage(null), onSuccess: async () => { setDailyDraft(null); setRecipientDraft(null); setMessage("Security policy updated."); await queryClient.invalidateQueries({ queryKey: ["security-policy", user?.id] }); }, onError: async (error) => { setDailyDraft(null); setRecipientDraft(null); setMessage(error.message === "step_up_unavailable" ? "To loosen a control, contact Support for identity verification." : error.message === "security_policy_changed" ? "These controls changed in another session. Refresh and try again." : "The policy could not be updated."); await queryClient.invalidateQueries({ queryKey: ["security-policy", user?.id] }); } });
 
@@ -63,5 +64,10 @@ export function SecurityPolicyControls() {
       <form onSubmit={(event) => void addAddress(event)} className="addressForm"><label className="fieldLabel">Label<input value={label} onChange={(event) => setLabel(event.target.value)} placeholder="Treasury wallet" /></label><label className="fieldLabel">EVM address<input value={address} onChange={(event) => setAddress(event.target.value.trim())} placeholder="0x…" spellCheck={false} /></label><button className="button secondary" disabled={!address || !label}><Plus size={14} /> Save</button></form>
       <div className="addressList">{addresses.data?.entries.length ? addresses.data.entries.map((entry) => { const cooling = new Date(entry.availableAt) > new Date(); return <div key={entry.entryId}><span className={cooling ? "pending" : "ready"}>{cooling ? <Clock3 size={13} /> : <Check size={13} />}{cooling ? "Cooling" : "Ready"}</span><div><strong>{entry.label}</strong><small>{short(entry.address)} · {cooling ? `available ${new Date(entry.availableAt).toLocaleString()}` : "approved destination"}</small></div><button aria-label={`Remove ${entry.label}`} onClick={() => void removeAddress(entry.entryId)}><Trash2 size={14} /></button></div>; }) : <div className="emptyAddress">No saved destinations yet.</div>}</div>
     </section>
+    {policy.data.walletPolicies?.length ? <section className="panel securityPolicyPanel"><div className="panelHeading"><div><h2>Wallet Provider Rules</h2>
+      <p className="sourceCaption">Enforced by your wallet provider when it signs. Aura shows them here; change them with the provider.</p></div></div>
+      <div className="addressList">{policy.data.walletPolicies.map((rule) => <div key={rule.policyId}><span className={rule.enabled ? "ready" : "pending"}>{rule.enabled ? <Check size={13} /> : <Clock3 size={13} />}</span>
+        <strong>{rule.policyType.replaceAll("_", " ")}</strong><small>{rule.enabled ? "On" : "Off"} · updated {new Date(rule.updatedAt).toLocaleString()}</small></div>)}</div>
+    </section> : null}
   </>;
 }
