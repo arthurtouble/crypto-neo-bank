@@ -16,7 +16,9 @@ CREATE TABLE feature_flags_next (
 );
 INSERT INTO feature_flags_next (flag_key, enabled, audience, configuration_json, updated_at, updated_by)
 SELECT flag_key, enabled, CASE WHEN audience = 'operations' THEN 'operations' ELSE 'all' END, configuration_json, updated_at, updated_by
-FROM feature_flags;
+FROM feature_flags
+-- Switches for features that no longer exist are not carried over.
+WHERE flag_key NOT IN ('concierge', 'membership_preview');
 DROP TABLE feature_flags;
 ALTER TABLE feature_flags_next RENAME TO feature_flags;
 

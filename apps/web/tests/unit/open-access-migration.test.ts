@@ -73,6 +73,8 @@ describe("open-access, retired-feature, and privacy migrations on an existing da
     expect(db.prepare("SELECT audience, updated_by FROM feature_flags WHERE flag_key = 'swaps'").get())
       .toMatchObject({ audience: "all", updated_by: "aura-migration" });
     expect(db.prepare("SELECT COUNT(*) AS n FROM feature_flags WHERE audience = 'beta'").get()).toMatchObject({ n: 0 });
+    expect(db.prepare("SELECT COUNT(*) AS n FROM feature_flags WHERE flag_key IN ('concierge', 'membership_preview')").get()).toMatchObject({ n: 0 });
+    expect(db.prepare("SELECT COUNT(*) AS n FROM feature_flags WHERE flag_key = 'defi_actions'").get()).toMatchObject({ n: 1 });
   });
 
   it("keeps the swap approval guard, now without an invitation requirement", () => {
