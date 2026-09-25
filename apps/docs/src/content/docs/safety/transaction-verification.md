@@ -1,28 +1,28 @@
 ---
 title: Transaction verification
-description: What Aura checks before and after an outgoing transaction.
+description: What Aura checks before and after a money movement.
 ---
 
-Aura checks the action you reviewed against the transaction your wallet is asked to sign. After you submit it, Aura checks what the network recorded. These checks do not take control of your wallet or make a transaction reversible.
+Aura builds each money movement on its server, and your wallet signs exactly that. After you submit it, Aura checks what the network recorded. These checks do not take control of your wallet or make a transaction reversible.
 
 ## Before signing
 
-For supported transfers, Aura checks that the wallet is linked to your account, the recipient and amount match your review, the asset contract is the one you selected, and your account controls allow the action. Value-based limits use a recent independent price observation. If a price, wallet link, or required security proof is missing, the transfer stops rather than using an estimate from your browser.
+Aura checks that the feature is on, your account is not locked, and the action fits your daily limit and recipient settings. Limits use a recent independent price, or the route's quoted value. If a limit is set and the value is unknown, the action stops rather than using an estimate from your browser.
 
-An approval, swap, lending action, or cross-network route needs its own reviewed transaction plan. A quote or preview alone cannot authorize a signature. Actions without a completed plan stay unavailable.
+Any token approval and the action it enables are signed together, as one operation. Swap quotes stay on Aura's server; the browser cannot change the transaction.
 
 ## After submission
 
-A transaction hash means the wallet broadcast something; it does not prove that the expected transfer happened. Aura compares the network transaction with the prepared call, checks the receipt and expected effect, and waits for the network's finality threshold. A chain reorganization or conflicting evidence can return a previously confirmed action to a pending or review state.
+A transaction hash means your wallet broadcast something. It does not prove the expected result. Aura checks that:
 
-A hash first reported after a review window or safety control closes is tracked as an observation, not accepted as a new signing approval. The original account control stays in force while Aura checks what happened on-chain. Even if the transfer settles, the separate Activity item says approval review is needed.
+- the onchain operation came from your wallet and contains exactly the calls Aura prepared;
+- the network has finalized it;
+- the expected transfer, deposit, or withdrawal appears in that operation.
 
-For a cross-network route, a source-network receipt does not prove destination delivery. That needs separate destination evidence.
+For a cross-network move, Aura also waits for LI.FI to report delivery and checks that at least the minimum amount reached your wallet on the other network.
 
-## Older activity
-
-Some older records were based on receipt checks alone. They remain in your history but are marked **Unverified** under the newer standard. Aura will not silently present them as independently verified transfers.
+If Aura doesn't receive a hash in time, the action shows as **Not confirmed**, not failed. Check your wallet activity.
 
 ## What these controls do not cover
 
-You can still use your wallet outside Aura. Aura's limits and review steps do not freeze the wallet or apply to transactions made elsewhere. Always read the wallet prompt and check a new recipient through an independent channel.
+You can still use your key outside Aura. Aura's controls do not freeze the wallet or apply to transactions made elsewhere. Always read the wallet prompt and check a new recipient through an independent channel.

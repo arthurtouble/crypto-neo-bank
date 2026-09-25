@@ -5,7 +5,7 @@ description: System boundaries, sources of truth, runtime flows, and recovery ru
 
 ## Principle
 
-Aurel is an orchestration and presentation layer, not a bank ledger. Aurel must remain recoverable from its providers and public chains. Deleting the application database must never delete customer money, change a customer balance, or make ownership ambiguous.
+Aurel prepares, checks, and presents money movements; it is not a bank ledger. Aurel must remain recoverable from its providers and public chains. Deleting the application database must never delete customer money, change a customer balance, or make ownership ambiguous.
 
 ## Systems of record
 

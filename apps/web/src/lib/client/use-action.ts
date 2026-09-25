@@ -35,11 +35,12 @@ export function useAction(options: { onSettled?: (action: ActionView) => void } 
   const settledRef = useRef(options.onSettled);
   useEffect(() => { settledRef.current = options.onSettled; }, [options.onSettled]);
 
-  const run = useCallback(async (input: ActionInput, sign: (action: ActionView) => SignOptions) => {
+  /** Sign and track an action prepared by any Aura endpoint (a bank payout, for example). */
+  const runPrepared = useCallback(async (prepare: () => Promise<ActionView>, sign: (action: ActionView) => SignOptions) => {
     setError(null); setOutcomeUnknown(false); setAction(null); setPhase("preparing");
     let signing = false;
     try {
-      const prepared = (await api<{ action: ActionView }>("/api/actions", { method: "POST", json: input })).action;
+      const prepared = await prepare();
       setAction(prepared);
       if (!prepared.calls) throw new Error("This action can't be signed any more.");
       setPhase("signing");
@@ -58,6 +59,9 @@ export function useAction(options: { onSettled?: (action: ActionView) => void } 
       setPhase("idle");
     }
   }, [api, wallet]);
+
+  const run = useCallback((input: ActionInput, sign: (action: ActionView) => SignOptions) =>
+    runPrepared(async () => (await api<{ action: ActionView }>("/api/actions", { method: "POST", json: input })).action, sign), [api, runPrepared]);
 
   useEffect(() => {
     if (phase !== "tracking" || !action) return;
@@ -83,5 +87,5 @@ export function useAction(options: { onSettled?: (action: ActionView) => void } 
 
   const reset = useCallback(() => { setPhase("idle"); setAction(null); setError(null); setOutcomeUnknown(false); }, []);
 
-  return { run, reset, phase, action, error, outcomeUnknown, busy: phase === "preparing" || phase === "signing", wallet };
+  return { run, runPrepared, reset, phase, action, error, outcomeUnknown, busy: phase === "preparing" || phase === "signing", wallet };
 }

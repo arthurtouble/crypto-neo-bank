@@ -106,9 +106,12 @@ test("feedback and financial actions fail closed without authentication", async 
   expect(feedback.status()).toBe(401);
 });
 
-test("unsigned provider events are rejected", async ({ request }) => {
-  const response = await request.post("/api/webhooks/provider", { data: { id: "e2e-unsigned", type: "account.updated" } });
-  expect([400, 401, 403]).toContain(response.status());
+test("provider webhooks reject unsigned events and unknown providers", async ({ request }) => {
+  for (const provider of ["bridge", "privy", "rain"]) {
+    const response = await request.post(`/api/webhooks/${provider}`, { data: { event_id: "e2e-unsigned", type: "customer.updated" } });
+    expect([401, 503], provider).toContain(response.status());
+  }
+  expect((await request.post("/api/webhooks/provider", { data: {} })).status()).toBe(404);
 });
 
 test("legacy documentation route points to the dedicated docs site", async ({ request }) => {

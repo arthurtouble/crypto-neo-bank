@@ -1,26 +1,37 @@
 import { env } from "cloudflare:workers";
 import { normalizeAuraTag, publicTagResponse, type AuraTagRow } from "@/lib/aura-tags";
 import { requireLinkedEvmWallet } from "@/lib/auth/wallet";
-import { BridgeRailAdapter } from "@/lib/providers/bridge";
+import { RateLimitError } from "@/lib/http/errors";
+import { bridgeClient, getUsdAccount } from "@/lib/providers/bridge";
+import { enforceRateLimit } from "@/lib/security/rate-limit";
 
-export async function GET(_request: Request, { params }: { params: Promise<{ tag: string }> }) {
+const unavailable = () => Response.json({ error: "tag_unavailable" }, { status: 404, headers: { "Cache-Control": "no-store" } });
+
+/** A public payment page. Every failure looks the same, so tags cannot be probed. */
+export async function GET(request: Request, { params }: { params: Promise<{ tag: string }> }) {
+  try {
+    await enforceRateLimit(env.PROJECTION_DB, { namespace: "aura_tag_public", subject: request.headers.get("cf-connecting-ip") ?? "unknown",
+      limit: 60, windowSeconds: 60 });
+  } catch (error) {
+    if (error instanceof RateLimitError) return Response.json({ error: "rate_limited" }, { status: 429, headers: { "Cache-Control": "no-store", ...error.headers } });
+    return unavailable();
+  }
   try {
     const tag = normalizeAuraTag((await params).tag);
     const row = await env.PROJECTION_DB.prepare("SELECT tag, subject_reference, receiving_address, display_name, public_bank_enabled FROM aura_tags WHERE tag = ? AND active = 1 AND public_enabled = 1")
       .bind(tag).first<AuraTagRow>();
-    if (!row) return Response.json({ error: "tag_unavailable" }, { status: 404, headers: { "Cache-Control": "no-store" } });
+    if (!row) return unavailable();
     await requireLinkedEvmWallet(row.subject_reference, row.receiving_address);
     let bank;
-    if (row.public_bank_enabled === 1 && process.env.BRIDGE_MODE === "live" && process.env.BRIDGE_API_KEY) {
+    const bridge = row.public_bank_enabled === 1 ? await bridgeClient(env.PROJECTION_DB) : null;
+    if (bridge) {
       const link = await env.PROJECTION_DB.prepare("SELECT external_customer_id FROM provider_customer_links WHERE subject_reference = ? AND provider = 'bridge' AND status = 'active'")
         .bind(row.subject_reference).first<{ external_customer_id: string }>();
-      if (link) {
-        try { bank = await new BridgeRailAdapter(process.env.BRIDGE_API_KEY, process.env.BRIDGE_API_BASE_URL).getUsdAccount(link.external_customer_id); }
-        catch { /* A Bridge outage leaves crypto available and bank instructions hidden. */ }
-      }
+      // A Bridge outage leaves crypto available and bank instructions hidden.
+      if (link) bank = await getUsdAccount(bridge, link.external_customer_id).catch(() => undefined);
     }
     return Response.json(publicTagResponse(row, bank), { headers: { "Cache-Control": "no-store" } });
   } catch {
-    return Response.json({ error: "tag_unavailable" }, { status: 404, headers: { "Cache-Control": "no-store" } });
+    return unavailable();
   }
 }

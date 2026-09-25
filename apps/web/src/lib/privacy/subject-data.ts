@@ -35,7 +35,6 @@ export const subjectDataInventory = {
   wallet_policies: { export: true, erase: true, reason: "Rebuildable wallet-provider projection" },
   command_idempotency: { export: false, erase: true, reason: "Short-lived retry protection" },
   webhook_receipts: { export: false, erase: false, reason: "Provider event replay protection" },
-  projection_refreshes: { export: false, erase: false, reason: "Provider event processing record" },
   operational_issues: { export: false, erase: false, reason: "Internal reconciliation exception" }
 } satisfies Record<string, Handling>;
 

@@ -19,7 +19,7 @@ Aurel can lose its D1 data without losing customer funds because Privy, contract
 
 1. Confirm signature rejection or schema failure from structured Worker logs using `traceId`.
 2. Do not disable signature or timestamp verification to restore traffic.
-3. Confirm the provider’s active secret and signing format through an authenticated support channel.
+3. Confirm the provider’s active key or secret and signing format through an authenticated support channel. Bridge signs with RSA (`BRIDGE_WEBHOOK_PUBLIC_KEY`), Privy with Svix (`PRIVY_WEBHOOK_SECRET`); Rain is rejected until its scheme is implemented.
 4. Rotate the Worker secret if exposure is suspected.
 5. Replay provider events by their stable event IDs. Duplicates are safe because `webhook_receipts.event_id` is unique.
 6. Rebuild affected projections from provider APIs or chains after replay.
@@ -80,7 +80,7 @@ Customers request an export or deletion in Settings → Data & Privacy. Operator
 
 ## Testing provider events in development
 
-The dev webhook accepts events signed with the secret in the ignored `.aura-dev-webhook-secret` file: `x-aurel-timestamp` is the Unix time and `x-aurel-signature` is `v1=` plus the hex HMAC-SHA256 of `{timestamp}.{body}`. Use the `demo` provider, a test subject that exists in `subject_profiles`, and one of the event types in [provider projections](../architecture/provider-projections.md). Remove test rows afterwards.
+Point a Bridge sandbox webhook, or Privy's test events, at the dev Worker's `/api/webhooks/bridge` or `/api/webhooks/privy`, with that provider's sandbox key or secret set on the dev environment. Events resolve to customers through `provider_customer_links`. See [provider projections](../architecture/provider-projections.md). Remove test rows afterwards.
 
 ## Security escalation
 

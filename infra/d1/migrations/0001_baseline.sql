@@ -28,18 +28,6 @@ CREATE INDEX webhook_receipts_status_idx ON webhook_receipts (processing_status,
 
 CREATE INDEX webhook_receipts_subject_idx ON webhook_receipts (subject_reference, received_at);
 
-CREATE TABLE projection_refreshes (
-  refresh_id TEXT PRIMARY KEY,
-  event_id TEXT NOT NULL,
-  subject_reference TEXT NOT NULL,
-  source_name TEXT NOT NULL,
-  source_external_id TEXT NOT NULL,
-  requested_at TEXT NOT NULL,
-  completed_at TEXT,
-  status TEXT NOT NULL CHECK (status IN ('queued', 'completed', 'failed')),
-  FOREIGN KEY (event_id) REFERENCES webhook_receipts(event_id)
-);
-
 CREATE TABLE command_idempotency (
   idempotency_key TEXT PRIMARY KEY,
   subject_reference TEXT NOT NULL,
@@ -239,14 +227,20 @@ CREATE TABLE incident_updates (
 
 CREATE INDEX incident_updates_public_idx ON incident_updates(published, updated_at DESC);
 
+-- The customer's account at a regulated provider (Bridge, Rain). The provider is authoritative for its status.
 CREATE TABLE provider_customer_links (
   subject_reference TEXT NOT NULL,
-  provider TEXT NOT NULL,
+  provider TEXT NOT NULL CHECK (provider IN ('bridge', 'rain')),
   external_customer_id TEXT NOT NULL,
-  status TEXT NOT NULL DEFAULT 'pending',
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'active', 'rejected', 'closed')),
+  kyc_status TEXT,
+  tos_status TEXT,
+  onboarding_url TEXT,
+  observed_at TEXT,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
-  PRIMARY KEY (subject_reference, provider)
+  PRIMARY KEY (subject_reference, provider),
+  FOREIGN KEY (subject_reference) REFERENCES subject_profiles(subject_reference)
 );
 
 CREATE UNIQUE INDEX idx_provider_customer_external

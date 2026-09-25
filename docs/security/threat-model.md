@@ -16,7 +16,7 @@ Customer signing authority remains with the customer's Privy signer, which owns 
 | Malicious transaction plan | Server-built calls, exact approvals batched with the action, LI.FI Diamond pinned as call target and spender, price-impact cap | Verifier checks decoded calls equal prepared calls and expected events are present; feature switch |
 | Quote tampering | Quotes held server-side (45 s); browser sees only a quote ID | Source debit and minimum output verified onchain |
 | Excessive or automated withdrawal | Optional daily limit, saved-recipients-only mode, Turnstile on abuse-prone intake | Rate limits, product events, issue queue |
-| Replay or forged webhook | HMAC, timestamp tolerance, stable event ID | Duplicate receipt record, Queue retry/DLQ, reconciliation |
+| Replay or forged webhook | Per-provider signatures (Bridge RSA, Privy Svix; Rain rejected), provider taken from the URL, timestamp tolerance, stable event ID | Duplicate receipt record, Queue retry/DLQ, reconciliation |
 | Operator abuse | Explicit Privy-subject allowlist, deny by default, no operator signer | Append-only audit evidence and issue history |
 | Projection corruption | Never authorize from a projected balance; validate provider and chain state | Rebuild projections and reconcile authoritative sources |
 | Support social engineering | Never request recovery secrets; support has no signing or action tools | Case audit trail, emergency lock, human escalation |

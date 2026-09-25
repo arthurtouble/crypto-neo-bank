@@ -16,7 +16,7 @@ export default defineConfig({
   webServer: {
     command: `pnpm dev --host 127.0.0.1 --port ${e2ePort}`,
     url: serverURL,
-    env: { ...process.env, PROVIDER_WEBHOOK_SECRET: "e2e-local-only-secret", AURA_LOCAL_BINDINGS: "1" },
+    env: { ...process.env, AURA_LOCAL_BINDINGS: "1" },
     reuseExistingServer: process.env.AUREL_E2E_USE_EXISTING === "1",
     timeout: 120_000
   },

@@ -42,7 +42,7 @@ beforeEach(() => {
 afterEach(() => sqlite.close());
 
 const get = (handler: (request: Request) => Promise<Response>, path: string) => handler(new Request(`https://aura.test${path}`));
-const providerEvent = (type: string, data: Record<string, unknown>, provider = "rain") => applyProviderEvent(d1(sqlite) as unknown as ProjectionDatabase, {
+const providerEvent = (type: string, data: Record<string, unknown>, provider: "bridge" | "privy" | "rain" = "rain") => applyProviderEvent(d1(sqlite) as unknown as ProjectionDatabase, {
   id: crypto.randomUUID(), provider, type, subjectReference: "alice", providerObjectId: "object-1", createdAt: "2026-09-25T10:00:00.000Z", data });
 
 describe("card route", () => {
@@ -70,7 +70,8 @@ describe("rewards route", () => {
     expect(await (await get(rewards, "/api/rewards")).json()).toMatchObject({ state: "not_connected", membership: null, entitlements: [] });
   });
 
-  it("returns the current membership and entitlements", async () => {
+  it("returns the current membership and entitlements while cards are on", async () => {
+    sqlite.exec("UPDATE feature_flags SET enabled = 1, audience = 'all' WHERE flag_key = 'payment_cards'");
     await providerEvent("membership.updated", { tier: "plus", score: 10, renewalAt: "2027-01-01T00:00:00.000Z" });
     const now = Date.now();
     await providerEvent("benefit.entitlement.updated", { entitlementId: "ent-1", benefitKey: "atm.fee_refund", status: "active", allowance: 5,

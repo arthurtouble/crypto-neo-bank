@@ -3,7 +3,7 @@ title: Internal security review
 description: Current findings, accepted risks, mitigations, and release conclusion.
 ---
 
-> **Update 25 September 2026:** the private-beta invitation gate was removed. Findings about invitation codes, cohorts, country gating, and beta transaction caps no longer apply; open access relies on feature switches, account locks, and daily limits ([launch controls](../operations/launch-controls.md)). The rest of this review is unchanged.
+> **Update 25 September 2026:** the private-beta invitation gate was removed. Findings about invitation codes, cohorts, country gating, and beta transaction caps no longer apply; open access relies on feature switches, account locks, and daily limits ([launch controls](../operations/launch-controls.md)). Later on 25 September, money movement moved to the [money actions](../architecture/money-actions.md) pipeline and provider webhooks moved to per-provider endpoints; the controls list below reflects that. The rest of this review is unchanged.
 
 Reviewed 22 September 2026. Scope: application authentication, private-beta access, transaction preparation, provider events, data authority, operational recovery, Cloudflare configuration and release controls. This is an internal engineering review, not the independent review required for public launch.
 
@@ -12,14 +12,13 @@ Reviewed 22 September 2026. Scope: application authentication, private-beta acce
 - Protected APIs derive the customer subject from a server-verified Privy access token.
 - Operations access denies everyone unless an exact Privy subject is configured.
 - Aurel cannot independently sign customer wallet transactions.
-- Transaction preparation validates allowlisted chain/asset/destination, policy and expected returned transaction fields.
-- Direct sends are simulated; route approvals are exact rather than unlimited by default.
-- Instructions retain constrained state transitions, policy results and source receipt evidence.
-- Provider events require timestamped HMAC authentication, replay protection and idempotent processing.
+- Actions are prepared server-side as exact calls; approvals are exact and batched with the action.
+- The verifier requires decoded calls to equal prepared calls, finality, expected events, and cross-chain delivery before `confirmed`.
+- Actions keep forward-only status transitions and append-only evidence.
+- Provider events are verified per provider (Bridge RSA, Privy Svix; Rain rejected until implemented), with replay protection and idempotent processing.
 - Queue failures reach a dead-letter queue and a critical issue; scheduled reconciliation runs every five minutes.
 - D1 is not treated as authoritative for customer balances or settlement.
 - Security headers, abuse limits, structured logs, CI, CodeQL, dependency audit and isolated recovery testing exist.
-- Invitation codes are returned only at creation and stored as hashes; country, cohort and transaction-cap policy is enforced server-side.
 - Product capabilities have database-backed server-side kill switches, and the public status response exposes only bounded operational state.
 - The recovery drill performs a real local backup, clean restore, integrity check and retained-consent verification.
 

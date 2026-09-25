@@ -27,8 +27,18 @@ export type Prepared = { ok: true; action: StoredAction } | { ok: false; block: 
 
 /** Build, check, value, and store an action for the customer to sign. */
 export async function prepareAction(db: D1Database, subject: string, wallet: string, input: ActionInput, now = new Date()): Promise<Prepared> {
-  const built = await build(db, input, subject, wallet, now);
-  await requireFeature(db, featureFor(built));
+  return prepareBuiltAction(db, subject, wallet, await build(db, input, subject, wallet, now), featureFor, now);
+}
+
+/** The customer's controls for an action, checked before any provider is asked to do anything. */
+export async function precheckAction(db: D1Database, subject: string, built: BuiltAction, now = new Date()): Promise<Block | null> {
+  return checkControls(built, await valueAsset(built.valuation, { now }), await loadControls(db, subject, built.recipient ?? null, now));
+}
+
+/** Check, value, and store an action built elsewhere, such as a bank payout's funding transfer. */
+export async function prepareBuiltAction(db: D1Database, subject: string, wallet: string, built: BuiltAction,
+  feature: (action: BuiltAction) => FeatureKey, now = new Date()): Promise<Prepared> {
+  await requireFeature(db, feature(built));
   const valuation = await valueAsset(built.valuation, { now });
   const controls = await loadControls(db, subject, built.recipient ?? null, now);
   const block = checkControls(built, valuation, controls);

@@ -23,7 +23,7 @@ const unwrapped: Record<string, string> = {
   "status": "public status page data",
   "auth/session": "session probe returns authenticated:false rather than an error body",
   "aura-tags/[tag]": "public payment page; every failure is an indistinguishable 404",
-  "webhooks/provider": "signature-verified provider ingress with its own replay handling"
+  "webhooks/[provider]": "provider-signed ingress; each provider's own scheme, with replay handling"
 };
 
 describe("API route inventory", () => {

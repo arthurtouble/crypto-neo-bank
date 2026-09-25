@@ -7,7 +7,7 @@ Aura's threat model starts with outcomes, not security slogans. The most importa
 
 ## Account takeover
 
-An attacker may compromise email, a social account, a device, a session, or recovery method. Aura relies on Privy for identity and wallet infrastructure and verifies access tokens on the server. Actions needing transaction-specific approval stay on hold until Aura can verify that approval for the exact instruction.
+An attacker may compromise email, a social account, a device, a session, or recovery method. Aura relies on Privy for sign-in and the wallet, and verifies access tokens on the server. Your emergency lock, daily limit, and saved-recipients-only mode limit what a stolen session can do through Aura.
 
 Customers still need secure devices and recovery methods. Passkeys reduce phishing exposure but do not make a compromised session or device harmless.
 
@@ -15,17 +15,17 @@ Customers still need secure devices and recovery methods. Passkeys reduce phishi
 
 A compromised frontend, dependency, route response, or provider integration could attempt to change a destination, amount, contract, or calldata.
 
-Aura validates supported chains, assets, contract targets, requested amounts, and returned route fields on the server. The wallet provides a final independent confirmation surface. Customers should stop if the wallet request does not match the action they intended.
+Aura builds the transaction on its server and keeps swap quotes there, so the browser cannot swap in different calls. After signing, Aura checks that the onchain operation matches what it prepared. The wallet provides a final independent confirmation surface. Customers should stop if the wallet request does not match the action they intended.
 
 ## Destination mistakes and scams
 
-Valid blockchain addresses can belong to scammers, be copied incorrectly, or be substituted by clipboard malware. The address book, optional saved-only mode, cooling periods, clear labels, and high-value review are designed to slow down dangerous first-time transfers.
+Valid blockchain addresses can belong to scammers, be copied incorrectly, or be substituted by clipboard malware. Saved recipients, the optional saved-only mode, the wait before new recipients, clear labels, and an optional daily limit are designed to slow down dangerous first-time transfers.
 
 These controls cannot establish that a person on the other end is honest.
 
 ## Smart-contract and protocol failure
 
-A supported contract can contain a bug, be upgraded, suffer an oracle failure, lose liquidity, or change through governance. Allowlisting and simulation reduce accidental interaction with unknown contracts, but they do not guarantee protocol safety.
+A supported contract can contain a bug, be upgraded, suffer an oracle failure, lose liquidity, or change through governance. Building exact calls on the server reduces accidental interaction with unknown contracts, but they do not guarantee protocol safety.
 
 Aura should keep integrations narrow, monitor material changes, and stop preparing affected actions when reliable operation or review is not possible.
 
@@ -35,11 +35,11 @@ Stablecoins can lose their peg, freeze addresses, change redemption terms, or fa
 
 ## Bridge and routing risk
 
-Cross-chain routes can depend on several contracts, liquidity sources, validators, messages, and relayers. Source-chain success does not prove destination delivery. Aura tracks the route reference and distinguishes source confirmation from destination completion.
+Cross-chain routes can depend on several contracts, liquidity sources, validators, messages, and relayers. Source-chain success does not prove destination delivery. Aura marks a route complete only after it sees at least the minimum amount arrive on the destination network.
 
 ## Insider and operations risk
 
-A malicious or mistaken operator could misuse access, alter configuration, mishandle a support case, or expose logs. Aura separates customer and operator authorization, keeps operator access allowlisted, limits the support assistant to read-only tools, and keeps signing outside Aura.
+A malicious or mistaken operator could misuse access, alter configuration, mishandle a support case, or expose logs. Aura separates customer and operator authorization, keeps operator access allowlisted, and keeps signing outside Aura.
 
 This design reduces the power of an operator but does not eliminate the need for access review, logging, change control, incident response, and vendor oversight.
 
@@ -51,10 +51,6 @@ Because chains and providers hold canonical financial state, an Aura database lo
 
 Cloudflare, Privy, RPC endpoints, LI.FI, Aave interfaces, or future regulated providers may be unavailable. The product should isolate affected features, show honest status, and avoid treating a timeout as a completed action.
 
-## AI risk
-
-An AI assistant can hallucinate, misread context, or be manipulated by untrusted content. The support assistant has no signing, transaction, or administrative tool. Its output is explanatory and cannot replace the authoritative transaction preview or eligibility decision.
-
 ## Outside the boundary
 
-Aura cannot enforce its controls after a customer exports a wallet or uses another application. It cannot reverse confirmed blockchain transactions, prevent every phishing attack, guarantee a protocol, or recover a secret it never possessed.
+Aura cannot enforce its controls after a customer exports their key or uses another application. It cannot reverse confirmed blockchain transactions, prevent every phishing attack, guarantee a protocol, or recover a secret it never possessed.

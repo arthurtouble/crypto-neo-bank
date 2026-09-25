@@ -5,9 +5,9 @@ sidebar:
   order: 1
 ---
 
-Aura does not currently charge a product fee and does not add a LI.FI integrator fee.
+Aura does not currently charge a product fee. Aura can add a LI.FI integrator fee to swaps; it is set to zero today, and any fee would appear in the quote before you sign.
 
-You may still pay network gas, protocol interest, bridge or exchange costs, price impact, and provider charges. The relevant screen should show known costs before you sign.
+You may still pay network gas, bridge or exchange costs, price impact, and provider charges. The relevant screen should show known costs before you sign.
 
 Before Aura activates a subscription, spread, interchange share, referral payment, asset-based fee, or benefit charge, it will disclose the amount or calculation and any conflict it creates.
 
@@ -17,11 +17,9 @@ Aura has no house token. A product should be included because it is useful, unde
 
 | Cost | Where it comes from |
 | --- | --- |
-| Network gas | The source blockchain |
-| Protocol interest | The borrowing market and position |
+| Network gas | The source blockchain, unless Aura covers it once fee sponsorship is set up |
 | Bridge or exchange fee | The selected cross-chain route |
 | Price impact or slippage | Available liquidity and market movement |
-| Token approval gas | A separate ERC-20 approval transaction |
 | Provider fee | A future banking, card, trading, or benefit provider |
 
 Known costs should appear before signing. Some costs are estimates and can change before execution. A zero Aura fee does not mean an action is free.

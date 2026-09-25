@@ -11,7 +11,7 @@ description: Required scope and evidence for independent security assessment.
 - LI.FI quotes: server-held storage, Diamond pinning, price-impact and slippage bounds, and batched ERC-20 approvals.
 - Account lock, daily limit, saved-recipients-only mode, recipient cooling, valuation, and feature switches on every action.
 - Operator authorization, Cloudflare Access activation boundary and feature kill switches.
-- Provider webhook authentication, replay prevention, queue retries, dead-letter processing and reconciliation.
+- Per-provider webhook verification (Bridge RSA, Privy Svix, Rain rejection), customer resolution through `provider_customer_links`, replay prevention, queue retries, dead-letter processing and reconciliation.
 - D1 migrations, evidence integrity, backup/export/restore, log minimization and incident procedures.
 - CSP, security headers, Turnstile verification, abuse controls and API error behavior.
 

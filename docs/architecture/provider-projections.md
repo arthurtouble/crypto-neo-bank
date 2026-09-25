@@ -5,8 +5,11 @@ description: How provider events become read models before card, rewards, and wa
 
 ## Flow
 
-1. A provider adapter (Bridge, Rain, Privy) sends a normalized event to `POST /api/webhooks/provider`, signed with `PROVIDER_WEBHOOK_SECRET`.
-2. The web Worker verifies the signature, records a `webhook_receipts` row (replay protection), and enqueues the event.
+1. Each provider posts to its own endpoint, and the web Worker verifies that provider's signature scheme. The provider comes from the URL, never the payload. A provider whose secret is not set returns 503 `provider_not_connected`.
+   - `POST /api/webhooks/bridge`: Bridge RSA signature. `X-Webhook-Signature: t=<ms>,v0=<base64>` over `<t>.<raw body>`, 10-minute tolerance, key in `BRIDGE_WEBHOOK_PUBLIC_KEY` (the PEM from Bridge's webhook endpoint).
+   - `POST /api/webhooks/privy`: Svix (`svix-id`, `svix-timestamp`, `svix-signature`), 5-minute tolerance, secret in `PRIVY_WEBHOOK_SECRET` (`whsec_…`).
+   - `POST /api/webhooks/rain`: rejects everything until Rain's scheme is implemented. `RAIN_WEBHOOK_SECRET` is reserved.
+2. The adapter normalizes the event, resolves the provider's customer to an Aura customer through `provider_customer_links`, records a `webhook_receipts` row (replay protection), and enqueues it. Bridge `customer` and `kyc_link` events become `provider.customer.updated`; other Bridge categories are recorded and acknowledged but not projected yet.
 3. The events Worker (`apps/events`) applies it with `applyProviderEvent` from `packages/provider-projections`, then marks the receipt processed.
 4. The web app reads the projection. Every projection keeps its source provider and observation time, and is rebuildable by replaying events.
 
@@ -16,12 +19,13 @@ A failure while applying is retried and ends in the dead-letter queue after five
 
 | Event type | Providers | Projection | Read by |
 | --- | --- | --- | --- |
+| `provider.customer.updated` | bridge, rain | `provider_customer_links` | Bank account onboarding status |
 | `card.account.updated` | bridge, rain | `card_account_projections` | `GET /api/cards` while `payment_cards` is on |
 | `membership.updated` | bridge, rain | `membership_projections` | `GET /api/rewards` |
 | `benefit.entitlement.updated` | bridge, rain | `benefit_entitlements` | `GET /api/rewards` |
 | `wallet.policy.updated` | privy | `wallet_policies` | `GET /api/security/policy` (`walletPolicies`) |
 
-The `demo` provider may send any of these for testing. Payload schemas are strict (`cardAccountEventSchema`, `membershipEventSchema`, `benefitEntitlementEventSchema`, `walletPolicyEventSchema`); unknown fields, including card numbers, are rejected.
+Payload schemas are strict (`cardAccountEventSchema`, `membershipEventSchema`, `benefitEntitlementEventSchema`, `walletPolicyEventSchema`); unknown fields, including card numbers, are rejected.
 
 ## Ordering and integrity
 
@@ -33,4 +37,8 @@ The `demo` provider may send any of these for testing. Payload schemas are stric
 ## Aura-owned tables in the same package
 
 - `user_preferences`: notification choices (`GET`/`PATCH /api/preferences`). Saved now, honored once a delivery service is connected. Security notices are always sent.
-- `command_idempotency`: `claimProviderCommand` and `settleProviderCommand` stop a retried request from sending the same provider command twice. Market orders use it; bank transfers and card issuance should use it when their providers connect.
+- `command_idempotency`: `claimProviderCommand` and `settleProviderCommand` stop a retried request from sending the same provider command twice. Bank account commands use it; card issuance should use it when Rain connects.
+
+## Bridge commands
+
+Bridge onboarding (KYC link), a USD virtual account that deposits to the customer's smart wallet, and payouts run only when the `fiat_accounts` switch is on and `BRIDGE_API_KEY` is set. For a payout, Bridge returns a Base deposit address, and the customer funds it with an ordinary transfer [action](money-actions.md). Request and response shapes must be confirmed against Bridge's sandbox.

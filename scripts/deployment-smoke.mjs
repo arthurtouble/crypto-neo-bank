@@ -70,12 +70,14 @@ for (const path of ["/api/growth/waitlist", "/api/portfolio", "/api/demo/session
   assert(response.status === 404, `${path} is retired (${response.status})`);
 }
 
-const webhook = await request("/api/webhooks/provider", {
-  method: "POST",
-  headers: { "content-type": "application/json" },
-  body: JSON.stringify({ id: "smoke-test", type: "account.updated" })
-});
-assert([400, 401, 403].includes(webhook.status), `webhook rejects an unsigned event (${webhook.status})`);
+for (const provider of ["bridge", "privy", "rain"]) {
+  const webhook = await request(`/api/webhooks/${provider}`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ event_id: "smoke-test", type: "customer.updated" })
+  });
+  assert([401, 503].includes(webhook.status), `${provider} webhook rejects an unsigned event (${webhook.status})`);
+}
 
 console.log(`Smoke target: ${baseUrl}`);
 if (failures) process.exitCode = 1;

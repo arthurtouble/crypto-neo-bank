@@ -30,7 +30,7 @@ The interactive `/app/sandbox` route exercises these boundaries without credenti
 - Supported login methods and passkey policy.
 - Embedded-wallet chain configuration, initially Base.
 - Server-side authorization/signing requirements.
-- Webhook signing secret and current event catalog.
+- Webhook signing secret (Svix `whsec_…`) and current event catalog.
 - Recovery behavior and user-facing wording approved by Privy.
 
 ### Implementation sequence
@@ -40,7 +40,7 @@ The interactive `/app/sandbox` route exercises these boundaries without credenti
 3. Replace `DemoWalletAdapter` behind the `WalletAdapter` interface.
 4. Map Privy user and wallet IDs to opaque Aurel references. Do not store key material.
 5. Have the customer sign every money movement in their own wallet; Aura never signs.
-6. Map Privy webhook events into the normalized provider-event envelope.
+6. Map Privy webhook events (received at `/api/webhooks/privy`, Svix-verified) into the normalized provider-event envelope.
 7. Add sandbox contract tests for wallet creation, recovery, export, policy denial, and failed signing.
 8. Complete a recovery exercise before accepting material deposits.
 
@@ -63,7 +63,7 @@ The interactive `/app/sandbox` route exercises these boundaries without credenti
 2. Keep Bridge customer IDs and resource IDs as opaque references.
 3. Leave identity documents and sensitive verification evidence with Bridge.
 4. Require an explicit provider approval state before revealing bank or card details.
-5. Verify Bridge events at ingress and normalize them before the Queue boundary.
+5. Verify Bridge events at `/api/webhooks/bridge` (RSA signature, public key in `BRIDGE_WEBHOOK_PUBLIC_KEY`) and normalize them before the Queue boundary.
 6. Refresh the affected Bridge object after every event; do not treat webhook payloads as the final balance.
 7. Test duplicates, reordered events, delayed events, provider downtime, and rejected transfers.
 8. Reconcile transfers and card states daily before production launch.
@@ -82,11 +82,12 @@ Copy the returned D1 ID into both `apps/web/wrangler.jsonc` and `apps/events/wra
 
 ```bash
 pnpm --filter @aurel/web exec wrangler d1 migrations apply aurel-projections --remote
-pnpm --filter @aurel/web exec wrangler secret put PROVIDER_WEBHOOK_SECRET
 pnpm typecheck:all
 pnpm test
 pnpm deploy:dry-run
 ```
+
+Set each connected provider's secrets with `wrangler secret put`: `BRIDGE_API_KEY` and `BRIDGE_WEBHOOK_PUBLIC_KEY` (the PEM from Bridge's webhook endpoint), `PRIVY_WEBHOOK_SECRET` (`whsec_…`), and later `RAIN_WEBHOOK_SECRET`. A provider without its webhook secret returns 503 `provider_not_connected`. See [provider projections](provider-projections.md).
 
 Production and sandbox must use different provider programs, secrets, queues, and D1 databases. Never place secret values in a Wrangler file or shell history.
 

@@ -1,62 +1,51 @@
 ---
 title: Account controls
-description: Saved addresses, review periods, limits, and account lock.
+description: Feature availability, saved recipients, daily limit, and account lock.
 sidebar:
   order: 2
 ---
 
 ## Feature availability
 
-Aura can switch each financial feature on or off for everyone: direct transfers, swaps, cross-network moves, Aave and Sky actions, tokenized markets, bank accounts, and cards. When a feature is off, Aura will not prepare new actions for it, including ones already reviewed but not yet signed. Your wallet still works in other apps.
+Aura can switch each financial feature on or off for everyone: direct transfers, swaps, cross-network moves, Aave and Sky actions, tokenized markets, bank accounts, and cards. When a feature is off, Aura will not prepare new actions for it, Your wallet still works in other apps.
 
 ## Wallet provider rules
 
 If your wallet provider enforces its own rules, such as a spending limit or an address allowlist, Settings shows them next to Aura's controls. The provider applies them when it signs; change them with the provider.
 
-## Higher-risk actions
+## Your settings
 
-Aura holds an in-app action when it requires approval that we cannot yet verify for that exact transaction on the server. Adding a passkey to sign-in alone does not lift that hold.
+You set these in Settings. Changes apply right away and are recorded.
 
-## Saved addresses
+| Control | Default | What it does |
+| --- | --- | --- |
+| Emergency lock | Off | Blocks every money movement through Aura |
+| Daily limit | Off | Caps the US dollar value you send to other people in any 24 hours |
+| Saved recipients only | Off | Only lets you send to saved recipients |
+| Wait before new recipients | 4 hours | With saved recipients only on, a newly saved recipient can't receive until the wait ends |
 
-Give trusted destinations clear names and check the full address independently. A newly saved address has a 24-hour cooling period by default.
+## Saved recipients
 
-If Saved Destinations Only is on, adding a new destination needs extra identity verification. Until that review is available, Aura will not save the new address. You can still rename an address already saved, and its original cooling period stays in place.
+Give trusted recipients clear names and check the full address independently. A label is for recognition. It is not proof of identity or ownership. Adding and removing a recipient creates an audit event.
 
-For transfers of $1,000 or more, the cooling period blocks immediate use of a newly saved destination. Lower-value new destinations receive a warning unless saved-only mode is enabled. Adding, cooling, and removing a destination creates an audit event.
+## Daily limit
 
-An address label is for recognition. It is not proof of identity or ownership.
-
-## Review threshold
-
-Actions at or above your chosen threshold, never higher than $10,000, require an extra review step. If Aura cannot determine a reliable US dollar value, it treats the action as higher risk instead of skipping the check.
-
-The default high-value review starts at $25,000 of rolling 24-hour activity. Once cooling ends, Aura compares the new preparation with the original instruction. The reviewed release expires after 15 minutes.
-
-## Rolling limit
-
-The default rolling limit is $25,000 over 24 hours for submitted and confirmed estimated USD volume. A limit is not a bank freeze and does not include actions signed outside Aura.
-
-Price changes and unknown valuations make USD limits approximate. Conservative handling is used when value cannot be established reliably.
+The daily limit counts sends and swaps that pay another address. Swaps and Earn moves within your own account don't count. If Aura cannot value an amount while a limit is set, it blocks the action instead of skipping the check. Price changes make USD limits approximate.
 
 ## Account lock
 
-The account lock stops Aura from preparing new outgoing actions. It does not freeze the wallet, reverse submitted transactions, or prevent activity in another app.
+The lock stops Aura from preparing any money movement. It does not freeze the wallet, reverse submitted transactions, or prevent activity in another app.
 
-Use the lock when account access, a destination, or a recent prompt looks suspicious. Then secure the underlying identity and recovery methods as well. An ordinary session cannot unlock the account or loosen saved-destination, cooling, or limit controls. Contact Support to begin identity review; do not assume a support case immediately restores access.
-
-## Reserve warning
-
-The default $10,000 liquid-reserve preference warns when an action may reduce visible liquid assets below the selected floor. It is guidance, not a custodial reserve or hard transaction block.
+Use the lock when account access, a recipient, or a recent prompt looks suspicious. Then secure your sign-in and recovery methods as well.
 
 ## Scope
 
-Controls are evaluated during supported Aura preparation. Protocol liquidations, provider freezes, gas charges, market movements, exported-wallet activity, and transactions created in another application remain outside their enforcement boundary.
+Controls apply when Aura prepares a money movement. Provider freezes, gas charges, market movements, an exported key, and transactions created in another application remain outside their enforcement boundary.
 
 ## A practical routine
 
 1. Start with a small amount.
 2. Check the network and full address.
-3. Read the wallet prompt, not just the Aura preview.
+3. Read the wallet prompt, not just the Aura summary.
 4. Verify the transaction on the correct block explorer.
 5. Treat unexpected prompts as suspicious and cancel them.
