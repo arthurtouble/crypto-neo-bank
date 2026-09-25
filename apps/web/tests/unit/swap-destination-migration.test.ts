@@ -1,19 +1,14 @@
-import { DatabaseSync } from "node:sqlite";
-import { readFileSync, readdirSync } from "node:fs";
-import { resolve } from "node:path";
+import type { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
+import { schemaDatabase } from "../support/schema";
 
-const migrations = resolve(process.cwd(), "../../infra/d1/migrations");
 const sourceHash = `0x${"a".repeat(64)}`;
 const secondSourceHash = `0x${"e".repeat(64)}`;
 const destinationHash = `0x${"b".repeat(64)}`;
 const fingerprint = `0x${"c".repeat(64)}`;
 
 function database(withPreparedCall = true) {
-  const db = new DatabaseSync(":memory:");
-  db.exec("PRAGMA foreign_keys = ON");
-  for (const file of readdirSync(migrations).filter((name) => name.endsWith(".sql")).sort())
-    db.exec(readFileSync(resolve(migrations, file), "utf8"));
+  const db = schemaDatabase();
   db.exec(`INSERT INTO subject_profiles (subject_reference, privy_user_reference, created_at, updated_at)
       VALUES ('alice', 'alice', '2026-09-23T00:00:00Z', '2026-09-23T00:00:00Z');
     INSERT INTO wallet_references (wallet_reference, subject_reference, provider, address, chain_family, control_model, observed_at)
@@ -35,6 +30,7 @@ function database(withPreparedCall = true) {
     // Bridge release is intentionally not live yet. Seed a confirmed source
     // proof for this migration's retention/identity tests, then restore the
     // production release trigger before exercising destination inserts.
+    const { sql: releaseTrigger } = db.prepare("SELECT sql FROM sqlite_master WHERE name = 'intent_prepared_calls_step_up_insert'").get() as { sql: string };
     db.exec("DROP TRIGGER intent_prepared_calls_step_up_insert");
     db.exec(`INSERT INTO intent_prepared_calls (intent_id, step_index, subject_reference, wallet_address,
       chain_id, target_address, native_value, calldata_hash, call_fingerprint, semantic_action,
@@ -44,8 +40,7 @@ function database(withPreparedCall = true) {
         '0x2222222222222222222222222222222222222222', '0', 'sha256:data', 'call-fingerprint-a',
         'bridge', 'swap-plan:plan-a', '2026-09-23T00:10:00Z', '{}', '${sourceHash}',
         'confirmed', '2026-09-23T00:00:00Z', 'released')`);
-    db.exec(readFileSync(resolve(migrations, "0030_governed_swap_preparation.sql"), "utf8")
-      .replace("DROP TRIGGER intent_prepared_calls_step_up_insert;", ""));
+    db.exec(releaseTrigger);
   }
   return db;
 }
@@ -96,6 +91,7 @@ describe("durable swap destination evidence", () => {
           to_amount_min_raw, 'quote-b', 'quote-b', tool_id, approval_spender, route_steps_json, source_call_json,
           route_policy_version, catalog_version, observed_at, expires_at, fingerprint, 'intent-b'
         FROM swap_quote_plans WHERE plan_id = 'plan-a'`);
+      const { sql: releaseTrigger } = db.prepare("SELECT sql FROM sqlite_master WHERE name = 'intent_prepared_calls_step_up_insert'").get() as { sql: string };
       db.exec("DROP TRIGGER intent_prepared_calls_step_up_insert");
       db.exec(`INSERT INTO intent_prepared_calls (intent_id, step_index, subject_reference, wallet_address,
         chain_id, target_address, native_value, calldata_hash, call_fingerprint, semantic_action,
@@ -105,8 +101,7 @@ describe("durable swap destination evidence", () => {
           native_value, calldata_hash, call_fingerprint, semantic_action, 'swap-plan:plan-b',
           expires_at, expected_effect_json, '${secondSourceHash}', verification_state,
           created_at, submission_phase FROM intent_prepared_calls WHERE intent_id = 'intent-a'`);
-      db.exec(readFileSync(resolve(migrations, "0030_governed_swap_preparation.sql"), "utf8")
-        .replace("DROP TRIGGER intent_prepared_calls_step_up_insert;", ""));
+      db.exec(releaseTrigger);
       expect(() => record(db, "intent-b", "plan-b", destinationHash, secondSourceHash)).toThrow(/UNIQUE/);
     } finally { db.close(); }
   });

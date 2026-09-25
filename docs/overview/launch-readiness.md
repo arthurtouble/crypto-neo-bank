@@ -3,7 +3,7 @@ title: Aura launch readiness
 description: Evidence required before Aura can serve customers with real financial actions.
 ---
 
-Last reviewed: 24 September 2026. This describes the source branch, not the deployed Worker. The detailed release register is `docs/operations/aura-production-release-plan.md` in the repository; the prior readiness ledger is historical.
+Last reviewed: 24 September 2026. This describes the source branch, not the deployed Worker. The detailed release register is `docs/archive/aura-production-release-plan-2026-09-24.md` in the repository; the prior readiness ledger is historical.
 
 ## Current decision
 

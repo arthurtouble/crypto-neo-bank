@@ -1,7 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
-import { spawnSync } from "node:child_process";
-import { resolve } from "node:path";
+import { sqliteWithIntent } from "../support/schema";
 import { matchesPreparedCall, normalizePreparedCall } from "@/lib/transactions/evidence";
 
 const sender = "0x000000000000000000000000000000000000dEaD";
@@ -50,14 +48,10 @@ describe("prepared transaction evidence", () => {
 });
 
 describe("prepared call migration", () => {
-  const migration = () => readFileSync(resolve(process.cwd(), "../../infra/d1/migrations/0014_prepared_intent_calls.sql"), "utf8");
-  const parent = "PRAGMA foreign_keys = ON; CREATE TABLE transaction_intents (intent_id TEXT PRIMARY KEY); INSERT INTO transaction_intents VALUES ('intent-1');";
   const row = `INSERT INTO intent_prepared_calls
-    (intent_id, step_index, subject_reference, wallet_address, chain_id, target_address, native_value, calldata_hash, call_fingerprint, semantic_action, source_reference, expires_at, expected_effect_json, verification_state, created_at)
-    VALUES ('intent-1', 0, 'subject-1', '${sender.toLowerCase()}', 8453, '${recipient.toLowerCase()}', '1000', '0xabc', '0xdef', 'swap', 'quote-1', '2026-09-22T00:00:00Z', '{}', 'prepared', '2026-09-21T00:00:00Z');`;
-  function sqlite(sql: string) {
-    return spawnSync("sqlite3", [":memory:"], { input: `${parent}\n${migration()}\n${sql}`, encoding: "utf8" });
-  }
+    (intent_id, step_index, subject_reference, wallet_address, chain_id, target_address, native_value, calldata_hash, call_fingerprint, semantic_action, source_reference, expires_at, expected_effect_json, verification_state, created_at, submission_phase)
+    VALUES ('intent-1', 0, 'subject-1', '${sender.toLowerCase()}', 8453, '${recipient.toLowerCase()}', '1000', '0xabc', '0xdef', 'swap', 'quote-1', '2026-09-22T00:00:00Z', '{}', 'prepared', '2026-09-21T00:00:00Z', 'legacy');`;
+  const sqlite = sqliteWithIntent;
 
   it("creates a prepared record under an existing intent", () => {
     const result = sqlite(`${row} SELECT intent_id, step_index, verification_state FROM intent_prepared_calls;`);

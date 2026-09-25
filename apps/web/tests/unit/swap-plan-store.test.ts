@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { DatabaseSync } from "node:sqlite";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import type { DatabaseSync } from "node:sqlite";
+import { schemaDatabase } from "../support/schema";
 import { bindSwapQuotePlan, getActiveSwapQuotePlan, saveSwapQuotePlan } from "@/lib/swap/plans";
 import type { ServerHeldLifiPlan } from "@/lib/swap/lifi";
 
@@ -39,15 +38,15 @@ function d1(db: DatabaseSync): D1Database {
 let sqlite: DatabaseSync;
 let database: D1Database;
 beforeEach(() => {
-  sqlite = new DatabaseSync(":memory:");
-  sqlite.exec(`PRAGMA foreign_keys = ON;
-    CREATE TABLE wallet_references (wallet_reference TEXT PRIMARY KEY, subject_reference TEXT NOT NULL, address TEXT NOT NULL);
-    INSERT INTO wallet_references VALUES ('wallet-a', 'subject-a', '${wallet}');
-    CREATE TABLE transaction_intents (intent_id TEXT PRIMARY KEY, subject_reference TEXT NOT NULL, wallet_reference TEXT NOT NULL,
-      intent_type TEXT NOT NULL, chain_id INTEGER NOT NULL, status TEXT NOT NULL, expires_at TEXT NOT NULL, route_reference TEXT);
-    INSERT INTO transaction_intents VALUES ('submitted-intent', 'subject-a', 'wallet-a', 'swap', 8453, 'reviewed', '2099-01-01', NULL);`);
-  sqlite.exec(readFileSync(resolve(process.cwd(), "../../infra/d1/migrations/0021_server_held_swap_plans.sql"), "utf8"));
-  sqlite.exec(readFileSync(resolve(process.cwd(), "../../infra/d1/migrations/0023_swap_plan_integrity.sql"), "utf8"));
+  sqlite = schemaDatabase();
+  sqlite.exec(`INSERT INTO subject_profiles (subject_reference, privy_user_reference, created_at, updated_at)
+      VALUES ('subject-a', 'subject-a', '2026-09-23T00:00:00Z', '2026-09-23T00:00:00Z');
+    INSERT INTO wallet_references (wallet_reference, subject_reference, provider, address, chain_family, control_model, observed_at)
+      VALUES ('wallet-a', 'subject-a', 'privy', '${wallet}', 'evm', 'customer', '2026-09-23T00:00:00Z');
+    INSERT INTO transaction_intents (intent_id, subject_reference, wallet_reference, intent_type, chain_id, request_json,
+      policy_result_json, disclosure_version, status, created_at, updated_at, expires_at)
+      VALUES ('submitted-intent', 'subject-a', 'wallet-a', 'swap', 8453, '{}', '{}', 'v1', 'reviewed',
+        '2026-09-23T00:00:00Z', '2026-09-23T00:00:00Z', '2099-01-01');`);
   database = d1(sqlite);
 });
 afterEach(() => sqlite.close());

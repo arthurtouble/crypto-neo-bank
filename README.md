@@ -24,13 +24,13 @@ pnpm build
 
 For an already deployed environment, set `AURA_SMOKE_URL` to its exact origin and run `pnpm test:deployment`. Set `AURA_SMOKE_DOCS_URL` when its docs origin differs from the current production docs origin. The command has no default app target.
 
-The web app is in `apps/web`, public documentation is in `apps/docs`, and internal documentation (architecture, runbooks, security, compliance) is in [`docs/`](./docs/README.md). Cloudflare bindings are configured in `apps/web/wrangler.jsonc`; D1 migrations are in `infra/d1/migrations`. Local development uses isolated Miniflare state. This branch is deployed only to the isolated [Aura development Worker](./docs/operations/aura-development-worker.md). The original Worker and D1 are separate.
+The web app is in `apps/web`, public documentation is in `apps/docs`, and internal documentation (architecture, runbooks, security, compliance) is in [`docs/`](./docs/README.md). Cloudflare bindings are configured in `apps/web/wrangler.jsonc`; The D1 schema is `infra/d1/migrations/0001_baseline.sql`. Local development uses isolated Miniflare state. This branch is deployed only to the isolated [Aura development Worker](./docs/operations/aura-development-worker.md). The original Worker and D1 are separate.
 
 ## Integration and release boundary
 
 The [architecture guide](./docs/architecture/architecture.md) explains source-of-truth rules. The [partner integration guide](./docs/architecture/partner-integration.md) and [operations runbook](./docs/operations/operations-runbook.md) cover provider activation, secrets, migrations, reconciliation, and recovery. Apply reviewed migrations and run release checks before any deployment. Never put provider credentials in `wrangler.jsonc`.
 
-The retired waitlist, referral, campaign, experiment, goal, bill, income-plan, transfer-schedule, price-alert, and swap-reminder features have no routes or tables, and the private-beta invitation gate is gone. Migrations `0040_drop_retired_features.sql` and `0041_open_access.sql` drop their storage; audit events that reference those records are retained.
+Retired features (waitlist and growth tools, goals, bills, schedules, price alerts, borrowing, the demo sandbox, regulated market orders, portfolio tax lots, and the support assistant) have no routes or tables. The [codebase audit](./docs/overview/codebase-audit-2026-09-25.md) records the current refactor plan.
 
 Customers accept the current terms of use and privacy notice on first sign-in (`/api/terms`). Settings offers notification choices, product-update consent, and data export and deletion; `apps/web/src/lib/privacy/subject-data.ts` classifies every customer-data table. Provider events for cards, memberships and benefits, and wallet rules are applied by the events Worker using `packages/provider-projections`; see [provider projections](./docs/architecture/provider-projections.md).
 

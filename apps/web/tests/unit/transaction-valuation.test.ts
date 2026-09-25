@@ -1,8 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
+import { sqliteWithIntent } from "../support/schema";
 import { valueSwapSource, valueTransfer, ValuationError } from "@/lib/transactions/valuation";
-import { readFileSync } from "node:fs";
-import { spawnSync } from "node:child_process";
-import { resolve } from "node:path";
 
 const now = new Date("2026-09-22T12:00:30.000Z");
 const candle = (price: string, at = 1_790_078_400, count = 4) => ({ error: [], result: { "ETH/USD": [[at, price, price, price, price, price, "2", count]], last: at } });
@@ -82,10 +80,8 @@ describe("server swap source valuation", () => {
 });
 
 describe("immutable valuation evidence migration", () => {
-  const migration = readFileSync(resolve(process.cwd(), "../../infra/d1/migrations/0016_authoritative_intent_valuations.sql"), "utf8");
-  const setup = "PRAGMA foreign_keys = ON; CREATE TABLE transaction_intents (intent_id TEXT PRIMARY KEY); INSERT INTO transaction_intents VALUES ('intent-1');";
   const row = "INSERT INTO intent_valuations VALUES ('v1','intent-1','8453:native','1000000000000000000',18,'3000','3000','kraken:ohlc:1m:ETH/USD:high','2026-09-22T12:00:00Z','2026-09-22T12:00:30Z','300000',1,0);";
-  const sqlite = (sql: string) => spawnSync("sqlite3", [":memory:"], { input: `${setup}\n${migration}\n${sql}`, encoding: "utf8" });
+  const sqlite = sqliteWithIntent;
 
   it("stores bound evidence and rejects updates, deletes, and orphan rows", () => {
     expect(sqlite(`${row} SELECT usd_cents FROM intent_valuations;`).stdout.trim()).toBe("300000");

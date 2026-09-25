@@ -26,6 +26,7 @@
     "test:live:readonly": "pnpm --filter @aurel/web test:live:readonly",
     "test:deployment": "node scripts/deployment-smoke.mjs",
     "test:recovery": "bash scripts/recovery-drill.sh",
+    "d1:reset:dev": "bash scripts/d1-reset-dev.sh",
     "marketing:check": "node scripts/check-marketing-claims.mjs",
     "typecheck": "pnpm --filter @aurel/web typecheck",
     "typecheck:all": "pnpm -r typecheck",
