@@ -231,7 +231,9 @@ CREATE INDEX incident_updates_public_idx ON incident_updates(published, updated_
 CREATE TABLE provider_customer_links (
   subject_reference TEXT NOT NULL,
   provider TEXT NOT NULL CHECK (provider IN ('bridge', 'rain')),
-  external_customer_id TEXT NOT NULL,
+  -- Bridge creates the customer only after verification, so this can start empty.
+  external_customer_id TEXT,
+  onboarding_reference TEXT,
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'active', 'rejected', 'closed')),
   kyc_status TEXT,
   tos_status TEXT,
@@ -245,6 +247,9 @@ CREATE TABLE provider_customer_links (
 
 CREATE UNIQUE INDEX idx_provider_customer_external
   ON provider_customer_links(provider, external_customer_id);
+
+CREATE UNIQUE INDEX idx_provider_customer_onboarding
+  ON provider_customer_links(provider, onboarding_reference);
 
 CREATE TABLE data_requests (
   request_id TEXT PRIMARY KEY,

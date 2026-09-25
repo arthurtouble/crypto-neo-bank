@@ -11,7 +11,7 @@ export const POST = route("money.bank_accounts.post", { invalid: "invalid_bank_a
   const bridge = await bridgeClient(env.PROJECTION_DB);
   if (!bridge) return errorResponse(503, "feature_unavailable", context, { message: "Bank payouts aren't available yet." });
   const input = bankAccountInputSchema.parse(await request.json());
-  const link = await env.PROJECTION_DB.prepare("SELECT external_customer_id FROM provider_customer_links WHERE subject_reference = ? AND provider = 'bridge' AND status = 'active'")
+  const link = await env.PROJECTION_DB.prepare("SELECT external_customer_id FROM provider_customer_links WHERE subject_reference = ? AND provider = 'bridge' AND status = 'active' AND external_customer_id IS NOT NULL")
     .bind(subject.subjectReference).first<{ external_customer_id: string }>();
   if (!link) return errorResponse(409, "verification_required", context, { message: "Finish bank account setup first." });
   const account = await addBankAccount(bridge, link.external_customer_id, input, crypto.randomUUID());

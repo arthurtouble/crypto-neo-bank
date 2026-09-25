@@ -4,15 +4,12 @@
 interface __BaseEnv_CloudflareEnv {
 	PROJECTION_DB: D1Database;
 	PROVIDER_EVENTS: Queue;
-	AI: Ai;
 	PRODUCT_ENVIRONMENT: "production";
 	PRODUCT_MODE: "mainnet-preview";
 	NEXT_PUBLIC_PRIVY_APP_ID: "cmub5evr4013l0cjs0w5dijlb";
 	NEXT_PUBLIC_TURNSTILE_SITE_KEY: "0x4AAAAAAE_LD5ONaf0OITS8";
 	TURNSTILE_HOSTNAMES: "aurel-financial-os.aurel-events.workers.dev";
 	ADMIN_PRIVY_SUBJECTS: "";
-	PROVIDER_WEBHOOK_TOLERANCE_SECONDS: "300";
-	PROVIDER_WEBHOOK_SECRET: string;
 	PRIVY_APP_SECRET: string;
 	TURNSTILE_SECRET: string;
 }
@@ -24,7 +21,7 @@ type StringifyValues<EnvType extends Record<string, unknown>> = {
 	[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
 };
 declare namespace NodeJS {
-	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "PRODUCT_ENVIRONMENT" | "PRODUCT_MODE" | "NEXT_PUBLIC_PRIVY_APP_ID" | "NEXT_PUBLIC_TURNSTILE_SITE_KEY" | "TURNSTILE_HOSTNAMES" | "ADMIN_PRIVY_SUBJECTS" | "PROVIDER_WEBHOOK_TOLERANCE_SECONDS" | "PROVIDER_WEBHOOK_SECRET" | "PRIVY_APP_SECRET" | "TURNSTILE_SECRET">> {}
+	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "PRODUCT_ENVIRONMENT" | "PRODUCT_MODE" | "NEXT_PUBLIC_PRIVY_APP_ID" | "NEXT_PUBLIC_TURNSTILE_SITE_KEY" | "TURNSTILE_HOSTNAMES" | "ADMIN_PRIVY_SUBJECTS" | "PRIVY_APP_SECRET" | "TURNSTILE_SECRET">> {}
 }
 
 // Begin runtime types

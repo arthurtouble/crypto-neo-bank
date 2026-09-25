@@ -6,7 +6,7 @@ export type NormalizedEvent = {
   createdAt: string;
   data: Record<string, unknown>;
   /** How to find the Aura customer: directly, or through the provider's customer ID. */
-  subject: { kind: "subject"; value: string } | { kind: "provider_customer"; value: string } | null;
+  subject: { kind: "subject"; value: string } | { kind: "provider_customer"; value: string } | { kind: "provider_onboarding"; value: string } | null;
 };
 
 export type WebhookProvider = {

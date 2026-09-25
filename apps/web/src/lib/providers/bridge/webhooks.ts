@@ -9,6 +9,7 @@ const eventSchema = z.object({
   event_type: z.string().min(1).max(120),
   event_object_id: z.string().min(1).max(200),
   event_object: z.record(z.string(), z.unknown()),
+  event_object_status: z.string().nullable().optional(),
   event_created_at: z.string()
 }).passthrough();
 
@@ -34,26 +35,35 @@ async function verify({ headers, rawBody, secret, nowMs }: { headers: Headers; r
 }
 
 /**
- * Customer and KYC changes update the customer link. Other categories
- * (virtual account activity, transfers, cards) are stored and acknowledged
- * until their projections are built against Bridge's sandbox payloads.
+ * Customer, KYC-link, and transfer events update Aura's projections. Other
+ * categories (virtual account activity, cards) are recorded and acknowledged
+ * until their projections exist. Event types are `<category>.<mutation>`, and
+ * `event_object` has the same shape as the matching API object.
  */
 function normalize(payload: unknown) {
   const parsed = eventSchema.safeParse(payload);
   if (!parsed.success) return null;
   const event = parsed.data;
   const object = event.event_object;
+  const text = (value: unknown) => typeof value === "string" ? value : undefined;
   const createdAt = Number.isNaN(Date.parse(event.event_created_at)) ? new Date().toISOString() : new Date(event.event_created_at).toISOString();
   const base = { id: `bridge:${event.event_id}`, providerObjectId: event.event_object_id, createdAt };
-  if (event.event_category === "customer" && typeof object.status === "string") {
-    return { ...base, type: "provider.customer.updated", data: { status: object.status }, subject: { kind: "provider_customer" as const, value: event.event_object_id } };
+  if (event.event_category === "customer") {
+    const status = text(object.status) ?? event.event_object_status ?? undefined;
+    if (!status) return null;
+    return { ...base, type: "provider.customer.updated", data: { status }, subject: { kind: "provider_customer" as const, value: event.event_object_id } };
   }
-  if (event.event_category === "kyc_link" && typeof object.customer_id === "string") {
-    return { ...base, type: "provider.customer.updated", data: { kycStatus: object.kyc_status, tosStatus: object.tos_status },
-      subject: { kind: "provider_customer" as const, value: object.customer_id } };
+  if (event.event_category === "kyc_link") {
+    return { ...base, type: "provider.customer.updated",
+      data: { kycStatus: text(object.kyc_status), tosStatus: text(object.tos_status), customerId: text(object.customer_id) },
+      subject: { kind: "provider_onboarding" as const, value: event.event_object_id } };
   }
-  const customer = typeof object.customer_id === "string" ? object.customer_id : typeof object.on_behalf_of === "string" ? object.on_behalf_of : null;
-  return { ...base, type: `bridge.${event.event_category}.${event.event_type}`, data: {},
+  const customer = text(object.on_behalf_of) ?? text(object.customer_id);
+  if (event.event_category === "transfer" && customer && text(object.state)) {
+    return { ...base, type: "bank.payout.updated", data: { transferId: event.event_object_id, state: text(object.state) },
+      subject: { kind: "provider_customer" as const, value: customer } };
+  }
+  return { ...base, type: `bridge.${event.event_category}`, data: {},
     subject: customer ? { kind: "provider_customer" as const, value: customer } : null };
 }
 

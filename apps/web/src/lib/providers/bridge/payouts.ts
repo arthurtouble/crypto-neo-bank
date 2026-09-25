@@ -1,4 +1,4 @@
-import { isAddress } from "viem";
+import { isAddress, parseUnits } from "viem";
 import { z } from "zod";
 import type { BridgeClient } from "./client";
 
@@ -8,7 +8,7 @@ const payoutSchema = z.object({
   source_deposit_instructions: z.object({
     payment_rail: z.literal("base"),
     currency: z.literal("usdc"),
-    to_address: z.string().refine(isAddress),
+    to_address: z.string().refine(isAddress).nullable(),
     amount: z.string().regex(/^\d+(\.\d{1,6})?$/)
   }).passthrough()
 }).passthrough();
@@ -23,10 +23,13 @@ export async function createPayout(bridge: BridgeClient, input: { customerId: st
   fromAddress: string; rail: "ach" | "wire"; requestId: string }): Promise<Payout> {
   const payout = await bridge.request("/transfers", payoutSchema, {
     method: "POST", idempotencyKey: `payout:${input.requestId}`,
-    body: { on_behalf_of: input.customerId, amount: input.amountUsd,
+    body: { on_behalf_of: input.customerId, amount: input.amountUsd, client_reference_id: input.requestId,
       source: { payment_rail: "base", currency: "usdc", from_address: input.fromAddress },
       destination: { payment_rail: input.rail, currency: "usd", external_account_id: input.externalAccountId } }
   });
-  if (payout.source_deposit_instructions.amount !== input.amountUsd) throw new Error("Bridge changed the payout amount.");
-  return { transferId: payout.id, depositAddress: payout.source_deposit_instructions.to_address.toLowerCase() as `0x${string}`, amount: payout.source_deposit_instructions.amount };
+  const instructions = payout.source_deposit_instructions;
+  // Bridge writes amounts like "25.0"; compare values, not strings.
+  if (parseUnits(instructions.amount, 6) !== parseUnits(input.amountUsd, 6)) throw new Error("Bridge changed the payout amount.");
+  if (!instructions.to_address) throw new Error("Bridge returned no deposit address for this payout.");
+  return { transferId: payout.id, depositAddress: instructions.to_address.toLowerCase() as `0x${string}`, amount: input.amountUsd };
 }

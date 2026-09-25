@@ -3,7 +3,7 @@ import { BridgeClient } from "./client";
 
 export { BridgeClient, BridgeError } from "./client";
 export { getUsdAccount, openUsdAccount } from "./accounts";
-export { startOnboarding } from "./onboarding";
+export { readOnboarding, startOnboarding } from "./onboarding";
 export { createPayout } from "./payouts";
 export { addBankAccount, bankAccountInputSchema } from "./bank-accounts";
 

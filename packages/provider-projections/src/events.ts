@@ -1,4 +1,5 @@
 import { applyCardAccount } from "./card-accounts";
+import { applyBankPayout } from "./bank-payouts";
 import { applyCustomerLink } from "./customer-links";
 import type { ProjectionDatabase } from "./database";
 import { applyBenefitEntitlement, applyMembership } from "./memberships";
@@ -19,6 +20,7 @@ type Adapter = (db: ProjectionDatabase, subjectReference: string, data: unknown,
 /** Which provider may report which projection. Anything else is ignored. */
 export const projectionAdapters: Record<string, { providers: readonly string[]; apply: Adapter }> = {
   "provider.customer.updated": { providers: ["bridge", "rain"], apply: applyCustomerLink },
+  "bank.payout.updated": { providers: ["bridge"], apply: applyBankPayout },
   "card.account.updated": { providers: ["bridge", "rain"], apply: applyCardAccount },
   "membership.updated": { providers: ["bridge", "rain"], apply: applyMembership },
   "benefit.entitlement.updated": { providers: ["bridge", "rain"], apply: applyBenefitEntitlement },

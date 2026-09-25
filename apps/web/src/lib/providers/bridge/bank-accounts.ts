@@ -8,7 +8,7 @@ export const bankAccountInputSchema = z.strictObject({
   routingNumber: z.string().regex(/^\d{9}$/),
   checkingOrSavings: z.enum(["checking", "savings"]),
   address: z.strictObject({
-    streetLine1: z.string().trim().min(2).max(120), city: z.string().trim().min(2).max(80),
+    streetLine1: z.string().trim().min(4).max(35), city: z.string().trim().min(2).max(80),
     state: z.string().trim().length(2), postalCode: z.string().trim().min(3).max(10), country: z.literal("USA")
   })
 });
@@ -16,7 +16,8 @@ export type BankAccountInput = z.infer<typeof bankAccountInputSchema>;
 
 const externalAccountSchema = z.object({
   id: z.string(),
-  last_4: z.string().regex(/^\d{4}$/),
+  account: z.object({ last_4: z.string().regex(/^\d{4}$/) }).passthrough().optional(),
+  last_4: z.string().regex(/^\d{4}$/).optional(),
   bank_name: z.string().optional(),
   account_owner_name: z.string().optional(),
   active: z.boolean().optional()
@@ -26,6 +27,7 @@ export type BankAccount = { id: string; lastFour: string; displayName: string };
 
 /** Save a US bank account with Bridge. Aura keeps only Bridge's ID, the last four digits, and a display name. */
 export async function addBankAccount(bridge: BridgeClient, customerId: string, input: BankAccountInput, requestId: string): Promise<BankAccount> {
+  // Top-level account_number and routing_number are deprecated in Bridge's API; they go under `account`.
   const account = await bridge.request(`/customers/${encodeURIComponent(customerId)}/external_accounts`, externalAccountSchema, {
     method: "POST", idempotencyKey: `bank-account:${requestId}`,
     body: { currency: "usd", account_type: "us", bank_name: input.bankName, account_owner_name: input.accountOwnerName,
@@ -33,5 +35,7 @@ export async function addBankAccount(bridge: BridgeClient, customerId: string, i
       address: { street_line_1: input.address.streetLine1, city: input.address.city, state: input.address.state,
         postal_code: input.address.postalCode, country: input.address.country } }
   });
-  return { id: account.id, lastFour: account.last_4, displayName: account.bank_name ?? input.bankName };
+  const lastFour = account.account?.last_4 ?? account.last_4;
+  if (!lastFour) throw new Error("Bridge returned a bank account without its last four digits.");
+  return { id: account.id, lastFour, displayName: account.bank_name ?? input.bankName };
 }

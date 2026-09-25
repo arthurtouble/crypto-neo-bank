@@ -38,7 +38,7 @@ const healthBody = await health.json().catch(() => ({}));
 assert(health.ok && healthBody.status === "ok" && healthBody.service === "aura-web", `Aura health reports ok (${health.status})`);
 assert(healthBody.dependencies?.operationalDatabase === "ok", "health confirms the projection database binding");
 
-for (const path of ["/app", "/app/deposit", "/app/borrow", "/app/support"]) {
+for (const path of ["/app", "/app/deposit", "/app/earn", "/app/support"]) {
   const response = await request(path);
   assert(response.ok && (await response.text()).includes("Example data"), `${path} offers labeled guest browsing (${response.status})`);
 }

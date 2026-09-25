@@ -24,11 +24,14 @@ export const POST = route("money.onboarding", { invalid: "invalid_onboarding", u
   const now = new Date().toISOString();
   await ensureSubjectProfile(env.PROJECTION_DB, subject.subjectReference);
   const onboarding = await startOnboarding(bridge, { subject: subject.subjectReference, ...input });
+  // A repeat request (corrected name or email) replaces the link only while Bridge has no customer yet.
   await env.PROJECTION_DB.prepare(`INSERT INTO provider_customer_links
-      (subject_reference, provider, external_customer_id, status, kyc_status, tos_status, onboarding_url, created_at, updated_at)
-    VALUES (?, 'bridge', ?, 'pending', ?, ?, ?, ?, ?)
-    ON CONFLICT(subject_reference, provider) DO UPDATE SET onboarding_url = excluded.onboarding_url, updated_at = excluded.updated_at
-      WHERE provider_customer_links.external_customer_id = excluded.external_customer_id`)
-    .bind(subject.subjectReference, onboarding.customerId, onboarding.kycStatus, onboarding.tosStatus, onboarding.kycLink, now, now).run();
+      (subject_reference, provider, external_customer_id, onboarding_reference, status, kyc_status, tos_status, onboarding_url, created_at, updated_at)
+    VALUES (?, 'bridge', ?, ?, 'pending', ?, ?, ?, ?, ?)
+    ON CONFLICT(subject_reference, provider) DO UPDATE SET onboarding_reference = excluded.onboarding_reference,
+      external_customer_id = excluded.external_customer_id, kyc_status = excluded.kyc_status, tos_status = excluded.tos_status,
+      onboarding_url = excluded.onboarding_url, updated_at = excluded.updated_at
+      WHERE provider_customer_links.external_customer_id IS NULL`)
+    .bind(subject.subjectReference, onboarding.customerId, onboarding.kycLinkId, onboarding.kycStatus, onboarding.tosStatus, onboarding.kycLink, now, now).run();
   return Response.json({ verificationUrl: onboarding.kycLink, termsUrl: onboarding.tosLink, traceId: context.traceId }, { status: 201 });
 });

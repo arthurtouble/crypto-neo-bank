@@ -10,7 +10,8 @@ const reply = (status: number, body: Record<string, unknown>) => Response.json(b
 async function resolveSubject(provider: string, subject: NormalizedEvent["subject"]): Promise<string | undefined> {
   if (!subject) return undefined;
   if (subject.kind === "subject") return subject.value;
-  const link = await env.PROJECTION_DB.prepare("SELECT subject_reference FROM provider_customer_links WHERE provider = ? AND external_customer_id = ?")
+  const column = subject.kind === "provider_customer" ? "external_customer_id" : "onboarding_reference";
+  const link = await env.PROJECTION_DB.prepare(`SELECT subject_reference FROM provider_customer_links WHERE provider = ? AND ${column} = ?`)
     .bind(provider, subject.value).first<{ subject_reference: string }>();
   return link?.subject_reference;
 }

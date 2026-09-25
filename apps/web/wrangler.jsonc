@@ -33,9 +33,6 @@
       { "binding": "PROVIDER_EVENTS", "queue": "aurel-provider-events" }
     ]
   },
-  "ai": {
-    "binding": "AI"
-  },
   "env": {
     "dev": {
       "name": "aura-dev",
@@ -61,7 +58,6 @@
         "migrations_dir": "../../infra/d1/migrations"
       }],
       "queues": { "producers": [{ "binding": "PROVIDER_EVENTS", "queue": "aura-dev-provider-events" }] },
-      "ai": { "binding": "AI" },
       "observability": { "enabled": true, "logs": { "enabled": true, "head_sampling_rate": 1 }, "traces": { "enabled": true, "head_sampling_rate": 0.01 } }
     }
   },

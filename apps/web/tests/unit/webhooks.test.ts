@@ -60,9 +60,14 @@ describe("Bridge signatures", () => {
       event_type: `${category}.updated`, event_object_id: "cust_1", event_object: object, event_created_at: "2026-09-25T11:59:00Z" }, new Headers());
     expect(event("customer", { status: "active" })).toMatchObject({ id: "bridge:wh_1", type: "provider.customer.updated", data: { status: "active" },
       subject: { kind: "provider_customer", value: "cust_1" } });
-    expect(event("kyc_link", { customer_id: "cust_1", kyc_status: "approved", tos_status: "approved" }))
-      .toMatchObject({ type: "provider.customer.updated", data: { kycStatus: "approved", tosStatus: "approved" } });
-    expect(event("transfer", { on_behalf_of: "cust_1" })).toMatchObject({ type: "bridge.transfer.transfer.updated", data: {} });
+    // Bridge documents approval as "active", but its customer webhook example says "approved".
+    expect(event("customer", { status: "approved" })).toMatchObject({ data: { status: "approved" } });
+    expect(event("kyc_link", { customer_id: null, kyc_status: "under_review", tos_status: "approved" }))
+      .toMatchObject({ type: "provider.customer.updated", data: { kycStatus: "under_review", tosStatus: "approved" },
+        subject: { kind: "provider_onboarding", value: "cust_1" } });
+    expect(event("transfer", { on_behalf_of: "cust_1", state: "payment_processed" }))
+      .toMatchObject({ type: "bank.payout.updated", data: { transferId: "cust_1", state: "payment_processed" } });
+    expect(event("virtual_account.activity", { customer_id: "cust_1" })).toMatchObject({ type: "bridge.virtual_account.activity", data: {} });
     expect(bridgeWebhooks.normalize({ event_id: "x" }, new Headers())).toBeNull();
   });
 });
@@ -134,5 +139,26 @@ describe("POST /api/webhooks/:provider", () => {
     expect((await post("rain")).status).toBe(401);
     expect(sqlite.prepare("SELECT COUNT(*) AS n FROM webhook_receipts").get()).toEqual({ n: 0 });
     expect(state.sent).toEqual([]);
+  });
+});
+
+describe("Bridge payout state", () => {
+  it("appends each payout state to the funding action once, and ignores unknown transfers", async () => {
+    const sqlite = schemaDatabase();
+    const db = d1(sqlite) as unknown as ProjectionDatabase;
+    sqlite.exec(`INSERT INTO subject_profiles (subject_reference, privy_user_reference, created_at, updated_at) VALUES ('alice', 'alice', 't', 't');
+      INSERT INTO actions (action_id, subject_reference, wallet_address, kind, chain_id, summary_json, calls_json, calls_fingerprint, effects_json,
+        counts_toward_limit, created_at, expires_at, updated_at)
+      VALUES ('a1', 'alice', '0x1111111111111111111111111111111111111111', 'transfer', 8453, '{"bankPayout":{"transferId":"tr_1"}}',
+        '[{"to":"0x2222222222222222222222222222222222222222","value":"0","data":"0x"}]', 'fp', '[]', 1, 't', 't', 't');`);
+    const event = (transferId: string, state: string) => applyProviderEvent(db, { id: `bridge:${state}`, provider: "bridge", type: "bank.payout.updated",
+      subjectReference: "alice", providerObjectId: transferId, createdAt: "2026-09-25T12:00:00.000Z", data: { transferId, state } });
+    expect(await event("tr_1", "payment_submitted")).toMatchObject({ status: "applied" });
+    await event("tr_1", "payment_submitted");
+    await event("tr_1", "payment_processed");
+    expect(await event("tr_2", "payment_processed")).toMatchObject({ status: "ignored" });
+    expect(sqlite.prepare("SELECT json_extract(evidence_json, '$.state') AS state FROM action_events ORDER BY rowid").all())
+      .toEqual([{ state: "payment_submitted" }, { state: "payment_processed" }]);
+    sqlite.close();
   });
 });

@@ -25,7 +25,7 @@ export const POST = route("money.payouts.post", { invalid: "invalid_payout", una
   const input = schema.parse(await request.json());
   if (Number(input.amountUsd) <= 0) return errorResponse(422, "invalid_amount", context, { message: "Enter an amount greater than zero." });
   const [link, bank] = await Promise.all([
-    env.PROJECTION_DB.prepare("SELECT external_customer_id FROM provider_customer_links WHERE subject_reference = ? AND provider = 'bridge' AND status = 'active'")
+    env.PROJECTION_DB.prepare("SELECT external_customer_id FROM provider_customer_links WHERE subject_reference = ? AND provider = 'bridge' AND status = 'active' AND external_customer_id IS NOT NULL")
       .bind(subject.subjectReference).first<{ external_customer_id: string }>(),
     env.PROJECTION_DB.prepare(`SELECT beneficiary_id, provider_beneficiary_reference, display_name, account_hint FROM bank_beneficiary_projections
       WHERE beneficiary_id = ? AND subject_reference = ? AND provider = 'bridge' AND verification_status = 'verified'`)
