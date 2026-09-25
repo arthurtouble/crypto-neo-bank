@@ -14,10 +14,6 @@ const to = { id: destination, chainId: 8453, address: destination.split(":")[1],
 const arbitrum = { ...from, id: "42161:0xaf88d065e77c8cc2239327c5edb3a432268e5831",
   chainId: 42161, address: "0xaf88d065e77c8cc2239327c5edb3a432268e5831" };
 
-vi.mock("@/lib/swap/governed-route", () => ({ validateGovernedSameChainPlan: (plan: StoredSwapQuotePlan) => ({
-  sourceCall: JSON.parse(plan.source_call_json), expectedEffect: { wallet, sourceAssetId: source,
-    destinationAssetId: destination, sourceAmountRaw: "1000000", minimumOutputRaw: "900000", recipient: wallet }
-}) }));
 vi.mock("@/lib/swap/governed-across-route", () => ({ validateGovernedAcrossPlan: (plan: StoredSwapQuotePlan) => ({
   sourceCall: JSON.parse(plan.source_call_json), expectedSourceEffect: { wallet, bridgeAmountRaw: "997500" },
   expectedDestinationEffect: { recipient: wallet, minimumOutputRaw: "900000" }
@@ -48,53 +44,41 @@ async function fixture(): Promise<StoredSwapQuotePlan> {
     fingerprint, status: "active", intent_id: "intent-1" };
 }
 
+async function bridgeFixture(): Promise<StoredSwapQuotePlan> {
+  const plan = await fixture();
+  plan.destination_asset_id = arbitrum.id;
+  plan.destination_chain_id = 42161;
+  plan.tool_id = "across";
+  plan.route_steps_json = JSON.stringify([{ id: "fee", type: "protocol", tool: "feeCollection" },
+    { id: "quote-1", type: "cross", tool: "across" }]);
+  plan.route_policy_version = await hash([["across", "feecollection"], ["across"], [diamond], [diamond]]);
+  plan.catalog_version = await hash([from, arbitrum]);
+  plan.fingerprint = await hash(["lifi", "across", "quote-1", source, arbitrum.id,
+    "1000000", "950000", "900000", wallet, wallet, 0.005, 8453, diamond,
+    "0", "0x1234", diamond, null, null, plan.expires_at, plan.route_policy_version,
+    plan.catalog_version, JSON.parse(plan.route_steps_json), JSON.parse(plan.economics_json!)]);
+  return plan;
+}
+
 describe("stored Swap preparation integrity", () => {
   beforeEach(() => {
-    vi.stubEnv("AUREL_LIFI_ALLOWED_TOOLS", "uniswap");
-    vi.stubEnv("AUREL_LIFI_ALLOWED_EXCHANGES", "uniswap");
-    vi.stubEnv("AUREL_LIFI_ALLOWED_BRIDGES", "");
+    vi.stubEnv("AUREL_LIFI_ALLOWED_TOOLS", "across,feecollection");
+    vi.stubEnv("AUREL_LIFI_ALLOWED_BRIDGES", "across");
     vi.stubEnv("AUREL_SWAP_ALLOWED_TARGETS", diamond);
     vi.stubEnv("AUREL_SWAP_ALLOWED_SPENDERS", diamond);
     vi.stubEnv("AUREL_SWAP_EXECUTION_POLICY", JSON.stringify({ diamond,
       feeForwarder: "0x3333333333333333333333333333333333333333",
-      feeRecipients: ["0x4444444444444444444444444444444444444444"],
-      routerSpenders: [{ router: "0x5555555555555555555555555555555555555555",
-        spender: "0x5555555555555555555555555555555555555555", feeTiers: [3000] }] }));
+      feeRecipients: ["0x4444444444444444444444444444444444444444"] }));
   });
 
-  it("rebinds the retained quote to current policy, catalog, and exact fingerprint", async () => {
+  it("refuses same-network LI.FI plans; Base swaps use the direct Uniswap path", async () => {
+    vi.stubEnv("AUREL_LIFI_ALLOWED_TOOLS", "uniswap");
     const plan = await fixture();
-    expect((await assertSwapPrepareIntegrity(plan, { from, to }, now)).reviewedSpender).toBe(diamond);
-    await expect(assertSwapPrepareIntegrity({ ...plan, fingerprint: `0x${"0".repeat(64)}` }, { from, to }, now)).rejects.toThrow();
-  });
-
-  it("fails closed when current operator policy or catalog metadata changes", async () => {
-    const plan = await fixture();
-    vi.stubEnv("AUREL_LIFI_ALLOWED_EXCHANGES", "sushiswap");
-    await expect(assertSwapPrepareIntegrity(plan, { from, to }, now)).rejects.toThrow();
-    vi.stubEnv("AUREL_LIFI_ALLOWED_EXCHANGES", "uniswap");
-    await expect(assertSwapPrepareIntegrity(plan, { from, to: { ...to, decimals: 17 } }, now)).rejects.toThrow();
+    await expect(assertSwapPrepareIntegrity(plan, { from, to }, now)).rejects.toThrow(/not approved/);
   });
 
   it("rebinds a reviewed bridge to the bridge allowlist and the retained fingerprint", async () => {
-    vi.stubEnv("AUREL_SWAP_EXECUTION_POLICY", JSON.stringify({ diamond,
-      feeForwarder: "0x3333333333333333333333333333333333333333",
-      feeRecipients: ["0x4444444444444444444444444444444444444444"], routerSpenders: [] }));
-    vi.stubEnv("AUREL_LIFI_ALLOWED_TOOLS", "across,feecollection");
-    vi.stubEnv("AUREL_LIFI_ALLOWED_EXCHANGES", "");
-    vi.stubEnv("AUREL_LIFI_ALLOWED_BRIDGES", "across");
-    const plan = await fixture();
-    plan.destination_asset_id = arbitrum.id;
-    plan.destination_chain_id = 42161;
-    plan.tool_id = "across";
-    plan.route_steps_json = JSON.stringify([{ id: "fee", type: "protocol", tool: "feeCollection" },
-      { id: "quote-1", type: "cross", tool: "across" }]);
-    plan.route_policy_version = await hash([["across", "feecollection"], [], ["across"], [diamond], [diamond]]);
-    plan.catalog_version = await hash([from, arbitrum]);
-    plan.fingerprint = await hash(["lifi", "across", "quote-1", source, arbitrum.id,
-      "1000000", "950000", "900000", wallet, wallet, 0.005, 8453, diamond,
-      "0", "0x1234", diamond, null, null, plan.expires_at, plan.route_policy_version,
-      plan.catalog_version, JSON.parse(plan.route_steps_json), JSON.parse(plan.economics_json!)]);
+    const plan = await bridgeFixture();
     const result = await assertSwapPrepareIntegrity(plan, { from, to: arbitrum }, now);
     expect(result).toMatchObject({ reviewedSpender: diamond,
       expectedSourceEffect: { bridgeAmountRaw: "997500" } });
@@ -102,5 +86,26 @@ describe("stored Swap preparation integrity", () => {
       { from, to: arbitrum }, now)).rejects.toThrow();
     vi.stubEnv("AUREL_LIFI_ALLOWED_BRIDGES", "");
     await expect(assertSwapPrepareIntegrity(plan, { from, to: arbitrum }, now)).rejects.toThrow();
+  });
+
+  it("fails closed when current operator policy or catalog metadata changes", async () => {
+    const plan = await bridgeFixture();
+    vi.stubEnv("AUREL_SWAP_ALLOWED_SPENDERS", `${diamond},0x5555555555555555555555555555555555555555`);
+    await expect(assertSwapPrepareIntegrity(plan, { from, to: arbitrum }, now)).rejects.toThrow(/policy or catalog changed/);
+    vi.stubEnv("AUREL_SWAP_ALLOWED_SPENDERS", diamond);
+    await expect(assertSwapPrepareIntegrity(plan, { from, to: { ...arbitrum, decimals: 17 } }, now)).rejects.toThrow();
+  });
+
+  it("ignores a stale exchange allowlist: it no longer enters the route policy", async () => {
+    vi.stubEnv("AUREL_LIFI_ALLOWED_EXCHANGES", "uniswap");
+    const plan = await bridgeFixture();
+    await expect(assertSwapPrepareIntegrity(plan, { from, to: arbitrum }, now)).resolves.toMatchObject({ reviewedSpender: diamond });
+  });
+
+  it("rejects a legacy execution policy that still lists router spenders", async () => {
+    vi.stubEnv("AUREL_SWAP_EXECUTION_POLICY", JSON.stringify({ diamond,
+      feeForwarder: "0x3333333333333333333333333333333333333333",
+      feeRecipients: ["0x4444444444444444444444444444444444444444"], routerSpenders: [] }));
+    await expect(assertSwapPrepareIntegrity(await bridgeFixture(), { from, to: arbitrum }, now)).rejects.toThrow();
   });
 });
