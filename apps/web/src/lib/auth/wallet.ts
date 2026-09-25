@@ -1,17 +1,13 @@
 import { PrivyClient } from "@privy-io/node";
 import { isAddress } from "viem";
 import { PRIVY_APP_ID } from "@/config/client";
+import { WalletOwnershipError } from "@/lib/http/errors";
 
 type LinkedAccount = { type: string; chain_type?: string; address?: string };
 type UserWithWallets = { id: string; linked_accounts: LinkedAccount[] };
 type GetUser = (subjectReference: string) => Promise<UserWithWallets>;
 
-export class WalletOwnershipError extends Error {
-  constructor() {
-    super("This wallet is not linked to your account.");
-    this.name = "WalletOwnershipError";
-  }
-}
+export { WalletOwnershipError };
 
 async function getPrivyUser(subjectReference: string): Promise<UserWithWallets> {
   if (!process.env.PRIVY_APP_SECRET) throw new Error("Privy server authentication is not configured.");
