@@ -12,7 +12,7 @@ No row below is approved merely by appearing here. Record the decision, date, ac
 | Initial countries | Open | Provider country matrix plus local product/marketing review |
 | Excluded countries/persons | Fail closed pending approval | Sanctions and provider restrictions implemented in eligibility |
 | Aurel role for self-controlled wallet/DeFi interface | Open | Counsel characterization and activity-by-activity licensing analysis |
-| KYC/fiat/card allocation | Open | Signed provider agreement and the [responsibility matrix](/compliance/compliance-responsibility-matrix/) |
+| KYC/fiat/card allocation | Open | Signed provider agreement and the [responsibility matrix](compliance-responsibility-matrix.md) |
 | Tokenized assets | Disabled | Issuer, venue, distribution, transfer restriction and country review |
 | Membership/rewards | Prepared only | Vendor contracts, tax/consumer terms and entitlement funding |
 | “Bank”, “account”, “deposit”, insurance and yield language | Restricted | Approved copy library reflecting exact legal product |

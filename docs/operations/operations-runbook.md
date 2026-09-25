@@ -52,7 +52,7 @@ Aurel can lose its D1 data without losing customer funds because Privy, contract
 6. Stop the rollout and use `pnpm release:rollback` if authentication, policy, transaction preparation, asset reads, or support intake regress.
 7. A code rollback does not roll back D1. Database changes must remain backward-compatible through the rollout window.
 
-## Service targets for closed beta
+## Service targets
 
 - Application availability target: 99.95%, excluding upstream chain/provider incidents shown as degraded dependencies.
 - Supported route preparation success: at least 98% when a provider route is available.

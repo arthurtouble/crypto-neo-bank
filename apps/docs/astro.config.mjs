@@ -14,7 +14,7 @@ export default defineConfig({
       pagination: true,
       tableOfContents: { minHeadingLevel: 2, maxHeadingLevel: 3 },
       sidebar: [
-        { label: "Start here", items: [{ label: "Welcome", slug: "" }, { label: "Product status", slug: "getting-started/status" }, { label: "Set up Aura", slug: "getting-started/setup" }, { label: "Private beta", slug: "getting-started/private-beta" }] },
+        { label: "Start here", items: [{ label: "Welcome", slug: "" }, { label: "Product status", slug: "getting-started/status" }, { label: "Set up Aura", slug: "getting-started/setup" }, { label: "Access and availability", slug: "getting-started/access" }] },
         { label: "Understand Aura", items: [
           { label: "Product principles", slug: "concepts/product-principles" },
           { label: "Architecture", slug: "concepts/architecture" },

@@ -32,6 +32,6 @@ description: Roles, severities, response procedures, communications, and recover
 
 An incident closes only when impact is bounded, affected records are reconciled, customer/provider notices are complete, the feature flag decision is recorded, and corrective actions have owners and dates. Critical and High incidents require a written review within five business days.
 
-## Required contacts before beta expansion
+## Required contacts before launch
 
 Record a primary and backup for product/security, operations/support, legal/compliance and each production provider. AI agents may support evidence collection and drafting; they are not the incident lead or accountable contact.

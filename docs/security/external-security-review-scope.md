@@ -8,7 +8,7 @@ description: Required scope and evidence for independent security assessment.
 - Privy token verification, subject isolation, recovery/export presentation and passkey step-up.
 - Transaction intent creation, fingerprinting, policy, cooling, expiry, simulation, wallet handoff and state transitions.
 - Allowlisted networks, tokens, protocol contracts, route targets and ERC-20 approvals.
-- Beta invitation hashing, redemption concurrency, country gating, suspension and transaction caps.
+- Account locks, per-account daily limits, and server-side feature switches on every money-moving path.
 - Operator authorization, Cloudflare Access activation boundary and feature kill switches.
 - Provider webhook authentication, replay prevention, queue retries, dead-letter processing and reconciliation.
 - D1 migrations, evidence integrity, backup/export/restore, log minimization and incident procedures.
@@ -17,7 +17,7 @@ description: Required scope and evidence for independent security assessment.
 
 ## Required tests
 
-Test horizontal and vertical authorization, forged Privy/Access headers, duplicate invite redemption, transaction-policy bypass, altered calldata, quote tampering, stale review reuse, webhook timing/replay, queue poison messages, unsupported asset/network paths, prompt injection, sensitive log leakage and rollback/schema mismatch.
+Test horizontal and vertical authorization, forged Privy/Access headers, transaction-policy bypass, altered calldata, quote tampering, stale review reuse, webhook timing/replay, queue poison messages, unsupported asset/network paths, prompt injection, sensitive log leakage and rollback/schema mismatch.
 
 ## Exit standard
 

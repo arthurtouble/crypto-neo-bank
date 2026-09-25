@@ -18,4 +18,4 @@ Last reviewed: 24 September 2026. This describes the source branch, not the depl
 5. **Operations:** Primary and backup incident owners, provider escalation paths, support coverage, out-of-band customer communication, dispute handling, fraud/sanctions handoff, and rollback/forward-fix procedures are staffed and exercised.
 6. **Acceptance:** Desktop and mobile flows, five uncoached customer journeys, controlled funded movements on every published route, delayed/failed settlement recovery, and a post-release smoke pass are recorded. Financial flags remain disabled until the specific rail passes its gate.
 
-See [Aura build status](/overview/build-status/) for what is implemented and what still needs integration. The existing [edge security activation](/operations/edge-security-activation/) and [acceptance plan](/operations/acceptance-test-plan/) provide operator steps.
+See [Aura build status](build-status.md) for what is implemented and what still needs integration. The existing [edge security activation](../operations/edge-security-activation.md) and [acceptance plan](../operations/acceptance-test-plan.md) provide operator steps.

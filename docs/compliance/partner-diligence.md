@@ -7,7 +7,7 @@ description: Internal provider diligence package, questions, evidence, and appro
 
 Aurel is a customer-controlled financial interface for stablecoins, public-chain protocols and, after approval, regulated fiat and card services. Base is the home network. Privy provides authentication and wallet infrastructure. Customers—not Aurel—confirm wallet transactions. Public chains, protocols and regulated providers remain authoritative for balances and settlement; Aurel does not operate a shadow bank ledger.
 
-The initial partner request is a closed USDC-first beta with 25 invited users, expanding to 100 only after operational evidence meets the gates in the [closed-beta plan](/operations/closed-beta-plan/). Bank accounts, fiat conversion and cards remain disabled until contracts, jurisdiction approval, end-to-end reconciliation and customer disclosures are complete.
+The initial partner request is a closed USDC-first beta with 25 invited users, expanding to 100 only after operational evidence meets the gates in the [launch controls](../operations/launch-controls.md). Bank accounts, fiat conversion and cards remain disabled until contracts, jurisdiction approval, end-to-end reconciliation and customer disclosures are complete.
 
 ## Product and customer
 
@@ -54,17 +54,17 @@ The partner should quote setup fees, monthly minimum, per-customer KYC, enhanced
 
 ## Evidence package
 
-- Architecture and source-of-truth rules: [architecture](/architecture/architecture/)
-- Security model: [threat model](/security/threat-model/) and [security review](/security/security-review/)
-- Operating and incident process: [operations runbook](/operations/operations-runbook/)
-- Responsibility allocation: [responsibility matrix](/compliance/compliance-responsibility-matrix/)
-- Provider comparison: [provider requirements](/compliance/provider-requirements-matrix/)
-- Beta limits and progression: [closed-beta plan](/operations/closed-beta-plan/)
-- Acceptance protocol: [acceptance test plan](/operations/acceptance-test-plan/)
-- Fund and data flows: [fund and provider data](/architecture/fund-flow-and-provider-data/)
-- Volume and economics assumptions: [volume and economics](/product/volume-and-economics-inputs/)
-- Data retention: [data retention schedule](/operations/data-retention-schedule/)
-- External security review scope: [external review scope](/security/external-security-review-scope/)
+- Architecture and source-of-truth rules: [architecture](../architecture/architecture.md)
+- Security model: [threat model](../security/threat-model.md) and [security review](../security/security-review.md)
+- Operating and incident process: [operations runbook](../operations/operations-runbook.md)
+- Responsibility allocation: [responsibility matrix](compliance-responsibility-matrix.md)
+- Provider comparison: [provider requirements](provider-requirements-matrix.md)
+- Beta limits and progression: [launch controls](../operations/launch-controls.md)
+- Acceptance protocol: [acceptance test plan](../operations/acceptance-test-plan.md)
+- Fund and data flows: [fund and provider data](../architecture/fund-flow-and-provider-data.md)
+- Volume and economics assumptions: [volume and economics](../product/volume-and-economics-inputs.md)
+- Data retention: [data retention schedule](../operations/data-retention-schedule.md)
+- External security review scope: [external review scope](../security/external-security-review-scope.md)
 
 ## Open approval items
 

@@ -5,7 +5,7 @@ sidebar:
   order: 1
 ---
 
-Aura is a browsable product preview. Every section can be explored without signing in, using clearly labeled fictional data. Personal records and financial actions require authentication and applicable invitation, country, and security checks. The current Aura development site uses this branch; it is not a production release.
+Aura is a browsable product preview. Every section can be explored without signing in, using clearly labeled fictional data. Anyone can sign in. Personal records require authentication, and financial actions also depend on feature availability and your account controls. The current Aura development site uses this branch; it is not a production release.
 
 | Area | Current capability | Boundary |
 | --- | --- | --- |

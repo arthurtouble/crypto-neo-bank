@@ -24,7 +24,7 @@ Start in log or managed-challenge mode, inspect representative traffic, then enf
 
 1. Managed ruleset for the product hostname.
 2. Block non-HTTPS and unexpected methods where the API contract is explicit.
-3. Managed Challenge for suspicious traffic to `/api/auth/*`, `/api/beta/*`, `/api/support/*` and `/api/webhooks/*` while excluding validated provider source ranges only when the provider publishes stable ranges.
+3. Managed Challenge for suspicious traffic to `/api/auth/*`, `/api/feedback`, `/api/support/*` and `/api/webhooks/*` while excluding validated provider source ranges only when the provider publishes stable ranges.
 4. Block requests detected as API fallthrough after the OpenAPI operation inventory is complete.
 5. Never bypass application authentication, Turnstile, webhook signatures or D1-backed abuse limits because an edge rule exists.
 
@@ -34,21 +34,20 @@ Recommended initial edge ceilings, measured before enforcement:
 
 | Path | Ceiling | Action |
 |---|---:|---|
-| `/api/beta/access` POST | 10 per IP / hour | Managed Challenge, then block repeated abuse |
 | `/api/support/cases` POST | 10 per IP / hour | Managed Challenge; application also enforces 5/customer/hour |
 | `/api/support/assistant` POST | 30 per customer/IP / minute | Block excess; application enforces its customer limit |
-| `/api/routing/quote` POST | 60 per customer/IP / 10 minutes | Block excess; application enforces 30/customer/10 minutes |
+| `/api/swap/quote` POST | 60 per customer/IP / 10 minutes | Block excess; application enforces 20/customer/10 minutes |
 | `/api/webhooks/provider` POST | Contracted provider envelope | Rate high enough for retry bursts; never replace HMAC verification |
 | `/api/ops/*` | Low operator volume | Access policy first, then strict per-identity/IP limit |
 
-Revisit thresholds using observed beta distributions. A rate-limit event is not evidence that the customer is malicious.
+Revisit thresholds using observed traffic distributions. A rate-limit event is not evidence that the customer is malicious.
 
 ## API Shield
 
 1. Update `infra/cloudflare/aurel-api.openapi.yaml` with the custom server hostname.
 2. Upload it as an OpenAPI 3.0 schema and add its operations to Web Assets.
 3. Enable validation detection without mitigation.
-4. Send representative valid and invalid beta traffic.
+4. Send representative valid and invalid customer traffic.
 5. Review `cf.schema_validation.uploaded.violated` samples and correct the schema or clients.
 6. Enforce violations with a scoped WAF custom rule only after false positives are resolved.
 
@@ -56,16 +55,16 @@ Schema upload enables detection; it does not enable blocking by itself.
 
 ## Logs and alerts
 
-Workers Logs and traces are enabled. Before beta expansion, configure OpenTelemetry export or Workers Trace Events Logpush to the approved destination with redaction and retention controls. Alert on:
+Workers Logs and traces are enabled. Before launch, configure OpenTelemetry export or Workers Trace Events Logpush to the approved destination with redaction and retention controls. Alert on:
 
 - authentication and authorization failure spikes;
 - transaction preparation or receipt-check errors;
 - dependency checks becoming unavailable;
 - dead-letter messages and stuck provider events;
 - Critical/High operational issues;
-- unusual support and invite-redemption volume.
+- unusual support and sign-up volume.
 
-The destination, receiver, quiet hours, escalation and test date belong in [launch readiness](/overview/launch-readiness/).
+The destination, receiver, quiet hours, escalation and test date belong in [launch readiness](../overview/launch-readiness.md).
 
 ## Evidence to retain
 

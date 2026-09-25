@@ -28,9 +28,9 @@ Reviewed 22 September 2026. Scope: application authentication, private-beta acce
 | High launch gate | WAF/API rate rules, API Shield and operator Access are not active | Configure after custom domain and operator identity are approved; capture evidence |
 | High launch gate | No independent application/security assessment | Independent review with no unresolved critical/high issues |
 | Medium | External log retention, alert routing and named incident coverage are unset | Configure receiver/export and exercise notification |
-| Medium | Real-wallet acceptance matrix is incomplete | Execute the [acceptance test plan](/operations/acceptance-test-plan/) with designated funded test wallets |
+| Medium | Real-wallet acceptance matrix is incomplete | Execute the [acceptance test plan](../operations/acceptance-test-plan.md) with designated funded test wallets |
 | Medium | Regulated provider and jurisdiction allocation is unsigned | Contract, counsel and operational tabletop sign-off |
-| Moderate accepted for private beta | Two transitive wallet-connector advisories have no safe direct override | Track reachability, upstream remediation and review date in the [dependency risk register](/architecture/dependency-risk-register/); no High/Critical advisories are open |
+| Moderate accepted for private beta | Two transitive wallet-connector advisories have no safe direct override | Track reachability, upstream remediation and review date in the [dependency risk register](../architecture/dependency-risk-register.md); no High/Critical advisories are open |
 | Low | Public Worker hostname remains the production hostname | Attach approved custom domain and update origin/API schemas |
 
 ## Threat assumptions
@@ -39,4 +39,4 @@ Customer device compromise, malicious wallet extensions, exported-key use outsid
 
 ## Release verdict
 
-Suitable for continued invite-only engineering and acceptance testing with small designated funds. Not approved for broad public launch or regulated fiat/card activation until every high launch gate is closed and the accountable owner records evidence in [launch readiness](/overview/launch-readiness/).
+Suitable for continued invite-only engineering and acceptance testing with small designated funds. Not approved for broad public launch or regulated fiat/card activation until every high launch gate is closed and the accountable owner records evidence in [launch readiness](../overview/launch-readiness.md).

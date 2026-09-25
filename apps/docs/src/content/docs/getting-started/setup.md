@@ -11,7 +11,7 @@ Open Aura to browse Overview, Deposit, Send, Swap, Earn, Borrow, Invest, Cards, 
 
 ## Sign in
 
-Select **Get Started** and choose a sign-in method offered by Privy. Aura verifies the session before showing personal data. Financial actions also require the applicable invitation, country eligibility, transaction policy, and wallet confirmation. Use an account you can recover and add a passkey when available.
+Select **Get Started** and choose a sign-in method offered by Privy. Aura verifies the session before showing personal data. Financial actions also depend on feature availability, your account controls and daily limit, transaction policy, and wallet confirmation. Use an account you can recover and add a passkey when available.
 
 ## Connect a wallet
 
