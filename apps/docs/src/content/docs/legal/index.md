@@ -1,20 +1,22 @@
 ---
 title: Legal documents
-description: Pre-launch terms, privacy information, risk disclosures, and customer policies.
+description: Terms, privacy information, risk disclosures, and customer policies for Aura.
 sidebar:
   order: 1
 ---
 
 :::caution[Pre-launch drafts]
-These documents are working drafts for product design and counsel review. They are not yet customer terms. The operating entity, registered address, launch countries, regulators, provider contracts, and contact channels must be completed before acceptance or public launch.
+These documents are drafts for counsel review. Aura asks every customer to accept the current terms of use and acknowledge the privacy notice the first time they sign in, and again when a version changes. The operating entity, registered address, governing law, regulators, and contact channels must be completed before public launch.
 :::
 
-- [Terms of use](/legal/terms-of-use/)
-- [Privacy notice](/legal/privacy-notice/)
-- [Risk disclosure](/legal/risk-disclosure/)
-- [Acceptable use policy](/legal/acceptable-use/)
-- [Cookie notice](/legal/cookie-notice/)
-- [Electronic communications consent](/legal/electronic-communications/)
-- [Complaints policy](/legal/complaints/)
+| Document | Current version |
+| --- | --- |
+| [Terms of use](/legal/terms-of-use/) | 2026-09-25 |
+| [Privacy notice](/legal/privacy-notice/) | 2026-09-25 |
+| [Risk disclosure](/legal/risk-disclosure/) | 2026-09-25 |
+| [Acceptable use policy](/legal/acceptable-use/) | 2026-09-25 |
+| [Cookie notice](/legal/cookie-notice/) | 2026-09-25 |
+| [Electronic communications](/legal/electronic-communications/) | 2026-09-25 |
+| [Complaints policy](/legal/complaints/) | 2026-09-25 |
 
-The product should show the relevant document at the point it matters. A link in a footer is not a substitute for a clear warning before a risky action.
+Aura shows the relevant warning at the moment it matters, such as before you approve a transaction. A link in a footer does not replace that.

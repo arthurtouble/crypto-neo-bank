@@ -70,6 +70,18 @@ If Aurel times out after sending a command:
 3. Display “status unknown—checking provider,” never “failed,” until authoritative status is known.
 4. Reconcile the provider object and only then permit a retry.
 
+## Customer data requests
+
+Customers request an export or deletion in Settings → Data & Privacy. Operators see open requests at `GET /api/ops/privacy/data-requests` and fulfil one with `PATCH /api/ops/privacy/data-requests/{requestId}` and `{"action": "export" | "delete" | "reject"}`.
+
+- **Export** returns every exportable table for the customer from `lib/privacy/subject-data.ts`, each with the reason it is kept. Deliver it through the verified support channel, never by public link.
+- **Delete** erases the erasable tables in one batch and records the counts in the request evidence and audit log. Retained tables are listed in the response with their reasons.
+- Complete requests within the legal deadline for the customer's country, and reject only with a recorded reason.
+
+## Testing provider events in development
+
+The dev webhook accepts events signed with the secret in the ignored `.aura-dev-webhook-secret` file: `x-aurel-timestamp` is the Unix time and `x-aurel-signature` is `v1=` plus the hex HMAC-SHA256 of `{timestamp}.{body}`. Use the `demo` provider, a test subject that exists in `subject_profiles`, and one of the event types in [provider projections](../architecture/provider-projections.md). Remove test rows afterwards.
+
 ## Security escalation
 
 - Freeze or restrict through the authoritative provider first when the contractual program supports it.

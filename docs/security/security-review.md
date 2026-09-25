@@ -3,6 +3,8 @@ title: Internal security review
 description: Current findings, accepted risks, mitigations, and release conclusion.
 ---
 
+> **Update 25 September 2026:** the private-beta invitation gate was removed. Findings about invitation codes, cohorts, country gating, and beta transaction caps no longer apply; open access relies on feature switches, account locks, and daily limits ([launch controls](../operations/launch-controls.md)). The rest of this review is unchanged.
+
 Reviewed 22 September 2026. Scope: application authentication, private-beta access, transaction preparation, provider events, data authority, operational recovery, Cloudflare configuration and release controls. This is an internal engineering review, not the independent review required for public launch.
 
 ## Positive controls verified in code

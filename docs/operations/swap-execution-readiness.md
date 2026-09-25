@@ -1,6 +1,6 @@
 # Swap execution readiness
 
-The development app's visible Swap screen uses Aura's asset picker and governed `/api/swap/*` review, approval, preparation, and status paths. The server checks the linked wallet and obtains LI.FI quotes; only the narrow decoded, reviewed calls described below can receive a preparation ID. `swaps` and `cross_chain` are enabled only in isolated `aura-dev-projections` for invited test accounts. Production flags remain off. No funded end-to-end transaction has been performed by the operator.
+The development app's visible Swap screen uses Aura's asset picker and governed `/api/swap/*` review, approval, preparation, and status paths. The server checks the linked wallet and obtains LI.FI quotes; only the narrow decoded, reviewed calls described below can receive a preparation ID. `swaps` and `cross_chain` are enabled only in isolated `aura-dev-projections`. Production flags remain off. No funded end-to-end transaction has been performed by the operator.
 
 This page describes what the current implementation can prove. It is not a launch approval.
 
@@ -35,7 +35,7 @@ The isolated Aura development D1 is migrated through `0038_support_assistant_fla
 
 1. Rehearse small self-owned Base USDC/WETH and Base-USDC → Arbitrum-USDC transactions. Cover zero allowance, exact approval, an existing nonzero insufficient allowance, fresh re-quote, rejection, quote expiry, source revert, destination delay, partial/refund status, reorg, account lock, and lost-response recovery. A source receipt alone must never mark a bridge complete.
 2. Have an independent reviewer assess the deployed contract mapping, LI.FI fee forwarder and recipient allowlist, canonical calldata decoder, approval flow, simulation, route economics, status parser, Across event linkage, and receipt verifiers. Confirm legal eligibility of launch jurisdictions and assets.
-3. Only after those checks, make a separate decision about broader beta or production availability. Other bridge tools, assets, tokenized securities, and arbitrary token routes need separate contract/effect audits; a quote in the picker does not make an asset signable.
+3. Only after those checks, make a separate decision about production availability. Other bridge tools, assets, tokenized securities, and arbitrary token routes need separate contract/effect audits; a quote in the picker does not make an asset signable.
 
 Aurel uses LI.FI as the route provider, including when LI.FI selects Across as the underlying bridge. No direct Across Swap API integration or key is planned. See [LI.FI's contract architecture](https://github.com/lifinance/contracts) and [Across event changes](https://docs.across.to/guides/migration/non-evm/indexers).
 

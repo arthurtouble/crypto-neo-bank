@@ -3,7 +3,7 @@ title: Regulated services
 description: How future fiat accounts, cards, identity checks, insurance, and investments would be introduced.
 ---
 
-Aurel does not currently offer bank accounts, fiat transfers, payment cards, insurance, or securities trading. Product models and interface previews are not evidence that a regulated service is live.
+Aura does not currently offer bank accounts, fiat transfers, payment cards, insurance, or securities trading. Product models and interface previews are not evidence that a regulated service is live.
 
 ## Partner-led services
 
@@ -20,15 +20,15 @@ The intended model uses regulated providers for the activities they are licensed
 
 The customer may accept provider-specific terms or form a direct relationship with that provider.
 
-## What remains with Aurel
+## What remains with Aura
 
-Partner-led compliance does not eliminate Aurel's responsibilities. Aurel still controls its marketing, onboarding sequence, data flows, access control, interface accuracy, provider selection, customer support entry point, incident response, and the activities it performs itself.
+Partner-led compliance does not eliminate Aura's responsibilities. Aura still controls its marketing, onboarding sequence, data flows, access control, interface accuracy, provider selection, customer support entry point, incident response, and the activities it performs itself.
 
-If Aurel adds its own recommendations, discretionary controls, exchange activity, custody behavior, or cross-border marketing, its regulatory position can change. Legal analysis must follow the actual product, not the label “aggregator.”
+If Aura adds its own recommendations, discretionary controls, exchange activity, custody behavior, or cross-border marketing, its regulatory position can change. Legal analysis must follow the actual product, not the label “aggregator.”
 
 ## Platform onboarding
 
-A provider decides whether to onboard both Aurel and individual customers. A starter or sandbox plan normally grants technical exploration, not production approval.
+A provider decides whether to onboard both Aura and individual customers. A starter or sandbox plan normally grants technical exploration, not production approval.
 
 Platform diligence can include:
 
@@ -50,7 +50,7 @@ A one-person team is not automatically prohibited. Providers may still require c
 
 The provider determines the exact checks. Lower starting balances may make a customer relationship easier to understand, but they do not remove identity or sanctions requirements. Higher balances, unusual flows, higher-risk countries, business accounts, or inconsistent source information can trigger enhanced review.
 
-Aurel should collect a piece of information only when the provider or Aurel has a defined need for it. Original identity documents should remain with the regulated provider wherever the integration permits.
+Aura should collect a piece of information only when the provider or Aura has a defined need for it. Original identity documents should remain with the regulated provider wherever the integration permits.
 
 ## Country availability
 

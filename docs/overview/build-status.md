@@ -3,20 +3,23 @@ title: Aura build status
 description: Current product implementation and external release dependencies.
 ---
 
-Last reviewed: 24 September 2026. The public tour is deployed to `aura-dev.aurel-events.workers.dev`; this page describes the source branch, which may have newer changes. The dated Aura design and implementation plan are in `docs/superpowers/` at the repository root.
+Last reviewed: 25 September 2026. The branch is deployed to `aura-dev.aurel-events.workers.dev`; this page describes the source branch, which may have newer changes. Dated design and implementation plans are in `docs/superpowers/`.
 
 ## Implemented in this branch
 
 - Aura landing page, 12 customer sections, desktop/mobile navigation, and public browsing with labeled fictional data.
-- Privy sign-in open to everyone, feature switches, account locks and daily limits, linked wallets, passkey and recovery surfaces, wallet export, and transaction policy controls.
+- Privy sign-in open to everyone, with acceptance of the current terms and privacy notice recorded per version on first sign-in.
+- Server-side controls on every money-moving path: feature switches, account locks, per-account daily limits, saved-address cooling, review thresholds, and transaction policy, rechecked inside the atomic D1 writes.
 - Direct Base wallet reads and governed crypto-send preparation, simulation, customer signing, intent evidence, and reconciliation.
-- LI.FI asset search and route discovery through the server-held reviewed swap flow. Unsafe direct browser execution was removed.
-- Aave Base market, debt, position, and reward reads. Customer Aave writes remain paused.
-- Aura tag registration with a unique, non-transferable tag, verified linked receiving wallet, public opt-in, and public crypto payment page. A separate bank-detail opt-in exposes complete activated Bridge instructions only for the linked provider customer; without a connected Bridge program, the method is unavailable. Card payment remains unavailable.
-- Issuer-backed card projection read boundary, support cases, read-only assistant, coverage-aware transactions and insights, and security/privacy settings.
-- D1 migrations through `0037_aura_tag_bank_consent.sql` on the isolated development database; no production migration or deployment has been performed.
+- Swaps: direct Uniswap V3 calls for Base USDC/WETH, and Base USDC to Arbitrum or Ethereum USDC through LI.FI and Across, each through the server-held reviewed flow.
+- Aave Base supply, withdraw, borrow, and repay, and Sky USDC deposits and withdrawals on Ethereum, behind the `defi_actions` switch.
+- Aura tag registration with a unique, non-transferable tag, verified linked receiving wallet, public opt-in, and public crypto payment page. Bank details appear only for an activated Bridge customer; card payment remains unavailable.
+- Provider projections for cards, memberships and benefits, and wallet-provider rules, applied from signed provider events by the events Worker (see [provider projections](../architecture/provider-projections.md)).
+- Notification choices, product-update consent, and self-service data export and deletion backed by a classified inventory of every customer-data table.
+- Support cases, read-only assistant, coverage-aware transactions and insights, and the operations console (issues, reconciliation, feature switches, analytics).
+- D1 migrations through `0042_privacy_and_flag_vocabulary.sql` on the isolated development database; no production migration or deployment has been performed.
 
-The customer waitlist, markets lists, price alerts, goals, scheduled transfers, paycheck planning, external-wallet portfolio tracking, lifestyle concierge, and membership tiers have been removed from the UI. Their API routes are removed and return 404. Migration `0040_drop_retired_features.sql` drops the retired goal, bill, subscription, income-plan, transfer-schedule, price-alert, swap-reminder, waitlist, referral, campaign, experiment, growth-event, communication, and retention-run tables, and disables unredeemed customer referral codes. Audit evidence, consent records, and beta invitations remain.
+The customer waitlist, markets lists, price alerts, goals, scheduled transfers, paycheck planning, external-wallet portfolio tracking, lifestyle concierge, the private-beta invitation gate, and Aura-computed membership tiers have been removed. Their API routes are removed and return 404. Migrations `0040`–`0042` drop the retired goal, bill, subscription, income-plan, transfer-schedule, price-alert, swap-reminder, waitlist, referral, campaign, experiment, growth-event, communication, and retention-run tables, and disables unredeemed customer referral codes. Audit evidence, consent records, and beta invitations remain.
 
 ## External or incomplete
 

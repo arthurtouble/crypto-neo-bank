@@ -46,7 +46,7 @@ The chain or provider decides whether an action settles. Aura records transactio
 
 These are product defaults, not universal promises. Availability and exact enforcement can depend on the action and authoritative data available at the time.
 
-An ordinary signed-in session may tighten transaction controls but cannot unlock an account or raise limits. Such changes need a separate verified recovery path, which is not self-service in the current private beta.
+An ordinary signed-in session may tighten transaction controls but cannot unlock an account or raise limits. Such changes need a separate verified recovery path, which is not yet self-service.
 
 ## Operations separation
 

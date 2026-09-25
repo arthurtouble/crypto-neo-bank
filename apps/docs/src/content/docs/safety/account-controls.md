@@ -5,6 +5,14 @@ sidebar:
   order: 2
 ---
 
+## Feature availability
+
+Aura can switch each financial feature on or off for everyone: direct transfers, swaps, cross-network moves, Aave and Sky actions, tokenized markets, bank accounts, and cards. When a feature is off, Aura will not prepare new actions for it, including ones already reviewed but not yet signed. Your wallet still works in other apps.
+
+## Wallet provider rules
+
+If your wallet provider enforces its own rules, such as a spending limit or an address allowlist, Settings shows them next to Aura's controls. The provider applies them when it signs; change them with the provider.
+
 ## Higher-risk actions
 
 Aura holds an in-app action when it requires approval that we cannot yet verify for that exact transaction on the server. Adding a passkey to sign-in alone does not lift that hold.

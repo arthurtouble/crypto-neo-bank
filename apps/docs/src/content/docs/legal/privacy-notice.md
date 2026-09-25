@@ -1,67 +1,89 @@
 ---
 title: Privacy notice
-description: What personal data Aurel expects to use, why, and the choices available to you.
+description: What personal data Aura uses, why, how long it is kept, and the choices you have.
 sidebar:
   order: 3
 ---
 
-**Status:** Pre-launch draft for counsel review  
-**Proposed effective date:** To be set before launch
+**Version:** 2026-09-25 · **Status:** Pre-launch draft for counsel review
 
-This notice explains how the future Aurel operating entity expects to handle personal data. The final controller identity, address, representative, data protection contact, launch countries, and provider list must be completed before launch.
+Aura is operated by the Aurel operating entity ("Aurel", "we", "us"). This notice explains how we handle personal data when you browse Aura, sign in, and use its features. The controller's legal name, address, representative, data protection contact, and supervisory authority must be completed before launch.
 
 ## Data we use
 
-Depending on the feature, Aurel may use:
+**Account and sign-in.** Your Privy account reference and session reference. Privy handles your email, phone, or social sign-in under its own privacy notice; Aura receives a verified account identifier, not your password.
 
-- account identifiers and verified Privy subject references;
-- public wallet addresses, networks, transaction hashes, and onchain activity;
-- security preferences, saved-address labels, review thresholds, and audit events;
-- transaction requests, policy results, status history, and provider receipts;
-- support messages, consent records, and complaint records;
-- historical waitlist email addresses, approximate country hints from trusted hosting metadata, invitation linkage, and references to separately checked eligibility evidence;
-- historical first-party campaign labels submitted with earlier waitlist signups;
-- device, browser, security, rate-limit, and diagnostic data; and
-- limited product analytics from an allowlist of event names.
+**Wallets and transactions.** Public wallet addresses linked to your account, networks, transaction hashes, the transactions you review and prepare in Aura, their policy results, valuations, status history, and chain evidence. Public blockchains record this activity permanently.
 
-Future regulated providers may collect identity documents, screening results, source-of-funds information, and financial records under their own notices. Aurel is designed to avoid copying identity documents unless there is a defined legal and operational need.
+**Security settings.** Account lock, daily limit, review thresholds, saved addresses and their labels, passkey credential records, and audit events.
+
+**Choices you make.** Notification choices, consent to product-update emails, acceptance of these documents with the version and time, and your public Aura tag if you create one.
+
+**Support and feedback.** Messages, complaint details, and feedback you send.
+
+**Provider information.** When a provider is connected, Aura stores references and status it reports, such as a card's status and last four digits, benefit entitlements, bank-transfer instructions, and rules your wallet provider enforces. Identity documents, screening results, and full card numbers stay with those providers.
+
+**Technical data.** Browser and device information, IP-derived security signals, rate-limit counters, diagnostic logs, and a short allowlist of product events (such as "transaction prepared" or "support opened").
+
+Aura no longer runs a waitlist, invitation program, referral program, or marketing campaigns. Email addresses, campaign labels, and invitation records collected by those earlier programs are deleted from our database when those programs are retired, rather than kept.
 
 ## Why we use it
 
-We expect to use data to preserve historical waitlist evidence, operate cohorts and invitations, provide and secure the service, authenticate users, apply requested safety settings, prepare and trace actions, prevent abuse, answer support cases, meet legal duties, manage providers, investigate incidents, and improve the product. Historical waitlist signup was not consent to unrelated marketing.
+| Purpose | Data | Basis (to be confirmed per country) |
+| --- | --- | --- |
+| Provide the service you asked for | Account, wallets, transactions, choices | Contract |
+| Keep accounts and funds safe, prevent fraud and abuse | Security settings, technical data, audit events | Legitimate interests; legal obligation |
+| Prove what you agreed to and when | Document acceptance and consent records | Legal obligation; legitimate interests |
+| Answer support requests and complaints | Support and feedback | Contract; legal obligation |
+| Improve reliability and the product | Product events, diagnostics | Legitimate interests |
+| Send product-update emails | Email and consent record | Consent, which you can withdraw at any time |
 
-The final notice will map each purpose to the lawful basis that applies in each launch country, such as performing a contract, complying with law, legitimate interests, or consent.
+We do not sell personal data, use it for third-party advertising, or make decisions with legal effects about you solely by automated means.
 
 ## Where data comes from
 
-Data can come from you, your browser or device, Privy, connected wallets, public blockchains, protocols, routing providers, support interactions, and future regulated partners.
+From you, your browser, Privy, the wallets you link, public blockchains and protocols (Base, Ethereum, Aave, Sky, Uniswap, LI.FI and Across), and providers you choose to connect.
 
 ## Who receives it
 
-Data may be shared only as needed with wallet and identity infrastructure, Cloudflare hosting and security services, chain and RPC infrastructure, protocols, route providers, support vendors, professional advisers, authorities where legally required, and future regulated partners.
-
-Public wallet addresses and transactions are visible on public blockchains. Blockchain records may be permanent and cannot be deleted by Aurel.
+Only as needed to run Aura: Privy (sign-in and wallets), Cloudflare (hosting, security, and storage), RPC and chain-data services, routing and protocol providers when you request a quote or action, providers you connect, support tools, professional advisers, and authorities where the law requires. Anyone can see public wallet addresses and transactions on public blockchains, and Aura cannot delete them.
 
 ## International transfers
 
-Providers may process data outside your country. Before launch, Aurel must identify those transfers and document the safeguards used, such as adequacy decisions or approved contractual clauses.
+Our providers may process data outside your country. Before launch we must list those transfers and the safeguards used, such as adequacy decisions or standard contractual clauses.
 
-## Retention
+## How long we keep it
 
-Aurel will keep data only for a defined business or legal need. Retention periods for historical waitlist and campaign data must be approved before public launch; campaign data is deleted or aggregated under that schedule. Security settings must survive a session. Transaction evidence, invitation evidence, consent, complaints, and provider events may require longer retention for investigations and legal duties. A deletion request for growth data does not delete public blockchain history, provider records, product access, or evidence Aurel must legally retain.
+| Data | Kept |
+| --- | --- |
+| Preferences, product events, feedback, public Aura tag, rebuildable account history | Until you delete it or close your account |
+| Transactions, security settings, audit events, passkey records | As long as required for security, fraud prevention, and financial record-keeping laws |
+| Consent and document-acceptance records | As long as we rely on them, plus the applicable limitation period |
+| Support cases and complaints | For the complaint-handling retention period in each country |
+| Diagnostic logs and rate-limit counters | Days to weeks |
 
-## Your rights
+Exact periods for each launch country must be set before launch.
 
-Depending on where you live, you may have rights to access, correct, delete, restrict, object to, or receive a copy of personal data; withdraw consent; and complain to a regulator. Authenticated customers can request a growth-data export or deletion in Settings. A contact route for people who joined the earlier waitlist without an account must be published before public launch. Some rights have legal limits, especially for public blockchain records and records Aurel must retain.
+## Your rights and choices
 
-## Automated decisions
+Depending on where you live, you may have rights to access, correct, delete, restrict, or object to the use of your data, to receive a copy, and to complain to a regulator.
 
-Aurel applies rules to supported assets, destinations, limits, cooling periods, and review requirements. The approximate IP country hint does not determine eligibility. An operator must check eligibility separately before an invitation. Before launch, any decision with legal or similarly significant effects must be identified, explained, and paired with required review rights.
+In **Settings → Data & Privacy** you can:
+
+- **Export my data:** receive a copy of everything Aura holds about your account, table by table, with the reason each record is kept;
+- **Delete my data:** erase your preferences, product events, feedback, public Aura tag, and account history Aura can rebuild from providers and chains. Transaction, security, consent, and support records are kept where the law or account safety requires, and the result tells you which;
+- **Product update emails:** turn them on or off at any time.
+
+Deleting data in Aura does not delete blockchain history, records held by Privy or other providers, or your wallet and funds.
 
 ## Security
 
-Aurel uses server-side session verification, restricted secrets, security preferences, transaction evidence, rate limits, and provider-event checks. No service can promise perfect security.
+Aura verifies every session on the server, keeps provider credentials in restricted secrets, checks the signatures on provider events, applies rate limits, and records security-relevant actions. No service can promise perfect security.
 
-## Contact and complaints
+## Changes
 
-The privacy email, controller address, representative, data protection officer where required, and relevant supervisory authority must be added before public launch. The waitlist is closed; a usable data-request contact route is still required for historical records.
+We will show you a new version before it applies and ask you to confirm it the next time you sign in.
+
+## Contact
+
+The privacy email, postal address, and data protection contact must be added before launch. Until then, use the in-app support form, choose "Account", and say your request is about privacy.

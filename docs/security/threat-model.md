@@ -27,6 +27,6 @@ Customer signing authority remains in Privy customer-controlled wallets. Public 
 - Aurel cannot reverse a confirmed blockchain transfer.
 - Aurel cannot guarantee stablecoin parity, protocol solvency, bridge liquidity, or chain availability.
 - A successful source-chain transaction is not evidence of destination receipt.
-- Aurel policy controls govern transactions prepared through Aurel; they do not prevent a customer from exporting a wallet and transacting elsewhere.
+- Aura policy controls govern transactions prepared through Aura; they do not prevent a customer from exporting a wallet and transacting elsewhere.
 
 Review this model before enabling a new chain, asset, protocol, provider, delegated signer, smart contract, or operator capability.

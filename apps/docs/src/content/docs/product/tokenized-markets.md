@@ -42,7 +42,7 @@ Privy can provide wallet access to a transaction. It does not replace the issuer
 
 Access remains unavailable when a required country rule, identity result, investor status, document, venue approval, or review date is missing or stale. A generic disclaimer does not cure missing eligibility.
 
-Aura models quote, order, hold, and transfer permissions separately. A customer-specific decision must come from a contracted eligibility provider, match the exact customer and instrument, and include current identity, country, investor-class, document, and venue evidence. Private-beta access and ordinary Privy sign-in are not substitutes. The current provider adapter is unconnected, so it grants no permissions.
+Aura models quote, order, hold, and transfer permissions separately. A customer-specific decision must come from a contracted eligibility provider, match the exact customer and instrument, and include current identity, country, investor-class, document, and venue evidence. Signing in to Aura is not a substitute. The current provider adapter is unconnected, so it grants no permissions.
 
 The order boundary is also off by default. Even after a provider is connected, it requires a separate operations switch, contracted venue and legal references, verified payment and receiving wallets, and a fresh eligibility decision. The public catalog and a DeFi swap quote cannot bypass that boundary.
 

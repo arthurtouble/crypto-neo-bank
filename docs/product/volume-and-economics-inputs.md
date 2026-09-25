@@ -1,13 +1,13 @@
 ---
-title: Beta volume and unit-economics inputs
+title: Volume and unit-economics inputs
 description: Assumptions and evidence required for volume, cost, revenue, and contribution-margin planning.
 ---
 
-Use contracted provider pricing and observed beta behavior. Blank cells are decisions, not zero-cost assumptions.
+Use contracted provider pricing and observed early customer behavior. Blank cells are decisions, not zero-cost assumptions.
 
 | Input | Low | Base | High | Evidence source |
 |---|---:|---:|---:|---|
-| Invited customers | 25 | 100 | 500 | Beta cohort plan |
+| Active customers | 25 | 100 | 500 | Launch scenarios |
 | Activated customers | 15 | 70 | 350 | Measured activation funnel |
 | Average visible assets | TBD | TBD | TBD | Onchain/provider observation; never stored as ledger |
 | Monthly onchain actions/customer | TBD | TBD | TBD | Product events and intents |

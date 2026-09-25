@@ -41,4 +41,4 @@ A provider is not selectable unless it confirms the use case, customer relations
 
 ## Current recommendation
 
-Run a two-provider diligence process and select one primary provider for the beta. Do not integrate both production programs simultaneously: dual integration increases reconciliation, compliance and support surface before product-market evidence exists. Keep the existing adapter boundary so a second provider can be introduced for geographic or capability redundancy later.
+Run a two-provider diligence process and select one primary provider for launch. Do not integrate both production programs simultaneously: dual integration increases reconciliation, compliance and support surface before product-market evidence exists. Keep the existing adapter boundary so a second provider can be introduced for geographic or capability redundancy later.

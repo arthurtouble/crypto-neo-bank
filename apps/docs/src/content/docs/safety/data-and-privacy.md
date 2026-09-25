@@ -17,6 +17,8 @@ Aura minimizes authoritative financial data. It does not pretend that operating 
 | Future KYC records | Regulated provider | Avoid storing identity documents; consume the minimum status needed for access |
 | Support and complaints | Aura | Retain enough context to investigate and respond |
 | Consent and disclosures | Aura | Record which material version and action were shown or accepted |
+| Notification choices | Customer instruction | Retain until changed or deleted; applied once delivery is connected |
+| Card, benefit, and wallet-rule records | Issuer, benefit provider, or wallet provider | Store the status the provider reports, with source and time; rebuildable by replaying provider events |
 | Product analytics | Aura | Accept only allowlisted event names; never use analytics as a balance source |
 | Provider webhook receipts | Provider and Aura | Retain idempotently for retry, reconciliation, and incident evidence |
 
@@ -36,7 +38,7 @@ The final integration and contracts determine the exact allocation. Aura remains
 
 Different records need different retention periods. Security evidence and complaint records may need to remain longer than product analytics. Data should not be kept indefinitely merely because storage is inexpensive.
 
-Before broad launch, Aura must finalize a jurisdiction-specific retention schedule, deletion process, legal-hold procedure, and customer-rights workflow.
+Every Aura table that holds customer data is classified as erasable or retained, with a reason, and a test fails if a new table is left unclassified. Preferences, analytics, feedback, the public Aura tag, and rebuildable provider and portfolio history are erasable. Transactions, security settings, passkey records, consent, and support cases are retained as evidence. Jurisdiction-specific periods and a legal-hold procedure must be set before launch.
 
 ## Logs and analytics
 
@@ -46,5 +48,5 @@ Product analytics should answer bounded questions such as whether customers fini
 
 ## Customer rights
 
-The [Privacy notice](/legal/privacy-notice/) explains the current draft legal framework, data categories, purposes, recipients, retention, international transfers, and customer rights. Entity details, governing law, and privacy contacts must be finalized before live customer onboarding.
+In Settings → Data & Privacy you can request an export of everything Aura holds about your account, request deletion of erasable data, and turn product-update emails on or off. The [Privacy notice](/legal/privacy-notice/) explains data categories, purposes, recipients, retention, international transfers, and your rights. Entity details, governing law, and privacy contacts must be finalized before launch.
 

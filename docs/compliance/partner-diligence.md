@@ -7,7 +7,7 @@ description: Internal provider diligence package, questions, evidence, and appro
 
 Aurel is a customer-controlled financial interface for stablecoins, public-chain protocols and, after approval, regulated fiat and card services. Base is the home network. Privy provides authentication and wallet infrastructure. Customers—not Aurel—confirm wallet transactions. Public chains, protocols and regulated providers remain authoritative for balances and settlement; Aurel does not operate a shadow bank ledger.
 
-The initial partner request is a closed USDC-first beta with 25 invited users, expanding to 100 only after operational evidence meets the gates in the [launch controls](../operations/launch-controls.md). Bank accounts, fiat conversion and cards remain disabled until contracts, jurisdiction approval, end-to-end reconciliation and customer disclosures are complete.
+Aura is open to anyone who signs in; each provider feature launches behind its own switch, starting USDC-first and within the limits in [launch controls](../operations/launch-controls.md). Bank accounts, fiat conversion and cards remain disabled until contracts, jurisdiction approval, end-to-end reconciliation and customer disclosures are complete.
 
 ## Product and customer
 
@@ -15,7 +15,7 @@ The initial partner request is a closed USDC-first beta with 25 invited users, e
 - Initial proposition: one calm interface for self-controlled wallets, USDC movement, curated DeFi, security policy, support and membership.
 - No house token, deposit promise, guaranteed yield or balance-sheet lending.
 - Proposed initial limits: USD 25,000 of Aurel-prepared movement per rolling 24 hours; USD 1,000 new-destination threshold with a 24-hour cooling period.
-- Proposed beta geography: only countries explicitly accepted in writing by the selected provider and launch counsel. No implied global availability.
+- Provider geography: a provider feature is offered only in countries the provider and launch counsel accept in writing. Aura itself is available to anyone who can use it lawfully.
 
 ## System boundary
 
@@ -59,7 +59,7 @@ The partner should quote setup fees, monthly minimum, per-customer KYC, enhanced
 - Operating and incident process: [operations runbook](../operations/operations-runbook.md)
 - Responsibility allocation: [responsibility matrix](compliance-responsibility-matrix.md)
 - Provider comparison: [provider requirements](provider-requirements-matrix.md)
-- Beta limits and progression: [launch controls](../operations/launch-controls.md)
+- Limits, switches, and stop conditions: [launch controls](../operations/launch-controls.md)
 - Acceptance protocol: [acceptance test plan](../operations/acceptance-test-plan.md)
 - Fund and data flows: [fund and provider data](../architecture/fund-flow-and-provider-data.md)
 - Volume and economics assumptions: [volume and economics](../product/volume-and-economics-inputs.md)
