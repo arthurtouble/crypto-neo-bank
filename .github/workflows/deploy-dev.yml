@@ -1,0 +1,52 @@
+name: deploy dev
+
+# Every commit on main that passes the quality workflow deploys to the isolated
+# dev environment. Production is never deployed from here.
+on:
+  workflow_run:
+    workflows: [quality]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: dev
+      url: https://aura-dev.aurel-events.workers.dev
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.25.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Until production is migrated, schema changes edit the baseline, so the
+      # dev database is reset when the baseline changes. Switches stay as they were.
+      - run: bash scripts/d1-reset-dev.sh --if-schema-changed
+      - run: pnpm --filter @aurel/web exec wrangler d1 migrations apply aura-dev-projections --remote --env dev
+      - run: pnpm events:deploy:dev
+      - run: pnpm deploy:dev
+      - run: pnpm docs:deploy:dev
+      - run: pnpm test:deployment
+        env:
+          AURA_SMOKE_URL: https://aura-dev.aurel-events.workers.dev
+          AURA_SMOKE_DOCS_URL: https://aura-dev-docs.aurel-events.workers.dev

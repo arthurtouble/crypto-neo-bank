@@ -4,13 +4,19 @@
 
 ## Deploy
 
+Merging to `main` deploys dev. When the `quality` workflow passes on a push to `main`, `.github/workflows/deploy-dev.yml` resets the database if the baseline changed, applies migrations, deploys the events, web, and docs Workers, and runs the deployment smoke. Work happens on branches; open a pull request and merge it to ship to dev. The workflow can also be run by hand from the Actions tab. It never deploys production.
+
+It needs two secrets on the `dev` GitHub environment (Settings → Environments → dev): `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`. The token needs Workers Scripts, D1, and Queues edit permissions on the account.
+
+To deploy from a machine instead:
+
 ```bash
 pnpm deploy:dev          # web Worker
 pnpm events:deploy:dev   # provider-event consumer
 pnpm docs:deploy:dev     # docs Worker
 ```
 
-After every deployment, run the smoke check:
+After a manual deployment, run the smoke check:
 
 ```bash
 AURA_SMOKE_URL=https://aura-dev.aurel-events.workers.dev \
@@ -26,9 +32,7 @@ The schema is `infra/d1/migrations/0001_baseline.sql`. Until production is migra
 pnpm d1:reset:dev
 ```
 
-The reset drops every table in `aura-dev-projections` and applies the current schema. Development data is disposable. It then needs the feature switches it had before, which the baseline seeds as off; turn them on from the operations console or with `wrangler d1 execute`.
-
-Adopting the baseline on 25 September 2026 requires one reset, because the dev database was migrated through the retired numbered files (last `0039`).
+The reset drops every table in `aura-dev-projections`, applies the current schema, and turns back on the feature switches that were on. Development data is disposable. It records the baseline's hash in `dev_schema_state`, and `--if-schema-changed` resets only when the hash differs. The dev deploy uses that, so a merged schema change resets dev by itself.
 
 ## Configuration
 
