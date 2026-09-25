@@ -45,7 +45,7 @@ CI (`.github/workflows/ci.yml`) runs lint, `typecheck:all`, `test:unit`, build, 
 ## Cloudflare environments
 
 - `apps/web/wrangler.jsonc` top level = production (`aurel-financial-os`, D1 `aurel-projections`). `--env dev` = isolated dev (`aura-dev`, D1 `aura-dev-projections`, queue `aura-dev-provider-events`).
-- Default to dev. Deploy with `pnpm deploy:dev`, `pnpm events:deploy:dev`, `pnpm docs:deploy:dev`; migrate with `pnpm --filter @aurel/web exec wrangler d1 migrations apply aura-dev-projections --remote --env dev`; then smoke with `AURA_SMOKE_URL=https://aura-dev.aurel-events.workers.dev AURA_SMOKE_DOCS_URL=https://aura-dev-docs.aurel-events.workers.dev pnpm test:deployment`.
+- Default to dev. Merging to `main` deploys dev automatically after CI passes (`.github/workflows/deploy-dev.yml`), so work on branches and merge through pull requests. To deploy by hand, use `pnpm deploy:dev`, `pnpm events:deploy:dev`, `pnpm docs:deploy:dev`; migrate with `pnpm --filter @aurel/web exec wrangler d1 migrations apply aura-dev-projections --remote --env dev`; then smoke with `AURA_SMOKE_URL=https://aura-dev.aurel-events.workers.dev AURA_SMOKE_DOCS_URL=https://aura-dev-docs.aurel-events.workers.dev pnpm test:deployment`.
 - Never deploy, migrate, or change secrets on production without explicit instruction. See `docs/operations/aura-development-worker.md` and `docs/operations/operations-runbook.md`.
 - Wrangler reads `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` from the environment.
 
