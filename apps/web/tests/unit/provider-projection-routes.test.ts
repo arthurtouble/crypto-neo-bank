@@ -82,14 +82,14 @@ describe("rewards route", () => {
 
 describe("preferences route", () => {
   it("returns defaults, saves a partial update, and rejects unknown fields", async () => {
-    expect(await (await get(readPreferences, "/api/preferences")).json()).toMatchObject({ preferences: { notifications: { productUpdatesEmail: false } } });
+    expect(await (await get(readPreferences, "/api/preferences")).json()).toMatchObject({ preferences: { notifications: { transactionEmail: true } } });
     const saved = await patchPreferences(new Request("https://aura.test/api/preferences", { method: "PATCH",
-      body: JSON.stringify({ notifications: { productUpdatesEmail: true } }) }));
+      body: JSON.stringify({ notifications: { transactionPush: false } }) }));
     expect(saved.status).toBe(200);
     expect(await (await get(readPreferences, "/api/preferences")).json()).toMatchObject({
-      preferences: { notifications: { transactionEmail: true, productUpdatesEmail: true } } });
+      preferences: { notifications: { transactionEmail: true, transactionPush: false } } });
     const invalid = await patchPreferences(new Request("https://aura.test/api/preferences", { method: "PATCH",
-      body: JSON.stringify({ notifications: { securityAlerts: false } }) }));
+      body: JSON.stringify({ notifications: { productUpdatesEmail: true } }) }));
     expect(invalid.status).toBe(400);
   });
 });

@@ -167,7 +167,7 @@ export const POST = route("intent.prepare", { unavailable: "prepare_unavailable"
       JOIN security_profiles s ON s.subject_reference = i.subject_reference AND s.account_locked = 0
         AND s.policy_version = ?
       JOIN feature_flags f ON f.flag_key = 'direct_transfers' AND f.enabled = 1
-        AND f.audience IN ('all', 'beta')
+        AND f.audience = 'all'
       WHERE c.intent_id = ? AND c.step_index = 0 AND c.subject_reference = ?
         AND c.wallet_address = ? AND c.chain_id = 8453 AND c.target_address = ?
         AND c.native_value = ? AND c.calldata_hash = ? AND c.call_fingerprint = ?
@@ -216,7 +216,7 @@ export const POST = route("intent.prepare", { unavailable: "prepare_unavailable"
     SELECT i.intent_id, ?, i.subject_reference, ?, ?, ?, ?, ?, ?, ?, ?, i.expires_at, ?, 'prepared', ?, ${heldForStepUp ? "'awaiting_step_up'" : "'legacy'"}
     FROM transaction_intents i WHERE i.intent_id = ? AND i.subject_reference = ? AND i.status = 'reviewed' AND i.expires_at > ?
       AND unixepoch(?) BETWEEN unixepoch('now') - 180 AND unixepoch('now') + 60
-      AND EXISTS (SELECT 1 FROM feature_flags f WHERE f.flag_key = ? AND f.enabled = 1 AND f.audience IN ('all', 'beta'))
+      AND EXISTS (SELECT 1 FROM feature_flags f WHERE f.flag_key = ? AND f.enabled = 1 AND f.audience = 'all')
       AND NOT EXISTS (SELECT 1 FROM security_profiles s WHERE s.subject_reference = i.subject_reference AND s.account_locked = 1)
       ${heldForStepUp ? `AND EXISTS (SELECT 1 FROM address_book_entries saved
         WHERE saved.subject_reference = i.subject_reference AND saved.chain_family = 'evm'

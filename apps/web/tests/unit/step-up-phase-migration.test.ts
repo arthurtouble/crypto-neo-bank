@@ -8,7 +8,9 @@ const migrations = resolve(process.cwd(), "../../infra/d1/migrations");
 function database(withNewMigration = true) {
   const db = new DatabaseSync(":memory:");
   db.exec("PRAGMA foreign_keys = ON");
-  for (const file of readdirSync(migrations).filter((name) => name.endsWith(".sql") && (withNewMigration || (!name.startsWith("0026_") && !name.startsWith("0030_") && !name.startsWith("0034_") && !name.startsWith("0039_")))).sort())
+  for (const file of readdirSync(migrations).filter((name) => name.endsWith(".sql") && (withNewMigration || (!name.startsWith("0026_") && !name.startsWith("0030_") && !name.startsWith("0034_") && !name.startsWith("0039_")
+    // The simulated pre-0026 database predates the current schema migrations as well.
+    && name < "0040_"))).sort())
     db.exec(readFileSync(resolve(migrations, file), "utf8"));
   db.exec(`INSERT INTO subject_profiles (subject_reference, privy_user_reference, created_at, updated_at)
       VALUES ('subject-a', 'subject-a', '2026-09-23T00:00:00.000Z', '2026-09-23T00:00:00.000Z');

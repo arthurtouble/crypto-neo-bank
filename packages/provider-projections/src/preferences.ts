@@ -4,12 +4,12 @@ import type { ProjectionDatabase } from "./database";
 /**
  * Customer-owned notification choices. They are saved now and honored once a
  * delivery provider is connected; security notices are never optional.
+ * Marketing email is consent, not a preference: see consent_events.
  */
 export const preferencesSchema = z.object({
   notifications: z.object({
     transactionEmail: z.boolean(),
-    transactionPush: z.boolean(),
-    productUpdatesEmail: z.boolean()
+    transactionPush: z.boolean()
   }).strict()
 }).strict();
 export type Preferences = z.infer<typeof preferencesSchema>;
@@ -20,7 +20,7 @@ export const preferencesUpdateSchema = z.object({
 export type PreferencesUpdate = z.infer<typeof preferencesUpdateSchema>;
 
 export const defaultPreferences: Preferences = {
-  notifications: { transactionEmail: true, transactionPush: true, productUpdatesEmail: false }
+  notifications: { transactionEmail: true, transactionPush: true }
 };
 
 export async function readPreferences(db: ProjectionDatabase, subjectReference: string): Promise<Preferences & { updatedAt: string | null }> {

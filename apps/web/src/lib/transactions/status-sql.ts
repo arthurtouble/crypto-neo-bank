@@ -6,9 +6,9 @@ export const REPORTED_HASH_CLAIM_SQL = `UPDATE intent_prepared_calls SET reporte
   AND EXISTS (SELECT 1 FROM transaction_intents i WHERE i.intent_id = intent_prepared_calls.intent_id
     AND i.subject_reference = ? AND i.status IN ('reviewed', 'submitted') AND i.expires_at > ?
     AND EXISTS (SELECT 1 FROM security_profiles s WHERE s.subject_reference = i.subject_reference AND s.account_locked = 0)
-    AND EXISTS (SELECT 1 FROM feature_flags f WHERE f.flag_key = ? AND f.enabled = 1 AND f.audience IN ('all', 'beta'))
+    AND EXISTS (SELECT 1 FROM feature_flags f WHERE f.flag_key = ? AND f.enabled = 1 AND f.audience = 'all')
     AND (i.intent_type != 'bridge' OR EXISTS (SELECT 1 FROM feature_flags swap_gate
-      WHERE swap_gate.flag_key = 'swaps' AND swap_gate.enabled = 1 AND swap_gate.audience IN ('all', 'beta'))))`;
+      WHERE swap_gate.flag_key = 'swaps' AND swap_gate.enabled = 1 AND swap_gate.audience = 'all')))`;
 
 const TERMINAL_INTENT_PREDICATE = `WHERE intent_id = ? AND subject_reference = ? AND status = 'reviewed'
     AND transaction_hash IS NULL

@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 const directory = resolve(process.cwd(), "../../infra/d1/migrations");
 const migrations = readdirSync(directory).filter((name) => name.endsWith(".sql")).sort();
-const upgrades = ["0040_drop_retired_features.sql", "0041_open_access.sql"];
+const upgrades = ["0040_drop_retired_features.sql", "0041_open_access.sql", "0042_privacy_and_flag_vocabulary.sql"];
 const at = "2026-09-24T00:00:00.000Z";
 
 let db: DatabaseSync;
@@ -27,7 +27,9 @@ function existingDatabase() {
     INSERT INTO growth_invite_links VALUES ('invite', 'campaign', 'alice', 'customer_referral', 'alice', '${at}');
     INSERT INTO audit_events (audit_id, subject_reference, actor_type, actor_reference, action, target_type, target_reference, evidence_json, occurred_at)
       VALUES ('audit-1', 'alice', 'customer', 'alice', 'savings_goal.archive', 'savings_goal', 'goal-1', '{}', '${at}');
-    UPDATE feature_flags SET audience = 'beta' WHERE flag_key = 'swaps';`);
+    UPDATE feature_flags SET audience = 'beta' WHERE flag_key = 'swaps';
+    INSERT INTO growth_consent_events VALUES ('consent-1', 'alice', 'beta_operational', 'granted', 'v1', '${at}');
+    INSERT INTO growth_data_requests (request_id, subject_reference, request_type, status, requested_at) VALUES ('request-1', 'alice', 'export', 'completed', '${at}');`);
   return db;
 }
 
@@ -37,7 +39,7 @@ function upgrade() {
 
 const tables = () => new Set((db.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all() as Array<{ name: string }>).map((row) => row.name));
 
-describe("open-access and retired-feature migrations on an existing database", () => {
+describe("open-access, retired-feature, and privacy migrations on an existing database", () => {
   it("apply with foreign keys enforced and leave no dangling references", () => {
     existingDatabase();
     upgrade();
@@ -56,6 +58,15 @@ describe("open-access and retired-feature migrations on an existing database", (
     expect(db.prepare("SELECT action FROM audit_events WHERE audit_id = 'audit-1'").get()).toMatchObject({ action: "savings_goal.archive" });
   });
 
+  it("keeps consent history and data requests under their new names", () => {
+    existingDatabase();
+    upgrade();
+    expect(db.prepare("SELECT purpose, action FROM consent_events WHERE subject_reference = 'alice'").all()).toEqual([{ purpose: "service_updates", action: "granted" }]);
+    expect(db.prepare("SELECT request_id FROM data_requests").all()).toEqual([{ request_id: "request-1" }]);
+    for (const name of ["growth_consent_events", "growth_data_requests"]) expect(tables().has(name), name).toBe(false);
+    expect(() => db.exec("UPDATE feature_flags SET audience = 'beta' WHERE flag_key = 'swaps'")).toThrow(/CHECK/);
+  });
+
   it("turns the retired beta flag audience into the customer audience", () => {
     existingDatabase();
     upgrade();
@@ -72,6 +83,7 @@ describe("open-access and retired-feature migrations on an existing database", (
     expect(before).toContain("beta_access");
     expect(after).not.toContain("beta_access");
     // Every other condition of the guard is unchanged.
-    expect(after).toBe(before.replace("    JOIN beta_access b ON b.subject_reference = i.subject_reference AND b.status = 'active'\n", ""));
+    expect(after).toBe(before.replace("    JOIN beta_access b ON b.subject_reference = i.subject_reference AND b.status = 'active'\n", "")
+      .replaceAll("IN ('all', 'beta')", "= 'all'"));
   });
 });

@@ -42,13 +42,18 @@ test("retired growth, planning, alert, invitation, and routing endpoints are gon
   for (const path of ["/api/growth/events", "/api/growth/waitlist", "/api/growth/referrals", "/api/growth/experiments", "/api/ops/growth/waitlist", "/api/ops/growth/campaigns",
     "/api/ops/growth/experiments", "/api/ops/growth/communications", "/api/goals", "/api/bills", "/api/income-plan", "/api/transfer-schedules", "/api/swap/alerts",
     "/api/swap/reminders", "/api/market-data", "/api/portfolio", "/api/reconcile", "/api/beta/access", "/api/beta/feedback",
-    "/api/ops/beta", "/api/routing/quote", "/api/swap/curated-quote"]) {
+    "/api/ops/beta", "/api/routing/quote", "/api/swap/curated-quote", "/api/growth/consent", "/api/growth/data-requests",
+    "/api/ops/growth/data-requests"]) {
     expect((await request.get(path)).status(), path).toBe(404);
   }
 });
 
-test("customer data request operations fail closed", async ({ request }) => {
-  expect([401, 403]).toContain((await request.get("/api/ops/growth/data-requests")).status());
+test("privacy, terms, and data request operations fail closed", async ({ request }) => {
+  for (const path of ["/api/ops/privacy/data-requests", "/api/privacy/consent", "/api/privacy/data-requests", "/api/terms", "/api/preferences", "/api/rewards"]) {
+    const response = await request.get(path);
+    expect([401, 403], path).toContain(response.status());
+    expect(response.headers()["cache-control"], path).toContain("no-store");
+  }
 });
 
 test("the pre-launch application and tour routes are gone", async ({ request }) => {

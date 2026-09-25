@@ -61,7 +61,7 @@ export async function issueActionPasskeyChallenge(
       AND lower(json_extract(c.expected_effect_json, '$.recipient')) = lower(json_extract(i.request_json, '$.destination'))
       AND p.account_locked = 0 AND p.policy_version = ?
       AND EXISTS (SELECT 1 FROM feature_flags f WHERE f.flag_key = 'direct_transfers'
-        AND f.enabled = 1 AND f.audience IN ('all', 'beta'))
+        AND f.enabled = 1 AND f.audience = 'all')
       AND EXISTS (SELECT 1 FROM action_passkey_credentials k WHERE k.subject_reference = i.subject_reference
         AND k.rp_id = ? AND k.status = 'active')
       AND EXISTS (SELECT 1 FROM address_book_entries a WHERE a.subject_reference = i.subject_reference

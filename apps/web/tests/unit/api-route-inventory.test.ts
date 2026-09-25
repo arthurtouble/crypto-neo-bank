@@ -46,7 +46,8 @@ describe("API route inventory", () => {
     const retired = ["goals", "bills", "income-plan", "transfer-schedules", "swap/reminders", "swap/alerts", "market-data",
       "reconcile", "portfolio", "beta/access", "beta/feedback", "ops/beta", "routing/quote", "swap/curated-quote",
       "growth/waitlist", "growth/referrals", "growth/events", "growth/experiments", "ops/growth/campaigns",
-      "ops/growth/experiments", "ops/growth/communications", "ops/growth/waitlist"];
+      "ops/growth/experiments", "ops/growth/communications", "ops/growth/waitlist", "growth/consent", "growth/data-requests",
+      "ops/growth/data-requests"];
     const existing = new Set(routes.map((item) => item.path));
     expect(retired.filter((path) => existing.has(path))).toEqual([]);
   });

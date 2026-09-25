@@ -163,7 +163,7 @@ export const POST = route("swap.approval.prepare", { unavailable: "approval_unav
       JOIN transaction_intents i ON i.intent_id = a.intent_id
       JOIN security_profiles s ON s.subject_reference = a.subject_reference AND s.account_locked = 0
         AND s.policy_version = ?
-      JOIN feature_flags f ON f.flag_key = 'swaps' AND f.enabled = 1 AND f.audience IN ('all', 'beta')
+      JOIN feature_flags f ON f.flag_key = 'swaps' AND f.enabled = 1 AND f.audience = 'all'
       WHERE a.approval_id = ? AND a.subject_reference = ? AND a.wallet_address = ?
         AND a.plan_id = ? AND a.intent_id = ? AND a.status = 'prepared' AND a.transaction_hash IS NULL
         AND a.expires_at = ? AND a.expires_at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
@@ -193,7 +193,7 @@ export const POST = route("swap.approval.prepare", { unavailable: "approval_unav
           OR (i.intent_type = 'bridge' AND p.tool_id = 'across' AND p.destination_chain_id IN (1, 42161)
             AND p.recipient = p.wallet_address
             AND EXISTS (SELECT 1 FROM feature_flags c WHERE c.flag_key = 'cross_chain'
-              AND c.enabled = 1 AND c.audience IN ('all', 'beta'))))`)
+              AND c.enabled = 1 AND c.audience = 'all')))`)
       .bind(profile.policy_version, approval!.approval_id, subject.subjectReference, wallet,
         plan.plan_id, intent.intent_id, approval!.expires_at, approval!.call_json,
         call.fingerprint, call.to.toLowerCase(), observed.step.spender.toLowerCase(), observed.step.amountRaw,
@@ -214,7 +214,7 @@ export const POST = route("swap.approval.prepare", { unavailable: "approval_unav
     SELECT ?, i.subject_reference, p.wallet_address, i.intent_id, p.plan_id, ?, ?, ?, ?, ?, 'prepared', ?, ?, ?
     FROM swap_quote_plans p JOIN transaction_intents i ON i.intent_id = p.intent_id
     JOIN security_profiles s ON s.subject_reference = i.subject_reference AND s.account_locked = 0
-    JOIN feature_flags f ON f.flag_key = 'swaps' AND f.enabled = 1 AND f.audience IN ('all', 'beta')
+    JOIN feature_flags f ON f.flag_key = 'swaps' AND f.enabled = 1 AND f.audience = 'all'
     WHERE p.plan_id = ? AND i.intent_id = ? AND p.subject_reference = ? AND p.wallet_address = ?
       AND p.status = 'active' AND i.status = 'reviewed' AND i.chain_id = 8453
       AND p.source_chain_id = 8453
@@ -225,7 +225,7 @@ export const POST = route("swap.approval.prepare", { unavailable: "approval_unav
             OR (p.destination_chain_id = 42161 AND p.destination_asset_id = '42161:0xaf88d065e77c8cc2239327c5edb3a432268e5831'))
           AND p.recipient = p.wallet_address
           AND EXISTS (SELECT 1 FROM feature_flags cross_chain WHERE cross_chain.flag_key = 'cross_chain'
-            AND cross_chain.enabled = 1 AND cross_chain.audience IN ('all', 'beta'))))
+            AND cross_chain.enabled = 1 AND cross_chain.audience = 'all')))
       AND i.route_reference = 'swap-plan:' || p.plan_id
       AND json_extract(i.policy_result_json, '$.permitted') = 1
       AND p.expires_at > ? AND p.expires_at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now')

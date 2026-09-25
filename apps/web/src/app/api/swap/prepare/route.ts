@@ -151,7 +151,7 @@ export const POST = route("swap.prepare", { unavailable: "prepare_unavailable", 
       JOIN swap_quote_plans p ON p.intent_id = i.intent_id AND p.plan_id = ?
       JOIN security_profiles s ON s.subject_reference = i.subject_reference AND s.account_locked = 0
         AND s.policy_version = ?
-      JOIN feature_flags f ON f.flag_key = 'swaps' AND f.enabled = 1 AND f.audience IN ('all', 'beta')
+      JOIN feature_flags f ON f.flag_key = 'swaps' AND f.enabled = 1 AND f.audience = 'all'
       WHERE c.intent_id = ? AND c.step_index = 0 AND c.subject_reference = ?
         AND c.semantic_action = ? AND c.submission_phase = 'released'
         AND c.verification_state = 'prepared' AND c.reported_hash IS NULL
@@ -167,7 +167,7 @@ export const POST = route("swap.prepare", { unavailable: "prepare_unavailable", 
         AND unixepoch(?) BETWEEN unixepoch('now') - 180 AND unixepoch('now') + 60
         AND (? = 'swap' OR EXISTS (SELECT 1 FROM feature_flags cross_feature
           WHERE cross_feature.flag_key = 'cross_chain' AND cross_feature.enabled = 1
-            AND cross_feature.audience IN ('all', 'beta')))
+            AND cross_feature.audience = 'all'))
         AND EXISTS (SELECT 1 FROM (
           SELECT COALESCE(SUM(CAST(v.usd_cents AS INTEGER)), 0) AS cents,
             COALESCE(SUM(CASE WHEN v.valuation_id IS NULL THEN 1 ELSE 0 END), 0) AS missing
@@ -202,7 +202,7 @@ export const POST = route("swap.prepare", { unavailable: "prepare_unavailable", 
         'swap-plan:' || p.plan_id, i.expires_at, ?, 'prepared', ?, 'released'
       FROM transaction_intents i JOIN swap_quote_plans p ON p.intent_id = i.intent_id
       JOIN security_profiles s ON s.subject_reference = i.subject_reference AND s.account_locked = 0
-      JOIN feature_flags f ON f.flag_key = 'swaps' AND f.enabled = 1 AND f.audience IN ('all', 'beta')
+      JOIN feature_flags f ON f.flag_key = 'swaps' AND f.enabled = 1 AND f.audience = 'all'
       WHERE i.intent_id = ? AND i.subject_reference = ? AND i.intent_type = ?
         AND i.chain_id = 8453 AND i.wallet_reference = ? AND i.route_reference = 'swap-plan:' || p.plan_id
         AND i.status = 'reviewed' AND i.expires_at > ?
@@ -215,7 +215,7 @@ export const POST = route("swap.prepare", { unavailable: "prepare_unavailable", 
         AND p.destination_chain_id = ? AND p.fingerprint = ? AND p.route_policy_version = ?
         AND (? = 'swap' OR EXISTS (SELECT 1 FROM feature_flags cross_feature
           WHERE cross_feature.flag_key = 'cross_chain' AND cross_feature.enabled = 1
-            AND cross_feature.audience IN ('all', 'beta')))
+            AND cross_feature.audience = 'all'))
         AND NOT EXISTS (SELECT 1 FROM intent_prepared_calls prior WHERE prior.intent_id = i.intent_id)
         AND EXISTS (SELECT 1 FROM (
           SELECT COALESCE(SUM(CAST(v.usd_cents AS INTEGER)), 0) AS cents,

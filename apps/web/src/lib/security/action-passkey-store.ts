@@ -44,7 +44,7 @@ export async function consumeVerifiedActionPasskey(
           WHERE p.subject_reference = action_passkey_challenges.subject_reference
             AND p.account_locked = 0 AND p.policy_version = action_passkey_challenges.policy_version)
         AND EXISTS (SELECT 1 FROM feature_flags f
-          WHERE f.flag_key = 'direct_transfers' AND f.enabled = 1 AND f.audience IN ('all', 'beta'))
+          WHERE f.flag_key = 'direct_transfers' AND f.enabled = 1 AND f.audience = 'all')
         AND EXISTS (SELECT 1 FROM transaction_intents i
           WHERE i.intent_id = action_passkey_challenges.intent_id
             AND i.subject_reference = action_passkey_challenges.subject_reference

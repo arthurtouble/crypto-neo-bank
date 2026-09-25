@@ -4,13 +4,12 @@ import { usePrivy } from "@privy-io/react-auth";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bell } from "lucide-react";
 
-type Notifications = { transactionEmail: boolean; transactionPush: boolean; productUpdatesEmail: boolean };
+type Notifications = { transactionEmail: boolean; transactionPush: boolean };
 type PreferencesResponse = { preferences: { notifications: Notifications }; delivery: string };
 
 const choices: Array<{ key: keyof Notifications; label: string }> = [
   { key: "transactionEmail", label: "Transaction emails" },
-  { key: "transactionPush", label: "Transaction push notifications" },
-  { key: "productUpdatesEmail", label: "Product update emails" }
+  { key: "transactionPush", label: "Transaction push notifications" }
 ];
 
 /** Saved notification choices; delivery starts once a notification service is connected. */
