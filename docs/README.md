@@ -8,6 +8,7 @@ These files contain operational and security-sensitive context. Keep them in the
 
 - [Build status](overview/build-status.md): what is live, what depends on providers, and what was retired.
 - [Launch readiness](overview/launch-readiness.md): release gates.
+- [Codebase audit, 25 September 2026](overview/codebase-audit-2026-09-25.md): findings, target architecture, and the refactor plan.
 - [Operations runbook](operations/operations-runbook.md): provider activation, secrets, migrations, reconciliation, and recovery.
 - [Architecture](architecture/architecture.md): systems of record and the rule that D1 never owns money.
 - [Provider projections](architecture/provider-projections.md): the event contract for cards, rewards, and wallet policies.
