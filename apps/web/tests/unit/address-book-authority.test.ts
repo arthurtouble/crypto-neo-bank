@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+const httpErrors = await vi.hoisted(() => import("@/lib/http/errors"));
 import { DatabaseSync } from "node:sqlite";
 
 const state = vi.hoisted(() => ({ database: null as D1Database | null }));
 vi.mock("cloudflare:workers", () => ({ env: { get PROJECTION_DB() { return state.database; } } }));
-vi.mock("@/lib/auth/server", () => ({ AuthenticationError: class extends Error {}, requireVerifiedSubject: async () => ({
+vi.mock("@/lib/auth/server", () => ({ AuthenticationError: httpErrors.AuthenticationError, requireVerifiedSubject: async () => ({
   subjectReference: "alice", sessionReference: "session-alice"
 }) }));
 vi.mock("@/lib/profile/ensure", () => ({ ensureSubjectProfile: async () => undefined }));
@@ -11,6 +12,7 @@ vi.mock("@/lib/security/rate-limit", () => ({ enforceRateLimit: async () => unde
 
 import { DELETE as deleteAddress, POST as saveAddress } from "@/app/api/security/addresses/route";
 import { POST as saveRecipient } from "@/app/api/recipients/route";
+
 
 function d1(db: DatabaseSync): D1Database {
   return { prepare(sql: string) { return { bind(...args: unknown[]) {

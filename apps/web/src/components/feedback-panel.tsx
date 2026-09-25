@@ -16,7 +16,7 @@ export function FeedbackPanel() {
     event.preventDefault(); setState("sending");
     try {
       const token = await getAccessToken();
-      const response = await fetch("/api/beta/feedback", { method: "POST", headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), "Content-Type": "application/json" }, body: JSON.stringify({ surface: pathname, sentiment, category, message }) });
+      const response = await fetch("/api/feedback", { method: "POST", headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), "Content-Type": "application/json" }, body: JSON.stringify({ surface: pathname, sentiment, category, message }) });
       if (!response.ok) throw new Error();
       setMessage(""); setState("sent");
     } catch { setState("error"); }

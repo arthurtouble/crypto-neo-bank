@@ -1,6 +1,5 @@
 import { generateRegistrationOptions, verifyRegistrationResponse, type PublicKeyCredentialCreationOptionsJSON, type RegistrationResponseJSON } from "@simplewebauthn/server";
 import { cose, decodeCredentialPublicKey } from "@simplewebauthn/server/helpers";
-import { configuredCountries } from "@/lib/beta/access";
 import { validateActionPasskeyOrigin } from "./action-passkey-origin";
 
 export type VerifyPendingRegistrationInput = {
@@ -27,8 +26,6 @@ export async function issuePendingRegistrationChallenge(db: D1Database, input: P
   validateActionPasskeyOrigin(input.origin, input.rpId, input.deploymentMode);
   if (!input.subjectReference || !input.sessionReference || !Number.isFinite(input.now.getTime()))
     throw new Error("Invalid passkey registration binding.");
-  const countries = configuredCountries();
-  if (!countries.length) throw new Error("Passkey registration requires a launch-country allowlist.");
   const userID = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(input.subjectReference)));
   const options = await generateRegistrationOptions({
     rpName: "Aura", rpID: input.rpId, userName: "Aura account", userID,
@@ -45,11 +42,9 @@ export async function issuePendingRegistrationChallenge(db: D1Database, input: P
     (challenge_id, challenge_digest, subject_reference, session_reference, purpose, rp_id, origin, expires_at, created_at)
     SELECT ?, ?, s.subject_reference, ?, 'registration', ?, ?, ?, ? FROM subject_profiles s
     JOIN security_profiles p ON p.subject_reference = s.subject_reference
-    JOIN beta_access b ON b.subject_reference = s.subject_reference
-    WHERE s.subject_reference = ? AND p.account_locked = 0 AND b.status = 'active'
-      AND b.country_code IN (SELECT value FROM json_each(?))`)
+    WHERE s.subject_reference = ? AND p.account_locked = 0`)
     .bind(challengeId, digest, input.sessionReference, input.rpId, input.origin, expiresAt, now,
-      input.subjectReference, JSON.stringify(countries)).run();
+      input.subjectReference).run();
   if (inserted.meta.changes !== 1) throw new Error("Passkey registration is unavailable for this account.");
   return { challengeId, challenge: options.challenge, expiresAt, options };
 }
@@ -88,19 +83,15 @@ export async function storePendingActionPasskeyRegistration(db: D1Database, inpu
     || ![ -7, -257 ].includes(credential.algorithm) || !Number.isSafeInteger(credential.counter) || credential.counter < 0
     || credential.publicKeyCose.length === 0)
     throw new Error("Invalid pending passkey registration evidence.");
-  const countries = configuredCountries();
-  if (!countries.length) throw new Error("Pending passkey registration requires a launch-country allowlist.");
   const now = input.now.toISOString();
   const [consumed, stored, audited] = await db.batch([
     db.prepare(`UPDATE action_passkey_challenges SET consumed_at = ?
       WHERE challenge_id = ? AND challenge_digest = ? AND subject_reference = ? AND session_reference = ?
         AND purpose = 'registration' AND rp_id = ? AND origin = ?
         AND consumed_at IS NULL AND created_at <= ? AND expires_at > ?
-        AND EXISTS (SELECT 1 FROM security_profiles p WHERE p.subject_reference = action_passkey_challenges.subject_reference AND p.account_locked = 0)
-        AND EXISTS (SELECT 1 FROM beta_access b WHERE b.subject_reference = action_passkey_challenges.subject_reference
-          AND b.status = 'active' AND b.country_code IN (SELECT value FROM json_each(?)))`)
+        AND EXISTS (SELECT 1 FROM security_profiles p WHERE p.subject_reference = action_passkey_challenges.subject_reference AND p.account_locked = 0)`)
       .bind(now, input.challengeId, credential.challengeDigest, input.subjectReference, input.sessionReference,
-        input.rpId, input.origin, now, now, JSON.stringify(countries)),
+        input.rpId, input.origin, now, now),
     db.prepare(`INSERT INTO action_passkey_credentials
       (credential_id, subject_reference, public_key_cose, algorithm, rp_id, sign_count, status, created_at)
       SELECT ?, c.subject_reference, ?, ?, c.rp_id, ?, 'pending', ? FROM action_passkey_challenges c

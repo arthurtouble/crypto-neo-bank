@@ -2,9 +2,10 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it, vi } from "vitest";
+const httpErrors = await vi.hoisted(() => import("@/lib/http/errors"));
 
 const state = vi.hoisted(() => ({
-  AuthenticationError: class AuthenticationError extends Error {},
+  AuthenticationError: httpErrors.AuthenticationError,
   authenticated: false,
   calls: 0
 }));
@@ -13,13 +14,13 @@ vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {}, AI: {
 } } }));
 vi.mock("@/lib/auth/server", () => ({ AuthenticationError: state.AuthenticationError,
   requireVerifiedSubject: async () => { if (!state.authenticated) throw new state.AuthenticationError(); return { subjectReference: "subject-a" }; } }));
-vi.mock("@/lib/beta/access", () => ({ BetaAccessError: class BetaAccessError extends Error {}, requireBetaAccess: async () => undefined }));
-vi.mock("@/lib/features/flags", () => ({ FeatureUnavailableError: class FeatureUnavailableError extends Error {}, requireFeature: async (_db: unknown, key: string) => {
+vi.mock("@/lib/features/flags", () => ({ FeatureUnavailableError: httpErrors.FeatureUnavailableError, requireFeature: async (_db: unknown, key: string) => {
   if (key !== "support_assistant") throw new Error("Legacy feature used.");
 } }));
-vi.mock("@/lib/security/rate-limit", () => ({ RateLimitError: class RateLimitError extends Error {}, enforceRateLimit: async () => undefined }));
+vi.mock("@/lib/security/rate-limit", () => ({ RateLimitError: httpErrors.RateLimitError, enforceRateLimit: async () => undefined }));
 
 import { POST } from "@/app/api/support/assistant/route";
+
 
 describe("Aura support assistant", () => {
   it("requires a session before calling Workers AI", async () => {

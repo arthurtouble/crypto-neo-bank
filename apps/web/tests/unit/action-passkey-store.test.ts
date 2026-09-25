@@ -47,7 +47,6 @@ const challenge = () => sqlite.prepare("SELECT consumed_at FROM action_passkey_c
 const counter = () => sqlite.prepare("SELECT sign_count FROM action_passkey_credentials WHERE credential_id = 'credential-1'").get() as { sign_count: number };
 
 beforeEach(() => {
-  vi.stubEnv("BETA_ALLOWED_COUNTRIES", "PT");
   sqlite = new DatabaseSync(":memory:");
   sqlite.exec("PRAGMA foreign_keys = ON");
   for (const file of readdirSync(root).filter((name) => name.endsWith(".sql")).sort()) {
@@ -55,7 +54,7 @@ beforeEach(() => {
   }
   sqlite.exec("UPDATE feature_flags SET enabled=1 WHERE flag_key='direct_transfers'");
   sqlite.exec(`INSERT INTO subject_profiles (subject_reference, privy_user_reference, onboarding_state, created_at, updated_at)
-      VALUES ('subject-a', 'subject-a', 'beta_active', '2026-09-23T00:00:00.000Z', '2026-09-23T00:00:00.000Z');
+      VALUES ('subject-a', 'subject-a', 'wallet_ready', '2026-09-23T00:00:00.000Z', '2026-09-23T00:00:00.000Z');
     INSERT INTO wallet_references (wallet_reference, subject_reference, provider, address, chain_family, control_model, observed_at)
       VALUES ('wallet-a', 'subject-a', 'privy', '0x1111111111111111111111111111111111111111', 'evm', 'customer', '2026-09-23T00:00:00.000Z');
     INSERT INTO transaction_intents (intent_id, subject_reference, wallet_reference, intent_type, chain_id, request_json,
@@ -73,10 +72,6 @@ beforeEach(() => {
         '{"type":"native_transfer","recipient":"0x2222222222222222222222222222222222222222","amountRaw":"1"}',
         '2026-09-23T00:00:00.000Z', 'awaiting_step_up');
     INSERT INTO security_profiles (subject_reference, updated_at) VALUES ('subject-a', '2026-09-23T00:00:00.000Z');
-    INSERT INTO beta_access (subject_reference, cohort, country_code, status, transaction_limit_usd,
-      terms_version, terms_accepted_at, activated_at, updated_at)
-      VALUES ('subject-a', 'test', 'PT', 'active', 25000, 'private-beta-2026-09',
-        '2026-09-23T00:00:00.000Z', '2026-09-23T00:00:00.000Z', '2026-09-23T00:00:00.000Z');
     INSERT INTO address_book_entries (entry_id, subject_reference, chain_family, address, label, created_at, available_at)
       VALUES ('recipient-1', 'subject-a', 'evm', '0x2222222222222222222222222222222222222222', 'Recipient',
         '2026-09-23T00:00:00.000Z', '2026-09-23T00:00:00.000Z');
@@ -201,10 +196,6 @@ describe("action passkey evidence store", () => {
   });
 
   it.each([
-    ["suspended beta", "UPDATE beta_access SET status='suspended' WHERE subject_reference='subject-a'"],
-    ["closed beta", "UPDATE beta_access SET status='closed' WHERE subject_reference='subject-a'"],
-    ["changed country", "UPDATE beta_access SET country_code='US' WHERE subject_reference='subject-a'"],
-    ["missing beta", "DELETE FROM beta_access WHERE subject_reference='subject-a'"],
     ["disabled direct transfers", "UPDATE feature_flags SET enabled=0 WHERE flag_key='direct_transfers'"],
     ["operations-only direct transfers", "UPDATE feature_flags SET audience='operations' WHERE flag_key='direct_transfers'"],
     ["missing direct-transfer flag", "DELETE FROM feature_flags WHERE flag_key='direct_transfers'"],
@@ -227,15 +218,7 @@ describe("action passkey evidence store", () => {
     expect(counter().sign_count).toBe(1);
   });
 
-  it("rejects when the launch-country allowlist is not configured", async () => {
-    vi.stubEnv("BETA_ALLOWED_COUNTRIES", "");
-    await expect(consumeVerifiedActionPasskey(database, base)).rejects.toThrow();
-    expect(count()).toBe(0);
-    expect(challenge().consumed_at).toBeNull();
-  });
-
   it.each([
-    ["beta cap", "UPDATE beta_access SET transaction_limit_usd=50 WHERE subject_reference='subject-a'"],
     ["security cap", "UPDATE security_profiles SET daily_limit_usd=50 WHERE subject_reference='subject-a'"]
   ])("rejects a reduced %s even if the challenge and policy version still match", async (_label, mutation) => {
     sqlite.exec(mutation);

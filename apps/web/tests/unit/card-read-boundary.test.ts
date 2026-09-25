@@ -1,14 +1,16 @@
 import { describe, expect, it, vi } from "vitest";
+const httpErrors = await vi.hoisted(() => import("@/lib/http/errors"));
 
 vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
   prepare() { return { bind() { return { async first() { return { provider: "rain", status: "active", last_four: "1234" }; } }; } }; }
 } } }));
 vi.mock("@/lib/auth/server", () => ({
-  AuthenticationError: class AuthenticationError extends Error {},
+  AuthenticationError: httpErrors.AuthenticationError,
   requireVerifiedSubject: async () => ({ subjectReference: "subject-a" })
 }));
 
 import { GET } from "@/app/api/cards/route";
+
 
 describe("card read boundary", () => {
   it("does not show a stored card projection as live without an issuer connection", async () => {

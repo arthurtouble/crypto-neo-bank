@@ -1,13 +1,13 @@
 import { env } from "cloudflare:workers";
 import { z } from "zod";
-import { AuthenticationError, requireVerifiedSubject } from "@/lib/auth/server";
-import { BetaAccessError, requireBetaAccess } from "@/lib/beta/access";
-import { RateLimitError, enforceRateLimit } from "@/lib/security/rate-limit";
+import { requireVerifiedSubject } from "@/lib/auth/server";
+import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { resolvePortfolioAccounts } from "@/lib/portfolio/accounts";
 import { BaseChainSource } from "@/lib/portfolio/chain-source";
 import { BaseAaveSource } from "@/lib/portfolio/aave-source";
 import { ingestOnePage, PortfolioIngestError } from "@/lib/portfolio/ingest";
 import type { AccountId, HistoricalEventSource } from "@/lib/portfolio/types";
+import { route, errorResponse } from "@/lib/http/route";
 
 const bodySchema = z.object({
   accountId: z.string().regex(/^8453:0x[a-f0-9]{40}$/),
@@ -19,29 +19,17 @@ function reply(body: Record<string, unknown>, status: number) {
   return Response.json(body, { status, headers: { "Cache-Control": "no-store" } });
 }
 
-export async function POST(request: Request) {
-  const traceId = crypto.randomUUID();
-  try {
-    const subject = await requireVerifiedSubject(request);
-    await requireBetaAccess(env.PROJECTION_DB, subject.subjectReference);
-    await enforceRateLimit(env.PROJECTION_DB, { namespace: "portfolio-refresh", subject: subject.subjectReference, limit: 20, windowSeconds: 60 });
-    const input = bodySchema.parse(await request.json());
-    // This is deliberately fresh; a browser address or old wallet_reference
-    // row never grants scope to portfolio history.
-    const accounts = await resolvePortfolioAccounts(subject.subjectReference);
-    if (!accounts.some((item) => item.accountId === input.accountId)) return reply({ error: "account_not_linked", traceId }, 403);
-    const key = (env as typeof env & { BLOCKSCOUT_API_KEY?: string }).BLOCKSCOUT_API_KEY;
-    if (input.sourceId === "blockscout:8453" && !key) return reply({ error: "source_unconfigured", traceId }, 503);
-    const source: HistoricalEventSource = input.sourceId === "blockscout:8453" ? new BaseChainSource({ apiKey: key }) : new BaseAaveSource();
-    const result = await ingestOnePage(env.PROJECTION_DB, subject.subjectReference, input.accountId as AccountId, source, input.cursor ?? null);
-    return reply({ accountId: input.accountId, sourceId: input.sourceId, ...result, traceId }, 200);
-  } catch (error) {
-    if (error instanceof AuthenticationError) return reply({ error: "unauthorized", traceId }, 401);
-    if (error instanceof BetaAccessError) return reply({ error: error.code, traceId }, 403);
-    if (error instanceof RateLimitError) return Response.json({ error: "rate_limited", traceId }, { status: 429, headers: { "Cache-Control": "no-store", "Retry-After": String(error.retryAfterSeconds) } });
-    if (error instanceof z.ZodError) return reply({ error: "invalid_refresh", issues: error.issues, traceId }, 400);
-    if (error instanceof PortfolioIngestError) return reply({ error: error.code, message: error.message, traceId }, error.code === "invalid_cursor" || error.code === "conflict" || error.code === "reorg" ? 409 : 503);
-    console.error(JSON.stringify({ level: "error", event: "portfolio.refresh.failed", traceId, message: error instanceof Error ? error.message : "unknown" }));
-    return reply({ error: "refresh_unavailable", traceId }, 503);
-  }
-}
+export const POST = route("portfolio.refresh", { unavailable: "refresh_unavailable", invalid: "invalid_refresh", onError: (error, context) => error instanceof PortfolioIngestError ? errorResponse(["invalid_cursor", "conflict", "reorg"].includes(error.code) ? 409 : 503, error.code, context, { message: error.message }) : undefined }, async (request: Request, { traceId }) => {
+  const subject = await requireVerifiedSubject(request);
+  await enforceRateLimit(env.PROJECTION_DB, { namespace: "portfolio-refresh", subject: subject.subjectReference, limit: 20, windowSeconds: 60 });
+  const input = bodySchema.parse(await request.json());
+  // This is deliberately fresh; a browser address or old wallet_reference
+  // row never grants scope to portfolio history.
+  const accounts = await resolvePortfolioAccounts(subject.subjectReference);
+  if (!accounts.some((item) => item.accountId === input.accountId)) return reply({ error: "account_not_linked", traceId }, 403);
+  const key = (env as typeof env & { BLOCKSCOUT_API_KEY?: string }).BLOCKSCOUT_API_KEY;
+  if (input.sourceId === "blockscout:8453" && !key) return reply({ error: "source_unconfigured", traceId }, 503);
+  const source: HistoricalEventSource = input.sourceId === "blockscout:8453" ? new BaseChainSource({ apiKey: key }) : new BaseAaveSource();
+  const result = await ingestOnePage(env.PROJECTION_DB, subject.subjectReference, input.accountId as AccountId, source, input.cursor ?? null);
+  return reply({ accountId: input.accountId, sourceId: input.sourceId, ...result, traceId }, 200);
+});

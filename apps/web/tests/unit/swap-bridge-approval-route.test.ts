@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+const httpErrors = await vi.hoisted(() => import("@/lib/http/errors"));
 import { getAddress } from "viem";
 import { normalizePreparedCall } from "@/lib/transactions/evidence";
 
@@ -43,15 +44,13 @@ vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: { prepare(sql: stri
     }, async run() { state.writes.push({ sql, values }); return { meta: { changes: 1 } }; }
   }; } }; }
 } } }));
-vi.mock("@/lib/auth/server", () => ({ AuthenticationError: class AuthenticationError extends Error {},
+vi.mock("@/lib/auth/server", () => ({ AuthenticationError: httpErrors.AuthenticationError,
   requireVerifiedSubject: async () => ({ subjectReference: "subject-a" }) }));
-vi.mock("@/lib/auth/wallet", () => ({ WalletOwnershipError: class WalletOwnershipError extends Error {},
+vi.mock("@/lib/auth/wallet", () => ({ WalletOwnershipError: httpErrors.WalletOwnershipError,
   requireLinkedEvmWallet: async () => wallet }));
-vi.mock("@/lib/beta/access", () => ({ BetaAccessError: class BetaAccessError extends Error {},
-  configuredCountries: () => ["PT"], requireBetaAccess: async () => ({ mode: "invite", status: "active", countryCode: "PT", transactionLimitUsd: 1000 }) }));
-vi.mock("@/lib/features/flags", () => ({ FeatureUnavailableError: class FeatureUnavailableError extends Error {},
+vi.mock("@/lib/features/flags", () => ({ FeatureUnavailableError: httpErrors.FeatureUnavailableError,
   requireFeature: async (_db: unknown, key: string) => { if (state.featureFailure === key) throw new Error("disabled"); } }));
-vi.mock("@/lib/security/rate-limit", () => ({ RateLimitError: class RateLimitError extends Error {}, enforceRateLimit: async () => undefined }));
+vi.mock("@/lib/security/rate-limit", () => ({ RateLimitError: httpErrors.RateLimitError, enforceRateLimit: async () => undefined }));
 vi.mock("@/lib/swap/plans", () => ({ getActiveSwapQuotePlan: async () => ({
   plan_id: planId, intent_id: state.planIntent, wallet_address: wallet, source_asset_id: source,
   destination_asset_id: destination, source_chain_id: 8453, destination_chain_id: state.destinationChain,
@@ -77,6 +76,7 @@ vi.mock("viem", async (importOriginal) => { const actual = await importOriginal<
   return { ...actual, createPublicClient: () => ({}) }; });
 
 import { POST } from "@/app/api/swap/approval/route";
+
 
 const post = () => POST(new Request("https://aurel.test/api/swap/approval", { method: "POST",
   body: JSON.stringify({ intentId, planId, walletAddress: wallet }) }));

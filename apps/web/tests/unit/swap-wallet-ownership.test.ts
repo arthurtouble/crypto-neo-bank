@@ -1,28 +1,26 @@
 import { describe, expect, it, vi } from "vitest";
+const httpErrors = await vi.hoisted(() => import("@/lib/http/errors"));
 
 const fixture = vi.hoisted(() => ({ quoteCalls: 0 }));
 vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {} } }));
 vi.mock("@/lib/auth/server", () => ({
-  AuthenticationError: class AuthenticationError extends Error {},
+  AuthenticationError: httpErrors.AuthenticationError,
   requireVerifiedSubject: async () => ({ subjectReference: "did:privy:owner" })
 }));
-vi.mock("@/lib/beta/access", () => ({
-  BetaAccessError: class BetaAccessError extends Error {},
-  requireBetaAccess: async () => undefined
-}));
 vi.mock("@/lib/features/flags", () => ({
-  FeatureUnavailableError: class FeatureUnavailableError extends Error {},
+  FeatureUnavailableError: httpErrors.FeatureUnavailableError,
   requireFeature: async () => undefined
 }));
 vi.mock("@/lib/security/rate-limit", () => ({
-  RateLimitError: class RateLimitError extends Error {},
+  RateLimitError: httpErrors.RateLimitError,
   enforceRateLimit: async () => undefined
 }));
 vi.mock("@/lib/auth/wallet", () => {
-  class WalletOwnershipError extends Error {}
+  const WalletOwnershipError = httpErrors.WalletOwnershipError;
   return { WalletOwnershipError, requireLinkedEvmWallet: async () => { throw new WalletOwnershipError("Unlinked wallet"); } };
 });
-vi.mock("@/lib/swap/quotes", () => ({
+vi.mock("@/lib/swap/quotes", async (original) => ({
+  ...await original<typeof import("@/lib/swap/quotes")>(),
   swapQuoteRequestSchema: { parse: (input: unknown) => input }
 }));
 vi.mock("@/lib/swap/catalog", () => ({
@@ -33,6 +31,7 @@ vi.mock("@/lib/swap/lifi", () => ({
 }));
 
 import { POST } from "@/app/api/swap/quote/route";
+
 
 describe("swap quote wallet boundary", () => {
   it("refuses a quote for a wallet that is not linked to the session", async () => {

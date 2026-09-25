@@ -49,10 +49,9 @@ const status = await request("/api/status");
 const statusBody = await status.json().catch(() => ({}));
 assert([200, 503].includes(status.status) && Array.isArray(statusBody.components), `public status returns bounded component state (${status.status})`);
 
-for (const path of ["/api/portfolio", "/api/activity", "/api/defi/aave/positions?address=0x000000000000000000000000000000000000dEaD", "/api/ops/summary", "/api/ops/beta", "/api/ops/features", "/api/ops/analytics", "/api/beta/access"]) {
+for (const path of ["/api/activity", "/api/defi/aave/positions?address=0x000000000000000000000000000000000000dEaD", "/api/ops/summary", "/api/ops/features", "/api/ops/analytics"]) {
   const response = await request(path);
-  const accepted = path === "/api/portfolio" ? [401, 403, 410] : [401, 403];
-  assert(accepted.includes(response.status), `${path} rejects or retires an unauthenticated request (${response.status})`);
+  assert([401, 403].includes(response.status), `${path} rejects an unauthenticated request (${response.status})`);
 }
 
 for (const path of ["/api/portfolio/history?range=7D", "/api/portfolio/tax-support?year=2026", "/api/swap/assets?q=USD"]) {
@@ -66,9 +65,9 @@ for (const path of ["/api/portfolio/refresh", "/api/swap/quote", "/api/intents/e
   assert(response.headers.get("cache-control")?.includes("no-store"), `${path} does not cache action responses`);
 }
 
-for (const path of ["/api/growth/waitlist", "/api/growth/events"]) {
+for (const path of ["/api/growth/waitlist", "/api/growth/events", "/api/portfolio", "/api/beta/access", "/api/routing/quote", "/api/swap/curated-quote"]) {
   const response = await request(path, { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
-  assert(response.status === 410, `${path} rejects retired public writes (${response.status})`);
+  assert(response.status === 404, `${path} is retired (${response.status})`);
 }
 
 const webhook = await request("/api/webhooks/provider", {

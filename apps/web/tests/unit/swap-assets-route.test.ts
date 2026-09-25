@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+const httpErrors = await vi.hoisted(() => import("@/lib/http/errors"));
 
 const fixture = vi.hoisted(() => ({
   authenticated: true,
-  beta: true,
   rateLimited: false,
   providerUnavailable: false,
   imported: true,
@@ -11,7 +11,7 @@ const fixture = vi.hoisted(() => ({
 
 vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {} } }));
 vi.mock("@/lib/auth/server", () => {
-  class AuthenticationError extends Error {}
+  const AuthenticationError = httpErrors.AuthenticationError;
   return {
     AuthenticationError,
     requireVerifiedSubject: async () => {
@@ -20,18 +20,11 @@ vi.mock("@/lib/auth/server", () => {
     }
   };
 });
-vi.mock("@/lib/beta/access", () => {
-  class BetaAccessError extends Error { code = "beta_required"; }
-  return {
-    BetaAccessError,
-    requireBetaAccess: async () => { if (!fixture.beta) throw new BetaAccessError(); }
-  };
-});
 vi.mock("@/lib/security/rate-limit", () => {
-  class RateLimitError extends Error { retryAfterSeconds = 30; }
+  const RateLimitError = httpErrors.RateLimitError;
   return {
     RateLimitError,
-    enforceRateLimit: async () => { if (fixture.rateLimited) throw new RateLimitError(); }
+    enforceRateLimit: async () => { if (fixture.rateLimited) throw new RateLimitError(30); }
   };
 });
 vi.mock("@/lib/swap/catalog", () => {
@@ -52,11 +45,12 @@ vi.mock("@/lib/swap/catalog", () => {
 
 import { GET } from "@/app/api/swap/assets/route";
 
+
 function request(query: string) { return GET(new Request(`https://aurel.test/api/swap/assets${query}`)); }
 
 describe("Swap asset catalog API", () => {
   beforeEach(() => {
-    fixture.authenticated = true; fixture.beta = true; fixture.rateLimited = false;
+    fixture.authenticated = true; fixture.rateLimited = false;
     fixture.providerUnavailable = false; fixture.imported = true; fixture.searches = 0;
   });
 
@@ -84,10 +78,9 @@ describe("Swap asset catalog API", () => {
     expect(fixture.searches).toBe(0);
   });
 
-  it("enforces auth, beta, rate limits, and unavailable upstream state", async () => {
+  it("enforces auth, rate limits, and unavailable upstream state", async () => {
     fixture.authenticated = false; expect((await request("?q=ETH")).status).toBe(401);
-    fixture.authenticated = true; fixture.beta = false; expect((await request("?q=ETH")).status).toBe(403);
-    fixture.beta = true; fixture.rateLimited = true; expect((await request("?q=ETH")).status).toBe(429);
+    fixture.authenticated = true; fixture.rateLimited = true; expect((await request("?q=ETH")).status).toBe(429);
     fixture.rateLimited = false; fixture.providerUnavailable = true; expect((await request("?q=ETH")).status).toBe(503);
   });
 });

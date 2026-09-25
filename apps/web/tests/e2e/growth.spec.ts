@@ -38,16 +38,17 @@ test("landing is accessible and fits common widths", async ({ page }) => {
   expect(results.violations.filter((violation) => ["serious", "critical"].includes(violation.impact ?? ""))).toEqual([]);
 });
 
-test("retired public growth telemetry cannot record facts", async ({ request }) => {
-  const response = await request.post("/api/growth/events", { data: { events: [{ eventName: "invite_issued", anonymousSessionId: "f5ba9bbc-4318-4fcb-8649-c9b3be2c315e", surface: "/", properties: {} }] } });
-  expect(response.status()).toBe(410);
+test("retired growth, planning, alert, invitation, and routing endpoints are gone", async ({ request }) => {
+  for (const path of ["/api/growth/events", "/api/growth/waitlist", "/api/growth/referrals", "/api/growth/experiments", "/api/ops/growth/waitlist", "/api/ops/growth/campaigns",
+    "/api/ops/growth/experiments", "/api/ops/growth/communications", "/api/goals", "/api/bills", "/api/income-plan", "/api/transfer-schedules", "/api/swap/alerts",
+    "/api/swap/reminders", "/api/market-data", "/api/portfolio", "/api/reconcile", "/api/beta/access", "/api/beta/feedback",
+    "/api/ops/beta", "/api/routing/quote", "/api/swap/curated-quote"]) {
+    expect((await request.get(path)).status(), path).toBe(404);
+  }
 });
 
-test("growth operations and customer data endpoints fail closed", async ({ request }) => {
-  for (const path of ["/api/ops/growth/waitlist", "/api/ops/growth/campaigns", "/api/ops/growth/experiments", "/api/ops/growth/data-requests", "/api/growth/referrals"]) {
-    const response = await request.get(path);
-    expect([401, 403]).toContain(response.status());
-  }
+test("customer data request operations fail closed", async ({ request }) => {
+  expect([401, 403]).toContain((await request.get("/api/ops/growth/data-requests")).status());
 });
 
 test("the pre-launch application and tour routes are gone", async ({ request }) => {

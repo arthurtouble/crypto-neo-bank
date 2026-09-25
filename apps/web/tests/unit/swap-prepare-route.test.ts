@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+const httpErrors = await vi.hoisted(() => import("@/lib/http/errors"));
 import { DatabaseSync } from "node:sqlite";
 import { readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
@@ -15,7 +16,7 @@ const fixture = vi.hoisted(() => ({
   allowance: "sufficient", routeValid: true, simulationValid: true, changes: 1,
   expiryAt: "", advanceAfterSimulation: false, simulationAdvanceMs: 60_000, priceAgeMs: 0, bridge: false,
   bridgeChainId: 42161,
-  countries: ["US"] as string[], inserted: [] as string[], insertValues: [] as unknown[][], simulationCalls: 0,
+  inserted: [] as string[], insertValues: [] as unknown[][], simulationCalls: 0,
   recheckAvailable: true, recheckQuery: "", recheckValues: [] as unknown[]
 }));
 
@@ -48,15 +49,12 @@ vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
   }; } }; },
   async batch(statements: Array<{ run(): Promise<unknown> }>) { return Promise.all(statements.map((statement) => statement.run())); }
 } } }));
-vi.mock("@/lib/auth/server", () => ({ AuthenticationError: class AuthenticationError extends Error {},
+vi.mock("@/lib/auth/server", () => ({ AuthenticationError: httpErrors.AuthenticationError,
   requireVerifiedSubject: async () => ({ subjectReference: "did:privy:owner" }) }));
-vi.mock("@/lib/auth/wallet", () => ({ WalletOwnershipError: class WalletOwnershipError extends Error {},
+vi.mock("@/lib/auth/wallet", () => ({ WalletOwnershipError: httpErrors.WalletOwnershipError,
   requireLinkedEvmWallet: async () => wallet }));
-vi.mock("@/lib/beta/access", () => ({ BetaAccessError: class BetaAccessError extends Error {},
-  configuredCountries: () => fixture.countries,
-  requireBetaAccess: async () => ({ mode: "invite", status: "active", countryCode: "US", transactionLimitUsd: 25_000 }) }));
-vi.mock("@/lib/features/flags", () => ({ FeatureUnavailableError: class FeatureUnavailableError extends Error {}, requireFeature: async () => undefined }));
-vi.mock("@/lib/security/rate-limit", () => ({ RateLimitError: class RateLimitError extends Error {}, enforceRateLimit: async () => undefined }));
+vi.mock("@/lib/features/flags", () => ({ FeatureUnavailableError: httpErrors.FeatureUnavailableError, requireFeature: async () => undefined }));
+vi.mock("@/lib/security/rate-limit", () => ({ RateLimitError: httpErrors.RateLimitError, enforceRateLimit: async () => undefined }));
 vi.mock("@/lib/swap/plans", () => ({ getActiveSwapQuotePlan: async () => ({
   plan_id: planId, intent_id: fixture.planIntent, subject_reference: "did:privy:owner", wallet_address: wallet,
   source_asset_id: source, destination_asset_id: fixture.bridge ? fixture.bridgeChainId === 1 ? ethereumDestination : bridgeDestination : destination,
@@ -97,6 +95,7 @@ vi.mock("viem", async (importOriginal) => { const actual = await importOriginal<
 
 import { POST } from "@/app/api/swap/prepare/route";
 
+
 function post(body: Record<string, unknown> = { intentId, planId, walletAddress: wallet }) {
   return POST(new Request("https://aurel.test/api/swap/prepare", { method: "POST", body: JSON.stringify(body) }));
 }
@@ -126,16 +125,13 @@ function seededCommitDatabase(policyVersion = 1) {
       current, fixture.expiryAt, "plan-fingerprint", intentId);
   db.prepare("INSERT INTO security_profiles (subject_reference,policy_version,updated_at) VALUES ('did:privy:owner',?,?)")
     .run(policyVersion, current);
-  db.prepare(`INSERT INTO beta_access (subject_reference,cohort,country_code,status,transaction_limit_usd,
-    terms_version,terms_accepted_at,activated_at,updated_at)
-    VALUES ('did:privy:owner','test','US','active',25000,'test',?,?,?)`).run(current, current, current);
   return db;
 }
 
 describe("governed Swap preparation boundary", () => {
   beforeEach(() => { Object.assign(fixture, { planIntent: intentId, intentStatus: "reviewed", intentType: "swap",
     locked: false, allowance: "sufficient", routeValid: true, simulationValid: true, changes: 1,
-    countries: ["US"], inserted: [], insertValues: [], simulationCalls: 0, advanceAfterSimulation: false,
+    inserted: [], insertValues: [], simulationCalls: 0, advanceAfterSimulation: false,
     simulationAdvanceMs: 60_000, priceAgeMs: 0, bridge: false, bridgeChainId: 42161,
     recheckAvailable: true, recheckQuery: "", recheckValues: [],
     expiryAt: new Date(Date.now() + 45_000).toISOString() }); });
@@ -160,10 +156,8 @@ describe("governed Swap preparation boundary", () => {
     expect(fixture.inserted).toHaveLength(0);
   });
 
-  it("refuses account lock and a country without explicit allowance", async () => {
+  it("refuses a locked account", async () => {
     fixture.locked = true;
-    expect((await post()).status).toBe(403);
-    fixture.locked = false; fixture.countries = [];
     expect((await post()).status).toBe(403);
     expect(fixture.inserted).toHaveLength(0);
   });
@@ -225,14 +219,11 @@ describe("governed Swap preparation boundary", () => {
       db.exec("UPDATE security_profiles SET policy_version=policy_version+1 WHERE subject_reference='did:privy:owner'");
       expect(current()).toBeUndefined();
       db.exec("UPDATE security_profiles SET policy_version=1 WHERE subject_reference='did:privy:owner'");
-      db.exec("UPDATE beta_access SET status='suspended' WHERE subject_reference='did:privy:owner'");
-      expect(current()).toBeUndefined();
-      db.exec("UPDATE beta_access SET status='active' WHERE subject_reference='did:privy:owner'");
       db.exec("UPDATE feature_flags SET enabled=0 WHERE flag_key='swaps'");
       expect(current()).toBeUndefined();
       db.exec("UPDATE feature_flags SET enabled=1, audience='operations' WHERE flag_key='swaps'");
       expect(current()).toBeUndefined();
-      db.exec("UPDATE feature_flags SET audience='beta' WHERE flag_key='swaps'");
+      db.exec("UPDATE feature_flags SET audience='all' WHERE flag_key='swaps'");
       db.exec("UPDATE security_profiles SET account_locked=1 WHERE subject_reference='did:privy:owner'");
       expect(current()).toBeUndefined();
       db.exec("UPDATE security_profiles SET account_locked=0, daily_limit_usd=0.5 WHERE subject_reference='did:privy:owner'");

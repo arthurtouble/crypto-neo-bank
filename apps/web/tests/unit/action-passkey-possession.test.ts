@@ -66,7 +66,6 @@ async function assertion(challenge: string, changes: { origin?: string; rpId?: s
 }
 
 beforeEach(async () => {
-  vi.stubEnv("BETA_ALLOWED_COUNTRIES", "PT");
   sqlite = new DatabaseSync(":memory:");
   sqlite.exec("PRAGMA foreign_keys = ON");
   for (const file of readdirSync(root).filter((name) => name.endsWith(".sql")).sort())
@@ -80,8 +79,7 @@ beforeEach(async () => {
       VALUES ('subject-a','subject-a','2026-09-23T00:00:00.000Z','2026-09-23T00:00:00.000Z');
     INSERT INTO security_profiles (subject_reference, updated_at)
       VALUES ('subject-a','2026-09-23T00:00:00.000Z');
-    INSERT INTO beta_access (subject_reference, cohort, country_code, status, transaction_limit_usd, terms_version, terms_accepted_at, activated_at, updated_at)
-      VALUES ('subject-a','test','PT','active',25000,'v1','2026-09-23T00:00:00.000Z','2026-09-23T00:00:00.000Z','2026-09-23T00:00:00.000Z');`);
+`);
   sqlite.prepare(`INSERT INTO action_passkey_credentials
     (credential_id,subject_reference,public_key_cose,algorithm,rp_id,created_at)
     VALUES (?,'subject-a',?,-7,?,'2026-09-23T00:00:00.000Z')`).run(credentialId, publicKeyCose, rpId);
@@ -155,10 +153,7 @@ describe("pending passkey possession", () => {
     sqlite.exec("UPDATE security_profiles SET account_locked=1");
     await expect(completePendingPasskeyPossession(database, { ...input, challengeId: issued.challengeId,
       challenge: issued.challenge, response })).rejects.toThrow();
-    sqlite.exec("UPDATE security_profiles SET account_locked=0; UPDATE beta_access SET status='suspended'");
-    await expect(completePendingPasskeyPossession(database, { ...input, challengeId: issued.challengeId,
-      challenge: issued.challenge, response })).rejects.toThrow();
-    sqlite.exec("UPDATE beta_access SET status='active'");
+    sqlite.exec("UPDATE security_profiles SET account_locked=0");
     sqlite.prepare("UPDATE action_passkey_credentials SET status='revoked', revoked_at=? WHERE credential_id=?")
       .run("2026-09-23T00:02:00.000Z", credentialId);
     await expect(completePendingPasskeyPossession(database, { ...input, challengeId: issued.challengeId,

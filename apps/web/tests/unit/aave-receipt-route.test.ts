@@ -1,13 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+const httpErrors = await vi.hoisted(() => import("@/lib/http/errors"));
 
 const state = vi.hoisted(() => ({
   observed: { status: "pending" } as unknown,
   result: { status: "pending", reason: "transaction_unavailable" } as { status: string; reason?: string },
   prepared: null as unknown
 }));
-vi.mock("@/lib/auth/server", () => ({ AuthenticationError: class extends Error {},
+vi.mock("@/lib/auth/server", () => ({ AuthenticationError: httpErrors.AuthenticationError,
   requireVerifiedSubject: async () => ({ subjectReference: "subject-a" }) }));
-vi.mock("@/lib/auth/wallet", () => ({ WalletOwnershipError: class extends Error {},
+vi.mock("@/lib/auth/wallet", () => ({ WalletOwnershipError: httpErrors.WalletOwnershipError,
   requireLinkedEvmWallet: async () => "0x2222222222222222222222222222222222222222" }));
 vi.mock("@/lib/transactions/chain-observation", () => ({ observeTransaction: async () => state.observed }));
 vi.mock("@/lib/transactions/effects", () => ({ verifyExpectedEffect: async (prepared: unknown) => {
@@ -16,6 +17,7 @@ vi.mock("@/lib/transactions/effects", () => ({ verifyExpectedEffect: async (prep
 } }));
 
 import { POST } from "@/app/api/defi/aave/receipt/route";
+
 
 const sender = "0x2222222222222222222222222222222222222222";
 const hash = `0x${"a".repeat(64)}`;

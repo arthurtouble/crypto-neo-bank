@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+const httpErrors = await vi.hoisted(() => import("@/lib/http/errors"));
 
 const state = vi.hoisted(() => ({ authenticated: false, active: false, locked: false, contractChanged: false, shares: 100n * 10n ** 18n }));
 vi.mock("viem", async (original) => ({ ...await original<typeof import("viem")>(),
@@ -16,21 +17,21 @@ vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {
   prepare() { return { bind() { return { async first() { return { account_locked: state.locked ? 1 : 0 }; } }; } }; }
 } } }));
 vi.mock("@/lib/auth/server", () => {
-  class AuthenticationError extends Error {}
+  const AuthenticationError = httpErrors.AuthenticationError;
   return { AuthenticationError, requireVerifiedSubject: async () => {
     if (!state.authenticated) throw new AuthenticationError();
     return { subjectReference: "subject-a" };
   } };
 });
-vi.mock("@/lib/beta/access", () => ({ BetaAccessError: class extends Error {},
-  configuredCountries: () => ["PT"], requireBetaAccess: async () => ({
-    mode: "invite", status: state.active ? "active" : "preview", countryCode: "PT" }) }));
-vi.mock("@/lib/auth/wallet", () => ({ WalletOwnershipError: class extends Error {},
+vi.mock("@/lib/auth/wallet", () => ({ WalletOwnershipError: httpErrors.WalletOwnershipError,
   requireLinkedEvmWallet: async (_subject: string, wallet: string) => wallet }));
 vi.mock("@/lib/profile/ensure", () => ({ ensureSubjectProfile: async () => undefined }));
-vi.mock("@/lib/security/rate-limit", () => ({ RateLimitError: class extends Error {}, enforceRateLimit: async () => undefined }));
+vi.mock("@/lib/features/flags", () => ({ FeatureUnavailableError: httpErrors.FeatureUnavailableError,
+  requireFeature: async (_db: unknown, key: string) => { if (!state.active) throw new httpErrors.FeatureUnavailableError(key); } }));
+vi.mock("@/lib/security/rate-limit", () => ({ RateLimitError: httpErrors.RateLimitError, enforceRateLimit: async () => undefined }));
 
 import { POST } from "@/app/api/defi/sky/action/route";
+
 
 const request = (action = "deposit") => new Request("https://aura.test/api/defi/sky/action", { method: "POST",
   headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action,
@@ -40,13 +41,15 @@ describe("Sky wallet action boundary", () => {
   beforeEach(() => Object.assign(state, { authenticated: false, active: false, locked: false,
     contractChanged: false, shares: 100n * 10n ** 18n }));
 
-  it("requires sign-in and an active invitation", async () => {
+  it("requires sign-in and the DeFi actions switch", async () => {
     expect((await POST(request())).status).toBe(401);
     state.authenticated = true;
-    expect((await POST(request())).status).toBe(403);
+    const response = await POST(request());
+    expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({ error: "feature_unavailable" });
   });
 
-  it("returns exact Ethereum calls for an unlocked invited wallet", async () => {
+  it("returns exact Ethereum calls for any unlocked signed-in wallet", async () => {
     state.authenticated = true; state.active = true;
     const response = await POST(request());
     expect(response.status).toBe(200);

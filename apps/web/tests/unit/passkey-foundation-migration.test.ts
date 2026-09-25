@@ -5,7 +5,7 @@ import { resolve } from "node:path";
 
 const directory = resolve(process.cwd(), "../../infra/d1/migrations");
 const subject = `INSERT INTO subject_profiles (subject_reference, privy_user_reference, onboarding_state, created_at, updated_at)
-  VALUES ('subject-a', 'subject-a', 'beta_active', '2026-09-23T00:00:00.000Z', '2026-09-23T00:00:00.000Z');
+  VALUES ('subject-a', 'subject-a', 'wallet_ready', '2026-09-23T00:00:00.000Z', '2026-09-23T00:00:00.000Z');
   INSERT INTO wallet_references (wallet_reference, subject_reference, provider, address, chain_family, control_model, observed_at)
   VALUES ('wallet-a', 'subject-a', 'privy', '0x1111111111111111111111111111111111111111', 'evm', 'customer', '2026-09-23T00:00:00.000Z');
   INSERT INTO transaction_intents (intent_id, subject_reference, wallet_reference, intent_type, chain_id, request_json,

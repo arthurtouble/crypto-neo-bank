@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+const httpErrors = await vi.hoisted(() => import("@/lib/http/errors"));
 
-const state = vi.hoisted(() => ({ authorized: true, betaAllowed: true, accounts: ["8453:0x1111111111111111111111111111111111111111"], scopedReads: 0, ingestCalls: 0, sourceFails: false }));
+const state = vi.hoisted(() => ({ authorized: true, accounts: ["8453:0x1111111111111111111111111111111111111111"], scopedReads: 0, ingestCalls: 0, sourceFails: false }));
 vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {}, BLOCKSCOUT_API_KEY: "test-key" } }));
 vi.mock("@/lib/auth/server", () => {
-  class AuthenticationError extends Error {}
+  const AuthenticationError = httpErrors.AuthenticationError;
   return { AuthenticationError, requireVerifiedSubject: async () => { if (!state.authorized) throw new AuthenticationError("Missing session"); return { subjectReference: "subject-a" }; } };
 });
-vi.mock("@/lib/beta/access", () => { class BetaAccessError extends Error { code = "invite_required"; } return { BetaAccessError, requireBetaAccess: async () => { if (!state.betaAllowed) throw new BetaAccessError(); } }; });
-vi.mock("@/lib/security/rate-limit", () => ({ RateLimitError: class extends Error {}, enforceRateLimit: async () => undefined }));
+vi.mock("@/lib/security/rate-limit", () => ({ RateLimitError: httpErrors.RateLimitError, enforceRateLimit: async () => undefined }));
 vi.mock("@/lib/portfolio/accounts", () => ({ resolvePortfolioAccounts: async () => { state.scopedReads++; return state.accounts.map((accountId) => ({ accountId })); } }));
 vi.mock("@/lib/portfolio/ingest", () => {
   class PortfolioIngestError extends Error { code = "source_unavailable"; }
@@ -16,9 +16,10 @@ vi.mock("@/lib/portfolio/ingest", () => {
 
 import { POST } from "@/app/api/portfolio/refresh/route";
 
+
 const accountId = "8453:0x1111111111111111111111111111111111111111";
 function request(body: unknown) { return new Request("https://aurel.test/api/portfolio/refresh", { method: "POST", body: JSON.stringify(body) }); }
-beforeEach(() => { state.authorized = true; state.betaAllowed = true; state.accounts = [accountId]; state.scopedReads = 0; state.ingestCalls = 0; state.sourceFails = false; });
+beforeEach(() => { state.authorized = true; state.accounts = [accountId]; state.scopedReads = 0; state.ingestCalls = 0; state.sourceFails = false; });
 
 describe("portfolio refresh boundary", () => {
   it("requires authentication and a freshly linked account", async () => {
@@ -28,13 +29,6 @@ describe("portfolio refresh boundary", () => {
     expect((await POST(request({ accountId: "8453:0x2222222222222222222222222222222222222222", sourceId: "blockscout:8453" }))).status).toBe(403);
     expect(state.ingestCalls).toBe(0);
     expect(state.scopedReads).toBe(1);
-  });
-
-  it("requires beta access before touching any source", async () => {
-    state.betaAllowed = false;
-    expect((await POST(request({ accountId, sourceId: "blockscout:8453" }))).status).toBe(403);
-    expect(state.scopedReads).toBe(0);
-    expect(state.ingestCalls).toBe(0);
   });
 
   it("returns only a server checkpoint and never caches a refresh response", async () => {

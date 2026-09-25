@@ -1,14 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+const httpErrors = await vi.hoisted(() => import("@/lib/http/errors"));
 import { DatabaseSync } from "node:sqlite";
 
 const state = vi.hoisted(() => ({ database: null as D1Database | null }));
 vi.mock("cloudflare:workers", () => ({ env: { get PROJECTION_DB() { return state.database; } } }));
-vi.mock("@/lib/auth/server", () => ({ AuthenticationError: class extends Error {}, requireVerifiedSubject: async () => ({
+vi.mock("@/lib/auth/server", () => ({ AuthenticationError: httpErrors.AuthenticationError, requireVerifiedSubject: async () => ({
   subjectReference: "alice", sessionReference: "session-alice"
 }) }));
 vi.mock("@/lib/profile/ensure", () => ({ ensureSubjectProfile: async () => undefined }));
 
 import { PATCH } from "@/app/api/security/policy/route";
+
 
 function d1(db: DatabaseSync): D1Database {
   return { prepare(sql: string) { return { bind(...args: unknown[]) {

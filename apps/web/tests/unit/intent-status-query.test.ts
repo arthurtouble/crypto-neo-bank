@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+const httpErrors = await vi.hoisted(() => import("@/lib/http/errors"));
 
 const fixture = vi.hoisted(() => ({
   query: "",
@@ -42,11 +43,12 @@ vi.mock("cloudflare:workers", () => ({
 }));
 
 vi.mock("@/lib/auth/server", () => ({
-  AuthenticationError: class AuthenticationError extends Error {},
+  AuthenticationError: httpErrors.AuthenticationError,
   requireVerifiedSubject: async () => ({ subjectReference: fixture.subjectReference })
 }));
 
 import { GET } from "@/app/api/intents/status/route";
+
 
 const intentId = "00000000-0000-4000-8000-000000000001";
 

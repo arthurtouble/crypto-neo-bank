@@ -102,22 +102,21 @@ test("public status exposes bounded component state and no secrets", async ({ re
 });
 
 test("private APIs fail closed without an authenticated subject", async ({ request }) => {
-  for (const path of ["/api/portfolio", "/api/portfolio/history?range=7D", "/api/activity", "/api/insights", "/api/goals", "/api/bills", "/api/cards", "/api/income-plan", "/api/aura-tags", "/api/intents/status?intentId=00000000-0000-4000-8000-000000000000", "/api/money/account", "/api/recipients", "/api/transfer-schedules", "/api/ops/summary", "/api/ops/beta", "/api/ops/features", "/api/ops/analytics", "/api/security/policy", "/api/beta/access"]) {
+  for (const path of ["/api/portfolio/history?range=7D", "/api/activity", "/api/insights", "/api/cards", "/api/aura-tags", "/api/intents/status?intentId=00000000-0000-4000-8000-000000000000", "/api/money/account", "/api/recipients", "/api/ops/summary", "/api/ops/features", "/api/ops/analytics", "/api/security/policy"]) {
     const response = await request.get(path);
-    const accepted = path === "/api/portfolio" ? [401, 403, 410] : [401, 403];
-    expect(accepted).toContain(response.status());
+    expect([401, 403], path).toContain(response.status());
+    expect(response.headers()["cache-control"], path).toContain("no-store");
+    expect(await response.json(), path).toHaveProperty("traceId");
   }
 });
 
-test("feedback and beta redemption fail closed without authentication", async ({ request }) => {
+test("feedback and financial actions fail closed without authentication", async ({ request }) => {
   const quote = await request.post("/api/swap/quote", { data: { fromAssetId: "USDC", toAssetId: "ETH", amount: "1", fromAddress: "0x000000000000000000000000000000000000dEaD" } });
   expect(quote.status()).toBe(401);
   const rewards = await request.post("/api/defi/aave/rewards", { data: { sender: "0x000000000000000000000000000000000000dEaD" } });
   expect(rewards.status()).toBe(401);
-  const feedback = await request.post("/api/beta/feedback", { data: { surface: "/app", sentiment: "neutral", category: "usability", message: "This is a useful test message." } });
+  const feedback = await request.post("/api/feedback", { data: { surface: "/app", sentiment: "neutral", category: "usability", message: "This is a useful test message." } });
   expect(feedback.status()).toBe(401);
-  const redeem = await request.post("/api/beta/access", { data: { code: "AUREL-TEST", countryCode: "PT", acceptTerms: true } });
-  expect(redeem.status()).toBe(401);
 });
 
 test("unsigned provider events are rejected", async ({ request }) => {

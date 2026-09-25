@@ -23,35 +23,9 @@ paths:
       responses:
         "200": { description: Bounded public component and incident status }
         "503": { description: Status evidence is unavailable }
-  /api/beta/access:
-    get:
-      operationId: betaAccess
-      responses:
-        "200": { description: Current subject access state }
-        "401": { description: Authentication required }
+  /api/feedback:
     post:
-      operationId: redeemBetaInvite
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: false
-              required: [code, countryCode, acceptTerms]
-              properties:
-                code: { type: string, minLength: 6, maxLength: 80 }
-                countryCode: { type: string, pattern: "^[A-Za-z]{2}$" }
-                acceptTerms: { type: boolean, enum: [true] }
-      responses:
-        "201": { description: Invitation redeemed }
-        "400": { description: Invalid request }
-        "401": { description: Authentication required }
-        "403": { description: Invalid invitation or unavailable country }
-        "429": { description: Redemption rate limit reached }
-  /api/beta/feedback:
-    post:
-      operationId: betaFeedback
+      operationId: feedback
       responses:
         "201": { description: Feedback accepted }
         "400": { description: Invalid feedback }
@@ -63,39 +37,11 @@ paths:
       responses:
         "200": { description: Authenticated session }
         "401": { description: Authentication required }
-  /api/portfolio:
-    get:
-      operationId: portfolio
-      responses:
-        "200": { description: Non-authoritative portfolio projection }
-        "401": { description: Authentication required }
   /api/activity:
     get:
       operationId: activity
       responses:
         "200": { description: Account activity projection }
-        "401": { description: Authentication required }
-  /api/routing/quote:
-    post:
-      operationId: routingQuote
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: false
-              required: [fromChainId, toChainId, fromToken, toToken, amount, fromAddress]
-              properties:
-                fromChainId: { type: integer }
-                toChainId: { type: integer }
-                fromToken: { type: string, maxLength: 64 }
-                toToken: { type: string, maxLength: 64 }
-                amount: { type: string, pattern: "^[0-9]+$", maxLength: 80 }
-                fromAddress: { type: string, pattern: "^0x[a-fA-F0-9]{40}$" }
-      responses:
-        "200": { description: Executable route quotation }
-        "400": { description: Invalid or unsupported route }
         "401": { description: Authentication required }
   /api/webhooks/provider:
     post:
