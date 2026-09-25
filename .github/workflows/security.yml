@@ -10,6 +10,8 @@ on:
 permissions:
   contents: read
   security-events: write
+  actions: read
+  pull-requests: read
 
 jobs:
   secrets:
@@ -20,6 +22,8 @@ jobs:
         with:
           fetch-depth: 0
       - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   codeql:
     runs-on: ubuntu-latest

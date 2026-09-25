@@ -26,6 +26,8 @@ export default defineConfig({
     vinext(),
     cloudflare({
       viteEnvironment: { name: "rsc", childEnvironments: ["ssr"] },
+      // Remote bindings (Workers AI) need Cloudflare credentials; tests and CI run without them.
+      remoteBindings: process.env.AURA_LOCAL_BINDINGS !== "1",
     }),
   ],
 });
