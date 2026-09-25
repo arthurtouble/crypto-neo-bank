@@ -39,7 +39,7 @@ The interactive `/app/sandbox` route exercises these boundaries without credenti
 2. Replace `DemoIdentityAdapter` behind the `IdentityAdapter` interface.
 3. Replace `DemoWalletAdapter` behind the `WalletAdapter` interface.
 4. Map Privy user and wallet IDs to opaque Aurel references. Do not store key material.
-5. Enforce passkey or step-up authentication before signing material-value commands.
+5. Have the customer sign every money movement in their own wallet; Aura never signs.
 6. Map Privy webhook events into the normalized provider-event envelope.
 7. Add sandbox contract tests for wallet creation, recovery, export, policy denial, and failed signing.
 8. Complete a recovery exercise before accepting material deposits.

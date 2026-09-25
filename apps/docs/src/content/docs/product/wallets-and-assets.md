@@ -7,13 +7,13 @@ sidebar:
 
 ## Wallet authority
 
-Privy provides Aura’s sign-in and embedded-wallet infrastructure. You can also connect an external EVM wallet. Aura does not hold a private key that can move your assets on its own.
+Your Aura account is a smart wallet on Base. It is controlled by your Privy sign-in, and its address is your deposit address. Aura does not hold a key that can move your assets.
 
-For an available action, Aura prepares and checks the transaction before your wallet shows the final request. You can sign or cancel it. Preview-only features never request a signature.
+The smart wallet signs an approval and the action it enables together, as one operation. Once fee sponsorship is set up, Aura covers the network fee on Base for actions it prepares, so you won't need ETH for gas there. That setup is not finished yet; until it is, your account uses your Privy wallet directly and you need gas.
 
-An embedded wallet is not an Aura company wallet. Wallet creation, signing, recovery, and export follow the configured Privy model. Aura receives the public wallet reference and verified customer identity needed to provide the product.
+For an available action, Aura prepares and checks the transaction before your wallet shows it. You sign or cancel. Preview-only features never request a signature.
 
-An external wallet may be used in other applications. Transactions made elsewhere can change the balance and position Aura reads, and they do not pass through Aura's policy controls.
+Sign-in, signing, recovery, and export follow Privy's model. Aura receives the public wallet address and verified identity it needs to provide the product.
 
 ## Where balances come from
 
@@ -35,13 +35,9 @@ Portfolio values combine token quantities with price data. A displayed total is 
 
 Unknown or unsupported assets are excluded rather than assigned a guess. A missing price should not be treated as zero value or proof that the token is worthless.
 
-Historical value is shown only for days with complete wallet activity, protocol coverage, and independent price evidence. Choose 7, 30, or 90 completed UTC days. Aura does not calculate an inception return from these windows. Missing days appear as gaps; current balances are not substituted for them. The daily price source currently covers ETH and USDC on Base. Other assets and incomplete Aave position history can leave gaps.
-
-If source history is being rebuilt, or a source has advanced beyond the last calculation, the prior chart value is hidden until a fresh calculation is published. Tax-support rows are likewise unavailable while their source evidence is stale. A documented acquisition or sale can support a tax lot without a daily closing price, but the export is not tax advice and may be incomplete.
-
 ## DeFi positions
 
-Portfolio reads the active wallet's Aave V3 position directly from Aave and Base. It shows the source-reported active-market count, health factor, and net position when those fields are available.
+Portfolio reads your Aave V3 position directly from Aave and Base. It shows the source-reported active-market count, health factor, and net position when those fields are available.
 
 Aura also reads claimable rewards from Aave's rewards interface when available. Portfolio shows the source-reported reward and USD estimate without treating an unavailable response as a zero balance. Claiming in Aura is currently unavailable; a displayed reward is not a completed payment.
 
@@ -59,7 +55,7 @@ Before relying on a wallet for significant value:
 4. test access from a recovery scenario with a small balance;
 5. keep public wallet addresses separate from private recovery material.
 
-Exporting a wallet gives the customer more portability and more direct responsibility. Once used elsewhere, Aura cannot enforce its destination rules, cooling periods, account lock, or transaction review.
+Exporting your key gives you more portability and more direct responsibility. If you use it elsewhere, Aura's account lock, daily limit, and recipient settings don't apply.
 
 ## Deposits
 

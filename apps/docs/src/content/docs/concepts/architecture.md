@@ -1,19 +1,19 @@
 ---
 title: Architecture
-description: How the interface, policy layer, wallet, chains, protocols, and providers fit together.
+description: How the interface, account controls, wallet, chains, protocols, and providers fit together.
 ---
 
-Aura is built as a thin orchestration and policy layer. It does not try to become the ledger, custodian, bank, exchange, and benefits provider at once.
+Aura is a thin layer that prepares, checks, and explains money movements. It does not try to become the ledger, custodian, bank, exchange, and benefits provider at once.
 
 ## The transaction path
 
 Most financial actions follow the same path:
 
-1. **The customer requests an action.** This may be a transfer, a protocol deposit, a repayment, or a cross-chain route.
-2. **Aura prepares and checks it.** The server validates the network, asset, destination, account controls, limits, required disclosures, and the proposed transaction data.
-3. **The wallet presents the transaction.** The customer sees the final wallet request and chooses whether to sign.
-4. **The chain or provider settles it.** The authoritative system accepts, rejects, or later updates the action.
-5. **Aura observes the result.** The product records the transaction reference, checks supported receipts, and presents the updated state.
+1. **You ask for it.** A send, swap, cross-chain move, Earn deposit or withdrawal, or investment.
+2. **Aura prepares and checks it.** The server checks the feature, your account lock, limits, and recipient settings, then builds the exact transaction.
+3. **Your wallet signs it.** Any approval and the action itself go out together, as one signature and one onchain operation.
+4. **The chain settles it.** The network accepts or rejects the operation.
+5. **Aura verifies the result.** Aura reads the chain itself. It marks the movement complete only when the operation matches what was prepared, is final, and shows the expected transfer or deposit. Cross-chain moves also need delivery on the other network.
 
 Preparation is not settlement. A quote is not a transfer. A wallet prompt is not a signature. A submitted transaction is not necessarily final.
 
@@ -21,21 +21,21 @@ Preparation is not settlement. A quote is not a transfer. A wallet prompt is not
 
 ### Product interface
 
-The web application is the customer-facing workspace. It presents portfolios, transaction plans, safety controls, documentation, and support. A mobile application can later use the same provider and policy interfaces.
+The web application is the customer-facing workspace. It presents balances, money movements, safety controls, documentation, and support. A mobile application can later use the same provider and policy interfaces.
 
 ### Identity and wallet infrastructure
 
-Privy supplies authentication and embedded-wallet infrastructure. Customers may also connect a supported external EVM wallet. Protected APIs verify the Privy access token on the server and derive the customer identity from that verified token.
+Privy supplies sign-in and the wallet. Each customer has a smart wallet on Base, controlled by their Privy sign-in. It holds funds, signs batched operations, and can have gas paid by Aura's sponsor. Protected APIs verify the Privy access token on the server and derive the customer identity from that verified token.
 
-### Policy layer
+### Account controls
 
-Aura evaluates product controls before it prepares a supported action. Examples include account lock, allowlisted networks and assets, saved-destination rules, cooling periods, rolling limits, and high-value review. Actions that require transaction-specific approval remain unavailable until Aura can verify that approval for the exact instruction.
+Aura checks your controls before it prepares a money movement: the account lock, an optional daily limit, saved-recipients-only mode, and the wait before new recipients.
 
-The policy layer can refuse to prepare an action inside Aura. It cannot stop a customer from using an exported wallet or another application.
+These checks can refuse a movement inside Aura. They cannot stop a customer from using an exported key or another app.
 
 ### Public chains and protocols
 
-Base is the home network. Supported chain RPC endpoints and protocol contracts supply balances, market state, positions, transaction receipts, and settlement. Aave V3 on Base is the initial lending integration. LI.FI supplies route discovery for supported cross-chain USDC transfers.
+Base is the home network. Supported chain RPC endpoints and protocol contracts supply balances, market state, positions, transaction receipts, and settlement. Earn uses Aave V3 on Base and Sky savings on Ethereum. LI.FI supplies routes for swaps and cross-chain moves between supported assets.
 
 ### Rebuildable product data
 
@@ -43,11 +43,11 @@ Cloudflare D1 stores product projections, security preferences, transaction evid
 
 ### Event and operations layer
 
-Cloudflare Queues handles accepted asynchronous provider events. Scheduled checks identify stale transactions, expired reviews, and event-processing problems. Structured Worker logs and traces support investigation.
+Cloudflare Queues handles accepted asynchronous provider events. Scheduled checks identify stuck money movements and event-processing problems. Structured Worker logs and traces support investigation.
 
 ## Why Cloudflare
 
-The product and APIs run on Cloudflare Workers. Static assets are delivered from the same platform. D1 holds application records, Queues decouples provider-event intake from processing, and Workers AI is available for bounded read-only assistance.
+The product and APIs run on Cloudflare Workers. Static assets are delivered from the same platform. D1 holds application records, and Queues decouples provider-event intake from processing.
 
 This keeps the operating surface small. It does not remove the need for backups, access control, migration review, observability, vendor monitoring, and tested incident procedures.
 
@@ -59,6 +59,6 @@ An abstraction is useful only when it preserves meaningful differences. A bank t
 
 ## Failure philosophy
 
-Aura fails closed when a required security or eligibility fact is missing. It should not prepare a tokenized-market action without current eligibility data, treat an unknown transaction value as below a step-up threshold, or mark a routed transfer complete only because the source transaction succeeded.
+Aura fails closed when a required security or eligibility fact is missing. It should not prepare a tokenized-market action without current eligibility data, treat an unknown value as within a daily limit, or mark a routed transfer complete only because the source transaction succeeded.
 
 When a dependency is unavailable, the product should show the affected feature as unavailable and leave unaffected areas usable. See [Sources of truth](/concepts/sources-of-truth/) for how Aura treats missing financial data.

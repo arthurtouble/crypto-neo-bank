@@ -7,18 +7,15 @@ sidebar:
 
 ## Direct transfers
 
-Aura checks the supported network, asset, destination, amount, account settings, and review rules before asking your wallet to sign. A supported Base transfer is prepared as an exact call and checked again just before your wallet opens. If the transfer or your account controls changed, you need a new review. Higher-value actions that need step-up remain paused until Aura can verify the step-up server-side.
+You can send assets on Base from your Aura account. Before your wallet opens, Aura checks your account lock, daily limit, and recipient settings, then builds the exact transaction. Passing these checks does not certify the recipient or guarantee settlement.
 
 Saving an address does not prove that you control it. Check the full address independently.
-
-For a supported direct transfer, Aura evaluates the account lock, network, asset, destination rules, cooling status, rolling amount, review threshold, step-up requirement, and required warnings. Passing those checks means Aura may prepare the action. It does not certify the recipient or guarantee settlement.
 
 ### Before sending
 
 - Confirm the chain with the recipient.
 - Compare the full address through an independent channel.
 - Review the token contract, not only its symbol.
-- Keep enough native gas for the transfer.
 - Use a small test when the destination is new.
 - Read the wallet prompt before signing.
 
@@ -26,27 +23,26 @@ A transaction sent to a valid but unintended address is usually irreversible.
 
 ## Moving between networks
 
-Swap can review supported USDC bridge routes. A quote is not a transfer. Aura prepares an exact approval or route call only after checking the current quote and account controls. Each step needs its own wallet confirmation. Source settlement and destination delivery are separate.
+Use Swap to move an asset to another network. A quote is not a transfer. Any approval and the route are signed together. Leaving the first network and arriving on the second are separate steps.
 
 See [Cross-chain routes](/product/cross-chain-routing/) for delayed-route guidance.
 
 ## What confirmation means
 
-- **Reviewed** means Aura’s checks passed. It does not mean the transaction was signed.
-- **Submitted** means a transaction hash exists.
-- **Confirmed** for a newly prepared transfer means Aura matched the transaction and expected effect, checked the receipt against the canonical block, and waited for its finality threshold. Older receipt-only records are marked unverified.
-- Destination delivery may still need separate confirmation for a cross-chain route.
+- **Submitted** means your wallet signed and a transaction hash exists.
+- **Complete** means Aura matched the onchain operation to what you reviewed, waited for the network to finalize it, and found the expected transfer.
+- For a cross-chain route, Aura also waits for delivery on the other network.
 
 Quotes, gas, price impact, and timing can change before you sign.
 
-## Limits and review
+## Your limits
 
-The default rolling transaction limit is $25,000 over 24 hours for Aura-prepared actions. A new saved destination has a 24-hour cooling period for transfers of $1,000 or more. Higher-value actions enter a review path and must be resubmitted with the same material instruction within the release window.
+In Settings you can set a daily limit, allow sends only to saved recipients, and set a wait before a new saved recipient can receive (4 hours by default). The daily limit is off by default. Changes apply right away.
 
-These controls only cover actions prepared through Aura. They do not freeze the underlying wallet.
+These controls only cover sends prepared through Aura. They do not bind a key you export and use elsewhere.
 
 ## If a transfer looks stuck
 
-Check the transaction hash on the correct source-chain explorer. A pending, replaced, reverted, and confirmed transaction need different responses. Do not send the same payment again until you know whether the first instruction settled.
+Check the transaction hash on the correct network's explorer. A pending, replaced, reverted, and confirmed transaction need different responses. Do not send the same payment again until you know whether the first instruction settled.
 
-For a route, source confirmation is only one step. Use the route reference and destination explorer as well. Support can investigate evidence but cannot reverse a confirmed chain transaction.
+For a route, source confirmation is only one step. Check the destination network's explorer as well. Support can investigate evidence but cannot reverse a confirmed chain transaction.

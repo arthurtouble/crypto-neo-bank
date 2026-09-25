@@ -8,9 +8,10 @@ Status: pre-launch operating baseline. Counsel and each regulated provider must 
 | Record | Purpose | Baseline period | Authority and deletion rule |
 |---|---|---:|---|
 | Wallet addresses and provider references | Connect the customer to authoritative systems | Active relationship + 7 years | Delete or irreversibly detach after legal, complaint, fraud and tax holds expire |
-| Transaction intents, policy results and state events | Explain and investigate customer instructions | 7 years | Preserve hashes and decision evidence; never store signing secrets |
+| Actions and action events (`actions`, `action_events`) | Explain and investigate customer money movements | 7 years | Preserve hashes and decision evidence; never store signing secrets |
 | Consent and disclosure evidence | Prove the version and action accepted | 7 years after relationship | Legal hold overrides scheduled deletion |
 | Security preferences and destination book | Enforce customer controls | Active relationship + 90 days | Delete after closure unless linked to an incident or complaint |
+| Route quotes (`route_quotes`) | Price and bind a route the customer may sign | Until expiry, unless used by an action | Deleted after expiry; a used quote follows its action |
 | Provider webhook receipts | Retry, reconcile and investigate events | 2 years | Retain identifiers and hashes; minimize raw payload data |
 | Support cases and complaints | Respond and evidence handling | 7 years | Redact accidental secrets immediately; provider-specific rules may be longer |
 | Product analytics | Improve activation and reliability | 13 months raw; 36 months aggregated | Remove direct subject reference from retained aggregates |

@@ -32,8 +32,8 @@ Cloudflare Workers hosts the application and APIs. D1 stores non-authoritative p
 - Server-side Privy token verification and subject-scoped records.
 - Customer signing; no Aurel customer private keys.
 - Supported chain/asset allowlists and transaction-plan validation.
-- RPC simulation for direct sends; exact approvals for routed ERC-20 movements.
-- Emergency lock, destination allowlist, cooling periods, rolling limits and step-up threshold.
+- Exact server-built calls, with any ERC-20 approval batched into the same operation, and outcomes verified from chain evidence.
+- Account lock, saved-recipients-only mode, new-recipient cooling, and optional daily limit.
 - Signed, timestamped, replay-resistant provider webhook intake.
 - Idempotent queue processing, dead-letter evidence and scheduled reconciliation.
 - Deny-all-by-default operator authorization, structured audit evidence and support cases.

@@ -11,9 +11,9 @@ Aura minimizes authoritative financial data. It does not pretend that operating 
 | --- | --- | --- |
 | Balances and protocol positions | Chain or provider | Read or cache for the interface; rebuildable from the authoritative source |
 | Customer identity | Privy | Store the verified provider subject needed to protect customer records |
-| Wallet references | Wallet and chain | Store public addresses and network context; never an Aura private key |
+| Wallet references | Wallet and chain | Store your smart wallet address and network context; never a private key |
 | Security preferences | Customer instruction | Retain because controls must survive sessions and remain auditable |
-| Transaction intents and events | Aura plus chain/provider evidence | Retain policy results, states, hashes, and receipt checks |
+| Money movements and their checks | Aura plus chain/provider evidence | Retain the prepared transaction, status, hashes, and checks |
 | Future KYC records | Regulated provider | Avoid storing identity documents; consume the minimum status needed for access |
 | Support and complaints | Aura | Retain enough context to investigate and respond |
 | Consent and disclosures | Aura | Record which material version and action were shown or accepted |
@@ -38,7 +38,7 @@ The final integration and contracts determine the exact allocation. Aura remains
 
 Different records need different retention periods. Security evidence and complaint records may need to remain longer than product analytics. Data should not be kept indefinitely merely because storage is inexpensive.
 
-Every Aura table that holds customer data is classified as erasable or retained, with a reason, and a test fails if a new table is left unclassified. Preferences, analytics, feedback, the public Aura tag, and rebuildable provider and portfolio history are erasable. Transactions, security settings, passkey records, consent, and support cases are retained as evidence. Jurisdiction-specific periods and a legal-hold procedure must be set before launch.
+Every Aura table that holds customer data is classified as erasable or retained, with a reason, and a test fails if a new table is left unclassified. Preferences, analytics, feedback, the public Aura tag, and rebuildable provider and portfolio history are erasable. Money movements, security settings, consent, and support cases are retained as evidence. Jurisdiction-specific periods and a legal-hold procedure must be set before launch.
 
 ## Logs and analytics
 

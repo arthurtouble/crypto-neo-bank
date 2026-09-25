@@ -11,6 +11,7 @@ These files contain operational and security-sensitive context. Keep them in the
 - [Codebase audit, 25 September 2026](overview/codebase-audit-2026-09-25.md): findings, target architecture, and the refactor plan.
 - [Operations runbook](operations/operations-runbook.md): provider activation, secrets, migrations, reconciliation, and recovery.
 - [Architecture](architecture/architecture.md): systems of record and the rule that D1 never owns money.
+- [Money actions](architecture/money-actions.md): how every customer money movement is prepared, signed, verified, and recorded.
 - [Provider projections](architecture/provider-projections.md): the event contract for cards, rewards, and wallet policies.
 
 ## Sections
@@ -18,7 +19,7 @@ These files contain operational and security-sensitive context. Keep them in the
 | Folder | Contents |
 | --- | --- |
 | `overview/` | Build status and launch readiness |
-| `architecture/` | Architecture, provider projections, fund flow and provider data, partner integration, provider activation, dependency risks |
+| `architecture/` | Architecture, money actions, provider projections, fund flow and provider data, partner integration, provider activation, dependency risks |
 | `operations/` | Runbook, launch controls, incident response, acceptance tests, data retention, edge security, release plans, feature readiness records |
 | `security/` | Threat model, security review, external review scope |
 | `compliance/` | Responsibility matrix, legal and jurisdiction decisions, partner diligence, provider requirements |

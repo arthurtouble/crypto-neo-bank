@@ -1,12 +1,12 @@
 ---
 title: Cross-chain routes
-description: How USDC bridge routes are reviewed and tracked.
+description: How cross-chain moves are quoted, signed, and tracked.
 ---
 
-Swap can find supported USDC routes between Base and another network. A LI.FI quote estimates output, fees, timing, and any token approval. It expires and is not a completed transfer.
+Swap can move a supported asset from one network to another. LI.FI finds the route and estimates output, fees, and timing. The quote expires after 45 seconds and is not a transfer.
 
-Aura checks the asset, networks, amount, spender, contract calls, and account controls before asking the wallet to sign. An ERC-20 approval is a separate transaction. Its allowance can remain if the later route fails or is cancelled. Review both wallet prompts and keep native gas for each step.
+Aura checks the assets, networks, amount, recipient, price impact, and your account controls before your wallet opens. Any token approval and the route are signed together, as one operation.
 
-Source-chain confirmation shows that the route transaction ran. It does not prove that USDC arrived on the destination chain. Bridges and relayers can delay or fail delivery. Aura tracks the route reference, source transaction, and supported destination evidence separately.
+The first network confirming shows the route started. It does not prove the asset arrived. Aura shows the move as on its way until LI.FI reports delivery and Aura sees at least the minimum amount reach your wallet on the other network.
 
-If delivery appears delayed, check the source transaction, route status, destination address, and destination explorer before retrying. Repeating a route can send funds twice. Open a support case with the route reference and transaction hash if it remains unresolved; never share a private key or recovery phrase.
+If delivery looks delayed, check the transaction in Activity and on both networks' explorers before retrying. Repeating a route can send funds twice. Open a support case with the transaction hash if it stays unresolved. Never share a private key or recovery phrase.

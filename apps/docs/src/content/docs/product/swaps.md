@@ -1,12 +1,21 @@
 ---
 title: Swap
-description: How Aura searches assets and reviews cross-chain routes.
+description: How Aura quotes, checks, and completes swaps.
 ---
 
-Aura searches supported assets and asks LI.FI for available swap and cross-chain routes. A quote is a time-sensitive proposal, not a completed transaction. Prices, fees, liquidity, and destination delivery can change before signing.
+Swap moves any supported asset to another, on the same network or across networks. Aura asks LI.FI for a route and shows you the rate, fees, and price impact.
 
-The governed swap flow checks asset identity, contract targets, approvals, account policy, and exact transaction calls before a wallet can be asked to sign. Some routes are unavailable because those checks or destination settlement evidence are incomplete. Aura does not send a raw provider transaction directly from an unreviewed browser quote.
+## Before you sign
 
-A token swap may require a separate onchain approval. Review each wallet prompt, including the spender and allowance. An approval can remain after a swap fails or is cancelled; you can revoke it separately. For cross-chain routes, source-chain confirmation does not establish that the destination asset arrived. Aura shows the route state until supported destination evidence is available.
+- A quote lasts 45 seconds. After that, get a new one.
+- You choose the slippage: 0.1%, 0.5%, or 1%. The route fails rather than deliver less than the minimum.
+- Aura refuses a route whose price impact is above 3%, or above 1% when an asset is unverified.
+- Aura keeps the quote on its server. Your wallet only signs a transaction sent to LI.FI's contract.
 
-The wallet and chains remain authoritative for balances and transactions. [Check current availability](/getting-started/status/) before relying on a route.
+If the swap needs a token approval, the approval and the swap are signed together, as one operation. The approval covers only this swap.
+
+## After you sign
+
+Aura checks the chain itself. A swap is complete when the operation matches what you reviewed and at least the minimum output arrived. For a cross-network swap, the first network confirming is not enough. Aura shows it as on its way until the asset arrives on the other network.
+
+Prices, fees, and liquidity can change. The wallet and chains remain authoritative for balances. [Check current availability](/getting-started/status/) before relying on a route.

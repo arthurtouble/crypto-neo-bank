@@ -10,7 +10,7 @@ Use contracted provider pricing and observed early customer behavior. Blank cell
 | Active customers | 25 | 100 | 500 | Launch scenarios |
 | Activated customers | 15 | 70 | 350 | Measured activation funnel |
 | Average visible assets | TBD | TBD | TBD | Onchain/provider observation; never stored as ledger |
-| Monthly onchain actions/customer | TBD | TBD | TBD | Product events and intents |
+| Monthly onchain actions/customer | TBD | TBD | TBD | Product events and actions |
 | Monthly fiat volume/customer | TBD | TBD | TBD | Provider sandbox/production reports |
 | Card spend/customer | TBD | TBD | TBD | Issuer reports |
 | KYC/EDD cost | TBD | TBD | TBD | Provider quote |

@@ -30,9 +30,8 @@ This is a meaningful safety boundary, not a promise that loss is impossible. A c
 Financial products often hide safety in settings, terms, and compliance workflows. Aura treats safety as part of the primary product:
 
 - clear transaction previews before signing;
-- saved destinations and optional destination restrictions;
-- cooling periods for higher-risk actions;
-- rolling transaction limits and step-up authentication;
+- saved recipients, with an optional saved-only mode and a wait before new ones;
+- an optional daily limit;
 - honest status labels for live, preview, and unavailable services;
 - retained transaction evidence and receipt checks;
 - plain-language explanations of protocol and provider boundaries.
