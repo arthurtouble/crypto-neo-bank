@@ -72,11 +72,12 @@ describe("saved wallet address authority", () => {
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM address_book_entries").get()).toMatchObject({ count: 0 });
   });
 
-  it("requires unavailable step-up before adding a new enforced allowlist destination", async () => {
-    sqlite.exec("UPDATE security_profiles SET enforce_address_book=1 WHERE subject_reference='alice'");
-    expect((await securityRequest()).status).toBe(409);
-    expect((await recipientRequest()).status).toBe(409);
-    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM address_book_entries").get()).toMatchObject({ count: 0 });
+  it("lets a saved-recipients-only customer add a recipient, which then waits out its delay", async () => {
+    sqlite.exec("UPDATE security_profiles SET enforce_address_book=1, new_address_delay_seconds=14400 WHERE subject_reference='alice'");
+    const saved = await securityRequest();
+    expect(saved.status).toBe(201);
+    const { entry } = await saved.json() as { entry: { createdAt: string; availableAt: string } };
+    expect(Date.parse(entry.availableAt) - Date.parse(entry.createdAt)).toBe(14_400_000);
   });
 
   it("restores a deleted destination if its audit write fails", async () => {

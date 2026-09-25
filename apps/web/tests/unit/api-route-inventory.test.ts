@@ -45,7 +45,9 @@ describe("API route inventory", () => {
       "ops/growth/experiments", "ops/growth/communications", "ops/growth/waitlist", "growth/consent", "growth/data-requests",
       "ops/growth/data-requests", "demo/commands", "demo/scenarios", "demo/session", "markets/orders",
       "markets/eligibility", "markets/instruments", "portfolio/history", "portfolio/refresh", "portfolio/materialize",
-      "portfolio/tax-support", "support/assistant", "money/transfers", "defi/aave/rewards", "defi/aave/preview"];
+      "portfolio/tax-support", "support/assistant", "money/transfers", "defi/aave/rewards", "defi/aave/preview",
+      "intents/evaluate", "intents/prepare", "intents/status", "intents/reconcile", "swap/quote", "swap/review", "swap/prepare",
+      "swap/approval", "defi/aave/action", "defi/aave/receipt", "defi/sky/action", "defi/sky/receipt"];
     const existing = new Set(routes.map((item) => item.path));
     expect(retired.filter((path) => existing.has(path))).toEqual([]);
   });
@@ -63,13 +65,10 @@ describe("open access", () => {
     expect(offenders).toEqual([]);
   });
 
-  it("gates every money-moving route on a server-side feature switch", () => {
-    const financial = ["intents/prepare", "intents/evaluate", "swap/review", "swap/prepare", "swap/approval",
-      "defi/aave/action", "defi/sky/action"];
-    const missing = financial.filter((path) => {
-      const source = routes.find((item) => item.path === path)?.source ?? "";
-      return !/requireFeature\(|featureEnabled\(|requireEnabled\(/.test(source);
-    });
-    expect(missing).toEqual([]);
+  it("gates every money-moving path on a server-side feature switch", () => {
+    // Every action is prepared through one function; route quotes are gated in their handler.
+    const gated = [readFileSync(resolve(srcRoot, "lib/actions/prepare.ts"), "utf8"), routes.find((item) => item.path === "routes/quote")?.source ?? ""];
+    expect(gated.map((source) => /requireFeature\(|featureEnabled\(/.test(source))).toEqual([true, true]);
+    expect(routes.find((item) => item.path === "actions")?.source).toContain("prepareAction(");
   });
 });

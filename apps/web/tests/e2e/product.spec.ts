@@ -89,7 +89,7 @@ test("public status exposes bounded component state and no secrets", async ({ re
 });
 
 test("private APIs fail closed without an authenticated subject", async ({ request }) => {
-  for (const path of ["/api/activity", "/api/insights", "/api/cards", "/api/aura-tags", "/api/intents/status?intentId=00000000-0000-4000-8000-000000000000", "/api/money/account", "/api/recipients", "/api/ops/summary", "/api/ops/features", "/api/ops/analytics", "/api/security/policy"]) {
+  for (const path of ["/api/activity", "/api/insights", "/api/cards", "/api/aura-tags", "/api/actions/00000000-0000-4000-8000-000000000000", "/api/money/account", "/api/recipients", "/api/ops/summary", "/api/ops/features", "/api/ops/analytics", "/api/security/policy"]) {
     const response = await request.get(path);
     expect([401, 403], path).toContain(response.status());
     expect(response.headers()["cache-control"], path).toContain("no-store");
@@ -98,10 +98,10 @@ test("private APIs fail closed without an authenticated subject", async ({ reque
 });
 
 test("feedback and financial actions fail closed without authentication", async ({ request }) => {
-  const quote = await request.post("/api/swap/quote", { data: { fromAssetId: "USDC", toAssetId: "ETH", amount: "1", fromAddress: "0x000000000000000000000000000000000000dEaD" } });
+  const quote = await request.get("/api/routes/quote?from=8453:native&to=8453:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913&amount=1");
   expect(quote.status()).toBe(401);
-  const earn = await request.post("/api/defi/aave/action", { data: { action: "supply", sender: "0x000000000000000000000000000000000000dEaD", symbol: "USDC", amount: "1" } });
-  expect(earn.status()).toBe(401);
+  const action = await request.post("/api/actions", { data: { kind: "earn", protocol: "aave", direction: "deposit", asset: "USDC", amount: "1" } });
+  expect(action.status()).toBe(401);
   const feedback = await request.post("/api/feedback", { data: { surface: "/app", sentiment: "neutral", category: "usability", message: "This is a useful test message." } });
   expect(feedback.status()).toBe(401);
 });

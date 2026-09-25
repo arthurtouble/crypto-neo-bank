@@ -40,7 +40,7 @@ test("landing is accessible and fits common widths", async ({ page }) => {
 
 test("retired endpoints are gone", async ({ request }) => {
   for (const path of ["/api/growth/waitlist", "/api/goals", "/api/portfolio", "/api/portfolio/history", "/api/beta/access",
-    "/api/demo/session", "/api/markets/orders", "/api/support/assistant", "/api/defi/aave/preview"]) {
+    "/api/demo/session", "/api/markets/orders", "/api/support/assistant", "/api/defi/aave/preview", "/api/intents/evaluate", "/api/swap/review"]) {
     expect((await request.get(path)).status(), path).toBe(404);
   }
 });

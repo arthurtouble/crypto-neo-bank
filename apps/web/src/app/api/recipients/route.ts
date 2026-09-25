@@ -3,8 +3,8 @@ import { z } from "zod";
 import { requireVerifiedSubject } from "@/lib/auth/server";
 import { ensureSubjectProfile } from "@/lib/profile/ensure";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
-import { AddressStepUpUnavailableError, saveWalletAddress } from "@/lib/security/wallet-address-book";
-import { route, errorResponse } from "@/lib/http/route";
+import { saveWalletAddress } from "@/lib/security/wallet-address-book";
+import { route } from "@/lib/http/route";
 
 const createSchema = z.object({ kind: z.literal("wallet"), address: z.string().regex(/^0x[a-fA-F0-9]{40}$/), name: z.string().trim().min(1).max(48) });
 type WalletRow = { entry_id: string; address: string; label: string; available_at: string; last_used_at: string | null };
@@ -17,9 +17,9 @@ export const GET = route("recipients.get", { unavailable: "recipients_unavailabl
   const [wallets, banks, recent] = await env.PROJECTION_DB.batch([
     env.PROJECTION_DB.prepare("SELECT entry_id, address, label, available_at, last_used_at FROM address_book_entries WHERE subject_reference = ? ORDER BY COALESCE(last_used_at, created_at) DESC").bind(subject.subjectReference),
     env.PROJECTION_DB.prepare("SELECT beneficiary_id, display_name, account_hint, rail, verification_status, last_used_at FROM bank_beneficiary_projections WHERE subject_reference = ? AND verification_status != 'removed' ORDER BY COALESCE(last_used_at, observed_at) DESC").bind(subject.subjectReference),
-    env.PROJECTION_DB.prepare(`SELECT lower(json_extract(request_json, '$.destination')) AS address, MAX(created_at) AS used_at
-      FROM transaction_intents WHERE subject_reference = ? AND intent_type = 'transfer' AND json_extract(request_json, '$.destination') IS NOT NULL
-      GROUP BY lower(json_extract(request_json, '$.destination')) ORDER BY used_at DESC LIMIT 8`).bind(subject.subjectReference)
+    env.PROJECTION_DB.prepare(`SELECT json_extract(summary_json, '$.to') AS address, MAX(created_at) AS used_at
+      FROM actions WHERE subject_reference = ? AND kind = 'transfer' AND status IN ('submitted', 'settling', 'confirmed')
+      GROUP BY json_extract(summary_json, '$.to') ORDER BY used_at DESC LIMIT 8`).bind(subject.subjectReference)
   ]);
   const now = Date.now();
   const savedAddresses = new Set((wallets.results as unknown as WalletRow[]).map((row) => row.address.toLowerCase()));
@@ -31,7 +31,7 @@ export const GET = route("recipients.get", { unavailable: "recipients_unavailabl
   return Response.json({ recipients, observedAt: new Date().toISOString(), authority: "Security address book and provider beneficiary projections", traceId }, { headers: { "Cache-Control": "no-store" } });
 });
 
-export const POST = route("recipients.post", { unavailable: "recipient_create_unavailable", invalid: "invalid_recipient", onError: (error, context) => error instanceof AddressStepUpUnavailableError ? errorResponse(409, "step_up_unavailable", context) : undefined }, async (request: Request, { traceId }) => {
+export const POST = route("recipients.post", { unavailable: "recipient_create_unavailable", invalid: "invalid_recipient" }, async (request: Request, { traceId }) => {
   const subject = await requireVerifiedSubject(request);
   await enforceRateLimit(env.PROJECTION_DB, { namespace: "recipient_create", subject: subject.subjectReference, limit: 12, windowSeconds: 3600 });
   const input = createSchema.parse(await request.json());

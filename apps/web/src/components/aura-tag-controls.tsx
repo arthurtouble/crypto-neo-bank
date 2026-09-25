@@ -1,6 +1,7 @@
 "use client";
 
-import { usePrivy, useWallets } from "@privy-io/react-auth";
+import { usePrivy } from "@privy-io/react-auth";
+import { useAuraWallet } from "@/lib/client/use-aura-wallet";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
@@ -8,8 +9,7 @@ type Tag = { tag: string; address: string; displayName: string; publicEnabled: b
 
 export function AuraTagControls() {
   const { user, getAccessToken } = usePrivy();
-  const { wallets } = useWallets();
-  const wallet = wallets.find((item) => item.walletClientType === "privy") ?? wallets[0];
+  const { address } = useAuraWallet();
   const [current, setCurrent] = useState<Tag | null>(null);
   const [tag, setTag] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -36,10 +36,10 @@ export function AuraTagControls() {
   async function save(event: React.FormEvent) {
     event.preventDefault(); setBusy(true); setMessage("");
     try {
-      if (!wallet) throw new Error("Connect a wallet before creating a tag.");
+      if (!address) throw new Error("Your wallet isn't ready yet.");
       const token = await getAccessToken();
       if (!token) throw new Error("Sign in again to save your tag.");
-      const response = await fetch("/api/aura-tags", { method: "PUT", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ tag, address: wallet.address, displayName, publicEnabled: enabled, publicBankEnabled: enabled && bankEnabled }) });
+      const response = await fetch("/api/aura-tags", { method: "PUT", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ tag, address, displayName, publicEnabled: enabled, publicBankEnabled: enabled && bankEnabled }) });
       if (!response.ok) {
         const result = await response.json() as { error?: string };
         throw new Error(result.error === "tag_taken" ? "That tag is already taken." : "Your tag could not be saved.");
@@ -55,7 +55,7 @@ export function AuraTagControls() {
       <label className="fieldLabel">Public display name<input value={displayName} onChange={(event) => setDisplayName(event.target.value)} required maxLength={48} /></label>
       <label className="supportUrgent"><input type="checkbox" checked={enabled} onChange={(event) => setEnabled(event.target.checked)} /> Show my payment page publicly</label>
       <label className="supportUrgent"><input type="checkbox" checked={bankEnabled} disabled={!enabled} onChange={(event) => setBankEnabled(event.target.checked)} /> Show my Bridge bank details on the public page when available</label>
-      <button className="button primary" disabled={busy || !wallet}>{busy ? "Saving…" : "Save Aura tag"}</button>
+      <button className="button primary" disabled={busy || !address}>{busy ? "Saving…" : "Save Aura tag"}</button>
     </form>
     {current?.publicEnabled && <Link className="textLink" href={`/pay/${current.tag}`}>View your payment page</Link>}
     {message && <p role="status">{message}</p>}

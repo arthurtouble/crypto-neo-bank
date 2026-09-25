@@ -50,11 +50,8 @@
         "NEXT_PUBLIC_TURNSTILE_SITE_KEY": "1x00000000000000000000AA",
         "TURNSTILE_HOSTNAMES": "aura-dev.aurel-events.workers.dev,localhost",
         "ADMIN_PRIVY_SUBJECTS": "",
-        "AUREL_LIFI_ALLOWED_TOOLS": "across,feecollection",
-        "AUREL_LIFI_ALLOWED_BRIDGES": "across",
-        "AUREL_SWAP_ALLOWED_TARGETS": "0x1231deb6f5749ef6ce6943a275a1d3e7486f4eae",
-        "AUREL_SWAP_ALLOWED_SPENDERS": "0x1231deb6f5749ef6ce6943a275a1d3e7486f4eae",
-        "AUREL_SWAP_EXECUTION_POLICY": "{\"diamond\":\"0x1231deb6f5749ef6ce6943a275a1d3e7486f4eae\",\"feeForwarder\":\"0xce40449b773a3e6e5e769adb4e567179d4828cbd\",\"feeRecipients\":[\"0xc06ebbefd94032b85424d51906e2a335efae264b\"]}",
+        "LIFI_INTEGRATOR": "aurel",
+        "LIFI_INTEGRATOR_FEE": "0",
         "REQUIRE_CF_ACCESS": "false",
         "PROVIDER_WEBHOOK_TOLERANCE_SECONDS": "300"
       },

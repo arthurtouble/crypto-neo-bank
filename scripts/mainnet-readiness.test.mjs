@@ -41,26 +41,14 @@ test("readiness rejects malformed contract-code responses", () => {
   assert.match(result.stderr, /FAIL  Aave Base has invalid contract code/);
 });
 
-test("readiness checks the mounted LI.FI Base swap facet and its deployed code", () => {
+test("readiness checks the LI.FI Diamond on every supported chain", () => {
   const result = run();
   assert.equal(result.status, 0, result.stderr);
-  assert.match(result.stdout, /PASS  LI.FI Base:.*mounted swap facet.*deployed code/);
+  assert.match(result.stdout, /PASS  LI.FI Diamond: deployed code at 0x1231/);
 });
 
-test("readiness fails closed when the LI.FI selector maps to another facet", () => {
-  const result = run({ AUREL_TEST_BAD_LIFI_FACET: "1" });
+test("readiness fails closed when the LI.FI Diamond has no code on a chain", () => {
+  const result = run({ AUREL_TEST_MISSING_LIFI_CODE: "1" });
   assert.equal(result.status, 1);
-  assert.match(result.stderr, /FAIL  LI.FI Base swap facet differs/);
-});
-
-test("readiness rejects a LI.FI facet word with nonzero ABI address padding", () => {
-  const result = run({ AUREL_TEST_MALFORMED_LIFI_FACET: "1" });
-  assert.equal(result.status, 1);
-  assert.match(result.stderr, /FAIL  LI.FI Base mounted facet returned an invalid address word/);
-});
-
-test("readiness fails closed when the mounted LI.FI facet has no code", () => {
-  const result = run({ AUREL_TEST_MISSING_LIFI_FACET_CODE: "1" });
-  assert.equal(result.status, 1);
-  assert.match(result.stderr, /FAIL  LI.FI Base has no contract code/);
+  assert.match(result.stderr, /FAIL  LI.FI Diamond has no contract code on Arbitrum/);
 });

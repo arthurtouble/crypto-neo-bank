@@ -1,10 +1,11 @@
 "use client";
 
-import { usePrivy, useWallets } from "@privy-io/react-auth";
+import { usePrivy } from "@privy-io/react-auth";
 import { useQuery } from "@tanstack/react-query";
 import { Check, Clock3, Download, ExternalLink, FileSpreadsheet, LoaderCircle, Search, ShieldCheck, X, XCircle } from "lucide-react";
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useAuraWallet } from "@/lib/client/use-aura-wallet";
 import { activityCategory, activityCsv, activityEventLabel, activityLabel, activityStatus, taxSupportCsv, type ActivityCategory } from "@/lib/activity/presentation";
 
 type Intent = { intentId: string; type: string; status: string; transactionHash?: string; createdAt: string; updatedAt?: string; confirmedAt?: string; failureReason?: string; chainId?: number; asset?: string; amount?: string; destination?: string; estimatedUsd?: number; routeReference?: string; source?: string; sourceKind?: "projection" | "chain" | "provider"; authority?: string; events?: Array<{ type: string; occurredAt: string }> };
@@ -17,19 +18,17 @@ function short(value?: string) { return value && value.length > 14 ? `${value.sl
 
 export function ActivityWorkspace() {
   const { user, getAccessToken } = usePrivy();
-  const { wallets } = useWallets();
-  const wallet = useMemo(() => wallets.find((item) => item.walletClientType === "privy") ?? wallets[0], [wallets]);
+  const { address } = useAuraWallet();
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<(typeof categories)[number]>("All");
   const [status, setStatus] = useState("All");
   const [selected, setSelected] = useState<Intent | null>(null);
   const [exportOpen, setExportOpen] = useState(false);
   const query = useQuery<ActivityResponse>({
-    queryKey: ["full-activity", user?.id, wallet?.address],
+    queryKey: ["full-activity", user?.id, address],
     queryFn: async () => {
       const token = await getAccessToken();
-      if (token) await fetch("/api/intents/reconcile", { method: "POST", headers: { Authorization: `Bearer ${token}` } }).catch(() => undefined);
-      const response = await fetch(`/api/activity${wallet?.address ? `?address=${wallet.address}` : ""}`, { headers: token ? { Authorization: `Bearer ${token}` } : undefined, cache: "no-store" });
+      const response = await fetch(`/api/activity${address ? `?address=${address}` : ""}`, { headers: token ? { Authorization: `Bearer ${token}` } : undefined, cache: "no-store" });
       if (!response.ok) throw new Error("Activity could not be loaded.");
       return response.json();
     },

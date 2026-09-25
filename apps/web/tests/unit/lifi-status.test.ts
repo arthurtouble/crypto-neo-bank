@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { readLifiTransferStatus } from "@/lib/swap/lifi-status";
+import { readLifiTransferStatus } from "@/lib/actions/lifi-status";
 
 const sourceHash = `0x${"a".repeat(64)}`;
 const destinationHash = `0x${"b".repeat(64)}`;
