@@ -54,18 +54,18 @@ for (const path of ["/api/activity", "/api/defi/aave/positions?address=0x0000000
   assert([401, 403].includes(response.status), `${path} rejects an unauthenticated request (${response.status})`);
 }
 
-for (const path of ["/api/portfolio/history?range=7D", "/api/portfolio/tax-support?year=2026", "/api/swap/assets?q=USD"]) {
+for (const path of ["/api/swap/assets?q=USD"]) {
   const response = await request(path);
   assert([401, 403].includes(response.status), `${path} rejects unauthenticated account reads (${response.status})`);
   assert(response.headers.get("cache-control")?.includes("no-store"), `${path} does not cache account responses`);
 }
-for (const path of ["/api/portfolio/refresh", "/api/swap/quote", "/api/intents/evaluate", "/api/intents/prepare", "/api/defi/aave/preview", "/api/defi/aave/action", "/api/defi/aave/receipt", "/api/defi/sky/action", "/api/defi/sky/receipt"]) {
+for (const path of ["/api/swap/quote", "/api/intents/evaluate", "/api/intents/prepare", "/api/defi/aave/action", "/api/defi/aave/receipt", "/api/defi/sky/action", "/api/defi/sky/receipt"]) {
   const response = await request(path, { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
   assert([401, 403].includes(response.status), `${path} rejects unauthenticated actions (${response.status})`);
   assert(response.headers.get("cache-control")?.includes("no-store"), `${path} does not cache action responses`);
 }
 
-for (const path of ["/api/growth/waitlist", "/api/growth/events", "/api/portfolio", "/api/beta/access", "/api/routing/quote", "/api/swap/curated-quote"]) {
+for (const path of ["/api/growth/waitlist", "/api/portfolio", "/api/demo/session", "/api/markets/orders", "/api/support/assistant"]) {
   const response = await request(path, { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
   assert(response.status === 404, `${path} is retired (${response.status})`);
 }

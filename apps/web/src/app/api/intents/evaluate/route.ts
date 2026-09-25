@@ -15,7 +15,7 @@ async function fingerprint(value: unknown): Promise<string> {
 }
 
 const intentSchema = z.object({
-  type: z.enum(["transfer", "swap", "bridge", "earn_supply", "earn_withdraw", "earn_claim", "borrow", "repay"]),
+  type: z.enum(["transfer", "swap", "bridge", "earn_supply", "earn_withdraw", "earn_claim"]),
   walletAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
   chainId: z.number().int().positive(),
   asset: z.string().min(1).max(80),

@@ -7,7 +7,7 @@ test("landing introduces Aura and its provider boundaries", async ({ page }) => 
   await expect(page.getByText("Spend anywhere, invest in global markets, and get incredible rewards. All from one app.")).toBeVisible();
   await expect(page.getByRole("link", { name: "Get Started" })).toHaveCount(4);
   await expect(page.locator('a[href="/apply"], a[href="/tour"]')).toHaveCount(0);
-  for (const title of ["A home for all your assets", "Spend", "Earn", "Send", "Invest", "Borrow", "Rewards", "Security"]) {
+  for (const title of ["A home for all your assets", "Spend", "Earn", "Send", "Invest", "Rewards", "Security"]) {
     await expect(page.getByRole("heading", { name: title, exact: true })).toHaveCount(1);
   }
   await expect(page.locator("#faq details")).toHaveCount(5);
@@ -38,12 +38,9 @@ test("landing is accessible and fits common widths", async ({ page }) => {
   expect(results.violations.filter((violation) => ["serious", "critical"].includes(violation.impact ?? ""))).toEqual([]);
 });
 
-test("retired growth, planning, alert, invitation, and routing endpoints are gone", async ({ request }) => {
-  for (const path of ["/api/growth/events", "/api/growth/waitlist", "/api/growth/referrals", "/api/growth/experiments", "/api/ops/growth/waitlist", "/api/ops/growth/campaigns",
-    "/api/ops/growth/experiments", "/api/ops/growth/communications", "/api/goals", "/api/bills", "/api/income-plan", "/api/transfer-schedules", "/api/swap/alerts",
-    "/api/swap/reminders", "/api/market-data", "/api/portfolio", "/api/reconcile", "/api/beta/access", "/api/beta/feedback",
-    "/api/ops/beta", "/api/routing/quote", "/api/swap/curated-quote", "/api/growth/consent", "/api/growth/data-requests",
-    "/api/ops/growth/data-requests"]) {
+test("retired endpoints are gone", async ({ request }) => {
+  for (const path of ["/api/growth/waitlist", "/api/goals", "/api/portfolio", "/api/portfolio/history", "/api/beta/access",
+    "/api/demo/session", "/api/markets/orders", "/api/support/assistant", "/api/defi/aave/preview"]) {
     expect((await request.get(path)).status(), path).toBe(404);
   }
 });

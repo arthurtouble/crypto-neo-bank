@@ -28,20 +28,21 @@ const post = (body: unknown) => POST(new Request("https://aura.test/api/defi/aav
 describe("Aave receipt boundary", () => {
   beforeEach(() => { state.result = { status: "pending", reason: "transaction_unavailable" }; state.prepared = null; });
 
-  it.each(["supply", "withdraw", "borrow", "repay"] as const)("binds the %s event to the exact wallet call", async (action) => {
+  it.each(["supply", "withdraw"] as const)("binds the %s event to the exact wallet call", async (action) => {
     const response = await post({ action, sender, symbol: "USDC", amount: "1.5", hash });
     expect(response.status).toBe(202);
     expect(await response.json()).toMatchObject({ status: "pending", hash });
     expect(state.prepared).toMatchObject({ chainId: 8453, walletAddress: sender,
-      semanticAction: { supply: "earn_supply", withdraw: "earn_withdraw", borrow: "borrow", repay: "repay" }[action],
+      semanticAction: { supply: "earn_supply", withdraw: "earn_withdraw" }[action],
       expectedEffect: { asset: expect.any(String), amountRaw: "1500000" }, reportedHash: hash });
   });
 
   it("reports chain failure and rejects unsupported receipt requests", async () => {
     state.result = { status: "failed", reason: "transaction_reverted" };
-    const response = await post({ action: "borrow", sender, symbol: "USDC", amount: "1", hash });
+    const response = await post({ action: "supply", sender, symbol: "USDC", amount: "1", hash });
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({ status: "failed", reason: "transaction_reverted" });
-    expect((await post({ action: "borrow", sender, symbol: "USDC", amount: "1", hash: "bad" })).status).toBe(400);
+    expect((await post({ action: "supply", sender, symbol: "USDC", amount: "1", hash: "bad" })).status).toBe(400);
+    expect((await post({ action: "borrow", sender, symbol: "USDC", amount: "1", hash })).status).toBe(400);
   });
 });

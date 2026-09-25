@@ -66,7 +66,7 @@ type IntentRow = { intent_id: string; intent_type: string; chain_id: number; wal
 function featureFor(type: string): FeatureKey {
   if (type === "swap") return "swaps";
   if (type === "bridge") return "cross_chain";
-  if (type.startsWith("earn_") || type === "borrow" || type === "repay") return "defi_actions";
+  if (type.startsWith("earn_")) return "defi_actions";
   return "direct_transfers";
 }
 
@@ -87,7 +87,7 @@ export const POST = route("intent.prepare", { unavailable: "prepare_unavailable"
   const policy = z.object({ permitted: z.literal(true), requiresStepUp: z.boolean().optional() }).passthrough().safeParse(JSON.parse(intent.policy_result_json));
   if (!policy.success) return reply({ error: "policy_not_permitted", traceId }, 403);
   await requireFeature(env.PROJECTION_DB, featureFor(intent.intent_type));
-  const reviewed = z.object({ type: z.enum(["transfer", "swap", "bridge", "earn_supply", "earn_withdraw", "earn_claim", "borrow", "repay"]), chainId: z.number().int().positive(), destination: address, asset: z.string(), amount: z.string(), estimatedUsd: z.number().nonnegative().optional(), availableUsd: z.number().nonnegative().optional() }).passthrough().parse(JSON.parse(intent.request_json));
+  const reviewed = z.object({ type: z.enum(["transfer", "swap", "bridge", "earn_supply", "earn_withdraw", "earn_claim"]), chainId: z.number().int().positive(), destination: address, asset: z.string(), amount: z.string(), estimatedUsd: z.number().nonnegative().optional(), availableUsd: z.number().nonnegative().optional() }).passthrough().parse(JSON.parse(intent.request_json));
   if (reviewed.type !== intent.intent_type || reviewed.chainId !== intent.chain_id) return reply({ error: "review_mismatch", traceId }, 409);
   if (intent.intent_type === "transfer" && input.stepIndex !== 0) return reply({ error: "prepare_conflict", traceId }, 409);
   const valuation = await valueTransfer(reviewed, { now: currentTime });

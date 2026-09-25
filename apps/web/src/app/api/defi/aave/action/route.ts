@@ -11,7 +11,7 @@ import { buildAaveBaseCall } from "@/lib/defi/aave-call-policy";
 import { route } from "@/lib/http/route";
 
 const schema = z.strictObject({
-  action: z.enum(["supply", "withdraw", "borrow", "repay"]),
+  action: z.enum(["supply", "withdraw"]),
   sender: z.string().refine(isAddress),
   symbol: z.enum(["USDC", "WETH"]),
   amount: z.string().regex(/^\d+(?:\.\d+)?$/).max(40)
@@ -40,7 +40,7 @@ export const POST = route("defi.aave.action", { unavailable: "action_unavailable
   return reply({
     action: input.action, symbol: input.symbol, amount: input.amount, amountRaw: amountRaw.toString(),
     chainId: 8453, assetAddress: asset,
-    approvalCall: input.action === "supply" || input.action === "repay"
+    approvalCall: input.action === "supply"
       ? buildAaveBaseCall({ action: "approve", ...identity }) : null,
     poolCall: buildAaveBaseCall({ action: input.action, ...identity }),
     executionAvailable: true, traceId

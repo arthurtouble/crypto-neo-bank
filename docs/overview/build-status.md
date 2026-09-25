@@ -3,23 +3,23 @@ title: Aura build status
 description: Current product implementation and external release dependencies.
 ---
 
-Last reviewed: 25 September 2026. The branch is deployed to `aura-dev.aurel-events.workers.dev`; this page describes the source branch, which may have newer changes. Dated design and implementation plans are in `docs/superpowers/`.
+Last reviewed: 25 September 2026. The branch is deployed to `aura-dev.aurel-events.workers.dev`; this page describes the source branch, which may have newer changes. Dated plans and release logs are in `docs/archive/`. The current refactor plan is in the [codebase audit](codebase-audit-2026-09-25.md).
 
 ## Implemented in this branch
 
-- Aura landing page, 12 customer sections, desktop/mobile navigation, and public browsing with labeled fictional data.
+- Aura landing page, 11 customer sections, desktop/mobile navigation, and public browsing with labeled fictional data.
 - Privy sign-in open to everyone, with acceptance of the current terms and privacy notice recorded per version on first sign-in.
 - Server-side controls on every money-moving path: feature switches, account locks, per-account daily limits, saved-address cooling, review thresholds, and transaction policy, rechecked inside the atomic D1 writes.
 - Direct Base wallet reads and governed crypto-send preparation, simulation, customer signing, intent evidence, and reconciliation.
 - Swaps: direct Uniswap V3 calls for Base USDC/WETH, and Base USDC to Arbitrum or Ethereum USDC through LI.FI and Across, each through the server-held reviewed flow.
-- Aave Base supply, withdraw, borrow, and repay, and Sky USDC deposits and withdrawals on Ethereum, behind the `defi_actions` switch.
+- Aave Base supply and withdraw, and Sky USDC deposits and withdrawals on Ethereum, behind the `defi_actions` switch.
 - Aura tag registration with a unique, non-transferable tag, verified linked receiving wallet, public opt-in, and public crypto payment page. Bank details appear only for an activated Bridge customer; card payment remains unavailable.
 - Provider projections for cards, memberships and benefits, and wallet-provider rules, applied from signed provider events by the events Worker (see [provider projections](../architecture/provider-projections.md)).
 - Notification choices, product-update consent, and self-service data export and deletion backed by a classified inventory of every customer-data table.
-- Support cases, read-only assistant, coverage-aware transactions and insights, and the operations console (issues, reconciliation, feature switches, analytics).
+- Support cases, coverage-aware transactions and insights, and the operations console (issues, reconciliation, feature switches, analytics).
 - D1 migrations through `0042_privacy_and_flag_vocabulary.sql` on the isolated development database; no production migration or deployment has been performed.
 
-The customer waitlist, markets lists, price alerts, goals, scheduled transfers, paycheck planning, external-wallet portfolio tracking, lifestyle concierge, the private-beta invitation gate, and Aura-computed membership tiers have been removed. Their API routes are removed and return 404. Migrations `0040`–`0042` drop the retired goal, bill, subscription, income-plan, transfer-schedule, price-alert, swap-reminder, waitlist, referral, campaign, experiment, growth-event, communication, and retention-run tables, and disables unredeemed customer referral codes. Audit evidence, consent records, and beta invitations remain.
+Borrowing, the support assistant, the partner sandbox and demo provider, regulated market orders and eligibility, the portfolio history and tax-lot pipeline, and action-passkey step-up were removed on 25 September 2026 (see the codebase audit). Earlier, the customer waitlist, markets lists, price alerts, goals, scheduled transfers, paycheck planning, external-wallet portfolio tracking, lifestyle concierge, the private-beta invitation gate, and Aura-computed membership tiers have been removed. Their API routes are removed and return 404. Migrations `0040`–`0042` drop the retired goal, bill, subscription, income-plan, transfer-schedule, price-alert, swap-reminder, waitlist, referral, campaign, experiment, growth-event, communication, and retention-run tables, and disables unredeemed customer referral codes. Audit evidence, consent records, and beta invitations remain.
 
 ## External or incomplete
 
@@ -30,7 +30,7 @@ The customer waitlist, markets lists, price alerts, goals, scheduled transfers, 
 | Card payments on Aura tag pages | Acquiring/payment-link provider, recipient onboarding, payment state, refunds, and disputes |
 | Sky and Morpho vaults | Selected contracts, risk review, exact-call preparation, simulation, settlement, and support |
 | Aave writes | Governed execution plan, action-bound authorization, and verified effects |
-| Tokenized stocks and metals | Issuer, venue, eligibility, country controls, order execution, and disclosures |
+| Tokenized stocks and metals | Invest catalog on the shared LI.FI route module (refactor step 4) and issuer restrictions |
 | Cashback and benefits | Funded provider program, eligibility, fulfilment, and transaction evidence |
 | Passcode and remote sessions | Supported identity-provider controls and recovery process |
 | Notifications | Connected delivery provider and preference enforcement |

@@ -23,11 +23,7 @@ const unwrapped: Record<string, string> = {
   "status": "public status page data",
   "auth/session": "session probe returns authenticated:false rather than an error body",
   "aura-tags/[tag]": "public payment page; every failure is an indistinguishable 404",
-  "webhooks/provider": "signature-verified provider ingress with its own replay handling",
-  "markets/instruments": "public, cacheable catalog",
-  "demo/commands": "fictional example data only",
-  "demo/scenarios": "fictional example data only",
-  "demo/session": "fictional example data only"
+  "webhooks/provider": "signature-verified provider ingress with its own replay handling"
 };
 
 describe("API route inventory", () => {
@@ -47,7 +43,9 @@ describe("API route inventory", () => {
       "reconcile", "portfolio", "beta/access", "beta/feedback", "ops/beta", "routing/quote", "swap/curated-quote",
       "growth/waitlist", "growth/referrals", "growth/events", "growth/experiments", "ops/growth/campaigns",
       "ops/growth/experiments", "ops/growth/communications", "ops/growth/waitlist", "growth/consent", "growth/data-requests",
-      "ops/growth/data-requests"];
+      "ops/growth/data-requests", "demo/commands", "demo/scenarios", "demo/session", "markets/orders",
+      "markets/eligibility", "markets/instruments", "portfolio/history", "portfolio/refresh", "portfolio/materialize",
+      "portfolio/tax-support", "support/assistant", "money/transfers", "defi/aave/rewards", "defi/aave/preview"];
     const existing = new Set(routes.map((item) => item.path));
     expect(retired.filter((path) => existing.has(path))).toEqual([]);
   });
@@ -67,7 +65,7 @@ describe("open access", () => {
 
   it("gates every money-moving route on a server-side feature switch", () => {
     const financial = ["intents/prepare", "intents/evaluate", "swap/review", "swap/prepare", "swap/approval",
-      "defi/aave/action", "defi/sky/action", "markets/orders"];
+      "defi/aave/action", "defi/sky/action"];
     const missing = financial.filter((path) => {
       const source = routes.find((item) => item.path === path)?.source ?? "";
       return !/requireFeature\(|featureEnabled\(|requireEnabled\(/.test(source);

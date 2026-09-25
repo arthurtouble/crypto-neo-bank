@@ -7,7 +7,7 @@ sidebar:
 
 ## Explore
 
-Open Aura to browse Overview, Deposit, Send, Swap, Earn, Borrow, Invest, Cards, Rewards, Transactions, Insights, Settings, and Support. All values in the signed-out view are fictional examples. You can browse without creating an account.
+Open Aura to browse Overview, Deposit, Send, Swap, Earn, Invest, Cards, Rewards, Transactions, Insights, Settings, and Support. All values in the signed-out view are fictional examples. You can browse without creating an account.
 
 ## Sign in
 

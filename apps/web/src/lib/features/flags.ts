@@ -1,6 +1,6 @@
 import { FeatureUnavailableError } from "@/lib/http/errors";
 
-export const featureKeys = ["direct_transfers", "swaps", "cross_chain", "defi_actions", "support_assistant", "tokenized_markets", "fiat_accounts", "payment_cards"] as const;
+export const featureKeys = ["direct_transfers", "swaps", "cross_chain", "defi_actions", "fiat_accounts", "payment_cards"] as const;
 export type FeatureKey = (typeof featureKeys)[number];
 
 const safeDefaults: Record<FeatureKey, boolean> = {
@@ -8,8 +8,6 @@ const safeDefaults: Record<FeatureKey, boolean> = {
   swaps: false,
   cross_chain: false,
   defi_actions: false,
-  support_assistant: false,
-  tokenized_markets: false,
   fiat_accounts: false,
   payment_cards: false
 };

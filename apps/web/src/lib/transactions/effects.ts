@@ -13,17 +13,13 @@ const effectSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("erc20_approval"), token: address, spender: address, amountRaw: amount }).strict(),
   z.object({ type: z.literal("earn_supply"), asset: address, amountRaw: amount }).strict(),
   z.object({ type: z.literal("earn_withdraw"), asset: address, amountRaw: amount }).strict(),
-  z.object({ type: z.literal("borrow"), asset: address, amountRaw: amount }).strict(),
-  z.object({ type: z.literal("repay"), asset: address, amountRaw: amount }).strict(),
   z.object({ type: z.literal("sky_deposit"), amountRaw: amount }).strict(),
   z.object({ type: z.literal("sky_withdraw"), amountRaw: amount }).strict()
 ]);
 
 const aaveEvents = {
   earn_supply: parseAbiItem("event Supply(address indexed reserve, address user, address indexed onBehalfOf, uint256 amount, uint16 indexed referralCode)"),
-  earn_withdraw: parseAbiItem("event Withdraw(address indexed reserve, address indexed user, address indexed to, uint256 amount)"),
-  borrow: parseAbiItem("event Borrow(address indexed reserve, address user, address indexed onBehalfOf, uint256 amount, uint8 interestRateMode, uint256 borrowRate, uint16 indexed referralCode)"),
-  repay: parseAbiItem("event Repay(address indexed reserve, address indexed user, address indexed repayer, uint256 amount, bool useATokens)")
+  earn_withdraw: parseAbiItem("event Withdraw(address indexed reserve, address indexed user, address indexed to, uint256 amount)")
 } as const;
 const skyEvents = {
   sky_deposit: parseAbiItem("event Deposit(address indexed sender, address indexed owner, uint256 assets, uint256 shares)"),
@@ -119,15 +115,11 @@ export async function verifyExpectedEffect(prepared: PreparedEffectEvidence, obs
           topics: log.topics as [`0x${string}`, ...`0x${string}`[]], strict: true });
         const args = decoded.args as Record<string, unknown>;
         if (!sameAddress(String(args.reserve), effect.asset) || args.amount !== BigInt(effect.amountRaw)) continue;
-        const actorMatches = action === "earn_supply" || action === "borrow"
+        const actorMatches = action === "earn_supply"
           ? sameAddress(String(args.user), prepared.walletAddress) && sameAddress(String(args.onBehalfOf), prepared.walletAddress)
-          : action === "earn_withdraw"
-            ? sameAddress(String(args.user), prepared.walletAddress) && sameAddress(String(args.to), prepared.walletAddress)
-            : sameAddress(String(args.user), prepared.walletAddress) && sameAddress(String(args.repayer), prepared.walletAddress);
+          : sameAddress(String(args.user), prepared.walletAddress) && sameAddress(String(args.to), prepared.walletAddress);
         if (!actorMatches) continue;
-        if ((action === "earn_supply" || action === "borrow") && BigInt(String(args.referralCode)) !== 0n) continue;
-        if (action === "borrow" && BigInt(String(args.interestRateMode)) !== 2n) continue;
-        if (action === "repay" && args.useATokens !== false) continue;
+        if (action === "earn_supply" && BigInt(String(args.referralCode)) !== 0n) continue;
         return { status: "confirmed" };
       } catch { /* This log is not the reviewed Aave Pool event. */ }
     }

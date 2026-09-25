@@ -71,11 +71,12 @@ describe("server-authoritative intent evaluation", () => {
   });
 
   it("does not create a reviewed intent for actions without governed preparation", async () => {
-    for (const type of ["swap", "bridge", "earn_supply", "earn_withdraw", "earn_claim", "borrow", "repay"]) {
+    for (const type of ["swap", "bridge", "earn_supply", "earn_withdraw", "earn_claim"]) {
       const response = await POST(request(type));
       expect(response.status).toBe(409);
       expect(await response.json()).toMatchObject({ error: "action_not_ready" });
     }
+    for (const type of ["borrow", "repay"]) expect((await POST(request(type))).status).toBe(400);
     expect(state.writes.some((item) => item.sql.includes("INSERT INTO transaction_intents"))).toBe(false);
   });
 

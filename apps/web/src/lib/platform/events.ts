@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const providerEventSchema = z.object({
   id: z.string().min(3).max(160),
-  provider: z.enum(["bridge", "privy", "rain", "demo"]),
+  provider: z.enum(["bridge", "privy", "rain"]),
   type: z.string().min(3).max(120),
   subjectReference: z.string().min(3).max(160).optional(),
   providerObjectId: z.string().min(1).max(200),

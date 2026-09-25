@@ -8,18 +8,15 @@ import { usePublicClient } from "wagmi";
 import { AAVE_BASE_ASSETS, AAVE_BASE_V3_MARKET } from "@/lib/defi/aave";
 import { validateAaveCall } from "@/lib/defi/aave-call-policy";
 
-type Action = "supply" | "withdraw" | "borrow" | "repay";
+type Action = "supply" | "withdraw";
 type Symbol = "USDC" | "WETH";
 type Call = { chainId: 8453; from: string; to: string; value: "0"; data: `0x${string}` };
 type Prepared = { action: Action; symbol: Symbol; amount: string; amountRaw: string; assetAddress: string;
   approvalCall: Call | null; poolCall: Call; executionAvailable: true };
-type Preview = { action: Action; symbol: Symbol; amount: string; observedAt: string;
-  postHealthFactor: number | null; debtStatus: "none" | "positive" | "unresolved";
-  approvalRequired: boolean; simulation: "passed" | "after_approval"; executionAvailable: false };
 type Submitted = { action: Action; symbol: Symbol; amount: string; sender: string; hash: string;
   status: "submitted" | "pending" | "confirmed" | "failed" | "inconsistent" | "unavailable" };
 
-const labels: Record<Action, string> = { supply: "Supply", withdraw: "Withdraw", borrow: "Borrow", repay: "Repay" };
+const labels: Record<Action, string> = { supply: "Supply", withdraw: "Withdraw" };
 
 export function AaveActionPreview({ walletAddress, actions, symbols }: {
   walletAddress?: string; actions: readonly Action[]; symbols: readonly Symbol[];
@@ -31,7 +28,6 @@ export function AaveActionPreview({ walletAddress, actions, symbols }: {
   const [action, setAction] = useState<Action>(actions[0]);
   const [symbol, setSymbol] = useState<Symbol>(symbols[0]);
   const [amount, setAmount] = useState("");
-  const [preview, setPreview] = useState<Preview | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [phase, setPhase] = useState("");
@@ -42,21 +38,6 @@ export function AaveActionPreview({ walletAddress, actions, symbols }: {
   const selection = JSON.stringify([walletAddress, action, symbol, amount]);
   const liveSelection = useRef(selection);
   useEffect(() => { liveSelection.current = selection; }, [selection]);
-
-  async function check(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setPreview(null); setError(""); setBusy(true);
-    try {
-      const token = await getAccessToken();
-      if (!token || !walletAddress) throw new Error("Sign in to check your position.");
-      const response = await fetch("/api/defi/aave/preview", { method: "POST", cache: "no-store",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ action, sender: walletAddress, symbol, amount }) });
-      if (!response.ok) throw new Error("Current Aave risk could not be confirmed. Check your amount or try again later.");
-      setPreview(await response.json() as Preview);
-    } catch (reason) { setError(reason instanceof Error ? reason.message : "Preview unavailable."); }
-    finally { setBusy(false); }
-  }
 
   async function prepare(token: string, chosen: { action: Action; symbol: Symbol; amount: string; sender: string }) {
     const response = await fetch("/api/defi/aave/action", { method: "POST", cache: "no-store",
@@ -74,7 +55,7 @@ export function AaveActionPreview({ walletAddress, actions, symbols }: {
       throw new Error("Aave action changed. Review it again.");
     validateAaveCall({ action: chosen.action, wallet: chosen.sender, asset, amountRaw: raw,
       transaction: result.poolCall });
-    if (chosen.action === "supply" || chosen.action === "repay") validateAaveCall({
+    if (chosen.action === "supply") validateAaveCall({
       action: "approve", wallet: chosen.sender, asset, amountRaw: raw, transaction: result.approvalCall
     });
     else if (result.approvalCall !== null) throw new Error("Unexpected Aave approval step.");
@@ -160,7 +141,6 @@ export function AaveActionPreview({ walletAddress, actions, symbols }: {
         if (evidence.status === "confirmed") {
           await queryClient.invalidateQueries({ queryKey: ["aave-position"] });
           await queryClient.invalidateQueries({ queryKey: ["aave-base-market"] });
-          await queryClient.invalidateQueries({ queryKey: ["aave-borrow-market"] });
           await queryClient.invalidateQueries({ queryKey: ["defi-positions"] });
         }
         if (!["confirmed", "failed", "inconsistent"].includes(evidence.status)) timer = setTimeout(poll, 8_000);
@@ -173,31 +153,22 @@ export function AaveActionPreview({ walletAddress, actions, symbols }: {
     return () => { cancelled = true; clearTimeout(timer); };
   }, [submitted, getAccessToken, queryClient]);
 
-  return <form className="aavePreviewForm" onSubmit={(event) => void check(event)}>
+  return <form className="aavePreviewForm" onSubmit={(event) => { event.preventDefault(); void execute(); }}>
     <div className="aavePreviewFields">
-      <label>Action<select value={action} onChange={(event) => { setAction(event.target.value as Action); setPreview(null); }}>
+      <label>Action<select value={action} onChange={(event) => { setAction(event.target.value as Action); }}>
         {actions.map((item) => <option key={item} value={item}>{labels[item]}</option>)}
       </select></label>
-      {symbols.length > 1 && <label>Asset<select value={symbol} onChange={(event) => { setSymbol(event.target.value as Symbol); setPreview(null); }}>
+      {symbols.length > 1 && <label>Asset<select value={symbol} onChange={(event) => { setSymbol(event.target.value as Symbol); }}>
         {symbols.map((item) => <option key={item} value={item}>{item}</option>)}
       </select></label>}
       <label>Amount<input type="text" inputMode="decimal" autoComplete="off" value={amount}
-        onChange={(event) => { setAmount(event.target.value); setPreview(null); }} placeholder={`0 ${symbol}`} required /></label>
+        onChange={(event) => { setAmount(event.target.value); }} placeholder={`0 ${symbol}`} required /></label>
     </div>
     <div className="aavePreviewButtons">
-      <button className="button secondary" type="submit" disabled={busy || !walletAddress || !amount.trim()}>{busy && !phase ? "Checking…" : "Preview risk"}</button>
-      <button className="button primary" type="button" disabled={busy || awaitingReceipt || outcomeUnknown || !walletAddress || !amount.trim()}
-        onClick={() => void execute()}>{busy ? "Working…" : outcomeUnknown ? "Check wallet activity" : awaitingReceipt ? "Waiting for transaction" : `Continue ${labels[action].toLowerCase()} in wallet`}</button>
+      <button className="button primary" type="submit" disabled={busy || awaitingReceipt || outcomeUnknown || !walletAddress || !amount.trim()}>{busy ? "Working…" : outcomeUnknown ? "Check wallet activity" : awaitingReceipt ? "Waiting for transaction" : `Continue ${labels[action].toLowerCase()} in wallet`}</button>
     </div>
     {phase && <p role="status">{phase}</p>}
     {error && <p className="formError" role="alert">{error}</p>}
-    {preview && <div className="aavePreviewResult" role="status">
-      <strong>{labels[preview.action]} {preview.amount} {preview.symbol}</strong>
-      <span>{preview.debtStatus === "none" ? "No debt after this action" : preview.postHealthFactor === null ? "Final debt requires settlement" : `Estimated health factor ${preview.postHealthFactor.toFixed(2)}`}</span>
-      {preview.approvalRequired && <span>An exact token approval would be needed first.</span>}
-      {preview.simulation === "passed" && <span>The exact call passed a same-block revert check.</span>}
-      <small>Observed {new Date(preview.observedAt).toLocaleTimeString()} · Preview only; Aave state can change before signing.</small>
-    </div>}
     {approvalHash && <p role="status">Token approval: <a href={`https://basescan.org/tx/${approvalHash}`} target="_blank" rel="noreferrer">View on Base</a></p>}
     {submitted && <div className="aavePreviewResult" role="status"><strong>Aave transaction {submitted.status}</strong>
       <span>Completion is based on the Base receipt and Aave Pool event.</span>

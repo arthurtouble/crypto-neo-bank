@@ -10,7 +10,7 @@ import { verifyExpectedEffect } from "@/lib/transactions/effects";
 import { route } from "@/lib/http/route";
 
 const schema = z.strictObject({
-  action: z.enum(["supply", "withdraw", "borrow", "repay"]),
+  action: z.enum(["supply", "withdraw"]),
   sender: z.string().refine(isAddress), symbol: z.enum(["USDC", "WETH"]),
   amount: z.string().regex(/^\d+(?:\.\d+)?$/).max(40),
   hash: z.string().regex(/^0x[a-fA-F0-9]{64}$/)
@@ -36,9 +36,9 @@ export const POST = route("defi.aave.receipt", { unavailable: "receipt_unavailab
   const effect = await verifyExpectedEffect({
     chainId: 8453, walletAddress: wallet, targetAddress: call.to, nativeValue: call.value,
     calldataHash: call.dataHash, semanticAction: input.action === "supply" ? "earn_supply"
-      : input.action === "withdraw" ? "earn_withdraw" : input.action,
+      : "earn_withdraw",
     expectedEffect: { type: input.action === "supply" ? "earn_supply"
-      : input.action === "withdraw" ? "earn_withdraw" : input.action,
+      : "earn_withdraw",
       asset, amountRaw: amountRaw.toString() },
     reportedHash: input.hash, observedBlockHash: null
   }, observed);

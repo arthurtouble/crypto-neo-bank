@@ -1,5 +1,5 @@
 export type TransactionIntentInput = {
-  type: "transfer" | "swap" | "bridge" | "earn_supply" | "earn_withdraw" | "earn_claim" | "borrow" | "repay";
+  type: "transfer" | "swap" | "bridge" | "earn_supply" | "earn_withdraw" | "earn_claim";
   chainId: number;
   asset: string;
   amount: string;

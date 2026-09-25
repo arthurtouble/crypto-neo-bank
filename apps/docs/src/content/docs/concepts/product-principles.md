@@ -3,7 +3,7 @@ title: Product principles
 description: What Aura is building, who it is for, and the decisions that shape the product.
 ---
 
-Aura is a financial interface built around stablecoins and customer-controlled wallets. It brings together money movement, onchain markets, borrowing, portfolio views, and—once providers are contracted—fiat accounts and cards.
+Aura is a financial interface built around stablecoins and customer-controlled wallets. It brings together money movement, onchain markets, savings, portfolio views, and—once providers are contracted—fiat accounts and cards.
 
 The aim is not to put a bank-shaped skin over crypto. It is to make several independent financial systems feel coherent without hiding where the money sits, who controls it, or what can go wrong.
 

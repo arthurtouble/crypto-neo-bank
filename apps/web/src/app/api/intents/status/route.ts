@@ -105,7 +105,7 @@ export const POST = route("intent.status", { unavailable: "status_unavailable", 
     if (current.status === "confirmed") return reply({ error: "intent_expired_or_unreviewed", traceId }, 409);
     if (current.expires_at <= new Date().toISOString()) return await late("review_expired");
     if (prepared.expires_at <= new Date().toISOString()) return await late("prepared_expired");
-    const feature: FeatureKey = current.intent_type === "swap" ? "swaps" : current.intent_type === "bridge" ? "cross_chain" : current.intent_type.startsWith("earn_") || ["borrow", "repay"].includes(current.intent_type) ? "defi_actions" : "direct_transfers";
+    const feature: FeatureKey = current.intent_type === "swap" ? "swaps" : current.intent_type === "bridge" ? "cross_chain" : current.intent_type.startsWith("earn_") ? "defi_actions" : "direct_transfers";
     try {
       await requireFeature(env.PROJECTION_DB, feature);
       if (current.intent_type === "bridge") await requireFeature(env.PROJECTION_DB, "swaps");

@@ -11,14 +11,12 @@ const blockHash = `0x${"b".repeat(64)}`;
 const amountRaw = 1_000_000n;
 const events = {
   earn_supply: parseAbiItem("event Supply(address indexed reserve, address user, address indexed onBehalfOf, uint256 amount, uint16 indexed referralCode)"),
-  earn_withdraw: parseAbiItem("event Withdraw(address indexed reserve, address indexed user, address indexed to, uint256 amount)"),
-  borrow: parseAbiItem("event Borrow(address indexed reserve, address user, address indexed onBehalfOf, uint256 amount, uint8 interestRateMode, uint256 borrowRate, uint16 indexed referralCode)"),
-  repay: parseAbiItem("event Repay(address indexed reserve, address indexed user, address indexed repayer, uint256 amount, bool useATokens)")
+  earn_withdraw: parseAbiItem("event Withdraw(address indexed reserve, address indexed user, address indexed to, uint256 amount)")
 } as const;
 type Action = keyof typeof events;
 const topics = (value: unknown[]): string[] => value.flat(Infinity).filter((item): item is string => typeof item === "string");
 
-function poolLog(action: Action, overrides: { actor?: string; asset?: string; amount?: bigint; rateMode?: number; useATokens?: boolean } = {}) {
+function poolLog(action: Action, overrides: { actor?: string; asset?: string; amount?: bigint } = {}) {
   const actor = (overrides.actor ?? wallet) as `0x${string}`;
   const reserve = (overrides.asset ?? asset) as `0x${string}`;
   const amount = overrides.amount ?? amountRaw;
@@ -27,20 +25,10 @@ function poolLog(action: Action, overrides: { actor?: string; asset?: string; am
     topics: topics(encodeEventTopics({ abi: [events.earn_supply], eventName: "Supply", args: { reserve, onBehalfOf: actor, referralCode: 0 } })),
     data: encodeAbiParameters([{ type: "address" }, { type: "uint256" }], [actor, amount])
   };
-  if (action === "earn_withdraw") return {
+  return {
     address: AAVE_BASE_V3_MARKET,
     topics: topics(encodeEventTopics({ abi: [events.earn_withdraw], eventName: "Withdraw", args: { reserve, user: actor, to: actor } })),
     data: encodeAbiParameters([{ type: "uint256" }], [amount])
-  };
-  if (action === "borrow") return {
-    address: AAVE_BASE_V3_MARKET,
-    topics: topics(encodeEventTopics({ abi: [events.borrow], eventName: "Borrow", args: { reserve, onBehalfOf: actor, referralCode: 0 } })),
-    data: encodeAbiParameters([{ type: "address" }, { type: "uint256" }, { type: "uint8" }, { type: "uint256" }], [actor, amount, overrides.rateMode ?? 2, 1n])
-  };
-  return {
-    address: AAVE_BASE_V3_MARKET,
-    topics: topics(encodeEventTopics({ abi: [events.repay], eventName: "Repay", args: { reserve, user: actor, repayer: actor } })),
-    data: encodeAbiParameters([{ type: "uint256" }, { type: "bool" }], [amount, overrides.useATokens ?? false])
   };
 }
 
@@ -57,7 +45,7 @@ async function evidence(action: Action) {
 }
 
 describe("Aave protocol settlement evidence", () => {
-  it.each(["earn_supply", "earn_withdraw", "borrow", "repay"] as const)("requires an exact finalized %s Pool event", async (action) => {
+  it.each(["earn_supply", "earn_withdraw"] as const)("requires an exact finalized %s Pool event", async (action) => {
     const { prepared, observation } = await evidence(action);
     expect(await verifyExpectedEffect(prepared, observation)).toEqual({ status: "confirmed" });
     expect(await verifyExpectedEffect(prepared, { ...observation, receipt: { ...observation.receipt, logs: [] } })).toMatchObject({ status: "inconsistent" });
@@ -66,12 +54,11 @@ describe("Aave protocol settlement evidence", () => {
     expect(await verifyExpectedEffect(prepared, { ...observation, receipt: { ...observation.receipt, logs: [poolLog(action, { asset: AAVE_BASE_ASSETS.WETH })] } })).toMatchObject({ status: "inconsistent" });
   });
 
-  it("rejects stable-rate borrowing and aToken repayment", async () => {
-    const borrow = await evidence("borrow");
-    expect(await verifyExpectedEffect(borrow.prepared, { ...borrow.observation,
-      receipt: { ...borrow.observation.receipt, logs: [poolLog("borrow", { rateMode: 1 })] } })).toMatchObject({ status: "inconsistent" });
-    const repay = await evidence("repay");
-    expect(await verifyExpectedEffect(repay.prepared, { ...repay.observation,
-      receipt: { ...repay.observation.receipt, logs: [poolLog("repay", { useATokens: true })] } })).toMatchObject({ status: "inconsistent" });
+  it("does not confirm retired borrow or repay effects", async () => {
+    const { prepared, observation } = await evidence("earn_supply");
+    for (const type of ["borrow", "repay"]) {
+      expect(await verifyExpectedEffect({ ...prepared, semanticAction: type,
+        expectedEffect: { type, asset, amountRaw: amountRaw.toString() } }, observation)).toMatchObject({ status: "inconsistent" });
+    }
   });
 });

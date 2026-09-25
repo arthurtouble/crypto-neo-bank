@@ -29,11 +29,6 @@ const examples: Record<CustomerSection | "overview", Example> = {
     { label: "Sky", value: "USDC savings", note: "Ethereum USDC converts to sUSDS" },
     { label: "Morpho", value: "Unavailable", note: "Integration review needed" }
   ] },
-  borrow: { title: "Borrow", items: [
-    { label: "Debt", value: "$1,250", note: "Aave example position" },
-    { label: "Repayment", value: "$1,250 + interest", note: "Current debt is read from Aave" },
-    { label: "Health factor", value: "2.4", note: "Liquidation risk changes with markets" }
-  ] },
   invest: { title: "Invest", items: [
     { label: "Crypto", value: "Supported swaps", note: "Live route and asset checks required" },
     { label: "Tokenized stocks", value: "Unavailable", note: "Eligibility and venue required" },
