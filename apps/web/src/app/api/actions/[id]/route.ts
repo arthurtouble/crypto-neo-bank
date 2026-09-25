@@ -1,5 +1,5 @@
 import { env } from "cloudflare:workers";
-import { applyVerification, expireIfStale, getAction } from "@/lib/actions/store";
+import { applyVerification, expireIfStale, getAction, listActionEvents } from "@/lib/actions/store";
 import { verifyAction } from "@/lib/actions/verify";
 import { requireVerifiedSubject } from "@/lib/auth/server";
 import { errorResponse, route } from "@/lib/http/route";
@@ -23,5 +23,5 @@ export const GET = route("actions.get", { unavailable: "action_unavailable" }, a
       effects: action.effects, transactionHash: action.transactionHash });
     action = await applyVerification(env.PROJECTION_DB, action, result, now);
   }
-  return Response.json({ action: actionView(action), traceId: context.traceId });
+  return Response.json({ action: actionView(action), events: await listActionEvents(env.PROJECTION_DB, action.id), traceId: context.traceId });
 });

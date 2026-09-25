@@ -101,3 +101,15 @@ Production and sandbox must use different provider programs, secrets, queues, an
 - Incident ownership and 24/7 provider escalation paths documented.
 - Limits, disclosures, fees, and failure messages match approved program behavior.
 - No UI state represents a provider action as settled before authoritative confirmation.
+
+## Bridge sandbox notes
+
+From Bridge's documentation (apidocs.bridge.xyz), checked 25 September 2026:
+
+- Sandbox base URL is `https://api.sandbox.bridge.xyz/v0`; sandbox keys start with `sk-test`. Set `BRIDGE_API_BASE_URL` accordingly.
+- Sandbox customers must be created through the Customers API, not KYC links, and approval is simulated with `POST /v0/customers/{id}/simulate_kyc_approval`. Aura's onboarding uses KYC links, so a sandbox run needs a test customer created by hand and linked in `provider_customer_links`.
+- Sandbox fires no payment webhooks, and virtual accounts and transfers carry dummy data. Payout states (`bank.payout.updated`) can only be exercised in production.
+- Every POST needs an `Idempotency-Key`; a reused key with a different body is rejected, and keys expire after 24 hours.
+- Webhook endpoints start disabled and must be enabled with `PUT /webhooks` after creation.
+
+Rain's documentation requires a partner login and has not been reviewed. Rain webhooks are rejected until its signing scheme is implemented from that documentation.

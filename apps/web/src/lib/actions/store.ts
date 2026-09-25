@@ -112,6 +112,22 @@ export async function listActions(db: D1Database, subject: string, limit = 50): 
   return rows.results.map(fromRow);
 }
 
+/** Settled or submitted actions created in [start, end), oldest first. */
+export async function listActionsBetween(db: D1Database, subject: string, start: Date, end: Date): Promise<StoredAction[]> {
+  const rows = await db.prepare(`SELECT * FROM actions WHERE subject_reference = ? AND status NOT IN ('prepared', 'expired')
+    AND created_at >= ? AND created_at < ? ORDER BY created_at ASC LIMIT 5000`).bind(subject, start.toISOString(), end.toISOString()).all<ActionRow>();
+  return rows.results.map(fromRow);
+}
+
+export type ActionEvent = { type: string; evidence: Record<string, unknown>; occurredAt: string };
+
+/** An action's history: submission, status changes, and provider updates such as bank payout states. */
+export async function listActionEvents(db: D1Database, actionId: string): Promise<ActionEvent[]> {
+  const rows = await db.prepare("SELECT event_type, evidence_json, occurred_at FROM action_events WHERE action_id = ? ORDER BY occurred_at, rowid")
+    .bind(actionId).all<{ event_type: string; evidence_json: string; occurred_at: string }>();
+  return rows.results.map((row) => ({ type: row.event_type, evidence: JSON.parse(row.evidence_json) as Record<string, unknown>, occurredAt: row.occurred_at }));
+}
+
 async function appendEvent(db: D1Database, actionId: string, type: string, evidence: Record<string, unknown>, now: Date) {
   await db.prepare("INSERT INTO action_events (event_id, action_id, event_type, evidence_json, occurred_at) VALUES (?, ?, ?, ?, ?)")
     .bind(crypto.randomUUID(), actionId, type, JSON.stringify(evidence), now.toISOString()).run();

@@ -12,6 +12,7 @@ These files contain operational and security-sensitive context. Keep them in the
 - [Operations runbook](operations/operations-runbook.md): provider activation, secrets, migrations, reconciliation, and recovery.
 - [Architecture](architecture/architecture.md): systems of record and the rule that D1 never owns money.
 - [Money actions](architecture/money-actions.md): how every customer money movement is prepared, signed, verified, and recorded.
+- [Screen data](architecture/frontend-data.md): the API each screen reads, and example data for guests.
 - [Provider projections](architecture/provider-projections.md): the event contract for cards, rewards, and wallet policies.
 
 ## Sections
