@@ -11,7 +11,6 @@ const features = [
   { title: "Earn", text: "A few vaults, with the risks in view.", href: "/app/earn", image: "earn" },
   { title: "Send", text: "An address, a saved contact, or an Aura tag.", href: "/app/send", image: "send" },
   { title: "Invest", text: "Explore crypto and eligible markets.", href: "/app/invest", image: "invest" },
-  { title: "Borrow", text: "Understand debt before you borrow or repay.", href: "/app/borrow", image: "borrow" },
   { title: "Rewards", text: "Cashback and benefits when available.", href: "/app/rewards", image: "rewards" },
   { title: "Security", text: "Your access, limits, and recovery in one place.", href: "/app/settings", image: "settings" }
 ] as const;

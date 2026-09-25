@@ -7,7 +7,8 @@ vi.mock("@privy-io/react-auth", () => ({
   useWallets: () => ({ ready: true, wallets: [{ address: "0x1111111111111111111111111111111111111111", walletClientType: "privy" }] }),
   useSendTransaction: () => ({ sendTransaction: async () => ({ hash: "0x" }) })
 }));
-vi.mock("@tanstack/react-query", () => ({ useQuery: () => ({ data: undefined }) }));
+vi.mock("@privy-io/react-auth/smart-wallets", () => ({ useSmartWallets: () => ({ client: undefined }) }));
+vi.mock("@tanstack/react-query", () => ({ useQuery: () => ({ data: undefined }), useQueryClient: () => ({ invalidateQueries: async () => undefined }) }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: () => undefined }), useSearchParams: () => new URLSearchParams() }));
 vi.mock("wagmi", async (importOriginal) => ({
   ...await importOriginal<typeof import("wagmi")>(),

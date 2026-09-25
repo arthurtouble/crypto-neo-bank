@@ -5,19 +5,19 @@ description: Required scope and evidence for independent security assessment.
 
 ## In scope
 
-- Privy token verification, subject isolation, recovery/export presentation and passkey step-up.
-- Transaction intent creation, fingerprinting, policy, cooling, expiry, simulation, wallet handoff and state transitions.
-- Allowlisted networks, tokens, protocol contracts, route targets and ERC-20 approvals.
-- Account locks, per-account daily limits, and server-side feature switches on every money-moving path.
+- Privy token verification, subject isolation, smart-wallet binding, and recovery/export presentation.
+- Action preparation (`POST /api/actions`), call fingerprinting, hash binding, expiry, and status transitions.
+- The verifier: operation identity (decoded calls equal prepared calls), finality, expected events, and cross-chain delivery.
+- LI.FI quotes: server-held storage, Diamond pinning, price-impact and slippage bounds, and batched ERC-20 approvals.
+- Account lock, daily limit, saved-recipients-only mode, recipient cooling, valuation, and feature switches on every action.
 - Operator authorization, Cloudflare Access activation boundary and feature kill switches.
-- Provider webhook authentication, replay prevention, queue retries, dead-letter processing and reconciliation.
+- Per-provider webhook verification (Bridge RSA, Privy Svix, Rain rejection), customer resolution through `provider_customer_links`, replay prevention, queue retries, dead-letter processing and reconciliation.
 - D1 migrations, evidence integrity, backup/export/restore, log minimization and incident procedures.
 - CSP, security headers, Turnstile verification, abuse controls and API error behavior.
-- Support-assistant isolation from signing, transactions, administration and individualized advice.
 
 ## Required tests
 
-Test horizontal and vertical authorization, forged Privy/Access headers, transaction-policy bypass, altered calldata, quote tampering, stale review reuse, webhook timing/replay, queue poison messages, unsupported asset/network paths, prompt injection, sensitive log leakage and rollback/schema mismatch.
+Test horizontal and vertical authorization, forged Privy/Access headers, transaction-policy bypass, altered calldata, quote tampering, stale quote reuse, hash replay across actions, spoofed events in an unrelated operation, webhook timing/replay, queue poison messages, unsupported asset/network paths, sensitive log leakage and rollback/schema mismatch.
 
 ## Exit standard
 

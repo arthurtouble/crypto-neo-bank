@@ -1,7 +1,7 @@
 "use client";
 
-import { usePrivy, useWallets } from "@privy-io/react-auth";
-import { useMemo } from "react";
+import { usePrivy } from "@privy-io/react-auth";
+import { useAuraWallet } from "@/lib/client/use-aura-wallet";
 
 function initials(value: string) {
   return value.split(/\s|@/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("") || "A";
@@ -13,9 +13,8 @@ function compact(address?: string) {
 
 export function ClientIdentity() {
   const { authenticated, user } = usePrivy();
-  const { wallets } = useWallets();
-  const wallet = useMemo(() => wallets.find((item) => item.walletClientType === "privy") ?? wallets[0], [wallets]);
+  const { address } = useAuraWallet();
   const label = authenticated ? user?.email?.address ?? user?.google?.email ?? "Aura account" : "Explore Aura";
 
-  return <div className="clientIdentity"><span className="avatar">{initials(label)}</span><span><strong>{label}</strong><small>{authenticated ? compact(wallet?.address) : "Guest view"}</small></span></div>;
+  return <div className="clientIdentity"><span className="avatar">{initials(label)}</span><span><strong>{label}</strong><small>{authenticated ? compact(address) : "Guest view"}</small></span></div>;
 }

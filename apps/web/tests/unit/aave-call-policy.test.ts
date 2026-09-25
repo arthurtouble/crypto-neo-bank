@@ -11,8 +11,6 @@ const amount = 1_000_000n;
 const abi = [
   { type: "function", name: "supply", inputs: [{ type: "address" }, { type: "uint256" }, { type: "address" }, { type: "uint16" }] },
   { type: "function", name: "withdraw", inputs: [{ type: "address" }, { type: "uint256" }, { type: "address" }] },
-  { type: "function", name: "borrow", inputs: [{ type: "address" }, { type: "uint256" }, { type: "uint256" }, { type: "uint16" }, { type: "address" }] },
-  { type: "function", name: "repay", inputs: [{ type: "address" }, { type: "uint256" }, { type: "uint256" }, { type: "address" }] },
   { type: "function", name: "approve", inputs: [{ type: "address" }, { type: "uint256" }] }
 ] as const;
 
@@ -20,13 +18,13 @@ function tx(to: string, data: `0x${string}`, overrides: Record<string, unknown> 
   return { chainId: 8453, from: wallet, to, data, value: "0", ...overrides };
 }
 
-function call(action: "supply" | "withdraw" | "borrow" | "repay", args: readonly unknown[], overrides: Record<string, unknown> = {}) {
+function call(action: "supply" | "withdraw", args: readonly unknown[], overrides: Record<string, unknown> = {}) {
   const data = encodeFunctionData({ abi, functionName: action, args: args as never });
   return validateAaveCall({ action, wallet, asset: usdc, amountRaw: amount, transaction: tx(pool, data), ...overrides });
 }
 
 describe("Aave Base exact-call policy", () => {
-  it.each(["supply", "withdraw", "borrow", "repay", "approve"] as const)("builds only an exact governed %s call", (action) => {
+  it.each(["supply", "withdraw", "approve"] as const)("builds only an exact governed %s call", (action) => {
     const built = buildAaveBaseCall({ action, wallet, asset: usdc, amountRaw: amount });
     expect(built).toMatchObject({ chainId: 8453, from: wallet, to: action === "approve" ? usdc : pool, value: "0" });
     expect(validateAaveCall({ action, wallet, asset: usdc, amountRaw: amount, transaction: built }).amountRaw).toBe(amount.toString());
@@ -35,13 +33,11 @@ describe("Aave Base exact-call policy", () => {
   it("never builds an unbounded approval or zero amount", () => {
     expect(() => buildAaveBaseCall({ action: "approve", wallet, asset: usdc, amountRaw: maxUint256 })).toThrow();
     expect(() => buildAaveBaseCall({ action: "supply", wallet, asset: usdc, amountRaw: 0n })).toThrow();
-    expect(() => buildAaveBaseCall({ action: "borrow", wallet: other, asset: other, amountRaw: amount })).toThrow();
+    expect(() => buildAaveBaseCall({ action: "supply", wallet: other, asset: other, amountRaw: amount })).toThrow();
   });
   it.each([
     ["supply", [usdc, amount, wallet, 0]],
-    ["withdraw", [usdc, amount, wallet]],
-    ["borrow", [usdc, amount, 2n, 0, wallet]],
-    ["repay", [usdc, amount, 2n, wallet]]
+    ["withdraw", [usdc, amount, wallet]]
   ] as const)("accepts exact %s", (action, args) => {
     expect(call(action, args)).toMatchObject({ action, asset: usdc.toLowerCase(), amountRaw: amount.toString() });
   });
@@ -62,10 +58,7 @@ describe("Aave Base exact-call policy", () => {
     ["wrong amount", "supply", [usdc, amount + 1n, wallet, 0]],
     ["third-party supply", "supply", [usdc, amount, other, 0]],
     ["nonzero referral", "supply", [usdc, amount, wallet, 1]],
-    ["third-party withdrawal", "withdraw", [usdc, amount, other]],
-    ["stable borrow", "borrow", [usdc, amount, 1n, 0, wallet]],
-    ["delegated borrow", "borrow", [usdc, amount, 2n, 0, other]],
-    ["wrong repay mode", "repay", [usdc, amount, 1n, wallet]]
+    ["third-party withdrawal", "withdraw", [usdc, amount, other]]
   ] as const)("rejects %s", (_name, action, args) => {
     expect(() => call(action, args)).toThrow();
   });
@@ -81,9 +74,8 @@ describe("Aave Base exact-call policy", () => {
     expect(() => validateAaveCall({ action: "supply", wallet, asset: other, amountRaw: amount, transaction: tx(pool, data) })).toThrow();
   });
 
-  it("permits max only for explicitly reviewed withdraw and repay", () => {
+  it("permits max only for an explicitly reviewed withdrawal", () => {
     expect(call("withdraw", [usdc, maxUint256, wallet], { max: true, amountRaw: 1n })).toMatchObject({ amountMode: "max", amountRaw: null });
-    expect(call("repay", [usdc, maxUint256, 2n, wallet], { max: true, amountRaw: 1n })).toMatchObject({ amountMode: "max", amountRaw: null });
     expect(() => call("withdraw", [usdc, maxUint256, wallet])).toThrow();
     expect(() => call("supply", [usdc, maxUint256, wallet, 0], { max: true })).toThrow();
   });

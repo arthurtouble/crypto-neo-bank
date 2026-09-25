@@ -1,4 +1,4 @@
-type IntentRow = { intent_id: string; subject_reference: string };
+type ActionRow = { action_id: string; subject_reference: string; status: string };
 type WebhookRow = { event_id: string; subject_reference: string | null; provider: string };
 
 function issueStatement(
@@ -38,22 +38,20 @@ export async function recordDeadLetter(db: D1Database, message: Message<{ event?
 export async function runScheduledReconciliation(db: D1Database, scheduledTime = Date.now()) {
   const now = new Date(scheduledTime).toISOString();
   const staleBefore = new Date(scheduledTime - 15 * 60_000).toISOString();
+  const settlingBefore = new Date(scheduledTime - 2 * 60 * 60_000).toISOString();
   const webhookStaleBefore = new Date(scheduledTime - 10 * 60_000).toISOString();
-  const [expired, staleSubmitted, failedWebhooks, stuckWebhooks] = await db.batch([
-    db.prepare("SELECT intent_id, subject_reference FROM transaction_intents WHERE status = 'reviewed' AND expires_at < ? LIMIT 250").bind(now),
-    db.prepare("SELECT intent_id, subject_reference FROM transaction_intents WHERE status = 'submitted' AND updated_at < ? LIMIT 250").bind(staleBefore),
+  const [staleActions, failedWebhooks, stuckWebhooks] = await db.batch([
+    db.prepare(`SELECT action_id, subject_reference, status FROM actions
+      WHERE (status = 'submitted' AND submitted_at < ?) OR (status = 'settling' AND submitted_at < ?) LIMIT 250`).bind(staleBefore, settlingBefore),
     db.prepare("SELECT event_id, subject_reference, provider FROM webhook_receipts WHERE processing_status = 'failed' LIMIT 250"),
     db.prepare("SELECT event_id, subject_reference, provider FROM webhook_receipts WHERE processing_status IN ('received', 'enqueued') AND received_at < ? LIMIT 250").bind(webhookStaleBefore)
   ]);
 
   const statements: D1PreparedStatement[] = [];
-  for (const item of expired.results as unknown as IntentRow[]) statements.push(issueStatement(db, {
-    subjectReference: item.subject_reference, type: "expired_intent", severity: "warning", sourceName: "transaction_policy",
-    sourceReference: item.intent_id, summary: "A reviewed transaction intent expired without submission.", now
-  }));
-  for (const item of staleSubmitted.results as unknown as IntentRow[]) statements.push(issueStatement(db, {
-    subjectReference: item.subject_reference, type: "stale_transaction", severity: "high", sourceName: "source_chain",
-    sourceReference: item.intent_id, summary: "A submitted transaction has no observed source receipt after 15 minutes.", now
+  for (const item of staleActions.results as unknown as ActionRow[]) statements.push(issueStatement(db, {
+    subjectReference: item.subject_reference, type: "stale_action", severity: "high", sourceName: "source_chain",
+    sourceReference: item.action_id, summary: item.status === "settling"
+      ? "A cross-chain action has not been delivered after 2 hours." : "A submitted action has no settled receipt after 15 minutes.", now
   }));
   for (const item of failedWebhooks.results as unknown as WebhookRow[]) statements.push(issueStatement(db, {
     subjectReference: item.subject_reference, type: "webhook_failed", severity: "high", sourceName: item.provider,
@@ -65,8 +63,7 @@ export async function runScheduledReconciliation(db: D1Database, scheduledTime =
   }));
 
   const details = {
-    expiredIntents: expired.results.length,
-    staleTransactions: staleSubmitted.results.length,
+    staleActions: staleActions.results.length,
     failedWebhooks: failedWebhooks.results.length,
     stalledWebhooks: stuckWebhooks.results.length,
     issueCandidates: statements.length

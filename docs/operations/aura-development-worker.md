@@ -1,11 +1,42 @@
 # Aura development Worker
 
-`aura-dev.aurel-events.workers.dev` is the isolated development origin. It uses the `dev` Wrangler environment in `apps/web/wrangler.jsonc`, D1 `aura-dev-projections`, and queue `aura-dev-provider-events`. The original `aurel-financial-os` Worker and D1 are separate.
+`aura-dev.aurel-events.workers.dev` is the isolated development origin. It uses the `dev` Wrangler environment in `apps/web/wrangler.jsonc`, D1 `aura-dev-projections`, and queue `aura-dev-provider-events`. The docs Worker is `aura-dev-docs.aurel-events.workers.dev`. The original `aurel-financial-os` Worker and its D1 are separate; never touch them without explicit instruction.
 
-Run `pnpm deploy:dev` from the repository root to build and deploy this Worker. Apply future migrations with `pnpm --filter @aurel/web exec wrangler d1 migrations apply aura-dev-projections --remote --env dev` after reviewing them. The isolated D1 was migrated through `0039_ethereum_usdc_bridge.sql` on 24 September 2026. The latest code deployment version is `c18f6f7b-82e0-468e-89aa-bd019eeb31e8`. Run `pnpm docs:deploy:dev` for the separate docs Worker, currently version `c708b621-3238-42f3-93c0-cb153e544da7`.
+## Deploy
 
-This origin can show the landing page and labeled example-data product tour without credentials. Its links use the isolated documentation Worker at `aura-dev-docs.aurel-events.workers.dev`; the original docs Worker remains separate. `PRIVY_APP_SECRET` is installed only on `aura-dev`, and the origin is in Privy's allowed domains. The email/wallet sign-in modal loaded on the deployed app; completing a user sign-in and authenticated API check remains. The development build uses [Cloudflare's Turnstile test site and secret keys](https://developers.cloudflare.com/turnstile/troubleshooting/testing/); the test secret is installed only on `aura-dev`. These keys are not a production bot control. Provider webhooks use a development-only signing secret. Do not copy production secrets into this Worker or set live provider modes for a demo. Anyone can sign in; the first sign-in asks for acceptance of the current terms. Aave Base supply, withdraw, borrow, and repay, and Sky deposits and withdrawals, prepare exact wallet calls for an authenticated account with a linked Privy wallet; the chain and the protocol decide the result. `direct_transfers`, `swaps`, `cross_chain`, and `defi_actions` are enabled only in isolated dev D1. Swap execution remains limited to exact Base USDC/WETH Uniswap calls and Base USDC → Arbitrum or Ethereum USDC LI.FI/Across V4 calls that pass the current server-held policy. The Bridge, Rain, acquiring, securities, and rewards programs are still unconnected. The dev provider-event consumer `aura-dev-provider-event-consumer` applies signed events from `aura-dev-provider-events` to the projection tables; the dev webhook signing secret is in the ignored local `.aura-dev-webhook-secret` file, not in Git.
+```bash
+pnpm deploy:dev          # web Worker
+pnpm events:deploy:dev   # provider-event consumer
+pnpm docs:deploy:dev     # docs Worker
+```
 
-Use Cloudflare's secret controls for credentials; never commit them. Exercise sign-in, recovery, wallet ownership, logout and session revocation on this origin before treating authenticated records as verified. Set `AURA_SMOKE_URL=https://aura-dev.aurel-events.workers.dev` and `AURA_SMOKE_DOCS_URL=https://aura-dev-docs.aurel-events.workers.dev`, then run `pnpm test:deployment` after every deployment. The script has no default app target. On 24 September the branch passed 1,155 web unit tests across 139 files, typecheck, lint, build, and 29 desktop/mobile product Playwright checks (one skipped). Earlier full browser and read-only LI.FI checks also passed. The latest deployment smoke passed landing, guest browsing, health, protected routes, retired write routes, webhook signature rejection, and unknown Aura tag privacy checks. Failed chain balance reads now display unavailable rather than observed. Historical card projections remain stored but `/api/cards` does not present one as an active issuer card until a connected issuer confirms it. No customer transaction was signed.
+After every deployment, run the smoke check:
 
-Sky USDC ↔ sUSDS uses the verified Ethereum Spark wrapper with chain balance reads and bounded exact wallet calls. Sky converts Ethereum USDC within the deposit transaction; Base USDC must first move to Ethereum through a separate reviewed bridge. Authenticated Overview and Earn share the same live sUSDS balance read. The receipt endpoint checks finalized Ethereum call identity and token/vault events before declaring a Sky action confirmed. The latest deployment smoke passed, including unauthenticated Sky action and receipt rejection (401). No funded Sky or Privy signing test has been performed; see [Sky USDC savings](sky-usdc.md). A current read-only Base → Ethereum USDC LI.FI quote passed the exact route policy, and its dev D1 triggers now admit reviewed approval/preparation. No funded bridge or Sky transaction has been signed.
+```bash
+AURA_SMOKE_URL=https://aura-dev.aurel-events.workers.dev \
+AURA_SMOKE_DOCS_URL=https://aura-dev-docs.aurel-events.workers.dev \
+pnpm test:deployment
+```
+
+## Database
+
+The schema is `infra/d1/migrations/0001_baseline.sql`. Until production is migrated, schema changes edit the baseline, and the dev database is reset rather than migrated:
+
+```bash
+pnpm d1:reset:dev
+```
+
+The reset drops every table in `aura-dev-projections` and applies the current schema. Development data is disposable. It then needs the feature switches it had before, which the baseline seeds as off; turn them on from the operations console or with `wrangler d1 execute`.
+
+Adopting the baseline on 25 September 2026 requires one reset, because the dev database was migrated through the retired numbered files (last `0039`).
+
+## Configuration
+
+- Secrets are set with `wrangler secret put --env dev`, never in `wrangler.jsonc`. `PRIVY_APP_SECRET`, the Turnstile test secret, and a development-only webhook signing secret are installed only on `aura-dev`. The local copy of the webhook secret is in the ignored `.aura-dev-webhook-secret`.
+- Turnstile uses [Cloudflare's test keys](https://developers.cloudflare.com/turnstile/troubleshooting/testing/), which are not a production bot control.
+- The origin is in Privy's allowed domains. Anyone can sign in; the first sign-in asks for acceptance of the current terms.
+- Never set live provider modes or copy production secrets here.
+
+## What has and has not been exercised
+
+Guest browsing, sign-in modal loading, protected-route rejection, webhook signature rejection, and unknown Aura tag privacy pass the deployment smoke. No customer transaction has been signed, no funded swap, bridge, Aave, or Sky action has run, and Bridge, Rain, and acquiring programs are not connected. Exercise sign-in, recovery, wallet ownership, logout, and session revocation here before treating authenticated records as verified.

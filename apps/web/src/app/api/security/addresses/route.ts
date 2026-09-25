@@ -2,8 +2,8 @@ import { env } from "cloudflare:workers";
 import { z } from "zod";
 import { requireVerifiedSubject } from "@/lib/auth/server";
 import { ensureSubjectProfile } from "@/lib/profile/ensure";
-import { AddressStepUpUnavailableError, removeWalletAddress, saveWalletAddress } from "@/lib/security/wallet-address-book";
-import { route, errorResponse } from "@/lib/http/route";
+import { removeWalletAddress, saveWalletAddress } from "@/lib/security/wallet-address-book";
+import { route } from "@/lib/http/route";
 
 const createSchema = z.object({ address: z.string().regex(/^0x[a-fA-F0-9]{40}$/), label: z.string().trim().min(1).max(48) });
 type EntryRow = { entry_id: string; address: string; label: string; created_at: string; available_at: string; last_used_at: string | null };
@@ -15,7 +15,7 @@ export const GET = route("security.addresses.get", { unavailable: "address_book_
   return Response.json({ entries: rows.results.map((row) => ({ entryId: row.entry_id, address: row.address, label: row.label, createdAt: row.created_at, availableAt: row.available_at, lastUsedAt: row.last_used_at })), traceId }, { headers: { "Cache-Control": "no-store" } });
 });
 
-export const POST = route("security.addresses.post", { unavailable: "address_create_unavailable", invalid: "invalid_address_entry", onError: (error, context) => error instanceof AddressStepUpUnavailableError ? errorResponse(409, "step_up_unavailable", context) : undefined }, async (request: Request, { traceId }) => {
+export const POST = route("security.addresses.post", { unavailable: "address_create_unavailable", invalid: "invalid_address_entry" }, async (request: Request, { traceId }) => {
   const subject = await requireVerifiedSubject(request);
   const input = createSchema.parse(await request.json());
   await ensureSubjectProfile(env.PROJECTION_DB, subject.subjectReference);

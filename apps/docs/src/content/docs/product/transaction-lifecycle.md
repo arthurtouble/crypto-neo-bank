@@ -1,87 +1,60 @@
 ---
 title: Activity and transaction states
-description: What prepared, cooling, reviewed, submitted, confirmed, failed, and cancelled mean.
+description: What submitted, on its way, complete, failed, and not confirmed mean.
 ---
 
-Activity is an evidence trail, not just a list of successful payments. Aura records the states it observes so customers and operations can distinguish a request from a settled result.
+Transactions shows more than successful payments. It records what Aura saw at each step, so you can tell a request apart from a settled result. Getting a quote doesn't add anything to the list.
 
-Supported swaps use the governed preparation and intent record. LI.FI route discovery alone does not create a transaction or a completed Activity item.
+## How a money movement works
 
-## Standard lifecycle
+1. **You ask.** You choose the action, amount, network, and recipient or position.
+2. **Aura prepares it.** Aura's server checks that the feature is on, applies any controls you've set, and builds the exact transaction.
+3. **You sign.** Your wallet shows the transaction. Any approval and the action are signed together, as one operation. You can cancel.
+4. **Your wallet submits it.** It sends Aura the transaction hash.
+5. **Aura checks it.** Aura reads the blockchain itself and checks the result.
 
-1. **Request.** The customer enters the action, amount, network, destination, or protocol position.
-2. **Prepare.** Aura or the integrated protocol produces an unsigned transaction plan.
-3. **Validate.** The server checks product policy, supported contracts, account controls, and required disclosures.
-4. **Simulate.** Supported direct sends and reviewed Swap routes use gas estimation and a read-only execution call. Aave previews the position; Sky checks the current balance and conversion limit before wallet signing.
-5. **Confirm.** The wallet presents the final transaction. The customer signs or cancels.
-6. **Submit.** A transaction hash exists and the source network has received the transaction.
-7. **Observe.** Aura checks the source receipt and, where relevant, the provider or destination state.
+## What each status means
 
-Supported direct sends use **Review**, **Confirm**, **Submitted**, and **Complete**. Eligible accounts can also confirm the reviewed USD Coin Swap route when it is enabled. Other route previews do not reach a signing step. The progress panel can be closed after submission; the request remains visible in Activity.
-
-## State meanings
-
-| State | Meaning |
+| Status | Meaning |
 | --- | --- |
-| **Blocked** | A policy rule rejected the request. No signing request was created. |
-| **Cooling** | A new-destination or high-value waiting period is active. |
-| **Reviewed** | The hold elapsed and the same instruction was revalidated. This release expires after 15 minutes. |
-| **Submitted** | The customer signed and a transaction hash exists. Settlement is still pending. |
-| **Confirmed** | The transaction has passed the required checks. A cross-network Swap also needs verified delivery on the destination network. |
-| **Failed** | Preparation, submission, provider handling, or the source receipt failed. |
-| **Cancelled** | The instruction was cancelled before settlement. |
+| **Blocked** | A feature switch or one of your controls stopped the request. Nothing was sent to your wallet. |
+| **Submitted** | You signed and a transaction hash exists. Aura is still checking. |
+| **On its way** | A move between networks has left the first network. It hasn't arrived yet. |
+| **Complete** | The transaction matches what you reviewed, the network finalized it, and the expected transfer or deposit appeared. A move between networks must also arrive. |
+| **Failed** | The network rejected it, the route failed, or the result didn't match what you reviewed. Transactions shows the reason. |
+| **Not confirmed** | Aura didn't get a transaction hash in time. If you signed it in your wallet, check your wallet's activity. This isn't the same as failed. |
 
-“Submitted” and “Complete” are deliberately different. A transaction hash proves only that a request was submitted. For supported new transfers, Aura compares the final receipt, calls, and effects with the prepared instruction before marking it complete. A receipt alone is not enough. Older records that lack this binding remain unverified even if a source receipt reports success.
+A transaction hash only proves something was submitted. Before Aura marks a transaction complete, it compares what was signed, and what it did, with what Aura prepared. A receipt alone isn't enough. Aura keeps checking until the network treats the transaction as final, because earlier blocks can occasionally be rewritten.
 
-States do not move arbitrarily. For example, a cooling instruction must be reviewed before submission, and a submitted instruction needs matched settlement evidence before Aura calls it confirmed. A chain reorganization can invalidate earlier evidence, so Aura keeps checking until the required finality threshold is reached.
+Open any item to see its timeline. The timeline is only ever added to, never edited. The blockchain or partner still decides whether it settled.
 
-Open an item in Activity to see its recorded timeline. It can include security review, completion of a security delay, network submission, and final confirmation or failure. Timeline entries come from append-only intent events; the blockchain or provider still controls settlement truth.
+Transactions can also show your Aave history from an outside source. Each record shows where it came from. Outside history doesn't mean Aura started or checked that transaction.
 
-For Aave, Activity can also read protocol history from an external source. The source remains visible on each record so an Aura workflow entry is never presented as if it were a protocol observation. External history is not proof that Aura initiated or verified the action.
+## Exports
 
-## Exports and coverage
+Before it creates a file, the export dialog tells you what's in your current view. It shows how many rows have network receipts, how many came straight from the protocol, and how many have a US dollar estimate.
 
-The Export dialog describes the records in the current filtered view before creating a file. It shows how many rows have network receipts, how many came directly from the protocol source, and how many carry a source-reported or action-time USD estimate.
+- **Activity CSV** includes dates, amounts, statuses, sources, and transaction hashes.
+- **Tax Support CSV** adds where each record came from, with clearly marked blanks for tax classification and cost basis.
 
-- **Activity CSV** includes dates, amounts, statuses, sources and transaction hashes.
-- **Tax Support CSV** adds evidence authority and explicit placeholders for tax classification and cost basis.
+Aura doesn't guess a purchase price, gain or loss, or tax treatment when it doesn't have the evidence. Missing cost basis shows as **Unavailable**, and tax classification shows as **Review required**. The file supports your records. It isn't a bank statement, a tax return, or tax advice.
 
-Aura does not infer a purchase price, disposal method, jurisdictional tax treatment, gain or loss when the evidence is incomplete. Missing cost basis stays **Unavailable**, and tax classification stays **Review required**. The file is supporting evidence, not a bank statement, tax return or tax advice.
+Aave history comes in pages and can be temporarily unavailable. If the data is partial or missing, the export tells you. It won't pretend the file is complete.
 
-Aave activity is paginated and can be temporarily unavailable. The export warns when the current protocol response is partial or missing instead of silently presenting the file as complete.
+## Moves between networks
 
-## Instruction fingerprints
+When you move an asset between networks, the first network confirming doesn't prove delivery. Transactions shows the first transaction and the delivery separately.
 
-A high-value action that completes its cooling period is not released as a blank approval. Aura compares the network, asset, amount, destination, and relevant call data with the original instruction. If a material field changes, the previous review does not apply.
+Aura marks the move complete only after LI.FI reports delivery and Aura sees at least the minimum amount arrive. If less arrives, a refund is reported, or delivery fails, Transactions tells you.
 
-The reviewed state lasts 15 minutes. After that, the customer must prepare the action again. This prevents an old approval window from remaining open indefinitely.
-
-## Simulations are estimates
-
-Simulation can catch a likely revert and estimate gas under current state. It cannot guarantee execution at a later block. Prices, balances, allowances, contract state, network conditions, and oracle values can change before settlement.
-
-For a protocol action, previewed health factors and rates are decision support. They are not guaranteed outcomes.
-
-## Receipt checks
-
-Aura checks supported submitted transactions using source-chain JSON-RPC. The activity record can include the transaction hash, source block, receipt result, last-check time, and available route or provider reference.
-
-For a cross-network Swap, source confirmation does not prove delivery. Activity shows the first transaction and destination delivery separately. Aura marks the Swap complete only after it verifies both. If less than the stated minimum arrives, a refund is reported, or the evidence changes, the transfer stays under review. A quote preview is not a transfer.
-
-A submitted transaction unresolved for more than 15 minutes becomes an operations exception. That threshold starts investigation; it does not mean the transaction has failed or that Aura guarantees resolution within 15 minutes.
-
-## A transfer reported after controls close
-
-If your wallet broadcast a previously prepared Base transfer but its hash reaches Aura after a review expires, access changes, or an account control closes, Activity keeps it in a separate **Transfer review** section. The report is not a new approval. Aura checks the exact on-chain call, receipt, finality, and expected transfer effect. Until those checks finish it says **Checking transfer**. A settled transfer is marked **Transfer settled — approval review needed**, not an ordinary completed Aura instruction. A mismatch or reverted transfer is shown separately and sent for operations review. This path cannot reopen signing or change a cancelled instruction into an approved payment.
-
-The same observation-only rule applies to a late Swap report. For a cross-network Swap, checking the first transaction is not the same as confirming delivery; support reviews the result separately. A late report never renews an expired approval or permits another signature.
+If a move is unresolved for more than 15 minutes, our operations team is alerted. That starts an investigation. It doesn't mean the move failed.
 
 ## Replaced and repeated transactions
 
-A wallet may replace a pending transaction with another transaction using the same nonce. Network explorers may show the original as dropped or replaced. Aura should preserve the known history rather than rewriting it as though only one request existed.
+A wallet can replace a pending transaction with a new one. Block explorers may then show the original as dropped or replaced. Aura keeps the full history rather than rewriting it as one request.
 
-Before retrying any uncertain transaction, check the wallet activity and authoritative source. Repeating a transfer can produce two valid payments.
+Before retrying anything uncertain, check your wallet's activity and a block explorer. Repeating a transfer can mean paying twice.
 
-## What Aura cannot reverse
+## What Aura can't reverse
 
-Public-chain transactions are generally irreversible after settlement. Aura cannot recall funds sent to the wrong address, undo a protocol liquidation, or cancel a confirmed route. Product controls are designed to reduce preventable mistakes before signing.
+Blockchain transactions generally can't be reversed once settled. Aura can't recall funds sent to the wrong address, or cancel a confirmed move between networks. Aura's controls are there to help you catch mistakes before you sign.

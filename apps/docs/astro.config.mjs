@@ -33,7 +33,7 @@ export default defineConfig({
         ] },
         { label: "Build wealth", items: [
           { label: "Swap", slug: "product/swaps" },
-          { label: "Earn and borrow", slug: "product/earn-and-borrow" },
+          { label: "Earn", slug: "product/earn" },
           { label: "Tokenized markets", slug: "product/tokenized-markets" }
         ] },
         { label: "Safety", items: [

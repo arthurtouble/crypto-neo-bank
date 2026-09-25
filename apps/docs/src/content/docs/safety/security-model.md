@@ -1,78 +1,75 @@
 ---
 title: Security model
-description: The controls that protect access, preparation, signing, and settlement.
+description: How Aura protects sign-in, preparing transactions, signing, and settlement.
 sidebar:
   order: 1
 ---
 
-No single control can prevent every loss. Aura uses layers, and each layer has a clear job. The model assumes that browsers, dependencies, providers, protocols, and customers can all make mistakes or come under attack.
+No single safeguard can stop every loss, so Aura uses several layers, each with a clear job. We assume browsers, software libraries, partners, protocols, and people can all make mistakes or be attacked.
 
-## Access
+## Signing in
 
-Privy handles sign-in and wallet infrastructure. Protected Aura APIs verify the Privy access token on the server. They do not trust an identity supplied by the browser.
+Privy runs sign-in and your wallet. Aura's server checks your Privy sign-in on every protected request. It never trusts an identity your browser claims.
 
-Authentication proves access to an account; it does not prove that every transaction is safe. Aura currently holds actions above the step-up threshold until it can verify approval for that exact instruction on the server. Passkey enrollment alone is not sufficient evidence.
+Signing in proves you can access the account. It doesn't prove a transaction is safe, so Aura also checks each money movement before you sign.
 
-The planned action-bound passkey check is separate from account sign-in. Its verifier and one-use evidence store exist but are not connected to a customer enrollment or approval flow. Before activation, Aura still needs a reviewed first-enrollment and recovery process, server-trusted simulation of the exact call before authorization, verification of the resulting effects after settlement, an exact production domain for the passkey, and an independent security assessment. The initial scope is direct transfers only. Aura's approval would govern only actions through Aura; it would not make the wallet itself unable to sign elsewhere.
+## Preparing a transaction
 
-The disconnected authorization store checks the account lock, direct-transfer availability, saved-recipient cooling, a recent server-authored valuation, and current rolling spending limits before recording a direct-transfer approval. It is not connected to signing. This check does not fetch a new market price. Fresh external valuation when the customer authorizes, server-trusted exact-call simulation, post-settlement effect verification, and a final pre-sign policy recheck remain required before any customer approval flow can go live.
+Aura's server builds every money movement. It checks that the feature is on and applies any controls you've set. Then it builds the exact transaction and records what it should do on the blockchain.
 
-## Preparation
-
-Aura checks the account lock, supported chain and asset, destination rules, cooling period, amount limits, review threshold, step-up requirement, and required disclosures.
-
-Unknown transaction values do not silently pass as small transactions. If Aura cannot establish a fresh, independent USD value for a transfer, preparation stops.
+If you've set a daily limit and Aura can't value the amount, it blocks the movement. An unknown value never passes as a small one.
 
 ## Signing
 
-The wallet shows the final transaction. You sign or cancel. Aura cannot sign on your behalf.
+Your wallet shows the transaction, and you sign or cancel. A token approval and the action it enables are signed together, as one operation. Aura never holds your keys and can't sign for you.
 
 ## Settlement
 
-The chain or provider decides whether an action settles. Aura records transaction hashes and rechecks supported source-chain receipts, but its database is not the final balance record.
+The blockchain, or the partner, decides whether a movement settles. Aura then reads the blockchain itself. It marks a movement complete only when:
 
-## Default product controls
+- what was signed matches what Aura prepared;
+- the network has finalized it; and
+- the expected transfer or deposit appears.
 
-| Control | Default | What it does |
+For a move between networks, Aura also waits for it to arrive. Aura's database is never the final record of your balance.
+
+## Your controls
+
+These are all optional and off until you turn them on. Changes apply right away, and Aura keeps a record of them.
+
+| Control | Starts as | What it does |
 | --- | --- | --- |
-| Emergency account lock | Off | Blocks new transaction intents prepared through Aura when enabled |
-| Saved destinations only | Off | Optionally restricts direct transfers to cooled address-book entries |
-| New-address cooling | 24 hours | Delays transfers of $1,000 or more to a newly saved destination |
-| Rolling transaction limit | $25,000 / 24 hours | Includes recent submitted, confirmed, and still-active prepared transfers; a final database guard prevents concurrent preparations from exceeding it |
-| Step-up threshold | $10,000 | Holds higher-risk preparation until transaction-specific approval can be verified server-side |
-| High-value review | $25,000 / 24 hours | Places the instruction in cooling and later revalidates the same details |
-| Reviewed-intent expiry | 15 minutes | Requires prompt submission after review |
-| Reserve-floor warning | $10,000 | Warns when visible liquid reserves may fall below the preference; it is not a hard hold |
+| Emergency lock | Off | Stops Aura preparing any money movement |
+| Daily limit | Off | Caps the US dollar value you send to other people in any 24 hours. Swaps within your own account and Earn don't count |
+| Saved recipients only | Off | Lets you send only to recipients you've saved |
+| Wait before new recipients | 4 hours | When saved recipients only is on, a newly saved recipient can't receive until the wait ends |
 
-These are product defaults, not universal promises. Availability and exact enforcement can depend on the action and authoritative data available at the time.
+See [account controls](/safety/account-controls/).
 
-An ordinary signed-in session may tighten transaction controls but cannot unlock an account or raise limits. Such changes need a separate verified recovery path, which is not yet self-service.
+## How we separate access
 
-## Operations separation
+- Customer features need a verified sign-in.
+- Our operations tools need a separate, named list of staff accounts. If the list is empty, nobody has access.
+- Networks, assets, and contracts are checked before your wallet opens.
+- Our production secrets stay on the server. They're never in the browser or our source code.
+- Updates from partners must carry a valid signature and timestamp before we process them.
 
-- Customer APIs require a verified customer identity.
-- Operations APIs require a separate explicit subject allowlist. An empty allowlist grants no operator access.
-- Supported chains, assets, contracts, and direct-transfer destinations are checked before a wallet prompt.
-- The support assistant is read-only and has no signing or administrative tool.
-- Production secrets stay in server-side Cloudflare bindings rather than browser variables or source control.
-- Provider events require signature and timestamp verification before queueing.
+## Records and monitoring
 
-## Evidence and monitoring
+Changes that matter for security leave a record we can review after an incident. Every money movement keeps its transaction hash and the checks Aura ran. Scheduled checks flag stuck movements and failed partner updates.
 
-Security-relevant state changes create evidence that can be reviewed after an incident. Submitted transactions retain available hashes and receipt checks. Provider events use idempotency identifiers. Scheduled checks surface stale transactions, expired reviews, and failed event processing.
-
-Monitoring helps detect and explain problems. It does not prevent every exploit or guarantee immediate detection.
+Monitoring helps us find and explain problems. It can't prevent every attack or promise we'll spot it straight away.
 
 ## Recovery
 
-If application state cannot be trusted, affected instruction paths should pause. Operations restores retained evidence, rereads authoritative chain or provider state, replays safe idempotent events, and records unresolved differences.
+If we can't trust Aura's records, the affected features pause. Our team restores saved evidence, rereads the blockchain or partner, and records anything still unexplained.
 
-Customer ownership should not depend on Aura's projection database. Security preferences and evidence still need tested backup and restoration because losing them can weaken the product's control layer.
+Your ownership of your assets doesn't depend on Aura's database. We still back up your settings and records and test restoring them, because losing them could weaken your controls.
 
-## Important boundary
+## Where Aura's protection ends
 
-Aura’s controls apply only to actions prepared through Aura. They cannot stop an action signed in another app or from an exported wallet.
+Aura's controls only apply to money movements Aura prepares. They can't stop a transaction signed in another app or with an exported key. Controls built into the wallet itself are planned, not live.
 
-They also cannot remove smart-contract, stablecoin, oracle, bridge, chain, provider, phishing, malware, or customer-decision risk. See the [Threat model](/safety/threat-model/) for the risks the product is designed around.
+They also can't remove risk from smart contracts, stablecoins, price feeds, bridges, networks, partners, phishing, malware, or your own decisions. See the [threat model](/safety/threat-model/).
 
-See [report a security issue](/safety/report-a-security-issue/) for safe disclosure steps.
+To report a problem, see [report a security issue](/safety/report-a-security-issue/).

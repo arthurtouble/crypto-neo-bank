@@ -1,60 +1,62 @@
 ---
 title: Threat model
-description: The main ways customers or the service could lose money, access, or trustworthy evidence.
+description: The main ways you or Aura could lose money, access, or reliable records, and what we do about each.
 ---
 
-Aura's threat model starts with outcomes, not security slogans. The most important outcomes to prevent are unauthorized asset movement, a customer signing something materially different from what the interface described, exposure of sensitive data, silent loss of transaction evidence, and misleading presentation of financial risk.
+We start from what could go wrong for you, not from security slogans. The outcomes we most want to prevent are:
 
-## Account takeover
+- someone moving your assets without your permission;
+- you signing something different from what Aura showed you;
+- your personal data being exposed;
+- transaction records being lost without anyone noticing; and
+- financial risk being presented in a misleading way.
 
-An attacker may compromise email, a social account, a device, a session, or recovery method. Aura relies on Privy for identity and wallet infrastructure and verifies access tokens on the server. Actions needing transaction-specific approval stay on hold until Aura can verify that approval for the exact instruction.
+## Someone takes over your account
 
-Customers still need secure devices and recovery methods. Passkeys reduce phishing exposure but do not make a compromised session or device harmless.
+An attacker might get into your email, social account, device, session, or recovery method. Privy runs sign-in and your wallet, and Aura checks every sign-in on its server.
 
-## Malicious or altered transaction data
+If you've turned them on, your emergency lock, daily limit, and saved-recipients-only mode limit what a stolen session can do through Aura. You still need to keep your devices and recovery methods secure. Stronger sign-in methods reduce phishing risk, but they can't make a compromised device safe.
 
-A compromised frontend, dependency, route response, or provider integration could attempt to change a destination, amount, contract, or calldata.
+## Someone tampers with a transaction
 
-Aura validates supported chains, assets, contract targets, requested amounts, and returned route fields on the server. The wallet provides a final independent confirmation surface. Customers should stop if the wallet request does not match the action they intended.
+A compromised web page, software library, route response, or partner could try to change a recipient, amount, or contract.
 
-## Destination mistakes and scams
+Aura builds each transaction on its server and keeps swap quotes there, so the browser can't swap in something else. After you sign, Aura checks that what reached the blockchain matches what it prepared. Your wallet gives you a final, separate look. If the wallet prompt doesn't match what you meant to do, stop.
 
-Valid blockchain addresses can belong to scammers, be copied incorrectly, or be substituted by clipboard malware. The address book, optional saved-only mode, cooling periods, clear labels, and high-value review are designed to slow down dangerous first-time transfers.
+## Wrong recipients and scams
 
-These controls cannot establish that a person on the other end is honest.
+A valid address can belong to a scammer, be copied wrongly, or be swapped by malware on your clipboard. Saved recipients, saved-only mode, the wait before new recipients, clear names, and a daily limit are there to slow down risky first payments.
 
-## Smart-contract and protocol failure
+None of these can tell you whether the person on the other end is honest.
 
-A supported contract can contain a bug, be upgraded, suffer an oracle failure, lose liquidity, or change through governance. Allowlisting and simulation reduce accidental interaction with unknown contracts, but they do not guarantee protocol safety.
+## A protocol fails
 
-Aura should keep integrations narrow, monitor material changes, and stop preparing affected actions when reliable operation or review is not possible.
+A contract can have a bug, be upgraded, get a bad price feed, run short of liquidity, or change through governance. Building exact transactions on the server cuts the chance of touching an unknown contract. It can't make a protocol safe.
 
-## Stablecoin and issuer risk
+We keep our integrations narrow, watch for important changes, and stop preparing affected actions when we can't operate or review them safely.
 
-Stablecoins can lose their peg, freeze addresses, change redemption terms, or face issuer, reserve, banking, or regulatory problems. A dollar-denominated display is not a guarantee of one-dollar redemption.
+## A stablecoin fails
 
-## Bridge and routing risk
+Stablecoins can lose their peg, freeze addresses, change how redemption works, or run into issuer, reserve, banking, or regulatory problems. A balance shown in dollars isn't a promise you can redeem it for a dollar.
 
-Cross-chain routes can depend on several contracts, liquidity sources, validators, messages, and relayers. Source-chain success does not prove destination delivery. Aura tracks the route reference and distinguishes source confirmation from destination completion.
+## A bridge or route fails
 
-## Insider and operations risk
+Moves between networks can depend on several contracts, liquidity sources, validators, messages, and relayers, chosen by LI.FI from third-party bridges and exchanges. Confirmation on the first network doesn't prove delivery. Aura marks a move complete only after it sees at least the minimum amount arrive.
 
-A malicious or mistaken operator could misuse access, alter configuration, mishandle a support case, or expose logs. Aura separates customer and operator authorization, keeps operator access allowlisted, limits the support assistant to read-only tools, and keeps signing outside Aura.
+## Someone on our team makes a mistake or misuses access
 
-This design reduces the power of an operator but does not eliminate the need for access review, logging, change control, incident response, and vendor oversight.
+A staff member could misuse access, change settings, mishandle a support case, or expose logs. We keep customer and staff access separate, limit staff access to a named list, and keep signing out of Aura entirely.
 
-## Projection and evidence loss
+That limits what any one of us can do. It doesn't replace access reviews, logging, change control, incident response, and oversight of our suppliers.
 
-Because chains and providers hold canonical financial state, an Aura database loss should not change ownership. It could still erase security settings, case history, or transaction context. Backups, restoration tests, append-style events, idempotent provider processing, and reconciliation address this risk.
+## Aura loses its records
 
-## Denial of service and dependency failure
+Because blockchains and partners hold your actual money, losing Aura's database wouldn't change what you own. It could still erase your settings, case history, or transaction context. Backups, restore tests, add-only records, and checking against the source protect against this.
 
-Cloudflare, Privy, RPC endpoints, LI.FI, Aave interfaces, or future regulated providers may be unavailable. The product should isolate affected features, show honest status, and avoid treating a timeout as a completed action.
+## A service we depend on goes down
 
-## AI risk
+Cloudflare, Privy, blockchain data services, LI.FI, Aave, or a future partner could be unavailable. When that happens, Aura shows the affected feature as unavailable. It never treats a timeout as a completed action.
 
-An AI assistant can hallucinate, misread context, or be manipulated by untrusted content. The support assistant has no signing, transaction, or administrative tool. Its output is explanatory and cannot replace the authoritative transaction preview or eligibility decision.
+## Outside what Aura can do
 
-## Outside the boundary
-
-Aura cannot enforce its controls after a customer exports a wallet or uses another application. It cannot reverse confirmed blockchain transactions, prevent every phishing attack, guarantee a protocol, or recover a secret it never possessed.
+Aura can't apply its controls after you export your key or use another app. It can't reverse a confirmed blockchain transaction, stop every phishing attack, guarantee a protocol, or recover a secret it never had.

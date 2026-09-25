@@ -1,52 +1,53 @@
 ---
-title: Send and route
-description: Direct transfers, cross-chain routes, checks, and confirmation.
+title: Send money
+description: Send assets on Base to an address or an Aura tag, and what each status means.
 sidebar:
   order: 2
 ---
 
-## Direct transfers
+You can send assets on Base from your Aura account to any Base address or to a public Aura tag.
 
-Aura checks the supported network, asset, destination, amount, account settings, and review rules before asking your wallet to sign. A supported Base transfer is prepared as an exact call and checked again just before your wallet opens. If the transfer or your account controls changed, you need a new review. Higher-value actions that need step-up remain paused until Aura can verify the step-up server-side.
+Before your wallet opens, Aura checks that sending is switched on and applies any controls you've set. Then it builds the exact transaction for you to sign. These checks don't vouch for the recipient, and they don't guarantee the payment settles.
 
-Saving an address does not prove that you control it. Check the full address independently.
+## Before you send
 
-For a supported direct transfer, Aura evaluates the account lock, network, asset, destination rules, cooling status, rolling amount, review threshold, step-up requirement, and required warnings. Passing those checks means Aura may prepare the action. It does not certify the recipient or guarantee settlement.
+- Confirm with the recipient that they can receive on Base.
+- Check the full address with them in a separate way, such as a call or another app.
+- Check the token contract, not just its symbol.
+- Send a small test amount to someone new.
+- Read the wallet prompt before you sign.
 
-### Before sending
+A payment sent to the wrong but valid address usually can't be reversed.
 
-- Confirm the chain with the recipient.
-- Compare the full address through an independent channel.
-- Review the token contract, not only its symbol.
-- Keep enough native gas for the transfer.
-- Use a small test when the destination is new.
-- Read the wallet prompt before signing.
+Saving an address doesn't prove who controls it. A saved name is just a label for you.
 
-A transaction sent to a valid but unintended address is usually irreversible.
+## Sending to another network
 
-## Moving between networks
+To send an asset to another network, use Swap. See [cross-chain routes](/product/cross-chain-routing/).
 
-Swap can review supported USDC bridge routes. A quote is not a transfer. Aura prepares an exact approval or route call only after checking the current quote and account controls. Each step needs its own wallet confirmation. Source settlement and destination delivery are separate.
+## What the status means
 
-See [Cross-chain routes](/product/cross-chain-routing/) for delayed-route guidance.
+- **Submitted** means you signed and a transaction hash exists.
+- **Complete** means Aura matched the transaction to what you reviewed, waited for the network to finalize it, and found the expected transfer.
 
-## What confirmation means
+Fees and timing can change before you sign.
 
-- **Reviewed** means Aura’s checks passed. It does not mean the transaction was signed.
-- **Submitted** means a transaction hash exists.
-- **Confirmed** for a newly prepared transfer means Aura matched the transaction and expected effect, checked the receipt against the canonical block, and waited for its finality threshold. Older receipt-only records are marked unverified.
-- Destination delivery may still need separate confirmation for a cross-chain route.
+## Your controls
 
-Quotes, gas, price impact, and timing can change before you sign.
+In Settings you can:
 
-## Limits and review
+- set a daily limit;
+- send only to saved recipients;
+- set a wait before a newly saved recipient can receive. It's 4 hours unless you change it.
 
-The default rolling transaction limit is $25,000 over 24 hours for Aura-prepared actions. A new saved destination has a 24-hour cooling period for transfers of $1,000 or more. Higher-value actions enter a review path and must be resubmitted with the same material instruction within the release window.
+All of these are off until you turn them on, and changes apply right away.
 
-These controls only cover actions prepared through Aura. They do not freeze the underlying wallet.
+They only cover sends Aura prepares. They don't apply if you export your key and use it somewhere else.
 
-## If a transfer looks stuck
+## If a payment looks stuck
 
-Check the transaction hash on the correct source-chain explorer. A pending, replaced, reverted, and confirmed transaction need different responses. Do not send the same payment again until you know whether the first instruction settled.
+Look up the transaction hash on a Base block explorer. A transaction can be pending, replaced, reverted, or confirmed, and each needs a different response.
 
-For a route, source confirmation is only one step. Use the route reference and destination explorer as well. Support can investigate evidence but cannot reverse a confirmed chain transaction.
+Don't send the same payment again until you know what happened to the first one.
+
+Support can look into it with you, but can't reverse a confirmed transaction.

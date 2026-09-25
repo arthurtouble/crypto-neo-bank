@@ -1,12 +1,25 @@
 ---
 title: Cross-chain routes
-description: How USDC bridge routes are reviewed and tracked.
+description: How moves between networks are quoted, signed, and tracked.
 ---
 
-Swap can find supported USDC routes between Base and another network. A LI.FI quote estimates output, fees, timing, and any token approval. It expires and is not a completed transfer.
+You can use Swap to move an asset from one network to another. This is how you deposit from, or withdraw to, a network other than Base.
 
-Aura checks the asset, networks, amount, spender, contract calls, and account controls before asking the wallet to sign. An ERC-20 approval is a separate transaction. Its allowance can remain if the later route fails or is cancelled. Review both wallet prompts and keep native gas for each step.
+## Getting a quote
 
-Source-chain confirmation shows that the route transaction ran. It does not prove that USDC arrived on the destination chain. Bridges and relayers can delay or fail delivery. Aura tracks the route reference, source transaction, and supported destination evidence separately.
+LI.FI finds the route. It chooses among third-party bridges and exchanges, and estimates what you'll receive, the fees, and the timing. A quote lasts 45 seconds. It isn't a transfer.
 
-If delivery appears delayed, check the source transaction, route status, destination address, and destination explorer before retrying. Repeating a route can send funds twice. Open a support case with the route reference and transaction hash if it remains unresolved; never share a private key or recovery phrase.
+Before your wallet opens, Aura checks the assets, networks, amount, recipient, and price impact, and applies any controls you've set. Any token approval and the move itself are signed together, as one operation.
+
+## While it's moving
+
+When the first network confirms, the move has started. That doesn't mean it has arrived. Aura shows it as **On its way** until LI.FI reports delivery and Aura sees at least the minimum amount arrive in your wallet on the other network.
+
+## If it seems stuck
+
+1. Open the transaction in Transactions.
+2. Check it on both networks' block explorers.
+3. Don't repeat the move yet. Repeating it can send your funds twice.
+4. If it's still unresolved, open a support case with the transaction hash.
+
+Never share a private key or recovery phrase, including with Aura support.

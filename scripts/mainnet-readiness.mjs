@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { AAVE_BASE_ASSETS, AAVE_BASE_PROTOCOL, AAVE_BASE_V3_MARKET } from "../apps/web/src/lib/defi/aave.ts";
+import { LIFI_DIAMOND } from "../apps/web/src/lib/actions/lifi.ts";
 
 const chains = [
   { name: "Base", id: 8453, rpc: "https://base-rpc.publicnode.com", contracts: ["0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"] },
@@ -56,23 +57,15 @@ async function checkLifi() {
   return `LI.FI: ${quote.tool}, estimated destination amount ${quote.estimate.toAmount}`;
 }
 
-async function checkLifiBaseFacet() {
-  const chain = chains[0];
-  // LI.FI Base deployment: https://github.com/lifinance/contracts/blob/main/deployments/base.json
-  const diamond = "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE";
-  const facet = "0x31a9b1835864706Af10103b31Ea2b79bdb995F5F";
-  const selector = "5fd9ae2e"; // swapTokensMultipleV3ERC20ToERC20
-  for (const address of [diamond, facet]) {
-    const code = await rpc(chain, "eth_getCode", [address, "latest"]);
+async function checkLifiDiamond() {
+  // Route actions pin their call target and approval spender to this address on every chain.
+  // https://github.com/lifinance/contracts/blob/main/deployments/base.json
+  for (const chain of chains) {
+    const code = await rpc(chain, "eth_getCode", [LIFI_DIAMOND, "latest"]);
     if (typeof code !== "string" || !/^0x(?:[0-9a-f]{2})+$/i.test(code))
-      throw new Error(`LI.FI Base has no contract code at ${address}`);
+      throw new Error(`LI.FI Diamond has no contract code on ${chain.name}`);
   }
-  // DiamondLoupeFacet.facetAddress(bytes4), queried rather than inferred from the manifest.
-  const data = `0xcdffacc6${selector.padEnd(64, "0")}`;
-  const result = await rpc(chain, "eth_call", [{ to: diamond, data }, "latest"]);
-  const active = addressWord(result, "LI.FI Base mounted facet");
-  if (active.toLowerCase() !== facet.toLowerCase()) throw new Error(`LI.FI Base swap facet differs from reviewed deployment: ${active}`);
-  return "LI.FI Base: mounted swap facet matches reviewed deployment; deployed code at Diamond and facet";
+  return `LI.FI Diamond: deployed code at ${LIFI_DIAMOND} on ${chains.map((chain) => chain.name).join(", ")}`;
 }
 
 async function checkAaveBase() {
@@ -103,7 +96,7 @@ async function checkAaveBase() {
   return "Aave Base: active Pool, oracle, and data provider match governed addresses; deployed code at provider, Pool, oracle, data provider, USDC, and WETH";
 }
 
-const results = await Promise.allSettled([...chains.map(checkChain), checkLifi(), checkLifiBaseFacet(), checkAaveBase()]);
+const results = await Promise.allSettled([...chains.map(checkChain), checkLifi(), checkLifiDiamond(), checkAaveBase()]);
 let failed = false;
 for (const result of results) {
   if (result.status === "fulfilled") console.log(`PASS  ${result.value}`);

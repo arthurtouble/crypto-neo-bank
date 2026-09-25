@@ -1,64 +1,69 @@
 ---
 title: Architecture
-description: How the interface, policy layer, wallet, chains, protocols, and providers fit together.
+description: How the app, your wallet, blockchains, protocols, and partners fit together.
 ---
 
-Aura is built as a thin orchestration and policy layer. It does not try to become the ledger, custodian, bank, exchange, and benefits provider at once.
+Aura is a thin layer. It prepares money movements, checks them, and explains what happened. It doesn't try to be the ledger, the custodian, the bank, and the exchange all at once.
 
-## The transaction path
+## How a money movement works
 
-Most financial actions follow the same path:
+Every send, swap, move between networks, Earn deposit or withdrawal, and crypto purchase follows the same path:
 
-1. **The customer requests an action.** This may be a transfer, a protocol deposit, a repayment, or a cross-chain route.
-2. **Aura prepares and checks it.** The server validates the network, asset, destination, account controls, limits, required disclosures, and the proposed transaction data.
-3. **The wallet presents the transaction.** The customer sees the final wallet request and chooses whether to sign.
-4. **The chain or provider settles it.** The authoritative system accepts, rejects, or later updates the action.
-5. **Aura observes the result.** The product records the transaction reference, checks supported receipts, and presents the updated state.
+1. **You ask.** You choose what to do and how much.
+2. **Aura prepares and checks it.** Aura's server checks that the feature is on and applies any controls you've set. Then it builds the exact transaction.
+3. **You sign.** Your wallet shows the transaction. Any token approval and the action itself are signed together, as one operation.
+4. **The network settles it.** The blockchain accepts or rejects the operation.
+5. **Aura checks the result.** Aura reads the blockchain itself. It marks the movement complete only when the operation matches what was prepared, is final, and shows the expected transfer or deposit. A move between networks also has to arrive.
 
-Preparation is not settlement. A quote is not a transfer. A wallet prompt is not a signature. A submitted transaction is not necessarily final.
+Each step is separate. A quote isn't a transfer. A wallet prompt isn't a signature. A submitted transaction isn't necessarily final.
 
-## Main components
+## The main parts
 
-### Product interface
+### The app
 
-The web application is the customer-facing workspace. It presents portfolios, transaction plans, safety controls, documentation, and support. A mobile application can later use the same provider and policy interfaces.
+The web app is where you see balances, move money, set controls, and get support.
 
-### Identity and wallet infrastructure
+### Sign-in and your wallet
 
-Privy supplies authentication and embedded-wallet infrastructure. Customers may also connect a supported external EVM wallet. Protected APIs verify the Privy access token on the server and derive the customer identity from that verified token.
+Privy runs sign-in and your wallet. Your account is a smart wallet on Base that you control through your Privy sign-in. It holds your funds and signs each action as one batched operation. Aura may cover its network fees on Base.
 
-### Policy layer
+Aura's server checks your Privy sign-in on every request. It never trusts an identity your browser claims.
 
-Aura evaluates product controls before it prepares a supported action. Examples include account lock, allowlisted networks and assets, saved-destination rules, cooling periods, rolling limits, and high-value review. Actions that require transaction-specific approval remain unavailable until Aura can verify that approval for the exact instruction.
+### Your controls
 
-The policy layer can refuse to prepare an action inside Aura. It cannot stop a customer from using an exported wallet or another application.
+If you turn them on, Aura applies your account lock, daily limit, saved-recipients-only mode, and the wait before new recipients. They're all off by default.
 
-### Public chains and protocols
+These checks can stop a movement inside Aura. They can't stop someone who uses an exported key or another app.
 
-Base is the home network. Supported chain RPC endpoints and protocol contracts supply balances, market state, positions, transaction receipts, and settlement. Aave V3 on Base is the initial lending integration. LI.FI supplies route discovery for supported cross-chain USDC transfers.
+### Blockchains and protocols
 
-### Rebuildable product data
+Base is the home network. Aura reads balances, positions, and transaction receipts directly from the networks and protocol contracts.
 
-Cloudflare D1 stores product projections, security preferences, transaction evidence, support records, and provider-event state. These records make the experience faster and operations auditable. They are not the authoritative financial ledger.
+- **Earn** uses Aave on Base and Sky savings on Ethereum.
+- **Swaps and moves between networks** use routes found by LI.FI, which chooses among third-party bridges and exchanges.
 
-### Event and operations layer
+### Aura's own records
 
-Cloudflare Queues handles accepted asynchronous provider events. Scheduled checks identify stale transactions, expired reviews, and event-processing problems. Structured Worker logs and traces support investigation.
+Aura keeps records such as your settings, the transactions it prepared and the checks it ran, and your support cases. They make the app fast and let us explain what happened. They are never the final word on your balance.
+
+### Background checks
+
+Aura runs scheduled checks that spot stuck movements and problems processing partner updates. Logs help us investigate.
 
 ## Why Cloudflare
 
-The product and APIs run on Cloudflare Workers. Static assets are delivered from the same platform. D1 holds application records, Queues decouples provider-event intake from processing, and Workers AI is available for bounded read-only assistance.
+Aura runs on Cloudflare. The app, its server, its database, and its background processing all run in one place.
 
-This keeps the operating surface small. It does not remove the need for backups, access control, migration review, observability, vendor monitoring, and tested incident procedures.
+That keeps things simple. We still need backups, access control, careful database changes, monitoring, and tested incident plans.
 
-## Provider abstraction
+## Room to change partners
 
-Provider-specific behavior sits behind explicit interfaces. The product should not assume that one wallet, route, card, or banking provider will be permanent.
+Aura keeps each partner behind a clear boundary, so we can change a wallet, route, card, or bank partner later.
 
-An abstraction is useful only when it preserves meaningful differences. A bank transfer and an onchain transaction should not be forced into identical states if their cancellation, dispute, or finality rules differ. Shared concepts are normalized; material provider behavior remains visible.
+We don't hide real differences, though. A bank transfer and a blockchain transaction have different rules for cancelling, disputes, and finality, and Aura shows them differently.
 
-## Failure philosophy
+## When something is missing, Aura stops
 
-Aura fails closed when a required security or eligibility fact is missing. It should not prepare a tokenized-market action without current eligibility data, treat an unknown transaction value as below a step-up threshold, or mark a routed transfer complete only because the source transaction succeeded.
+If Aura is missing a fact it needs for safety, it doesn't guess. It won't treat an unknown value as within your daily limit. It won't mark a move between networks complete just because the first network confirmed it.
 
-When a dependency is unavailable, the product should show the affected feature as unavailable and leave unaffected areas usable. See [Sources of truth](/concepts/sources-of-truth/) for how Aura treats missing financial data.
+When a service Aura depends on is down, Aura shows the affected feature as unavailable and keeps the rest working. See [sources of truth](/concepts/sources-of-truth/).

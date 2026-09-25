@@ -1,58 +1,63 @@
 ---
 title: Provider responsibilities
-description: What Aura, Privy, protocols, and future regulated partners each do.
+description: Who does what in Aura, from Privy and LI.FI to the blockchains, protocols, and future partners.
 sidebar:
   order: 2
 ---
 
-| Party | Main role | Does not replace |
-| --- | --- | --- |
-| Aura | Product experience, policy checks, records, support routing, and provider oversight | Customer judgment or provider regulation |
-| Privy | Authentication and wallet infrastructure | Aura’s product, security, and disclosure duties |
-| Base and protocols | Onchain execution and source data | Aura support or legal review |
-| LI.FI | Route discovery and execution data | Destination confirmation or Aura route checks |
-| Future regulated partners | Their contracted accounts, identity checks, sanctions controls, and regulated records | Aura’s marketing, access control, security, complaints, and vendor oversight |
+Aura brings several independent companies and systems together. Each one has its own job.
 
-A provider can perform customer checks without taking responsibility for everything Aura says or does. Exact duties must be set in contracts and procedures before a regulated feature launches.
+| Who | What they do | What they don't replace |
+| --- | --- | --- |
+| Aura | The app, checks before you sign, records, support, and choosing and overseeing partners | Your own judgment, or a partner's regulated duties |
+| Privy | Sign-in and your wallet | Aura's duties for its product, security, and disclosures |
+| Base, Ethereum, and other networks | Running and recording transactions | Aura's support or legal review |
+| Aave, Sky, and Spark | Running Earn positions under their own rules | Aura's explanation of the risks |
+| LI.FI | Finding routes through third-party bridges and exchanges | Aura's own checks, including confirming delivery |
+| Kraken | Market prices Aura uses to value actions against your daily limit | Aura's decision on what to allow |
+| Cloudflare | Hosting, security, and bot checks | Aura's responsibility for your data |
+| Future partners (Bridge, Rain) | Their own accounts, cards, identity checks, and regulated records | Aura's marketing, access controls, security, complaints handling, and oversight |
+
+A partner running customer checks doesn't make it responsible for everything Aura says or does. Exact duties will be set in contracts before any regulated feature launches.
 
 ## Aura
 
-Aura owns the customer experience it creates. That includes accurate feature descriptions, transaction and fee presentation, product access rules, security controls inside Aura, customer communication, complaint routing, provider oversight, and the records needed to explain its own decisions.
+Aura is responsible for the experience it builds. That includes describing features accurately, showing transactions and fees clearly, deciding who can use what, the controls inside Aura, talking to you, routing complaints, overseeing partners, and keeping the records that explain our own decisions.
 
-Aura does not become a regulated bank merely by integrating an API. It also does not become exempt from ordinary privacy, security, consumer-protection, marketing, sanctions, or contractual obligations because a partner performs KYC.
+Connecting to a bank partner doesn't make Aura a bank. And a partner doing identity checks doesn't free Aura from its own privacy, security, consumer-protection, marketing, sanctions, or contract duties.
 
 ## Privy
 
-Privy supplies authentication and embedded-wallet infrastructure. It controls the wallet and identity features described in its contract and configuration. Aura verifies Privy sessions before serving customer-scoped records and uses the wallet interface to request customer confirmation.
+Privy provides sign-in and your wallet. It runs the key that signs for your wallet, recovery, and export, as set out in its contract and settings. Aura checks your Privy sign-in before showing your records, and asks your wallet to show you each transaction to sign.
 
-Privy does not decide whether Aura should support an asset or protocol, whether an Aura disclosure is accurate, or whether a future regulated service can be offered in a country.
+Privy doesn't decide which assets or protocols Aura supports, whether Aura's explanations are accurate, or whether a regulated service can be offered in a country.
 
-## Chains and protocols
+## Blockchains and protocols
 
-Public networks order transactions and provide receipts. Protocol contracts determine positions, interest, collateral, and liquidation according to their code and governance.
+Networks order transactions and record them. Aave, Sky, and Spark run positions and interest according to their own code and governance.
 
-Aura selects which integrations to expose, validates supported actions, and explains material risk. It cannot reverse chain settlement or change a protocol's rules.
+Aura chooses which of them to offer, checks supported actions, and explains the main risks. It can't reverse a settled transaction or change a protocol's rules.
 
-## LI.FI and route components
+## LI.FI and the services it routes through
 
-LI.FI returns available route data and prepared transactions. The underlying route can include independent bridges, exchanges, relayers, and contracts.
+LI.FI finds routes and prepares the transactions. A route can pass through independent bridges, exchanges, relayers, and contracts that LI.FI chooses.
 
-Aura validates the route against the customer's request and tracks available references. LI.FI does not make source confirmation equal destination delivery, and Aura does not guarantee every route component.
+Aura checks each route against what you asked for and tracks it until delivery. Neither LI.FI nor Aura guarantees every part of a route.
 
-## Future regulated partners
+## Future partners
 
-A Bridge, Rain, banking, card, insurance, or investment provider may contract directly with the customer for its regulated service. It may own identity verification, sanctions screening, source-of-funds review, account issuance, safeguarding, transaction monitoring, disputes, or regulatory records within that service.
+Bridge (for bank transfers) and Rain or Bridge (for cards) may contract with you directly for their regulated services. They may handle identity checks, sanctions screening, source-of-funds checks, opening accounts or issuing cards, holding funds, monitoring transactions, disputes, and regulatory records.
 
-The provider will also diligence Aura. It can require security documentation, compliance procedures, approved countries, customer and volume forecasts, marketing review, complaint handling, beneficial-owner checks, financial information, and named accountable contacts. “The customer contracts with the provider” does not create automatic platform approval.
+These partners also check Aura before they work with us. They can ask for security documents, compliance procedures, approved countries, forecasts, marketing review, complaint handling, ownership checks, financial information, and named contacts. You signing up with a partner doesn't mean the partner has approved Aura.
 
-## Customer
+## You
 
-The customer protects access methods, checks transaction details, decides whether to sign, provides accurate onboarding information, and uses the service lawfully. Customer responsibility does not excuse a misleading interface or a control failure by Aura or a provider.
+You protect your sign-in and recovery methods, check each transaction, decide whether to sign, give accurate information, and use Aura lawfully. Your responsibility doesn't excuse a misleading screen or a failed control on our side or a partner's.
 
 ## AI and automation
 
-AI may help draft code, summarize cases, classify operational work, and explain documentation. It is not the legal entity, accountable officer, security owner, or customer. High-impact decisions need defined ownership, reliable evidence, and human escalation even in a very lean company.
+AI can help us write code, summarize cases, sort operational work, and explain documentation. It isn't the company, a responsible officer, a security owner, or a customer. Important decisions need a named owner, reliable evidence, and a person to escalate to, however small the team.
 
-## Final allocation
+## The final word
 
-This page describes the intended operating model. Signed provider agreements, the chosen entity and jurisdictions, applicable law, and written procedures determine the final allocation. If product copy conflicts with the provider contract or actual service, the feature should remain unavailable until the conflict is resolved.
+This page describes how we intend things to work. Signed partner contracts, the operating company and its jurisdictions, the law, and our written procedures decide the final split. If anything here conflicts with a contract or with how a service actually works, the feature stays unavailable until it's resolved.

@@ -11,22 +11,26 @@ When you accept the terms of use, you agree to receive agreements, disclosures, 
 
 ## How we deliver records
 
-Aura delivers records in the app and, once a notification service is connected, by email or push notification. A provider you connect may deliver its own records under its terms. Keep your sign-in email current.
+We deliver records in the app. Once a notification service is connected, we'll also use email or push notifications.
+
+A partner you use, such as Bridge once it is live, may send its own records under its own terms. Keep your sign-in email up to date.
 
 ## Messages you control
 
 | Message | Your choice |
 | --- | --- |
-| Security notices (sign-in, lock, limit, and passkey changes) | Always sent; they protect your account |
-| Transaction updates by email or push | On by default; change in Settings → Account and preferences |
+| Security notices (for example, sign-in, account lock, and limit changes) | Always sent, because they protect your account |
+| Transaction updates by email or push | On by default. Change them in Settings → Account and preferences |
 | Product-update emails | Off unless you turn them on in Settings → Data & Privacy |
 
-Your choices are saved now and apply as soon as delivery is connected.
+We save your choices now. They apply as soon as delivery is connected.
 
 ## What you need
 
-A current browser, internet access, a working email address, and software that can display and save web pages and PDF files.
+A current browser, internet access, a working email address, and software that can show and save web pages and PDF files.
 
-## Paper copies and withdrawal
+## Paper copies and withdrawing consent
 
-The final policy must explain how to request a paper copy, any fee, and how to withdraw consent to electronic delivery without losing rights. A provider may require electronic delivery for a product offered only online, where the law allows. Withdrawing consent does not affect records already delivered or transactions already completed.
+**[Placeholder: the final policy must explain how to request a paper copy, any fee, and how to withdraw consent to electronic delivery without losing rights.]**
+
+A partner may require electronic delivery for a product it offers only online, where the law allows. Withdrawing consent does not affect records already delivered or transactions already completed.

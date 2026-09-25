@@ -1,54 +1,74 @@
 ---
 title: Risk disclosure
-description: The main risks of wallets, stablecoins, DeFi, cross-chain routes, and mainnet transactions.
+description: The main risks of self-custody, stablecoins, DeFi, swaps, and cross-network moves.
 sidebar:
   order: 4
 ---
 
 **Version:** 2026-09-25 · **Status:** Pre-launch draft for counsel review
 
-Digital assets can lose all or most of their value. Use only assets you can afford to expose to loss and get independent advice when you need it.
+Digital assets can lose most or all of their value. Only use assets you can afford to lose, and get independent advice when you need it.
 
-## Wallet and account risk
+## Self-custody and account risk
 
-Anyone with your signing authority or recovery material may control the wallet. A compromised device, email account, passkey, connected app, or recovery path can lead to loss. Aura cannot reverse a valid blockchain transaction.
+Your Aura account is a smart wallet that you control through your Privy sign-in. Aura does not hold your funds or your keys. That means Aura cannot recover access for you, and cannot reverse a valid blockchain transaction.
 
-## Mainnet and transaction risk
+Anyone who gains control of your sign-in or recovery methods may be able to control your wallet. A compromised device, email account, sign-in method, or recovery path can lead to loss.
 
-Aura uses public mainnets and real assets. Transactions can fail, be delayed, reordered, front-run, or cost more than expected. A wrong address, network, token, contract, or approval can cause permanent loss.
+Your access depends on Privy. If Privy is unavailable, or changes or ends its service, you may be unable to reach your wallet through Aura for a time. Learn how Privy's recovery and export work before you hold significant value.
+
+## Smart wallet and network fee risk
+
+Your account relies on smart-contract wallet software and on services that submit its transactions to the network. These can contain bugs or stop working.
+
+Aura may cover network fees on Base for actions it prepares. We can stop doing so at any time. If we do, you will need the network's fee asset to make transactions.
+
+## Transaction risk
+
+Aura uses public blockchains and real assets. Transactions can fail, be delayed or reordered, be front-run, or cost more than expected.
+
+A wrong address, network, token, contract, or approval can cause permanent loss.
 
 ## Smart-contract and protocol risk
 
-Contracts can contain bugs, be exploited, paused, upgraded, or governed in ways you did not expect. Oracles, keepers, RPC services, validators, sequencers, and user interfaces can fail.
+Contracts can contain bugs. They can be exploited, paused, upgraded, or changed through governance in ways you did not expect. Price feeds, blockchain data services, validators, and user interfaces can fail.
+
+Aura does not offer borrowing. If you use the same wallet with another app to borrow, the protocol can sell your collateral automatically. Aura cannot warn you in time or stop it.
 
 ## Stablecoin risk
 
-A stablecoin can lose its target price, become illiquid, be frozen or blocked, or fail because of its issuer, reserves, banks, custodians, governance, regulation, or redemption process. “Stable” does not mean guaranteed.
+A stablecoin can lose its target price, become hard to sell, be frozen, or fail. Causes include problems with its issuer, reserves, banks, custodians, governance, regulation, or redemption process. "Stable" does not mean guaranteed.
 
 ## Earn risk
 
-Aave and Sky yields are variable. It can fall to zero or be outweighed by token loss, fees, tax, illiquidity, or protocol failure. A DeFi position is not a bank deposit and is not covered by deposit insurance unless a specific regulated product says otherwise.
+Aave and Sky rates are variable. They can fall to zero, or be outweighed by losses on the token, fees, tax, difficulty withdrawing, or protocol failure.
 
-## Borrowing and liquidation risk
+A position in Aave or Sky is not a bank deposit. It is not covered by deposit insurance unless a specific regulated product says otherwise.
 
-Collateral prices, debt, interest, and health factors can change quickly. A protocol may liquidate collateral automatically. Aura cannot pause liquidation or guarantee that a warning reaches you in time.
+## Swap and cross-network risk
 
-## Cross-chain risk
+Swaps and moves between networks use routes found by LI.FI. LI.FI chooses among third-party bridges and exchanges, and neither LI.FI nor Aura controls them.
 
-Aura moves USDC between networks through LI.FI and Across. Routes depend on bridges, exchanges, relayers, liquidity, finality, destination contracts, and multiple networks. A source-chain receipt does not alone prove destination delivery. Recovery can be slow or impossible.
+A route can depend on several contracts, liquidity sources, relayers, and networks. Confirmation on the first network does not prove the asset arrived on the second. If something goes wrong, recovery can be slow or impossible.
 
 ## Market, liquidity, and pricing risk
 
-Prices can be volatile or manipulated. A quote may be stale, and available liquidity may disappear. Large trades can move the price. A displayed valuation may not be a price at which you can exit.
+Prices can move fast or be manipulated. A quote can go stale, and liquidity can disappear. Large trades can move the price. A value shown in Aura may not be a price you can actually sell at.
 
 ## Provider and regulatory risk
 
-Privy, Base, Ethereum, Aave, Sky, Uniswap, LI.FI, Across, stablecoin issuers, and future providers can change, suspend, or discontinue services. Law, sanctions, tax, or provider rules can restrict access, transfers, redemption, or recovery.
+Privy, Base, Ethereum, Aave, Sky, Spark, LI.FI, the bridges and exchanges it uses, stablecoin issuers, and future partners can change, suspend, or end their services.
+
+Laws, sanctions, tax rules, or a provider's rules can restrict access, transfers, redemption, or recovery.
 
 ## Tokenized asset risk
 
-A token may not give the legal rights its name suggests. Issuer insolvency, transfer restrictions, market closure, corporate actions, custody structure, and jurisdiction can affect value and enforceability. Aura does not currently offer tokenized securities trading.
+A token may not give you the legal rights its name suggests. Its value and your rights can be affected by the issuer's insolvency, transfer restrictions, market closures, corporate actions, how the underlying asset is held, and which laws apply.
+
+Aura does not currently offer tokenized stocks, metals, or other securities.
 
 ## Operational risk
 
-Software, networks, data, providers, and people can fail. Security controls reduce risk; they do not remove it. Keep independent records and do not rely on Aura as the only way to access a wallet or understand a position.
+Software, networks, data, providers, and people can fail. Security controls reduce risk. They do not remove it.
+
+Keep your own records. Don't rely on Aura as the only way to reach your wallet or understand a position.

@@ -2,6 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { PrivyProvider } from "@privy-io/react-auth";
+import { SmartWalletsProvider } from "@privy-io/react-auth/smart-wallets";
 import { WagmiProvider } from "@privy-io/wagmi";
 import { useState } from "react";
 import { HOME_CHAIN, SUPPORTED_CHAINS, web3Config } from "@/config/chains";
@@ -26,14 +27,17 @@ export default function Web3RuntimeProvider({ children }: { children: React.Reac
           loginMessage: "Sign in to your Aura account."
         },
         embeddedWallets: {
-          ethereum: { createOnLogin: "users-without-wallets" },
+          // Every customer gets a Privy signer, which owns their smart wallet.
+          ethereum: { createOnLogin: "all-users" },
           showWalletUIs: true
         }
       }}
     >
-      <QueryClientProvider client={queryClient}>
-        <WagmiProvider config={web3Config}>{children}</WagmiProvider>
-      </QueryClientProvider>
+      <SmartWalletsProvider>
+        <QueryClientProvider client={queryClient}>
+          <WagmiProvider config={web3Config}>{children}</WagmiProvider>
+        </QueryClientProvider>
+      </SmartWalletsProvider>
     </PrivyProvider>
   );
 }

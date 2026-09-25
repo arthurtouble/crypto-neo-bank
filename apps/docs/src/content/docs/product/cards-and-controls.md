@@ -1,31 +1,29 @@
 ---
 title: Cards and controls
-description: Understand Aura's card design, issuer boundaries, and the controls that appear after setup.
+description: Where Aura cards stand, and the controls planned for them.
 ---
 
-## Current status
+:::note[Not available yet]
+Aura doesn't issue cards yet. Cards, cashback, and rewards are waiting for a card program with a partner such as Rain or Bridge.
+:::
 
-Card issuance is not live. The Card page is provider-ready and clearly shows **Not Issued** until an issuer-backed card account is connected.
-
-Aura does not display a card number, last four digits, network, limit, or active control unless that value was observed from the issuer.
+Until a card program is live, the Cards page shows **Not issued**. Aura never shows a card number, last four digits, card network, limit, or control unless the card issuer has reported it.
 
 ## Planned controls
 
-The card workspace is designed for familiar controls:
+Once a card program is live, we plan to offer:
 
-- Freeze and unfreeze
-- Daily and monthly spending limits
-- Allowed countries
-- PIN access
-- Wallet provisioning where supported
-- Terminate card
+- freeze and unfreeze;
+- daily and monthly spending limits;
+- allowed countries;
+- PIN access;
+- adding the card to your phone's wallet, where supported;
+- cancelling the card.
 
-Card transactions link to support. An issuer dispute can start only after the issuer's dispute process is connected. Statements appear in Settings only when provided by the issuer.
+Each control will appear only when the issuer confirms it's ready for your card. The issuer may run its own identity, country, sanctions, and eligibility checks.
 
-Each control stays unavailable until the connected issuer reports that the card and capability are ready **and** Aura has enabled the issuer's control API. Country, identity, sanctions, eligibility, and underwriting checks may apply.
+## Where card records come from
 
-## Sources of truth
+The card issuer owns the card itself: creating it, approving payments, settling them, PINs, disputes, and statements. Aura may keep a copy so pages load quickly, but the issuer's record always wins.
 
-The issuer owns card creation, authorization, clearing, settlement, PIN handling, disputes, and statement records. Aura may keep a disposable projection so the interface loads quickly, but it is not the authoritative card system.
-
-If Aura and the issuer differ, the issuer record controls. Aura must reconcile or hide stale data rather than invent a state.
+If Aura's copy and the issuer's record differ, Aura corrects or hides its copy. It never makes up a status.

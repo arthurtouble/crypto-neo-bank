@@ -1,9 +1,9 @@
 ---
 title: Aura documentation
-description: Understand Aura, its safeguards, and what is currently available.
+description: How Aura works, how it keeps you in control, and what you can use today.
 template: splash
 hero:
-  tagline: Learn where your assets sit, what each provider does, and which actions are available.
+  tagline: Your money stays in your own wallet. These guides explain what Aura does, who does the rest, and what's available now.
   actions:
     - text: Get started
       link: /getting-started/setup/
@@ -18,33 +18,32 @@ import { Card, CardGrid } from '@astrojs/starlight/components';
 ## The essentials
 
 <CardGrid>
-  <Card title="Explore first" icon="open-book">Browse Aura with clearly labeled fictional data before signing in.</Card>
-  <Card title="You control the wallet" icon="key">Your wallet shows the final request, and you choose whether to sign.</Card>
-  <Card title="Balances come from the source" icon="database">Chains and connected providers remain authoritative for balances and transactions.</Card>
-  <Card title="Mainnet means real value" icon="warning">Check the network, address, asset, and amount before every signature.</Card>
+  <Card title="Look around first" icon="open-book">Browse Aura with clearly labeled example data before you sign in.</Card>
+  <Card title="You hold the keys" icon="key">Your account is your own wallet. Aura never holds your funds or keys, and you sign every transaction.</Card>
+  <Card title="Balances come from the source" icon="database">Aura reads balances from the blockchain and the protocols you use. Its own records never override them.</Card>
+  <Card title="Real money, real networks" icon="warning">Check the network, address, asset, and amount before every signature.</Card>
 </CardGrid>
 
 ## Use Aura
 
-- [Overview, wallet assets, and receiving crypto](/product/wallets-and-assets/)
-- [Send and saved recipients](/product/send-and-route/)
+- [Your account and assets](/product/wallets-and-assets/)
+- [Send money](/product/send-and-route/)
 - [Aura tag payment pages](/product/aura-tag/)
-- [Swap and cross-chain routes](/product/swaps/)
-- [Earn and Borrow](/product/earn-and-borrow/)
-- [Cards and issuer controls](/product/cards-and-controls/)
+- [Swap and move between networks](/product/swaps/)
+- [Earn](/product/earn/)
 - [Transactions and their status](/product/transaction-lifecycle/)
-- [Security and recovery](/safety/account-controls/)
-- [Current availability](/getting-started/status/)
+- [Account controls](/safety/account-controls/)
+- [What's available now](/getting-started/status/)
 
-Banking, cards, securities, rewards, and some transaction types require connected providers and eligibility. Their presence in the product does not mean they are active.
+Bank transfers, cards, rewards, and tokenized stocks aren't available yet. You may see them in the app, but they only work once a partner is approved and connected.
 
 ## How Aura works
 
 - [Sources of truth](/concepts/sources-of-truth/)
-- [Provider responsibilities](/company/provider-responsibilities/)
+- [Who does what](/company/provider-responsibilities/)
 - [Security model](/safety/security-model/)
 - [Risk disclosure](/legal/risk-disclosure/)
 
 :::caution[Real transactions]
-A signed mainnet transaction can move real assets and may not be reversible.
+A signed transaction moves real assets and usually can't be reversed.
 :::

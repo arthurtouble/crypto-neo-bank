@@ -1,27 +1,14 @@
-type ProviderEventMessage = {
-  event: { id: string; provider: string; type: string; subjectReference?: string; providerObjectId: string; createdAt: string; data: Record<string, unknown> };
-  receivedAt: string;
-  payloadSha256: string;
-};
-
-import { applyProviderEvent } from "@aurel/provider-projections";
+import { applyProviderEvent, type ProviderEventMessage } from "@aurel/provider-projections";
 import { checkDependencies, recordDeadLetter, runScheduledReconciliation } from "./reconciliation";
 
 async function processMessage(env: Cloudflare.Env, message: Message<ProviderEventMessage>): Promise<void> {
   const { event } = message.body;
   // Apply first: a failure here is retried and never marks the receipt processed.
   const result = await applyProviderEvent(env.PROJECTION_DB, event);
-  const subjectReference = event.subjectReference ?? `unresolved:${event.providerObjectId}`;
   const now = new Date().toISOString();
-  await env.PROJECTION_DB.batch([
-    env.PROJECTION_DB.prepare(`
-      INSERT OR IGNORE INTO projection_refreshes
-      (refresh_id, event_id, subject_reference, source_name, source_external_id, requested_at, completed_at, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?, 'completed')
-    `).bind(crypto.randomUUID(), event.id, subjectReference, event.provider, event.providerObjectId, now, now),
-    env.PROJECTION_DB.prepare("UPDATE webhook_receipts SET processing_status = 'processed', processed_at = ?, last_error = NULL WHERE event_id = ?")
-      .bind(now, event.id)
-  ]);
+  // The receipt keeps the outcome, so an ignored event is visible without a separate log table.
+  await env.PROJECTION_DB.prepare("UPDATE webhook_receipts SET processing_status = 'processed', processed_at = ?, last_error = ? WHERE event_id = ?")
+    .bind(now, result.status === "ignored" ? `ignored:${result.reason}` : null, event.id).run();
   console.log(JSON.stringify({ message: "provider event processed", queueMessageId: message.id, eventId: event.id, provider: event.provider,
     eventType: event.type, attempt: message.attempts, projection: result }));
 }

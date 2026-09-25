@@ -1,53 +1,51 @@
 ---
 title: Product principles
-description: What Aura is building, who it is for, and the decisions that shape the product.
+description: What Aura is for, and the choices that shape it.
 ---
 
-Aura is a financial interface built around stablecoins and customer-controlled wallets. It brings together money movement, onchain markets, borrowing, portfolio views, and—once providers are contracted—fiat accounts and cards.
+Aura is a money app built around stablecoins and your own wallet. It brings together sending, swapping, investing in crypto, and earning. Once partners are approved, it will add bank transfers and cards.
 
-The aim is not to put a bank-shaped skin over crypto. It is to make several independent financial systems feel coherent without hiding where the money sits, who controls it, or what can go wrong.
+We're not putting a bank-shaped skin over crypto. We want several independent financial systems to feel like one app, without hiding where your money sits, who controls it, or what can go wrong.
 
-## One relationship, many financial systems
+## One app, many systems
 
-Aura is an aggregator. Public blockchains, wallet infrastructure, DeFi protocols, routing providers, and future regulated partners each perform a different job. Aura gives the customer one place to understand and use them.
+Blockchains, wallet software, DeFi protocols, routing services, and future partners each do a different job. Aura gives you one place to understand and use them.
 
-That distinction matters. A balance shown in Aura may come from a blockchain, a lending protocol, or a future banking provider. Similar-looking balances can have different legal rights, liquidity, insurance, and settlement behavior. The interface should make those differences understandable instead of flattening them into a misleading total.
+That matters because similar-looking balances can behave very differently. A balance may sit in your wallet, in a lending protocol, or, later, with a bank partner. Each has different rights, liquidity, protection, and settlement. Aura aims to make those differences clear, not hide them in one total.
 
-## Independent by design
+## No house token
 
-Aura has no house token. There is no proprietary asset whose price depends on customers staying inside the product. Assets and providers should earn their place through utility, risk, liquidity, operating reliability, and customer demand.
+Aura has no token of its own. No asset's price depends on you staying in the app. An asset or partner earns its place by being useful, well understood, liquid, and reliable.
 
-That does not eliminate commercial incentives. Aura may eventually earn subscriptions, interchange share, disclosed provider revenue, or service fees. Those incentives should be visible and should not determine whether a risky or unsuitable product is promoted.
+We still have commercial interests. Aura may later earn from subscriptions, card fees, disclosed partner revenue, or service fees. We'll show you those, and they shouldn't decide what we put in front of you.
 
-## Customer-controlled access
+## Your wallet, your signature
 
-Wallet actions are prepared by Aura and confirmed by the customer. Aura does not keep a private key that lets an employee or an AI assistant move customer assets on its own.
+Aura prepares each action. You sign it. Aura holds no key that would let an employee or an automated system move your assets.
 
-This is a meaningful safety boundary, not a promise that loss is impossible. A customer can still approve a malicious transaction, lose account access, use an exported wallet elsewhere, or interact with a protocol that fails. Product controls reduce avoidable mistakes inside Aura; they do not control the whole internet.
+This is a real safety boundary. It doesn't make loss impossible. You could still sign a harmful transaction, lose access to your sign-in, use an exported key elsewhere, or use a protocol that fails. Aura's controls reduce mistakes inside Aura. They can't control the whole internet.
 
-## Safety should be visible
+## Safety you can see
 
-Financial products often hide safety in settings, terms, and compliance workflows. Aura treats safety as part of the primary product:
+Many financial apps bury safety in settings and fine print. In Aura, it's part of the main experience:
 
-- clear transaction previews before signing;
-- saved destinations and optional destination restrictions;
-- cooling periods for higher-risk actions;
-- rolling transaction limits and step-up authentication;
-- honest status labels for live, preview, and unavailable services;
-- retained transaction evidence and receipt checks;
-- plain-language explanations of protocol and provider boundaries.
+- a clear review of each transaction before you sign;
+- saved recipients, with an optional saved-only mode and a wait before new ones;
+- an optional daily limit and account lock;
+- honest labels for what's live, what's in preview, and what's unavailable;
+- a record of every transaction and the checks Aura ran;
+- plain explanations of what each partner and protocol does.
 
-Controls should explain themselves at the moment they matter. Documentation provides depth, but it should not compensate for an unclear transaction screen.
+Controls should explain themselves when they matter. These docs add depth. They don't make up for an unclear screen.
 
-## A useful first deposit
+## Useful from the first deposit
 
-Aura does not require a large minimum balance to become useful. A new customer should be able to connect or create a wallet, see supported assets, understand the safety model, and try a small transaction before deciding whether to deepen the relationship.
+You don't need a large balance to get value from Aura. You should be able to sign in, see your assets, understand how your account is protected, and try a small transaction before you go further.
 
-Membership can recognize a larger and longer relationship, but it should not turn basic safety or support into a luxury feature. Higher tiers may add economically costly benefits or more personal service; core account security remains available to everyone.
+Basic safety and support are for everyone, not a premium extra.
 
 ## Calm, not simplistic
 
-The interface removes unnecessary words and choices, but it does not remove material facts. The product should feel calm because information is ordered well—not because fees, risk, or responsibility have been hidden.
+Aura cuts words and choices you don't need. It doesn't cut facts you do need. It should feel calm because information is well ordered, not because fees, risks, or responsibilities are hidden.
 
-For the current boundary between working and planned features, see [Product status](/getting-started/status/).
-
+For what's working now and what's still to come, see [product status](/getting-started/status/).

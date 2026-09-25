@@ -38,7 +38,7 @@ const healthBody = await health.json().catch(() => ({}));
 assert(health.ok && healthBody.status === "ok" && healthBody.service === "aura-web", `Aura health reports ok (${health.status})`);
 assert(healthBody.dependencies?.operationalDatabase === "ok", "health confirms the projection database binding");
 
-for (const path of ["/app", "/app/deposit", "/app/borrow", "/app/support"]) {
+for (const path of ["/app", "/app/deposit", "/app/earn", "/app/support"]) {
   const response = await request(path);
   assert(response.ok && (await response.text()).includes("Example data"), `${path} offers labeled guest browsing (${response.status})`);
 }
@@ -54,28 +54,30 @@ for (const path of ["/api/activity", "/api/defi/aave/positions?address=0x0000000
   assert([401, 403].includes(response.status), `${path} rejects an unauthenticated request (${response.status})`);
 }
 
-for (const path of ["/api/portfolio/history?range=7D", "/api/portfolio/tax-support?year=2026", "/api/swap/assets?q=USD"]) {
+for (const path of ["/api/swap/assets?q=USD", "/api/routes/quote?from=8453:native&to=8453:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913&amount=1", "/api/actions/00000000-0000-4000-8000-000000000000"]) {
   const response = await request(path);
   assert([401, 403].includes(response.status), `${path} rejects unauthenticated account reads (${response.status})`);
   assert(response.headers.get("cache-control")?.includes("no-store"), `${path} does not cache account responses`);
 }
-for (const path of ["/api/portfolio/refresh", "/api/swap/quote", "/api/intents/evaluate", "/api/intents/prepare", "/api/defi/aave/preview", "/api/defi/aave/action", "/api/defi/aave/receipt", "/api/defi/sky/action", "/api/defi/sky/receipt"]) {
+for (const path of ["/api/actions", "/api/actions/00000000-0000-4000-8000-000000000000/submit"]) {
   const response = await request(path, { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
   assert([401, 403].includes(response.status), `${path} rejects unauthenticated actions (${response.status})`);
   assert(response.headers.get("cache-control")?.includes("no-store"), `${path} does not cache action responses`);
 }
 
-for (const path of ["/api/growth/waitlist", "/api/growth/events", "/api/portfolio", "/api/beta/access", "/api/routing/quote", "/api/swap/curated-quote"]) {
+for (const path of ["/api/growth/waitlist", "/api/portfolio", "/api/demo/session", "/api/markets/orders", "/api/support/assistant", "/api/intents/prepare", "/api/swap/prepare", "/api/defi/aave/action"]) {
   const response = await request(path, { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
   assert(response.status === 404, `${path} is retired (${response.status})`);
 }
 
-const webhook = await request("/api/webhooks/provider", {
-  method: "POST",
-  headers: { "content-type": "application/json" },
-  body: JSON.stringify({ id: "smoke-test", type: "account.updated" })
-});
-assert([400, 401, 403].includes(webhook.status), `webhook rejects an unsigned event (${webhook.status})`);
+for (const provider of ["bridge", "privy", "rain"]) {
+  const webhook = await request(`/api/webhooks/${provider}`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ event_id: "smoke-test", type: "customer.updated" })
+  });
+  assert([401, 503].includes(webhook.status), `${provider} webhook rejects an unsigned event (${webhook.status})`);
+}
 
 console.log(`Smoke target: ${baseUrl}`);
 if (failures) process.exitCode = 1;

@@ -1,83 +1,77 @@
 "use client";
 
-import { usePrivy } from "@privy-io/react-auth";
 import { Check, CircleAlert, ExternalLink, LoaderCircle, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { SUPPORTED_CHAINS } from "@/config/chains";
-import { bridgeProgressDetail, lifecycleCopy, lifecycleStep, normalizeVerifiedIntentStatus, terminalIntentStatuses, type TransactionLifecycleStatus } from "@/lib/transactions/lifecycle";
-
-type IntentState = { status: string; type?: string; verificationState?: string; failureReason?: string | null };
-type ObservedState = { intentId: string; status: TransactionLifecycleStatus; failureReason: string | null; detail: string | null };
+import type { ActionPhase, ActionView } from "@/lib/client/use-action";
 
 type Props = {
-  action: string;
-  status: TransactionLifecycleStatus;
-  stage?: string | null;
-  error?: string | null;
-  intentId?: string | null;
-  hashes?: string[];
-  chainId?: number;
-  submittedDetail?: string;
-  onConfirmed?: () => void;
+  /** What the customer is doing, in sentence case: "Transfer", "Swap", "Deposit". */
+  label: string;
+  phase: ActionPhase;
+  action: ActionView | null;
+  error: string | null;
+  outcomeUnknown: boolean;
 };
 
-function explorerUrl(chainId: number, hash: string) {
-  const chain = SUPPORTED_CHAINS.find((item) => item.id === chainId);
-  const base = chain?.blockExplorers?.default.url;
+function explorerUrl(chainId: number | null, hash: string | null) {
+  if (!chainId || !hash) return null;
+  const base = SUPPORTED_CHAINS.find((chain) => chain.id === chainId)?.blockExplorers?.default.url;
   return base ? `${base}/tx/${hash}` : null;
 }
 
-export function TransactionProgress({ action, status, stage, error, intentId, hashes = [], chainId = 8453, submittedDetail, onConfirmed }: Props) {
-  const { getAccessToken } = usePrivy();
-  const [observed, setObserved] = useState<ObservedState | null>(null);
-  const onConfirmedRef = useRef(onConfirmed);
-  const currentObservation = observed?.intentId === intentId ? observed : null;
-  const effectiveStatus = currentObservation?.status ?? status;
-  const copy = lifecycleCopy(effectiveStatus, action);
-  const currentStep = lifecycleStep(effectiveStatus);
-  const links = useMemo(() => hashes.map((hash) => ({ hash, url: explorerUrl(chainId, hash) })).filter((item) => item.url), [chainId, hashes]);
+/** Customer wording for a verifier reason. Unknown reasons fall back to a generic line rather than a code. */
+function failureText(reason: string | null): string {
+  if (!reason) return "It didn't complete. Check the reason before trying again.";
+  if (reason === "refunded") return "The transfer was refunded to your wallet on the original network.";
+  if (reason === "partial_delivery") return "It arrived as a different asset. Check your wallet.";
+  if (reason === "delivery_below_minimum") return "Less than the minimum arrived. Contact Support.";
+  if (reason === "delivery_failed" || reason.startsWith("destination_")) return "Delivery failed. Contact Support before trying again.";
+  if (reason === "operation_reverted" || reason === "transaction_reverted") return "The network rejected it. Nothing moved.";
+  return "We couldn't match this transaction to what you confirmed. Contact Support.";
+}
 
-  useEffect(() => { onConfirmedRef.current = onConfirmed; }, [onConfirmed]);
+function copy(label: string, phase: ActionPhase, action: ActionView | null) {
+  if (phase === "preparing") return { step: 0, title: `Preparing ${label.toLowerCase()}`, detail: "Checking your limits and building the transaction." };
+  if (phase === "signing") return { step: 1, title: "Confirm in your wallet", detail: "Review the request, then confirm it." };
+  switch (action?.status) {
+    case "settling": return { step: 2, title: "On its way", detail: "The first transaction is confirmed. We're waiting for delivery." };
+    case "confirmed": return { step: 3, title: `${label} complete`, detail: "The network confirmed it." };
+    case "failed": return { step: 3, title: `${label} failed`, detail: failureText(action.failureReason) };
+    case "expired": return { step: 3, title: `${label} not confirmed`, detail: "We didn't receive it in time. If you confirmed it in your wallet, check Transactions." };
+    default: return { step: 2, title: `${label} submitted`, detail: "We're waiting for the network. You can leave this screen." };
+  }
+}
 
-  useEffect(() => {
-    if (!intentId || status !== "submitted") return;
-    let stopped = false;
-    let timer: number | undefined;
-    let notified = false;
-    const check = async () => {
-      try {
-        const token = await getAccessToken();
-        if (!token || stopped) return;
-        await fetch("/api/intents/reconcile", { method: "POST", headers: { Authorization: `Bearer ${token}` } });
-        const response = await fetch(`/api/intents/status?intentId=${encodeURIComponent(intentId)}`, { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" });
-        if (!response.ok) return;
-        const body = await response.json() as IntentState;
-        const next = normalizeVerifiedIntentStatus(body.status, body.verificationState);
-        if (next) setObserved({ intentId, status: next,
-          failureReason: body.status === "confirmed" && body.verificationState !== "confirmed" ? "This historical confirmation lacks independently verified transaction evidence." : body.failureReason ?? null,
-          detail: body.type === "bridge" ? bridgeProgressDetail(body.verificationState) : null });
-        if (next === "confirmed" && !notified) { notified = true; onConfirmedRef.current?.(); }
-        if ((!next || !terminalIntentStatuses.has(next)) && !stopped) timer = window.setTimeout(check, 5_000);
-      } catch {
-        if (!stopped) timer = window.setTimeout(check, 8_000);
-      }
-    };
-    timer = window.setTimeout(check, 1_500);
-    return () => { stopped = true; if (timer) window.clearTimeout(timer); };
-  }, [getAccessToken, intentId, status]);
-
-  const failed = effectiveStatus === "failed" || effectiveStatus === "cancelled";
-  const complete = effectiveStatus === "confirmed";
-  const submitted = effectiveStatus === "submitted";
+/** Progress for one action from `useAction`. Renders nothing while idle without an error. */
+export function TransactionProgress({ label, phase, action, error, outcomeUnknown }: Props) {
+  if (phase === "idle") {
+    if (!error) return null;
+    return <div className="transactionProgress failed" role="alert">
+      <div className="transactionProgressHeadline">
+        <span><X size={17} /></span>
+        <div><strong>{outcomeUnknown ? "Check Transactions first" : `${label} not sent`}</strong>
+          <small>{outcomeUnknown ? "Your wallet may have sent this. Check Transactions before you try again." : error}</small></div>
+      </div>
+      {outcomeUnknown && <div className="transactionLinks"><Link href="/app/transactions">Open Transactions</Link></div>}
+    </div>;
+  }
+  const { step, title, detail } = copy(label, phase, action);
+  const failed = action?.status === "failed" || action?.status === "expired";
+  const complete = action?.status === "confirmed";
+  const links = [
+    { name: "View transaction", url: explorerUrl(action?.chainId ?? null, action?.transactionHash ?? null) },
+    { name: "View delivery", url: explorerUrl(action?.destinationChainId ?? null, action?.destinationTransactionHash ?? null) }
+  ].filter((link): link is { name: string; url: string } => Boolean(link.url));
   return <div className={`transactionProgress ${failed ? "failed" : complete ? "complete" : "active"}`} role={failed ? "alert" : "status"} aria-live="polite">
     <div className="transactionProgressHeadline">
-      <span>{failed ? <X size={17} /> : complete ? <Check size={17} /> : submitted ? <Check size={17} /> : <LoaderCircle className="spin" size={17} />}</span>
-      <div><strong>{stage || copy.title}</strong><small>{error || currentObservation?.failureReason || currentObservation?.detail || (submitted && submittedDetail) || copy.detail}</small></div>
+      <span>{failed ? <X size={17} /> : complete ? <Check size={17} /> : <LoaderCircle className="spin" size={17} />}</span>
+      <div><strong>{title}</strong><small>{detail}</small></div>
     </div>
-    {!failed && <div className="transactionSteps" aria-label={`${action} progress`}>
-      {["Review", "Confirm", "Submitted", "Complete"].map((label, index) => <span className={index <= currentStep ? "done" : ""} key={label}><i>{index < currentStep || complete ? <Check size={10} /> : index + 1}</i>{label}</span>)}
+    {!failed && <div className="transactionSteps" aria-label={`${label} progress`}>
+      {["Prepare", "Confirm", "Submitted", "Complete"].map((name, index) => <span className={index <= step ? "done" : ""} key={name}><i>{index < step || complete ? <Check size={10} /> : index + 1}</i>{name}</span>)}
     </div>}
-    {failed && <div className="transactionFailureHint"><CircleAlert size={14} /> No retry was started automatically.</div>}
-    {links.length > 0 && <div className="transactionLinks">{links.map((item, index) => <a href={item.url!} target="_blank" rel="noreferrer" key={item.hash}>View {links.length > 1 ? `Transaction ${index + 1}` : "Transaction"}<ExternalLink size={12} /></a>)}</div>}
+    {failed && <div className="transactionFailureHint"><CircleAlert size={14} /> Nothing was retried automatically.</div>}
+    {links.length > 0 && <div className="transactionLinks">{links.map((link) => <a href={link.url} target="_blank" rel="noreferrer" key={link.name}>{link.name}<ExternalLink size={12} /></a>)}</div>}
   </div>;
 }

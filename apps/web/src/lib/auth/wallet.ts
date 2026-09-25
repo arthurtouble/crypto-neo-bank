@@ -1,18 +1,32 @@
-import { PrivyClient } from "@privy-io/node";
 import { isAddress } from "viem";
-import { PRIVY_APP_ID } from "@/config/client";
 import { WalletOwnershipError } from "@/lib/http/errors";
+import { privyClient } from "./privy";
 
-type LinkedAccount = { type: string; chain_type?: string; address?: string };
+type LinkedAccount = { type: string; chain_type?: string; address?: string; wallet_client_type?: string };
 type UserWithWallets = { id: string; linked_accounts: LinkedAccount[] };
 type GetUser = (subjectReference: string) => Promise<UserWithWallets>;
 
 export { WalletOwnershipError };
 
 async function getPrivyUser(subjectReference: string): Promise<UserWithWallets> {
-  if (!process.env.PRIVY_APP_SECRET) throw new Error("Privy server authentication is not configured.");
-  const client = new PrivyClient({ appId: PRIVY_APP_ID, appSecret: process.env.PRIVY_APP_SECRET });
-  return client.users()._get(subjectReference);
+  return privyClient().users()._get(subjectReference);
+}
+
+/**
+ * The wallet Aura prepares actions for: the customer's Privy smart wallet,
+ * or their Privy embedded wallet before a smart wallet exists. Never an
+ * external wallet, and never an address the browser supplies.
+ */
+export async function requireActionWallet(subjectReference: string, getUser: GetUser = getPrivyUser): Promise<`0x${string}`> {
+  const user = await getUser(subjectReference);
+  if (user.id !== subjectReference) throw new WalletOwnershipError();
+  const valid = (account: LinkedAccount) => Boolean(account.address && isAddress(account.address));
+  // Privy's smart wallet accounts carry no chain_type; they are EVM by construction.
+  const chosen = user.linked_accounts.find((account) => account.type === "smart_wallet" && valid(account))
+    ?? user.linked_accounts.find((account) => account.type === "wallet" && account.chain_type === "ethereum"
+      && account.wallet_client_type === "privy" && valid(account));
+  if (!chosen?.address) throw new WalletOwnershipError("Your Aura wallet isn't ready yet.");
+  return chosen.address.toLowerCase() as `0x${string}`;
 }
 
 /** Resolve ownership from Privy, never from a client-supplied address or D1 projection. */
@@ -25,8 +39,7 @@ export async function requireLinkedEvmWallet(
   const user = await getUser(subjectReference);
   const normalized = address.toLowerCase();
   if (user.id !== subjectReference || !user.linked_accounts.some((account) =>
-    (account.type === "wallet" || account.type === "smart_wallet") &&
-    account.chain_type === "ethereum" &&
+    (account.type === "smart_wallet" || (account.type === "wallet" && account.chain_type === "ethereum")) &&
     account.address?.toLowerCase() === normalized
   )) throw new WalletOwnershipError();
   return normalized;

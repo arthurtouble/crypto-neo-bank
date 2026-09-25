@@ -1,62 +1,53 @@
 ---
 title: Account controls
-description: Saved addresses, review periods, limits, and account lock.
+description: The optional lock, daily limit, and recipient settings you can turn on, and what they cover.
 sidebar:
   order: 2
 ---
 
-## Feature availability
+Aura gives you a few optional controls. They're all off until you turn them on. When you change one, it applies right away, and Aura keeps a record of the change.
 
-Aura can switch each financial feature on or off for everyone: direct transfers, swaps, cross-network moves, Aave and Sky actions, tokenized markets, bank accounts, and cards. When a feature is off, Aura will not prepare new actions for it, including ones already reviewed but not yet signed. Your wallet still works in other apps.
+## Your controls
+
+| Control | Starts as | What it does |
+| --- | --- | --- |
+| Emergency lock | Off | Stops Aura preparing any money movement |
+| Daily limit | Off | Caps the US dollar value you send to other people in any 24 hours |
+| Saved recipients only | Off | Lets you send only to recipients you've saved |
+| Wait before new recipients | 4 hours | When saved recipients only is on, a newly saved recipient can't receive until the wait ends |
+
+## Emergency lock
+
+Turn on the lock if something looks wrong: an unexpected prompt, a recipient you don't recognize, or signs someone else has access. Then secure your sign-in and recovery methods too.
+
+The lock stops Aura preparing any money movement. It doesn't freeze your wallet, reverse a transaction you already submitted, or stop activity in another app.
+
+## Daily limit
+
+The daily limit counts sends, and swaps that pay someone else. Swaps within your own account and Earn deposits and withdrawals don't count.
+
+If you've set a limit and Aura can't work out the value of an amount, it blocks the action rather than skip the check. Prices move, so the dollar value is approximate.
+
+## Saved recipients
+
+Give recipients you trust clear names, and check each full address in a separate way before saving it. A name is there to help you recognize someone. It doesn't prove who owns the address.
+
+## When Aura switches a feature off
+
+Aura can also switch a feature off for everyone, for example sends, swaps, or Earn. While a feature is off, Aura won't prepare new actions for it. Your wallet still works in other apps.
 
 ## Wallet provider rules
 
-If your wallet provider enforces its own rules, such as a spending limit or an address allowlist, Settings shows them next to Aura's controls. The provider applies them when it signs; change them with the provider.
+If your wallet provider applies its own rules, such as a spending limit or a list of allowed addresses, Settings shows them next to Aura's controls. The provider applies them when it signs. To change them, go to the provider.
 
-## Higher-risk actions
+## What controls can't do
 
-Aura holds an in-app action when it requires approval that we cannot yet verify for that exact transaction on the server. Adding a passkey to sign-in alone does not lift that hold.
+Controls only apply when Aura prepares a money movement. They don't cover network fees, market moves, an exported key, or transactions you make in another app.
 
-## Saved addresses
-
-Give trusted destinations clear names and check the full address independently. A newly saved address has a 24-hour cooling period by default.
-
-If Saved Destinations Only is on, adding a new destination needs extra identity verification. Until that review is available, Aura will not save the new address. You can still rename an address already saved, and its original cooling period stays in place.
-
-For transfers of $1,000 or more, the cooling period blocks immediate use of a newly saved destination. Lower-value new destinations receive a warning unless saved-only mode is enabled. Adding, cooling, and removing a destination creates an audit event.
-
-An address label is for recognition. It is not proof of identity or ownership.
-
-## Review threshold
-
-Actions at or above your chosen threshold, never higher than $10,000, require an extra review step. If Aura cannot determine a reliable US dollar value, it treats the action as higher risk instead of skipping the check.
-
-The default high-value review starts at $25,000 of rolling 24-hour activity. Once cooling ends, Aura compares the new preparation with the original instruction. The reviewed release expires after 15 minutes.
-
-## Rolling limit
-
-The default rolling limit is $25,000 over 24 hours for submitted and confirmed estimated USD volume. A limit is not a bank freeze and does not include actions signed outside Aura.
-
-Price changes and unknown valuations make USD limits approximate. Conservative handling is used when value cannot be established reliably.
-
-## Account lock
-
-The account lock stops Aura from preparing new outgoing actions. It does not freeze the wallet, reverse submitted transactions, or prevent activity in another app.
-
-Use the lock when account access, a destination, or a recent prompt looks suspicious. Then secure the underlying identity and recovery methods as well. An ordinary session cannot unlock the account or loosen saved-destination, cooling, or limit controls. Contact Support to begin identity review; do not assume a support case immediately restores access.
-
-## Reserve warning
-
-The default $10,000 liquid-reserve preference warns when an action may reduce visible liquid assets below the selected floor. It is guidance, not a custodial reserve or hard transaction block.
-
-## Scope
-
-Controls are evaluated during supported Aura preparation. Protocol liquidations, provider freezes, gas charges, market movements, exported-wallet activity, and transactions created in another application remain outside their enforcement boundary.
-
-## A practical routine
+## A simple routine
 
 1. Start with a small amount.
-2. Check the network and full address.
-3. Read the wallet prompt, not just the Aura preview.
-4. Verify the transaction on the correct block explorer.
-5. Treat unexpected prompts as suspicious and cancel them.
+2. Check the network and the full address.
+3. Read the wallet prompt, not just Aura's summary.
+4. Check the transaction on a block explorer.
+5. If a prompt surprises you, cancel it.

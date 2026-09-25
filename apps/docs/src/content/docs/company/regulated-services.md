@@ -1,64 +1,65 @@
 ---
 title: Regulated services
-description: How future fiat accounts, cards, identity checks, insurance, and investments would be introduced.
+description: How bank transfers, cards, and other regulated services would be added to Aura.
 ---
 
-Aura does not currently offer bank accounts, fiat transfers, payment cards, insurance, or securities trading. Product models and interface previews are not evidence that a regulated service is live.
+Aura doesn't offer bank accounts, bank transfers, cards, insurance, or securities today. You may see some of these in the app, but that doesn't mean they're live.
 
-## Partner-led services
+Bank transfers are built with Bridge and are waiting for Bridge's approval. Cards are waiting for a card program with Rain or Bridge.
 
-The intended model uses regulated providers for the activities they are licensed and contracted to perform. Depending on the service and country, a partner may own:
+## Partners do the regulated work
 
-- customer identification and verification;
+We plan to use regulated partners for the work they're licensed and contracted to do. Depending on the service and country, a partner may handle:
+
+- checking who you are;
 - sanctions and politically exposed person screening;
-- source-of-funds or source-of-wealth review;
-- account or card issuance;
-- fiat safeguarding and payment execution;
-- transaction monitoring and suspicious-activity procedures;
+- checking where your money comes from;
+- opening accounts or issuing cards;
+- holding dollars and making payments;
+- monitoring transactions and reporting suspicious activity;
 - disputes, chargebacks, freezes, and closures;
 - regulatory records and reporting.
 
-The customer may accept provider-specific terms or form a direct relationship with that provider.
+You may need to accept the partner's own terms, and you may have a direct relationship with it.
 
-## What remains with Aura
+## What stays with Aura
 
-Partner-led compliance does not eliminate Aura's responsibilities. Aura still controls its marketing, onboarding sequence, data flows, access control, interface accuracy, provider selection, customer support entry point, incident response, and the activities it performs itself.
+Using a partner doesn't remove Aura's own duties. Aura is still responsible for its marketing, the sign-up flow, how data moves, who can access what, accurate screens, choosing partners, support, incident response, and anything it does itself.
 
-If Aura adds its own recommendations, discretionary controls, exchange activity, custody behavior, or cross-border marketing, its regulatory position can change. Legal analysis must follow the actual product, not the label “aggregator.”
+If Aura starts giving recommendations, making decisions for customers, running an exchange, or holding assets, its regulatory position could change. The legal analysis has to follow what Aura actually does, not what we call it.
 
-## Platform onboarding
+## Partners check Aura too
 
-A provider decides whether to onboard both Aura and individual customers. A starter or sandbox plan normally grants technical exploration, not production approval.
+A partner decides whether to work with Aura, as well as with each customer. A test account usually means we can try the technology, not that we're approved for real customers.
 
-Platform diligence can include:
+A partner may look at:
 
-- incorporation and beneficial ownership;
-- management background and accountable contacts;
-- product flows and customer agreements;
-- target countries and restricted sectors;
-- forecast customer numbers, balances, and transaction volume;
+- how Aura is incorporated and who owns it;
+- who runs it and who is accountable;
+- how the product works and the customer agreements;
+- target countries and restricted businesses;
+- expected customer numbers, balances, and transaction volumes;
 - compliance and complaints procedures;
-- information-security program and penetration testing;
+- security practices and penetration testing;
 - fraud controls and transaction limits;
-- financial condition, insurance, and business continuity;
-- marketing and disclosure review;
-- subcontractors, wallet providers, and onchain counterparties.
+- finances, insurance, and business continuity;
+- marketing and disclosures;
+- subcontractors, wallet providers, and the blockchain services we use.
 
-A one-person team is not automatically prohibited. Providers may still require credible coverage, segregation of critical duties, escalation paths, and named people who can answer for compliance, security, operations, and customers. Contractors and specialist firms can provide some functions; accountability cannot be delegated to an AI system.
+A small team isn't ruled out automatically. Partners may still require cover for key roles, separation of critical duties, clear escalation, and named people responsible for compliance, security, operations, and customers. Contractors and specialist firms can do some of this work, but accountability can't be handed to an AI system.
 
-## Customer onboarding
+## Checks on you
 
-The provider determines the exact checks. Lower starting balances may make a customer relationship easier to understand, but they do not remove identity or sanctions requirements. Higher balances, unusual flows, higher-risk countries, business accounts, or inconsistent source information can trigger enhanced review.
+The partner decides which checks you'll go through. A smaller starting balance may keep things simple, but identity and sanctions checks still apply. Larger balances, unusual activity, higher-risk countries, business accounts, or inconsistent information can lead to more checks.
 
-Aura should collect a piece of information only when the provider or Aura has a defined need for it. Original identity documents should remain with the regulated provider wherever the integration permits.
+Aura should only ask for information when we or the partner have a clear need. Where possible, your original identity documents stay with the partner.
 
-## Country availability
+## Where it's available
 
-Availability is evaluated service by service. A customer may be eligible for a wallet but not a card, for a card but not tokenized securities, or for stablecoin conversion but not a local bank account.
+Each service is checked country by country. You might be able to use your wallet but not a card, or swap stablecoins but not open a local bank account.
 
-Country access requires a maintained matrix covering customer residence, citizenship where relevant, entity type, provider coverage, product permissions, sanctions, marketing rules, and benefit availability. Missing or stale eligibility data fails closed.
+We keep a record of which service is available where, based on residence, citizenship where relevant, partner coverage, sanctions, and marketing rules. If that information is missing or out of date, the service stays unavailable.
 
-## Launch standard
+## Before anything goes live
 
-A regulated feature becomes live only after contracts, production credentials, approved jurisdictions, customer terms, privacy disclosures, support routing, monitoring, reconciliation, incident playbooks, and end-to-end tests are complete. Until then, the feature remains marked preview or unavailable.
-
+A regulated feature goes live only when its contracts, production access, approved countries, customer terms, privacy notices, support, monitoring, reconciliation, incident plans, and full testing are all in place. Until then, it's marked as preview or unavailable.

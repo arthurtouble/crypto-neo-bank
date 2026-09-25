@@ -17,21 +17,21 @@ Run `pnpm test:mainnet-readiness` to verify chain IDs, allowlisted USDC contract
 
 ## Human journeys
 
-1. New user: authenticate, enroll passkey, create or connect wallet, review risk disclosures.
-2. Recovery: sign out, use the configured recovery path, confirm the same public address, inspect/export through Privy’s customer flow.
+1. New user: sign in, confirm the smart wallet address on Base, review risk disclosures.
+2. Recovery: sign out, use the configured recovery path, confirm the same smart wallet address, inspect/export through Privy’s customer flow.
 3. Receive: copy and QR address, fund with a small Base amount, refresh and compare against BaseScan.
-4. Direct send: save destination, observe cooling policy, preview/simulate, verify wallet prompt, sign, follow receipt.
-5. Cross-chain: request supported native USDC route, verify exact approval, sign approval and route, distinguish source from destination state.
-6. Aave: verify market and position, prepare supply/withdraw and borrow/repay only with understood liquidation risk.
-7. Controls: turn on account lock and saved-destination-only; confirm preparation fails closed; turn off only after reauthentication.
-8. Failure: reject a wallet prompt, use insufficient gas, allow a quote to expire and verify clear recovery.
+4. Send: save a recipient, observe cooling, verify the wallet prompt, sign once, and confirm the action reaches `confirmed`.
+5. Swap and cross-chain: quote a route, check price impact and slippage, sign approval and route as one operation, and confirm source and destination states are shown separately.
+6. Earn: Aave supply and withdraw on Base; Sky deposit and withdraw on Ethereum.
+7. Controls: turn on account lock, a daily limit, and saved-recipients-only; confirm preparation is blocked.
+8. Failure: reject a wallet prompt, let a quote expire, and let an action expire unsubmitted; verify clear recovery. Confirm gas is sponsored once the paymaster is configured.
 9. Support: submit normal and urgent cases without exposing secrets; verify operator triage.
 
 ## 100-movement matrix
 
-Allocate at least 20 movements to Base direct send/receive and at least 10 to each published routed USDC source/destination combination selected for launch. Include approval-required, customer-rejected, expired-quote, insufficient-gas and destination-delay cases. A route is not published merely because LI.FI can quote it; it must pass this matrix and have a recovery procedure.
+Allocate at least 20 movements to Base direct send/receive and at least 10 to each published routed USDC source/destination combination selected for launch. Include approval-required, customer-rejected, expired-quote and destination-delay cases. A route is not published merely because LI.FI can quote it; it must pass this matrix and have a recovery procedure.
 
-For each movement record: tester ID alias, build version, UTC time, source/destination chain, token contract, displayed amount/fees, wallet prompt comparison, approval hash, route hash, destination evidence, duration, result, issue ID and reviewer. Never place sensitive authentication material in the evidence file.
+For each movement record: tester ID alias, build version, UTC time, source/destination chain, token contract, displayed amount/fees, wallet prompt comparison, action ID, transaction hash, destination evidence, duration, result, issue ID and reviewer. Never place sensitive authentication material in the evidence file.
 
 ## Exit criteria
 

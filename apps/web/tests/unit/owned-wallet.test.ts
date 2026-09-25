@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { WalletOwnershipError, requireLinkedEvmWallet } from "@/lib/auth/wallet";
+import { WalletOwnershipError, requireActionWallet, requireLinkedEvmWallet } from "@/lib/auth/wallet";
 
 const subject = "did:privy:owner";
 const owned = "0x1111111111111111111111111111111111111111";
@@ -24,5 +24,24 @@ describe("server wallet ownership", () => {
     }))).rejects.toBeInstanceOf(WalletOwnershipError);
     await expect(requireLinkedEvmWallet(subject, owned, async () => { throw new Error("Privy unavailable"); }))
       .rejects.toThrow("Privy unavailable");
+  });
+
+  it("recognizes a Privy smart wallet, which carries no chain type", async () => {
+    await expect(requireLinkedEvmWallet(subject, owned, async () => ({
+      id: subject, linked_accounts: [{ type: "smart_wallet", address: owned }]
+    }))).resolves.toBe(owned);
+  });
+});
+
+describe("the wallet Aura prepares actions for", () => {
+  const signer = { type: "wallet", chain_type: "ethereum", wallet_client_type: "privy", address: other };
+  const external = { type: "wallet", chain_type: "ethereum", wallet_client_type: "metamask", address: "0x3333333333333333333333333333333333333333" };
+
+  it("prefers the smart wallet, then the Privy signer, and never an external wallet", async () => {
+    await expect(requireActionWallet(subject, async () => ({ id: subject, linked_accounts: [external, signer, { type: "smart_wallet", address: owned }] })))
+      .resolves.toBe(owned);
+    await expect(requireActionWallet(subject, async () => ({ id: subject, linked_accounts: [external, signer] }))).resolves.toBe(other);
+    await expect(requireActionWallet(subject, async () => ({ id: subject, linked_accounts: [external] }))).rejects.toBeInstanceOf(WalletOwnershipError);
+    await expect(requireActionWallet(subject, async () => ({ id: "did:privy:other", linked_accounts: [signer] }))).rejects.toBeInstanceOf(WalletOwnershipError);
   });
 });

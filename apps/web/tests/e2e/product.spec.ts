@@ -19,19 +19,6 @@ test("financial modals stay fixed to a long mobile viewport", async ({ page }) =
   expect(geometry.dialogBottom).toBeLessThanOrEqual(844);
 });
 
-test("partner sandbox exercises success and failure workflows", async ({ page }) => {
-  test.setTimeout(60_000);
-  await page.goto("/app/sandbox");
-  await expect(page.getByRole("heading", { name: "Provider integration lab" })).toBeVisible();
-  const allocate = page.getByRole("button", { name: /Allocate \$2,500/ });
-  await expect(allocate).toBeEnabled({ timeout: 45_000 });
-  await allocate.click();
-  await expect(page.locator(".receiptPanel").getByText("Review and sign")).toBeVisible();
-  await page.getByRole("button", { name: /Failed transfer/ }).click();
-  await page.getByRole("button", { name: /Withdraw \$1,000/ }).click();
-  await expect(page.locator(".receiptPanel").getByText("The destination could not be verified. No funds moved.")).toBeVisible();
-});
-
 test("public landing page has no serious accessibility violations", async ({ page }) => {
   await page.goto("/");
   const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
@@ -54,15 +41,15 @@ test("theme and private access gate remain usable", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
   await expect(page.getByText("Example data", { exact: true })).toBeVisible();
   if (page.viewportSize()!.width < 800) await page.getByRole("button", { name: "Open navigation" }).click();
-  await page.getByRole("link", { name: "Borrow" }).click();
-  await expect(page.getByRole("heading", { name: "Borrow" })).toBeVisible();
+  await page.getByRole("link", { name: "Earn" }).click();
+  await expect(page.getByRole("heading", { name: "Earn" })).toBeVisible();
   await expect(page.getByText("Example data", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: /Sign in to continue/ })).toBeVisible();
 });
 
 test("every Aura section is browsable with labeled fictional data", async ({ page }) => {
   test.setTimeout(90_000);
-  for (const section of ["deposit", "send", "swap", "earn", "borrow", "invest", "cards", "rewards", "transactions", "insights", "settings", "support"]) {
+  for (const section of ["deposit", "send", "swap", "earn", "invest", "cards", "rewards", "transactions", "insights", "settings", "support"]) {
     await page.goto(`/app/${section}`);
     await expect(page.getByRole("heading", { name: section[0].toUpperCase() + section.slice(1), exact: true })).toBeVisible();
     await expect(page.getByText("Example data", { exact: true })).toBeVisible();
@@ -102,7 +89,7 @@ test("public status exposes bounded component state and no secrets", async ({ re
 });
 
 test("private APIs fail closed without an authenticated subject", async ({ request }) => {
-  for (const path of ["/api/portfolio/history?range=7D", "/api/activity", "/api/insights", "/api/cards", "/api/aura-tags", "/api/intents/status?intentId=00000000-0000-4000-8000-000000000000", "/api/money/account", "/api/recipients", "/api/ops/summary", "/api/ops/features", "/api/ops/analytics", "/api/security/policy"]) {
+  for (const path of ["/api/activity", "/api/insights", "/api/cards", "/api/aura-tags", "/api/actions/00000000-0000-4000-8000-000000000000", "/api/money/account", "/api/recipients", "/api/ops/summary", "/api/ops/features", "/api/ops/analytics", "/api/security/policy"]) {
     const response = await request.get(path);
     expect([401, 403], path).toContain(response.status());
     expect(response.headers()["cache-control"], path).toContain("no-store");
@@ -111,17 +98,20 @@ test("private APIs fail closed without an authenticated subject", async ({ reque
 });
 
 test("feedback and financial actions fail closed without authentication", async ({ request }) => {
-  const quote = await request.post("/api/swap/quote", { data: { fromAssetId: "USDC", toAssetId: "ETH", amount: "1", fromAddress: "0x000000000000000000000000000000000000dEaD" } });
+  const quote = await request.get("/api/routes/quote?from=8453:native&to=8453:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913&amount=1");
   expect(quote.status()).toBe(401);
-  const rewards = await request.post("/api/defi/aave/rewards", { data: { sender: "0x000000000000000000000000000000000000dEaD" } });
-  expect(rewards.status()).toBe(401);
+  const action = await request.post("/api/actions", { data: { kind: "earn", protocol: "aave", direction: "deposit", asset: "USDC", amount: "1" } });
+  expect(action.status()).toBe(401);
   const feedback = await request.post("/api/feedback", { data: { surface: "/app", sentiment: "neutral", category: "usability", message: "This is a useful test message." } });
   expect(feedback.status()).toBe(401);
 });
 
-test("unsigned provider events are rejected", async ({ request }) => {
-  const response = await request.post("/api/webhooks/provider", { data: { id: "e2e-unsigned", type: "account.updated" } });
-  expect([400, 401, 403]).toContain(response.status());
+test("provider webhooks reject unsigned events and unknown providers", async ({ request }) => {
+  for (const provider of ["bridge", "privy", "rain"]) {
+    const response = await request.post(`/api/webhooks/${provider}`, { data: { event_id: "e2e-unsigned", type: "customer.updated" } });
+    expect([401, 503], provider).toContain(response.status());
+  }
+  expect((await request.post("/api/webhooks/provider", { data: {} })).status()).toBe(404);
 });
 
 test("legacy documentation route points to the dedicated docs site", async ({ request }) => {

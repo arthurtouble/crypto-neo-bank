@@ -1,10 +1,11 @@
 "use client";
 
-import { usePrivy, useWallets } from "@privy-io/react-auth";
+import { usePrivy } from "@privy-io/react-auth";
 import { useQuery } from "@tanstack/react-query";
 import { Check, Clock3, Download, ExternalLink, FileSpreadsheet, LoaderCircle, Search, ShieldCheck, X, XCircle } from "lucide-react";
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useAuraWallet } from "@/lib/client/use-aura-wallet";
 import { activityCategory, activityCsv, activityEventLabel, activityLabel, activityStatus, taxSupportCsv, type ActivityCategory } from "@/lib/activity/presentation";
 
 type Intent = { intentId: string; type: string; status: string; transactionHash?: string; createdAt: string; updatedAt?: string; confirmedAt?: string; failureReason?: string; chainId?: number; asset?: string; amount?: string; destination?: string; estimatedUsd?: number; routeReference?: string; source?: string; sourceKind?: "projection" | "chain" | "provider"; authority?: string; events?: Array<{ type: string; occurredAt: string }> };
@@ -17,20 +18,17 @@ function short(value?: string) { return value && value.length > 14 ? `${value.sl
 
 export function ActivityWorkspace() {
   const { user, getAccessToken } = usePrivy();
-  const { wallets } = useWallets();
-  const wallet = useMemo(() => wallets.find((item) => item.walletClientType === "privy") ?? wallets[0], [wallets]);
+  const { address } = useAuraWallet();
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<(typeof categories)[number]>("All");
   const [status, setStatus] = useState("All");
   const [selected, setSelected] = useState<Intent | null>(null);
   const [exportOpen, setExportOpen] = useState(false);
-  const [exportError, setExportError] = useState<string | null>(null);
   const query = useQuery<ActivityResponse>({
-    queryKey: ["full-activity", user?.id, wallet?.address],
+    queryKey: ["full-activity", user?.id, address],
     queryFn: async () => {
       const token = await getAccessToken();
-      if (token) await fetch("/api/intents/reconcile", { method: "POST", headers: { Authorization: `Bearer ${token}` } }).catch(() => undefined);
-      const response = await fetch(`/api/activity${wallet?.address ? `?address=${wallet.address}` : ""}`, { headers: token ? { Authorization: `Bearer ${token}` } : undefined, cache: "no-store" });
+      const response = await fetch(`/api/activity${address ? `?address=${address}` : ""}`, { headers: token ? { Authorization: `Bearer ${token}` } : undefined, cache: "no-store" });
       if (!response.ok) throw new Error("Activity could not be loaded.");
       return response.json();
     },
@@ -55,19 +53,6 @@ export function ActivityWorkspace() {
     const anchor = document.createElement("a"); anchor.href = url; anchor.download = `aura-${kind === "tax" ? "tax-support" : "activity"}-${new Date().toISOString().slice(0, 10)}.csv`; anchor.click(); URL.revokeObjectURL(url);
   }
 
-  async function downloadHistoricalTaxSupport() {
-    setExportError(null);
-    try {
-      const token = await getAccessToken();
-      if (!token) throw new Error("Sign in again to export tax support.");
-      const year = new Date().getUTCFullYear();
-      const response = await fetch(`/api/portfolio/tax-support?year=${year}`, { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" });
-      if (!response.ok) throw new Error("Historical tax support is unavailable right now.");
-      const data = await response.json();
-      const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }));
-      const anchor = document.createElement("a"); anchor.href = url; anchor.download = `aura-tax-support-${year}-page-1.json`; anchor.click(); URL.revokeObjectURL(url);
-    } catch (error) { setExportError(error instanceof Error ? error.message : "Historical tax support is unavailable right now."); }
-  }
 
   return <>
     <section className="panel widePanel activityWorkspace">
@@ -81,7 +66,7 @@ export function ActivityWorkspace() {
       <p className="authorityFootnote">Activity combines Aura workflow evidence with available provider and network records.</p>
       <p className="authorityFootnote">Question about a card charge? <Link href="/app/support?topic=card-charge">Open a support case</Link>. Issuer dispute submission becomes available when a card transaction feed and issuer case adapter are connected.</p>
     </section>
-    {exportOpen && <div className="modalBackdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && setExportOpen(false)}><section className="financialModal exportModal" role="dialog" aria-modal="true" aria-labelledby="export-title"><button className="modalClose" onClick={() => setExportOpen(false)} aria-label="Close"><X size={18} /></button><h2 id="export-title">Export Activity</h2><p>Download the {filtered.length} records in your current displayed activity page. Aura intents are capped at the latest 50; this is not complete historical or tax coverage.</p><div className="exportCoverage"><span><strong>{receiptRecords}</strong><small>Network receipts</small></span><span><strong>{chainRecords}</strong><small>Protocol records</small></span><span><strong>{valuedRecords}</strong><small>USD estimates</small></span></div><div className="exportChoices"><button className="exportChoice" onClick={() => download("activity")}><Download size={18} /><span><strong>Activity CSV</strong><small>Current displayed page only</small></span></button><button className="exportChoice" onClick={() => download("tax")}><FileSpreadsheet size={18} /><span><strong>Activity tax-support preview CSV</strong><small>Current page; missing cost basis remains unavailable</small></span></button><button className="exportChoice" onClick={downloadHistoricalTaxSupport}><FileSpreadsheet size={18} /><span><strong>Coverage-aware tax support data</strong><small>Versioned first page for this year, with coverage and next cursor</small></span></button></div>{exportError && <div className="formError" role="alert">{exportError}</div>}<div className="modalRisk"><ShieldCheck size={15} /> These files support record keeping. They are not bank statements, tax returns or tax advice.</div>{query.data?.sources.aave.status === "unavailable" && <div className="formWarning">Aave activity is temporarily unavailable, so this export contains Aura records only.</div>}{query.data?.sources.aave.partial && <div className="formWarning">The Aave source returned a partial page. Older protocol history may not be included.</div>}</section></div>}
-    {selected && <div className="modalBackdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && setSelected(null)}><section className="financialModal receiptModal" role="dialog" aria-modal="true" aria-labelledby="receipt-title"><button className="modalClose" onClick={() => setSelected(null)} aria-label="Close"><X size={18} /></button><div className={`receiptStatus ${selected.status}`}><Check size={19} /></div><h2 id="receipt-title">{activityLabel(selected.type)}</h2><strong className="receiptAmount">{selected.amount ? `${selected.amount} ${selected.asset ?? ""}` : activityStatus(selected.status)}</strong><div className="receiptDetails"><span>Status<strong>{activityStatus(selected.status)}</strong></span><span>Date<strong>{new Date(selected.createdAt).toLocaleString()}</strong></span><span>Category<strong>{activityCategory(selected.type)}</strong></span><span>Source<strong>{selected.source ?? "Aura"}</strong></span>{selected.destination && <span>Destination<strong>{short(selected.destination)}</strong></span>}<span>Reference<strong>{selected.intentId.slice(0, 12)}</strong></span>{selected.failureReason && <span>Reason<strong>{selected.failureReason}</strong></span>}</div>{selected.events?.length ? <div className="receiptTimeline"><h3>Timeline</h3>{selected.events.map((event, index) => <div key={`${event.type}-${event.occurredAt}-${index}`}><i /><span><strong>{activityEventLabel(event.type)}</strong><small>{new Date(event.occurredAt).toLocaleString()}</small></span></div>)}</div> : null}{selected.transactionHash ? <a className="button secondary full" href={`${explorers[selected.chainId ?? 8453] ?? explorers[8453]}/tx/${selected.transactionHash}`} target="_blank" rel="noreferrer">View Transaction <ExternalLink size={14} /></a> : <div className="modalRisk">No transaction hash has been recorded for this action.</div>}</section></div>}
+    {exportOpen && <div className="modalBackdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && setExportOpen(false)}><section className="financialModal exportModal" role="dialog" aria-modal="true" aria-labelledby="export-title"><button className="modalClose" onClick={() => setExportOpen(false)} aria-label="Close"><X size={18} /></button><h2 id="export-title">Export Activity</h2><p>Download the {filtered.length} records in your current displayed activity page. Aura intents are capped at the latest 50; this is not complete historical or tax coverage.</p><div className="exportCoverage"><span><strong>{receiptRecords}</strong><small>Network receipts</small></span><span><strong>{chainRecords}</strong><small>Protocol records</small></span><span><strong>{valuedRecords}</strong><small>USD estimates</small></span></div><div className="exportChoices"><button className="exportChoice" onClick={() => download("activity")}><Download size={18} /><span><strong>Activity CSV</strong><small>Current displayed page only</small></span></button><button className="exportChoice" onClick={() => download("tax")}><FileSpreadsheet size={18} /><span><strong>Activity tax-support preview CSV</strong><small>Current page; missing cost basis remains unavailable</small></span></button></div><div className="modalRisk"><ShieldCheck size={15} /> These files support record keeping. They are not bank statements, tax returns or tax advice.</div>{query.data?.sources.aave.status === "unavailable" && <div className="formWarning">Aave activity is temporarily unavailable, so this export contains Aura records only.</div>}{query.data?.sources.aave.partial && <div className="formWarning">The Aave source returned a partial page. Older protocol history may not be included.</div>}</section></div>}
+    {selected && <div className="modalBackdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && setSelected(null)}><section className="financialModal receiptModal" role="dialog" aria-modal="true" aria-labelledby="receipt-title"><button className="modalClose" onClick={() => setSelected(null)} aria-label="Close"><X size={18} /></button><div className={`receiptStatus ${selected.status}`}><Check size={19} /></div><h2 id="receipt-title">{activityLabel(selected.type)}</h2><strong className="receiptAmount">{selected.amount ? `${selected.amount} ${selected.asset ?? ""}` : activityStatus(selected.status)}</strong><div className="receiptDetails"><span>Status<strong>{activityStatus(selected.status)}</strong></span><span>Date<strong>{new Date(selected.createdAt).toLocaleString()}</strong></span><span>Category<strong>{activityCategory(selected.type)}</strong></span><span>Source<strong>{selected.source ?? "Aura"}</strong></span>{selected.destination && <span>Destination<strong>{short(selected.destination)}</strong></span>}<span>Reference<strong>{selected.intentId.slice(0, 12)}</strong></span>{selected.failureReason && <span>Reason<strong>{selected.failureReason}</strong></span>}</div>{selected.events?.length ? <div className="receiptTimeline"><h3>Timeline</h3>{selected.events.map((event, index) => <div key={`${event.type}-${event.occurredAt}-${index}`}><i /><span><strong>{activityEventLabel(event.type)}</strong><small>{new Date(event.occurredAt).toLocaleString()}</small></span></div>)}</div> : null}{selected.source === "Aura" && <Link className="button secondary full" href={`/app/transactions/${selected.intentId}`}>Full history</Link>}{selected.transactionHash ? <a className="button secondary full" href={`${explorers[selected.chainId ?? 8453] ?? explorers[8453]}/tx/${selected.transactionHash}`} target="_blank" rel="noreferrer">View Transaction <ExternalLink size={14} /></a> : <div className="modalRisk">No transaction hash has been recorded for this action.</div>}</section></div>}
   </>;
 }

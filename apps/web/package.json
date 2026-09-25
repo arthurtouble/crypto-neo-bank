@@ -17,7 +17,7 @@
     "test": "pnpm test:unit && pnpm test:e2e",
     "test:unit": "vitest run",
     "test:live:readonly": "AUREL_LIVE_READONLY=1 vitest run",
-    "test:e2e": "pnpm build && playwright test",
+    "test:e2e": "playwright test",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"
   },
@@ -36,6 +36,7 @@
     "fetch-retry": "6.0.0",
     "lucide-react": "1.47.0",
     "next": "16.3.6",
+    "permissionless": "^0.2.57",
     "pino": "^10.0.0",
     "qrcode.react": "^4.2.0",
     "react": "19.3.0",

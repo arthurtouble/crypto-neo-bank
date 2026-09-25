@@ -1,48 +1,47 @@
 ---
 title: Sources of truth
-description: Which system is authoritative for balances, identity, controls, and transaction evidence.
+description: Which system has the final word on balances, identity, controls, and transaction records.
 ---
 
-Aura is not the authoritative balance ledger. Financial ownership and settlement live with public chains, protocol contracts, and future regulated providers.
+Aura isn't the record of your balance. Ownership and settlement live on public blockchains, in protocol contracts, and, later, with approved partners.
 
-That design reduces custody and bookkeeping risk, but “not the ledger” does not mean “no important data.” Aura still keeps security settings, customer instructions, consent records, support cases, and transaction evidence that must be protected and recoverable.
+That lowers the risk of Aura losing track of your money. It doesn't mean Aura keeps nothing important. Your security settings, consent records, support cases, and transaction evidence still need protecting.
 
-## Authority by data type
+## Who has the final word
 
-| Data | Authoritative source | Aura's role |
+| Data | Final word | What Aura does |
 | --- | --- | --- |
-| Wallet asset balance | Public chain | Read, normalize, cache, and display |
-| DeFi position | Protocol contracts | Read position and market state; prepare supported actions |
-| Transaction settlement | Chain receipt or provider record | Track references, recheck status, and explain exceptions |
-| Customer authentication | Privy-verified identity | Protect customer-scoped records and sessions |
-| Wallet control | Customer and wallet infrastructure | Request customer confirmation; never hold an Aura signing key |
-| Security preferences | Customer instruction stored by Aura | Enforce inside Aura and retain an audit trail |
-| Future fiat balance | Contracted regulated provider | Display the provider record and reconcile events |
-| KYC decision | Future regulated provider | Consume the minimum status needed for access decisions |
-| Support case | Aura | Retain the request, handling record, and outcome |
-| Product analytics | Aura | Measure approved product events; never substitute for balances |
+| Wallet balance | The blockchain | Reads it, formats it, and shows it |
+| Earn position | The protocol contract | Reads it and prepares supported actions |
+| Whether a transaction settled | The blockchain, or the partner | Tracks it, checks it, and explains problems |
+| Who you are when you sign in | Privy | Protects your records and sessions |
+| Control of your wallet | You, through Privy | Asks you to sign. Never holds a key |
+| Your security settings | Your choices, stored by Aura | Applies them inside Aura and records changes |
+| Future bank balance | The bank partner | Shows the partner's record |
+| Identity verification | The partner, once live | Uses only the status it needs |
+| Support cases | Aura | Keeps the request, how it was handled, and the outcome |
+| Product analytics | Aura | Measures a fixed list of events. Never used for balances |
 
 ## What can be rebuilt
 
-Wallet balances, protocol positions, and confirmed public-chain receipts can be read again from their authoritative sources. Aura may cache or project that information for speed.
+Balances, protocol positions, and confirmed transactions can always be read again from the blockchain. Aura may keep a copy to load pages faster.
 
-A rebuild is still an operational event. It can take time, upstream endpoints can disagree or be unavailable, and historical context may be harder to reconstruct than current state.
+Rebuilding still takes effort. It can be slow, sources can disagree or be down, and past context can be harder to recover than current balances.
 
-## What cannot be casually discarded
+## What can't be thrown away
 
-Customer security preferences, saved destinations, cooling timestamps, policy decisions, consent versions, support correspondence, and provider-event processing records are not disposable caches. Losing them may not change an onchain balance, but it could weaken controls or prevent Aura from explaining what happened.
+Your security settings, saved recipients, waiting periods, the checks Aura ran, consent versions, support messages, and partner update records aren't disposable. Losing them wouldn't change your balance, but it could weaken your controls or stop us explaining what happened.
 
-These records require controlled access, backup, restoration tests, retention rules, and deletion procedures that reflect their purpose.
+So we protect them with access controls, backups, restore tests, and clear rules for how long we keep them and how we delete them.
 
-## Reconciliation
+## Checking against the source
 
-Reconciliation compares Aura's view with the authoritative system. It does not make the projection authoritative.
+When Aura compares its records with the source, the source always wins.
 
-For an onchain transaction, that means checking the requested chain, transaction hash, receipt status, block, and expected action. For a future provider event, it means comparing event history, provider API state, and the customer-facing record. Differences become operations exceptions rather than being silently overwritten.
+For a blockchain transaction, Aura checks the network, the transaction hash, the receipt, the block, and the expected result. For a partner update, it compares the partner's history with what you see. Differences go to our operations team. They are never silently overwritten.
 
-## During an incident
+## If something goes wrong
 
-If Aura cannot trust its application records, affected instruction paths should pause. Operations restores retained evidence, replays idempotent events, rereads chain or provider state, and records any unresolved gap.
+If Aura can't trust its own records, the affected features pause. Our team restores saved evidence, rereads the blockchain or partner, and records anything that's still unexplained.
 
-The customer may still control assets through the underlying wallet. That is an important recovery property, but it does not make an unexplained policy or evidence gap acceptable.
-
+Your wallet doesn't depend on Aura's records, so you keep control of your assets. That's an important safety net, but it doesn't excuse a gap in our records.

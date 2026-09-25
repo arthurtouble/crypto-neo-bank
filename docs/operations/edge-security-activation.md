@@ -37,7 +37,7 @@ Recommended initial edge ceilings, measured before enforcement:
 | `/api/support/cases` POST | 10 per IP / hour | Managed Challenge; application also enforces 5/customer/hour |
 | `/api/support/assistant` POST | 30 per customer/IP / minute | Block excess; application enforces its customer limit |
 | `/api/swap/quote` POST | 60 per customer/IP / 10 minutes | Block excess; application enforces 20/customer/10 minutes |
-| `/api/webhooks/provider` POST | Contracted provider envelope | Rate high enough for retry bursts; never replace HMAC verification |
+| `/api/webhooks/bridge`, `/api/webhooks/privy`, `/api/webhooks/rain` POST | Provider events (Bridge RSA, Privy Svix; Rain rejected until implemented) | Rate high enough for retry bursts; never replace signature verification |
 | `/api/ops/*` | Low operator volume | Access policy first, then strict per-identity/IP limit |
 
 Revisit thresholds using observed traffic distributions. A rate-limit event is not evidence that the customer is malicious.

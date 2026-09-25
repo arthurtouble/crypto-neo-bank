@@ -4,7 +4,7 @@ import { customerSections, legacySectionDestination, navigation } from "@/lib/pr
 describe("Aura product map", () => {
   it("exposes only the approved customer sections", () => {
     expect(customerSections).toEqual([
-      "deposit", "send", "swap", "earn", "borrow", "invest", "cards",
+      "deposit", "send", "swap", "earn", "invest", "cards",
       "rewards", "transactions", "insights", "settings", "support"
     ]);
     expect(navigation.flatMap((group) => group.items.map((item) => item.href))).toEqual([
@@ -16,6 +16,7 @@ describe("Aura product map", () => {
     expect(legacySectionDestination("transfers")).toBe("/app/deposit");
     expect(legacySectionDestination("goals")).toBe("/app");
     expect(legacySectionDestination("concierge")).toBe("/app/support");
+    expect(legacySectionDestination("borrow")).toBe("/app/earn");
     expect(legacySectionDestination("operations")).toBeNull();
   });
 });

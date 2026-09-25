@@ -5,7 +5,7 @@ description: System boundaries, sources of truth, runtime flows, and recovery ru
 
 ## Principle
 
-Aurel is an orchestration and presentation layer, not a bank ledger. Aurel must remain recoverable from its providers and public chains. Deleting the application database must never delete customer money, change a customer balance, or make ownership ambiguous.
+Aurel prepares, checks, and presents money movements; it is not a bank ledger. Aurel must remain recoverable from its providers and public chains. Deleting the application database must never delete customer money, change a customer balance, or make ownership ambiguous.
 
 ## Systems of record
 
@@ -49,6 +49,8 @@ flowchart LR
     CONSUMER -->|refresh request| BRIDGE
     CONSUMER -->|re-index| CHAIN
 ```
+
+Customer money movements follow the [money actions](money-actions.md) pipeline: the server prepares exact calls, the customer's smart wallet signs them, and the server verifies the result from chain evidence.
 
 The command path returns provider receipts. The event path refreshes read models. Neither path fabricates settlement from an Aurel database write.
 

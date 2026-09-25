@@ -6,7 +6,7 @@ import { AlertTriangle, Database, LoaderCircle, RefreshCw, Webhook } from "lucid
 import { useState } from "react";
 import { OperationsControls } from "./operations-controls";
 
-type Summary = { intents: Array<{ status: string; count: number }>; webhooks: Array<{ status: string; count: number }>; support: Array<{ status: string; count: number }>; funnel: Array<{ status: string; count: number }>; reliability: { confirmed?: number; failed?: number; stale?: number }; issues: Array<{ issue_id: string; issue_type: string; severity: string; source_name: string; summary: string; status: string; opened_at: string }>; projections: { count?: number; latest?: string | null }; checks: Array<{ check_key: string; status: string; checked_at: string; details: Record<string, number> }>; observedAt: string };
+type Summary = { intents: Array<{ status: string; count: number }>; webhooks: Array<{ status: string; count: number }>; support: Array<{ status: string; count: number }>; funnel: Array<{ status: string; count: number }>; reliability: { confirmed?: number; failed?: number; stale?: number }; issues: Array<{ issue_id: string; issue_type: string; severity: string; source_name: string; summary: string; status: string; opened_at: string }>; checks: Array<{ check_key: string; status: string; checked_at: string; details: Record<string, number> }>; observedAt: string };
 
 export function OperationsWorkspace() {
   const { getAccessToken, user } = usePrivy();

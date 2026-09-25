@@ -43,7 +43,7 @@ Bridge's [virtual-account API](https://apidocs.bridge.xyz/api-reference/virtual-
 
 ### Transfers
 
-The command path is: validate customer capability → validate recipient → show amount, fee, timing, and funding source → require step-up when policy says so → submit with an idempotency key → store the provider transfer ID → update from webhooks → reconcile until terminal.
+The command path is: validate customer capability → validate recipient → show amount, fee, timing, and funding source → check the customer's controls → submit with an idempotency key → store the provider transfer ID → update from webhooks → reconcile until terminal.
 
 Never mark a transfer complete from the initial API response. Support returns, refunds, review holds, and additional-information requests.
 

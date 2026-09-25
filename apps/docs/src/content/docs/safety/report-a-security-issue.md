@@ -5,16 +5,16 @@ sidebar:
   order: 3
 ---
 
-Use the in-product support form for account concerns. Mark the case urgent if funds may be at risk.
+If you're worried about your own account, use the support form in the app. Mark the case urgent if your funds may be at risk.
 
-For a product vulnerability, email **security@aurel.finance** once that address is activated. Until then, do not send sensitive material to an unverified address.
+To report a vulnerability in Aura, email **security@aurel.finance** once that address is active. Until then, don't send sensitive details to an address you can't verify.
 
-## Include
+## Please include
 
-- the affected page or feature;
-- steps that reproduce the issue;
-- the impact you observed;
-- transaction hashes or public wallet addresses, when relevant; and
+- the page or feature affected;
+- the steps to reproduce the issue;
+- what impact you saw;
+- transaction hashes or public wallet addresses, if relevant; and
 - a safe way to contact you.
 
 ## Never include
@@ -22,6 +22,8 @@ For a product vulnerability, email **security@aurel.finance** once that address 
 - a seed phrase or private key;
 - a recovery secret;
 - a password or one-time code; or
-- personal documents unless an approved support channel asks for them.
+- personal documents, unless an approved support channel asks for them.
 
-Do not access other people’s data, move assets, interrupt service, or use social engineering while testing. Aura does not yet operate a public bug-bounty program or promise a reward.
+## Test responsibly
+
+While testing, don't access other people's data, move assets, disrupt the service, or trick people into giving you access. Aura doesn't run a public bug bounty yet, and we can't promise a reward.

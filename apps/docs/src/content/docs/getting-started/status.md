@@ -1,28 +1,42 @@
 ---
 title: Product status
-description: What Aura can do now and what requires a provider or release gate.
+description: What you can use in Aura now, and what's still waiting on a partner.
 sidebar:
   order: 1
 ---
 
-Aura is a browsable product preview. Every section can be explored without signing in, using clearly labeled fictional data. Anyone can sign in; you accept the terms of use the first time. Personal records require authentication, and financial actions also depend on feature availability and your account controls. The current Aura development site uses this branch; it is not a production release.
+Aura is in preview. You can explore every section without signing in, using labeled example data. Anyone can sign in, and you accept the terms of use the first time you do.
 
-| Area | Current capability | Boundary |
+Your Aura account is a smart wallet on Base that you control. The features below are built, but each one stays switched off until it has been tested with real funds. No real-money transaction has been made through Aura yet, and covered network fees aren't set up yet.
+
+## Built, switched on as each is ready
+
+| Area | What it does | Good to know |
 | --- | --- | --- |
-| Overview | Base wallet balances, Aave positions, and Ethereum Sky sUSDS | Chains and protocols are authoritative; values depend on live reads |
-| Deposit | Crypto receiving address and Aura tag page | Bank instructions require an active Bridge account and complete provider details |
-| Send | Governed Base crypto transfer preparation and saved addresses | Wallet signing, policy, simulation, and settlement checks apply; bank payout execution is not connected |
-| Swap | LI.FI asset search and reviewed Base swaps and USDC bridges | Only routes that pass exact-call checks can be prepared; destination delivery needs separate confirmation |
-| Earn and Borrow | Aave supply, withdrawal, borrowing, and repayment on Base; Sky USDC deposits and withdrawals on Ethereum | Wallet approval, network fees, and chain settlement apply; Morpho is not connected |
-| Invest | Supported crypto routes | Tokenized stocks and metals require eligibility and a connected execution provider |
-| Cards | The card your issuer reports, shown once the card program is switched on | Issuance, freeze, limits, countries, PIN, wallet provisioning, termination, and disputes need Bridge/Rain program and control adapters |
-| Rewards | Membership and benefit allowances reported by a connected provider | Cashback and benefits need a contracted and funded provider program |
-| Transactions and Insights | Aura workflow evidence plus available chain and Aave activity | Exports show their coverage; issuer card transaction feed is not connected |
-| Settings and Support | Privy passkeys, recovery, wallet export, transaction limits, account lock, wallet-provider rules, notification choices, data export and deletion, and support cases | Session management and passcode changes depend on identity-provider capabilities; assistant depends on configured AI availability |
-| Aura tag payment page | Opted-in, verified linked crypto address | Bank transfer requires provider instructions; card payment requires an acquiring or payment-link provider |
+| Overview | Your balances on Base, Aave positions, and Sky savings on Ethereum | Values come from live reads. If a read fails, Aura shows it as unavailable |
+| Deposit | Your receiving address and Aura tag page | Bank details aren't available yet |
+| Send | Send assets on Base to an address or an Aura tag | Your controls apply, and you sign in your wallet |
+| Swap | Swap assets and move them between networks, using routes found by LI.FI | Quotes last 45 seconds. A move between networks is complete only when it arrives |
+| Invest | Buy crypto assets through the same routes as Swap | Tokenized stocks and metals aren't offered |
+| Earn | Supply and withdraw on Aave (Base). Deposit to and withdraw from Sky savings (Ethereum) | Rates change. Neither is a bank deposit |
+| Transactions and Insights | Your Aura activity, plus chain and Aave history where available | Exports say what they cover |
+| Aura tag | A public page where people can pay you in crypto | Bank and card payments on the page aren't available |
+| Settings | Sign-in, recovery, key export, optional account lock, daily limit, and saved-recipients-only mode, notification choices, and data export and deletion | Your controls are off until you turn them on |
+| Support | Open and follow support cases | |
 
-A screen or database record is not proof that a regulated service is active. No bank account, payment card, securities trade, or reward is promised until its provider connection, country eligibility, terms, and operational controls are in place. Aura does not give regulated investment advice. Aave and swap rates can change, and onchain transactions may be irreversible.
+## Not available yet
 
-See [sources of truth](/concepts/sources-of-truth/), [account controls](/safety/account-controls/), and [provider responsibilities](/company/provider-responsibilities/).
+| Area | Status |
+| --- | --- |
+| Bank accounts and bank transfers | Built with Bridge. Waiting for Bridge's approval. Bridge will verify your identity and hold the bank relationship |
+| Cards | Waiting for a card program with Rain or Bridge |
+| Cashback and rewards | Waiting for a funded partner program |
+| Tokenized stocks and metals | Depend on issuers being available. Not offered |
+| Card payments on Aura tag pages | Not available |
+| Borrowing | Not offered |
+
+Seeing a feature in the app doesn't mean it's live. We won't offer a bank account, card, or reward until the partner, your country's rules, the terms, and our support for it are all in place. Aura doesn't give investment advice.
+
+See [sources of truth](/concepts/sources-of-truth/), [account controls](/safety/account-controls/), and [who does what](/company/provider-responsibilities/).
 
 Last reviewed: 25 September 2026.

@@ -8,7 +8,7 @@ Aura is a crypto-and-fiat money app built on Cloudflare Workers. Infrastructure,
 - `apps/events`: queue consumer Worker (`aurel-provider-event-consumer`) that applies signed provider events to D1 projections.
 - `apps/docs`: public Astro docs Worker. Customer-facing copy.
 - `packages/provider-projections`: shared event contract used by web and events.
-- `infra/d1/migrations`: numbered D1 migrations (`NNNN_snake_case.sql`), shared by all Workers.
+- `infra/d1/migrations`: D1 schema (`0001_baseline.sql`, then numbered `NNNN_snake_case.sql` files once production exists), shared by all Workers.
 - `docs/`: internal docs (architecture, runbooks, security, compliance). Read `docs/README.md` first. Dated files are point-in-time evidence; don't edit them, update the undated doc instead.
 
 ## Commands (repo root)
@@ -33,7 +33,7 @@ CI (`.github/workflows/ci.yml`) runs lint, `typecheck:all`, `test:unit`, build, 
 - API handlers must use the wrapper in `apps/web/src/lib/http/route.ts`. `tests/unit/api-route-inventory.test.ts` fails otherwise; list genuine exceptions there as public/special-contract routes.
 - New customer-data tables must be classified in `apps/web/src/lib/privacy/subject-data.ts`.
 - Financial actions are gated server-side by feature switches (`src/lib/features/flags.ts`, stored in D1), account locks, daily limits, and transaction policy. Never gate only in the UI.
-- Migrations are append-only: add a new numbered file, never edit an applied one. Apply migrations before deploying code that needs them.
+- Migrations: `infra/d1/migrations/0001_baseline.sql` is the whole schema. No production database has been migrated yet, so edit the baseline directly and reset the dev database (see `docs/operations/aura-development-worker.md`). After the first production migration, migrations become append-only: add a new numbered file, never edit an applied one, and apply migrations before deploying code that needs them.
 - Never put secrets in `wrangler.jsonc`, docs, or tests. Use `wrangler secret put`. `.aura-dev-*` and `.dev.vars` are gitignored for local secrets.
 - Guest pages show fictional example data, and it must be labeled as such.
 

@@ -5,30 +5,34 @@ description: Fund movements, authoritative sources, and provider data responsibi
 
 ## Self-controlled onchain transfer
 
-`Customer request → Aurel policy and simulation → Privy wallet confirmation → Base transaction → Base receipt → Aurel evidence and display`
+All onchain movements follow [money actions](money-actions.md).
+
+## Send
+
+`Customer request → Aurel controls and exact calls → smart wallet signs one operation → Base → Aurel verifies identity, finality, and Transfer effect`
 
 - Aurel prepares; it does not possess a customer signing key.
 - Base is authoritative for balance and receipt.
-- D1 retains the instruction, policy result, transaction hash and checks.
+- D1 retains the action, its calls and effects, the transaction hash, and verification events.
 
-## Cross-chain USDC
+## Swaps and cross-chain moves
 
-`Customer request → LI.FI quote → Aurel route validation → exact token approval → source receipt → route transaction → bridge/exchange/relayer → destination chain → destination evidence`
+`Customer request → LI.FI quote held server-side → Aurel validation (Diamond target and spender, price impact, slippage) → approval + route in one operation → source debit verified → LI.FI status → destination receipt with minimum output`
 
 - Source confirmation is not destination delivery.
-- LI.FI and route components supply route state; the chains remain authoritative for their transactions.
-- Aurel retains route references and raises an exception when state remains ambiguous.
+- LI.FI supplies route state; the chains remain authoritative for their transactions.
+- The action stays `settling` until delivery is verified.
 
-## Aave V3
+## Earn (Aave V3 on Base, Sky on Ethereum)
 
-`Customer request → Aurel policy → Aave preview/plan → Privy confirmation → Aave contracts on Base → protocol position read`
+`Customer request → Aurel controls → exact approval + supply/withdraw in one operation → protocol contracts → Supply/Withdraw or vault events verified`
 
-- Aave contracts determine collateral, debt, rates and liquidation.
-- Aurel cannot pause liquidation or guarantee liquidity.
+- The protocols determine rates and liquidity.
+- Aurel cannot guarantee liquidity or returns.
 
 ## Future regulated fiat conversion
 
-`Customer onboarding → regulated-provider KYC decision → provider account/rail instruction → provider fiat record → provider conversion → provider or customer wallet delivery → signed provider event → Aurel reconciliation`
+`Customer onboarding (Bridge KYC link) → Bridge KYC decision → USD virtual account depositing to the smart wallet, or payout to a Bridge Base deposit address funded by a transfer action → Bridge record → signed Bridge event at /api/webhooks/bridge → Aurel projection`
 
 - The provider's contract must define account holder, safeguarding, conversion counterparty, settlement, reversals, freezes and complaints.
 - Aurel should retain status and opaque references, not original identity documents.
@@ -38,7 +42,7 @@ description: Fund movements, authoritative sources, and provider data responsibi
 
 | System | Aurel stores | Aurel does not store |
 |---|---|---|
-| Privy | Verified subject, public wallet reference | Private key, recovery secret, one-time code |
+| Privy | Verified subject, smart wallet address | Private key, recovery secret, one-time code |
 | Chain/protocol | Address, chain, asset, transaction hash, source block, observation time | A proprietary balance ledger |
-| LI.FI | Quote/route reference and transaction evidence | A claim that source confirmation equals destination delivery |
+| LI.FI | Server-held quote, route status, and transaction evidence | A claim that source confirmation equals destination delivery |
 | Future regulated provider | Customer/resource reference, eligibility/status, reconciliation evidence | Original KYC documents unless a contract and legal need explicitly require them |

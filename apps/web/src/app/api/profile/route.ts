@@ -17,8 +17,8 @@ export const GET = route("profile.get", { unavailable: "profile_unavailable" }, 
   await ensureSubjectProfile(env.PROJECTION_DB, subject.subjectReference);
   const [progress, submitted, earn] = await env.PROJECTION_DB.batch([
     env.PROJECTION_DB.prepare("SELECT network_guide_read_at, risk_guide_read_at, first_seen_at FROM onboarding_progress WHERE subject_reference = ?").bind(subject.subjectReference),
-    env.PROJECTION_DB.prepare("SELECT COUNT(*) AS count FROM transaction_intents WHERE subject_reference = ? AND status IN ('submitted', 'confirmed')").bind(subject.subjectReference),
-    env.PROJECTION_DB.prepare("SELECT COUNT(*) AS count FROM transaction_intents WHERE subject_reference = ? AND intent_type = 'earn_supply' AND status IN ('submitted', 'confirmed')").bind(subject.subjectReference)
+    env.PROJECTION_DB.prepare("SELECT COUNT(*) AS count FROM actions WHERE subject_reference = ? AND status IN ('submitted', 'settling', 'confirmed')").bind(subject.subjectReference),
+    env.PROJECTION_DB.prepare("SELECT COUNT(*) AS count FROM actions WHERE subject_reference = ? AND kind = 'earn' AND status IN ('submitted', 'settling', 'confirmed')").bind(subject.subjectReference)
   ]);
   const row = progress.results[0] as unknown as ProgressRow;
   return Response.json({
