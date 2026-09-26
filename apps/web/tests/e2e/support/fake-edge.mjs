@@ -83,7 +83,8 @@ export function startFakeEdge({ port }) {
     if (method === "eth_getBalance") return result(`0x${balance(chainId, "native", params[0]).toString(16)}`);
     if (method === "eth_call") {
       try { return result(ethCall(chainId, params[0])); }
-      catch (error) { return { jsonrpc: "2.0", id, error: { code: -32000, message: String(error.message ?? error) } }; }
+      // Like a real node: a call it can't serve reverts, without internal details.
+      catch { return { jsonrpc: "2.0", id, error: { code: -32000, message: "execution reverted" } }; }
     }
     return { jsonrpc: "2.0", id, error: { code: -32601, message: `method ${method} not supported by the fake node` } };
   }
