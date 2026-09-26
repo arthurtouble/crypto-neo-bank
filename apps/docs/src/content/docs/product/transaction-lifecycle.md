@@ -9,20 +9,20 @@ Transactions shows more than successful payments. It records what Aura saw at ea
 
 1. **You ask.** You choose the action, amount, network, and recipient or position.
 2. **Aura prepares it.** Aura's server checks that the feature is on, applies any controls you've set, and builds the exact transaction.
-3. **You sign.** Your wallet shows the transaction. Any approval and the action are signed together, as one operation. You can cancel.
-4. **Your wallet submits it.** It sends Aura the transaction hash.
+3. **You confirm.** You review it in Aura and confirm with your passkey. You can cancel.
+4. **Privy submits it.** Aura sends your signed request to Privy, which submits it to the network and pays the fee.
 5. **Aura checks it.** Aura reads the blockchain itself and checks the result.
 
 ## What each status means
 
 | Status | Meaning |
 | --- | --- |
-| **Blocked** | A feature switch or one of your controls stopped the request. Nothing was sent to your wallet. |
-| **Submitted** | You signed and a transaction hash exists. Aura is still checking. |
+| **Blocked** | A feature switch or one of your controls stopped the request. Nothing was sent. |
+| **Submitted** | You confirmed and a transaction hash exists. Aura is still checking. |
 | **On its way** | A move between networks has left the first network. It hasn't arrived yet. |
 | **Complete** | The transaction matches what you reviewed, the network finalized it, and the expected transfer or deposit appeared. A move between networks must also arrive. |
 | **Failed** | The network rejected it, the route failed, or the result didn't match what you reviewed. Transactions shows the reason. |
-| **Not confirmed** | Aura didn't get a transaction hash in time. If you signed it in your wallet, check your wallet's activity. This isn't the same as failed. |
+| **Not confirmed** | Aura didn't get a transaction hash in time. Check the transaction before you try again. This isn't the same as failed. |
 
 A transaction hash only proves something was submitted. Before Aura marks a transaction complete, it compares what was signed, and what it did, with what Aura prepared. A receipt alone isn't enough. Aura keeps checking until the network treats the transaction as final, because earlier blocks can occasionally be rewritten.
 
@@ -57,4 +57,4 @@ Before retrying anything uncertain, check your wallet's activity and a block exp
 
 ## What Aura can't reverse
 
-Blockchain transactions generally can't be reversed once settled. Aura can't recall funds sent to the wrong address, or cancel a confirmed move between networks. Aura's controls are there to help you catch mistakes before you sign.
+Blockchain transactions generally can't be reversed once settled. Aura can't recall funds sent to the wrong address, or cancel a confirmed move between networks. Aura's controls are there to help you catch mistakes before you confirm.

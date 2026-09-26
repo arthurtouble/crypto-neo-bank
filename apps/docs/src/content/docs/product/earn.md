@@ -20,7 +20,7 @@ Neither is a bank deposit, insured, or guaranteed. Getting your money out depend
 
 ## Depositing and withdrawing
 
-Any token approval and the deposit are signed together, as one operation. Check the asset, amount, and network in your wallet before you sign.
+Any token approval and the deposit are confirmed together, as one step. Check the asset, amount, and network in the review before you confirm with your passkey.
 
 Aura marks a deposit or withdrawal complete only after it sees the protocol's own record of it on the blockchain.
 

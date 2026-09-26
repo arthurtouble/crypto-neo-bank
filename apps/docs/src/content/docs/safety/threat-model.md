@@ -21,7 +21,7 @@ If you've turned them on, your emergency lock, daily limit, and saved-recipients
 
 A compromised web page, software library, route response, or partner could try to change a recipient, amount, or contract.
 
-Aura builds each transaction on its server and keeps swap quotes there, so the browser can't swap in something else. After you sign, Aura checks that what reached the blockchain matches what it prepared. Your wallet gives you a final, separate look. If the wallet prompt doesn't match what you meant to do, stop.
+Aura builds each transaction on its server and keeps swap quotes there, so the browser can't swap in something else. After you confirm, Aura checks that what reached the blockchain matches what it prepared. If the review doesn't match what you meant to do, stop.
 
 ## Wrong recipients and scams
 

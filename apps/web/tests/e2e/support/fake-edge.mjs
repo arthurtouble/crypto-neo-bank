@@ -7,10 +7,23 @@
 
 import { createServer } from "node:http";
 import { createPrivateKey, generateKeyPairSync, randomBytes, randomUUID, sign } from "node:crypto";
-import { decodeFunctionData, encodeFunctionResult, parseAbi } from "viem";
+import { decodeFunctionData, encodeAbiParameters, encodeEventTopics, encodeFunctionData, encodeFunctionResult, parseAbi, parseAbiItem } from "viem";
 
 /** The Privy user who may use the operations API in tests (feature switches). */
 export const OPERATOR = { userId: "did:privy:e2e-operator", wallet: "0x00000000000000000000000000000000000e2e01" };
+/** Where Privy's sponsored operations land: EntryPoint v0.7, called by a bundler. */
+export const ENTRY_POINT = "0x0000000071727de22e5e9d8baf0edac6f37da032";
+const BUNDLER = "0x000000000000000000000000000000000000b0b0";
+const PAYMASTER = "0x000000000000000000000000000000000000fee0";
+const entryPointAbi = parseAbi([
+  "struct PackedUserOperation { address sender; uint256 nonce; bytes initCode; bytes callData; bytes32 accountGasLimits; uint256 preVerificationGas; bytes32 gasFees; bytes paymasterAndData; bytes signature; }",
+  "function handleOps(PackedUserOperation[] ops, address beneficiary)"
+]);
+const kernelAbi = parseAbi(["function execute(bytes32 mode, bytes executionCalldata)"]);
+const beforeExecution = parseAbiItem("event BeforeExecution()");
+const userOperationEvent = parseAbiItem("event UserOperationEvent(bytes32 indexed userOpHash, address indexed sender, address indexed paymaster, uint256 nonce, bool success, uint256 actualGasCost, uint256 actualGasUsed)");
+const transferEvent = parseAbiItem("event Transfer(address indexed from, address indexed to, uint256 value)");
+
 /** LI.FI's Diamond, the only contract a bridge quote may call. */
 export const LIFI_DIAMOND = "0x1231deb6f5749ef6ce6943a275a1d3e7486f4eae";
 
@@ -46,9 +59,15 @@ const initialState = () => ({
   down: [],
   // The next transaction a connected wallet sends reverts on chain.
   revertNext: false,
+  // The chain: every transaction gets its own block. With finalizeAll off, nothing is final yet ("sent", not "complete").
+  head: 4096,
+  finalizeAll: true,
+  txs: {},
+  // Privy's relay: "ok", "reject" (Privy refuses, 400), "error" (Privy fails, 500), or "revert" (the operation lands but reverts).
+  relay: "ok",
+  relayed: {},
   // What LI.FI reports for a bridge: PENDING, or DONE with substatus COMPLETED or REFUNDED.
   bridge: { status: "PENDING", substatus: null },
-  receipts: {},
   approvals: {},
   // Every transaction a connected wallet sent, for tests to inspect.
   sent: []
@@ -95,12 +114,51 @@ export function startFakeEdge({ port }) {
     if (to) book[to.toLowerCase()] = (balance(chainId, key, to) + amount).toString();
   }
 
-  /** A connected wallet's transaction: apply its effect like the chain would, and keep a receipt. */
-  function sendTransaction({ chainId, from, to, data = "0x", value = "0x0" }) {
+  const blockHash = (number) => `0x${number.toString(16).padStart(64, "0")}`;
+
+  /** Put a transaction in the next block. */
+  function mine(tx) {
     const hash = `0x${randomBytes(32).toString("hex")}`;
+    state.head += 1;
+    state.txs[hash] = { ...tx, from: tx.from.toLowerCase(), to: tx.to.toLowerCase(), blockNumber: state.head };
+    return hash;
+  }
+
+  /** The balance changes and Transfer logs of one call, applied only if every call in the batch can succeed. */
+  function effectsOf(chainId, from, calls) {
+    const moves = [];
+    for (const call of calls) {
+      const value = BigInt(call.value ?? "0x0");
+      const data = call.data ?? "0x";
+      if (data === "0x") { moves.push({ token: "native", to: call.to, amount: value }); continue; }
+      const { functionName, args } = decodeFunctionData({ abi, data });
+      if (functionName === "transfer") moves.push({ token: call.to, to: args[0], amount: args[1] });
+      else if (functionName === "approve") moves.push({ approve: true, token: call.to, amount: args[1] });
+      else throw new Error(`unsupported ${functionName}`);
+    }
+    const needed = new Map();
+    for (const move of moves) if (!move.approve) needed.set(move.token.toLowerCase(), (needed.get(move.token.toLowerCase()) ?? 0n) + move.amount);
+    for (const [token, amount] of needed) if (balance(chainId, token, from) < amount) throw new Error("insufficient balance");
+    return moves;
+  }
+
+  function apply(chainId, from, moves) {
+    const logs = [];
+    for (const item of moves) {
+      if (item.approve) { state.approvals[`${chainId}:${from.toLowerCase()}`] = { token: item.token.toLowerCase(), amount: item.amount }; continue; }
+      move(chainId, item.token, from, item.to, item.amount);
+      if (item.token !== "native") logs.push({ address: item.token.toLowerCase(), topics: encodeEventTopics({ abi: [transferEvent], eventName: "Transfer", args: { from, to: item.to } }),
+        data: encodeAbiParameters([{ type: "uint256" }], [item.amount]) });
+    }
+    return logs;
+  }
+
+  /** A connected wallet's own transaction: apply its effect like the chain would, and keep a receipt. */
+  function sendTransaction({ chainId, from, to, data = "0x", value = "0x0" }) {
     const amount = BigInt(value);
     let success = !state.revertNext;
     state.revertNext = false;
+    let logs = [];
     if (success) {
       try {
         if (to.toLowerCase() === LIFI_DIAMOND) {
@@ -111,27 +169,55 @@ export function startFakeEdge({ port }) {
             if (!approval) throw new Error("no approval");
             move(chainId, approval.token, from, null, approval.amount);
           }
-        } else if (data === "0x") move(chainId, "native", from, to, amount);
-        else {
-          const { functionName, args } = decodeFunctionData({ abi, data });
-          if (functionName === "transfer") move(chainId, to, from, args[0], args[1]);
-          else if (functionName === "approve") state.approvals[`${chainId}:${from.toLowerCase()}`] = { token: to.toLowerCase(), amount: args[1] };
-          else throw new Error(`unsupported ${functionName}`);
-        }
+        } else logs = apply(chainId, from, effectsOf(chainId, from, [{ to, data, value }]));
       } catch { success = false; }
     }
-    state.receipts[hash] = { chainId, from: from.toLowerCase(), to: to.toLowerCase(), status: success ? "0x1" : "0x0" };
+    const hash = mine({ chainId, from, to, value: `0x${amount.toString(16)}`, input: data, success, logs });
     state.sent.push({ hash, chainId, from: from.toLowerCase(), to: to.toLowerCase(), data, value: amount.toString(), success });
     return hash;
   }
 
+  /**
+   * Privy's sponsored wallet_sendCalls: a bundler submits EntryPoint.handleOps
+   * with one operation from the customer's account, a Kernel batch of their
+   * calls. The operation's logs sit between BeforeExecution and its
+   * UserOperationEvent, as on chain.
+   */
+  function relay(wallet, chainId, calls) {
+    let success = state.relay !== "revert";
+    let execution = [];
+    try { if (success) execution = apply(chainId, wallet, effectsOf(chainId, wallet, calls)); }
+    catch { success = false; }
+    const batch = encodeAbiParameters([{ type: "tuple[]", components: [{ name: "target", type: "address" }, { name: "value", type: "uint256" }, { name: "callData", type: "bytes" }] }],
+      [calls.map((call) => ({ target: call.to, value: BigInt(call.value ?? "0x0"), callData: call.data ?? "0x" }))]);
+    const callData = encodeFunctionData({ abi: kernelAbi, functionName: "execute", args: [`0x01${"00".repeat(31)}`, batch] });
+    const zero = `0x${"00".repeat(32)}`;
+    const input = encodeFunctionData({ abi: entryPointAbi, functionName: "handleOps", args: [[{ sender: wallet, nonce: 0n, initCode: "0x", callData,
+      accountGasLimits: zero, preVerificationGas: 0n, gasFees: zero, paymasterAndData: "0x", signature: "0x" }], BUNDLER] });
+    const logs = [
+      { address: ENTRY_POINT, topics: encodeEventTopics({ abi: [beforeExecution], eventName: "BeforeExecution" }), data: "0x" },
+      ...execution,
+      { address: ENTRY_POINT, topics: encodeEventTopics({ abi: [userOperationEvent], eventName: "UserOperationEvent", args: { userOpHash: `0x${randomBytes(32).toString("hex")}`, sender: wallet, paymaster: PAYMASTER } }),
+        data: encodeAbiParameters([{ type: "uint256" }, { type: "bool" }, { type: "uint256" }, { type: "uint256" }], [0n, success, 0n, 0n]) }
+    ];
+    const hash = mine({ chainId, from: BUNDLER, to: ENTRY_POINT, value: "0x0", input, success: true, logs });
+    state.sent.push({ hash, chainId, from: wallet.toLowerCase(), to: ENTRY_POINT, data: input, value: "0", success, relayed: true, calls });
+    return hash;
+  }
+
   function receipt(hash) {
-    const item = state.receipts[hash];
-    if (!item) return null;
-    const blockHash = `0x${"b".repeat(64)}`;
-    return { transactionHash: hash, transactionIndex: "0x0", blockHash, blockNumber: "0x1000", from: item.from, to: item.to,
-      cumulativeGasUsed: "0x5208", gasUsed: "0x5208", effectiveGasPrice: "0x1", contractAddress: null, logs: [],
-      logsBloom: `0x${"0".repeat(512)}`, status: item.status, type: "0x2" };
+    const tx = state.txs[hash];
+    if (!tx) return null;
+    return { transactionHash: hash, transactionIndex: "0x0", blockHash: blockHash(tx.blockNumber), blockNumber: `0x${tx.blockNumber.toString(16)}`, from: tx.from, to: tx.to,
+      cumulativeGasUsed: "0x5208", gasUsed: "0x5208", effectiveGasPrice: "0x1", contractAddress: null,
+      logs: tx.logs.map((log, index) => ({ ...log, blockNumber: `0x${tx.blockNumber.toString(16)}`, blockHash: blockHash(tx.blockNumber), transactionHash: hash,
+        transactionIndex: "0x0", logIndex: `0x${index.toString(16)}`, removed: false })),
+      logsBloom: `0x${"0".repeat(512)}`, status: tx.success ? "0x1" : "0x0", type: "0x2" };
+  }
+
+  function block(tag) {
+    const number = tag === "latest" ? state.head : tag === "finalized" ? (state.finalizeAll ? state.head : 0) : Number.parseInt(tag, 16);
+    return { number: `0x${number.toString(16)}`, hash: blockHash(number), parentHash: blockHash(Math.max(0, number - 1)), timestamp: `0x${Math.floor(Date.now() / 1000).toString(16)}`, transactions: [] };
   }
 
   function ethCall(chainId, { to, data }) {
@@ -154,13 +240,14 @@ export function startFakeEdge({ port }) {
     const { id, method, params } = request;
     const result = (value) => ({ jsonrpc: "2.0", id, result: value });
     if (method === "eth_chainId") return result(`0x${chainId.toString(16)}`);
-    if (method === "eth_blockNumber") return result("0x1000");
+    if (method === "eth_blockNumber") return result(`0x${state.head.toString(16)}`);
+    if (method === "eth_getBlockByNumber") return result(block(params[0]));
     if (method === "eth_getBalance") return result(`0x${balance(chainId, "native", params[0]).toString(16)}`);
     if (method === "eth_getTransactionReceipt") return result(receipt(params[0]));
     if (method === "eth_getTransactionByHash") {
-      const item = state.receipts[params[0]];
-      return result(item ? { hash: params[0], from: item.from, to: item.to, blockHash: `0x${"b".repeat(64)}`, blockNumber: "0x1000",
-        transactionIndex: "0x0", nonce: "0x0", value: "0x0", input: "0x", gas: "0x5208", gasPrice: "0x1", type: "0x0", chainId: `0x${chainId.toString(16)}`,
+      const tx = state.txs[params[0]];
+      return result(tx ? { hash: params[0], from: tx.from, to: tx.to, blockHash: blockHash(tx.blockNumber), blockNumber: `0x${tx.blockNumber.toString(16)}`,
+        transactionIndex: "0x0", nonce: "0x0", value: tx.value, input: tx.input, gas: "0x5208", gasPrice: "0x1", type: "0x0", chainId: `0x${chainId.toString(16)}`,
         v: "0x1b", r: `0x${"1".repeat(64)}`, s: `0x${"1".repeat(64)}` } : null);
     }
     if (method === "eth_call") {
@@ -218,7 +305,7 @@ export function startFakeEdge({ port }) {
 
     // Test controls.
     if (url.pathname === "/__reset") { state = initialState(); return send(200, { ok: true }); }
-    if (url.pathname === "/__state") { state = { ...state, ...body, balances: { ...state.balances, ...body?.balances } }; return send(200, { ok: true }); }
+    if (url.pathname === "/__state") { state = { ...state, ...body, users: { ...state.users, ...body?.users }, balances: { ...state.balances, ...body?.balances } }; return send(200, { ok: true }); }
     if (url.pathname === "/__session") return send(200, { token: accessToken(body.userId, body) });
     if (url.pathname === "/__sent") return send(200, { sent: state.sent });
     if (url.pathname === "/__balances") {
@@ -241,6 +328,30 @@ export function startFakeEdge({ port }) {
       if (down("privy")) return send(503, { error: "unavailable" });
       const found = privyUser(decodeURIComponent(user[1]));
       return found ? send(200, found) : send(404, { error: "User not found" });
+    }
+
+    // Privy's wallet relay: wallet_sendCalls from the customer's embedded wallet, sponsored.
+    const walletRpc = /^\/privy\/v1\/wallets\/([^/]+)\/rpc$/.exec(url.pathname);
+    if (walletRpc) {
+      const walletId = decodeURIComponent(walletRpc[1]);
+      const owner = Object.entries(state.users).find(([id]) => `wallet-${id}` === walletId);
+      if (!owner || body?.method !== "wallet_sendCalls") return send(404, { error: "wallet not found" });
+      if (state.relay === "reject") return send(400, { error: "Invalid authorization signature" });
+      if (state.relay === "error") return send(500, { error: "internal error" });
+      const key = req.headers["privy-idempotency-key"];
+      // The same signed request is never sent twice.
+      if (key && state.relayed[key]) return send(200, { method: "wallet_sendCalls", data: { transaction_id: state.relayed[key].id } });
+      const chainId = Number(String(body.caip2).split(":")[1]);
+      const id = randomUUID();
+      const hash = relay(owner[1].wallet, chainId, body.params.calls);
+      state.relayed[key ?? id] = { id, hash };
+      return send(200, { method: "wallet_sendCalls", data: { transaction_id: id } });
+    }
+    const relayed = /^\/privy\/v1\/transactions\/([^/]+)$/.exec(url.pathname);
+    if (relayed) {
+      const found = Object.values(state.relayed).find((item) => item.id === decodeURIComponent(relayed[1]));
+      return found ? send(200, { id: found.id, status: "confirmed", transaction_hash: found.hash, caip2: "eip155:8453", created_at: Date.now() })
+        : send(404, { error: "transaction not found" });
     }
 
     // JSON-RPC nodes.

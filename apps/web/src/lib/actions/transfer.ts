@@ -1,6 +1,7 @@
 import { encodeFunctionData, erc20Abi, isAddress, parseUnits } from "viem";
 import { z } from "zod";
 import { requireAsset } from "@/lib/assets/pauses";
+import { ASSETS } from "@/lib/assets/registry";
 import { HttpError } from "@/lib/http/errors";
 import type { BuiltAction } from "./types";
 
@@ -30,6 +31,8 @@ export async function buildTransfer(db: D1Database, input: TransferInput, wallet
   if (asset.chainId !== 8453) throw new ActionInputError("unsupported_asset", "Sending is available for assets on Base.");
   const to = input.to.toLowerCase() as `0x${string}`;
   if (to === wallet.toLowerCase()) throw new ActionInputError("invalid_recipient", "This is your own address.");
+  // A token's own contract can't use what it receives; sending there loses the funds.
+  if (ASSETS.some((item) => item.address === to)) throw new ActionInputError("invalid_recipient", "That's a token contract, not a wallet. Check the address.");
   const amountRaw = rawAmount(input.amount, asset.decimals);
   const valuation = { assetId: asset.id, amountRaw: amountRaw.toString(), decimals: asset.decimals };
   const summary = { assetId: asset.id, symbol: asset.symbol, decimals: asset.decimals, amount: input.amount, amountRaw: amountRaw.toString(), to };

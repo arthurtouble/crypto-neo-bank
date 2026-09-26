@@ -7,7 +7,7 @@ sidebar:
 
 Aura doesn't charge a fee today.
 
-Aura can add a fee to swaps through LI.FI. It's set to zero right now. If that changes, the fee will appear in the quote before you sign.
+Aura can add a fee to swaps through LI.FI. It's set to zero right now. If that changes, the fee will appear in the quote before you confirm.
 
 ## Costs you may still pay
 
@@ -15,12 +15,13 @@ A zero Aura fee doesn't make every action free.
 
 | Cost | Where it comes from |
 | --- | --- |
-| Network fee | The blockchain, unless Aura covers it once that's set up |
-| Bridge or exchange fee | The route LI.FI finds for your swap or move |
+| Network fee | The blockchain. Aura pays it for actions from your account. When you add money from your own wallet, that wallet pays it |
+| Bridge or exchange fee | The route LI.FI finds for your swap or move. When you add money from another network, it comes out of the amount |
+| Card fee | The card provider, when you pay by card. It shows the fee before you pay |
 | Price impact or slippage | Available liquidity and market moves |
 | Partner fee | A future bank, card, or rewards partner |
 
-Aura shows the costs it knows about before you sign. Some are estimates and can change before the transaction goes through.
+Aura shows the costs it knows about before you confirm. Some are estimates and can change before the transaction goes through.
 
 ## How Aura may earn money later
 

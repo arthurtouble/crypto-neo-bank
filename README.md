@@ -4,11 +4,11 @@ Aura is the customer-facing financial app in this repository. The existing infra
 
 ## Product
 
-Visitors can browse every section with fictional, labeled example data. Anyone can sign in. Personal data needs a verified session, and financial actions are gated by server-side feature switches, account locks, per-account daily limits, and transaction policy. The customer navigation is Overview, Deposit, Send, Swap, Earn, Borrow, Invest, Cards, Rewards, Transactions, Insights, Settings, and Support.
+Visitors can browse every section with fictional, labeled example data. Anyone can sign in. Personal data needs a verified session, and financial actions are gated by server-side feature switches, account locks, per-account daily limits, and transaction policy. The customer navigation is Overview, Deposit, Send, Swap, Earn, Invest, Cards, Rewards, Transactions, Insights, Settings, and Support.
 
 Wallet and protocol balances come from public chains and providers. Fiat, card, and securities records come from connected providers. D1 stores projections, policies, audit evidence, consent, cases, and recovery records; it is not the authority for balances or settlement.
 
-The development app supports Privy wallets, Base balances and sends, reviewed direct Uniswap swaps on Base and LI.FI/Across USDC bridges, Aave supply/withdraw/borrow/repay, and Ethereum USDC deposits into and withdrawals from Sky sUSDS. Chain and protocol records decide the result. The public Aura tag page can show an opted-in member's verified wallet address. Bridge bank transfers, cards, securities execution, and rewards need provider programs that are not connected. See [current availability](./apps/docs/src/content/docs/getting-started/status.md).
+The development app gives each customer a Privy embedded wallet, the same address on every EVM network, with gas paid by Privy. It supports email or wallet sign-in; Overview balances in US dollars; deposits by address and QR code on Base, from a connected wallet on Base, Ethereum, Arbitrum, Optimism, or Polygon through LI.FI, or by card; sends on Base of ETH, USDC, WETH, and cbBTC, with a passkey required; swaps and cross-chain moves through LI.FI; Aave supply and withdraw on Base; and Ethereum USDC deposits into and withdrawals from Sky sUSDS. Only assets in the registry can be used, and operators can pause any of them. Chain and protocol records decide the result. The public Aura tag page can show an opted-in member's verified wallet address. Bridge bank transfers, cards, securities execution, and rewards need provider programs that are not connected. See [current availability](./apps/docs/src/content/docs/getting-started/status.md).
 
 ## Local development
 

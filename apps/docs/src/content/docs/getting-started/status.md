@@ -7,21 +7,21 @@ sidebar:
 
 Aura is in preview. You can explore every section without signing in, using labeled example data. Anyone can sign in, and you accept the terms of use the first time you do.
 
-Your Aura account is a smart wallet on Base that you control. The features below are built, but each one stays switched off until it has been tested with real funds. No real-money transaction has been made through Aura yet, and covered network fees aren't set up yet.
+Your Aura account is a wallet that Privy makes when you sign in, and you control it. Aura pays the network fee for actions from your account. The features below are built, but each one stays switched off until it has been tested with real funds. On our development version, we've made a real deposit from Ethereum to Base. We're testing sends now.
 
 ## Built, switched on as each is ready
 
 | Area | What it does | Good to know |
 | --- | --- | --- |
 | Overview | Your balances on Base, Aave positions, and Sky savings on Ethereum | Values come from live reads. If a read fails, Aura shows it as unavailable |
-| Deposit | Your receiving address and Aura tag page | Bank details aren't available yet |
-| Send | Send assets on Base to an address or an Aura tag | Your controls apply, and you sign in your wallet |
+| Deposit | Your address and QR code on Base, adding money from a connected wallet on Base, Ethereum, Arbitrum, Optimism, or Polygon, and paying by card through Privy | From another network, money is moved to the same asset on Base. Bank deposits are coming soon |
+| Send | Send ETH, USDC, WETH, or cbBTC on Base to an address, a saved recipient, an Aura tag, or your own linked wallet | Your controls apply, and you confirm with your passkey. Bank payouts are coming soon |
 | Swap | Swap assets and move them between networks, using routes found by LI.FI | Quotes last 45 seconds. A move between networks is complete only when it arrives |
 | Invest | Buy crypto assets through the same routes as Swap | Tokenized stocks and metals aren't offered |
 | Earn | Supply and withdraw on Aave (Base). Deposit to and withdraw from Sky savings (Ethereum) | Rates change. Neither is a bank deposit |
 | Transactions and Insights | Your Aura activity, plus chain and Aave history where available | Exports say what they cover |
 | Aura tag | A public page where people can pay you in crypto | Bank and card payments on the page aren't available |
-| Settings | Sign-in, recovery, key export, optional account lock, daily limit, and saved-recipients-only mode, notification choices, and data export and deletion | Your controls are off until you turn them on |
+| Settings | Sign-in, passkey, recovery, key export, optional account lock, daily limit, and saved-recipients-only mode, notification choices, and data export and deletion | Your controls are off until you turn them on |
 | Support | Open and follow support cases | |
 
 ## Not available yet
@@ -39,4 +39,4 @@ Seeing a feature in the app doesn't mean it's live. We won't offer a bank accoun
 
 See [sources of truth](/concepts/sources-of-truth/), [account controls](/safety/account-controls/), and [who does what](/company/provider-responsibilities/).
 
-Last reviewed: 25 September 2026.
+Last reviewed: 26 September 2026.

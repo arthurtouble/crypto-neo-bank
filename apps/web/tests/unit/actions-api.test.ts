@@ -72,6 +72,13 @@ describe("POST /api/actions", () => {
     expect((await post({ kind: "borrow" })).status).toBe(400);
   });
 
+  it("refuses to send to a token contract, where the funds would be lost", async () => {
+    const response = await post({ ...send, to: usdc });
+    expect(response.status).toBe(422);
+    expect(await response.json()).toMatchObject({ error: "invalid_recipient", message: "That's a token contract, not a wallet. Check the address." });
+    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM actions").get()).toEqual({ n: 0 });
+  });
+
   it("sends only registered assets, and nothing in a paused one", async () => {
     const unlisted = await post({ ...send, assetId: "8453:0x1111111111111111111111111111111111111111" });
     expect([unlisted.status, (await unlisted.json() as { error: string }).error]).toEqual([422, "unsupported_asset"]);

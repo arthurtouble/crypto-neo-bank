@@ -7,13 +7,13 @@ sidebar:
 
 ## Your account is your wallet
 
-Your Aura account is a smart wallet on the Base network. You control it through your Privy sign-in, and its address is your deposit address. Aura never holds your funds or a key that can move them.
+Privy makes a wallet for you when you first sign in. That wallet is your Aura account, and it has the same address on every network. You control it through your Privy sign-in. Aura never holds your funds or a key that can move them.
 
 Privy, an independent company, handles sign-in, the key that signs for your wallet, recovery, and export. Aura only receives your public wallet address and your verified sign-in.
 
-When you make a transaction, Aura prepares it and checks it first. Your wallet then shows it to you, and you sign or cancel. Features that aren't live never ask you to sign.
+When you make a transaction, Aura prepares it and checks it first. You review it in Aura, then confirm with your passkey or cancel. Features that aren't live never ask you to confirm.
 
-A smart wallet can sign a token approval and the action it enables together, as one operation. Aura plans to cover network fees on Base for the actions it prepares, so you won't need ETH for them. That isn't set up yet. Until it is, you need a little ETH on Base.
+Money only leaves your account after you add a passkey or an authenticator app. Aura pays the network fee for actions from your account, so you don't need ETH to pay fees.
 
 ## Where your balances come from
 
@@ -21,11 +21,16 @@ The blockchain is the final record of what you hold. Aura may keep a copy or for
 
 Your main balance view shows:
 
-| Asset | Network |
-| --- | --- |
-| ETH | Base |
-| USDC | Base |
-| WETH | Base |
+| Asset | Network | Group |
+| --- | --- | --- |
+| ETH | Base | Crypto |
+| USDC | Base | Cash |
+| WETH | Base | Crypto |
+| cbBTC | Base | Crypto |
+| Aave USDC and WETH you've supplied | Base | Earn |
+| Sky savings | Ethereum | Earn |
+
+Each item shows a US dollar value, and Overview adds them up into a total.
 
 Balances can update at slightly different times in Aura, in your wallet, and on a block explorer. To confirm a payment, check the transaction on the right network's block explorer.
 
@@ -37,9 +42,7 @@ Aura leaves out assets it doesn't recognize rather than guessing their value. A 
 
 ## Earn positions
 
-Aura reads your Aave position directly from Aave on Base. When the data is available, it shows how many markets you're in, your net position, and Aave's health factor. It reads your Sky savings from Ethereum.
-
-If Aave reports rewards you can claim, Aura shows them. You can't claim them in Aura yet. A reward on screen isn't a payment.
+Aura reads the USDC and WETH you've supplied directly from Aave on Base. It reads your Sky savings from Ethereum. If a read fails, Aura shows the position as unavailable rather than an old value.
 
 A position doesn't tell you what you've earned, your cost basis, or a tax value. Aura leaves those blank until it has complete history to back them up.
 
@@ -50,7 +53,7 @@ Privy handles recovery and export. Aura support will never ask for a seed phrase
 Before you keep a large amount in your account:
 
 1. check the recovery methods Privy offers you;
-2. secure the email, phone, device, or social account you sign in with;
+2. secure the email or wallet you sign in with, and the device that holds your passkey;
 3. understand what exporting your key means;
 4. test recovery with a small balance;
 5. keep your public address separate from anything you use to recover access.

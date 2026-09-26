@@ -151,10 +151,10 @@ function ActiveBankSend() {
 export function BankSendPanel() {
   const account = useBankAccount();
   const stage = account.data ? bankStage(account.data) : null;
-  return <section className="panel exampleCard"><span className="exampleLabel">Bank transfer · Bridge</span><h2>Send to a bank</h2>
+  return <section className="panel exampleCard" aria-labelledby="send-bank"><span className="exampleLabel">{stage === "unavailable" ? "Coming soon" : "Bank transfer · Bridge"}</span><h2 id="send-bank">Send to a bank</h2>
     {account.isPending && <p role="status">Loading…</p>}
     {account.isError && <p className="formError" role="alert">Bank transfers are unavailable right now. <button type="button" className="textLink" onClick={() => void account.refetch()}>Try again</button></p>}
-    {stage === "unavailable" && <p>Bank transfers open once Aura&apos;s banking partner is connected.</p>}
+    {stage === "unavailable" && <p>Coming soon. You&apos;ll be able to send dollars from your Aura account to a US bank account.</p>}
     {stage && stage !== "unavailable" && stage !== "active" && <p>Set up your bank account on <Link className="textLink" href="/app/deposit">Deposit</Link> first.</p>}
     {stage === "active" && <ActiveBankSend />}
   </section>;

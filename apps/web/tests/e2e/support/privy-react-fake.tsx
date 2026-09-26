@@ -8,7 +8,9 @@
 // A connected wallet sends through the fake edge, which moves balances like a
 // chain; "aura-e2e-wallet" = "reject" makes it refuse, as a customer would.
 // Card payments are recorded in window.__auraE2E.fundWallet; "aura-e2e-card" =
-// "fail" makes Privy's card flow fail.
+// "fail" makes Privy's card flow fail. Approving a money action stands in for
+// the passkey prompt: "aura-e2e-passkey" = "reject" cancels it. Opening
+// Privy's passkey setup is counted in window.__auraE2E.mfaEnrollment.
 
 import { createElement, Fragment, useSyncExternalStore, type ReactNode } from "react";
 
@@ -18,8 +20,8 @@ type Snapshot = { ready: boolean; session: Session | null; signedIn: boolean };
 const SESSION_KEY = "aura-e2e-session";
 const SIGNED_IN_KEY = "aura-e2e-signed-in";
 declare const __AURA_E2E_EDGE__: string;
-type Recorder = { fundWallet: unknown[] };
-const recorder = () => ((window as unknown as { __auraE2E?: Recorder }).__auraE2E ??= { fundWallet: [] });
+type Recorder = { fundWallet: unknown[]; mfaEnrollment: number };
+const recorder = () => ((window as unknown as { __auraE2E?: Recorder }).__auraE2E ??= { fundWallet: [], mfaEnrollment: 0 });
 const listeners = new Set<() => void>();
 const serverSnapshot: Snapshot = { ready: false, session: null, signedIn: false };
 let cached: { raw: string; snapshot: Snapshot } | null = null;
@@ -95,8 +97,11 @@ export function useWallets() {
 }
 
 export const useMfa = () => ({ mfaMethods: usePrivy().user?.mfaMethods ?? [] });
-export const useMfaEnrollment = () => ({ showMfaEnrollmentModal: () => undefined, closeMfaEnrollmentModal: () => undefined });
-export const useAuthorizationSignature = () => ({ generateAuthorizationSignature: async () => ({ signature: "ZTJlLWZha2Utc2lnbmF0dXJlLWZvci10ZXN0cy1vbmx5" }) });
+export const useMfaEnrollment = () => ({ showMfaEnrollmentModal: () => { recorder().mfaEnrollment += 1; }, closeMfaEnrollmentModal: () => undefined });
+export const useAuthorizationSignature = () => ({ generateAuthorizationSignature: async () => {
+  if (localStorage.getItem("aura-e2e-passkey") === "reject") throw new Error("User cancelled the passkey request.");
+  return { signature: "ZTJlLWZha2Utc2lnbmF0dXJlLWZvci10ZXN0cy1vbmx5" };
+} });
 export const useFundWallet = () => ({ fundWallet: async (input: unknown) => {
   recorder().fundWallet.push(input);
   if (localStorage.getItem("aura-e2e-card") === "fail") throw new Error("The card payment was declined.");

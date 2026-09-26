@@ -19,9 +19,9 @@ Aura has no token of its own. No asset's price depends on you staying in the app
 
 We still have commercial interests. Aura may later earn from subscriptions, card fees, disclosed partner revenue, or service fees. We'll show you those, and they shouldn't decide what we put in front of you.
 
-## Your wallet, your signature
+## Your wallet, your approval
 
-Aura prepares each action. You sign it. Aura holds no key that would let an employee or an automated system move your assets.
+Aura prepares each action. You approve it with your passkey. Aura holds no key that would let an employee or an automated system move your assets.
 
 This is a real safety boundary. It doesn't make loss impossible. You could still sign a harmful transaction, lose access to your sign-in, use an exported key elsewhere, or use a protocol that fails. Aura's controls reduce mistakes inside Aura. They can't control the whole internet.
 
@@ -29,7 +29,7 @@ This is a real safety boundary. It doesn't make loss impossible. You could still
 
 Many financial apps bury safety in settings and fine print. In Aura, it's part of the main experience:
 
-- a clear review of each transaction before you sign;
+- a clear review of each transaction before you confirm;
 - saved recipients, with an optional saved-only mode and a wait before new ones;
 - an optional daily limit and account lock;
 - honest labels for what's live, what's in preview, and what's unavailable;

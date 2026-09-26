@@ -5,7 +5,7 @@ description: Assets, trust boundaries, threats, controls, and residual risks.
 
 ## Assets and trust boundaries
 
-Customer signing authority remains with the customer's Privy signer, which owns their smart wallet on Base. Public chains and contracted providers are authoritative for assets and settlement. Aurel controls action preparation, customer controls, route quotes, product disclosures, provider routing, support evidence, and operational access; compromise of these controls can still cause a customer to approve a harmful transaction.
+Customer signing authority remains with the customer's Privy embedded wallet, the same address on every EVM network. Privy signs only after the customer's authorization signature, and money moves only once a passkey or authenticator app is enrolled. Public chains and contracted providers are authoritative for assets and settlement. Aurel controls action preparation, customer controls, route quotes, product disclosures, provider routing, support evidence, and operational access; compromise of these controls can still cause a customer to approve a harmful transaction.
 
 ## Priority threats and controls
 

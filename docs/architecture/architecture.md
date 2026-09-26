@@ -50,7 +50,7 @@ flowchart LR
     CONSUMER -->|re-index| CHAIN
 ```
 
-Customer money movements follow the [money actions](money-actions.md) pipeline: the server prepares exact calls, the customer's smart wallet signs them, and the server verifies the result from chain evidence.
+Customer money movements follow the [money actions](money-actions.md) pipeline: the server prepares exact calls and builds a `wallet_sendCalls` request, the customer's browser signs a Privy authorization signature, the server relays it through Privy with gas sponsored, and the server verifies the result from chain evidence. See [accounts and custody](accounts-and-custody.md).
 
 The command path returns provider receipts. The event path refreshes read models. Neither path fabricates settlement from an Aurel database write.
 

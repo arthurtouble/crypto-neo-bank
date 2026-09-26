@@ -26,7 +26,8 @@ A feature is done only when all of these are true:
 - **End-to-end tests** (Playwright, desktop and mobile) cover every step the customer takes in the feature: the happy path, the main failures, and empty and loading states. They run signed in, against local bindings, with Privy and chain calls stubbed at the edge of the app (see [`apps/web/tests/e2e/README.md`](../../apps/web/tests/e2e/README.md)).
 - **Live check on dev.** For anything that moves money, a small real transaction on dev, verified from the database and the chain: action status, events, Transactions page, and receipt.
 - **Records are right.** Every financial observation shows source, reference, status, and time. Stale or failed reads show as unavailable.
-- **Clean as you go.** No dead code, duplicated helpers, or unused flags left in the feature's area. Docs for the feature are updated.
+- **Clean as you go.** No dead code, duplicated helpers, or unused flags left in the feature's area.
+- **Docs in sync.** Every internal doc (`docs/`) and public doc (`apps/docs`) that describes the feature matches what shipped, in the same pull request: what works, what is coming soon, and what was cut. Search both for the feature's names, screens, routes, and switches; don't only edit the obvious page. Dated files stay as they were.
 - **Checks pass**: `pnpm lint`, `pnpm typecheck:all`, `pnpm test:unit`, and `pnpm test:e2e` for the feature's specs.
 
 ## Order and status
@@ -35,7 +36,7 @@ A feature is done only when all of these are true:
 | --- | --- | --- | --- |
 | 1 | Sign-in and Overview | Signed-in end-to-end test setup, email and wallet sign-in, terms acceptance, account creation, Overview balances in US dollars with a total | Done ([#18](https://github.com/arthurtouble/crypto-neo-bank/pull/18)) |
 | 2 | Deposit | Receive by QR code, add from a connected wallet, deposits from other networks, card funding; bank deposits shown as coming soon | Done ([#20](https://github.com/arthurtouble/crypto-neo-bank/pull/20)) |
-| 3 | Send | To an address, a saved recipient, an Aura tag, or the customer's own wallets; limits and cooling period; the passkey requirement and enrollment | Not started |
+| 3 | Send | To an address, a saved recipient, an Aura tag, or the customer's own wallets; limits and cooling period; the passkey requirement and enrollment; Base only (other networks later); bank payouts shown as coming soon | In progress |
 | 4 | Swap | On Base, then between networks | Not started |
 | 5 | Earn | Aave on Base, Sky on Ethereum | Not started |
 | 6 | Invest | Catalog and buying | Not started |
