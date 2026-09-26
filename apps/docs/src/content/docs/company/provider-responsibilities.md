@@ -9,7 +9,7 @@ Aura brings several independent companies and systems together. Each one has its
 
 | Who | What they do | What they don't replace |
 | --- | --- | --- |
-| Aura | The app, checks before you sign, records, support, and choosing and overseeing partners | Your own judgment, or a partner's regulated duties |
+| Aura | The app, checks before you confirm, records, support, and choosing and overseeing partners | Your own judgment, or a partner's regulated duties |
 | Privy | Sign-in and your wallet | Aura's duties for its product, security, and disclosures |
 | Base, Ethereum, and other networks | Running and recording transactions | Aura's support or legal review |
 | Aave, Sky, and Spark | Running Earn positions under their own rules | Aura's explanation of the risks |

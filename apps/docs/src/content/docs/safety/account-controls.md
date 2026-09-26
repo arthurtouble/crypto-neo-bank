@@ -12,9 +12,13 @@ Aura gives you a few optional controls. They're all off until you turn them on. 
 | Control | Starts as | What it does |
 | --- | --- | --- |
 | Emergency lock | Off | Stops Aura preparing any money movement |
-| Daily limit | Off | Caps the US dollar value you send to other people in any 24 hours |
+| Daily limit | Off | Caps the US dollar value you send in any 24 hours, including to your own linked wallets |
 | Saved recipients only | Off | Lets you send only to recipients you've saved |
 | Wait before new recipients | 4 hours | When saved recipients only is on, a newly saved recipient can't receive until the wait ends |
+
+## Passkey
+
+Money only leaves your account after you add a passkey or an authenticator app. Add one in **Settings > Account > Passkey**. If you haven't, Aura asks you to add one the first time you move money. You confirm each money action with it. Unlike the controls above, it isn't optional for moving money.
 
 ## Emergency lock
 
@@ -24,11 +28,13 @@ The lock stops Aura preparing any money movement. It doesn't freeze your wallet,
 
 ## Daily limit
 
-The daily limit counts sends, and swaps that pay someone else. Swaps within your own account and Earn deposits and withdrawals don't count.
+The daily limit counts every send, including sends to your own linked wallets, and swaps that pay someone else. Swaps within your own account and Earn deposits and withdrawals don't count.
 
 If you've set a limit and Aura can't work out the value of an amount, it blocks the action rather than skip the check. Prices move, so the dollar value is approximate.
 
 ## Saved recipients
+
+The 4-hour wait for a newly saved recipient only applies when saved recipients only is on.
 
 Give recipients you trust clear names, and check each full address in a separate way before saving it. A name is there to help you recognize someone. It doesn't prove who owns the address.
 
@@ -48,6 +54,6 @@ Controls only apply when Aura prepares a money movement. They don't cover networ
 
 1. Start with a small amount.
 2. Check the network and the full address.
-3. Read the wallet prompt, not just Aura's summary.
+3. Read the full review before you confirm.
 4. Check the transaction on a block explorer.
 5. If a prompt surprises you, cancel it.

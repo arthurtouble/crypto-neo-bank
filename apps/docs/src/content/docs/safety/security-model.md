@@ -9,9 +9,13 @@ No single safeguard can stop every loss, so Aura uses several layers, each with 
 
 ## Signing in
 
-Privy runs sign-in and your wallet. Aura's server checks your Privy sign-in on every protected request. It never trusts an identity your browser claims.
+Privy runs sign-in and your wallet. You sign in with your email or a wallet. Aura's server checks your Privy sign-in on every protected request. It never trusts an identity your browser claims.
 
-Signing in proves you can access the account. It doesn't prove a transaction is safe, so Aura also checks each money movement before you sign.
+Signing in proves you can access the account. It doesn't prove a transaction is safe, so Aura also checks each money movement before you confirm.
+
+## Passkey
+
+Money only leaves your account after you add a passkey or an authenticator app. You confirm each money action with it, so someone with only your sign-in can't move money.
 
 ## Preparing a transaction
 
@@ -21,7 +25,7 @@ If you've set a daily limit and Aura can't value the amount, it blocks the movem
 
 ## Signing
 
-Your wallet shows the transaction, and you sign or cancel. A token approval and the action it enables are signed together, as one operation. Aura never holds your keys and can't sign for you.
+You review the transaction in Aura, then confirm with your passkey or cancel. Aura sends the signed request to Privy, which submits it and pays the network fee. Aura never holds your keys and can't sign for you.
 
 ## Settlement
 
@@ -40,7 +44,7 @@ These are all optional and off until you turn them on. Changes apply right away,
 | Control | Starts as | What it does |
 | --- | --- | --- |
 | Emergency lock | Off | Stops Aura preparing any money movement |
-| Daily limit | Off | Caps the US dollar value you send to other people in any 24 hours. Swaps within your own account and Earn don't count |
+| Daily limit | Off | Caps the US dollar value you send in any 24 hours, including to your own linked wallets. Swaps within your own account and Earn don't count |
 | Saved recipients only | Off | Lets you send only to recipients you've saved |
 | Wait before new recipients | 4 hours | When saved recipients only is on, a newly saved recipient can't receive until the wait ends |
 
@@ -50,7 +54,7 @@ See [account controls](/safety/account-controls/).
 
 - Customer features need a verified sign-in.
 - Our operations tools need a separate, named list of staff accounts. If the list is empty, nobody has access.
-- Networks, assets, and contracts are checked before your wallet opens.
+- Networks, assets, and contracts are checked before you confirm.
 - Our production secrets stay on the server. They're never in the browser or our source code.
 - Updates from partners must carry a valid signature and timestamp before we process them.
 

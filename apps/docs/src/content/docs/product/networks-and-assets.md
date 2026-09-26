@@ -5,7 +5,9 @@ description: The networks and assets Aura supports, and how to avoid sending to 
 
 Aura always shows the network when you receive, send, swap, or earn.
 
-The same address can hold different balances on different networks. Check the network in Deposit before anyone sends you money. Use Swap to move assets between networks.
+The same address can hold different balances on different networks. Check the network in Deposit before anyone sends you money. Your address and QR code in Deposit are for Base only.
+
+To add money from another network, use **Deposit > From your wallet**. Aura moves it to the same asset on Base. Use Swap to move assets between networks from your Aura account.
 
 ## Supported networks
 

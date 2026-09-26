@@ -11,15 +11,21 @@ Open Aura to browse Overview, Deposit, Send, Swap, Earn, Invest, Cards, Rewards,
 
 ## Sign in
 
-Select **Get Started** and choose a sign-in method. Privy, an independent company, runs sign-in for Aura. Pick a method you can recover, because Aura can't restore a lost sign-in for you.
+Select **Sign in** and use your email or a wallet. Privy, an independent company, runs sign-in for Aura. Pick a method you can recover, because Aura can't restore a lost sign-in for you.
+
+**Get Started** opens the app with example data. It doesn't sign you in.
 
 ## Your account
 
-Your Aura account is a smart wallet on the Base network. You control it through your Privy sign-in. Its address is your deposit address.
+Privy makes a wallet for you when you first sign in. That wallet is your Aura account. It has the same address on every network, and you control it through your Privy sign-in.
 
 Aura never holds your funds or your keys. Privy handles the key that signs for your wallet, and its recovery and export. You'll find recovery and export in Settings.
 
-Aura plans to cover network fees on Base for the actions it prepares. That isn't set up yet, so for now you may need a little ETH on Base.
+Aura pays the network fee for actions from your account. You don't need ETH to pay fees.
+
+## Add a passkey
+
+Money only leaves your account after you add a passkey or an authenticator app. Add one in **Settings > Account > Passkey**. If you haven't, Aura asks you to add one the first time you move money. You then confirm each money action with it.
 
 ## Before you add money
 
@@ -33,8 +39,8 @@ A token Aura doesn't support can still arrive at your address without showing in
 
 ## Receive and send
 
-Use **Deposit** to see your address or share your Aura tag page. Use **Send** to pay an address or an Aura tag.
+Use **Deposit** to see your address and QR code, add money from a wallet you've connected, or pay by card. Use **Send** to pay an address, a saved recipient, an Aura tag, or one of your own linked wallets.
 
-Read the wallet prompt before you sign. A signed transaction usually can't be reversed. If a transfer seems slow, check the transaction before you try again.
+Check the review before you confirm with your passkey. A signed transaction usually can't be reversed. If a transfer seems slow, check the transaction before you try again.
 
 Creating an Aura account doesn't open a bank account, issue a card, or turn on rewards. [See what's available now](/getting-started/status/).
