@@ -40,7 +40,7 @@ describe("verifying an action from chain evidence", () => {
   it("waits for the transaction, the receipt, and finality", async () => {
     expect(await verifyAction(send, { observe: observe({ status: "pending" }) })).toMatchObject({ status: "pending", reason: "transaction_unavailable" });
     expect(await verifyAction(send, { observe: observe({ ...observed({}), receipt: null } as ChainObservation) })).toMatchObject({ status: "pending", reason: "receipt_unavailable" });
-    expect(await verifyAction(send, { observe: observe(observed({ confirmations: 1 })) })).toMatchObject({ status: "pending", reason: "confirmations" });
+    expect(await verifyAction(send, { observe: observe(observed({ confirmations: 0 })) })).toMatchObject({ status: "pending", reason: "confirmations" });
     expect(await verifyAction(send, { observe: observe({ ...observed({}), canonicalBlockHash: `0x${"e".repeat(64)}` } as ChainObservation) }))
       .toMatchObject({ status: "pending", reason: "reorg" });
   });
