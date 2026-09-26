@@ -12,6 +12,7 @@ These files contain operational and security-sensitive context. Keep them in the
 - [Codebase audit, 25 September 2026](overview/codebase-audit-2026-09-25.md): findings, target architecture, and the refactor plan.
 - [Operations runbook](operations/operations-runbook.md): provider activation, secrets, migrations, reconciliation, and recovery.
 - [Architecture](architecture/architecture.md): systems of record and the rule that D1 never owns money.
+- [Supported assets](architecture/assets.md): the asset registry, how to add an asset, and how to pause one.
 - [Money actions](architecture/money-actions.md): how every customer money movement is prepared, signed, verified, and recorded.
 - [Accounts and custody](architecture/accounts-and-custody.md): the Privy embedded-wallet account, how actions are relayed, custody, and leaving Privy.
 - [Screen data](architecture/frontend-data.md): the API each screen reads, and example data for guests.

@@ -1,7 +1,6 @@
 import { encodeFunctionData, erc20Abi, isAddress, parseUnits } from "viem";
 import { z } from "zod";
-import { parseAssetId } from "@/lib/swap/assets";
-import { resolveCatalogAsset } from "@/lib/swap/catalog";
+import { requireAsset } from "@/lib/assets/pauses";
 import { HttpError } from "@/lib/http/errors";
 import type { BuiltAction } from "./types";
 
@@ -25,28 +24,23 @@ export function rawAmount(amount: string, decimals: number): bigint {
   return raw;
 }
 
-/** Send an asset on Base from the customer's smart wallet to an address. */
-export async function buildTransfer(input: TransferInput, wallet: string): Promise<BuiltAction> {
-  const asset = parseAssetId(input.assetId);
-  if (!asset || asset.chainId !== 8453) throw new ActionInputError("unsupported_asset", "Sending is available for assets on Base.");
+/** Send a registered asset on Base from the customer's account to an address. */
+export async function buildTransfer(db: D1Database, input: TransferInput, wallet: string): Promise<BuiltAction> {
+  const asset = await requireAsset(db, input.assetId, "send");
+  if (asset.chainId !== 8453) throw new ActionInputError("unsupported_asset", "Sending is available for assets on Base.");
   const to = input.to.toLowerCase() as `0x${string}`;
   if (to === wallet.toLowerCase()) throw new ActionInputError("invalid_recipient", "This is your own address.");
-  const resolved = asset.address === null
-    ? { symbol: "ETH", decimals: 18 }
-    : await resolveCatalogAsset(input.assetId);
-  if (!resolved) throw new ActionInputError("unsupported_asset", "This asset isn't available to send.");
-  const amountRaw = rawAmount(input.amount, resolved.decimals);
-  const summary = { assetId: input.assetId, symbol: resolved.symbol, decimals: resolved.decimals, amount: input.amount,
-    amountRaw: amountRaw.toString(), to };
+  const amountRaw = rawAmount(input.amount, asset.decimals);
+  const valuation = { assetId: asset.id, amountRaw: amountRaw.toString(), decimals: asset.decimals };
+  const summary = { assetId: asset.id, symbol: asset.symbol, decimals: asset.decimals, amount: input.amount, amountRaw: amountRaw.toString(), to };
   if (asset.address === null) {
     return { kind: "transfer", chainId: 8453, calls: [{ to, value: amountRaw.toString(), data: "0x" }], effects: [],
-      summary, countsTowardLimit: true, valuation: { assetId: input.assetId, amountRaw: amountRaw.toString(), decimals: resolved.decimals }, recipient: to };
+      summary, countsTowardLimit: true, valuation, recipient: to };
   }
-  const token = asset.address.toLowerCase() as `0x${string}`;
   return {
     kind: "transfer", chainId: 8453,
-    calls: [{ to: token, value: "0", data: encodeFunctionData({ abi: erc20Abi, functionName: "transfer", args: [to, amountRaw] }) }],
-    effects: [{ type: "erc20_transfer", token, to, amountRaw: amountRaw.toString() }],
-    summary, countsTowardLimit: true, valuation: { assetId: input.assetId, amountRaw: amountRaw.toString(), decimals: resolved.decimals }, recipient: to
+    calls: [{ to: asset.address, value: "0", data: encodeFunctionData({ abi: erc20Abi, functionName: "transfer", args: [to, amountRaw] }) }],
+    effects: [{ type: "erc20_transfer", token: asset.address, to, amountRaw: amountRaw.toString() }],
+    summary, countsTowardLimit: true, valuation, recipient: to
   };
 }

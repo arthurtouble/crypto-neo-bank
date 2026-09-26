@@ -1,86 +1,62 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { DatabaseSync } from "node:sqlite";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { d1 } from "../support/d1";
+import { schemaDatabase } from "../support/schema";
 const httpErrors = await vi.hoisted(() => import("@/lib/http/errors"));
 
-const fixture = vi.hoisted(() => ({
-  authenticated: true,
-  rateLimited: false,
-  providerUnavailable: false,
-  imported: true,
-  searches: 0
-}));
+const fixture = vi.hoisted(() => ({ db: null as D1Database | null, authenticated: true, rateLimited: false }));
+vi.mock("cloudflare:workers", () => ({ env: { get PROJECTION_DB() { return fixture.db; } } }));
+vi.mock("@/lib/auth/server", () => ({ AuthenticationError: httpErrors.AuthenticationError, requireVerifiedSubject: async () => {
+  if (!fixture.authenticated) throw new httpErrors.AuthenticationError();
+  return { subjectReference: "did:privy:owner" };
+} }));
+vi.mock("@/lib/security/rate-limit", () => ({ RateLimitError: httpErrors.RateLimitError,
+  enforceRateLimit: async () => { if (fixture.rateLimited) throw new httpErrors.RateLimitError(30); } }));
 
-vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: {} } }));
-vi.mock("@/lib/auth/server", () => {
-  const AuthenticationError = httpErrors.AuthenticationError;
-  return {
-    AuthenticationError,
-    requireVerifiedSubject: async () => {
-      if (!fixture.authenticated) throw new AuthenticationError();
-      return { subjectReference: "did:privy:owner" };
-    }
-  };
-});
-vi.mock("@/lib/security/rate-limit", () => {
-  const RateLimitError = httpErrors.RateLimitError;
-  return {
-    RateLimitError,
-    enforceRateLimit: async () => { if (fixture.rateLimited) throw new RateLimitError(30); }
-  };
-});
-vi.mock("@/lib/swap/catalog", () => {
-  class CatalogUnavailableError extends Error { code = "provider_unavailable"; }
-  return {
-    CatalogUnavailableError,
-    getCatalogPage: async () => {
-      fixture.searches++;
-      if (fixture.providerUnavailable) throw new CatalogUnavailableError();
-      return { assets: [{ id: "8453:native", chainId: 8453, symbol: "ETH", verification: "verified", eligibility: "eligible" }], nextCursor: null, observedAt: "2026-09-22T00:00:00.000Z", source: "LI.FI" };
-    },
-    resolveCatalogAsset: async () => {
-      if (fixture.providerUnavailable) throw new CatalogUnavailableError();
-      return fixture.imported ? { id: "8453:0x1111111111111111111111111111111111111111", chainId: 8453, verification: "unverified", eligibility: "eligible" } : null;
-    }
-  };
-});
-
-import { GET } from "@/app/api/swap/assets/route";
-
-
-function request(query: string) { return GET(new Request(`https://aurel.test/api/swap/assets${query}`)); }
+const { GET } = await import("@/app/api/swap/assets/route");
+const request = (query: string) => GET(new Request(`https://aurel.test/api/swap/assets${query}`));
+const baseUsdc = "8453:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
 
 describe("Swap asset catalog API", () => {
-  beforeEach(() => {
-    fixture.authenticated = true; fixture.rateLimited = false;
-    fixture.providerUnavailable = false; fixture.imported = true; fixture.searches = 0;
-  });
+  let sqlite: DatabaseSync;
+  beforeEach(() => { sqlite = schemaDatabase(); fixture.db = d1(sqlite); fixture.authenticated = true; fixture.rateLimited = false; });
+  afterEach(() => sqlite.close());
 
-  it("serves a current, searchable catalog without caching personal responses", async () => {
-    const response = await request("?q=ETH&chainIds=8453,1");
+  it("lists only the registry's swappable assets, searchable by symbol, name, or contract, without caching", async () => {
+    const response = await request("?q=usd&chainIds=8453,1");
     expect(response.status).toBe(200);
     expect(response.headers.get("Cache-Control")).toBe("no-store");
-    expect(await response.json()).toMatchObject({ assets: [{ id: "8453:native" }], source: "LI.FI" });
+    const body = await response.json() as { assets: Array<{ id: string; verification: string; eligibility: string }>; source: string };
+    expect(body.source).toBe("Aura registry");
+    expect(body.assets.map((asset) => asset.id)).toEqual([baseUsdc, "1:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"]);
+    expect(body.assets.every((asset) => asset.verification === "verified" && asset.eligibility === "eligible")).toBe(true);
+    const byContract = await (await request("?q=0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf&chainIds=8453")).json() as { assets: Array<{ symbol: string }> };
+    expect(byContract.assets.map((asset) => asset.symbol)).toEqual(["cbBTC"]);
   });
 
-  it("imports only a current screened contract and never grants trade permission", async () => {
-    const response = await request("?import=8453:0x1111111111111111111111111111111111111111");
-    expect(response.status).toBe(200);
-    const body = await response.json() as Record<string, unknown>;
-    expect(body.asset).toMatchObject({ verification: "unverified" });
-    expect(body).not.toHaveProperty("canTrade");
-    fixture.imported = false;
-    expect((await request("?import=8453:0x1111111111111111111111111111111111111111")).status).toBe(404);
+  it("never finds a contract outside the registry, even by exact address", async () => {
+    const unknown = await request("?import=8453:0x1111111111111111111111111111111111111111");
+    expect(unknown.status).toBe(404);
+    expect(await unknown.json()).toMatchObject({ error: "asset_not_found" });
+    const search = await (await request("?q=0x1111111111111111111111111111111111111111")).json() as { assets: unknown[] };
+    expect(search.assets).toEqual([]);
+    expect(await (await request(`?import=${baseUsdc}`)).json()).toMatchObject({ asset: { id: baseUsdc, symbol: "USDC" } });
   });
 
-  it("rejects invalid query, cursor, and unsupported chain before searching", async () => {
-    for (const query of ["?q=x&chainIds=56", "?q=x&chainIds=abc", `?q=${"x".repeat(121)}`, "?q=x&cursor=!", "?import=8453:javascript:alert(1)"]) {
-      expect((await request(query)).status).toBe(400);
+  it("lists a paused asset as unavailable", async () => {
+    sqlite.exec(`INSERT INTO asset_pauses (asset_id, reason, paused_at, paused_by) VALUES ('${baseUsdc}', 'Depeg', '2026-09-26T00:00:00Z', 'op')`);
+    const body = await (await request(`?import=${baseUsdc}`)).json() as { asset: { eligibility: string; unavailableReason: string } };
+    expect(body.asset).toMatchObject({ eligibility: "unavailable", unavailableReason: "USDC is paused right now." });
+  });
+
+  it("rejects invalid queries and unsupported networks", async () => {
+    for (const query of ["?q=x&chainIds=56", "?q=x&chainIds=abc", `?q=${"x".repeat(121)}`, "?q=x&cursor=abc", "?import=8453:javascript:alert(1)"]) {
+      expect((await request(query)).status, query).toBe(400);
     }
-    expect(fixture.searches).toBe(0);
   });
 
-  it("enforces auth, rate limits, and unavailable upstream state", async () => {
+  it("requires a session and applies the rate limit", async () => {
     fixture.authenticated = false; expect((await request("?q=ETH")).status).toBe(401);
     fixture.authenticated = true; fixture.rateLimited = true; expect((await request("?q=ETH")).status).toBe(429);
-    fixture.rateLimited = false; fixture.providerUnavailable = true; expect((await request("?q=ETH")).status).toBe(503);
   });
 });

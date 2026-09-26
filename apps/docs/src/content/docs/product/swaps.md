@@ -11,7 +11,7 @@ Aura asks LI.FI for a route. LI.FI is an independent service that chooses among 
 
 - A quote lasts 45 seconds. After that, get a new one.
 - You choose the slippage: 0.1%, 0.5%, or 1%. If you would get less than the minimum, the swap fails instead.
-- Aura won't use a route with price impact above 3%, or above 1% if either asset is unverified.
+- You can only swap assets on Aura's reviewed list, and Aura won't use a route with price impact above 3%.
 - Aura keeps the quote on its server. Your wallet signs only a transaction to LI.FI's contract.
 
 If the swap needs a token approval, the approval and the swap are signed together, as one operation. The approval covers this swap only.

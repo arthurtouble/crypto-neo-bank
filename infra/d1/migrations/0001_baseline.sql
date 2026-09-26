@@ -313,6 +313,15 @@ CREATE UNIQUE INDEX aura_tags_current_owner_idx ON aura_tags(subject_reference) 
 
 CREATE INDEX aura_tags_public_idx ON aura_tags(tag, public_enabled, active);
 
+-- Assets from the registry (apps/web/src/lib/assets/registry.ts) that operators paused: no new deposits,
+-- sends, swaps, or purchases in them. Holdings stay visible. Resuming deletes the row; both are audited.
+CREATE TABLE asset_pauses (
+  asset_id TEXT PRIMARY KEY CHECK (asset_id = lower(asset_id) AND length(asset_id) BETWEEN 3 AND 80),
+  reason TEXT NOT NULL CHECK (length(reason) BETWEEN 1 AND 240),
+  paused_at TEXT NOT NULL,
+  paused_by TEXT NOT NULL
+);
+
 CREATE TABLE feature_flags (
   flag_key TEXT PRIMARY KEY,
   enabled INTEGER NOT NULL DEFAULT 0,

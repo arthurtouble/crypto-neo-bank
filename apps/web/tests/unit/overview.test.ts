@@ -35,10 +35,11 @@ describe("reading the overview from the chains", () => {
       price: async (asset) => asset === "btc" ? "60000.5" : "2500"
     }, now);
     expect(overview.holdings.map((item) => [item.group, item.symbol, item.amountRaw, item.usdCents])).toEqual([
-      ["cash", "USDC", "125500000", 12550],
-      ["crypto", "cbBTC", "1000000", 60000],
+      // Registry order; the page groups them.
       ["crypto", "ETH", "2000000000000000000", 500000],
+      ["cash", "USDC", "125500000", 12550],
       ["crypto", "WETH", "100000000000000000", 25000],
+      ["crypto", "cbBTC", "1000000", 60000],
       ["earn", "USDC", "50000000", 5000]
     ]);
     expect(overview.totals).toEqual({ cash: { usdCents: 12550, partial: false }, crypto: { usdCents: 585000, partial: false },

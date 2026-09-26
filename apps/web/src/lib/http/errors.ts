@@ -22,6 +22,11 @@ export class MfaRequiredError extends HttpError {
   constructor(message = "Add a passkey before you move money.") { super(403, "mfa_required", message); this.name = "MfaRequiredError"; }
 }
 
+/** An asset outside the registry, not allowed for this use, or paused by an operator. */
+export class AssetUnavailableError extends HttpError {
+  constructor(code: "unsupported_asset" | "asset_paused", message: string) { super(code === "asset_paused" ? 503 : 422, code, message); this.name = "AssetUnavailableError"; }
+}
+
 export class RateLimitError extends HttpError {
   constructor(public readonly retryAfterSeconds: number) {
     super(429, "rate_limited", "Too many requests. Try again shortly.", { "Retry-After": String(retryAfterSeconds) });

@@ -4,8 +4,7 @@ import { krakenUsd } from "@/lib/actions/valuation";
 import { rpcEndpoints } from "@/lib/actions/chain";
 import { AAVE_BASE_ASSETS, AAVE_BASE_V3_MARKET } from "@/lib/defi/aave";
 import { SKY_SUSDS, skyVaultAbi } from "@/lib/defi/sky-call-policy";
-import { BASE_ASSETS } from "@/config/chains";
-import { cashAssets, investAssets } from "@/lib/invest/catalog";
+import { assetsFor, type PriceSource } from "@/lib/assets/registry";
 
 /** Cash is stablecoins in the account, crypto is other assets in the account, earn is Aave and Sky deposits. */
 export type HoldingGroup = "cash" | "crypto" | "earn";
@@ -78,14 +77,13 @@ export async function readOverview(wallet: string, clients: Clients = defaultCli
     }
   };
   const par = async () => "1";
+  const priceOf = (source: PriceSource) => source.kind === "usd" ? par : () => clients.price(source.market);
   const token = (address: string) => () => clients.base.readContract({ address: address as `0x${string}`, abi: erc20Abi, functionName: "balanceOf", args: [owner] });
   const tasks: Array<Promise<Holding | null>> = [
-    ...cashAssets.map((asset) => read(asset.assetId, "cash", asset.name, asset.symbol, asset.decimals, "base", token(asset.assetId.split(":")[1]), par, true)),
-    ...investAssets.map((asset) => read(asset.assetId, "crypto", asset.name, asset.symbol, asset.decimals, "base",
-      asset.assetId === "8453:native" ? () => clients.base.getBalance({ address: owner }) : token(asset.assetId.split(":")[1]),
-      () => clients.price(asset.pricing === "kraken:btc" ? "btc" : "eth"))),
-    // Wrapped ether isn't offered in Invest, but the account can hold it (Aave withdrawals, deposits).
-    read(`8453:${BASE_ASSETS.WETH.address.toLowerCase()}`, "crypto", "Wrapped Ether", "WETH", 18, "base", token(BASE_ASSETS.WETH.address), () => clients.price("eth")),
+    // Every registered asset the account can hold on Base. Cash always shows, even at zero.
+    ...assetsFor("hold", 8453).map((asset) => read(asset.id, asset.category === "cash" ? "cash" : "crypto", asset.name, asset.symbol, asset.decimals, "base",
+      asset.address === null ? () => clients.base.getBalance({ address: owner }) : token(asset.address),
+      priceOf(asset.price), asset.category === "cash")),
     ...Object.entries(AAVE_BASE_ASSETS).map(([symbol, asset]) => read(`aave:8453:${asset.toLowerCase()}`, "earn", `Aave ${symbol}`, symbol,
       symbol === "USDC" ? 6 : 18, "aave:base", async () => {
         const reserve = await clients.base.readContract({ address: AAVE_BASE_V3_MARKET, abi: poolAbi, functionName: "getReserveData", args: [asset] });

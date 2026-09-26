@@ -87,7 +87,8 @@ describe("quoting a deposit from another network", () => {
   });
 
   it("rejects malformed input and reports the bridge provider unavailable", async () => {
-    expect((await post({ chainId: 42161, symbol: "DOGE", amount: "25", from: metamask })).status).toBe(400);
+    // An asset outside the registry has no deposit source.
+    expect((await post({ chainId: 42161, symbol: "DOGE", amount: "25", from: metamask })).status).toBe(422);
     expect((await post({ chainId: 42161, symbol: "USDC", amount: "-1", from: metamask })).status).toBe(400);
     expect((await post({ chainId: 42161, symbol: "USDC", amount: "25", from: "not-an-address" })).status).toBe(400);
     vi.stubGlobal("fetch", vi.fn(async () => new Response("down", { status: 503 })));

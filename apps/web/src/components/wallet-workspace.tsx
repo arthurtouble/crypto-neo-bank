@@ -6,14 +6,18 @@ import { LoaderCircle, Send, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { erc20Abi, formatUnits, isAddress } from "viem";
-import { useBalance, useReadContract } from "wagmi";
-import { BASE_ASSETS, HOME_CHAIN } from "@/config/chains";
+import { useBalance, useReadContracts } from "wagmi";
+import { HOME_CHAIN } from "@/config/chains";
+import { assetsFor } from "@/lib/assets/registry";
 import { useApi } from "@/lib/client/api";
 import { useAction } from "@/lib/client/use-action";
 import { MovePreviousAccount } from "./move-previous-account";
 import { TransactionProgress } from "./transaction-progress";
 
-type AssetSymbol = keyof typeof BASE_ASSETS;
+/** What can be sent: the registry's "send" assets on Base. The server checks the same list and any pause. */
+const SENDABLE = assetsFor("send", HOME_CHAIN.id);
+const TOKENS = SENDABLE.filter((item) => item.address !== null);
+type AssetSymbol = string;
 type Modal = "send" | null;
 type Recipient = { id: string; kind: "wallet" | "bank"; name: string; destination: string; detail: string; verified: boolean; recent?: boolean };
 
@@ -28,8 +32,7 @@ function amountText(value: bigint | undefined, decimals: number) {
 }
 
 function assetId(symbol: AssetSymbol) {
-  const { address } = BASE_ASSETS[symbol];
-  return address ? `${HOME_CHAIN.id}:${address.toLowerCase()}` : `${HOME_CHAIN.id}:native`;
+  return SENDABLE.find((item) => item.symbol === symbol)?.id ?? SENDABLE[0].id;
 }
 
 /** Send crypto from the Aura account. Deposits are in DepositWorkspace. */
@@ -39,7 +42,7 @@ export function WalletWorkspace() {
   const requestedRecipient = searchParams.get("sendTo") ?? "";
   const requestedTag = searchParams.get("tag");
   const requestedAsset = searchParams.get("asset");
-  const initialAsset = requestedAsset && requestedAsset in BASE_ASSETS ? requestedAsset as AssetSymbol : "USDC";
+  const initialAsset = SENDABLE.some((item) => item.symbol === requestedAsset) ? requestedAsset! : "USDC";
   const [modal, setModal] = useState<Modal>(isAddress(requestedRecipient) ? "send" : null);
   const [asset, setAsset] = useState<AssetSymbol>(initialAsset);
   const [recipient, setRecipient] = useState(isAddress(requestedRecipient) ? requestedRecipient : "");
@@ -56,8 +59,8 @@ export function WalletWorkspace() {
   const sending = transfer.busy;
   const inFlight = transfer.phase !== "idle" || transfer.outcomeUnknown;
   const eth = useBalance({ address, chainId: HOME_CHAIN.id, query: { enabled: Boolean(address) } });
-  const usdc = useReadContract({ address: BASE_ASSETS.USDC.address, abi: erc20Abi, functionName: "balanceOf", args: address ? [address] : undefined, chainId: HOME_CHAIN.id, query: { enabled: Boolean(address) } });
-  const weth = useReadContract({ address: BASE_ASSETS.WETH.address, abi: erc20Abi, functionName: "balanceOf", args: address ? [address] : undefined, chainId: HOME_CHAIN.id, query: { enabled: Boolean(address) } });
+  const tokens = useReadContracts({ contracts: TOKENS.map((item) => ({ address: item.address!, abi: erc20Abi, functionName: "balanceOf" as const,
+    args: [address!] as const, chainId: HOME_CHAIN.id })), query: { enabled: Boolean(address) } });
   const recipients = useQuery<{ recipients: Recipient[] }>({
     queryKey: ["recipients", address],
     queryFn: () => api("/api/recipients"),
@@ -65,11 +68,11 @@ export function WalletWorkspace() {
   });
   const savedRecipients = recipients.data?.recipients.filter((item) => item.kind === "wallet" && item.verified && !item.recent) ?? [];
 
-  const rows = [
-    { ...BASE_ASSETS.USDC, value: usdc.data, source: "Aura Wallet", pending: usdc.isPending },
-    { ...BASE_ASSETS.ETH, value: eth.data?.value, source: "Aura Wallet", pending: eth.isPending },
-    { ...BASE_ASSETS.WETH, value: weth.data, source: "Aura Wallet", pending: weth.isPending }
-  ];
+  const rows = SENDABLE.map((item) => {
+    const index = TOKENS.indexOf(item);
+    const value = index < 0 ? eth.data?.value : tokens.data?.[index]?.status === "success" ? tokens.data[index].result as bigint : undefined;
+    return { ...item, value, source: "Aura Wallet", pending: index < 0 ? eth.isPending : tokens.isPending };
+  });
 
   function openSend(symbol: AssetSymbol = "USDC") {
     if (sending) return;
@@ -144,7 +147,7 @@ export function WalletWorkspace() {
           <button className="modalClose" onClick={() => setModal(null)} aria-label="Close" disabled={sending}><X size={18} /></button>
           <form onSubmit={(event) => void submitSend(event)}>
             <h2 id="wallet-modal-title">Send</h2>
-            <label className="fieldLabel">Asset<select value={asset} disabled={inFlight} onChange={(event) => setAsset(event.target.value as AssetSymbol)}>{Object.keys(BASE_ASSETS).map((symbol) => <option key={symbol}>{symbol}</option>)}</select></label>
+            <label className="fieldLabel">Asset<select value={asset} disabled={inFlight} onChange={(event) => setAsset(event.target.value as AssetSymbol)}>{SENDABLE.map((item) => <option key={item.id}>{item.symbol}</option>)}</select></label>
             <label className="fieldLabel">Amount<input inputMode="decimal" placeholder="0.00" value={amount} disabled={inFlight} onChange={(event) => setAmount(event.target.value)} /></label>
             {savedRecipients.length > 0 && <label className="fieldLabel">Saved Recipient<select value={savedRecipients.some((item) => item.destination === recipient) ? recipient : ""} disabled={inFlight} onChange={(event) => setRecipient(event.target.value)}><option value="">Enter another address</option>{savedRecipients.map((item) => <option key={item.id} value={item.destination}>{item.name} · {item.detail}</option>)}</select></label>}
             <label className="fieldLabel">Destination<input autoComplete="off" spellCheck={false} placeholder="0x…" value={recipient} disabled={inFlight} onChange={(event) => setRecipient(event.target.value.trim())} /></label>

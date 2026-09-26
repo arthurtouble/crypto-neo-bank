@@ -13,8 +13,6 @@ const usdc = "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
 vi.mock("cloudflare:workers", () => ({ env: { get PROJECTION_DB() { return state.db; } } }));
 vi.mock("@/lib/auth/server", () => ({ requireVerifiedSubject: async () => ({ subjectReference: "alice", sessionReference: "s" }) }));
 vi.mock("@/lib/auth/wallet", () => ({ requireActionWallet: async () => wallet, requireMoneyMfa: async () => undefined, WalletOwnershipError: httpErrors.WalletOwnershipError }));
-vi.mock("@/lib/swap/catalog", () => ({ resolveCatalogAsset: async (id: string) => id === `8453:${usdc}`
-  ? { id, chainId: 8453, address: usdc, symbol: "USDC", name: "USD Coin", decimals: 6, logoUrl: null, verification: "verified", eligibility: "eligible" } : null }));
 vi.mock("@/lib/actions/verify", () => ({ verifyAction: vi.fn(async () => state.verification) }));
 
 const { POST: prepare } = await import("@/app/api/actions/route");
@@ -72,6 +70,15 @@ describe("POST /api/actions", () => {
     expect((await post({ ...send, to: wallet })).status).toBe(422);
     expect((await post({ ...send, assetId: "1:native" })).status).toBe(422);
     expect((await post({ kind: "borrow" })).status).toBe(400);
+  });
+
+  it("sends only registered assets, and nothing in a paused one", async () => {
+    const unlisted = await post({ ...send, assetId: "8453:0x1111111111111111111111111111111111111111" });
+    expect([unlisted.status, (await unlisted.json() as { error: string }).error]).toEqual([422, "unsupported_asset"]);
+    sqlite.exec(`INSERT INTO asset_pauses (asset_id, reason, paused_at, paused_by) VALUES ('${send.assetId}', 'Depeg', '2026-09-26T00:00:00Z', 'op')`);
+    const paused = await post(send);
+    expect([paused.status, (await paused.json() as { error: string }).error]).toEqual([503, "asset_paused"]);
+    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM actions").get()).toEqual({ n: 0 });
   });
 });
 

@@ -17,8 +17,6 @@ vi.mock("@/lib/auth/wallet", () => ({
   WalletOwnershipError: httpErrors.WalletOwnershipError
 }));
 vi.mock("@/lib/auth/privy", () => ({ privyClient: () => ({ wallets: () => ({ rpc: state.rpc }) }) }));
-vi.mock("@/lib/swap/catalog", () => ({ resolveCatalogAsset: async (id: string) => id === `8453:${usdc}`
-  ? { id, chainId: 8453, address: usdc, symbol: "USDC", name: "USD Coin", decimals: 6, logoUrl: null, verification: "verified", eligibility: "eligible" } : null }));
 
 const { POST: prepare } = await import("@/app/api/actions/route");
 const { POST: authorize } = await import("@/app/api/actions/[id]/authorize/route");

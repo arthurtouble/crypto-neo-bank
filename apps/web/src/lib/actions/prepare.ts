@@ -1,3 +1,4 @@
+import { requireNotPaused } from "@/lib/assets/pauses";
 import { requireFeature, type FeatureKey } from "@/lib/features/flags";
 import { checkControls, type Block } from "./controls";
 import { buildEarn, earnInputSchema } from "./earn";
@@ -18,7 +19,7 @@ function featureFor(action: BuiltAction): FeatureKey {
 }
 
 function build(db: D1Database, input: ActionInput, subject: string, wallet: string, now: Date): Promise<BuiltAction> {
-  if (input.kind === "transfer") return buildTransfer(input, wallet);
+  if (input.kind === "transfer") return buildTransfer(db, input, wallet);
   if (input.kind === "earn") return buildEarn(input, wallet);
   return buildRoute(db, input, subject, wallet, now);
 }
@@ -39,6 +40,7 @@ export async function precheckAction(db: D1Database, subject: string, built: Bui
 export async function prepareBuiltAction(db: D1Database, subject: string, wallet: string, built: BuiltAction,
   feature: (action: BuiltAction) => FeatureKey, now = new Date()): Promise<Prepared> {
   await requireFeature(db, feature(built));
+  await requireNotPaused(db, built.valuation.assetId);
   const valuation = await valueAsset(built.valuation, { now });
   const controls = await loadControls(db, subject, built.recipient ?? null, now);
   const block = checkControls(built, valuation, controls);
