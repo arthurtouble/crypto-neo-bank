@@ -14,6 +14,7 @@ import { useAction } from "@/lib/client/use-action";
 import { AddFromWallet } from "./add-from-wallet";
 import { DefiPositions } from "./defi-positions";
 import { MovePreviousAccount } from "./move-previous-account";
+import { useToast } from "./toast";
 import { TransactionProgress } from "./transaction-progress";
 
 type AssetSymbol = keyof typeof BASE_ASSETS;
@@ -48,7 +49,7 @@ export function WalletWorkspace({ mode = "overview" }: { mode?: "overview" | "de
   const [amount, setAmount] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const [fundError, setFundError] = useState<string | null>(null);
+  const toast = useToast();
   const [slowSetup, setSlowSetup] = useState(false);
   const { fundWallet } = useFundWallet();
   const { user } = usePrivy();
@@ -56,7 +57,7 @@ export function WalletWorkspace({ mode = "overview" }: { mode?: "overview" | "de
   const ownWallets = (user?.linkedAccounts ?? []).flatMap((account) => account.type === "wallet" && account.chainType === "ethereum"
     && !account.walletClientType?.startsWith("privy") && isAddress(account.address, { strict: false }) ? [account.address.toLowerCase()] : []);
   // useAction refreshes every query (balances included) when an action settles.
-  const transfer = useAction();
+  const transfer = useAction({ label: "Transfer" });
   const { address, ready } = transfer.wallet;
   const sending = transfer.busy;
   const inFlight = transfer.phase !== "idle" || transfer.outcomeUnknown;
@@ -85,13 +86,12 @@ export function WalletWorkspace({ mode = "overview" }: { mode?: "overview" | "de
 
   async function addFunds() {
     if (!address) return;
-    setFundError(null);
     try {
       // Privy's card flow. Privy requires an amount with an asset; it is only a starting value the customer edits.
       // Receiving any amount is the address and QR code on this screen, not Privy's receive screen.
       await fundWallet({ address, options: { chain: HOME_CHAIN, asset: "USDC", amount: "25", defaultFundingMethod: "card" } });
     } catch {
-      setFundError("The card payment didn't finish. You can try again, or use one of the other ways here.");
+      toast.error("Card payment didn't finish", "You can try again, or use one of the other ways here.");
     }
   }
 
@@ -173,7 +173,6 @@ export function WalletWorkspace({ mode = "overview" }: { mode?: "overview" | "de
             <AddFromWallet account={address} />
             <p>Or pay by card.</p>
             <button className="button secondary full" onClick={() => void addFunds()}><Plus size={16} /> Pay by card</button>
-            {fundError && <p className="formError" role="alert">{fundError}</p>}
             <p>Or send USDC on Base to your Aura account from anywhere.</p>
             <div className="receiveQr"><QRCodeSVG value={address} size={164} bgColor="transparent" fgColor="currentColor" level="M" /></div>
             <code className="addressBlock">{address}</code>
@@ -189,7 +188,7 @@ export function WalletWorkspace({ mode = "overview" }: { mode?: "overview" | "de
               <button type="button" className="button secondary full" key={wallet} disabled={inFlight} onClick={() => setRecipient(wallet)}>Send to my wallet · {shortAddress(wallet)}</button>)}
             <div className="transactionSummary"><span>From<strong>Aura account</strong></span><span>Account<strong>{shortAddress(address)}</strong></span><span>Review<strong>You confirm</strong></span></div>
             {formError && <p className="formError" role="alert">{formError}</p>}
-            <TransactionProgress label="Transfer" phase={transfer.phase} action={transfer.action} error={transfer.error} outcomeUnknown={transfer.outcomeUnknown} />
+            <TransactionProgress label="Transfer" phase={transfer.phase} action={transfer.action} outcomeUnknown={transfer.outcomeUnknown} />
             {transfer.phase === "done"
               ? <button type="button" className="button primary full" onClick={() => { transfer.reset(); setAmount(""); }}><Send size={16} /> New transfer</button>
               : <button className="button primary full" disabled={inFlight}>{sending ? <LoaderCircle className="spin" size={16} /> : <Send size={16} />}{transfer.outcomeUnknown ? "Check Transactions first" : transfer.phase === "tracking" ? "Sending" : transfer.phase === "preparing" ? "Checking" : sending ? "Confirm in your wallet" : "Send"}</button>}

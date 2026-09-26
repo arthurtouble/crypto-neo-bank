@@ -14,6 +14,7 @@ import { assetNetwork } from "@/lib/swap/picker-model";
 import { displayRawAmount, formatEstimatedFeeUsd } from "@/lib/swap/review-model";
 import { parseSwapDeepLink } from "@/lib/markets/swap-links";
 import { SwapAssetPicker } from "./swap-asset-picker";
+import { useToast } from "./toast";
 import { TransactionProgress } from "./transaction-progress";
 
 export type RouteQuote = {
@@ -38,7 +39,7 @@ export function SwapWorkspace() {
   const params = useSearchParams();
   const initial = useMemo(() => parseSwapDeepLink({ from: params.get("from"), to: params.get("to") }), [params]);
   const api = useApi();
-  const swap = useAction();
+  const swap = useAction({ label: "Swap" });
   const { address } = swap.wallet;
   const [fromAssetId, setFromAssetId] = useState<AssetId>(initial.fromAssetId);
   const [toAssetId, setToAssetId] = useState<AssetId>(initial.toAssetId);
@@ -49,6 +50,7 @@ export function SwapWorkspace() {
   const [usedQuoteId, setUsedQuoteId] = useState<string | null>(null);
   const [quoting, setQuoting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     if (!quote) return;
@@ -87,17 +89,23 @@ export function SwapWorkspace() {
   async function getQuote(event?: React.FormEvent) {
     event?.preventDefault();
     clearQuote();
+    let requested = false;
     try {
       if (!source || !destination || !address) throw new Error("Choose two available assets.");
       if (source.id === destination.id) throw new Error("Choose two different assets.");
       if (unverified.length && !acknowledged) throw new Error("Confirm the unverified contract address first.");
       if (!/^\d+(?:\.\d+)?$/.test(amount) || (amount.split(".")[1]?.length ?? 0) > source.decimals || parseUnits(amount, source.decimals) <= 0n) throw new Error("Enter a valid amount.");
       setQuoting(true);
+      requested = true;
       const query = new URLSearchParams({ from: source.id, to: destination.id, amount, slippageBps: String(slippageBps) });
       const body = await api<{ quote: RouteQuote }>(`/api/routes/quote?${query}`);
       setNow(Date.now());
       setQuote(body.quote);
-    } catch (caught) { setError(quoteErrorText(caught)); }
+    } catch (caught) {
+      // Input problems stay next to the form; a failed quote request is an outcome.
+      if (requested) toast.error("No quote", quoteErrorText(caught));
+      else setError(quoteErrorText(caught));
+    }
     finally { setQuoting(false); }
   }
 
@@ -148,6 +156,6 @@ export function SwapWorkspace() {
             ? <button className="button secondary full swapReviewAction" type="button" disabled={quoting || swap.outcomeUnknown} onClick={() => void getQuote()}><RefreshCw size={16} /> {remaining === 0 ? "Quote expired. Refresh" : "Get a new quote"}</button>
             : <button className="button primary full swapReviewAction" type="button" onClick={() => void confirm()}>Swap</button>}
     </section>}
-    <TransactionProgress label="Swap" phase={swap.phase} action={swap.action} error={swap.error} outcomeUnknown={swap.outcomeUnknown} />
+    <TransactionProgress label="Swap" phase={swap.phase} action={swap.action} outcomeUnknown={swap.outcomeUnknown} />
   </section>;
 }

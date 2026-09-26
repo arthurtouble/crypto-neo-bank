@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertOctagon, Check, Clock3, LoaderCircle, LockKeyhole, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { ApiError, useApi } from "@/lib/client/api";
+import { useToast } from "./toast";
 
 type Policy = { accountLocked: boolean; enforceAddressBook: boolean; dailyLimitUsd: number | null; newAddressDelayHours: number;
   policyVersion: number; updatedAt: string; enforcement: "aura" };
@@ -26,7 +27,7 @@ export function SecurityPolicyControls() {
   const queryClient = useQueryClient();
   const [address, setAddress] = useState("");
   const [label, setLabel] = useState("");
-  const [message, setMessage] = useState<string | null>(null);
+  const toast = useToast();
   const [dailyDraft, setDailyDraft] = useState<string | null>(null);
   const [delayDraft, setDelayDraft] = useState<string | null>(null);
 
@@ -36,38 +37,37 @@ export function SecurityPolicyControls() {
     queryFn: () => api<{ entries: Entry[] }>("/api/security/addresses") });
   const update = useMutation({
     mutationFn: (changes: PolicyChange) => api<{ policy: Policy }>("/api/security/policy", { method: "PATCH", json: changes }),
-    onMutate: () => setMessage(null),
-    onSuccess: () => setMessage("Your controls are updated."),
-    onError: (error) => setMessage(error instanceof ApiError && error.code === "security_policy_changed" ? error.message : "We couldn't update your controls. Try again."),
+    onSuccess: () => toast.success("Controls updated"),
+    onError: (error) => toast.error("Controls not updated", error instanceof ApiError && error.code === "security_policy_changed" ? error.message : "Try again."),
     onSettled: async () => { setDailyDraft(null); setDelayDraft(null); await queryClient.invalidateQueries({ queryKey: ["security-policy", user?.id] }); }
   });
 
   async function addAddress(event: React.FormEvent) {
-    event.preventDefault(); setMessage(null);
+    event.preventDefault();
     try { await api("/api/security/addresses", { method: "POST", json: { address, label } }); }
-    catch (error) { setMessage(error instanceof ApiError && error.code === "invalid_address_entry" ? "Enter a valid wallet address and label." : "We couldn't save this recipient."); return; }
-    setAddress(""); setLabel(""); setMessage("Recipient saved.");
+    catch (error) { toast.error("Recipient not saved", error instanceof ApiError && error.code === "invalid_address_entry" ? "Enter a valid wallet address and label." : "Try again."); return; }
+    setAddress(""); setLabel(""); toast.success("Recipient saved");
     await queryClient.invalidateQueries({ queryKey: ["address-book", user?.id] });
   }
 
   async function removeAddress(entryId: string) {
     try { await api(`/api/security/addresses?entryId=${encodeURIComponent(entryId)}`, { method: "DELETE" }); }
-    catch { setMessage("We couldn't remove this recipient."); return; }
-    setMessage("Recipient removed.");
+    catch { toast.error("Recipient not removed", "Try again."); return; }
+    toast.success("Recipient removed");
     await queryClient.invalidateQueries({ queryKey: ["address-book", user?.id] });
   }
 
   function saveDailyLimit(current: number | null) {
     if (dailyDraft === null) return;
     const next = dailyDraft.trim() === "" ? null : wholeNumber(dailyDraft.trim(), 1, 10_000_000);
-    if (next === undefined) { setDailyDraft(null); setMessage("Enter a whole dollar amount, or leave it empty for no limit."); return; }
+    if (next === undefined) { setDailyDraft(null); toast.error("Limit not changed", "Enter a whole dollar amount, or leave it empty for no limit."); return; }
     if (next !== current) update.mutate({ dailyLimitUsd: next }); else setDailyDraft(null);
   }
 
   function saveDelay(current: number) {
     if (delayDraft === null) return;
     const next = wholeNumber(delayDraft.trim(), 0, 168);
-    if (next === undefined) { setDelayDraft(null); setMessage("Enter between 0 and 168 hours."); return; }
+    if (next === undefined) { setDelayDraft(null); toast.error("Delay not changed", "Enter between 0 and 168 hours."); return; }
     if (next !== current) update.mutate({ newAddressDelayHours: next }); else setDelayDraft(null);
   }
 
@@ -83,7 +83,6 @@ export function SecurityPolicyControls() {
         <label><span><Clock3 size={17} /><b>Wait before new recipients<small>Hours before a new saved recipient can receive.</small></b></span><input type="number" min="0" max="168" step="1" disabled={update.isPending} value={delayDraft ?? String(current.newAddressDelayHours)} onChange={(event) => setDelayDraft(event.target.value)} onBlur={() => saveDelay(current.newAddressDelayHours)} /><em>Hours</em></label>
       </div>
       <p className="sourceCaption">Changes apply right away. These controls apply to transfers Aura prepares.</p>
-      {message && <div className="securityMessage" role="status">{message}</div>}
     </section>
     <section className="panel addressBookPanel"><div className="panelHeading"><div><h2>Saved recipients</h2><p className="sourceCaption">{current.newAddressDelayHours === 0 ? "New recipients are ready right away." : `New recipients are ready after ${current.newAddressDelayHours} hours.`}</p></div></div>
       <form onSubmit={(event) => void addAddress(event)} className="addressForm"><label className="fieldLabel">Label<input value={label} onChange={(event) => setLabel(event.target.value)} placeholder="Treasury wallet" /></label><label className="fieldLabel">EVM address<input value={address} onChange={(event) => setAddress(event.target.value.trim())} placeholder="0x…" spellCheck={false} /></label><button className="button secondary" disabled={!address || !label}><Plus size={14} /> Save</button></form>

@@ -5,6 +5,7 @@ import { Check, Copy } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { useApi } from "@/lib/client/api";
 import { bankStage, useBankAccount } from "@/lib/client/use-bank-account";
+import { useToast } from "./toast";
 
 const railNames = { ach: "Bank transfer", wire: "Wire", fednow: "Instant transfer" } as const;
 
@@ -29,11 +30,11 @@ function VerificationForm({ onStarted }: { onStarted: () => void }) {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState(user?.email?.address ?? "");
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
 
   async function submit(event: FormEvent) {
     event.preventDefault();
-    setBusy(true); setError(null);
+    setBusy(true);
     // Open the tab during the click so the browser doesn't block it; point it at Bridge once the link exists.
     const tab = window.open("", "_blank");
     try {
@@ -42,7 +43,7 @@ function VerificationForm({ onStarted }: { onStarted: () => void }) {
       onStarted();
     } catch (reason) {
       tab?.close();
-      setError(reason instanceof Error ? reason.message : "Something went wrong. Try again.");
+      toast.error("Verification didn't start", reason instanceof Error ? reason.message : "Something went wrong. Try again.");
     } finally { setBusy(false); }
   }
 
@@ -50,7 +51,6 @@ function VerificationForm({ onStarted }: { onStarted: () => void }) {
     <p>Bridge, our banking partner, verifies your identity before it opens a USD account for you.</p>
     <label className="fieldLabel">Full legal name<input value={fullName} onChange={(event) => setFullName(event.target.value)} autoComplete="name" required minLength={2} maxLength={120} /></label>
     <label className="fieldLabel">Email<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" required maxLength={254} /></label>
-    {error && <p className="formError" role="alert" style={{ marginTop: 14 }}>{error}</p>}
     <button className="button primary" style={{ marginTop: 14 }} disabled={busy || fullName.trim().length < 2 || !email}>{busy ? "Starting…" : "Verify with Bridge"}</button>
   </form>;
 }

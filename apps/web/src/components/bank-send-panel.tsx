@@ -8,6 +8,7 @@ import { useState, type FormEvent } from "react";
 import { useApi } from "@/lib/client/api";
 import { useAction, type ActionView } from "@/lib/client/use-action";
 import { bankStage, useBankAccount } from "@/lib/client/use-bank-account";
+import { useToast } from "./toast";
 import { TransactionProgress } from "./transaction-progress";
 
 type Recipient = { id: string; kind: "wallet" | "bank"; name: string; detail: string; verified: boolean };
@@ -30,14 +31,14 @@ function AddBankAccountForm({ onSaved, onCancel }: { onSaved: (name: string) => 
   const api = useApi();
   const [form, setForm] = useState(emptyBank);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
   const set = (key: keyof typeof emptyBank) => (event: { target: { value: string } }) => setForm((current) => ({ ...current, [key]: event.target.value }));
   const valid = form.accountOwnerName.trim() && form.bankName.trim() && /^\d{4,17}$/.test(form.accountNumber) && /^\d{9}$/.test(form.routingNumber)
     && form.streetLine1.trim() && form.city.trim() && /^[A-Za-z]{2}$/.test(form.state) && form.postalCode.trim();
 
   async function submit(event: FormEvent) {
     event.preventDefault();
-    setBusy(true); setError(null);
+    setBusy(true);
     try {
       const result = await api<{ bankAccount: { name: string; lastFour: string } }>("/api/money/bank-accounts", { method: "POST", json: {
         accountOwnerName: form.accountOwnerName.trim(), bankName: form.bankName.trim(), accountNumber: form.accountNumber, routingNumber: form.routingNumber,
@@ -47,7 +48,7 @@ function AddBankAccountForm({ onSaved, onCancel }: { onSaved: (name: string) => 
       setForm(emptyBank);
       onSaved(`${result.bankAccount.name} •••• ${result.bankAccount.lastFour}`);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Something went wrong. Try again.");
+      toast.error("Bank account not saved", reason instanceof Error ? reason.message : "Something went wrong. Try again.");
     } finally { setBusy(false); }
   }
 
@@ -67,7 +68,6 @@ function AddBankAccountForm({ onSaved, onCancel }: { onSaved: (name: string) => 
     <label className="fieldLabel">City<input value={form.city} onChange={set("city")} autoComplete="address-level2" required maxLength={80} /></label>
     <label className="fieldLabel">State<input value={form.state} onChange={set("state")} autoComplete="address-level1" placeholder="NY" required minLength={2} maxLength={2} /></label>
     <label className="fieldLabel">ZIP code<input value={form.postalCode} onChange={set("postalCode")} autoComplete="postal-code" inputMode="numeric" required maxLength={10} /></label>
-    {error && <p className="formError" role="alert" style={{ marginTop: 14 }}>{error}</p>}
     <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
       <button className="button primary" disabled={busy || !valid}>{busy ? "Saving…" : "Save bank account"}</button>
       <button type="button" className="button secondary" disabled={busy} onClick={onCancel}>Cancel</button>
@@ -77,7 +77,7 @@ function AddBankAccountForm({ onSaved, onCancel }: { onSaved: (name: string) => 
 
 function PayoutForm({ banks }: { banks: Recipient[] }) {
   const api = useApi();
-  const { runPrepared, phase, action, error, outcomeUnknown, busy, reset } = useAction();
+  const { runPrepared, phase, action, outcomeUnknown, busy, reset } = useAction({ label: "Bank transfer" });
   const [bankId, setBankId] = useState(banks[0]?.id ?? "");
   const [amount, setAmount] = useState("");
   const [wire, setWire] = useState(false);
@@ -93,7 +93,7 @@ function PayoutForm({ banks }: { banks: Recipient[] }) {
   }
 
   if (phase === "done") return <>
-    <TransactionProgress label="Bank transfer" phase={phase} action={action} error={error} outcomeUnknown={outcomeUnknown} />
+    <TransactionProgress label="Bank transfer" phase={phase} action={action} outcomeUnknown={outcomeUnknown} />
     <button type="button" className="button secondary" style={{ marginTop: 14 }} onClick={() => { reset(); setAmount(""); }}>Send another</button>
   </>;
 
@@ -112,7 +112,7 @@ function PayoutForm({ banks }: { banks: Recipient[] }) {
       </div>
     </div>
     <p>You sign a USDC transfer to Bridge. Bridge sends the dollars to your bank after it receives the USDC.</p>
-    <TransactionProgress label="Bank transfer" phase={phase} action={action} error={error} outcomeUnknown={outcomeUnknown} />
+    <TransactionProgress label="Bank transfer" phase={phase} action={action} outcomeUnknown={outcomeUnknown} />
     <button className="button primary" style={{ marginTop: 14 }} disabled={busy || tracking || !bank || !amountValid}>
       {phase === "preparing" ? "Checking…" : phase === "signing" ? "Confirm in your wallet" : "Review and send"}
     </button>
@@ -123,7 +123,7 @@ function ActiveBankSend() {
   const { user } = usePrivy();
   const api = useApi();
   const [adding, setAdding] = useState(false);
-  const [saved, setSaved] = useState<string | null>(null);
+  const toast = useToast();
   const recipients = useQuery({
     queryKey: ["bank-recipients", user?.id],
     queryFn: async () => (await api<{ recipients: Recipient[] }>("/api/recipients")).recipients.filter((item) => item.kind === "bank"),
@@ -139,10 +139,9 @@ function ActiveBankSend() {
     {banks.length > 0 && <div className="bankDetails" aria-label="Saved bank accounts">
       {banks.map((item) => <span key={item.id}>{item.name}<strong>{lastFour(item) ? `•••• ${lastFour(item)}` : ""}{item.verified ? "" : " · Not ready yet"}</strong></span>)}
     </div>}
-    {saved && <p className="transactionSuccess" role="status" style={{ marginTop: 14 }}>Saved {saved}.</p>}
     {adding
-      ? <AddBankAccountForm onCancel={() => setAdding(false)} onSaved={(name) => { setAdding(false); setSaved(name); void recipients.refetch(); }} />
-      : <button type="button" className="button secondary" style={{ marginTop: 14 }} onClick={() => { setAdding(true); setSaved(null); }}><Plus size={14} /> Add bank account</button>}
+      ? <AddBankAccountForm onCancel={() => setAdding(false)} onSaved={(name) => { setAdding(false); toast.success("Bank account saved", name); void recipients.refetch(); }} />
+      : <button type="button" className="button secondary" style={{ marginTop: 14 }} onClick={() => setAdding(true)}><Plus size={14} /> Add bank account</button>}
     {ready.length > 0 ? <PayoutForm key={ready.map((item) => item.id).join(",")} banks={ready} />
       : !adding && <p>Add a bank account to send money to it.</p>}
   </>;

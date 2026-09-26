@@ -7,6 +7,8 @@ import { WagmiProvider } from "@privy-io/wagmi";
 import { useState } from "react";
 import { HOME_CHAIN, SUPPORTED_CHAINS, web3Config } from "@/config/chains";
 import { PRIVY_APP_ID } from "@/config/client";
+import { PasskeyAddedToast } from "./passkey-added-toast";
+import { ToastProvider } from "./toast";
 
 export default function Web3RuntimeProvider({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => new QueryClient({
@@ -35,7 +37,12 @@ export default function Web3RuntimeProvider({ children }: { children: React.Reac
     >
       <SmartWalletsProvider>
         <QueryClientProvider client={queryClient}>
-          <WagmiProvider config={web3Config}>{children}</WagmiProvider>
+          <WagmiProvider config={web3Config}>
+            <ToastProvider>
+              <PasskeyAddedToast />
+              {children}
+            </ToastProvider>
+          </WagmiProvider>
         </QueryClientProvider>
       </SmartWalletsProvider>
     </PrivyProvider>

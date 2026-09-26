@@ -11,8 +11,8 @@ const labels: Record<Direction, string> = { supply: "Supply", withdraw: "Withdra
 
 /** Supply to or withdraw from Aave on Base. A supply approves and supplies in one confirmation. */
 export function AaveAction({ actions, symbols }: { actions: readonly Direction[]; symbols: readonly Symbol[] }) {
-  const earn = useAction();
   const [direction, setDirection] = useState<Direction>(actions[0]);
+  const earn = useAction({ label: labels[direction] });
   const [symbol, setSymbol] = useState<Symbol>(symbols[0]);
   const [amount, setAmount] = useState("");
   const locked = earn.phase !== "idle" && earn.phase !== "done" || earn.outcomeUnknown;
@@ -42,6 +42,6 @@ export function AaveAction({ actions, symbols }: { actions: readonly Direction[]
           : earn.outcomeUnknown ? "Check Transactions first" : labels[direction]}
       </button>
     </div>
-    <TransactionProgress label={labels[direction]} phase={earn.phase} action={earn.action} error={earn.error} outcomeUnknown={earn.outcomeUnknown} />
+    <TransactionProgress label={labels[direction]} phase={earn.phase} action={earn.action} outcomeUnknown={earn.outcomeUnknown} />
   </form>;
 }

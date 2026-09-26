@@ -5,6 +5,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { ActionInput } from "@/lib/actions/prepare";
 import type { AuthorizationRequest } from "@/lib/actions/privy-relay";
 import type { Call } from "@/lib/actions/types";
+import { useToast } from "@/components/toast";
+import { failureText } from "./action-copy";
 import { ApiError, useApi } from "./api";
 import { useAuraWallet } from "./use-aura-wallet";
 
@@ -20,17 +22,25 @@ export type ActionPhase = "idle" | "preparing" | "signing" | "tracking" | "done"
 const POLL_MS = 2_000;
 const terminal = new Set(["confirmed", "failed", "expired"]);
 /** Done from the customer's side: finished, or a same-chain action that matched on the chain and only awaits finality. */
+/** Toast key for the passkey prompt, cleared once the customer adds one. */
+export const MFA_REQUIRED_TOAST = "mfa-required";
+
 export const actionSettled = (action: ActionView) => terminal.has(action.status) || (action.status === "settling" && !action.destinationChainId);
 
 /**
  * Prepare an action on the server, approve the exact request the server
  * built, let the server relay it with gas paid, and track it until the chain
- * settles it.
+ * settles it. Errors and outcomes appear as toasts, named by `label`
+ * ("Transfer", "Swap").
  */
-export function useAction(options: { onSettled?: (action: ActionView) => void } = {}) {
+export function useAction(options: { label?: string; onSettled?: (action: ActionView) => void } = {}) {
   const api = useApi();
   const wallet = useAuraWallet();
   const queryClient = useQueryClient();
+  const toast = useToast();
+  const label = options.label ?? "Transaction";
+  const labelRef = useRef(label);
+  useEffect(() => { labelRef.current = label; }, [label]);
   const [phase, setPhase] = useState<ActionPhase>("idle");
   const [action, setAction] = useState<ActionView | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -64,21 +74,33 @@ export function useAction(options: { onSettled?: (action: ActionView) => void } 
       // Balances start changing as soon as the operation lands; refresh them without waiting for it to settle.
       void queryClient.invalidateQueries();
     } catch (reason) {
+      setPhase("idle");
       if (reason instanceof ApiError && reason.code === "mfa_required") {
         // Nothing was prepared or sent. Open Privy's setup so the customer can add a passkey and try again.
-        setError("Add a passkey or authenticator app to move money, then try again.");
-        setPhase("idle");
+        setError(reason.message);
+        toast.show({ tone: "error", key: MFA_REQUIRED_TOAST, sticky: true, title: "Add a passkey to move money",
+          detail: "Nothing was sent. Add a passkey or authenticator app in the window that opened, then try again." });
         wallet.enrollPasskey();
         return;
       }
       const rejected = reason instanceof Error && /reject|denied|cancel|exited/i.test(reason.message);
-      if (signing && !rejected) setOutcomeUnknown(true);
-      setError(reason instanceof ApiError || reason instanceof Error
-        ? rejected ? "You cancelled in your wallet. Nothing was sent." : reason.message
-        : "Something went wrong. Try again.");
-      setPhase("idle");
+      if (signing && !rejected) {
+        setOutcomeUnknown(true);
+        setError("Your wallet may have sent this. Check Transactions before you try again.");
+        toast.show({ tone: "error", sticky: true, title: "Check Transactions first",
+          detail: "Your wallet may have sent this. Check Transactions before you try again.", link: { label: "Open Transactions", href: "/app/transactions" } });
+        return;
+      }
+      if (rejected) {
+        setError("You cancelled. Nothing was sent.");
+        toast.show({ tone: "info", title: "Cancelled", detail: "Nothing was sent." });
+        return;
+      }
+      const message = reason instanceof ApiError || reason instanceof Error ? reason.message : "Something went wrong. Try again.";
+      setError(message);
+      toast.error(`${labelRef.current} not sent`, message);
     }
-  }, [api, wallet, queryClient]);
+  }, [api, wallet, queryClient, toast]);
 
   const run = useCallback((input: ActionInput) =>
     runPrepared(async () => (await api<{ action: ActionView }>("/api/actions", { method: "POST", json: input })).action), [api, runPrepared]);
@@ -94,6 +116,10 @@ export function useAction(options: { onSettled?: (action: ActionView) => void } 
         setAction(current);
         if (actionSettled(current)) {
           setPhase("done");
+          const name = labelRef.current;
+          if (current.status === "failed") toast.error(`${name} failed`, failureText(current.failureReason));
+          else if (current.status === "expired") toast.error(`${name} not confirmed`, "We didn't receive it in time. If you confirmed it, check Transactions.");
+          else toast.success(current.status === "confirmed" || current.destinationChainId ? `${name} complete` : `${name} sent`);
           await queryClient.invalidateQueries();
           settledRef.current?.(current);
           return;
@@ -103,7 +129,7 @@ export function useAction(options: { onSettled?: (action: ActionView) => void } 
     };
     timer = setTimeout(poll, POLL_MS);
     return () => { cancelled = true; clearTimeout(timer); };
-  }, [phase, action, api, queryClient]);
+  }, [phase, action, api, queryClient, toast]);
 
   const reset = useCallback(() => { setPhase("idle"); setAction(null); setError(null); setOutcomeUnknown(false); }, []);
 
