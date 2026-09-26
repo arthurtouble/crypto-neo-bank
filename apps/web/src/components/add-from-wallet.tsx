@@ -3,87 +3,208 @@
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowDownToLine, LoaderCircle, Wallet } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { encodeFunctionData, erc20Abi, formatUnits, parseUnits } from "viem";
-import { usePublicClient, useReadContract } from "wagmi";
-import { BASE_ASSETS, HOME_CHAIN } from "@/config/chains";
+import { useBalance, usePublicClient, useReadContract } from "wagmi";
+import { HOME_CHAIN } from "@/config/chains";
+import { ApiError, useApi } from "@/lib/client/api";
+import { DEPOSIT_NETWORKS, depositSource, depositSymbols, type DepositSymbol } from "@/lib/deposits/networks";
 
-type Phase = "idle" | "confirm" | "pending" | "done";
+type Phase = "idle" | "quoting" | "review" | "confirm" | "pending" | "bridging" | "done";
+type Call = { to: `0x${string}`; value: string; data: `0x${string}` };
+type Quote = {
+  chainId: number; symbol: DepositSymbol; tool: string; calls: Call[]; fromAmountRaw: string; toAmountRaw: string; toAmountMinRaw: string;
+  decimals: number; expiresAt: string; networkFeeUsd: number | null; providerFeeUsd: number | null;
+};
+type SupportedChainId = (typeof DEPOSIT_NETWORKS)[number]["chainId"];
 
-const USDC = BASE_ASSETS.USDC;
+const POLL_MS = 10_000;
 
 function shortAddress(address: string) {
   return `${address.slice(0, 6)}…${address.slice(-4)}`;
 }
 
+function amountText(raw: bigint | string, decimals: number) {
+  const value = Number(formatUnits(BigInt(raw), decimals));
+  return value.toLocaleString(undefined, { maximumFractionDigits: value < 1 ? 6 : 4 });
+}
+
+function quoteExpired(quote: Quote) {
+  return Date.parse(quote.expiresAt) <= Date.now();
+}
+
+function usdText(value: number | null) {
+  return value === null ? "unavailable" : `$${value.toFixed(2)}`;
+}
+
 /**
- * Move USDC on Base from a wallet the customer connected, such as MetaMask,
- * into their Aura account. It is a plain transfer the connected wallet signs
- * and pays gas for; Aura only reads the result from the chain.
+ * Add money from a wallet the customer connected, such as MetaMask. From
+ * Base it is a plain transfer. From another network the same asset is
+ * bridged to Base through LI.FI, with bridge fees taken from the amount that
+ * arrives. The connected wallet signs and pays the network fee either way;
+ * Aura reads the result from the chain.
  */
 export function AddFromWallet({ account }: { account: `0x${string}` }) {
+  const api = useApi();
   const { connectWallet } = usePrivy();
   const { wallets } = useWallets();
   const source = wallets.find((wallet) => !wallet.walletClientType.startsWith("privy"));
   const sourceAddress = source?.address as `0x${string}` | undefined;
-  const publicClient = usePublicClient({ chainId: HOME_CHAIN.id });
+  const [chainId, setChainId] = useState<SupportedChainId>(HOME_CHAIN.id);
+  const [symbol, setSymbol] = useState<DepositSymbol>("USDC");
+  const asset = depositSource(chainId, symbol) ?? depositSource(chainId, depositSymbols(chainId)[0])!;
+  const home = chainId === HOME_CHAIN.id;
+  const publicClient = usePublicClient({ chainId });
   const queryClient = useQueryClient();
-  const balance = useReadContract({ address: USDC.address, abi: erc20Abi, functionName: "balanceOf", args: sourceAddress ? [sourceAddress] : undefined,
-    chainId: HOME_CHAIN.id, query: { enabled: Boolean(sourceAddress) } });
+  const nativeBalance = useBalance({ address: sourceAddress, chainId, query: { enabled: Boolean(sourceAddress) && asset.address === null } });
+  const tokenBalance = useReadContract({ address: asset.address ?? undefined, abi: erc20Abi, functionName: "balanceOf", args: sourceAddress ? [sourceAddress] : undefined,
+    chainId, query: { enabled: Boolean(sourceAddress) && asset.address !== null } });
+  const available = asset.address === null ? nativeBalance.data?.value : tokenBalance.data;
   const [amount, setAmount] = useState("");
   const [phase, setPhase] = useState<Phase>("idle");
   const [error, setError] = useState<string | null>(null);
+  const [quote, setQuote] = useState<Quote | null>(null);
+  const [bridge, setBridge] = useState<{ hash: `0x${string}`; chainId: number; tool: string } | null>(null);
+
+  // Follow a bridged deposit until it arrives on Base, or fails and is refunded.
+  useEffect(() => {
+    if (!bridge) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout>;
+    const poll = async () => {
+      try {
+        const { status } = await api<{ status: string }>(`/api/deposits/status?chainId=${bridge.chainId}&hash=${bridge.hash}&tool=${bridge.tool}`);
+        if (cancelled) return;
+        if (status === "DONE" || status === "PARTIAL") {
+          setPhase("done"); setBridge(null); await queryClient.invalidateQueries(); return;
+        }
+        if (status === "REFUNDED" || status === "FAILED") {
+          setPhase("idle"); setBridge(null);
+          setError(status === "REFUNDED" ? "The bridge couldn't complete it and sent the funds back to your wallet." : "The bridge couldn't complete it. Check your wallet's activity.");
+          return;
+        }
+      } catch { /* A failed status read is retried. */ }
+      if (!cancelled) timer = setTimeout(poll, POLL_MS);
+    };
+    timer = setTimeout(poll, POLL_MS);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [bridge, api, queryClient]);
 
   if (!source || !sourceAddress) {
     return <button type="button" className="button primary full" onClick={() => connectWallet()}><Wallet size={16} /> Connect a wallet</button>;
   }
 
-  const available = balance.data;
-  const busy = phase === "confirm" || phase === "pending";
+  const busy = phase === "quoting" || phase === "confirm" || phase === "pending" || phase === "bridging";
+  const networkName = DEPOSIT_NETWORKS.find((network) => network.chainId === chainId)!.name;
+
+  function reset() {
+    setPhase("idle"); setQuote(null); setError(null);
+  }
+
+  function readAmount(): bigint | null {
+    let raw: bigint;
+    try { raw = parseUnits(amount, asset.decimals); } catch { setError("Enter an amount like 25 or 0.05."); return null; }
+    if (raw <= 0n) { setError("Enter an amount greater than zero."); return null; }
+    if (available !== undefined && raw > available) { setError(`That's more ${asset.symbol} on ${networkName} than this wallet holds.`); return null; }
+    return raw;
+  }
+
+  /** Send each call from the connected wallet on the source network, waiting for each to land. */
+  async function sendFromWallet(calls: Call[]): Promise<`0x${string}`> {
+    if (!source || !sourceAddress || !publicClient) throw new Error("wallet_unavailable");
+    await source.switchChain(chainId);
+    const provider = await source.getEthereumProvider();
+    let last: `0x${string}` | null = null;
+    for (const call of calls) {
+      setPhase("confirm");
+      const hash = await provider.request({ method: "eth_sendTransaction", params: [{ from: sourceAddress, to: call.to, data: call.data,
+        value: `0x${BigInt(call.value).toString(16)}` }] }) as `0x${string}`;
+      setPhase("pending");
+      const receipt = await publicClient.waitForTransactionReceipt({ hash, timeout: 300_000 });
+      if (receipt.status !== "success") throw new Error("reverted");
+      last = hash;
+    }
+    return last!;
+  }
+
+  function walletError(reason: unknown) {
+    setPhase("idle");
+    const rejected = reason instanceof Error && /reject|denied|cancel/i.test(reason.message);
+    setError(rejected ? "You cancelled it in your wallet." : "The transfer didn't go through. Check your wallet's activity before you try again.");
+  }
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     setError(null);
-    let raw: bigint;
-    try { raw = parseUnits(amount, USDC.decimals); } catch { return setError("Enter an amount like 25 or 25.50."); }
-    if (raw <= 0n) return setError("Enter an amount greater than zero.");
-    if (available !== undefined && raw > available) return setError("That's more USDC on Base than this wallet holds.");
-    if (!source || !sourceAddress || !publicClient) return;
+    if (phase === "review" && quote) return confirmBridge(quote);
+    const raw = readAmount();
+    if (raw === null) return;
+    if (home) {
+      try {
+        await sendFromWallet([asset.address === null
+          ? { to: account, value: raw.toString(), data: "0x" }
+          : { to: asset.address, value: "0", data: encodeFunctionData({ abi: erc20Abi, functionName: "transfer", args: [account, raw] }) }]);
+        setPhase("done"); setAmount("");
+        await queryClient.invalidateQueries();
+      } catch (reason) { walletError(reason); }
+      return;
+    }
+    setPhase("quoting");
     try {
-      setPhase("confirm");
-      await source.switchChain(HOME_CHAIN.id);
-      const provider = await source.getEthereumProvider();
-      const hash = await provider.request({ method: "eth_sendTransaction", params: [{ from: sourceAddress, to: USDC.address,
-        data: encodeFunctionData({ abi: erc20Abi, functionName: "transfer", args: [account, raw] }) }] }) as `0x${string}`;
-      setPhase("pending");
-      const receipt = await publicClient.waitForTransactionReceipt({ hash, timeout: 180_000 });
-      if (receipt.status !== "success") throw new Error("reverted");
-      setPhase("done");
-      setAmount("");
-      await queryClient.invalidateQueries();
-      void balance.refetch();
+      const { quote: next } = await api<{ quote: Quote }>("/api/deposits/quote", { method: "POST", json: { chainId, symbol: asset.symbol, amount, from: sourceAddress } });
+      setQuote(next); setPhase("review");
     } catch (reason) {
       setPhase("idle");
-      const rejected = reason instanceof Error && /reject|denied|cancel/i.test(reason.message);
-      setError(rejected ? "You cancelled it in your wallet. Nothing moved." : "The transfer didn't go through. Check your wallet's activity before you try again.");
+      setError(reason instanceof ApiError ? reason.message : "We couldn't find a route right now. Try again.");
     }
   }
 
+  async function confirmBridge(current: Quote) {
+    if (quoteExpired(current)) { reset(); return setError("That price expired. Review it again."); }
+    try {
+      const hash = await sendFromWallet(current.calls);
+      setPhase("bridging"); setAmount("");
+      setBridge({ hash, chainId: current.chainId, tool: current.tool });
+    } catch (reason) { walletError(reason); }
+  }
+
+  const buttonText = phase === "quoting" ? "Finding a route" : phase === "confirm" ? "Confirm in your wallet" : phase === "pending" ? "Sending"
+    : phase === "bridging" ? "Moving to Base" : phase === "review" ? "Confirm deposit" : home ? "Add from wallet" : "Review";
+
   return (
     <form onSubmit={(event) => void submit(event)}>
-      <label className="fieldLabel">Amount in USDC
-        <input inputMode="decimal" placeholder="0.00" value={amount} disabled={busy} onChange={(event) => { setAmount(event.target.value.trim()); setPhase("idle"); }} />
+      <label className="fieldLabel">Network
+        <select value={chainId} disabled={busy} onChange={(event) => { setChainId(Number(event.target.value) as SupportedChainId); reset(); }}>
+          {DEPOSIT_NETWORKS.map((network) => <option key={network.chainId} value={network.chainId}>{network.name}</option>)}
+        </select>
+      </label>
+      <label className="fieldLabel">Asset
+        <select value={asset.symbol} disabled={busy} onChange={(event) => { setSymbol(event.target.value as DepositSymbol); reset(); }}>
+          {depositSymbols(chainId).map((item) => <option key={item} value={item}>{item}</option>)}
+        </select>
+      </label>
+      <label className="fieldLabel">Amount in {asset.symbol}
+        <input inputMode="decimal" placeholder="0.00" value={amount} disabled={busy} onChange={(event) => { setAmount(event.target.value.trim()); reset(); }} />
       </label>
       <p className="authorityFootnote">
-        From {shortAddress(sourceAddress)} on Base · {available === undefined ? "balance unavailable" : `${formatUnits(available, USDC.decimals)} USDC available`}
+        From {shortAddress(sourceAddress)} on {networkName} · {available === undefined ? "balance unavailable" : `${amountText(available, asset.decimals)} ${asset.symbol} available`}
       </p>
+      {quote && phase === "review" && <div className="transactionSummary">
+        <span>You get about<strong>{amountText(quote.toAmountRaw, quote.decimals)} {quote.symbol} on Base</strong></span>
+        <span>At least<strong>{amountText(quote.toAmountMinRaw, quote.decimals)} {quote.symbol}</strong></span>
+        <span>Bridge fee<strong>{usdText(quote.providerFeeUsd)}</strong></span>
+        <span>Network fee<strong>{usdText(quote.networkFeeUsd)}</strong></span>
+      </div>}
       {error && <p className="formError" role="alert">{error}</p>}
+      {phase === "bridging" && <p role="status">Sent. It usually reaches Base in a few minutes. You can leave this screen.</p>}
       {phase === "done" && <p role="status">Added. Your balance updates in a moment.</p>}
       <button className="button primary full" disabled={busy}>
-        {busy ? <LoaderCircle className="spin" size={16} /> : <ArrowDownToLine size={16} />}
-        {phase === "confirm" ? "Confirm in your wallet" : phase === "pending" ? "Adding" : "Add from wallet"}
+        {busy ? <LoaderCircle className="spin" size={16} /> : <ArrowDownToLine size={16} />}{buttonText}
       </button>
-      <p className="authorityFootnote">Your wallet pays a small Base network fee in ETH.</p>
+      <p className="authorityFootnote">
+        {home ? "Your wallet pays a small Base network fee in ETH."
+          : `It arrives as ${asset.symbol} on Base. The bridge fee comes out of the amount, and your wallet pays the ${networkName} network fee.`}
+      </p>
     </form>
   );
 }
