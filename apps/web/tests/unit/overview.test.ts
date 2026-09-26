@@ -9,6 +9,7 @@ const wallet = "0x1111111111111111111111111111111111111111";
 const usdc = "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
 const cbbtc = "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf";
 const aUsdc = "0x4e65fe4dba92790696d040ac24aa414708f5c0ab";
+const weth = "0x4200000000000000000000000000000000000006";
 const now = new Date("2026-09-25T12:00:00.000Z");
 
 type Read = { address: string; functionName: string; args?: readonly unknown[] };
@@ -22,11 +23,12 @@ const baseReads = (call: Read) => {
   if (address === usdc) return 125_500_000n;
   if (address === cbbtc) return 1_000_000n;
   if (address === aUsdc) return 50_000_000n;
+  if (address === weth) return 10n ** 17n;
   return 0n;
 };
 
 describe("reading the overview from the chains", () => {
-  it("groups cash, vaults, and portfolio with values, sources, and observation times", async () => {
+  it("groups cash, crypto, and earn with values, sources, and observation times, and totals them", async () => {
     const overview = await readOverview(wallet, {
       base: fakeClient(baseReads, () => 2n * 10n ** 18n),
       ethereum: fakeClient((call) => { if (call.functionName === "balanceOf") return 0n; throw new Error("unexpected"); }),
@@ -34,11 +36,13 @@ describe("reading the overview from the chains", () => {
     }, now);
     expect(overview.holdings.map((item) => [item.group, item.symbol, item.amountRaw, item.usdCents])).toEqual([
       ["cash", "USDC", "125500000", 12550],
-      ["portfolio", "cbBTC", "1000000", 60000],
-      ["portfolio", "ETH", "2000000000000000000", 500000],
-      ["vaults", "USDC", "50000000", 5000]
+      ["crypto", "cbBTC", "1000000", 60000],
+      ["crypto", "ETH", "2000000000000000000", 500000],
+      ["crypto", "WETH", "100000000000000000", 25000],
+      ["earn", "USDC", "50000000", 5000]
     ]);
-    expect(overview.totals).toEqual({ cash: { usdCents: 12550, partial: false }, vaults: { usdCents: 5000, partial: false }, portfolio: { usdCents: 560000, partial: false } });
+    expect(overview.totals).toEqual({ cash: { usdCents: 12550, partial: false }, crypto: { usdCents: 585000, partial: false },
+      earn: { usdCents: 5000, partial: false }, all: { usdCents: 602550, partial: false } });
     expect(overview.holdings.every((item) => item.observedAt === now.toISOString() && item.source)).toBe(true);
   });
 
@@ -51,8 +55,10 @@ describe("reading the overview from the chains", () => {
     expect(overview.holdings.find((item) => item.symbol === "ETH")).toMatchObject({ status: "unavailable", amountRaw: null, usdCents: null });
     expect(overview.holdings.find((item) => item.label === "Sky savings")).toMatchObject({ status: "unavailable" });
     expect(overview.holdings.find((item) => item.symbol === "cbBTC")).toMatchObject({ status: "observed", amountRaw: "1000000", usdCents: null });
-    expect(overview.totals.portfolio.partial).toBe(true);
-    expect(overview.totals.vaults.partial).toBe(true);
+    expect(overview.totals.crypto.partial).toBe(true);
+    expect(overview.totals.earn.partial).toBe(true);
+    expect(overview.totals.cash.partial).toBe(false);
+    expect(overview.totals.all).toEqual({ usdCents: 17550, partial: true });
   });
 });
 

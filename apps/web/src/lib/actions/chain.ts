@@ -1,4 +1,5 @@
 import { getAddress, isAddress, isHex } from "viem";
+import { localEdgeUrl } from "@/lib/testing/local-edge";
 
 export const RPC_BY_CHAIN: Record<number, readonly string[]> = {
   1: ["https://ethereum-rpc.publicnode.com"],
@@ -15,6 +16,9 @@ export const RPC_BY_CHAIN: Record<number, readonly string[]> = {
  * public ones stay as fallbacks, since they rate-limit shared Worker traffic.
  */
 export function rpcEndpoints(chainId: number): readonly string[] {
+  // A local node (end-to-end tests) is used alone, so a test never reaches a public network.
+  const local = localEdgeUrl(`RPC_URL_${chainId}`);
+  if (local) return [local];
   const dedicated = process.env[`RPC_URL_${chainId}`];
   const endpoints = RPC_BY_CHAIN[chainId] ?? [];
   return dedicated && /^https:\/\//.test(dedicated) ? [dedicated, ...endpoints] : endpoints;

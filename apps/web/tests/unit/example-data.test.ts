@@ -3,8 +3,8 @@ import { exampleActions, exampleOverview, exampleRecipients } from "@/lib/exampl
 
 describe("guest example data", () => {
   it("adds up, so an example screen never shows impossible totals", () => {
-    for (const group of ["cash", "vaults", "portfolio"] as const) {
-      const sum = exampleOverview.holdings.filter((item) => item.group === group).reduce((total, item) => total + (item.usdCents ?? 0), 0);
+    for (const group of ["cash", "crypto", "earn", "all"] as const) {
+      const sum = exampleOverview.holdings.filter((item) => group === "all" || item.group === group).reduce((total, item) => total + (item.usdCents ?? 0), 0);
       expect(exampleOverview.totals[group].usdCents, group).toBe(sum);
     }
   });

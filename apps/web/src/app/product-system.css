@@ -763,3 +763,11 @@
 @keyframes toastIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
 @media (max-width: 640px) { .toastRegion { top: 12px; left: 16px; right: 16px; width: auto; } }
 @media (prefers-reduced-motion: reduce) { .toast { animation: none; } }
+
+/* Overview: one total, then cash, crypto, and earn. */
+.portfolioTotal { display: grid; gap: 6px; margin-bottom: 16px; padding: 20px; }
+.portfolioTotal .eyebrow { margin: 0; }
+.portfolioTotal > strong { font-family: var(--font-technical); font-size: clamp(28px, 4vw, 40px); font-weight: 500; }
+.portfolioTotal small { color: var(--muted); font-size: var(--type-caption); }
+.dashboardPage > section.panel.widePanel + section.panel.widePanel { margin-top: 16px; }
+.dashboardPage .panelHeading { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }

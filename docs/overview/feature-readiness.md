@@ -23,7 +23,7 @@ A feature is done only when all of these are true:
 - **Scope decided.** At the start, confirm with the product owner what is in the first release. Cut or simplify anything that isn't, and delete its code, routes, tables, and tests.
 - **Server rules enforced and tested.** Feature switches, account lock, daily limits, recipient rules, and the passkey requirement are checked on the server for every money action, with unit tests for each refusal.
 - **Unit tests** cover the domain logic, the API routes (success and each error code), and database effects, including the D1 triggers where they apply.
-- **End-to-end tests** (Playwright, desktop and mobile) cover every step the customer takes in the feature: the happy path, the main failures, and empty and loading states. They run signed in, against local bindings, with Privy and chain calls stubbed at the edge of the app.
+- **End-to-end tests** (Playwright, desktop and mobile) cover every step the customer takes in the feature: the happy path, the main failures, and empty and loading states. They run signed in, against local bindings, with Privy and chain calls stubbed at the edge of the app (see [`apps/web/tests/e2e/README.md`](../../apps/web/tests/e2e/README.md)).
 - **Live check on dev.** For anything that moves money, a small real transaction on dev, verified from the database and the chain: action status, events, Transactions page, and receipt.
 - **Records are right.** Every financial observation shows source, reference, status, and time. Stale or failed reads show as unavailable.
 - **Clean as you go.** No dead code, duplicated helpers, or unused flags left in the feature's area. Docs for the feature are updated.
@@ -33,9 +33,9 @@ A feature is done only when all of these are true:
 
 | # | Feature | Includes | Status |
 | --- | --- | --- | --- |
-| 1 | Sign-in and Overview | Signed-in end-to-end test setup, sign-in, terms acceptance, account creation, passkey, Overview balances | Not started |
+| 1 | Sign-in and Overview | Signed-in end-to-end test setup, email and wallet sign-in, terms acceptance, account creation, Overview balances in US dollars with a total | Done ([#18](https://github.com/arthurtouble/crypto-neo-bank/pull/18)) |
 | 2 | Deposit | Receive by QR code, add from a connected wallet, deposits from other networks, card funding | Not started |
-| 3 | Send | To an address, a saved recipient, an Aura tag, or the customer's own wallets; limits and cooling period | Not started |
+| 3 | Send | To an address, a saved recipient, an Aura tag, or the customer's own wallets; limits and cooling period; the passkey requirement and enrollment | Not started |
 | 4 | Swap | On Base, then between networks | Not started |
 | 5 | Earn | Aave on Base, Sky on Ethereum | Not started |
 | 6 | Invest | Catalog and buying | Not started |

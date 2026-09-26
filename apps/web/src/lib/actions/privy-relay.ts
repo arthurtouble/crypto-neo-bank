@@ -1,4 +1,5 @@
 import type { PrivyClient } from "@privy-io/node";
+import { localEdgeUrl } from "@/lib/testing/local-edge";
 import type { Call } from "./types";
 
 /**
@@ -9,6 +10,7 @@ import type { Call } from "./types";
  * not Privy's answer, decides the outcome.
  */
 export const PRIVY_API_URL = "https://api.privy.io";
+const privyApiUrl = () => localEdgeUrl("PRIVY_API_URL") ?? PRIVY_API_URL;
 
 export type SendCallsBody = {
   method: "wallet_sendCalls";
@@ -31,7 +33,7 @@ export function sendCallsRequest(input: { appId: string; walletId: string; chain
   return {
     version: 1,
     method: "POST",
-    url: `${PRIVY_API_URL}/v1/wallets/${input.walletId}/rpc`,
+    url: `${privyApiUrl()}/v1/wallets/${input.walletId}/rpc`,
     body: {
       method: "wallet_sendCalls",
       caip2: `eip155:${input.chainId}`,

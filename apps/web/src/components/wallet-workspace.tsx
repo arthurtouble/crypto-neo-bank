@@ -12,7 +12,6 @@ import { BASE_ASSETS, HOME_CHAIN } from "@/config/chains";
 import { useApi } from "@/lib/client/api";
 import { useAction } from "@/lib/client/use-action";
 import { AddFromWallet } from "./add-from-wallet";
-import { DefiPositions } from "./defi-positions";
 import { MovePreviousAccount } from "./move-previous-account";
 import { useToast } from "./toast";
 import { TransactionProgress } from "./transaction-progress";
@@ -36,7 +35,7 @@ function assetId(symbol: AssetSymbol) {
   return address ? `${HOME_CHAIN.id}:${address.toLowerCase()}` : `${HOME_CHAIN.id}:native`;
 }
 
-export function WalletWorkspace({ mode = "overview" }: { mode?: "overview" | "deposit" | "send" }) {
+export function WalletWorkspace({ mode }: { mode: "deposit" | "send" }) {
   const searchParams = useSearchParams();
   const api = useApi();
   const requestedRecipient = searchParams.get("sendTo") ?? "";
@@ -144,7 +143,7 @@ export function WalletWorkspace({ mode = "overview" }: { mode?: "overview" | "de
       <div className="contentGrid">
         <section className="panel widePanel">
           <div className="panelHeading walletHeading">
-            <div><h2>{mode === "deposit" ? "Receive crypto" : mode === "send" ? "Send crypto" : "Cash and crypto"}</h2></div>
+            <div><h2>{mode === "deposit" ? "Receive crypto" : "Send crypto"}</h2></div>
             <div className="walletActions">{mode !== "send" && <button className="button secondary" disabled={sending} onClick={() => { if (!sending) setModal("receive"); }}><QrCode size={16} /> Receive</button>}{mode !== "deposit" && <button className="button primary" disabled={sending} onClick={() => openSend()}><Send size={16} /> Send</button>}</div>
           </div>
           <div className="assetTable liveAssetTable">
@@ -162,7 +161,6 @@ export function WalletWorkspace({ mode = "overview" }: { mode?: "overview" | "de
         </section>
 
       </div>
-      {mode === "overview" && <DefiPositions address={address} />}
 
       {modal && <div className="modalBackdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && !sending && setModal(null)}>
         <section className="financialModal" role="dialog" aria-modal="true" aria-labelledby="wallet-modal-title">

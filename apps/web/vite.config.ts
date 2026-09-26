@@ -1,13 +1,23 @@
 import { cloudflare } from "@cloudflare/vite-plugin";
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
 import vinext from "vinext";
 
+// End-to-end tests (tests/e2e/support/serve.mjs) swap Privy's browser SDK for a
+// local stand-in and keep their own local database. Never set outside tests.
+const e2e = process.env.AURA_E2E === "1";
+const fake = (file: string) => fileURLToPath(new URL(`./tests/e2e/support/${file}`, import.meta.url));
+
 export default defineConfig({
+  resolve: e2e ? { alias: [
+    { find: /^@privy-io\/react-auth\/smart-wallets$/, replacement: fake("privy-smart-wallets-fake.tsx") },
+    { find: /^@privy-io\/react-auth$/, replacement: fake("privy-react-fake.tsx") },
+    { find: /^@privy-io\/wagmi$/, replacement: fake("privy-wagmi-fake.ts") }
+  ] } : undefined,
   optimizeDeps: {
     exclude: ["lucide-react"],
     include: [
-      "@privy-io/react-auth",
-      "@privy-io/wagmi",
+      ...(e2e ? [] : ["@privy-io/react-auth", "@privy-io/wagmi"]),
       "eventemitter3",
       "canonicalize",
       "fetch-retry",
@@ -28,6 +38,9 @@ export default defineConfig({
       viteEnvironment: { name: "rsc", childEnvironments: ["ssr"] },
       // Remote bindings (Workers AI) need Cloudflare credentials; tests and CI run without them.
       remoteBindings: process.env.AURA_LOCAL_BINDINGS !== "1",
+      persistState: e2e ? { path: ".wrangler/e2e-state" } : true,
+      // The fake edge's URLs and verification key, as plain variables of the local Worker.
+      config: e2e ? (worker) => ({ vars: { ...worker.vars, ...JSON.parse(process.env.AURA_E2E_VARS ?? "{}") } }) : undefined,
     }),
   ],
 });
