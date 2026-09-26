@@ -11,6 +11,7 @@ import { useBalance, useReadContract } from "wagmi";
 import { BASE_ASSETS, HOME_CHAIN } from "@/config/chains";
 import { useApi } from "@/lib/client/api";
 import { useAction } from "@/lib/client/use-action";
+import { AddFromWallet } from "./add-from-wallet";
 import { DefiPositions } from "./defi-positions";
 import { TransactionProgress } from "./transaction-progress";
 
@@ -81,10 +82,11 @@ export function WalletWorkspace({ mode = "overview" }: { mode?: "overview" | "de
     if (!address) return;
     setFundError(null);
     try {
-      // Privy's funding flow: card, exchange, or a wallet the customer connected, such as MetaMask.
-      await fundWallet({ address, options: { chain: HOME_CHAIN, asset: "USDC", amount: "25" } });
+      // Privy's card flow. Privy requires an amount with an asset; it is only a starting value the customer edits.
+      // Receiving any amount is the address and QR code on this screen, not Privy's receive screen.
+      await fundWallet({ address, options: { chain: HOME_CHAIN, asset: "USDC", amount: "25", defaultFundingMethod: "card" } });
     } catch {
-      setFundError("Adding funds didn't finish. You can try again, or send USDC on Base to the address below.");
+      setFundError("The card payment didn't finish. You can try again, or use one of the other ways here.");
     }
   }
 
@@ -164,10 +166,12 @@ export function WalletWorkspace({ mode = "overview" }: { mode?: "overview" | "de
           <button className="modalClose" onClick={() => setModal(null)} aria-label="Close" disabled={sending}><X size={18} /></button>
           {modal === "receive" ? <>
             <h2 id="wallet-modal-title">Add money</h2>
-            <p>Pay by card, from an exchange, or from a wallet you connected, like MetaMask.</p>
-            <button className="button primary full" onClick={() => void addFunds()}><Plus size={16} /> Add funds</button>
+            <p>Move USDC on Base from a wallet you connected, like MetaMask.</p>
+            <AddFromWallet account={address} />
+            <p>Or pay by card.</p>
+            <button className="button secondary full" onClick={() => void addFunds()}><Plus size={16} /> Pay by card</button>
             {fundError && <p className="formError" role="alert">{fundError}</p>}
-            <p>Or send USDC on Base to your Aura account.</p>
+            <p>Or send USDC on Base to your Aura account from anywhere.</p>
             <div className="receiveQr"><QRCodeSVG value={address} size={164} bgColor="transparent" fgColor="currentColor" level="M" /></div>
             <code className="addressBlock">{address}</code>
             <button className="button secondary full" onClick={() => void copyAddress()}>{copied ? <Check size={16} /> : <Copy size={16} />}{copied ? "Copied" : "Copy address"}</button>

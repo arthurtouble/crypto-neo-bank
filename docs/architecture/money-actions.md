@@ -13,7 +13,7 @@ Each customer has a Privy smart wallet on Base, owned by their Privy embedded si
 - The smart wallet holds funds. Its address is the customer's deposit address and the only address Aura prepares actions for.
 - The embedded signer and any wallet used to log in, such as MetaMask, never hold Aura funds and are never shown as the account. Until Privy has created the smart wallet, the app shows the account as still being set up rather than falling back to another address.
 - The smart wallet is deployed by its first operation. Until then a block explorer shows its address as an ordinary address with no code; that is expected.
-- Adding money opens Privy's funding flow (`useFundWallet`) for USDC on Base: card, exchange, or a transfer from a connected wallet. The methods are enabled in the Privy dashboard. The address and QR code remain for sending from anywhere else.
+- Adding money starts with a USDC transfer on Base from the wallet the customer connected, such as MetaMask (`add-from-wallet.tsx`). The connected wallet signs and pays that fee; Aura reads the result from the chain. Card payment goes through Privy's funding flow (`useFundWallet`, opened on the card method), enabled in the Privy dashboard. Privy needs a starting amount with an asset; the customer changes it there. The address and QR code remain for sending from anywhere else.
 - A paymaster sponsors gas, so customers need no ETH to act.
 - An action's calls go to the smart wallet as one batch, so an approval and the action it enables are a single signature and a single onchain operation.
 

@@ -4,7 +4,7 @@
 
 ## Deploy
 
-Merging to `main` deploys dev. When the `quality` workflow passes on a push to `main`, `.github/workflows/deploy-dev.yml` resets the database if the baseline changed, applies migrations, deploys the events, web, and docs Workers, and runs the deployment smoke. Work happens on branches; open a pull request and merge it to ship to dev. The workflow can also be run by hand from the Actions tab. It never deploys production.
+Merging to `main` deploys dev. On every push to `main`, without waiting for the `quality` workflow, `.github/workflows/deploy-dev.yml` resets the database if the baseline changed, applies migrations, deploys the events, web, and docs Workers, and runs the deployment smoke. Work happens on branches; open a pull request and merge it right away to ship to dev. CI still runs on `main`; when it fails, dev is running code that failed checks until the fix merges. The workflow can also be run by hand from the Actions tab. It never deploys production.
 
 It needs two secrets on the `dev` GitHub environment (Settings → Environments → dev): `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`. The token needs Workers Scripts, D1, and Queues edit permissions on the account.
 
