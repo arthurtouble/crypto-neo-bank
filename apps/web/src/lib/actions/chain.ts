@@ -79,8 +79,20 @@ export function requiredConfirmations(chainId: number): number {
 export async function observeTransaction(chainId: number, hash: string, fetcher: typeof fetch = fetch): Promise<ChainObservation> {
   const identity = await observeTransactionIdentity(chainId, hash, fetcher);
   if (identity.status === "pending") return identity;
-  const endpoint = RPC_BY_CHAIN[chainId]?.[0];
-  if (!endpoint) throw new Error("Unsupported chain.");
+  const endpoints = RPC_BY_CHAIN[chainId];
+  if (!endpoints?.length) throw new Error("Unsupported chain.");
+  // Public endpoints refuse some reads (publicnode treats receipts as archive requests), so try each in turn.
+  let lastError: Error | null = null;
+  for (const endpoint of endpoints) {
+    try { return await observeReceipt(identity, chainId, hash, endpoint, fetcher); }
+    catch (error) { lastError = error instanceof Error ? error : new Error("Chain observation failed."); }
+  }
+  throw lastError ?? new Error("Chain observation failed.");
+}
+
+/** Receipt, canonical block, confirmations, and finality from one endpoint, so the reads agree with each other. */
+async function observeReceipt(identity: Extract<TransactionIdentityObservation, { status: "found" }>, chainId: number, hash: string,
+  endpoint: string, fetcher: typeof fetch): Promise<ChainObservation> {
   if (parseQuantity(await rpc(fetcher, endpoint, "eth_chainId", [])) !== BigInt(chainId)) throw new Error("Receipt RPC returned the wrong chain.");
   const rawReceipt = await rpc(fetcher, endpoint, "eth_getTransactionReceipt", [hash]);
   if (rawReceipt === null) return { ...identity, receipt: null, canonicalBlockHash: null, confirmations: 0, finalizedBlockNumber: null };

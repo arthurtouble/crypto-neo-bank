@@ -99,9 +99,14 @@ function callsMatch(expected: readonly Call[], observed: readonly Call[]): boole
 }
 
 type Unsettled = { status: "pending"; reason: string } | { status: "failed"; reason: string };
-type Settled = { status: "found"; observed: Extract<ChainObservation, { status: "found" }> };
+type Settled = { status: "found"; observed: Extract<ChainObservation, { status: "found" }>; final: boolean };
 
-/** A receipt that is final on its chain and succeeded, or why not yet. */
+/**
+ * A receipt that succeeded and has enough confirmations, and whether its
+ * block is final yet. Base finalizes 15 to 25 minutes after inclusion, so a
+ * matching operation shows as settling first. A reverted receipt only fails
+ * once final, because a reorg could still include the operation differently.
+ */
 function settledReceipt(observed: ChainObservation, chainId: number, hash: string): Unsettled | Settled {
   if (observed.status === "pending") return { status: "pending", reason: "transaction_unavailable" };
   const receipt = observed.receipt;
@@ -109,11 +114,11 @@ function settledReceipt(observed: ChainObservation, chainId: number, hash: strin
   if (receipt.transactionHash.toLowerCase() !== hash.toLowerCase()) return { status: "pending", reason: "rpc_inconsistent" };
   if (!observed.blockHash || !observed.canonicalBlockHash || !sameAddress(receipt.blockHash, observed.blockHash)
     || !sameAddress(observed.canonicalBlockHash, observed.blockHash)) return { status: "pending", reason: "reorg" };
-  if (observed.confirmations < requiredConfirmations(chainId)
-    || observed.finalizedBlockNumber === null || observed.finalizedBlockNumber < receipt.blockNumber) return { status: "pending", reason: "finality" };
-  if (receipt.status === "reverted") return { status: "failed", reason: "transaction_reverted" };
+  if (observed.confirmations < requiredConfirmations(chainId)) return { status: "pending", reason: "confirmations" };
+  const final = observed.finalizedBlockNumber !== null && observed.finalizedBlockNumber >= receipt.blockNumber;
+  if (receipt.status === "reverted") return final ? { status: "failed", reason: "transaction_reverted" } : { status: "pending", reason: "finality" };
   if (receipt.status !== "success") return { status: "pending", reason: "receipt_status_unknown" };
-  return { status: "found", observed };
+  return { status: "found", observed, final };
 }
 
 /**
@@ -125,14 +130,17 @@ export async function verifyAction(action: VerifiableAction, dependencies: Depen
   const source = settledReceipt(await observe(action.chainId, action.transactionHash), action.chainId, action.transactionHash);
   if (source.status !== "found") return source;
   const { call, receipt } = source.observed;
+  // Until the block is final, only a fully matching operation moves forward; anything else waits for finality to decide.
+  const fail = (reason: string): Verification => source.final ? { status: "failed", reason } : { status: "pending", reason: "finality" };
   const operation = readWalletOperation(action.walletAddress, call, receipt!.logs, receipt!.status === "success");
-  if (operation.status === "unrecognized") return { status: "failed", reason: `operation_${operation.reason}` };
-  if (!callsMatch(action.calls, operation.calls)) return { status: "failed", reason: "calls_mismatch" };
-  if (!operation.success) return { status: "failed", reason: "operation_reverted" };
+  if (operation.status === "unrecognized") return fail(`operation_${operation.reason}`);
+  if (!callsMatch(action.calls, operation.calls)) return fail("calls_mismatch");
+  if (!operation.success) return fail("operation_reverted");
   for (const effect of action.effects) {
     if (effect.type === "delivery") continue;
-    if (!effectPresent(effect, action.walletAddress, operation.logs)) return { status: "failed", reason: `effect_missing_${effect.type}` };
+    if (!effectPresent(effect, action.walletAddress, operation.logs)) return fail(`effect_missing_${effect.type}`);
   }
+  if (!source.final) return { status: "settling", reason: "finality" };
   const delivery = action.effects.find((effect) => effect.type === "delivery");
   if (!delivery) return { status: "confirmed" };
   return verifyDelivery(action, delivery, observe, dependencies.lifiStatus ?? readLifiTransferStatus);

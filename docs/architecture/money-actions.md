@@ -46,7 +46,8 @@ sequenceDiagram
 3. **Submit.** The browser reports the transaction hash. The hash binds to one action only.
 4. **Verify.** On each status read, the server reads the receipt independently and decides:
    - **Identity.** The transaction is an EntryPoint `handleOps` call containing an operation from the customer's smart wallet whose decoded calls equal the prepared calls, and its `UserOperationEvent` reports success.
-   - **Finality.** Base: 3 confirmations and at or below the finalized block. Ethereum: 12.
+   - **Finality.** Base: 3 confirmations and at or below the finalized block. Ethereum: 12. Base finalizes 15 to 25 minutes after inclusion, so an operation that fully matches after 3 confirmations becomes `settling` (shown as sent for a same-chain action) and `confirmed` at finality. Before finality nothing fails: a mismatch or revert waits for the final block to decide.
+   - **Reads.** Each read falls back across the chain's public endpoints. publicnode refuses receipts as archive requests, so the receipt reads move on to the next endpoint.
    - **Effects.** Within that operation's logs, every expected effect is present: the exact ERC-20 transfer, the Aave `Supply` or `Withdraw` event, the Sky vault events, or the route's source debit and minimum output.
    - **Delivery.** Cross-chain routes stay `settling` until LI.FI reports the destination transaction and the destination receipt shows at least the minimum output reaching the customer.
 

@@ -18,6 +18,8 @@ export type ActionPhase = "idle" | "preparing" | "signing" | "tracking" | "done"
 
 const POLL_MS = 4_000;
 const terminal = new Set(["confirmed", "failed", "expired"]);
+/** Done from the customer's side: finished, or a same-chain action that matched on the chain and only awaits finality. */
+export const actionSettled = (action: ActionView) => terminal.has(action.status) || (action.status === "settling" && !action.destinationChainId);
 
 /**
  * Prepare an action on the server, sign its calls as one operation, report
@@ -72,7 +74,7 @@ export function useAction(options: { onSettled?: (action: ActionView) => void } 
         const current = (await api<{ action: ActionView }>(`/api/actions/${action.id}`)).action;
         if (cancelled) return;
         setAction(current);
-        if (terminal.has(current.status)) {
+        if (actionSettled(current)) {
           setPhase("done");
           await queryClient.invalidateQueries();
           settledRef.current?.(current);
