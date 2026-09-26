@@ -5,7 +5,7 @@ import { actionRequest } from "@/lib/actions/relay-request";
 import { expireIfStale, getAction, recordRelay, recordSubmission } from "@/lib/actions/store";
 import { privyClient } from "@/lib/auth/privy";
 import { requireVerifiedSubject } from "@/lib/auth/server";
-import { requireActionAccount } from "@/lib/auth/wallet";
+import { requireActionAccount, requireMoneyMfa } from "@/lib/auth/wallet";
 import { errorResponse, route } from "@/lib/http/route";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { actionView } from "../../view";
@@ -28,6 +28,7 @@ export const POST = route("actions.submit", { invalid: "invalid_submission", una
     const now = new Date();
 
     if ("signature" in input) {
+      await requireMoneyMfa(subject.subjectReference);
       const action = await expireIfStale(env.PROJECTION_DB, found, now);
       const account = await requireActionAccount(subject.subjectReference);
       const signable = actionRequest(action, account);

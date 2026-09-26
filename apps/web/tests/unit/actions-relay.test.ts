@@ -7,12 +7,13 @@ const httpErrors = await vi.hoisted(() => import("@/lib/http/errors"));
 const account = "0x1111111111111111111111111111111111111111";
 const recipient = "0x2222222222222222222222222222222222222222";
 const usdc = "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
-const state = vi.hoisted(() => ({ db: null as D1Database | null, rpc: vi.fn(), signed: [] as unknown[] }));
+const state = vi.hoisted(() => ({ db: null as D1Database | null, rpc: vi.fn(), signed: [] as unknown[], mfa: true }));
 vi.mock("cloudflare:workers", () => ({ env: { get PROJECTION_DB() { return state.db; } } }));
 vi.mock("@/lib/auth/server", () => ({ requireVerifiedSubject: async () => ({ subjectReference: "alice", sessionReference: "s" }) }));
 vi.mock("@/lib/auth/wallet", () => ({
   requireActionWallet: async () => account,
   requireActionAccount: async () => ({ address: account, walletId: "wallet-1" }),
+  requireMoneyMfa: async () => { if (!state.mfa) throw new httpErrors.MfaRequiredError(); },
   WalletOwnershipError: httpErrors.WalletOwnershipError
 }));
 vi.mock("@/lib/auth/privy", () => ({ privyClient: () => ({ wallets: () => ({ rpc: state.rpc }) }) }));
@@ -40,6 +41,7 @@ beforeEach(() => {
   sqlite.exec("UPDATE feature_flags SET enabled = 1");
   state.db = d1(sqlite);
   state.rpc = vi.fn(async () => ({ method: "wallet_sendCalls", data: { caip2: "eip155:8453", transaction_id: "tx-1" } }));
+  state.mfa = true;
 });
 afterEach(() => sqlite.close());
 
@@ -56,6 +58,15 @@ describe("sending an action through Privy", () => {
     // A second submission can't send it again.
     expect((await submit(new Request("https://aura.test", json({ signature })), params(id))).status).toBe(409);
     expect(state.rpc).toHaveBeenCalledTimes(1);
+  });
+
+  it("sends nothing until the customer has a passkey or authenticator app", async () => {
+    const id = await prepared();
+    state.mfa = false;
+    const response = await prepare(new Request("https://aura.test/api/actions", json({ kind: "transfer", assetId: `8453:${usdc}`, amount: "2", to: recipient })));
+    expect([response.status, (await response.json() as { error: string }).error]).toEqual([403, "mfa_required"]);
+    expect((await submit(new Request("https://aura.test", json({ signature })), params(id))).status).toBe(403);
+    expect(state.rpc).not.toHaveBeenCalled();
   });
 
   it("tells a rejected request apart from one whose outcome is unknown", async () => {

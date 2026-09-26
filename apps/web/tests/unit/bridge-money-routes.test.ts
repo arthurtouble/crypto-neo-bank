@@ -10,7 +10,7 @@ const wallet = "0x1111111111111111111111111111111111111111";
 const depositAddress = "0x9999999999999999999999999999999999999999";
 vi.mock("cloudflare:workers", () => ({ env: { get PROJECTION_DB() { return state.db; } } }));
 vi.mock("@/lib/auth/server", () => ({ requireVerifiedSubject: async () => ({ subjectReference: "alice", sessionReference: "s" }) }));
-vi.mock("@/lib/auth/wallet", () => ({ requireActionWallet: async () => wallet, WalletOwnershipError: httpErrors.WalletOwnershipError }));
+vi.mock("@/lib/auth/wallet", () => ({ requireActionWallet: async () => wallet, requireMoneyMfa: async () => undefined, WalletOwnershipError: httpErrors.WalletOwnershipError }));
 
 const { POST: onboard } = await import("@/app/api/money/onboarding/route");
 const { GET: account } = await import("@/app/api/money/account/route");

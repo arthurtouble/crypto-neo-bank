@@ -22,7 +22,7 @@ If Privy's response is lost, the client retries the same signed request once; Pr
 
 - **Where the key lives.** Privy splits each private key into two shares. One is only decryptable inside a sealed AWS Nitro enclave that Privy operates; the other is released only when the customer authenticates. The key is rebuilt in enclave memory to sign, and only after the login and wallet rules pass.
 - **Who can move funds.** Neither Aura nor Privy staff can extract a key without the customer's login. Whoever holds a customer's valid Privy session can sign as them, so account access is wallet access.
-- **What that means for Aura.** Aura's server never stores customer Privy tokens and never holds signing keys. Money-moving actions should require a passkey or authenticator code, not only an email code (tracked below).
+- **What that means for Aura.** Aura's server never stores customer Privy tokens and never holds signing keys. Money only leaves the account once the customer has a passkey or authenticator app enrolled in Privy (`requireMoneyMfa`); an email or SMS code alone is not enough. Aura's server checks this before it prepares, relays, or pays out, and the app opens Privy's setup screen when it is missing. After enrollment, Privy asks for that factor before the wallet key signs.
 - **Trust.** Custody depends on Privy's enclave, login system, and continued operation. Describe the product as self-custodial with keys secured by Privy, not as a hardware-wallet equivalent.
 
 ## Leaving Privy
@@ -52,10 +52,11 @@ Earlier builds used a Privy Kernel smart wallet as the account. Customers who st
 
 - Fee sponsorship: **Sponsor gas fees** (app pays), prepaid credits with a saved card, and every chain Aura sends from (Base, plus Ethereum for Sky).
 - TEE execution is enabled.
+- MFA: passkeys and authenticator apps turned on.
 
 ## Open items
 
 - Confirm the on-chain shape of the first sponsored operation (EntryPoint version, account encoding) and extend `user-operation.ts` if it differs.
-- Require passkey or TOTP MFA before money-moving actions.
+- Confirm on dev that Privy prompts for the passkey on relayed sends. If not, add an explicit verification step before signing.
 - Separate Privy apps for development and production, then HttpOnly cookies on the production domain.
 - Privy crypto deposit addresses for exchange deposits on other networks.

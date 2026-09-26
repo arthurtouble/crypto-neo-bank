@@ -12,7 +12,7 @@ const usdc = "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
 
 vi.mock("cloudflare:workers", () => ({ env: { get PROJECTION_DB() { return state.db; } } }));
 vi.mock("@/lib/auth/server", () => ({ requireVerifiedSubject: async () => ({ subjectReference: "alice", sessionReference: "s" }) }));
-vi.mock("@/lib/auth/wallet", () => ({ requireActionWallet: async () => wallet, WalletOwnershipError: httpErrors.WalletOwnershipError }));
+vi.mock("@/lib/auth/wallet", () => ({ requireActionWallet: async () => wallet, requireMoneyMfa: async () => undefined, WalletOwnershipError: httpErrors.WalletOwnershipError }));
 vi.mock("@/lib/swap/catalog", () => ({ resolveCatalogAsset: async (id: string) => id === `8453:${usdc}`
   ? { id, chainId: 8453, address: usdc, symbol: "USDC", name: "USD Coin", decimals: 6, logoUrl: null, verification: "verified", eligibility: "eligible" } : null }));
 vi.mock("@/lib/actions/verify", () => ({ verifyAction: vi.fn(async () => state.verification) }));

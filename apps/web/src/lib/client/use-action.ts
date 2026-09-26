@@ -64,6 +64,13 @@ export function useAction(options: { onSettled?: (action: ActionView) => void } 
       // Balances start changing as soon as the operation lands; refresh them without waiting for it to settle.
       void queryClient.invalidateQueries();
     } catch (reason) {
+      if (reason instanceof ApiError && reason.code === "mfa_required") {
+        // Nothing was prepared or sent. Open Privy's setup so the customer can add a passkey and try again.
+        setError("Add a passkey or authenticator app to move money, then try again.");
+        setPhase("idle");
+        wallet.enrollPasskey();
+        return;
+      }
       const rejected = reason instanceof Error && /reject|denied|cancel|exited/i.test(reason.message);
       if (signing && !rejected) setOutcomeUnknown(true);
       setError(reason instanceof ApiError || reason instanceof Error
