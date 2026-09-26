@@ -14,6 +14,8 @@ export default defineConfig({
     { find: /^@privy-io\/react-auth$/, replacement: fake("privy-react-fake.tsx") },
     { find: /^@privy-io\/wagmi$/, replacement: fake("privy-wagmi-fake.ts") }
   ] } : undefined,
+  // The browser reaches the fake edge through an HTTPS name that Playwright forwards (tests/e2e/support/fixtures.ts), so the CSP stays as deployed.
+  define: e2e ? { __AURA_E2E_EDGE__: JSON.stringify("https://edge.aura-e2e.test") } : undefined,
   optimizeDeps: {
     exclude: ["lucide-react"],
     include: [

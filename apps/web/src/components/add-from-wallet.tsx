@@ -161,7 +161,8 @@ export function AddFromWallet({ account }: { account: `0x${string}` }) {
       setQuote(next); setPhase("review");
     } catch (reason) {
       setPhase("idle");
-      toast.error("No route", reason instanceof ApiError ? reason.message : "We couldn't find a route right now. Try again.");
+      const unavailable = reason instanceof ApiError && ["provider_unavailable", "feature_unavailable"].includes(reason.code);
+      toast.error(unavailable ? "Not available right now" : "No route", reason instanceof ApiError ? reason.message : "We couldn't find a route right now. Try again.");
     }
   }
 

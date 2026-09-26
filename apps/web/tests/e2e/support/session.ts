@@ -1,6 +1,9 @@
 import type { Page } from "@playwright/test";
 import { randomUUID } from "node:crypto";
-import { aTokenFor } from "./fake-edge.mjs";
+import { aTokenFor, OPERATOR } from "./fake-edge.mjs";
+
+// The dev server drops idle keep-alive sockets after a few seconds; a fresh connection per setup call can't race that.
+const fresh = { Connection: "close" };
 
 const edgeUrl = `http://127.0.0.1:${process.env.AUREL_E2E_EDGE_PORT ?? "43174"}`;
 
@@ -14,31 +17,30 @@ export const ASSETS = {
 } as const;
 
 /** Change what the fake Privy, chains, and price feed return. */
-export async function edge(path: "/__reset" | "/__state" | "/__session", body: unknown = {}) {
+export async function edge(path: "/__reset" | "/__state" | "/__session" | "/__sent" | "/__balances", body: unknown = {}) {
   const response = await fetch(`${edgeUrl}${path}`, { method: "POST", body: JSON.stringify(body) });
   if (!response.ok) throw new Error(`fake edge ${path} failed: ${response.status}`);
-  return response.json() as Promise<{ token?: string }>;
+  return response.json() as Promise<{ token?: string; sent?: Array<{ hash: string; chainId: number; from: string; to: string; data: string; value: string; success: boolean }> }>;
 }
 
-export type Customer = { userId: string; wallet: `0x${string}`; email: string; token: string };
+export type Customer = { userId: string; wallet: `0x${string}`; email: string; token: string; externalWallets: `0x${string}`[] };
 
 /** A new customer with their own Privy account and embedded wallet, unique to the test. */
-export async function newCustomer(options: { mfa?: string[]; expiresIn?: number } = {}): Promise<Customer> {
+export async function newCustomer(options: { mfa?: string[]; expiresIn?: number; connectedWallet?: boolean } = {}): Promise<Customer> {
   const id = randomUUID().replaceAll("-", "");
-  const customer = { userId: `did:privy:${id}`, wallet: `0x${id.padEnd(40, "0").slice(0, 40)}` as `0x${string}`, email: `${id.slice(0, 8)}@example.com` };
-  await edge("/__state", { users: { [customer.userId]: { wallet: customer.wallet, email: customer.email, mfa: options.mfa ?? [] } } });
+  const externalWallets = options.connectedWallet ? [`0x${id.split("").reverse().join("").padEnd(40, "1").slice(0, 40)}` as `0x${string}`] : [];
+  const customer = { userId: `did:privy:${id}`, wallet: `0x${id.padEnd(40, "0").slice(0, 40)}` as `0x${string}`, email: `${id.slice(0, 8)}@example.com`, externalWallets };
+  await edge("/__state", { users: { [OPERATOR.userId]: { wallet: OPERATOR.wallet },
+    [customer.userId]: { wallet: customer.wallet, email: customer.email, mfa: options.mfa ?? [], externalWallets } } });
   const { token } = await edge("/__session", { userId: customer.userId, expiresIn: options.expiresIn });
   return { ...customer, token: token! };
 }
 
-/** Set on-chain balances for a wallet. Amounts are raw units, per chain and token (or "native"). */
-export async function setBalances(wallet: string, balances: Partial<Record<1 | 8453, Record<string, string>>>) {
-  const state: Record<number, Record<string, Record<string, string>>> = {};
-  for (const [chain, tokens] of Object.entries(balances)) {
-    state[Number(chain)] = {};
-    for (const [token, amount] of Object.entries(tokens ?? {})) state[Number(chain)][token.toLowerCase()] = { [wallet.toLowerCase()]: amount };
-  }
-  await edge("/__state", { balances: state });
+/** Set on-chain balances for a wallet, leaving other wallets' alone. Amounts are raw units, per chain and token (or "native"). */
+export async function setBalances(wallet: string, balances: Partial<Record<1 | 10 | 137 | 8453 | 42161, Record<string, string>>>) {
+  const entries = Object.entries(balances).flatMap(([chainId, tokens]) =>
+    Object.entries(tokens ?? {}).map(([token, amount]) => ({ chainId: Number(chainId), token, owner: wallet, amount })));
+  await edge("/__balances", entries);
 }
 
 /**
@@ -49,15 +51,23 @@ export async function setIdentity(page: Page, customer: Customer, options: { sig
   await page.addInitScript(({ session, signedIn }) => {
     localStorage.setItem("aura-e2e-session", JSON.stringify(session));
     if (signedIn) localStorage.setItem("aura-e2e-signed-in", "1");
-  }, { session: { userId: customer.userId, token: customer.token, wallet: customer.wallet, email: customer.email }, signedIn: options.signedIn ?? false });
+  }, { session: { userId: customer.userId, token: customer.token, wallet: customer.wallet, email: customer.email, externalWallets: customer.externalWallets },
+    signedIn: options.signedIn ?? false });
 }
 
 /** Accept the current terms through the API, as a returning customer already has. */
 export async function acceptTerms(page: Page, customer: Customer) {
-  const current = await page.request.get("/api/terms", { headers: { Authorization: `Bearer ${customer.token}` } });
+  const current = await page.request.get("/api/terms", { headers: { Authorization: `Bearer ${customer.token}`, ...fresh } });
   const { documents } = await current.json() as { documents: Array<{ key: string; version: string }> };
   const version = (key: string) => documents.find((item) => item.key === key)!.version;
-  const response = await page.request.post("/api/terms", { headers: { Authorization: `Bearer ${customer.token}` },
+  const response = await page.request.post("/api/terms", { headers: { Authorization: `Bearer ${customer.token}`, ...fresh },
     data: { termsVersion: version("terms_of_use"), privacyVersion: version("privacy_notice") } });
   if (!response.ok()) throw new Error(`accepting terms failed: ${response.status()}`);
+}
+
+/** Turn a feature switch on or off through the operations API, as an operator would. */
+export async function setFeature(page: Page, key: string, enabled: boolean) {
+  const { token } = await edge("/__session", { userId: OPERATOR.userId });
+  const response = await page.request.patch("/api/ops/features", { headers: { Authorization: `Bearer ${token}`, ...fresh }, data: { key, enabled } });
+  if (!response.ok()) throw new Error(`setting ${key} failed: ${response.status()}`);
 }

@@ -80,7 +80,55 @@ describe("quoting a deposit from another network", () => {
     expect((await post({ chainId: 137, symbol: "ETH", amount: "1", from: metamask })).status).toBe(422);
     expect(depositSymbols(137)).toEqual(["USDC"]);
     sqlite.exec("UPDATE feature_flags SET enabled = 0 WHERE flag_key = 'cross_chain'");
-    expect((await post({ chainId: 42161, symbol: "USDC", amount: "25", from: metamask })).status).toBe(503);
+    const off = await post({ chainId: 42161, symbol: "USDC", amount: "25", from: metamask });
+    expect(off.status).toBe(503);
+    expect(await off.json()).toMatchObject({ error: "feature_unavailable", message: expect.stringContaining("aren't available right now") });
     expect(state.quotes).toHaveLength(0);
+  });
+
+  it("rejects malformed input and reports the bridge provider unavailable", async () => {
+    expect((await post({ chainId: 42161, symbol: "DOGE", amount: "25", from: metamask })).status).toBe(400);
+    expect((await post({ chainId: 42161, symbol: "USDC", amount: "-1", from: metamask })).status).toBe(400);
+    expect((await post({ chainId: 42161, symbol: "USDC", amount: "25", from: "not-an-address" })).status).toBe(400);
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("down", { status: 503 })));
+    const down = await post({ chainId: 42161, symbol: "USDC", amount: "25", from: metamask });
+    expect(down.status).toBe(503);
+    expect(await down.json()).toMatchObject({ error: "provider_unavailable" });
+  });
+});
+
+const { GET: status } = await import("@/app/api/deposits/status/route");
+const hash = `0x${"a".repeat(64)}`;
+const statusOf = (query: string) => status(new Request(`https://aura.test/api/deposits/status?${query}`));
+
+describe("following a bridged deposit", () => {
+  let sqlite: DatabaseSync;
+  beforeEach(() => { sqlite = schemaDatabase(); state.db = d1(sqlite); });
+  afterEach(() => { sqlite.close(); vi.unstubAllGlobals(); });
+
+  const lifiStatus = (body: unknown) => vi.stubGlobal("fetch", vi.fn(async () => Response.json(body)));
+
+  it("reports delivery with the Base transaction", async () => {
+    lifiStatus({ status: "DONE", substatus: "COMPLETED", tool: "across", sending: { txHash: hash, chainId: 42161 }, receiving: { txHash: `0x${"b".repeat(64)}`, chainId: 8453 } });
+    expect(await (await statusOf(`chainId=42161&hash=${hash}&tool=across`)).json()).toMatchObject({ status: "DONE", destinationHash: `0x${"b".repeat(64)}` });
+  });
+
+  it("reports a refund, and a pending bridge", async () => {
+    lifiStatus({ status: "DONE", substatus: "REFUNDED", tool: "across", sending: { txHash: hash, chainId: 42161 } });
+    expect(await (await statusOf(`chainId=42161&hash=${hash}&tool=across`)).json()).toMatchObject({ status: "REFUNDED", destinationHash: null });
+    lifiStatus({ status: "PENDING", tool: "across", sending: { txHash: hash, chainId: 42161 } });
+    expect(await (await statusOf(`chainId=42161&hash=${hash}&tool=across`)).json()).toMatchObject({ status: "PENDING" });
+  });
+
+  it("says UNKNOWN rather than guessing when LI.FI is down or reports another transfer", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("down", { status: 503 })));
+    expect(await (await statusOf(`chainId=42161&hash=${hash}&tool=across`)).json()).toMatchObject({ status: "UNKNOWN" });
+    lifiStatus({ status: "DONE", substatus: "COMPLETED", tool: "across", sending: { txHash: `0x${"c".repeat(64)}`, chainId: 42161 } });
+    expect(await (await statusOf(`chainId=42161&hash=${hash}&tool=across`)).json()).toMatchObject({ status: "UNKNOWN" });
+  });
+
+  it("rejects a malformed hash or tool", async () => {
+    expect((await statusOf("chainId=42161&hash=0x12&tool=across")).status).toBe(400);
+    expect((await statusOf(`chainId=42161&hash=${hash}&tool=${encodeURIComponent("a b")}`)).status).toBe(400);
   });
 });

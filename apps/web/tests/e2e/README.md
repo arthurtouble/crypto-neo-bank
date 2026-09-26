@@ -15,6 +15,8 @@ Aura's own code runs for real: the pages, the API routes, token verification, th
 
 ## Writing a test
 
+Import `test` and `expect` from `support/fixtures.ts`. It forwards the browser's calls to the fake edge (`https://edge.aura-e2e.test`), so the app keeps its deployed Content Security Policy.
+
 Use the helpers in `support/session.ts`:
 
 - `newCustomer()` creates a Privy user with an embedded wallet, unique to the test, and mints their token.
@@ -23,6 +25,10 @@ Use the helpers in `support/session.ts`:
 - `acceptTerms(page, customer)` records terms acceptance, as a returning customer already has.
 - `edge("/__state", { down: ["rpc:1", "kraken", "privy"] })` makes an outside service fail.
 - `edge("/__reset")` clears the fake between tests.
+- `newCustomer({ connectedWallet: true })` also links a MetaMask-like wallet (`customer.externalWallets[0]`). It sends through the fake edge, which moves balances and keeps receipts like a chain. `edge("/__sent")` lists what it sent. `edge("/__state", { revertNext: true })` makes the next one revert.
+- `edge("/__state", { bridge: { status: "DONE", substatus: "COMPLETED" } })` sets what LI.FI reports for a bridge (`PENDING`, `COMPLETED`, or `REFUNDED`).
+- `setFeature(page, "cross_chain", true)` flips a feature switch through the real operations API, as the test operator.
+- In the browser, `localStorage` `aura-e2e-wallet` = `reject` makes the connected wallet refuse, and `aura-e2e-card` = `fail` makes the card flow fail. Card payments are recorded in `window.__auraE2E.fundWallet`.
 
 Each feature has one spec named after it, covering every step and failure listed in its pull request.
 

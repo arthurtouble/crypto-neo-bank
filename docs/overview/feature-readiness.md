@@ -34,7 +34,7 @@ A feature is done only when all of these are true:
 | # | Feature | Includes | Status |
 | --- | --- | --- | --- |
 | 1 | Sign-in and Overview | Signed-in end-to-end test setup, email and wallet sign-in, terms acceptance, account creation, Overview balances in US dollars with a total | Done ([#18](https://github.com/arthurtouble/crypto-neo-bank/pull/18)) |
-| 2 | Deposit | Receive by QR code, add from a connected wallet, deposits from other networks, card funding | Not started |
+| 2 | Deposit | Receive by QR code, add from a connected wallet, deposits from other networks, card funding; bank deposits shown as coming soon | In progress |
 | 3 | Send | To an address, a saved recipient, an Aura tag, or the customer's own wallets; limits and cooling period; the passkey requirement and enrollment | Not started |
 | 4 | Swap | On Base, then between networks | Not started |
 | 5 | Earn | Aave on Base, Sky on Ethereum | Not started |

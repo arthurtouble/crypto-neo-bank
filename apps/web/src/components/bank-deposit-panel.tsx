@@ -62,10 +62,10 @@ export function BankDepositPanel() {
   const instructions = account.data?.account.depositInstructions;
   const nextAction = account.data?.nextAction;
 
-  return <section className="panel exampleCard"><span className="exampleLabel">Bank transfer · Bridge</span><h2>Deposit from a bank</h2>
+  return <section className="panel exampleCard" aria-labelledby="deposit-bank"><span className="exampleLabel">{stage === "unavailable" ? "Coming soon" : "Bank transfer · Bridge"}</span><h2 id="deposit-bank">Deposit from a bank</h2>
     {account.isPending && <p role="status">Loading your bank details…</p>}
     {account.isError && <p className="formError" role="alert">Bank details are unavailable right now. <button type="button" className="textLink" onClick={() => void account.refetch()}>Try again</button></p>}
-    {stage === "unavailable" && <p>Bank deposits open once Aura&apos;s banking partner is connected.</p>}
+    {stage === "unavailable" && <p>Coming soon. You&apos;ll get US bank details and deposits will arrive as USDC in your Aura account.</p>}
     {stage === "start" && <VerificationForm onStarted={() => void account.refetch()} />}
     {stage === "continue" && nextAction?.type === "continue_verification" && <>
       <p>Finish identity verification with Bridge. After you finish, it can take a few minutes to confirm.</p>
