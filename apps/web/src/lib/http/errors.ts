@@ -18,6 +18,10 @@ export class WalletOwnershipError extends HttpError {
   constructor(message = "This wallet is not linked to your account.") { super(403, "wallet_not_linked", message); this.name = "WalletOwnershipError"; }
 }
 
+export class MfaRequiredError extends HttpError {
+  constructor(message = "Add a passkey before you move money.") { super(403, "mfa_required", message); this.name = "MfaRequiredError"; }
+}
+
 export class RateLimitError extends HttpError {
   constructor(public readonly retryAfterSeconds: number) {
     super(429, "rate_limited", "Too many requests. Try again shortly.", { "Retry-After": String(retryAfterSeconds) });

@@ -2,7 +2,7 @@ import { env } from "cloudflare:workers";
 import { actionInputSchema, prepareAction } from "@/lib/actions/prepare";
 import { listActions } from "@/lib/actions/store";
 import { requireVerifiedSubject } from "@/lib/auth/server";
-import { requireActionWallet } from "@/lib/auth/wallet";
+import { requireActionWallet, requireMoneyMfa } from "@/lib/auth/wallet";
 import { route } from "@/lib/http/route";
 import { ensureSubjectProfile } from "@/lib/profile/ensure";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
@@ -14,6 +14,7 @@ export const POST = route("actions.prepare", { invalid: "invalid_action", unavai
   const subject = await requireVerifiedSubject(request);
   await enforceRateLimit(env.PROJECTION_DB, { namespace: "actions", subject: subject.subjectReference, limit: 30, windowSeconds: 60 });
   const input = actionInputSchema.parse(await request.json());
+  await requireMoneyMfa(subject.subjectReference);
   const wallet = await requireActionWallet(subject.subjectReference);
   await ensureSubjectProfile(env.PROJECTION_DB, subject.subjectReference);
   const prepared = await prepareAction(env.PROJECTION_DB, subject.subjectReference, wallet, input);

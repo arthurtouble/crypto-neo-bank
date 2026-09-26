@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuthorizationSignature, useWallets } from "@privy-io/react-auth";
+import { useAuthorizationSignature, useMfaEnrollment, useWallets } from "@privy-io/react-auth";
 import { useCallback } from "react";
 import type { AuthorizationRequest } from "@/lib/actions/privy-relay";
 
@@ -13,6 +13,7 @@ import type { AuthorizationRequest } from "@/lib/actions/privy-relay";
 export function useAuraWallet() {
   const { wallets } = useWallets();
   const { generateAuthorizationSignature } = useAuthorizationSignature();
+  const { showMfaEnrollmentModal } = useMfaEnrollment();
   const embedded = wallets.find((wallet) => wallet.walletClientType === "privy");
   const address = embedded?.address.toLowerCase() as `0x${string}` | undefined;
 
@@ -20,5 +21,5 @@ export function useAuraWallet() {
   const authorize = useCallback(async (request: AuthorizationRequest): Promise<string> =>
     (await generateAuthorizationSignature(request)).signature, [generateAuthorizationSignature]);
 
-  return { address, ready: Boolean(address), authorize };
+  return { address, ready: Boolean(address), authorize, enrollPasskey: showMfaEnrollmentModal };
 }

@@ -1,13 +1,13 @@
 import { isAddress } from "viem";
-import { WalletOwnershipError } from "@/lib/http/errors";
+import { MfaRequiredError, WalletOwnershipError } from "@/lib/http/errors";
 import { privyClient } from "./privy";
 
 type LinkedAccount = { type: string; chain_type?: string; address?: string; wallet_client_type?: string; connector_type?: string;
   id?: string | null; wallet_index?: number };
-type UserWithWallets = { id: string; linked_accounts: LinkedAccount[] };
+type UserWithWallets = { id: string; linked_accounts: LinkedAccount[]; mfa_methods?: Array<{ type: string }> };
 type GetUser = (subjectReference: string) => Promise<UserWithWallets>;
 
-export { WalletOwnershipError };
+export { MfaRequiredError, WalletOwnershipError };
 
 async function getPrivyUser(subjectReference: string): Promise<UserWithWallets> {
   return privyClient().users()._get(subjectReference);
@@ -30,6 +30,17 @@ export async function requireActionAccount(subjectReference: string, getUser: Ge
     .sort((a, b) => (a.wallet_index ?? 0) - (b.wallet_index ?? 0))[0];
   if (!chosen?.address || !chosen.id) throw new WalletOwnershipError("Your Aura account isn't set up yet.");
   return { address: chosen.address.toLowerCase() as `0x${string}`, walletId: chosen.id };
+}
+
+/**
+ * Money leaves an Aura account only when the customer has a passkey or an
+ * authenticator app on their wallet. Privy then asks for it whenever the
+ * wallet signs, so an email code alone can't move funds. SMS doesn't count.
+ */
+export async function requireMoneyMfa(subjectReference: string, getUser: GetUser = getPrivyUser): Promise<void> {
+  const user = await getUser(subjectReference);
+  if (user.id !== subjectReference) throw new WalletOwnershipError();
+  if (!(user.mfa_methods ?? []).some((method) => method.type === "passkey" || method.type === "totp")) throw new MfaRequiredError();
 }
 
 /** The Aura account's address, for code that only needs to read or pay to it. */

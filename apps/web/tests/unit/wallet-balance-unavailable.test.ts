@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("@privy-io/react-auth", () => ({
   useFundWallet: () => ({ fundWallet: async () => undefined }),
   useWallets: () => ({ wallets: [{ walletClientType: "privy", address: "0x1111111111111111111111111111111111111111" }] }),
+  useMfaEnrollment: () => ({ showMfaEnrollmentModal: () => undefined }),
   useAuthorizationSignature: () => ({ generateAuthorizationSignature: async () => ({ signature: "sig" }) }),
   usePrivy: () => ({ getAccessToken: async () => null, user: { linkedAccounts: [
     { type: "wallet", chainType: "ethereum", walletClientType: "privy", address: "0x2222222222222222222222222222222222222222" },

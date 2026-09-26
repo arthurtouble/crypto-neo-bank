@@ -3,7 +3,7 @@ import { z } from "zod";
 import { buildPayoutFunding } from "@/lib/actions/payout";
 import { precheckAction, prepareBuiltAction } from "@/lib/actions/prepare";
 import { requireVerifiedSubject } from "@/lib/auth/server";
-import { requireActionWallet } from "@/lib/auth/wallet";
+import { requireActionWallet, requireMoneyMfa } from "@/lib/auth/wallet";
 import { errorResponse, route } from "@/lib/http/route";
 import { ensureSubjectProfile } from "@/lib/profile/ensure";
 import { bridgeClient, createPayout } from "@/lib/providers/bridge";
@@ -33,6 +33,7 @@ export const POST = route("money.payouts.post", { invalid: "invalid_payout", una
   ]);
   if (!link) return errorResponse(409, "verification_required", context, { message: "Finish bank account setup first." });
   if (!bank) return errorResponse(404, "bank_account_not_found", context, { message: "Choose a saved bank account." });
+  await requireMoneyMfa(subject.subjectReference);
   const wallet = await requireActionWallet(subject.subjectReference);
   await ensureSubjectProfile(env.PROJECTION_DB, subject.subjectReference);
   const destination = { id: bank.beneficiary_id, displayName: bank.display_name, lastFour: bank.account_hint?.slice(-4) ?? null };
