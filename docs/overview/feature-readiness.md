@@ -34,12 +34,12 @@ A feature is done only when all of these are true:
 | # | Feature | Includes | Status |
 | --- | --- | --- | --- |
 | 1 | Sign-in and Overview | Signed-in end-to-end test setup, email and wallet sign-in, terms acceptance, account creation, Overview balances in US dollars with a total | Done ([#18](https://github.com/arthurtouble/crypto-neo-bank/pull/18)) |
-| 2 | Deposit | Receive by QR code, add from a connected wallet, deposits from other networks, card funding; bank deposits shown as coming soon | In progress |
+| 2 | Deposit | Receive by QR code, add from a connected wallet, deposits from other networks, card funding; bank deposits shown as coming soon | Done ([#20](https://github.com/arthurtouble/crypto-neo-bank/pull/20)) |
 | 3 | Send | To an address, a saved recipient, an Aura tag, or the customer's own wallets; limits and cooling period; the passkey requirement and enrollment | Not started |
 | 4 | Swap | On Base, then between networks | Not started |
 | 5 | Earn | Aave on Base, Sky on Ethereum | Not started |
 | 6 | Invest | Catalog and buying | Not started |
-| 7 | Transactions | History, receipts, CSV export, background re-check | Not started |
+| 7 | Transactions | History, receipts, CSV export, background re-check; incoming deposits (today only actions the account sent are listed) | Not started |
 | 8 | Settings and security | Limits, recipients, account lock, passkey, Aura tag, data export and deletion, notifications | Not started |
 | 9 | Support and feedback | Support cases, feedback | Not started |
 | 10 | Bank and cards | Bridge and Rain adapters complete behind off switches | Not started |
