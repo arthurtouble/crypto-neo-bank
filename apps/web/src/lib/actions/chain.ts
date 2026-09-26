@@ -61,7 +61,7 @@ export async function observeTransactionIdentity(chainId: number, hash: string, 
   const endpoints = rpcEndpoints(chainId);
   if (!endpoints.length || !/^0x[a-f0-9]{64}$/i.test(hash)) throw new Error("Unsupported chain or transaction hash.");
   let pending = false;
-  let lastError: Error | null = null;
+  const failures: string[] = [];
   for (const endpoint of endpoints) {
     try {
       const observedChain = parseQuantity(await rpc(fetcher, endpoint, "eth_chainId", []));
@@ -75,10 +75,10 @@ export async function observeTransactionIdentity(chainId: number, hash: string, 
       if (tx.chainId != null && parseQuantity(tx.chainId) !== BigInt(chainId)) throw new Error("Chain transaction used the wrong chain.");
       if (tx.blockHash != null && (typeof tx.blockHash !== "string" || !/^0x[a-f0-9]{64}$/i.test(tx.blockHash))) throw new Error("Chain RPC returned a malformed block hash.");
       return { status: "found", call: { chainId, from: getAddress(tx.from), to: getAddress(tx.to), value: parseQuantity(tx.value).toString(), data: tx.input }, blockHash: tx.blockHash as string | null };
-    } catch (error) { lastError = error instanceof Error ? error : new Error("Chain observation failed."); }
+    } catch (error) { failures.push(`${new URL(endpoint).host}: ${error instanceof Error ? error.message : "failed"}`); }
   }
   if (pending) return { status: "pending" };
-  throw lastError ?? new Error("Chain observation failed.");
+  throw new Error(`Transaction read failed on every endpoint (${failures.join("; ")}).`);
 }
 
 /** Observe transaction, receipt, and canonical block independently from the chain. */
@@ -97,12 +97,12 @@ export async function observeTransaction(chainId: number, hash: string, fetcher:
   const endpoints = rpcEndpoints(chainId);
   if (!endpoints.length) throw new Error("Unsupported chain.");
   // Public endpoints refuse some reads (publicnode treats receipts as archive requests), so try each in turn.
-  let lastError: Error | null = null;
+  const failures: string[] = [];
   for (const endpoint of endpoints) {
     try { return await observeReceipt(identity, chainId, hash, endpoint, fetcher); }
-    catch (error) { lastError = error instanceof Error ? error : new Error("Chain observation failed."); }
+    catch (error) { failures.push(`${new URL(endpoint).host}: ${error instanceof Error ? error.message : "failed"}`); }
   }
-  throw lastError ?? new Error("Chain observation failed.");
+  throw new Error(`Receipt read failed on every endpoint (${failures.join("; ")}).`);
 }
 
 /** Receipt, canonical block, confirmations, and finality from one endpoint, so the reads agree with each other. */
