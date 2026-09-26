@@ -17,15 +17,19 @@ Run `pnpm test:mainnet-readiness` to verify chain IDs, allowlisted USDC contract
 
 ## Human journeys
 
-1. New user: sign in, confirm the smart wallet address on Base, review risk disclosures.
-2. Recovery: sign out, use the configured recovery path, confirm the same smart wallet address, inspect/export through Privy’s customer flow.
-3. Receive: copy and QR address, fund with a small Base amount, refresh and compare against BaseScan.
-4. Send: save a recipient, observe cooling, verify the wallet prompt, sign once, and confirm the action reaches `confirmed`.
-5. Swap and cross-chain: quote a route, check price impact and slippage, sign approval and route as one operation, and confirm source and destination states are shown separately.
-6. Earn: Aave supply and withdraw on Base; Sky deposit and withdraw on Ethereum.
-7. Controls: turn on account lock, a daily limit, and saved-recipients-only; confirm preparation is blocked.
-8. Failure: reject a wallet prompt, let a quote expire, and let an action expire unsubmitted; verify clear recovery. Confirm gas is sponsored once the paymaster is configured.
-9. Support: submit normal and urgent cases without exposing secrets; verify operator triage.
+1. New user: sign in with email or a wallet, accept the terms, confirm the Aura account address (the Privy embedded wallet, the same on every EVM network), and review risk disclosures.
+2. Recovery: sign out, use the configured recovery path, confirm the same account address, and inspect or export through Privy's customer flow.
+3. Passkey: without a passkey or authenticator app, start a send; confirm it is refused with `mfa_required`, nothing is sent, and Privy's enrollment opens. Enroll, retry, and confirm Privy asks for the new factor before signing.
+4. Receive: copy the address and scan the QR code, fund with a small Base amount, refresh and compare against BaseScan.
+5. Add from a wallet on Base: connect an external wallet, add a small amount on Base, and confirm it arrives in the account.
+6. Add from a wallet on another network: from Ethereum, Arbitrum, Optimism, or Polygon, quote and send a small amount; confirm the same asset arrives on Base and that the source and Base states are shown separately.
+7. Card funding: open Pay by card, complete a small card purchase in Privy's flow, and confirm the USDC arrives on Base.
+8. Send: on Base, send to an address, a saved recipient, an Aura tag, and an own linked wallet. Observe cooling for a new recipient, check the review step, approve with the passkey, and confirm the action reaches `confirmed`. Confirm a send to the account's own address or to a registered token contract is refused.
+9. Swap and cross-chain: quote a route, check price impact and slippage, sign approval and route as one operation, and confirm source and destination states are shown separately.
+10. Earn: Aave supply and withdraw on Base; Sky deposit and withdraw on Ethereum.
+11. Controls: turn on account lock, a daily limit, and saved-recipients-only; confirm preparation is blocked. Pause an asset in the operations console and confirm actions in it are refused.
+12. Failure: reject a wallet prompt, let a quote expire, and let an action expire unsubmitted; verify clear recovery. Confirm Privy paid the gas for each action.
+13. Support: submit normal and urgent cases without exposing secrets; verify operator triage.
 
 ## 100-movement matrix
 

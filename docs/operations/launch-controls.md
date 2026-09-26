@@ -15,6 +15,8 @@ Aura is open to anyone who signs in. Safety comes from server-side controls, not
   - Daily limit (`daily_limit_cents`, off by default) caps the rolling 24-hour USD value of sends and routes that pay another address. Swaps and earn moves within the customer's own wallet don't count.
   - Saved recipients only (`enforce_address_book`, off by default).
   - New-recipient cooling (`new_address_delay_seconds`, default 4 hours).
+- **Passkey requirement** (`requireMoneyMfa` in `apps/web/src/lib/auth/wallet.ts`): `POST /api/actions`, `POST /api/actions/:id/submit`, and `POST /api/money/payouts` refuse with `mfa_required` unless the customer has a passkey or authenticator app in Privy. The app then opens Privy's enrollment. An email or SMS code alone can't move money.
+- **Asset registry and pauses** (`apps/web/src/lib/assets/registry.ts`, `asset_pauses`): only registered assets can be shown, deposited, sent, swapped, or bought. An operator can pause an asset with a reason in the operations console (`/api/ops/assets`), which stops new actions in it at once. See [assets](../architecture/assets.md).
 
 These controls bind actions Aura prepares. They do not bind a key the customer exports and uses elsewhere. See [money actions](../architecture/money-actions.md).
 

@@ -43,4 +43,4 @@ The reset drops every table in `aura-dev-projections`, applies the current schem
 
 ## What has and has not been exercised
 
-Guest browsing, sign-in modal loading, protected-route rejection, webhook signature rejection, and unknown Aura tag privacy pass the deployment smoke. No customer transaction has been signed, no funded swap, bridge, Aave, or Sky action has run, and Bridge, Rain, and acquiring programs are not connected. Exercise sign-in, recovery, wallet ownership, logout, and session revocation here before treating authenticated records as verified.
+Guest browsing, sign-in modal loading, protected-route rejection, webhook signature rejection, and unknown Aura tag privacy pass the deployment smoke. One funded customer action has run: an Ethereum-to-Base deposit from a connected wallet ([#21](https://github.com/arthurtouble/crypto-neo-bank/pull/21)). No funded swap, Aave, or Sky action has run, and Bridge, Rain, and acquiring programs are not connected. Exercise email and wallet sign-in, passkey enrollment, recovery, wallet ownership, logout, and session revocation here before treating authenticated records as verified.

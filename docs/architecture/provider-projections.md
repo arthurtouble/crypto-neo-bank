@@ -41,4 +41,4 @@ Payload schemas are strict (`cardAccountEventSchema`, `membershipEventSchema`, `
 
 ## Bridge commands
 
-Bridge onboarding (KYC link), a USD virtual account that deposits to the customer's smart wallet, and payouts run only when the `fiat_accounts` switch is on and `BRIDGE_API_KEY` is set. For a payout, Bridge returns a Base deposit address, and the customer funds it with an ordinary transfer [action](money-actions.md). Request and response shapes must be confirmed against Bridge's sandbox.
+Bridge onboarding (KYC link), a USD virtual account that deposits to the customer's Aura account, and payouts run only when the `fiat_accounts` switch is on and `BRIDGE_API_KEY` is set. For a payout, Bridge returns a Base deposit address, and the customer funds it with an ordinary transfer [action](money-actions.md). Request and response shapes must be confirmed against Bridge's sandbox.

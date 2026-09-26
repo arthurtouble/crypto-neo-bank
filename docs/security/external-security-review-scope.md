@@ -5,7 +5,7 @@ description: Required scope and evidence for independent security assessment.
 
 ## In scope
 
-- Privy token verification, subject isolation, smart-wallet binding, and recovery/export presentation.
+- Privy token verification, subject isolation, embedded wallet binding, passkey requirement, relay signature checks, and recovery/export presentation.
 - Action preparation (`POST /api/actions`), call fingerprinting, hash binding, expiry, and status transitions.
 - The verifier: operation identity (decoded calls equal prepared calls), finality, expected events, and cross-chain delivery.
 - LI.FI quotes: server-held storage, Diamond pinning, price-impact and slippage bounds, and batched ERC-20 approvals.
