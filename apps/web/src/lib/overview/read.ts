@@ -4,9 +4,11 @@ import { krakenUsd } from "@/lib/actions/valuation";
 import { rpcEndpoints } from "@/lib/actions/chain";
 import { AAVE_BASE_ASSETS, AAVE_BASE_V3_MARKET } from "@/lib/defi/aave";
 import { SKY_SUSDS, skyVaultAbi } from "@/lib/defi/sky-call-policy";
+import { BASE_ASSETS } from "@/config/chains";
 import { cashAssets, investAssets } from "@/lib/invest/catalog";
 
-export type HoldingGroup = "cash" | "vaults" | "portfolio";
+/** Cash is stablecoins in the account, crypto is other assets in the account, earn is Aave and Sky deposits. */
+export type HoldingGroup = "cash" | "crypto" | "earn";
 
 /** One balance, with where it came from and when. An unavailable read never shows a number. */
 export type Holding = {
@@ -25,8 +27,8 @@ export type Holding = {
 export type Overview = {
   wallet: string;
   holdings: Holding[];
-  /** Per group: the sum of observed values, and whether any read in the group was unavailable. */
-  totals: Record<HoldingGroup, { usdCents: number; partial: boolean }>;
+  /** Per group and overall: the sum of observed values, and whether any read or price was unavailable. */
+  totals: Record<HoldingGroup | "all", { usdCents: number; partial: boolean }>;
   observedAt: string;
 };
 
@@ -58,7 +60,7 @@ function cents(raw: bigint, decimals: number, price: string | null): number | nu
 }
 
 /**
- * Read the customer's cash, vaults, and portfolio from the chains. Each
+ * Read the customer's cash, crypto, and earn deposits from the chains. Each
  * holding is read independently; one failed read marks only that holding
  * unavailable. Zero balances are left out, except cash, which always shows.
  */
@@ -79,24 +81,28 @@ export async function readOverview(wallet: string, clients: Clients = defaultCli
   const token = (address: string) => () => clients.base.readContract({ address: address as `0x${string}`, abi: erc20Abi, functionName: "balanceOf", args: [owner] });
   const tasks: Array<Promise<Holding | null>> = [
     ...cashAssets.map((asset) => read(asset.assetId, "cash", asset.name, asset.symbol, asset.decimals, "base", token(asset.assetId.split(":")[1]), par, true)),
-    ...investAssets.map((asset) => read(asset.assetId, "portfolio", asset.name, asset.symbol, asset.decimals, "base",
+    ...investAssets.map((asset) => read(asset.assetId, "crypto", asset.name, asset.symbol, asset.decimals, "base",
       asset.assetId === "8453:native" ? () => clients.base.getBalance({ address: owner }) : token(asset.assetId.split(":")[1]),
       () => clients.price(asset.pricing === "kraken:btc" ? "btc" : "eth"))),
-    ...Object.entries(AAVE_BASE_ASSETS).map(([symbol, asset]) => read(`aave:8453:${asset.toLowerCase()}`, "vaults", `Aave ${symbol}`, symbol,
+    // Wrapped ether isn't offered in Invest, but the account can hold it (Aave withdrawals, deposits).
+    read(`8453:${BASE_ASSETS.WETH.address.toLowerCase()}`, "crypto", "Wrapped Ether", "WETH", 18, "base", token(BASE_ASSETS.WETH.address), () => clients.price("eth")),
+    ...Object.entries(AAVE_BASE_ASSETS).map(([symbol, asset]) => read(`aave:8453:${asset.toLowerCase()}`, "earn", `Aave ${symbol}`, symbol,
       symbol === "USDC" ? 6 : 18, "aave:base", async () => {
         const reserve = await clients.base.readContract({ address: AAVE_BASE_V3_MARKET, abi: poolAbi, functionName: "getReserveData", args: [asset] });
         return clients.base.readContract({ address: reserve.aTokenAddress, abi: erc20Abi, functionName: "balanceOf", args: [owner] });
       }, symbol === "USDC" ? par : () => clients.price("eth"))),
-    read("sky:1:susds", "vaults", "Sky savings", "USDS", 18, "sky:ethereum", async () => {
+    read("sky:1:susds", "earn", "Sky savings", "USDS", 18, "sky:ethereum", async () => {
       const shares = await clients.ethereum.readContract({ address: SKY_SUSDS, abi: skyVaultAbi, functionName: "balanceOf", args: [owner] });
       return shares === 0n ? 0n : clients.ethereum.readContract({ address: SKY_SUSDS, abi: skyVaultAbi, functionName: "convertToAssets", args: [shares] });
     }, par)
   ];
   const holdings = (await Promise.all(tasks)).filter((item): item is Holding => item !== null);
-  const totals = { cash: { usdCents: 0, partial: false }, vaults: { usdCents: 0, partial: false }, portfolio: { usdCents: 0, partial: false } };
+  const totals = { cash: { usdCents: 0, partial: false }, crypto: { usdCents: 0, partial: false }, earn: { usdCents: 0, partial: false }, all: { usdCents: 0, partial: false } };
   for (const holding of holdings) {
-    if (holding.usdCents === null) totals[holding.group].partial = true;
-    else totals[holding.group].usdCents += holding.usdCents;
+    for (const total of [totals[holding.group], totals.all]) {
+      if (holding.usdCents === null) total.partial = true;
+      else total.usdCents += holding.usdCents;
+    }
   }
   return { wallet: owner.toLowerCase(), holdings, totals, observedAt };
 }

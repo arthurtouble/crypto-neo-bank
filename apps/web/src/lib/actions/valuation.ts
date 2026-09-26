@@ -1,3 +1,5 @@
+import { localEdgeUrl } from "@/lib/testing/local-edge";
+
 /** USD value of an action's source amount, used only for customer limits and display. */
 export type Valuation = { usdCents: number | null; source: string | null };
 
@@ -35,7 +37,7 @@ function decimal(value: string): { numerator: bigint; scale: bigint } | null {
 export async function krakenUsd(asset: KrakenAsset, now: Date, fetcher: typeof fetch = fetch): Promise<string | null> {
   const { pair, keys } = KRAKEN[asset];
   try {
-    const response = await fetcher(`https://api.kraken.com/0/public/OHLC?pair=${pair}&interval=1&since=${Math.floor(now.getTime() / 1000) - 180}`,
+    const response = await fetcher(`${localEdgeUrl("KRAKEN_API_URL") ?? "https://api.kraken.com"}/0/public/OHLC?pair=${pair}&interval=1&since=${Math.floor(now.getTime() / 1000) - 180}`,
       { signal: AbortSignal.timeout(4_000), headers: { Accept: "application/json" } });
     const length = Number(response.headers.get("content-length") ?? 0);
     if (!response.ok || length > MAX_RESPONSE_BYTES) return null;

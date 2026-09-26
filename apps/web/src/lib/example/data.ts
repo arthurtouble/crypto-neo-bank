@@ -15,11 +15,11 @@ export const exampleOverview: Overview = {
   observedAt: at,
   holdings: [
     { id: "8453:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", group: "cash", label: "USD Coin", symbol: "USDC", decimals: 6, source: "example", status: "observed", amountRaw: "8420000000", usdCents: 842000, observedAt: at },
-    { id: "aave:8453:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", group: "vaults", label: "Aave USDC", symbol: "USDC", decimals: 6, source: "example", status: "observed", amountRaw: "2650000000", usdCents: 265000, observedAt: at },
-    { id: "8453:0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf", group: "portfolio", label: "Bitcoin (Coinbase Wrapped BTC)", symbol: "cbBTC", decimals: 8, source: "example", status: "observed", amountRaw: "12000000", usdCents: 720000, observedAt: at },
-    { id: "8453:native", group: "portfolio", label: "Ether", symbol: "ETH", decimals: 18, source: "example", status: "observed", amountRaw: "2870000000000000000", usdCents: 718000, observedAt: at }
+    { id: "aave:8453:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", group: "earn", label: "Aave USDC", symbol: "USDC", decimals: 6, source: "example", status: "observed", amountRaw: "2650000000", usdCents: 265000, observedAt: at },
+    { id: "8453:0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf", group: "crypto", label: "Bitcoin (Coinbase Wrapped BTC)", symbol: "cbBTC", decimals: 8, source: "example", status: "observed", amountRaw: "12000000", usdCents: 720000, observedAt: at },
+    { id: "8453:native", group: "crypto", label: "Ether", symbol: "ETH", decimals: 18, source: "example", status: "observed", amountRaw: "2870000000000000000", usdCents: 718000, observedAt: at }
   ],
-  totals: { cash: { usdCents: 842000, partial: false }, vaults: { usdCents: 265000, partial: false }, portfolio: { usdCents: 1438000, partial: false } }
+  totals: { cash: { usdCents: 842000, partial: false }, crypto: { usdCents: 1438000, partial: false }, earn: { usdCents: 265000, partial: false }, all: { usdCents: 2545000, partial: false } }
 };
 
 const exampleAction = (id: string, kind: ActionView["kind"], summary: Record<string, unknown>, usdCents: number, created: string): ActionView & { createdAt: string } => ({

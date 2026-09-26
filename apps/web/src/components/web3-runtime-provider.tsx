@@ -7,12 +7,15 @@ import { WagmiProvider } from "@privy-io/wagmi";
 import { useState } from "react";
 import { HOME_CHAIN, SUPPORTED_CHAINS, web3Config } from "@/config/chains";
 import { PRIVY_APP_ID } from "@/config/client";
+import { ApiError } from "@/lib/client/api";
 import { PasskeyAddedToast } from "./passkey-added-toast";
 import { ToastProvider } from "./toast";
 
 export default function Web3RuntimeProvider({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => new QueryClient({
-    defaultOptions: { queries: { staleTime: 12_000, retry: 2, refetchOnWindowFocus: false } }
+    // A refused request (expired session, bad input) won't succeed on retry; a failed read might.
+    defaultOptions: { queries: { staleTime: 12_000, refetchOnWindowFocus: false,
+      retry: (failures, error) => failures < 2 && !(error instanceof ApiError && error.status < 500) } }
   }));
 
   return (
