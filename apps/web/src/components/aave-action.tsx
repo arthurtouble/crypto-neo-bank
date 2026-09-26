@@ -20,8 +20,7 @@ export function AaveAction({ actions, symbols }: { actions: readonly Direction[]
   async function execute(event: React.FormEvent) {
     event.preventDefault();
     if (locked || !amount.trim()) return;
-    await earn.run({ kind: "earn", protocol: "aave", direction: direction === "supply" ? "deposit" : "withdraw", asset: symbol, amount: amount.trim() },
-      () => ({ description: `${labels[direction]} ${amount.trim()} ${symbol} with Aave on Base.`, buttonText: labels[direction] }));
+    await earn.run({ kind: "earn", protocol: "aave", direction: direction === "supply" ? "deposit" : "withdraw", asset: symbol, amount: amount.trim() });
   }
 
   function edit(change: () => void) { change(); if (earn.phase === "done" || earn.error && !earn.outcomeUnknown) earn.reset(); }

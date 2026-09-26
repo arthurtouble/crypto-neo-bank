@@ -103,12 +103,9 @@ export function SwapWorkspace() {
 
   async function confirm() {
     if (!quote || remaining === 0 || usedQuoteId === quote.id) return;
-    const { id, from, to } = quote;
+    const { id } = quote;
     setUsedQuoteId(id);
-    await swap.run({ kind: "route", quoteId: id }, () => ({
-      description: `Swap ${amount} ${from.symbol} on ${assetNetwork(from.chainId)} for ${to.symbol} on ${assetNetwork(to.chainId)}.`,
-      buttonText: "Swap"
-    }));
+    await swap.run({ kind: "route", quoteId: id });
   }
 
   const quoteUsed = Boolean(quote && usedQuoteId === quote.id);

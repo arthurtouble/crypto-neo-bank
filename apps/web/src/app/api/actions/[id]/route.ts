@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
-import { applyVerification, expireIfStale, getAction, listActionEvents } from "@/lib/actions/store";
-import { verifyAction } from "@/lib/actions/verify";
+import { checkAction } from "@/lib/actions/check";
+import { expireIfStale, getAction, listActionEvents } from "@/lib/actions/store";
 import { requireVerifiedSubject } from "@/lib/auth/server";
 import { errorResponse, route } from "@/lib/http/route";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
@@ -18,10 +18,6 @@ export const GET = route("actions.get", { unavailable: "action_unavailable" }, a
   action = await expireIfStale(env.PROJECTION_DB, action, now);
   const open = action.status === "submitted" || action.status === "settling";
   const due = !action.checkedAt || now.getTime() - Date.parse(action.checkedAt) >= RECHECK_MS;
-  if (open && due && action.transactionHash) {
-    const result = await verifyAction({ chainId: action.chainId, walletAddress: action.wallet, calls: action.calls,
-      effects: action.effects, transactionHash: action.transactionHash });
-    action = await applyVerification(env.PROJECTION_DB, action, result, now);
-  }
+  if (open && due) action = await checkAction(env.PROJECTION_DB, action, now);
   return Response.json({ action: actionView(action), events: await listActionEvents(env.PROJECTION_DB, action.id), traceId: context.traceId });
 });

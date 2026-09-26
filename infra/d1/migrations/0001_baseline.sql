@@ -363,6 +363,8 @@ CREATE TABLE actions (
   status TEXT NOT NULL DEFAULT 'prepared'
     CHECK (status IN ('prepared', 'submitted', 'settling', 'confirmed', 'failed', 'expired')),
   transaction_hash TEXT CHECK (transaction_hash IS NULL OR (length(transaction_hash) = 66 AND transaction_hash = lower(transaction_hash))),
+  -- Privy's transaction ID for an operation Aura relayed; the chain hash follows once it lands.
+  relay_reference TEXT UNIQUE CHECK (relay_reference IS NULL OR length(relay_reference) BETWEEN 1 AND 200),
   destination_chain_id INTEGER,
   destination_transaction_hash TEXT,
   failure_reason TEXT,
@@ -390,6 +392,7 @@ WHEN NEW.subject_reference IS NOT OLD.subject_reference OR NEW.wallet_address IS
   OR NEW.usd_cents IS NOT OLD.usd_cents OR NEW.valuation_source IS NOT OLD.valuation_source
   OR NEW.route_quote_id IS NOT OLD.route_quote_id OR NEW.created_at IS NOT OLD.created_at
   OR (OLD.transaction_hash IS NOT NULL AND NEW.transaction_hash IS NOT OLD.transaction_hash)
+  OR (OLD.relay_reference IS NOT NULL AND NEW.relay_reference IS NOT OLD.relay_reference)
   OR (OLD.destination_transaction_hash IS NOT NULL AND NEW.destination_transaction_hash IS NOT OLD.destination_transaction_hash)
 BEGIN
   SELECT RAISE(ABORT, 'action identity is immutable');
@@ -402,7 +405,8 @@ WHEN NEW.status IS NOT OLD.status AND (
   OR NEW.status = 'prepared'
   OR (OLD.status = 'settling' AND NEW.status IN ('submitted', 'expired'))
   OR (OLD.status = 'submitted' AND NEW.status = 'expired')
-  OR (NEW.status IN ('submitted', 'settling', 'confirmed') AND NEW.transaction_hash IS NULL)
+  OR (NEW.status IN ('settling', 'confirmed') AND NEW.transaction_hash IS NULL)
+  OR (NEW.status = 'submitted' AND NEW.transaction_hash IS NULL AND NEW.relay_reference IS NULL)
 )
 BEGIN
   SELECT RAISE(ABORT, 'action status only moves forward');

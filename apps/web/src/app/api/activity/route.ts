@@ -1,8 +1,8 @@
 import { env } from "cloudflare:workers";
 import { isAddress } from "viem";
 import { activityItem } from "@/lib/actions/activity";
-import { applyVerification, listActions } from "@/lib/actions/store";
-import { verifyAction } from "@/lib/actions/verify";
+import { checkAction } from "@/lib/actions/check";
+import { listActions } from "@/lib/actions/store";
 import { requireVerifiedSubject } from "@/lib/auth/server";
 import { getAaveBaseActivity } from "@/lib/defi/aave";
 import { route } from "@/lib/http/route";
@@ -23,13 +23,9 @@ export const GET = route("activity.get", { unavailable: "activity_unavailable" }
       : Promise.resolve({ items: [], partial: false, sourceStatus: "none" as const })
   ]);
   // Opening Activity also advances a few open actions, so they settle even if the customer left the send screen.
-  const due = stored.filter((action) => (action.status === "submitted" || action.status === "settling") && action.transactionHash
+  const due = stored.filter((action) => (action.status === "submitted" || action.status === "settling") && (action.transactionHash || action.relayReference)
     && (!action.checkedAt || now.getTime() - Date.parse(action.checkedAt) >= RECHECK_MS)).slice(0, MAX_CHECKS);
-  const checked = new Map(await Promise.all(due.map(async (action) => {
-    const result = await verifyAction({ chainId: action.chainId, walletAddress: action.wallet, calls: action.calls,
-      effects: action.effects, transactionHash: action.transactionHash! }).catch(() => ({ status: "pending" as const, reason: "check_failed" }));
-    return [action.id, await applyVerification(env.PROJECTION_DB, action, result, now)] as const;
-  })));
+  const checked = new Map(await Promise.all(due.map(async (action) => [action.id, await checkAction(env.PROJECTION_DB, action, now)] as const)));
   const items = stored.map((action) => activityItem(checked.get(action.id) ?? action));
   const localKeys = new Set(items.filter((item) => item.transactionHash).map((item) => `${item.transactionHash!.toLowerCase()}:${item.type}`));
   const protocolItems = protocol.items.filter((item) => !localKeys.has(`${item.transactionHash.toLowerCase()}:${item.type}`)).map((item) => ({ ...item, intentId: item.id }));

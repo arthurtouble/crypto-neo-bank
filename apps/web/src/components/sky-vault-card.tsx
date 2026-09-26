@@ -20,8 +20,7 @@ export function SkyVaultCard() {
   async function execute(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (locked || !amount.trim()) return;
-    await earn.run({ kind: "earn", protocol: "sky", direction, asset: "USDC", amount: amount.trim() },
-      () => ({ description: `${labels[direction]} ${amount.trim()} USDC with Sky on Ethereum.`, buttonText: labels[direction] }));
+    await earn.run({ kind: "earn", protocol: "sky", direction, asset: "USDC", amount: amount.trim() });
   }
 
   function edit(change: () => void) { change(); if (earn.phase === "done" || earn.error && !earn.outcomeUnknown) earn.reset(); }

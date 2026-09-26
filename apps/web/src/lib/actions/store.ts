@@ -78,14 +78,14 @@ export async function insertAction(db: D1Database, action: NewAction, now: Date)
 
 type ActionRow = { action_id: string; subject_reference: string; wallet_address: string; kind: ActionKind; chain_id: number;
   summary_json: string; calls_json: string; effects_json: string; usd_cents: number | null; status: string;
-  transaction_hash: string | null; destination_chain_id: number | null; destination_transaction_hash: string | null;
+  transaction_hash: string | null; relay_reference: string | null; destination_chain_id: number | null; destination_transaction_hash: string | null;
   failure_reason: string | null; created_at: string; expires_at: string; submitted_at: string | null;
   settled_at: string | null; checked_at: string | null };
 
 export type StoredAction = {
   id: string; subject: string; wallet: string; kind: ActionKind; chainId: number; summary: Record<string, unknown>;
   calls: Call[]; effects: Effect[]; usdCents: number | null; status: "prepared" | "submitted" | "settling" | "confirmed" | "failed" | "expired";
-  transactionHash: string | null; destinationChainId: number | null; destinationTransactionHash: string | null;
+  transactionHash: string | null; relayReference: string | null; destinationChainId: number | null; destinationTransactionHash: string | null;
   failureReason: string | null; createdAt: string; expiresAt: string; submittedAt: string | null; settledAt: string | null; checkedAt: string | null;
 };
 
@@ -94,7 +94,7 @@ function fromRow(row: ActionRow): StoredAction {
     id: row.action_id, subject: row.subject_reference, wallet: row.wallet_address, kind: row.kind, chainId: row.chain_id,
     summary: JSON.parse(row.summary_json) as Record<string, unknown>,
     calls: callSchema.array().parse(JSON.parse(row.calls_json)), effects: effectSchema.array().parse(JSON.parse(row.effects_json)),
-    usdCents: row.usd_cents, status: row.status as StoredAction["status"], transactionHash: row.transaction_hash,
+    usdCents: row.usd_cents, status: row.status as StoredAction["status"], transactionHash: row.transaction_hash, relayReference: row.relay_reference,
     destinationChainId: row.destination_chain_id, destinationTransactionHash: row.destination_transaction_hash,
     failureReason: row.failure_reason, createdAt: row.created_at, expiresAt: row.expires_at, submittedAt: row.submitted_at,
     settledAt: row.settled_at, checkedAt: row.checked_at
@@ -121,7 +121,7 @@ export async function listActionsBetween(db: D1Database, subject: string, start:
 
 /** Submitted or settling actions not checked since `checkedBefore`, least recently checked first, across all customers. */
 export async function listDueActions(db: D1Database, checkedBefore: Date, limit: number): Promise<StoredAction[]> {
-  const rows = await db.prepare(`SELECT * FROM actions WHERE status IN ('submitted', 'settling') AND transaction_hash IS NOT NULL
+  const rows = await db.prepare(`SELECT * FROM actions WHERE status IN ('submitted', 'settling') AND (transaction_hash IS NOT NULL OR relay_reference IS NOT NULL)
     AND (checked_at IS NULL OR checked_at < ?) ORDER BY COALESCE(checked_at, '') ASC, created_at ASC LIMIT ?`)
     .bind(checkedBefore.toISOString(), limit).all<ActionRow>();
   return rows.results.map(fromRow);
@@ -166,6 +166,28 @@ export async function recordSubmission(db: D1Database, action: StoredAction, has
   }
   await appendEvent(db, action.id, "submitted", { transactionHash: normalized }, now);
   return "submitted";
+}
+
+/**
+ * Record that Aura relayed a prepared action to Privy, which returned
+ * `reference`. The chain hash is attached later, once the operation lands.
+ */
+export async function recordRelay(db: D1Database, action: StoredAction, reference: string, now: Date): Promise<boolean> {
+  const at = now.toISOString();
+  const result = await db.prepare(`UPDATE actions SET status = 'submitted', relay_reference = ?, submitted_at = ?, updated_at = ?
+    WHERE action_id = ? AND subject_reference = ? AND status = 'prepared' AND relay_reference IS NULL AND transaction_hash IS NULL`)
+    .bind(reference, at, at, action.id, action.subject).run();
+  if (result.meta.changes !== 1) return false;
+  await appendEvent(db, action.id, "submitted", { relayReference: reference }, now);
+  return true;
+}
+
+/** Attach the chain hash Privy reported for a relayed action. */
+export async function attachRelayHash(db: D1Database, action: StoredAction, hash: string, now: Date): Promise<StoredAction> {
+  const normalized = hash.toLowerCase();
+  await db.prepare("UPDATE actions SET transaction_hash = ?, updated_at = ? WHERE action_id = ? AND transaction_hash IS NULL")
+    .bind(normalized, now.toISOString(), action.id).run();
+  return { ...action, transactionHash: normalized };
 }
 
 export async function expireIfStale(db: D1Database, action: StoredAction, now: Date): Promise<StoredAction> {

@@ -3,9 +3,10 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ActionInput } from "@/lib/actions/prepare";
+import type { AuthorizationRequest } from "@/lib/actions/privy-relay";
 import type { Call } from "@/lib/actions/types";
 import { ApiError, useApi } from "./api";
-import { useAuraWallet, type SignOptions } from "./use-aura-wallet";
+import { useAuraWallet } from "./use-aura-wallet";
 
 export type ActionView = {
   id: string; kind: "transfer" | "earn" | "route"; chainId: number;
@@ -22,8 +23,9 @@ const terminal = new Set(["confirmed", "failed", "expired"]);
 export const actionSettled = (action: ActionView) => terminal.has(action.status) || (action.status === "settling" && !action.destinationChainId);
 
 /**
- * Prepare an action on the server, sign its calls as one operation, report
- * the hash, and track it until the chain settles it.
+ * Prepare an action on the server, approve the exact request the server
+ * built, let the server relay it with gas paid, and track it until the chain
+ * settles it.
  */
 export function useAction(options: { onSettled?: (action: ActionView) => void } = {}) {
   const api = useApi();
@@ -32,13 +34,13 @@ export function useAction(options: { onSettled?: (action: ActionView) => void } 
   const [phase, setPhase] = useState<ActionPhase>("idle");
   const [action, setAction] = useState<ActionView | null>(null);
   const [error, setError] = useState<string | null>(null);
-  /** The wallet may have sent the operation, but Aura never received its hash. */
+  /** The operation may have been sent, but Aura couldn't confirm it. */
   const [outcomeUnknown, setOutcomeUnknown] = useState(false);
   const settledRef = useRef(options.onSettled);
   useEffect(() => { settledRef.current = options.onSettled; }, [options.onSettled]);
 
   /** Sign and track an action prepared by any Aura endpoint (a bank payout, for example). */
-  const runPrepared = useCallback(async (prepare: () => Promise<ActionView>, sign: (action: ActionView) => SignOptions) => {
+  const runPrepared = useCallback(async (prepare: () => Promise<ActionView>) => {
     setError(null); setOutcomeUnknown(false); setAction(null); setPhase("preparing");
     let signing = false;
     try {
@@ -46,10 +48,17 @@ export function useAction(options: { onSettled?: (action: ActionView) => void } 
       setAction(prepared);
       if (!prepared.calls) throw new Error("This action can't be signed any more.");
       setPhase("signing");
+      const { request } = await api<{ request: AuthorizationRequest }>(`/api/actions/${prepared.id}/authorize`, { method: "POST" });
+      const signature = await wallet.authorize(request);
       signing = true;
-      const hash = await wallet.sendCalls(prepared.chainId, prepared.calls, sign(prepared));
+      const submit = () => api<{ action: ActionView }>(`/api/actions/${prepared.id}/submit`, { method: "POST", json: { signature } });
+      // An unconfirmed relay is retried once with the same signed request, which Privy won't send twice.
+      const submitted = (await submit().catch(async (reason) => {
+        if (!(reason instanceof ApiError) || reason.code !== "relay_unconfirmed") throw reason;
+        await new Promise((resolve) => setTimeout(resolve, 2_000));
+        return submit();
+      })).action;
       signing = false;
-      const submitted = (await api<{ action: ActionView }>(`/api/actions/${prepared.id}/submit`, { method: "POST", json: { transactionHash: hash } })).action;
       setAction(submitted);
       setPhase("tracking");
     } catch (reason) {
@@ -62,8 +71,8 @@ export function useAction(options: { onSettled?: (action: ActionView) => void } 
     }
   }, [api, wallet]);
 
-  const run = useCallback((input: ActionInput, sign: (action: ActionView) => SignOptions) =>
-    runPrepared(async () => (await api<{ action: ActionView }>("/api/actions", { method: "POST", json: input })).action, sign), [api, runPrepared]);
+  const run = useCallback((input: ActionInput) =>
+    runPrepared(async () => (await api<{ action: ActionView }>("/api/actions", { method: "POST", json: input })).action), [api, runPrepared]);
 
   useEffect(() => {
     if (phase !== "tracking" || !action) return;
