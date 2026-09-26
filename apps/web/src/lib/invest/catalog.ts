@@ -1,33 +1,24 @@
+import { assetsFor, type AssetCategory } from "@/lib/assets/registry";
+
 /**
- * The assets Aura presents for investing, all on Base and bought through the
- * shared LI.FI route module. Each entry is identified by contract, never by
- * ticker. Stocks and metals appear only once an issuer's token is available
- * on Base and its restrictions are reviewed; until then the categories are empty.
+ * What Invest offers: the registry's assets with the "invest" use, all on
+ * Base and bought through the shared LI.FI route module. A category with no
+ * registered assets shows as not available yet.
  */
 export type InvestCategory = "crypto" | "stocks" | "metals";
 
-export type InvestAsset = {
-  assetId: string;
-  symbol: string;
-  name: string;
-  decimals: number;
-  category: InvestCategory;
-  /** Where the price comes from for display and limits. */
-  pricing: "kraken:eth" | "kraken:btc";
-};
+export type InvestAsset = { assetId: string; symbol: string; name: string; decimals: number; category: InvestCategory; note?: string };
 
-export const investAssets: readonly InvestAsset[] = [
-  { assetId: "8453:0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf", symbol: "cbBTC", name: "Bitcoin (Coinbase Wrapped BTC)", decimals: 8, category: "crypto", pricing: "kraken:btc" },
-  { assetId: "8453:native", symbol: "ETH", name: "Ether", decimals: 18, category: "crypto", pricing: "kraken:eth" }
-];
+const categoryOf: Partial<Record<AssetCategory, InvestCategory>> = { crypto: "crypto", stock: "stocks", metal: "metals" };
 
-export const investCategories: ReadonlyArray<{ key: InvestCategory; label: string; available: boolean; note?: string }> = [
-  { key: "crypto", label: "Crypto", available: true },
-  { key: "stocks", label: "Stocks", available: false, note: "Tokenized stocks aren't available yet." },
-  { key: "metals", label: "Metals", available: false, note: "Tokenized metals aren't available yet." }
-];
+export const investAssets: readonly InvestAsset[] = assetsFor("invest", 8453).flatMap((asset) => {
+  const category = categoryOf[asset.category];
+  return category ? [{ assetId: asset.id, symbol: asset.symbol, name: asset.name, decimals: asset.decimals, category, ...(asset.note ? { note: asset.note } : {}) }] : [];
+});
 
-/** Stablecoins held as cash in the Overview. */
-export const cashAssets = [
-  { assetId: "8453:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", symbol: "USDC", name: "USD Coin", decimals: 6 }
-] as const;
+const labels: Record<InvestCategory, string> = { crypto: "Crypto", stocks: "Stocks", metals: "Metals" };
+const emptyNotes: Record<InvestCategory, string> = { crypto: "Crypto isn't available yet.", stocks: "Tokenized stocks aren't available yet.", metals: "Tokenized metals aren't available yet." };
+
+export const investCategories: ReadonlyArray<{ key: InvestCategory; label: string; available: boolean; note?: string }> =
+  (Object.keys(labels) as InvestCategory[]).map((key) => investAssets.some((asset) => asset.category === key)
+    ? { key, label: labels[key], available: true } : { key, label: labels[key], available: false, note: emptyNotes[key] });

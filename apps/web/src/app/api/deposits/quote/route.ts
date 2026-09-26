@@ -4,14 +4,16 @@ import { z } from "zod";
 import { quoteRoute, RouteQuoteError } from "@/lib/actions/lifi";
 import { requireVerifiedSubject } from "@/lib/auth/server";
 import { requireActionWallet, requireLinkedEvmWallet } from "@/lib/auth/wallet";
-import { asCatalogAsset, depositDestination, depositSource } from "@/lib/deposits/networks";
+import { requireAsset } from "@/lib/assets/pauses";
+import { depositDestination, depositSource } from "@/lib/deposits/networks";
+import { catalogAsset } from "@/lib/swap/catalog";
 import { featureEnabled } from "@/lib/features/flags";
 import { errorResponse, route } from "@/lib/http/route";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 
 const schema = z.object({
   chainId: z.number().int().positive(),
-  symbol: z.enum(["ETH", "USDC"]),
+  symbol: z.string().min(1).max(32),
   amount: z.string().regex(/^\d+(\.\d+)?$/).max(40),
   from: z.string().refine(isAddress)
 }).strict();
@@ -30,7 +32,7 @@ async (request, { traceId }) => {
   const input = schema.parse(await request.json());
   const source = depositSource(input.chainId, input.symbol);
   const destination = depositDestination(input.symbol);
-  if (!source || source.chainId === destination.chainId) throw new RouteQuoteError("invalid_request", "Choose another network to deposit from.");
+  if (!source || !destination || source.chainId === destination.chainId) throw new RouteQuoteError("invalid_request", "Choose another network to deposit from.");
   if (!await featureEnabled(env.PROJECTION_DB, "cross_chain")) return Response.json({ error: "feature_unavailable",
     message: "Deposits from other networks aren't available right now. You can still add money on Base.", traceId }, { status: 503 });
   // The sender must be a wallet the customer linked; the recipient is always their Aura account.
@@ -38,7 +40,9 @@ async (request, { traceId }) => {
     requireLinkedEvmWallet(subject.subjectReference, input.from),
     requireActionWallet(subject.subjectReference)
   ]);
-  const quoted = await quoteRoute({ from: asCatalogAsset(source), to: asCatalogAsset(destination), amount: input.amount,
+  // Registered isn't enough: a paused source or destination asset takes no new deposits.
+  const [fromAsset, toAsset] = await Promise.all([requireAsset(env.PROJECTION_DB, source.id, "deposit"), requireAsset(env.PROJECTION_DB, destination.id, "hold")]);
+  const quoted = await quoteRoute({ from: catalogAsset(fromAsset), to: catalogAsset(toAsset), amount: input.amount,
     wallet: from, recipient: account, slippageBps: 50 });
   return Response.json({ quote: {
     chainId: source.chainId, symbol: input.symbol, tool: quoted.tool, calls: quoted.calls,

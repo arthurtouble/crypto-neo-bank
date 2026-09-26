@@ -1,3 +1,4 @@
+import { registeredAsset } from "@/lib/assets/registry";
 import { localEdgeUrl } from "@/lib/testing/local-edge";
 
 /** USD value of an action's source amount, used only for customer limits and display. */
@@ -5,16 +6,6 @@ export type Valuation = { usdCents: number | null; source: string | null };
 
 const MAX_CANDLE_AGE_MS = 180_000;
 const MAX_RESPONSE_BYTES = 256_000;
-
-// Identified by chain and contract, never by ticker.
-const STABLECOINS = new Set([
-  "8453:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
-  "1:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-  "42161:0xaf88d065e77c8cc2239327c5edb3a432268e5831",
-  "10:0x0b2c639c533813f4aa9d7837caf62653d097ff85"
-]);
-const ETHER = new Set(["8453:native", "1:native", "42161:native", "10:native", "8453:0x4200000000000000000000000000000000000006"]);
-const BITCOIN = new Set(["8453:0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf"]);
 
 /** Kraken pair and the result keys Kraken may use for it. */
 const KRAKEN = { eth: { pair: "ETHUSD", keys: ["XETHZUSD", "ETHUSD"] }, btc: { pair: "XBTUSD", keys: ["XXBTZUSD", "XBTUSD"] } } as const;
@@ -54,16 +45,17 @@ export async function krakenUsd(asset: KrakenAsset, now: Date, fetcher: typeof f
 }
 
 /**
- * Stablecoins count at $1 even below peg, so a depeg never lowers a limit
- * check. Ether and bitcoin use a fresh Kraken candle. Anything else uses the route
- * provider's quoted value when there is one.
+ * Each registered asset's price source decides its value. Stablecoins count
+ * at $1 even below peg, so a depeg never lowers a limit check. Ether and
+ * bitcoin use a fresh Kraken candle. Anything else uses the route provider's
+ * quoted value when there is one.
  */
 export async function valueAsset(input: { assetId: string; amountRaw: string; decimals: number; quotedUsd?: string | null },
   options: { now?: Date; fetcher?: typeof fetch } = {}): Promise<Valuation> {
-  const assetId = input.assetId.toLowerCase();
+  const price = registeredAsset(input.assetId)?.price;
   const raw = BigInt(input.amountRaw);
-  if (STABLECOINS.has(assetId)) return { usdCents: centsOf(raw, input.decimals, { numerator: 1n, scale: 1n }), source: "stablecoin:par" };
-  const market: KrakenAsset | null = ETHER.has(assetId) ? "eth" : BITCOIN.has(assetId) ? "btc" : null;
+  if (price?.kind === "usd") return { usdCents: centsOf(raw, input.decimals, { numerator: 1n, scale: 1n }), source: "stablecoin:par" };
+  const market: KrakenAsset | null = price?.kind === "kraken" ? price.market : null;
   if (market) {
     const price = await krakenUsd(market, options.now ?? new Date(), options.fetcher ?? fetch);
     const parsed = price ? decimal(price) : null;

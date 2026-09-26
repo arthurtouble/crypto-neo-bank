@@ -19,21 +19,28 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ push: () => undefined })
 vi.mock("wagmi", async (importOriginal) => ({
   ...await importOriginal<typeof import("wagmi")>(),
   useBalance: () => ({ data: undefined, isPending: false, isError: true }),
-  useReadContract: () => ({ data: undefined, isPending: false, isError: true })
+  useReadContract: () => ({ data: undefined, isPending: false, isError: true }),
+  useReadContracts: () => ({ data: undefined, isPending: false, isError: true })
 }));
 
 import { WalletWorkspace } from "@/components/wallet-workspace";
 
 describe("wallet balance authority", () => {
   it("shows unavailable when chain balance reads fail", () => {
-    const html = renderToStaticMarkup(createElement(WalletWorkspace, { mode: "send" }));
+    const html = renderToStaticMarkup(createElement(WalletWorkspace));
     expect(html).toContain("Unavailable");
     expect(html).not.toContain("Observed now");
   });
 
+  it("lists exactly the registry's sendable assets on Base", () => {
+    search.params = "";
+    const html = renderToStaticMarkup(createElement(WalletWorkspace)).replaceAll("<!-- -->", "");
+    for (const symbol of ["ETH", "USDC", "WETH", "cbBTC"]) expect(html).toContain(`<strong>${symbol === "ETH" ? "Ether" : symbol === "USDC" ? "USD Coin" : symbol === "WETH" ? "Wrapped Ether" : "Bitcoin (Coinbase Wrapped BTC)"}</strong>`);
+  });
+
   it("offers the customer's own linked wallet as a destination, never the Privy signer", () => {
     search.params = "sendTo=0x4444444444444444444444444444444444444444";
-    const html = renderToStaticMarkup(createElement(WalletWorkspace, { mode: "send" })).replaceAll("<!-- -->", "");
+    const html = renderToStaticMarkup(createElement(WalletWorkspace)).replaceAll("<!-- -->", "");
     expect(html).toContain("Send to my wallet · 0xabe0…6b54");
     expect(html).not.toContain("0x2222…2222");
   });

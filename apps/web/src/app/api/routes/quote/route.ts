@@ -9,7 +9,7 @@ import { featureEnabled } from "@/lib/features/flags";
 import { errorResponse, route } from "@/lib/http/route";
 import { ensureSubjectProfile } from "@/lib/profile/ensure";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
-import { resolveCatalogAsset } from "@/lib/swap/catalog";
+import { requireCatalogAsset } from "@/lib/swap/catalog";
 
 const schema = z.object({
   from: z.string().max(80),
@@ -27,8 +27,8 @@ async (request, { traceId }) => {
   const subject = await requireVerifiedSubject(request);
   await enforceRateLimit(env.PROJECTION_DB, { namespace: "route_quote", subject: subject.subjectReference, limit: 30, windowSeconds: 60 });
   const input = schema.parse(Object.fromEntries(new URL(request.url).searchParams));
-  const [from, to] = await Promise.all([resolveCatalogAsset(input.from), resolveCatalogAsset(input.to)]);
-  if (!from || !to) throw new RouteQuoteError("invalid_request", "One of these assets isn't available.");
+  // Only registered, unpaused assets can be quoted; anything else is refused before LI.FI is asked.
+  const [from, to] = await Promise.all([requireCatalogAsset(env.PROJECTION_DB, input.from), requireCatalogAsset(env.PROJECTION_DB, input.to)]);
   const crossChain = from.chainId !== to.chainId;
   if (!await featureEnabled(env.PROJECTION_DB, crossChain ? "cross_chain" : "swaps"))
     return Response.json({ error: "feature_unavailable", traceId }, { status: 503 });
