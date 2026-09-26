@@ -1,0 +1,49 @@
+---
+title: Feature readiness
+description: The feature-by-feature pass that makes every customer flow work end to end before the redesign.
+---
+
+Agreed on 26 September 2026. This is the working plan until every feature below is done. Update the status table in the same pull request that changes a feature.
+
+## The plan
+
+1. **Make the product work (now).** Go feature by feature in the order below. Each feature gets its own branch and pull request, and is finished before the next one starts. The current UI is kept; don't spend time on visual design.
+2. **Redesign.** Wireframes, the new design system, the new experience, and the landing page, applied on top of working flows.
+3. **Words.** Rewrite product copy and docs to sound human, following the content style guide.
+4. **Launch hardening.** Legal text, geoblocking details, SEO, a final refactor and DRY pass, and production deployment.
+
+Two exceptions are done during step 1, because they shape how things are built: where geoblocking and account gating are enforced, and production setup (a separate Privy app for production, error logging, and alerts).
+
+Bridge banking and Rain cards are not approved yet. Their adapters are still built completely, behind switches that are off, and tested against recorded or fake provider responses.
+
+## Definition of done
+
+A feature is done only when all of these are true:
+
+- **Scope decided.** At the start, confirm with the product owner what is in the first release. Cut or simplify anything that isn't, and delete its code, routes, tables, and tests.
+- **Server rules enforced and tested.** Feature switches, account lock, daily limits, recipient rules, and the passkey requirement are checked on the server for every money action, with unit tests for each refusal.
+- **Unit tests** cover the domain logic, the API routes (success and each error code), and database effects, including the D1 triggers where they apply.
+- **End-to-end tests** (Playwright, desktop and mobile) cover every step the customer takes in the feature: the happy path, the main failures, and empty and loading states. They run signed in, against local bindings, with Privy and chain calls stubbed at the edge of the app.
+- **Live check on dev.** For anything that moves money, a small real transaction on dev, verified from the database and the chain: action status, events, Transactions page, and receipt.
+- **Records are right.** Every financial observation shows source, reference, status, and time. Stale or failed reads show as unavailable.
+- **Clean as you go.** No dead code, duplicated helpers, or unused flags left in the feature's area. Docs for the feature are updated.
+- **Checks pass**: `pnpm lint`, `pnpm typecheck:all`, `pnpm test:unit`, and `pnpm test:e2e` for the feature's specs.
+
+## Order and status
+
+| # | Feature | Includes | Status |
+| --- | --- | --- | --- |
+| 1 | Sign-in and Overview | Signed-in end-to-end test setup, sign-in, terms acceptance, account creation, passkey, Overview balances | Not started |
+| 2 | Deposit | Receive by QR code, add from a connected wallet, deposits from other networks, card funding | Not started |
+| 3 | Send | To an address, a saved recipient, an Aura tag, or the customer's own wallets; limits and cooling period | Not started |
+| 4 | Swap | On Base, then between networks | Not started |
+| 5 | Earn | Aave on Base, Sky on Ethereum | Not started |
+| 6 | Invest | Catalog and buying | Not started |
+| 7 | Transactions | History, receipts, CSV export, background re-check | Not started |
+| 8 | Settings and security | Limits, recipients, account lock, passkey, Aura tag, data export and deletion, notifications | Not started |
+| 9 | Support and feedback | Support cases, feedback | Not started |
+| 10 | Bank and cards | Bridge and Rain adapters complete behind off switches | Not started |
+| 11 | Rewards and Insights | Keep, simplify, or cut | Not started |
+| 12 | Operations console | Feature switches, issues, reconciliation | Not started |
+
+Status values: Not started, In progress, Done (with the pull request link), Cut.

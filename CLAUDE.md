@@ -26,6 +26,15 @@ pnpm build
 A single unit test: `pnpm --filter @aurel/web exec vitest run tests/unit/<file>.test.ts`.
 CI (`.github/workflows/ci.yml`) runs lint, `typecheck:all`, `test:unit`, build, e2e, and `test:recovery`. Run the first three before pushing.
 
+## Current plan: feature readiness
+
+Until every row in `docs/overview/feature-readiness.md` is done or cut, all product work follows it:
+
+- Go feature by feature in the listed order, one branch and pull request per feature. Use the `feature-pass` skill for each one.
+- A feature is done only when it meets the definition of done in that doc: scope confirmed with the product owner, server rules tested, unit tests and signed-in Playwright tests for every customer step (happy path and failures), a small real transaction on dev for money flows, and its area cleaned up.
+- Don't redesign the UI, rewrite copy, or do the final refactor yet. Those come after all features work.
+- Update the status table in the same pull request.
+
 ## Non-negotiable rules
 
 - **D1 never owns money.** Balances and settlement come from chains, protocols, and providers. A row in D1 is a replaceable projection, never proof a command succeeded. See `docs/architecture/architecture.md`.
