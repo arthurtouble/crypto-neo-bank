@@ -6,7 +6,7 @@ import { errorResponse, route } from "@/lib/http/route";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { actionView } from "../view";
 
-const RECHECK_MS = 5_000;
+const RECHECK_MS = 2_000;
 
 /** An action's status. Submitted actions are verified against the chain on read, at most every few seconds. */
 export const GET = route("actions.get", { unavailable: "action_unavailable" }, async (request, context, { params }: { params: Promise<{ id: string }> }) => {

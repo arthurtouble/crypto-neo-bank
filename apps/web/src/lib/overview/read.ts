@@ -1,7 +1,7 @@
 import { createPublicClient, erc20Abi, fallback, getAddress, http, parseAbi, type PublicClient } from "viem";
 import { base, mainnet } from "viem/chains";
 import { krakenUsd } from "@/lib/actions/valuation";
-import { RPC_BY_CHAIN } from "@/lib/actions/chain";
+import { rpcEndpoints } from "@/lib/actions/chain";
 import { AAVE_BASE_ASSETS, AAVE_BASE_V3_MARKET } from "@/lib/defi/aave";
 import { SKY_SUSDS, skyVaultAbi } from "@/lib/defi/sky-call-policy";
 import { cashAssets, investAssets } from "@/lib/invest/catalog";
@@ -38,7 +38,7 @@ const poolAbi = parseAbi([
 ]);
 
 function client(chain: typeof base | typeof mainnet): PublicClient {
-  return createPublicClient({ chain, transport: fallback(RPC_BY_CHAIN[chain.id].map((url) => http(url, { timeout: 8_000, retryCount: 0 }))) }) as PublicClient;
+  return createPublicClient({ chain, transport: fallback(rpcEndpoints(chain.id).map((url) => http(url, { timeout: 8_000, retryCount: 0 }))) }) as PublicClient;
 }
 
 export function defaultClients(): Clients {

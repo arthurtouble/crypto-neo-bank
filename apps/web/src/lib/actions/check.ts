@@ -29,6 +29,10 @@ export async function checkAction(db: D1Database, action: StoredAction, now: Dat
   if (!current.transactionHash) return current;
   const result: Verification = await (dependencies.verify ?? verifyAction)({ chainId: current.chainId, walletAddress: current.wallet,
     calls: current.calls, effects: current.effects, transactionHash: current.transactionHash })
-    .catch(() => ({ status: "pending" as const, reason: "check_failed" }));
+    .catch((error: unknown) => {
+      console.error(JSON.stringify({ level: "warn", event: "actions.check.failed", actionId: current.id, message: error instanceof Error ? error.message : "unknown" }));
+      return { status: "pending" as const, reason: "check_failed" };
+    });
+  if (result.status === "pending") console.log(JSON.stringify({ level: "info", event: "actions.check.pending", actionId: current.id, reason: result.reason }));
   return applyVerification(db, current, result, now);
 }

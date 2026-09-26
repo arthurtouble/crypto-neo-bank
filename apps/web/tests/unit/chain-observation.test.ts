@@ -1,9 +1,9 @@
-import { describe, expect, it } from "vitest";
-import { observeTransaction, RPC_BY_CHAIN } from "@/lib/actions/chain";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { observeTransaction, RPC_BY_CHAIN, rpcEndpoints } from "@/lib/actions/chain";
 
 const hash = `0x${"ab".repeat(32)}`;
 const blockHash = `0x${"cd".repeat(32)}`;
-const [first, second] = RPC_BY_CHAIN[8453];
+const [first] = RPC_BY_CHAIN[8453];
 
 function fetcher(refuseReceiptAt: string | null): typeof fetch {
   return (async (url: string, init?: RequestInit) => {
@@ -30,8 +30,17 @@ describe("observing a transaction on Base", () => {
   });
 
   it("fails only when every endpoint refuses", async () => {
-    const refuseAll = (async (url: string, init?: RequestInit) =>
-      fetcher(url === first || url === second ? url : null)(url, init)) as typeof fetch;
+    const refuseAll = (async (url: string, init?: RequestInit) => fetcher(url)(url, init)) as typeof fetch;
     await expect(observeTransaction(8453, hash, refuseAll)).rejects.toThrow("403");
+  });
+
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("reads from a dedicated endpoint first when one is configured, keeping the public ones as fallbacks", () => {
+    expect(rpcEndpoints(8453)).toEqual(RPC_BY_CHAIN[8453]);
+    vi.stubEnv("RPC_URL_8453", "https://base-mainnet.example/v2/key");
+    expect(rpcEndpoints(8453)).toEqual(["https://base-mainnet.example/v2/key", ...RPC_BY_CHAIN[8453]]);
+    vi.stubEnv("RPC_URL_8453", "http://insecure.example");
+    expect(rpcEndpoints(8453)).toEqual(RPC_BY_CHAIN[8453]);
   });
 });

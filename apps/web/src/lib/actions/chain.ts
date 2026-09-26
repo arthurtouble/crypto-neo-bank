@@ -4,9 +4,21 @@ export const RPC_BY_CHAIN: Record<number, readonly string[]> = {
   1: ["https://ethereum-rpc.publicnode.com"],
   10: ["https://mainnet.optimism.io"],
   137: ["https://polygon-bor-rpc.publicnode.com"],
-  8453: ["https://base-rpc.publicnode.com", "https://mainnet.base.org"],
+  // publicnode refuses receipts without a token, so it is the last resort for Base.
+  8453: ["https://mainnet.base.org", "https://base.drpc.org", "https://1rpc.io/base", "https://base-rpc.publicnode.com"],
   42161: ["https://arb1.arbitrum.io/rpc"]
 };
+
+/**
+ * Endpoints to read a chain from, in order. A dedicated endpoint set as the
+ * `RPC_URL_<chainId>` secret (for example an Alchemy URL) comes first; the
+ * public ones stay as fallbacks, since they rate-limit shared Worker traffic.
+ */
+export function rpcEndpoints(chainId: number): readonly string[] {
+  const dedicated = process.env[`RPC_URL_${chainId}`];
+  const endpoints = RPC_BY_CHAIN[chainId] ?? [];
+  return dedicated && /^https:\/\//.test(dedicated) ? [dedicated, ...endpoints] : endpoints;
+}
 
 /** The outer transaction as the chain reports it. For a smart wallet this is the bundler's EntryPoint call. */
 export type ObservedTransaction = { chainId: number; from: string; to: string; value: string; data: string };
@@ -46,8 +58,8 @@ function parseQuantity(value: unknown): bigint {
 }
 
 export async function observeTransactionIdentity(chainId: number, hash: string, fetcher: typeof fetch = fetch): Promise<TransactionIdentityObservation> {
-  const endpoints = RPC_BY_CHAIN[chainId];
-  if (!endpoints || !/^0x[a-f0-9]{64}$/i.test(hash)) throw new Error("Unsupported chain or transaction hash.");
+  const endpoints = rpcEndpoints(chainId);
+  if (!endpoints.length || !/^0x[a-f0-9]{64}$/i.test(hash)) throw new Error("Unsupported chain or transaction hash.");
   let pending = false;
   let lastError: Error | null = null;
   for (const endpoint of endpoints) {
@@ -73,14 +85,17 @@ export async function observeTransactionIdentity(chainId: number, hash: string, 
 export function requiredConfirmations(chainId: number): number {
   if (chainId === 1) return 12;
   if (chainId === 137) return 64;
+  // Base orders blocks through one sequencer every 2 seconds; inclusion is enough to show a transfer as sent.
+  // It is still confirmed only once the block is final.
+  if (chainId === 8453) return 1;
   return 3;
 }
 
 export async function observeTransaction(chainId: number, hash: string, fetcher: typeof fetch = fetch): Promise<ChainObservation> {
   const identity = await observeTransactionIdentity(chainId, hash, fetcher);
   if (identity.status === "pending") return identity;
-  const endpoints = RPC_BY_CHAIN[chainId];
-  if (!endpoints?.length) throw new Error("Unsupported chain.");
+  const endpoints = rpcEndpoints(chainId);
+  if (!endpoints.length) throw new Error("Unsupported chain.");
   // Public endpoints refuse some reads (publicnode treats receipts as archive requests), so try each in turn.
   let lastError: Error | null = null;
   for (const endpoint of endpoints) {

@@ -17,7 +17,7 @@ export type ActionView = {
 
 export type ActionPhase = "idle" | "preparing" | "signing" | "tracking" | "done";
 
-const POLL_MS = 4_000;
+const POLL_MS = 2_000;
 const terminal = new Set(["confirmed", "failed", "expired"]);
 /** Done from the customer's side: finished, or a same-chain action that matched on the chain and only awaits finality. */
 export const actionSettled = (action: ActionView) => terminal.has(action.status) || (action.status === "settling" && !action.destinationChainId);
@@ -61,6 +61,8 @@ export function useAction(options: { onSettled?: (action: ActionView) => void } 
       signing = false;
       setAction(submitted);
       setPhase("tracking");
+      // Balances start changing as soon as the operation lands; refresh them without waiting for it to settle.
+      void queryClient.invalidateQueries();
     } catch (reason) {
       const rejected = reason instanceof Error && /reject|denied|cancel|exited/i.test(reason.message);
       if (signing && !rejected) setOutcomeUnknown(true);
@@ -69,7 +71,7 @@ export function useAction(options: { onSettled?: (action: ActionView) => void } 
         : "Something went wrong. Try again.");
       setPhase("idle");
     }
-  }, [api, wallet]);
+  }, [api, wallet, queryClient]);
 
   const run = useCallback((input: ActionInput) =>
     runPrepared(async () => (await api<{ action: ActionView }>("/api/actions", { method: "POST", json: input })).action), [api, runPrepared]);
