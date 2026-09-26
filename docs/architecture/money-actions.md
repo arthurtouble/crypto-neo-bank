@@ -7,17 +7,14 @@ Every customer money movement is an **action**: a send, an earn deposit or withd
 
 ## Accounts
 
-Each customer has a Privy smart wallet on Base, owned by their Privy embedded signer.
+Each customer's account is their Privy embedded wallet, with gas paid by Privy. See [accounts and custody](accounts-and-custody.md) for how actions are signed and relayed, where keys live, and how to leave Privy.
 
-- Privy handles sign-in, the signer key, recovery, and export.
-- The smart wallet holds funds. Its address is the customer's deposit address and the only address Aura prepares actions for.
-- The embedded signer and any wallet used to log in, such as MetaMask, never hold Aura funds and are never shown as the account. Until Privy has created the smart wallet, the app shows the account as still being set up rather than falling back to another address.
-- The smart wallet is deployed by its first operation. Until then a block explorer shows its address as an ordinary address with no code; that is expected.
-- Adding money starts from the wallet the customer connected, such as MetaMask (`add-from-wallet.tsx`), with a network and an asset: Base, Ethereum, Arbitrum, Optimism, or Polygon, and ETH or USDC (`lib/deposits/networks.ts`). From Base it is a plain transfer. From another network, `POST /api/deposits/quote` gets a LI.FI route for the same asset on Base, paid to the Aura account from a wallet Privy shows is linked to the customer; bridge fees come out of the amount that arrives. The connected wallet signs and pays the source network fee. `GET /api/deposits/status` reports LI.FI's progress; the balance itself is read from Base. Deposits are not actions: the smart wallet signs nothing, so nothing is stored in D1. Card payment goes through Privy's funding flow (`useFundWallet`, opened on the card method). The address and QR code remain for sending from anywhere else, on Base only.
-- A paymaster sponsors gas, so customers need no ETH to act.
-- An action's calls go to the smart wallet as one batch, so an approval and the action it enables are a single signature and a single onchain operation.
+- Privy handles sign-in, the key, recovery, and export.
+- The embedded wallet holds funds. Its address is the customer's deposit address and the only address Aura prepares actions for. A wallet used to log in, such as MetaMask, never holds Aura funds and is never shown as the account.
+- An action's calls are sent as one sponsored batch, so an approval and the action it enables are one signature and one onchain operation.
+- Adding money starts from the wallet the customer connected, such as MetaMask (`add-from-wallet.tsx`), with a network and an asset: Base, Ethereum, Arbitrum, Optimism, or Polygon, and ETH or USDC (`lib/deposits/networks.ts`). From Base it is a plain transfer. From another network, `POST /api/deposits/quote` gets a LI.FI route for the same asset on Base, paid to the Aura account from a wallet Privy shows is linked to the customer; bridge fees come out of the amount that arrives. The connected wallet signs and pays the source network fee. `GET /api/deposits/status` reports LI.FI's progress; the balance itself is read from Base. Deposits are not actions: the Aura account signs nothing, so nothing is stored in D1. Card payment goes through Privy's funding flow (`useFundWallet`, opened on the card method). The address and QR code remain for sending from anywhere else, on Base only.
 
-Configuration lives in the Privy dashboard, not in code: enable smart wallets, choose **Kernel** (ZeroDev, v3), and set the Base bundler and paymaster. Kernel is chosen because its modules can later enforce spending limits and recipient cooling onchain. Aura's verifier decodes Kernel v3 and Coinbase Smart Wallet operations; other account types are reported as unrecognized rather than guessed.
+Configuration lives in the Privy dashboard, not in code: TEE execution and gas sponsorship (app pays) on every chain Aura sends from. Aura's verifier decodes EntryPoint v0.6, v0.7, and v0.8 bundles with Kernel v3 or Coinbase Smart Wallet encodings; other account types are reported as unrecognized rather than guessed.
 
 ## Pipeline
 
@@ -25,16 +22,19 @@ Configuration lives in the Privy dashboard, not in code: enable smart wallets, c
 sequenceDiagram
     participant C as Customer (browser)
     participant A as Aura API
-    participant W as Privy smart wallet
+    participant W as Privy (relay)
     participant B as Base
     C->>A: POST /api/actions {kind, ...}
     A->>A: flags, account lock, limits, recipient rules, valuation
     A->>A: build calls + expected effects, store action (prepared)
     A-->>C: actionId, calls, review summary
-    C->>W: sendTransaction({ calls })
-    W->>B: one user operation via bundler
-    W-->>C: transaction hash
-    C->>A: POST /api/actions/:id/submit {hash}
+    C->>A: POST /api/actions/:id/authorize
+    A-->>C: Privy wallet_sendCalls request
+    C->>C: sign request (authorization key)
+    C->>A: POST /api/actions/:id/submit {signature}
+    A->>W: relay signed request, gas sponsored
+    W->>B: one batched operation
+    W-->>A: transaction ID (hash once it lands)
     C->>A: GET /api/actions/:id (poll)
     A->>B: receipt, block, finality
     A->>A: verify operation identity and effects
@@ -42,10 +42,10 @@ sequenceDiagram
 ```
 
 1. **Prepare.** The server checks the feature switch, the account lock, the customer's limits and recipient rules, and values the action in USD. A builder returns the exact calls and the effects they must produce. The action is stored as `prepared` with a fingerprint of its calls and a short expiry.
-2. **Sign.** The browser sends exactly those calls through the smart wallet. The server never signs.
+2. **Sign.** The browser signs Privy's request for exactly those calls with the customer's authorization key, and the server relays it with gas paid. The server never signs and cannot change what was signed.
 3. **Submit.** The browser reports the transaction hash. The hash binds to one action only.
 4. **Verify.** On each status read, the server reads the receipt independently and decides:
-   - **Identity.** The transaction is an EntryPoint `handleOps` call containing an operation from the customer's smart wallet whose decoded calls equal the prepared calls, and its `UserOperationEvent` reports success.
+   - **Identity.** The transaction is an EntryPoint `handleOps` call containing an operation from the customer's account whose decoded calls equal the prepared calls, and its `UserOperationEvent` reports success.
    - **Finality.** Base: 3 confirmations and at or below the finalized block. Ethereum: 12. Base finalizes 15 to 25 minutes after inclusion, so an operation that fully matches after 3 confirmations becomes `settling` (shown as sent for a same-chain action) and `confirmed` at finality. Before finality nothing fails: a mismatch or revert waits for the final block to decide.
    - **When.** An action is verified when the customer reads it, when Activity opens (up to 3 open actions), and every 2 minutes by the web Worker's cron (`apps/web/worker/index.ts`, `lib/actions/recheck.ts`). The cron checks up to 20 submitted or settling actions not checked in the last minute, least recently checked first, one at a time, and expires prepared actions whose signing window passed.
    - **Reads.** Each read falls back across the chain's public endpoints. publicnode refuses receipts as archive requests, so the receipt reads move on to the next endpoint.
@@ -68,7 +68,7 @@ Swap, invest, cross-chain deposit, and cross-chain withdrawal are all `route` ac
 
 ## Routes (LI.FI)
 
-`GET /api/routes/quote` asks LI.FI for a quote with the smart wallet as sender and recipient, validates it, and stores it server-side as a `route_quote` with a short expiry. The browser receives an opaque quote ID, never raw calldata to trust.
+`GET /api/routes/quote` asks LI.FI for a quote with the Aura account as sender and recipient, validates it, and stores it server-side as a `route_quote` with a short expiry. The browser receives an opaque quote ID, never raw calldata to trust.
 
 Validation checks the assets, chains, amounts, recipient, slippage, price impact, and that the call target and approval spender are the LI.FI Diamond (`0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE`). Aura does not decode bridge-specific calldata: outcome verification is the control. LI.FI's integrator fee is set by `LIFI_INTEGRATOR_FEE` (a fraction, default 0) with integrator `aura`.
 
@@ -81,7 +81,7 @@ These are customer settings, off by default, stored in `security_profiles`:
 - **Saved recipients only** (`enforce_address_book`) blocks transfers to unsaved addresses.
 - **New recipient cooling** (`new_address_delay_seconds`, default 4 hours) delays a newly saved address before it counts as saved.
 
-Today these are enforced by the server on the actions it prepares. They do not stop a customer who exports their key and signs elsewhere. Onchain enforcement through a Kernel module is a separate, later feature ("Wealth protection"); the settings UI must say which kind of enforcement applies.
+Today these are enforced by the server on the actions it prepares. They do not stop a customer who exports their key and signs elsewhere. Onchain or Privy-policy enforcement is a separate, later feature ("Wealth protection"); the settings UI must say which kind of enforcement applies.
 
 Bank limits come from Bridge once connected and appear beside these.
 

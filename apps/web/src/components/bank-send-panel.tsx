@@ -89,10 +89,7 @@ function PayoutForm({ banks }: { banks: Recipient[] }) {
     event.preventDefault();
     if (!bank || !amountValid) return;
     const json = { bankAccountId: bank.id, amountUsd: amount, rail: wire ? "wire" : "ach" };
-    await runPrepared(
-      async () => (await api<{ action: ActionView }>("/api/money/payouts", { method: "POST", json })).action,
-      () => ({ description: `Send $${amount} to ${bankLabel(bank)}.`, buttonText: "Send" })
-    );
+    await runPrepared(async () => (await api<{ action: ActionView }>("/api/money/payouts", { method: "POST", json })).action);
   }
 
   if (phase === "done") return <>

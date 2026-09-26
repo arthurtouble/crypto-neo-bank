@@ -13,6 +13,7 @@ import { useApi } from "@/lib/client/api";
 import { useAction } from "@/lib/client/use-action";
 import { AddFromWallet } from "./add-from-wallet";
 import { DefiPositions } from "./defi-positions";
+import { MovePreviousAccount } from "./move-previous-account";
 import { TransactionProgress } from "./transaction-progress";
 
 type AssetSymbol = keyof typeof BASE_ASSETS;
@@ -122,10 +123,7 @@ export function WalletWorkspace({ mode = "overview" }: { mode?: "overview" | "de
     if (!/^\d*\.?\d+$/.test(amount) || Number(amount) <= 0) return setFormError("Enter an amount greater than zero.");
     try { await verifyTagRecipient(); }
     catch (reason) { return setFormError(reason instanceof Error ? reason.message : "Find the recipient again."); }
-    await transfer.run({ kind: "transfer", assetId: assetId(asset), amount, to: recipient }, () => ({
-      description: `Send ${amount} ${asset} to ${shortAddress(recipient)}.`,
-      buttonText: "Send"
-    }));
+    await transfer.run({ kind: "transfer", assetId: assetId(asset), amount, to: recipient });
   }
 
   useEffect(() => {
@@ -142,6 +140,7 @@ export function WalletWorkspace({ mode = "overview" }: { mode?: "overview" | "de
 
   return (
     <>
+      <MovePreviousAccount />
       <div className="contentGrid">
         <section className="panel widePanel">
           <div className="panelHeading walletHeading">

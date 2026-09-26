@@ -2,6 +2,9 @@ import { decodeAbiParameters, decodeEventLog, decodeFunctionData, hexToBigInt, p
 import { sameAddress, type Call } from "./types";
 
 // ERC-4337 EntryPoints. Kernel v3 uses v0.7; Coinbase Smart Wallet uses v0.6.
+// EIP-7702 accounts, such as Privy's upgraded embedded wallets, may use v0.8,
+// which keeps v0.7's handleOps encoding and events.
+export const ENTRY_POINT_V08 = "0x4337084d9e255ff0702461cf8895ce9e3b5ff108";
 export const ENTRY_POINT_V07 = "0x0000000071727de22e5e9d8baf0edac6f37da032";
 export const ENTRY_POINT_V06 = "0x5ff137d4b0fdcd49dca30c7cf57e578a026d2789";
 
@@ -89,7 +92,7 @@ export function readWalletOperation(wallet: string, transaction: Transaction, lo
     return { status: "found", calls: [normalizeCall(transaction.to, BigInt(transaction.value), transaction.data)], success: receiptSuccess, logs: [...logs] };
   }
   const entryPoint = transaction.to.toLowerCase();
-  if (entryPoint !== ENTRY_POINT_V07 && entryPoint !== ENTRY_POINT_V06) return { status: "unrecognized", reason: "not_entry_point" };
+  if (entryPoint !== ENTRY_POINT_V08 && entryPoint !== ENTRY_POINT_V07 && entryPoint !== ENTRY_POINT_V06) return { status: "unrecognized", reason: "not_entry_point" };
   const ops = decodeHandleOps(transaction.data as `0x${string}`);
   if (!ops) return { status: "unrecognized", reason: "not_handle_ops" };
   const mine = ops.filter((op) => sameAddress(op.sender, wallet));

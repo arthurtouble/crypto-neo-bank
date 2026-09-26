@@ -35,7 +35,7 @@ describe("the background re-check of open actions", () => {
       if (action.transactionHash.startsWith("0xb")) return { status: "confirmed" };
       throw new Error("rpc down");
     };
-    const summary = await recheckOpenActions(d1(sqlite), now, verify);
+    const summary = await recheckOpenActions(d1(sqlite), now, { verify });
     // "c" was checked 30 seconds ago and "d" is already settled.
     expect(seen.sort()).toEqual(["a", "b", "f"]);
     expect(summary).toEqual({ checked: 3, advanced: 2, failedChecks: 1, expired: 1 });

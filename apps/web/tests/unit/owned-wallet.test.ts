@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { WalletOwnershipError, requireActionWallet, requireLinkedEvmWallet } from "@/lib/auth/wallet";
+import { WalletOwnershipError, findLegacySmartWallet, requireActionAccount, requireActionWallet, requireLinkedEvmWallet } from "@/lib/auth/wallet";
 
 const subject = "did:privy:owner";
 const owned = "0x1111111111111111111111111111111111111111";
@@ -33,16 +33,23 @@ describe("server wallet ownership", () => {
   });
 });
 
-describe("the wallet Aura prepares actions for", () => {
-  const signer = { type: "wallet", chain_type: "ethereum", wallet_client_type: "privy", address: other };
-  const external = { type: "wallet", chain_type: "ethereum", wallet_client_type: "metamask", address: "0x3333333333333333333333333333333333333333" };
+describe("the Aura account", () => {
+  const embedded = { type: "wallet", chain_type: "ethereum", wallet_client_type: "privy", connector_type: "embedded", id: "wallet-1", wallet_index: 0, address: owned.toUpperCase().replace("0X", "0x") };
+  const second = { ...embedded, id: "wallet-2", wallet_index: 1, address: "0x4444444444444444444444444444444444444444" };
+  const smart = { type: "smart_wallet", address: other };
+  const external = { type: "wallet", chain_type: "ethereum", wallet_client_type: "metamask", connector_type: "injected", address: "0x3333333333333333333333333333333333333333" };
 
-  it("uses only the smart wallet, never its signer or an external wallet", async () => {
-    await expect(requireActionWallet(subject, async () => ({ id: subject, linked_accounts: [external, signer, { type: "smart_wallet", address: owned }] })))
-      .resolves.toBe(owned);
-    await expect(requireActionWallet(subject, async () => ({ id: subject, linked_accounts: [external, signer] }))).rejects.toBeInstanceOf(WalletOwnershipError);
-    await expect(requireActionWallet(subject, async () => ({ id: subject, linked_accounts: [external] }))).rejects.toBeInstanceOf(WalletOwnershipError);
-    await expect(requireActionWallet(subject, async () => ({ id: "did:privy:other", linked_accounts: [{ type: "smart_wallet", address: owned }] })))
-      .rejects.toBeInstanceOf(WalletOwnershipError);
+  it("is the first Privy embedded wallet, with its wallet ID, never a smart wallet or an external wallet", async () => {
+    await expect(requireActionAccount(subject, async () => ({ id: subject, linked_accounts: [external, smart, second, embedded] })))
+      .resolves.toEqual({ address: owned, walletId: "wallet-1" });
+    await expect(requireActionWallet(subject, async () => ({ id: subject, linked_accounts: [embedded] }))).resolves.toBe(owned);
+    await expect(requireActionAccount(subject, async () => ({ id: subject, linked_accounts: [external, smart] }))).rejects.toBeInstanceOf(WalletOwnershipError);
+    await expect(requireActionAccount(subject, async () => ({ id: subject, linked_accounts: [{ ...embedded, id: null }] }))).rejects.toBeInstanceOf(WalletOwnershipError);
+    await expect(requireActionAccount(subject, async () => ({ id: "did:privy:other", linked_accounts: [embedded] }))).rejects.toBeInstanceOf(WalletOwnershipError);
+  });
+
+  it("finds the smart wallet an earlier version used, only for the migration", async () => {
+    await expect(findLegacySmartWallet(subject, async () => ({ id: subject, linked_accounts: [embedded, smart] }))).resolves.toBe(other);
+    await expect(findLegacySmartWallet(subject, async () => ({ id: subject, linked_accounts: [embedded] }))).resolves.toBeNull();
   });
 });

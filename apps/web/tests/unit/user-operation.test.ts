@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { concatHex, encodeFunctionData, erc20Abi, pad, parseAbi } from "viem";
-import { decodeAccountCalls, ENTRY_POINT_V06, ENTRY_POINT_V07, readWalletOperation, type Log } from "@/lib/actions/user-operation";
+import { decodeAccountCalls, ENTRY_POINT_V06, ENTRY_POINT_V07, ENTRY_POINT_V08, readWalletOperation, type Log } from "@/lib/actions/user-operation";
 import { bundler, entryLog, handleOpsV07, kernelBatch, kernelMode as mode, kernelSingle } from "../support/bundles";
 
 const wallet = "0x1111111111111111111111111111111111111111";
@@ -67,6 +67,13 @@ describe("reading the wallet's operation from a bundle", () => {
     const input = handleOpsV07([{ sender: wallet, callData: mineCalls }]);
     expect(readWalletOperation(wallet, { from: bundler, to: ENTRY_POINT_V07, value: "0", data: input }, logs, true))
       .toMatchObject({ status: "found", success: false, logs: [] });
+  });
+
+  it("reads an EIP-7702 account's operation through EntryPoint v0.8, where the sender is the upgraded wallet itself", () => {
+    const logs = [entryLog(ENTRY_POINT_V08, "before"), tokenLog("01"), entryLog(ENTRY_POINT_V08, { sender: wallet, success: true })];
+    const input = handleOpsV07([{ sender: wallet, callData: mineCalls }]);
+    expect(readWalletOperation(wallet, { from: bundler, to: ENTRY_POINT_V08, value: "0", data: input }, logs, true))
+      .toEqual({ status: "found", success: true, calls: [{ to: usdc, value: "0", data: transfer }], logs: [tokenLog("01")] });
   });
 
   it("reads EntryPoint v0.6 bundles", () => {
