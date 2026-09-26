@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Download, LoaderCircle, Mail, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { marketingNoticeVersion } from "@/lib/legal/documents";
+import { useToast } from "./toast";
 
 type ConsentResponse = { consent: { marketing: boolean } };
 type RequestsResponse = { requests: Array<{ request_id: string; request_type: "export" | "delete"; status: string; requested_at: string }> };
@@ -13,7 +14,7 @@ export function DataRightsPanel() {
   const { user, getAccessToken } = usePrivy();
   const client = useQueryClient();
   const [working, setWorking] = useState<"export" | "delete" | "marketing" | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
+  const toast = useToast();
   async function call<T>(path: string, body?: unknown): Promise<T> {
     const token = await getAccessToken();
     const response = await fetch(path, { method: body ? "POST" : "GET", cache: "no-store",
@@ -26,21 +27,21 @@ export function DataRightsPanel() {
   const requests = useQuery<RequestsResponse>({ queryKey: ["data-requests", user?.id], queryFn: () => call<RequestsResponse>("/api/privacy/data-requests"), enabled: Boolean(user) });
   async function request(requestType: "export" | "delete") {
     if (requestType === "delete" && !window.confirm("Delete your preferences, analytics, feedback, public Aura tag, and rebuildable account history? Transaction, security, consent, and support records are kept where the law or safety requires. Your wallet and funds are not affected.")) return;
-    setWorking(requestType); setMessage(null);
+    setWorking(requestType);
     try {
       await call("/api/privacy/data-requests", { requestType });
-      setMessage(requestType === "export" ? "Export requested. We’ll send your data when it is ready." : "Deletion requested. We’ll confirm when it is complete.");
+      toast.success(requestType === "export" ? "Export requested" : "Deletion requested", requestType === "export" ? "We’ll send your data when it is ready." : "We’ll confirm when it is complete.");
       await client.invalidateQueries({ queryKey: ["data-requests", user?.id] });
-    } catch (error) { setMessage(error instanceof Error ? error.message : "Your request could not be received."); }
+    } catch (error) { toast.error("Request not received", error instanceof Error ? error.message : undefined); }
     finally { setWorking(null); }
   }
   async function setMarketing(granted: boolean) {
-    setWorking("marketing"); setMessage(null);
+    setWorking("marketing");
     try {
       await call("/api/privacy/consent", { purpose: "marketing", action: granted ? "granted" : "withdrawn", noticeVersion: marketingNoticeVersion });
       client.setQueryData(["consent", user?.id], { consent: { marketing: granted } });
-      setMessage(granted ? "Product update emails are on." : "Product update emails are off.");
-    } catch (error) { setMessage(error instanceof Error ? error.message : "Your choice could not be saved."); }
+      toast.success(granted ? "Product update emails are on" : "Product update emails are off");
+    } catch (error) { toast.error("Choice not saved", error instanceof Error ? error.message : undefined); }
     finally { setWorking(null); }
   }
   const marketing = consent.data?.consent.marketing ?? false;
@@ -53,6 +54,5 @@ export function DataRightsPanel() {
       <button disabled={Boolean(working)} onClick={() => void request("export")}>{working === "export" ? <LoaderCircle className="spin" size={15} /> : "Request"}</button></div>
     <div className="settingRow"><span className="settingIcon"><Trash2 size={17} /></span><div><strong>Delete my data</strong><small>Records we must keep are listed in the privacy notice.</small></div>
       <button disabled={Boolean(working)} onClick={() => void request("delete")}>{working === "delete" ? <LoaderCircle className="spin" size={15} /> : "Request"}</button></div>
-    {pending ? <p className="settingsMessage">Your {pending.request_type} request from {new Date(pending.requested_at).toLocaleDateString()} is in progress.</p> : null}
-    {message && <p className="settingsMessage" role="status">{message}</p>}</section>;
+    {pending ? <p className="settingsMessage">Your {pending.request_type} request from {new Date(pending.requested_at).toLocaleDateString()} is in progress.</p> : null}</section>;
 }

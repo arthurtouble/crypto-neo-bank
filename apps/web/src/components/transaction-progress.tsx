@@ -3,6 +3,7 @@
 import { Check, CircleAlert, ExternalLink, LoaderCircle, X } from "lucide-react";
 import Link from "next/link";
 import { SUPPORTED_CHAINS } from "@/config/chains";
+import { failureText } from "@/lib/client/action-copy";
 import { actionSettled, type ActionPhase, type ActionView } from "@/lib/client/use-action";
 
 type Props = {
@@ -10,7 +11,6 @@ type Props = {
   label: string;
   phase: ActionPhase;
   action: ActionView | null;
-  error: string | null;
   outcomeUnknown: boolean;
 };
 
@@ -18,17 +18,6 @@ function explorerUrl(chainId: number | null, hash: string | null) {
   if (!chainId || !hash) return null;
   const base = SUPPORTED_CHAINS.find((chain) => chain.id === chainId)?.blockExplorers?.default.url;
   return base ? `${base}/tx/${hash}` : null;
-}
-
-/** Customer wording for a verifier reason. Unknown reasons fall back to a generic line rather than a code. */
-function failureText(reason: string | null): string {
-  if (!reason) return "It didn't complete. Check the reason before trying again.";
-  if (reason === "refunded") return "The transfer was refunded to your wallet on the original network.";
-  if (reason === "partial_delivery") return "It arrived as a different asset. Check your wallet.";
-  if (reason === "delivery_below_minimum") return "Less than the minimum arrived. Contact Support.";
-  if (reason === "delivery_failed" || reason.startsWith("destination_")) return "Delivery failed. Contact Support before trying again.";
-  if (reason === "operation_reverted" || reason === "transaction_reverted") return "The network rejected it. Nothing moved.";
-  return "We couldn't match this transaction to what you confirmed. Contact Support.";
 }
 
 function copy(label: string, phase: ActionPhase, action: ActionView | null) {
@@ -45,17 +34,21 @@ function copy(label: string, phase: ActionPhase, action: ActionView | null) {
   }
 }
 
-/** Progress for one action from `useAction`. Renders nothing while idle without an error. */
-export function TransactionProgress({ label, phase, action, error, outcomeUnknown }: Props) {
+/**
+ * Progress for one action from `useAction`, shown where the customer started
+ * it. Errors and outcomes also appear as toasts. Only an outcome the customer
+ * must check stays here after the action ends.
+ */
+export function TransactionProgress({ label, phase, action, outcomeUnknown }: Props) {
   if (phase === "idle") {
-    if (!error) return null;
+    if (!outcomeUnknown) return null;
     return <div className="transactionProgress failed" role="alert">
       <div className="transactionProgressHeadline">
         <span><X size={17} /></span>
-        <div><strong>{outcomeUnknown ? "Check Transactions first" : `${label} not sent`}</strong>
-          <small>{outcomeUnknown ? "Your wallet may have sent this. Check Transactions before you try again." : error}</small></div>
+        <div><strong>Check Transactions first</strong>
+          <small>Your wallet may have sent this. Check Transactions before you try again.</small></div>
       </div>
-      {outcomeUnknown && <div className="transactionLinks"><Link href="/app/transactions">Open Transactions</Link></div>}
+      <div className="transactionLinks"><Link href="/app/transactions">Open Transactions</Link></div>
     </div>;
   }
   const { step, title, detail } = copy(label, phase, action);

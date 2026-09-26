@@ -4,6 +4,7 @@ import { usePrivy } from "@privy-io/react-auth";
 import { useAuraWallet } from "@/lib/client/use-aura-wallet";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useToast } from "./toast";
 
 type Tag = { tag: string; address: string; displayName: string; publicEnabled: boolean; publicBankEnabled: boolean };
 
@@ -17,6 +18,7 @@ export function AuraTagControls() {
   const [bankEnabled, setBankEnabled] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const toast = useToast();
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
@@ -34,7 +36,7 @@ export function AuraTagControls() {
     return () => { cancelled = true; };
   }, [user, getAccessToken]);
   async function save(event: React.FormEvent) {
-    event.preventDefault(); setBusy(true); setMessage("");
+    event.preventDefault(); setBusy(true);
     try {
       if (!address) throw new Error("Your wallet isn't ready yet.");
       const token = await getAccessToken();
@@ -45,8 +47,8 @@ export function AuraTagControls() {
         throw new Error(result.error === "tag_taken" ? "That tag is already taken." : "Your tag could not be saved.");
       }
       const result = await response.json() as Tag;
-      setCurrent(result); setTag(result.tag); setMessage("Aura tag saved.");
-    } catch (error) { setMessage(error instanceof Error ? error.message : "Your tag could not be saved."); }
+      setCurrent(result); setTag(result.tag); toast.success("Aura tag saved");
+    } catch (error) { toast.error("Tag not saved", error instanceof Error ? error.message : undefined); }
     finally { setBusy(false); }
   }
   return <section className="panel settingsPanel" id="tag"><h2>Aura tag</h2><p>Choose a public name for receiving crypto. You control whether its payment page is visible.</p>

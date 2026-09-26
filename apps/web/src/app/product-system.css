@@ -745,3 +745,21 @@
   .productShell *::before,
   .productShell *::after { transition-duration: .01ms !important; }
 }
+
+/* Toasts: outcomes of what the customer just did. Top right on desktop, top of the screen on phones. */
+.toastRegion { position: fixed; z-index: 1000; top: 16px; right: 16px; width: min(380px, calc(100vw - 32px)); display: grid; gap: 8px; pointer-events: none; }
+.toast { pointer-events: auto; display: grid; grid-template-columns: 28px minmax(0, 1fr) 28px; align-items: start; gap: 10px; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius-panel); background: var(--surface-raised, var(--surface)); color: var(--text); box-shadow: var(--shadow-popover, var(--shadow)); animation: toastIn 160ms var(--ease-out, ease-out); }
+.toastIcon { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%; background: var(--accent-soft); color: var(--accent); }
+.toast.success .toastIcon { background: color-mix(in srgb, var(--positive) 12%, transparent); color: var(--positive); }
+.toast.error { border-color: color-mix(in srgb, var(--danger) 35%, var(--border)); }
+.toast.error .toastIcon { background: color-mix(in srgb, var(--danger) 10%, transparent); color: var(--danger); }
+.toastText { min-width: 0; display: grid; gap: 3px; padding-top: 4px; }
+.toastText strong { font-size: var(--type-body-small); line-height: 1.3; }
+.toastText small { color: var(--muted); font-size: var(--type-caption); line-height: 1.4; }
+.toastText a { justify-self: start; margin-top: 3px; color: var(--accent); font-size: var(--type-caption); font-weight: 650; }
+.toastClose { width: 28px; height: 28px; display: grid; place-items: center; border: 0; border-radius: 50%; background: transparent; color: var(--muted); cursor: pointer; }
+.toastClose:hover { background: var(--surface-subtle); color: var(--text); }
+.toastClose:focus-visible, .toastText a:focus-visible { outline: 2px solid var(--focus, var(--accent)); outline-offset: 2px; }
+@keyframes toastIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+@media (max-width: 640px) { .toastRegion { top: 12px; left: 16px; right: 16px; width: auto; } }
+@media (prefers-reduced-motion: reduce) { .toast { animation: none; } }

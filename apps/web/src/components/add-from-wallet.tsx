@@ -9,6 +9,7 @@ import { useBalance, usePublicClient, useReadContract } from "wagmi";
 import { HOME_CHAIN } from "@/config/chains";
 import { ApiError, useApi } from "@/lib/client/api";
 import { DEPOSIT_NETWORKS, depositSource, depositSymbols, type DepositSymbol } from "@/lib/deposits/networks";
+import { useToast } from "./toast";
 
 type Phase = "idle" | "quoting" | "review" | "confirm" | "pending" | "bridging" | "done";
 type Call = { to: `0x${string}`; value: string; data: `0x${string}` };
@@ -56,6 +57,7 @@ export function AddFromWallet({ account }: { account: `0x${string}` }) {
   const home = chainId === HOME_CHAIN.id;
   const publicClient = usePublicClient({ chainId });
   const queryClient = useQueryClient();
+  const toast = useToast();
   const nativeBalance = useBalance({ address: sourceAddress, chainId, query: { enabled: Boolean(sourceAddress) && asset.address === null } });
   const tokenBalance = useReadContract({ address: asset.address ?? undefined, abi: erc20Abi, functionName: "balanceOf", args: sourceAddress ? [sourceAddress] : undefined,
     chainId, query: { enabled: Boolean(sourceAddress) && asset.address !== null } });
@@ -76,11 +78,13 @@ export function AddFromWallet({ account }: { account: `0x${string}` }) {
         const { status } = await api<{ status: string }>(`/api/deposits/status?chainId=${bridge.chainId}&hash=${bridge.hash}&tool=${bridge.tool}`);
         if (cancelled) return;
         if (status === "DONE" || status === "PARTIAL") {
-          setPhase("done"); setBridge(null); await queryClient.invalidateQueries(); return;
+          setPhase("done"); setBridge(null);
+          toast.success("Added", "It reached your account on Base.");
+          await queryClient.invalidateQueries(); return;
         }
         if (status === "REFUNDED" || status === "FAILED") {
           setPhase("idle"); setBridge(null);
-          setError(status === "REFUNDED" ? "The bridge couldn't complete it and sent the funds back to your wallet." : "The bridge couldn't complete it. Check your wallet's activity.");
+          toast.error("Deposit didn't complete", status === "REFUNDED" ? "The bridge sent the funds back to your wallet." : "Check your wallet's activity.");
           return;
         }
       } catch { /* A failed status read is retried. */ }
@@ -88,7 +92,7 @@ export function AddFromWallet({ account }: { account: `0x${string}` }) {
     };
     timer = setTimeout(poll, POLL_MS);
     return () => { cancelled = true; clearTimeout(timer); };
-  }, [bridge, api, queryClient]);
+  }, [bridge, api, queryClient, toast]);
 
   if (!source || !sourceAddress) {
     return <button type="button" className="button primary full" onClick={() => connectWallet()}><Wallet size={16} /> Connect a wallet</button>;
@@ -130,7 +134,8 @@ export function AddFromWallet({ account }: { account: `0x${string}` }) {
   function walletError(reason: unknown) {
     setPhase("idle");
     const rejected = reason instanceof Error && /reject|denied|cancel/i.test(reason.message);
-    setError(rejected ? "You cancelled it in your wallet." : "The transfer didn't go through. Check your wallet's activity before you try again.");
+    if (rejected) toast.show({ tone: "info", title: "Cancelled", detail: "Nothing was sent." });
+    else toast.error("Deposit didn't go through", "Check your wallet's activity before you try again.");
   }
 
   async function submit(event: React.FormEvent) {
@@ -145,6 +150,7 @@ export function AddFromWallet({ account }: { account: `0x${string}` }) {
           ? { to: account, value: raw.toString(), data: "0x" }
           : { to: asset.address, value: "0", data: encodeFunctionData({ abi: erc20Abi, functionName: "transfer", args: [account, raw] }) }]);
         setPhase("done"); setAmount("");
+        toast.success("Added", "Your balance updates in a moment.");
         await queryClient.invalidateQueries();
       } catch (reason) { walletError(reason); }
       return;
@@ -155,7 +161,7 @@ export function AddFromWallet({ account }: { account: `0x${string}` }) {
       setQuote(next); setPhase("review");
     } catch (reason) {
       setPhase("idle");
-      setError(reason instanceof ApiError ? reason.message : "We couldn't find a route right now. Try again.");
+      toast.error("No route", reason instanceof ApiError ? reason.message : "We couldn't find a route right now. Try again.");
     }
   }
 
@@ -164,6 +170,7 @@ export function AddFromWallet({ account }: { account: `0x${string}` }) {
     try {
       const hash = await sendFromWallet(current.calls);
       setPhase("bridging"); setAmount("");
+      toast.show({ tone: "info", title: "Sent", detail: "It usually reaches Base in a few minutes. You can leave this screen." });
       setBridge({ hash, chainId: current.chainId, tool: current.tool });
     } catch (reason) { walletError(reason); }
   }
@@ -196,8 +203,6 @@ export function AddFromWallet({ account }: { account: `0x${string}` }) {
         <span>Network fee<strong>{usdText(quote.networkFeeUsd)}</strong></span>
       </div>}
       {error && <p className="formError" role="alert">{error}</p>}
-      {phase === "bridging" && <p role="status">Sent. It usually reaches Base in a few minutes. You can leave this screen.</p>}
-      {phase === "done" && <p role="status">Added. Your balance updates in a moment.</p>}
       <button className="button primary full" disabled={busy}>
         {busy ? <LoaderCircle className="spin" size={16} /> : <ArrowDownToLine size={16} />}{buttonText}
       </button>

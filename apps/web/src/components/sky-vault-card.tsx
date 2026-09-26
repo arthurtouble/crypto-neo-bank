@@ -10,9 +10,9 @@ type Direction = "deposit" | "withdraw";
 const labels: Record<Direction, string> = { deposit: "Deposit", withdraw: "Withdraw" };
 
 export function SkyVaultCard() {
-  const earn = useAction();
-  const walletAddress = earn.wallet.address;
   const [direction, setDirection] = useState<Direction>("deposit");
+  const earn = useAction({ label: labels[direction] });
+  const walletAddress = earn.wallet.address;
   const [amount, setAmount] = useState("");
   const position = useSkyPosition(walletAddress);
   const locked = earn.phase !== "idle" && earn.phase !== "done" || earn.outcomeUnknown;
@@ -39,7 +39,7 @@ export function SkyVaultCard() {
       <button className="button primary" type="submit" disabled={locked || earn.phase === "done" || !walletAddress || !amount.trim()}>
         {earn.phase === "preparing" ? "Checking" : earn.phase === "signing" ? "Confirm in your wallet" : earn.phase === "tracking" ? "Waiting for Ethereum"
           : earn.outcomeUnknown ? "Check Transactions first" : labels[direction]}</button>
-      <TransactionProgress label={labels[direction]} phase={earn.phase} action={earn.action} error={earn.error} outcomeUnknown={earn.outcomeUnknown} />
+      <TransactionProgress label={labels[direction]} phase={earn.phase} action={earn.action} outcomeUnknown={earn.outcomeUnknown} />
     </form>
     <p className="authorityFootnote">Ethereum ETH pays network fees. Need USDC there? <Link href="/app/swap?from=8453%3A0x833589fcd6edb6e08f4c7c32d4f71b54bda02913&to=1%3A0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48">Bridge from Base</Link>.</p>
   </article>;

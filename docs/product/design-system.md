@@ -82,6 +82,7 @@ Dark mode is a separately composed palette—not an inverted light theme. Black 
 - Use a decelerating ease for entry and a faster ease for exit.
 - Respect `prefers-reduced-motion` globally.
 - Dialogs trap focus, close with Escape, expose a visible close action, and announce a title and description.
+- Toasts (`useToast` in `apps/web/src/components/toast.tsx`) report the outcome of something the customer just did: saved, sent, failed, cancelled. Field hints and load failures stay next to the content they describe. A transaction's live progress stays where it started. Errors stay 8 seconds, others 5; an outcome the customer must act on (check Transactions, keep a case reference) stays until closed.
 
 ## Reusable implementation brief
 
