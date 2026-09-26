@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useFundWallet } from "@privy-io/react-auth";
+import { useFundWallet, usePrivy } from "@privy-io/react-auth";
 import { Check, Copy, LoaderCircle, Plus, QrCode, Send, X } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useEffect, useState } from "react";
@@ -50,6 +50,10 @@ export function WalletWorkspace({ mode = "overview" }: { mode?: "overview" | "de
   const [fundError, setFundError] = useState<string | null>(null);
   const [slowSetup, setSlowSetup] = useState(false);
   const { fundWallet } = useFundWallet();
+  const { user } = usePrivy();
+  // Wallets the customer linked to their login, such as MetaMask. Never the Privy signer, which isn't theirs to send to.
+  const ownWallets = (user?.linkedAccounts ?? []).flatMap((account) => account.type === "wallet" && account.chainType === "ethereum"
+    && !account.walletClientType?.startsWith("privy") && isAddress(account.address, { strict: false }) ? [account.address.toLowerCase()] : []);
   // useAction refreshes every query (balances included) when an action settles.
   const transfer = useAction();
   const { address, ready } = transfer.wallet;
@@ -182,6 +186,8 @@ export function WalletWorkspace({ mode = "overview" }: { mode?: "overview" | "de
             <label className="fieldLabel">Amount<input inputMode="decimal" placeholder="0.00" value={amount} disabled={inFlight} onChange={(event) => setAmount(event.target.value)} /></label>
             {savedRecipients.length > 0 && <label className="fieldLabel">Saved Recipient<select value={savedRecipients.some((item) => item.destination === recipient) ? recipient : ""} disabled={inFlight} onChange={(event) => setRecipient(event.target.value)}><option value="">Enter another address</option>{savedRecipients.map((item) => <option key={item.id} value={item.destination}>{item.name} · {item.detail}</option>)}</select></label>}
             <label className="fieldLabel">Destination<input autoComplete="off" spellCheck={false} placeholder="0x…" value={recipient} disabled={inFlight} onChange={(event) => setRecipient(event.target.value.trim())} /></label>
+            {ownWallets.filter((wallet) => wallet !== recipient.toLowerCase()).slice(0, 3).map((wallet) =>
+              <button type="button" className="button secondary full" key={wallet} disabled={inFlight} onClick={() => setRecipient(wallet)}>Send to my wallet · {shortAddress(wallet)}</button>)}
             <div className="transactionSummary"><span>From<strong>Aura account</strong></span><span>Account<strong>{shortAddress(address)}</strong></span><span>Review<strong>You confirm</strong></span></div>
             {formError && <p className="formError" role="alert">{formError}</p>}
             <TransactionProgress label="Transfer" phase={transfer.phase} action={transfer.action} error={transfer.error} outcomeUnknown={transfer.outcomeUnknown} />
