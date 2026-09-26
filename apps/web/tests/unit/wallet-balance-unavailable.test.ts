@@ -4,10 +4,11 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@privy-io/react-auth", () => ({
   usePrivy: () => ({ getAccessToken: async () => null }),
-  useWallets: () => ({ ready: true, wallets: [{ address: "0x1111111111111111111111111111111111111111", walletClientType: "privy" }] }),
-  useSendTransaction: () => ({ sendTransaction: async () => ({ hash: "0x" }) })
+  useFundWallet: () => ({ fundWallet: async () => undefined })
 }));
-vi.mock("@privy-io/react-auth/smart-wallets", () => ({ useSmartWallets: () => ({ client: undefined }) }));
+vi.mock("@privy-io/react-auth/smart-wallets", () => ({ useSmartWallets: () => ({
+  client: { account: { address: "0x1111111111111111111111111111111111111111" } }, getClientForChain: async () => undefined
+}) }));
 vi.mock("@tanstack/react-query", () => ({ useQuery: () => ({ data: undefined }), useQueryClient: () => ({ invalidateQueries: async () => undefined }) }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: () => undefined }), useSearchParams: () => new URLSearchParams() }));
 vi.mock("wagmi", async (importOriginal) => ({

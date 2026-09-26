@@ -37,11 +37,12 @@ describe("the wallet Aura prepares actions for", () => {
   const signer = { type: "wallet", chain_type: "ethereum", wallet_client_type: "privy", address: other };
   const external = { type: "wallet", chain_type: "ethereum", wallet_client_type: "metamask", address: "0x3333333333333333333333333333333333333333" };
 
-  it("prefers the smart wallet, then the Privy signer, and never an external wallet", async () => {
+  it("uses only the smart wallet, never its signer or an external wallet", async () => {
     await expect(requireActionWallet(subject, async () => ({ id: subject, linked_accounts: [external, signer, { type: "smart_wallet", address: owned }] })))
       .resolves.toBe(owned);
-    await expect(requireActionWallet(subject, async () => ({ id: subject, linked_accounts: [external, signer] }))).resolves.toBe(other);
+    await expect(requireActionWallet(subject, async () => ({ id: subject, linked_accounts: [external, signer] }))).rejects.toBeInstanceOf(WalletOwnershipError);
     await expect(requireActionWallet(subject, async () => ({ id: subject, linked_accounts: [external] }))).rejects.toBeInstanceOf(WalletOwnershipError);
-    await expect(requireActionWallet(subject, async () => ({ id: "did:privy:other", linked_accounts: [signer] }))).rejects.toBeInstanceOf(WalletOwnershipError);
+    await expect(requireActionWallet(subject, async () => ({ id: "did:privy:other", linked_accounts: [{ type: "smart_wallet", address: owned }] })))
+      .rejects.toBeInstanceOf(WalletOwnershipError);
   });
 });

@@ -13,19 +13,16 @@ async function getPrivyUser(subjectReference: string): Promise<UserWithWallets> 
 }
 
 /**
- * The wallet Aura prepares actions for: the customer's Privy smart wallet,
- * or their Privy embedded wallet before a smart wallet exists. Never an
- * external wallet, and never an address the browser supplies.
+ * The wallet Aura prepares actions for: the customer's Privy smart wallet.
+ * Never the embedded wallet that signs for it, never an external login
+ * wallet, and never an address the browser supplies.
  */
 export async function requireActionWallet(subjectReference: string, getUser: GetUser = getPrivyUser): Promise<`0x${string}`> {
   const user = await getUser(subjectReference);
   if (user.id !== subjectReference) throw new WalletOwnershipError();
-  const valid = (account: LinkedAccount) => Boolean(account.address && isAddress(account.address));
   // Privy's smart wallet accounts carry no chain_type; they are EVM by construction.
-  const chosen = user.linked_accounts.find((account) => account.type === "smart_wallet" && valid(account))
-    ?? user.linked_accounts.find((account) => account.type === "wallet" && account.chain_type === "ethereum"
-      && account.wallet_client_type === "privy" && valid(account));
-  if (!chosen?.address) throw new WalletOwnershipError("Your Aura wallet isn't ready yet.");
+  const chosen = user.linked_accounts.find((account) => account.type === "smart_wallet" && account.address && isAddress(account.address));
+  if (!chosen?.address) throw new WalletOwnershipError("Your Aura account isn't set up yet.");
   return chosen.address.toLowerCase() as `0x${string}`;
 }
 
