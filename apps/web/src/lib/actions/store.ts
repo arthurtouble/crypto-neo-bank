@@ -119,6 +119,21 @@ export async function listActionsBetween(db: D1Database, subject: string, start:
   return rows.results.map(fromRow);
 }
 
+/** Submitted or settling actions not checked since `checkedBefore`, least recently checked first, across all customers. */
+export async function listDueActions(db: D1Database, checkedBefore: Date, limit: number): Promise<StoredAction[]> {
+  const rows = await db.prepare(`SELECT * FROM actions WHERE status IN ('submitted', 'settling') AND transaction_hash IS NOT NULL
+    AND (checked_at IS NULL OR checked_at < ?) ORDER BY COALESCE(checked_at, '') ASC, created_at ASC LIMIT ?`)
+    .bind(checkedBefore.toISOString(), limit).all<ActionRow>();
+  return rows.results.map(fromRow);
+}
+
+/** Expire every prepared action whose signing window has passed. Returns how many. */
+export async function expireStalePrepared(db: D1Database, now: Date): Promise<number> {
+  const result = await db.prepare("UPDATE actions SET status = 'expired', updated_at = ?1 WHERE status = 'prepared' AND expires_at <= ?1")
+    .bind(now.toISOString()).run();
+  return result.meta.changes ?? 0;
+}
+
 export type ActionEvent = { type: string; evidence: Record<string, unknown>; occurredAt: string };
 
 /** An action's history: submission, status changes, and provider updates such as bank payout states. */
