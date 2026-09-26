@@ -1,13 +1,14 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Check, Copy, LoaderCircle, QrCode, Send, X } from "lucide-react";
+import { useFundWallet } from "@privy-io/react-auth";
+import { Check, Copy, LoaderCircle, Plus, QrCode, Send, X } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
-import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { erc20Abi, formatUnits, isAddress } from "viem";
 import { useBalance, useReadContract } from "wagmi";
-import { BASE_ASSETS, HOME_CHAIN, SUPPORTED_CHAINS } from "@/config/chains";
+import { BASE_ASSETS, HOME_CHAIN } from "@/config/chains";
 import { useApi } from "@/lib/client/api";
 import { useAction } from "@/lib/client/use-action";
 import { DefiPositions } from "./defi-positions";
@@ -33,7 +34,6 @@ function assetId(symbol: AssetSymbol) {
 }
 
 export function WalletWorkspace({ mode = "overview" }: { mode?: "overview" | "deposit" | "send" }) {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const api = useApi();
   const requestedRecipient = searchParams.get("sendTo") ?? "";
@@ -46,7 +46,9 @@ export function WalletWorkspace({ mode = "overview" }: { mode?: "overview" | "de
   const [amount, setAmount] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const [receiveChainId, setReceiveChainId] = useState<number>(HOME_CHAIN.id);
+  const [fundError, setFundError] = useState<string | null>(null);
+  const [slowSetup, setSlowSetup] = useState(false);
+  const { fundWallet } = useFundWallet();
   // useAction refreshes every query (balances included) when an action settles.
   const transfer = useAction();
   const { address, ready } = transfer.wallet;
@@ -73,6 +75,17 @@ export function WalletWorkspace({ mode = "overview" }: { mode?: "overview" | "de
     await navigator.clipboard.writeText(address);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1400);
+  }
+
+  async function addFunds() {
+    if (!address) return;
+    setFundError(null);
+    try {
+      // Privy's funding flow: card, exchange, or a wallet the customer connected, such as MetaMask.
+      await fundWallet({ address, options: { chain: HOME_CHAIN, asset: "USDC", amount: "25" } });
+    } catch {
+      setFundError("Adding funds didn't finish. You can try again, or send USDC on Base to the address below.");
+    }
   }
 
   function openSend(symbol: AssetSymbol = "USDC") {
@@ -109,8 +122,16 @@ export function WalletWorkspace({ mode = "overview" }: { mode?: "overview" | "de
     }));
   }
 
+  useEffect(() => {
+    if (ready) return;
+    const timer = window.setTimeout(() => setSlowSetup(true), 15_000);
+    return () => window.clearTimeout(timer);
+  }, [ready]);
+
   if (!ready || !address) {
-    return <section className="panel walletLoading"><LoaderCircle className="spin" size={20} /><div><strong>Preparing your account</strong>{inFlight && <p role="alert">A transfer may be pending. Check Transactions before you try again.</p>}</div></section>;
+    return <section className="panel walletLoading"><LoaderCircle className="spin" size={20} /><div><strong>Setting up your account</strong>
+      {slowSetup && <p>This is taking longer than usual. Refresh the page. If it keeps happening, contact support.</p>}
+      {inFlight && <p role="alert">A transfer may be pending. Check Transactions before you try again.</p>}</div></section>;
   }
 
   return (
@@ -142,15 +163,15 @@ export function WalletWorkspace({ mode = "overview" }: { mode?: "overview" | "de
         <section className="financialModal" role="dialog" aria-modal="true" aria-labelledby="wallet-modal-title">
           <button className="modalClose" onClick={() => setModal(null)} aria-label="Close" disabled={sending}><X size={18} /></button>
           {modal === "receive" ? <>
-            <h2 id="wallet-modal-title">Add USD Coin</h2>
-            <p>Choose where you are sending from, then copy your address.</p>
-            <label className="fieldLabel">Sending From<select value={receiveChainId} onChange={(event) => setReceiveChainId(Number(event.target.value))}>{SUPPORTED_CHAINS.map((chain) => <option value={chain.id} key={chain.id}>{chain.name}</option>)}</select></label>
+            <h2 id="wallet-modal-title">Add money</h2>
+            <p>Pay by card, from an exchange, or from a wallet you connected, like MetaMask.</p>
+            <button className="button primary full" onClick={() => void addFunds()}><Plus size={16} /> Add funds</button>
+            {fundError && <p className="formError" role="alert">{fundError}</p>}
+            <p>Or send USDC on Base to your Aura account.</p>
             <div className="receiveQr"><QRCodeSVG value={address} size={164} bgColor="transparent" fgColor="currentColor" level="M" /></div>
             <code className="addressBlock">{address}</code>
-            <button className="button primary full" onClick={() => void copyAddress()}>{copied ? <Check size={16} /> : <Copy size={16} />}{copied ? "Copied" : "Copy address"}</button>
-            {receiveChainId !== HOME_CHAIN.id && <button className="button secondary full" onClick={() => { setModal(null); router.push("/app/swap"); }}>Swap or bridge to Base</button>}
-            <div className="modalRisk">Only send USDC on {SUPPORTED_CHAINS.find((chain) => chain.id === receiveChainId)?.name}. Funds sent elsewhere may not appear.</div>
-            {receiveChainId !== HOME_CHAIN.id && <p className="authorityFootnote">Your USDC remains on the selected network until you review and approve a route into your Aura balance.</p>}
+            <button className="button secondary full" onClick={() => void copyAddress()}>{copied ? <Check size={16} /> : <Copy size={16} />}{copied ? "Copied" : "Copy address"}</button>
+            <div className="modalRisk">Only send on Base. Funds sent on another network won&apos;t appear in Aura.</div>
           </> : <form onSubmit={(event) => void submitSend(event)}>
             <h2 id="wallet-modal-title">Send</h2>
             <label className="fieldLabel">Asset<select value={asset} disabled={inFlight} onChange={(event) => setAsset(event.target.value as AssetSymbol)}>{Object.keys(BASE_ASSETS).map((symbol) => <option key={symbol}>{symbol}</option>)}</select></label>
