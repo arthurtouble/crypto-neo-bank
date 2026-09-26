@@ -1349,3 +1349,19 @@ body {
 .supportMessages { display: grid; gap: 8px; margin: 18px 0; }.supportMessages p { margin: 0; padding: 12px; border: 1px solid var(--hairline); border-radius: 10px; font-size: 13px; line-height: 1.5; }.supportMessages strong { margin-right: 8px; }.supportPrompts, .supportDocs { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0; }.supportDocs a { padding: 10px; color: var(--accent); text-decoration: underline; }
 .auraLandingMobileNav { display: none; }
 @media (max-width: 720px) { .auraLandingMobileNav { display: block; position: relative; margin-left: auto; }.auraLandingMobileNav summary { display: flex; align-items: center; gap: 5px; min-height: 40px; padding: 0 10px; border: 1px solid var(--hairline-strong); border-radius: 9px; cursor: pointer; list-style: none; font-size: 13px; }.auraLandingMobileNav summary::-webkit-details-marker { display: none; }.auraLandingMobileNav[open] summary svg { transform: rotate(180deg); }.auraLandingMobileNav nav { position: absolute; z-index: 30; top: calc(100% + 8px); right: 0; display: grid; min-width: 170px; margin: 0; padding: 7px; border: 1px solid var(--hairline-strong); border-radius: 11px; background: var(--surface); box-shadow: 0 15px 30px rgba(0,0,0,.12); }.auraLandingMobileNav nav a { padding: 9px 10px; font-size: 13px; }.auraLandingHeaderActions { margin-left: 0; }.auraFeatureMedia img { width: 120%; max-width: none; margin-left: -20%; } }
+
+/* Dev build label: which commit this deploy runs. Absent in production builds. */
+.buildTag {
+  position: fixed;
+  left: 8px;
+  bottom: 8px;
+  z-index: 1000;
+  padding: 2px 6px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface-raised);
+  color: var(--text-secondary);
+  font: 11px/1.4 var(--font-technical);
+  pointer-events: none;
+  opacity: 0.85;
+}
