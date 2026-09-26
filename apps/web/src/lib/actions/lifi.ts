@@ -2,9 +2,12 @@ import { encodeFunctionData, erc20Abi, getAddress, isAddress, isHex, parseUnits 
 import { z } from "zod";
 import type { CatalogAsset } from "@/lib/swap/assets";
 import type { Call, Effect } from "./types";
+import { localEdgeUrl } from "@/lib/testing/local-edge";
+import { LIFI_DIAMOND } from "./lifi-diamond";
 
-/** The LI.FI Diamond has the same address on every chain LI.FI supports. */
-export const LIFI_DIAMOND = "0x1231deb6f5749ef6ce6943a275a1d3e7486f4eae";
+export { LIFI_DIAMOND };
+/** LI.FI's API, or the local fake in end-to-end tests. */
+export const lifiApiUrl = () => localEdgeUrl("LIFI_API_URL") ?? "https://li.quest";
 const QUOTE_TTL_MS = 45_000;
 const MAX_RESPONSE_BYTES = 1_000_000;
 const NATIVE = new Set(["0x0000000000000000000000000000000000000000", "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"]);
@@ -144,13 +147,15 @@ export async function quoteRoute(request: RouteQuoteRequest, dependencies: { fet
   if (Number.isFinite(fee) && fee > 0 && fee < 0.01) query.set("fee", String(fee));
   let response: Response;
   try {
-    response = await (dependencies.fetcher ?? fetch)(`https://li.quest/v1/quote?${query}`, {
+    response = await (dependencies.fetcher ?? fetch)(`${lifiApiUrl()}/v1/quote?${query}`, {
       headers: process.env.LIFI_API_KEY ? { "x-lifi-api-key": process.env.LIFI_API_KEY } : undefined,
       signal: AbortSignal.timeout(12_000)
     });
   } catch { throw new RouteQuoteError("provider_unavailable", "The route provider is unavailable right now."); }
   if (!response.ok) {
     await response.body?.cancel().catch(() => undefined);
+    // LI.FI answers 404 when no route exists; an outage or rate limit isn't a statement about the route.
+    if (response.status === 429 || response.status >= 500) throw new RouteQuoteError("provider_unavailable", "The route provider is unavailable right now. Try again in a few minutes.");
     throw new RouteQuoteError("no_route", "No route is available for this amount right now.");
   }
   let body: unknown;

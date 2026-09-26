@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { assetId, catalogAssetSchema, parseAssetId, type AssetId, type CatalogAsset } from "@/lib/swap/assets";
 import { CATALOG_REGISTRY, type CatalogRegistry } from "@/lib/swap/catalog-registry";
+import { lifiApiUrl } from "@/lib/actions/lifi";
 
 const TTL_MS = 300_000;
 const PAGE_SIZE = 30;
@@ -115,7 +116,7 @@ async function fetchSnapshot(chainId: number, fetcher: typeof fetch, now: number
   const query = new URLSearchParams({ chains: String(chainId), chainTypes: "EVM", minPriceUSD: "0" });
   let response: Response;
   try {
-    response = await fetcher(`https://li.quest/v1/tokens?${query}`, {
+    response = await fetcher(`${lifiApiUrl()}/v1/tokens?${query}`, {
       headers: process.env.LIFI_API_KEY ? { "x-lifi-api-key": process.env.LIFI_API_KEY } : undefined,
       signal: AbortSignal.timeout(12_000)
     });

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { AAVE_BASE_ASSETS, AAVE_BASE_PROTOCOL, AAVE_BASE_V3_MARKET } from "../apps/web/src/lib/defi/aave.ts";
-import { LIFI_DIAMOND } from "../apps/web/src/lib/actions/lifi.ts";
+import { LIFI_DIAMOND } from "../apps/web/src/lib/actions/lifi-diamond.ts";
 
 const chains = [
   { name: "Base", id: 8453, rpc: "https://base-rpc.publicnode.com", contracts: ["0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"] },

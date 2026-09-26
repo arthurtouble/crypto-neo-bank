@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { lifiApiUrl } from "./lifi";
 
 const MAX_RESPONSE_BYTES = 256_000;
 const hash = /^0x[a-f\d]{64}$/i;
@@ -76,7 +77,7 @@ export async function readLifiTransferStatus(
   const apiKey = options.apiKey ?? process.env.LIFI_API_KEY;
   let response: Response;
   try {
-    response = await (options.fetcher ?? fetch)(`https://li.quest/v1/status?${query}`, {
+    response = await (options.fetcher ?? fetch)(`${lifiApiUrl()}/v1/status?${query}`, {
       headers: apiKey ? { "x-lifi-api-key": apiKey } : undefined,
       signal: AbortSignal.timeout(8_000), cache: "no-store"
     });

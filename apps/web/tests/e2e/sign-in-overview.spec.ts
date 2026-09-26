@@ -1,4 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { expect, test } from "./support/fixtures";
 import { acceptTerms, ASSETS, edge, newCustomer, setBalances, setIdentity, type Customer } from "./support/session";
 
 // Feature 1 in docs/overview/feature-readiness.md: sign-in, terms, and the

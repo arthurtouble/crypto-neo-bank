@@ -1,9 +1,8 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useFundWallet, usePrivy } from "@privy-io/react-auth";
-import { Check, Copy, LoaderCircle, Plus, QrCode, Send, X } from "lucide-react";
-import { QRCodeSVG } from "qrcode.react";
+import { usePrivy } from "@privy-io/react-auth";
+import { LoaderCircle, Send, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { erc20Abi, formatUnits, isAddress } from "viem";
@@ -11,13 +10,11 @@ import { useBalance, useReadContract } from "wagmi";
 import { BASE_ASSETS, HOME_CHAIN } from "@/config/chains";
 import { useApi } from "@/lib/client/api";
 import { useAction } from "@/lib/client/use-action";
-import { AddFromWallet } from "./add-from-wallet";
 import { MovePreviousAccount } from "./move-previous-account";
-import { useToast } from "./toast";
 import { TransactionProgress } from "./transaction-progress";
 
 type AssetSymbol = keyof typeof BASE_ASSETS;
-type Modal = "receive" | "send" | null;
+type Modal = "send" | null;
 type Recipient = { id: string; kind: "wallet" | "bank"; name: string; destination: string; detail: string; verified: boolean; recent?: boolean };
 
 function shortAddress(address: string) {
@@ -35,7 +32,8 @@ function assetId(symbol: AssetSymbol) {
   return address ? `${HOME_CHAIN.id}:${address.toLowerCase()}` : `${HOME_CHAIN.id}:native`;
 }
 
-export function WalletWorkspace({ mode }: { mode: "deposit" | "send" }) {
+/** Send crypto from the Aura account. Deposits are in DepositWorkspace. */
+export function WalletWorkspace() {
   const searchParams = useSearchParams();
   const api = useApi();
   const requestedRecipient = searchParams.get("sendTo") ?? "";
@@ -47,10 +45,7 @@ export function WalletWorkspace({ mode }: { mode: "deposit" | "send" }) {
   const [recipient, setRecipient] = useState(isAddress(requestedRecipient) ? requestedRecipient : "");
   const [amount, setAmount] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
-  const toast = useToast();
   const [slowSetup, setSlowSetup] = useState(false);
-  const { fundWallet } = useFundWallet();
   const { user } = usePrivy();
   // Wallets the customer linked to their login, such as MetaMask. Never the Privy signer, which isn't theirs to send to.
   const ownWallets = (user?.linkedAccounts ?? []).flatMap((account) => account.type === "wallet" && account.chainType === "ethereum"
@@ -75,24 +70,6 @@ export function WalletWorkspace({ mode }: { mode: "deposit" | "send" }) {
     { ...BASE_ASSETS.ETH, value: eth.data?.value, source: "Aura Wallet", pending: eth.isPending },
     { ...BASE_ASSETS.WETH, value: weth.data, source: "Aura Wallet", pending: weth.isPending }
   ];
-
-  async function copyAddress() {
-    if (!address) return;
-    await navigator.clipboard.writeText(address);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1400);
-  }
-
-  async function addFunds() {
-    if (!address) return;
-    try {
-      // Privy's card flow. Privy requires an amount with an asset; it is only a starting value the customer edits.
-      // Receiving any amount is the address and QR code on this screen, not Privy's receive screen.
-      await fundWallet({ address, options: { chain: HOME_CHAIN, asset: "USDC", amount: "25", defaultFundingMethod: "card" } });
-    } catch {
-      toast.error("Card payment didn't finish", "You can try again, or use one of the other ways here.");
-    }
-  }
 
   function openSend(symbol: AssetSymbol = "USDC") {
     if (sending) return;
@@ -143,13 +120,13 @@ export function WalletWorkspace({ mode }: { mode: "deposit" | "send" }) {
       <div className="contentGrid">
         <section className="panel widePanel">
           <div className="panelHeading walletHeading">
-            <div><h2>{mode === "deposit" ? "Receive crypto" : "Send crypto"}</h2></div>
-            <div className="walletActions">{mode !== "send" && <button className="button secondary" disabled={sending} onClick={() => { if (!sending) setModal("receive"); }}><QrCode size={16} /> Receive</button>}{mode !== "deposit" && <button className="button primary" disabled={sending} onClick={() => openSend()}><Send size={16} /> Send</button>}</div>
+            <div><h2>Send crypto</h2></div>
+            <div className="walletActions"><button className="button primary" disabled={sending} onClick={() => openSend()}><Send size={16} /> Send</button></div>
           </div>
           <div className="assetTable liveAssetTable">
             <div className="tableHead"><span>Asset</span><span>Source</span><span>Status</span><span>Balance</span></div>
             {rows.map((row, index) => (
-              <button className="tableRow assetActionRow" key={row.symbol} disabled={sending || mode === "deposit"} onClick={() => openSend(row.symbol)}>
+              <button className="tableRow assetActionRow" key={row.symbol} disabled={sending} onClick={() => openSend(row.symbol)}>
                 <span className={`assetToken token${index}`}>{row.symbol.slice(0, 1)}</span>
                 <span><strong>{row.name}</strong><small>{row.symbol}</small></span>
                 <span>{row.source}</span>
@@ -165,18 +142,7 @@ export function WalletWorkspace({ mode }: { mode: "deposit" | "send" }) {
       {modal && <div className="modalBackdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && !sending && setModal(null)}>
         <section className="financialModal" role="dialog" aria-modal="true" aria-labelledby="wallet-modal-title">
           <button className="modalClose" onClick={() => setModal(null)} aria-label="Close" disabled={sending}><X size={18} /></button>
-          {modal === "receive" ? <>
-            <h2 id="wallet-modal-title">Add money</h2>
-            <p>Move USDC on Base from a wallet you connected, like MetaMask.</p>
-            <AddFromWallet account={address} />
-            <p>Or pay by card.</p>
-            <button className="button secondary full" onClick={() => void addFunds()}><Plus size={16} /> Pay by card</button>
-            <p>Or send USDC on Base to your Aura account from anywhere.</p>
-            <div className="receiveQr"><QRCodeSVG value={address} size={164} bgColor="transparent" fgColor="currentColor" level="M" /></div>
-            <code className="addressBlock">{address}</code>
-            <button className="button secondary full" onClick={() => void copyAddress()}>{copied ? <Check size={16} /> : <Copy size={16} />}{copied ? "Copied" : "Copy address"}</button>
-            <div className="modalRisk">Only send on Base. Funds sent on another network won&apos;t appear in Aura.</div>
-          </> : <form onSubmit={(event) => void submitSend(event)}>
+          <form onSubmit={(event) => void submitSend(event)}>
             <h2 id="wallet-modal-title">Send</h2>
             <label className="fieldLabel">Asset<select value={asset} disabled={inFlight} onChange={(event) => setAsset(event.target.value as AssetSymbol)}>{Object.keys(BASE_ASSETS).map((symbol) => <option key={symbol}>{symbol}</option>)}</select></label>
             <label className="fieldLabel">Amount<input inputMode="decimal" placeholder="0.00" value={amount} disabled={inFlight} onChange={(event) => setAmount(event.target.value)} /></label>
@@ -190,7 +156,7 @@ export function WalletWorkspace({ mode }: { mode: "deposit" | "send" }) {
             {transfer.phase === "done"
               ? <button type="button" className="button primary full" onClick={() => { transfer.reset(); setAmount(""); }}><Send size={16} /> New transfer</button>
               : <button className="button primary full" disabled={inFlight}>{sending ? <LoaderCircle className="spin" size={16} /> : <Send size={16} />}{transfer.outcomeUnknown ? "Check Transactions first" : transfer.phase === "tracking" ? "Sending" : transfer.phase === "preparing" ? "Checking" : sending ? "Confirm in your wallet" : "Send"}</button>}
-          </form>}
+          </form>
         </section>
       </div>}
     </>

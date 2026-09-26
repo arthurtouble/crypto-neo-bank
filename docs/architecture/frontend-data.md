@@ -17,7 +17,7 @@ Money movements use `useAction` (`lib/client/use-action.ts`): `run(input)` for `
 | Screen | Reads | Writes |
 | --- | --- | --- |
 | Overview | `GET /api/overview`: cash (USDC), crypto (ETH, WETH, cbBTC on Base), and earn (Aave on Base, Sky on Ethereum) holdings, each with `source`, `status` (`observed` or `unavailable`), `usdCents`, and `observedAt`; totals per group and overall (`all`) with a `partial` flag when a balance or price is unavailable | |
-| Deposit | `GET /api/money/account` (bank state and next step) | `POST /api/money/onboarding` |
+| Deposit | The account address (from Privy); the connected wallet's balance on the chosen network (read in the browser); `GET /api/money/account` (bank state and next step) | `POST /api/deposits/quote`, `GET /api/deposits/status`, `POST /api/money/onboarding` |
 | Send | `GET /api/recipients`, `GET /api/aura-tags/:tag` | `POST /api/actions` (`transfer`), `POST /api/money/bank-accounts`, `POST /api/money/payouts` |
 | Swap, Invest, cross-chain | `GET /api/swap/assets`, `GET /api/invest/catalog` (public), `GET /api/routes/quote` | `POST /api/actions` (`route`) |
 | Earn | `GET /api/defi/aave/markets`, `GET /api/defi/aave/positions` | `POST /api/actions` (`earn`) |
