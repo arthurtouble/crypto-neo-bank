@@ -5,7 +5,7 @@ import { usePrivy } from "@privy-io/react-auth";
 import { LoaderCircle, Send, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { erc20Abi, formatUnits, isAddress } from "viem";
+import { erc20Abi, formatUnits, isAddress, parseUnits } from "viem";
 import { useBalance, useReadContracts } from "wagmi";
 import { HOME_CHAIN } from "@/config/chains";
 import { assetsFor } from "@/lib/assets/registry";
@@ -48,6 +48,8 @@ export function WalletWorkspace() {
   const [recipient, setRecipient] = useState(isAddress(requestedRecipient) ? requestedRecipient : "");
   const [amount, setAmount] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
+  // Nothing is prepared until the customer has seen exactly what will be sent, and to whom.
+  const [reviewing, setReviewing] = useState(false);
   const [slowSetup, setSlowSetup] = useState(false);
   const { user } = usePrivy();
   // Wallets the customer linked to their login, such as MetaMask. Never the Privy signer, which isn't theirs to send to.
@@ -83,6 +85,7 @@ export function WalletWorkspace() {
     setRecipient("");
     setAmount("");
     setFormError(null);
+    setReviewing(false);
     setModal("send");
   }
 
@@ -94,15 +97,34 @@ export function WalletWorkspace() {
     if (tag.crypto.address.toLowerCase() !== recipient.toLowerCase()) throw new Error("The Aura tag address changed. Find the recipient again before sending.");
   }
 
-  async function submitSend(event: React.FormEvent) {
+  const selected = rows.find((row) => row.symbol === asset) ?? rows[0];
+  const savedName = savedRecipients.find((item) => item.destination.toLowerCase() === recipient.toLowerCase())?.name;
+  const recipientName = requestedTag && recipient.toLowerCase() === requestedRecipient.toLowerCase() ? `@${requestedTag}`
+    : ownWallets.some((wallet) => wallet === recipient.toLowerCase()) ? "Your wallet" : savedName ?? null;
+
+  function review(event: React.FormEvent) {
     event.preventDefault();
     setFormError(null);
     if (!address) return setFormError("Your wallet isn't ready yet.");
-    if (!isAddress(recipient)) return setFormError("Enter a valid address.");
+    if (!isAddress(recipient, { strict: false })) return setFormError("Enter a valid address.");
+    if (recipient.toLowerCase() === address.toLowerCase()) return setFormError("This is your own Aura address.");
     if (!/^\d*\.?\d+$/.test(amount) || Number(amount) <= 0) return setFormError("Enter an amount greater than zero.");
+    let raw: bigint;
+    try { raw = parseUnits(amount, selected.decimals); } catch { return setFormError(`Use at most ${selected.decimals} decimal places.`); }
+    if ((amount.split(".")[1]?.length ?? 0) > selected.decimals) return setFormError(`Use at most ${selected.decimals} decimal places.`);
+    if (selected.value !== undefined && raw > selected.value) return setFormError(`That's more ${asset} than you have.`);
+    setReviewing(true);
+  }
+
+  async function confirmSend() {
+    setFormError(null);
     try { await verifyTagRecipient(); }
-    catch (reason) { return setFormError(reason instanceof Error ? reason.message : "Find the recipient again."); }
-    await transfer.run({ kind: "transfer", assetId: assetId(asset), amount, to: recipient });
+    catch (reason) { setReviewing(false); return setFormError(reason instanceof Error ? reason.message : "Find the recipient again."); }
+    await transfer.run({ kind: "transfer", assetId: assetId(asset), amount, to: recipient as `0x${string}` });
+  }
+
+  function useMax() {
+    if (selected.value !== undefined) setAmount(formatUnits(selected.value, selected.decimals));
   }
 
   useEffect(() => {
@@ -145,20 +167,36 @@ export function WalletWorkspace() {
       {modal && <div className="modalBackdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && !sending && setModal(null)}>
         <section className="financialModal" role="dialog" aria-modal="true" aria-labelledby="wallet-modal-title">
           <button className="modalClose" onClick={() => setModal(null)} aria-label="Close" disabled={sending}><X size={18} /></button>
-          <form onSubmit={(event) => void submitSend(event)}>
-            <h2 id="wallet-modal-title">Send</h2>
-            <label className="fieldLabel">Asset<select value={asset} disabled={inFlight} onChange={(event) => setAsset(event.target.value as AssetSymbol)}>{SENDABLE.map((item) => <option key={item.id}>{item.symbol}</option>)}</select></label>
-            <label className="fieldLabel">Amount<input inputMode="decimal" placeholder="0.00" value={amount} disabled={inFlight} onChange={(event) => setAmount(event.target.value)} /></label>
-            {savedRecipients.length > 0 && <label className="fieldLabel">Saved Recipient<select value={savedRecipients.some((item) => item.destination === recipient) ? recipient : ""} disabled={inFlight} onChange={(event) => setRecipient(event.target.value)}><option value="">Enter another address</option>{savedRecipients.map((item) => <option key={item.id} value={item.destination}>{item.name} · {item.detail}</option>)}</select></label>}
-            <label className="fieldLabel">Destination<input autoComplete="off" spellCheck={false} placeholder="0x…" value={recipient} disabled={inFlight} onChange={(event) => setRecipient(event.target.value.trim())} /></label>
-            {ownWallets.filter((wallet) => wallet !== recipient.toLowerCase()).slice(0, 3).map((wallet) =>
-              <button type="button" className="button secondary full" key={wallet} disabled={inFlight} onClick={() => setRecipient(wallet)}>Send to my wallet · {shortAddress(wallet)}</button>)}
-            <div className="transactionSummary"><span>From<strong>Aura account</strong></span><span>Account<strong>{shortAddress(address)}</strong></span><span>Review<strong>You confirm</strong></span></div>
-            {formError && <p className="formError" role="alert">{formError}</p>}
-            <TransactionProgress label="Transfer" phase={transfer.phase} action={transfer.action} outcomeUnknown={transfer.outcomeUnknown} />
-            {transfer.phase === "done"
-              ? <button type="button" className="button primary full" onClick={() => { transfer.reset(); setAmount(""); }}><Send size={16} /> New transfer</button>
-              : <button className="button primary full" disabled={inFlight}>{sending ? <LoaderCircle className="spin" size={16} /> : <Send size={16} />}{transfer.outcomeUnknown ? "Check Transactions first" : transfer.phase === "tracking" ? "Sending" : transfer.phase === "preparing" ? "Checking" : sending ? "Confirm in your wallet" : "Send"}</button>}
+          <form onSubmit={(event) => review(event)}>
+            <h2 id="wallet-modal-title">{reviewing ? "Review" : "Send"}</h2>
+            {!reviewing ? <>
+              <label className="fieldLabel">Asset<select value={asset} disabled={inFlight} onChange={(event) => setAsset(event.target.value as AssetSymbol)}>{SENDABLE.map((item) => <option key={item.id}>{item.symbol}</option>)}</select></label>
+              <label className="fieldLabel">Amount<input inputMode="decimal" placeholder="0.00" value={amount} disabled={inFlight} onChange={(event) => setAmount(event.target.value.trim())} /></label>
+              <p className="authorityFootnote">{selected.value === undefined ? "Balance unavailable" : `${amountText(selected.value, selected.decimals)} ${asset} available`}
+                {selected.value !== undefined && selected.value > 0n && <> · <button type="button" className="textLink" onClick={useMax}>Max</button></>}</p>
+              {savedRecipients.length > 0 && <label className="fieldLabel">Saved recipient<select value={savedRecipients.some((item) => item.destination === recipient) ? recipient : ""} disabled={inFlight} onChange={(event) => setRecipient(event.target.value)}><option value="">Enter another address</option>{savedRecipients.map((item) => <option key={item.id} value={item.destination}>{item.name} · {item.detail}</option>)}</select></label>}
+              <label className="fieldLabel">To<input autoComplete="off" spellCheck={false} placeholder="0x…" value={recipient} disabled={inFlight} onChange={(event) => setRecipient(event.target.value.trim())} /></label>
+              {ownWallets.filter((wallet) => wallet !== recipient.toLowerCase()).slice(0, 3).map((wallet) =>
+                <button type="button" className="button secondary full" key={wallet} disabled={inFlight} onClick={() => setRecipient(wallet)}>Send to my wallet · {shortAddress(wallet)}</button>)}
+              {formError && <p className="formError" role="alert">{formError}</p>}
+              <button className="button primary full" disabled={inFlight}><Send size={16} /> Review</button>
+            </> : <>
+              <div className="transactionSummary" data-testid="send-review">
+                <span>Send<strong>{amount} {asset}</strong></span>
+                <span>To<strong>{recipientName ? `${recipientName} · ${shortAddress(recipient)}` : recipient}</strong></span>
+                <span>Network<strong>Base</strong></span>
+                <span>Network fee<strong>Paid by Aura</strong></span>
+              </div>
+              <p className="authorityFootnote">Transfers can&apos;t be reversed. Check the address before you confirm.</p>
+              {formError && <p className="formError" role="alert">{formError}</p>}
+              <TransactionProgress label="Transfer" phase={transfer.phase} action={transfer.action} outcomeUnknown={transfer.outcomeUnknown} />
+              {transfer.phase === "done"
+                ? <button type="button" className="button primary full" onClick={() => { transfer.reset(); setAmount(""); setReviewing(false); }}><Send size={16} /> New transfer</button>
+                : <>
+                  <button type="button" className="button primary full" disabled={inFlight} onClick={() => void confirmSend()}>{sending ? <LoaderCircle className="spin" size={16} /> : <Send size={16} />}{transfer.outcomeUnknown ? "Check Transactions first" : transfer.phase === "tracking" ? "Sending" : transfer.phase === "preparing" ? "Checking" : sending ? "Confirm with your passkey" : "Confirm and send"}</button>
+                  {!inFlight && <button type="button" className="button secondary full" onClick={() => setReviewing(false)}>Edit</button>}
+                </>}
+            </>}
           </form>
         </section>
       </div>}

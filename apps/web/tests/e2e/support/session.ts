@@ -20,7 +20,8 @@ export const ASSETS = {
 export async function edge(path: "/__reset" | "/__state" | "/__session" | "/__sent" | "/__balances", body: unknown = {}) {
   const response = await fetch(`${edgeUrl}${path}`, { method: "POST", body: JSON.stringify(body) });
   if (!response.ok) throw new Error(`fake edge ${path} failed: ${response.status}`);
-  return response.json() as Promise<{ token?: string; sent?: Array<{ hash: string; chainId: number; from: string; to: string; data: string; value: string; success: boolean }> }>;
+  return response.json() as Promise<{ token?: string; sent?: Array<{ hash: string; chainId: number; from: string; to: string; data: string; value: string; success: boolean;
+    relayed?: boolean; calls?: Array<{ to: string; data: string; value: string }> }> }>;
 }
 
 export type Customer = { userId: string; wallet: `0x${string}`; email: string; token: string; externalWallets: `0x${string}`[] };
@@ -70,4 +71,11 @@ export async function setFeature(page: Page, key: string, enabled: boolean) {
   const { token } = await edge("/__session", { userId: OPERATOR.userId });
   const response = await page.request.patch("/api/ops/features", { headers: { Authorization: `Bearer ${token}`, ...fresh }, data: { key, enabled } });
   if (!response.ok()) throw new Error(`setting ${key} failed: ${response.status()}`);
+}
+
+/** Call an Aura API as the customer, the way a screen would. */
+export async function asCustomer(page: Page, customer: Customer, method: "GET" | "POST" | "PUT" | "PATCH", path: string, data?: unknown) {
+  const response = await page.request.fetch(path, { method, headers: { Authorization: `Bearer ${customer.token}`, ...fresh }, data });
+  if (!response.ok()) throw new Error(`${method} ${path} failed: ${response.status()} ${await response.text()}`);
+  return response.json() as Promise<Record<string, unknown>>;
 }

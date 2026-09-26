@@ -84,7 +84,9 @@ export function useAction(options: { label?: string; onSettled?: (action: Action
         return;
       }
       const rejected = reason instanceof Error && /reject|denied|cancel|exited/i.test(reason.message);
-      if (signing && !rejected) {
+      // Privy refusing the signed request is definite: nothing was sent. Only an unanswered relay leaves the outcome unknown.
+      const refused = reason instanceof ApiError && reason.code === "relay_rejected";
+      if (signing && !rejected && !refused) {
         setOutcomeUnknown(true);
         setError("Your wallet may have sent this. Check Transactions before you try again.");
         toast.show({ tone: "error", sticky: true, title: "Check Transactions first",
