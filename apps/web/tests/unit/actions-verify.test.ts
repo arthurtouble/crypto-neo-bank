@@ -40,10 +40,17 @@ describe("verifying an action from chain evidence", () => {
   it("waits for the transaction, the receipt, and finality", async () => {
     expect(await verifyAction(send, { observe: observe({ status: "pending" }) })).toMatchObject({ status: "pending", reason: "transaction_unavailable" });
     expect(await verifyAction(send, { observe: observe({ ...observed({}), receipt: null } as ChainObservation) })).toMatchObject({ status: "pending", reason: "receipt_unavailable" });
-    expect(await verifyAction(send, { observe: observe(observed({ confirmations: 1 })) })).toMatchObject({ status: "pending", reason: "finality" });
-    expect(await verifyAction(send, { observe: observe(observed({ finalized: 99n })) })).toMatchObject({ status: "pending", reason: "finality" });
+    expect(await verifyAction(send, { observe: observe(observed({ confirmations: 1 })) })).toMatchObject({ status: "pending", reason: "confirmations" });
     expect(await verifyAction(send, { observe: observe({ ...observed({}), canonicalBlockHash: `0x${"e".repeat(64)}` } as ChainObservation) }))
       .toMatchObject({ status: "pending", reason: "reorg" });
+  });
+
+  it("shows a matching operation as settling until its block is final, and lets only finality fail one", async () => {
+    expect(await verifyAction(send, { observe: observe(observed({ finalized: 99n })) })).toEqual({ status: "settling", reason: "finality" });
+    const other = encodeFunctionData({ abi: erc20Abi, functionName: "transfer", args: [recipient, 6n] });
+    const data = handleOpsV07([{ sender: wallet, callData: kernelBatch([{ to: usdc, value: 0n, data: other }]) }]);
+    expect(await verifyAction(send, { observe: observe(observed({ data, finalized: 99n })) })).toEqual({ status: "pending", reason: "finality" });
+    expect(await verifyAction(send, { observe: observe(observed({ success: false, finalized: 99n })) })).toEqual({ status: "pending", reason: "finality" });
   });
 
   it("fails an operation that ran different calls than Aura prepared", async () => {

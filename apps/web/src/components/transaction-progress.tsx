@@ -3,7 +3,7 @@
 import { Check, CircleAlert, ExternalLink, LoaderCircle, X } from "lucide-react";
 import Link from "next/link";
 import { SUPPORTED_CHAINS } from "@/config/chains";
-import type { ActionPhase, ActionView } from "@/lib/client/use-action";
+import { actionSettled, type ActionPhase, type ActionView } from "@/lib/client/use-action";
 
 type Props = {
   /** What the customer is doing, in sentence case: "Transfer", "Swap", "Deposit". */
@@ -35,7 +35,9 @@ function copy(label: string, phase: ActionPhase, action: ActionView | null) {
   if (phase === "preparing") return { step: 0, title: `Preparing ${label.toLowerCase()}`, detail: "Checking your limits and building the transaction." };
   if (phase === "signing") return { step: 1, title: "Confirm in your wallet", detail: "Review the request, then confirm it." };
   switch (action?.status) {
-    case "settling": return { step: 2, title: "On its way", detail: "The first transaction is confirmed. We're waiting for delivery." };
+    case "settling": return action.destinationChainId
+      ? { step: 2, title: "On its way", detail: "The first transaction is confirmed. We're waiting for delivery." }
+      : { step: 3, title: `${label} sent`, detail: "It's on Base and becomes final in about 15 minutes." };
     case "confirmed": return { step: 3, title: `${label} complete`, detail: "The network confirmed it." };
     case "failed": return { step: 3, title: `${label} failed`, detail: failureText(action.failureReason) };
     case "expired": return { step: 3, title: `${label} not confirmed`, detail: "We didn't receive it in time. If you confirmed it in your wallet, check Transactions." };
@@ -58,7 +60,7 @@ export function TransactionProgress({ label, phase, action, error, outcomeUnknow
   }
   const { step, title, detail } = copy(label, phase, action);
   const failed = action?.status === "failed" || action?.status === "expired";
-  const complete = action?.status === "confirmed";
+  const complete = action !== null && !failed && actionSettled(action);
   const links = [
     { name: "View transaction", url: explorerUrl(action?.chainId ?? null, action?.transactionHash ?? null) },
     { name: "View delivery", url: explorerUrl(action?.destinationChainId ?? null, action?.destinationTransactionHash ?? null) }
