@@ -26,7 +26,8 @@ A feature is done only when all of these are true:
 - **End-to-end tests** (Playwright, desktop and mobile) cover every step the customer takes in the feature: the happy path, the main failures, and empty and loading states. They run signed in, against local bindings, with Privy and chain calls stubbed at the edge of the app (see [`apps/web/tests/e2e/README.md`](../../apps/web/tests/e2e/README.md)).
 - **Live check on dev.** For anything that moves money, a small real transaction on dev, verified from the database and the chain: action status, events, Transactions page, and receipt.
 - **Records are right.** Every financial observation shows source, reference, status, and time. Stale or failed reads show as unavailable.
-- **Clean as you go.** No dead code, duplicated helpers, or unused flags left in the feature's area. Docs for the feature are updated.
+- **Clean as you go.** No dead code, duplicated helpers, or unused flags left in the feature's area.
+- **Docs in sync.** Every internal doc (`docs/`) and public doc (`apps/docs`) that describes the feature matches what shipped, in the same pull request: what works, what is coming soon, and what was cut. Search both for the feature's names, screens, routes, and switches; don't only edit the obvious page. Dated files stay as they were.
 - **Checks pass**: `pnpm lint`, `pnpm typecheck:all`, `pnpm test:unit`, and `pnpm test:e2e` for the feature's specs.
 
 ## Order and status

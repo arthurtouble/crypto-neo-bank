@@ -43,7 +43,12 @@ Merge, wait for the dev deploy (the version label shows the short commit), then 
 ## 6. Finish
 
 - Remove dead code, duplicate helpers, and unused switches in the feature's area.
-- Update the feature's docs.
+- Bring every doc that mentions the feature in line with what shipped, internal and public, in the same pull request:
+  - Search `docs/` and `apps/docs/src/content/docs` for the feature's names, screens, API routes, tables, switches, and assets (`grep -ril`), and read each hit.
+  - Internal (`docs/`): architecture and data flow, `overview/build-status.md`, runbooks and operations, security and threat model where the rules changed. Leave dated files alone.
+  - Public (`apps/docs`): what a customer can do, what is coming soon, limits and controls, and fees. Never describe something as working when it is off, cut, or coming soon. Follow `docs/product/content-style-guide.md`.
+  - Repo guides: `CLAUDE.md`, `docs/README.md`, `apps/web/tests/e2e/README.md`, and skills, when commands, layout, or rules changed.
+  - Run `pnpm typecheck:all` (it checks the docs site) and `pnpm marketing:check`; fix any finding in pages you changed.
 - Set the row to Done with the pull request link.
 - Run `pnpm lint`, `pnpm typecheck:all`, `pnpm test:unit`, and the feature's e2e specs. Then merge (see the Cloudflare section of `CLAUDE.md`).
 - Tell the user what works, what was cut, and what is left for later steps. Then propose the next row.
