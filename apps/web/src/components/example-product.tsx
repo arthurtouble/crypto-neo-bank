@@ -26,8 +26,7 @@ const examples: Record<CustomerSection | "overview", Example> = {
   ] },
   earn: { title: "Earn", items: [
     { label: "Aave", value: "USDC", note: "Variable rate, protocol risk" },
-    { label: "Morpho", value: "USDC vaults", note: "Steakhouse and Gauntlet curate them on Base" },
-    { label: "Morpho", value: "Unavailable", note: "Integration review needed" }
+    { label: "Morpho", value: "USDC vaults", note: "Steakhouse and Gauntlet curate them on Base" }
   ] },
   invest: { title: "Invest", items: [
     { label: "Crypto", value: "Supported swaps", note: "Live route and asset checks required" },

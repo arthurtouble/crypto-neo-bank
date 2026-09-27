@@ -40,6 +40,6 @@ Aura marks a deposit or withdrawal complete only after it sees the protocol's ow
 
 Withdrawing depends on the lending markets having enough available. If a market can't release your amount, the withdrawal fails and nothing moves. Try a smaller amount, or try again later.
 
-Your Earn positions show in the Earn group on Overview. If Aura can't read a position, it shows it as unavailable, never as zero.
+Your Earn positions show in the Earn group on Overview and on each Earn card. Aura reads each position from the blockchain, then shows it growing live, to 8 decimals, at the position's current yearly rate: Aave's rate for Aave, and Morpho's net rate (after any fee) for a vault. Rates change, so the live number is an estimate between reads; each new read from the blockchain replaces it. If Aura can't read a position, it shows it as unavailable, never as zero. If it can't read the rate, the position shows as read, without growing.
 
 Smart contracts, price feeds, curators, governance, stablecoins, liquidity, and networks can fail or change. See the [risk disclosure](/legal/risk-disclosure/).

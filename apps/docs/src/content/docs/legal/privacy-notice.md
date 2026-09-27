@@ -53,7 +53,7 @@ We do not sell personal data or use it for third-party advertising. We do not ma
 
 - You and your browser.
 - Privy, which runs sign-in and your wallet.
-- Public blockchains and protocols: Base, Ethereum and other supported networks, Aave, Sky, and Spark.
+- Public blockchains and protocols: Base, Ethereum and other supported networks, Aave and Morpho.
 - LI.FI and the bridges and exchanges it routes through, when you ask for a quote or make a swap or cross-network move.
 - Kraken, for the market prices used to value actions against your daily limit.
 - Partners such as Bridge or Rain, once they are live and you choose to use them.
