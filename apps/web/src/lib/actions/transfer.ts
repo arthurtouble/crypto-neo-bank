@@ -31,10 +31,10 @@ export function refuseTokenContract(to: string) {
   if (ASSETS.some((item) => item.address === address)) throw new ActionInputError("invalid_recipient", "That's a token contract, not a wallet. Check the address.");
 }
 
-/** Send a registered asset on Base from the customer's account to an address. */
+/** Send a registered asset from the customer's account to an address, on the network where the account holds it (Base, or Ethereum for Tether Gold). */
 export async function buildTransfer(db: D1Database, input: TransferInput, wallet: string): Promise<BuiltAction> {
   const asset = await requireAsset(db, input.assetId, "send");
-  if (asset.chainId !== 8453) throw new ActionInputError("unsupported_asset", "Sending is available for assets on Base.");
+  if (!asset.uses.includes("hold")) throw new ActionInputError("unsupported_asset", "Sending is available for assets held in your account.");
   const to = input.to.toLowerCase() as `0x${string}`;
   if (to === wallet.toLowerCase()) throw new ActionInputError("invalid_recipient", "This is your own address.");
   refuseTokenContract(to);
@@ -42,11 +42,11 @@ export async function buildTransfer(db: D1Database, input: TransferInput, wallet
   const valuation = { assetId: asset.id, amountRaw: amountRaw.toString(), decimals: asset.decimals };
   const summary = { assetId: asset.id, symbol: asset.symbol, decimals: asset.decimals, amount: input.amount, amountRaw: amountRaw.toString(), to };
   if (asset.address === null) {
-    return { kind: "transfer", chainId: 8453, calls: [{ to, value: amountRaw.toString(), data: "0x" }], effects: [],
+    return { kind: "transfer", chainId: asset.chainId, calls: [{ to, value: amountRaw.toString(), data: "0x" }], effects: [],
       summary, countsTowardLimit: true, valuation, recipient: to };
   }
   return {
-    kind: "transfer", chainId: 8453,
+    kind: "transfer", chainId: asset.chainId,
     calls: [{ to: asset.address, value: "0", data: encodeFunctionData({ abi: erc20Abi, functionName: "transfer", args: [to, amountRaw] }) }],
     effects: [{ type: "erc20_transfer", token: asset.address, to, amountRaw: amountRaw.toString() }],
     summary, countsTowardLimit: true, valuation, recipient: to

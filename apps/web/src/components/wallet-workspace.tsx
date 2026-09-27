@@ -7,8 +7,8 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { erc20Abi, formatUnits, isAddress, parseUnits } from "viem";
 import { useBalance, useReadContracts } from "wagmi";
-import { HOME_CHAIN } from "@/config/chains";
-import { assetsFor, sendDestinations } from "@/lib/assets/registry";
+import { HOME_CHAIN, SUPPORTED_CHAINS } from "@/config/chains";
+import { assetsFor, networkName, sendDestinations } from "@/lib/assets/registry";
 import { ApiError, useApi } from "@/lib/client/api";
 import { displayRawAmount } from "@/lib/swap/review-model";
 import { useAction } from "@/lib/client/use-action";
@@ -17,8 +17,8 @@ import type { RouteQuote } from "./swap-workspace";
 import { useToast } from "./toast";
 import { TransactionProgress } from "./transaction-progress";
 
-/** What can be sent: the registry's "send" assets on Base. The server checks the same list and any pause. */
-const SENDABLE = assetsFor("send", HOME_CHAIN.id);
+/** What can be sent: the registry's "send" assets, on the network where the account holds each (Base, or Ethereum for Tether Gold). The server checks the same list and any pause. */
+const SENDABLE = assetsFor("send");
 const TOKENS = SENDABLE.filter((item) => item.address !== null);
 type AssetSymbol = string;
 type Modal = "send" | null;
@@ -93,7 +93,7 @@ export function WalletWorkspace() {
   const inFlight = (transfer.phase !== "idle" && transfer.phase !== "done" && !handedOff) || transfer.outcomeUnknown;
   const eth = useBalance({ address, chainId: HOME_CHAIN.id, query: { enabled: Boolean(address) } });
   const tokens = useReadContracts({ contracts: TOKENS.map((item) => ({ address: item.address!, abi: erc20Abi, functionName: "balanceOf" as const,
-    args: [address!] as const, chainId: HOME_CHAIN.id })), query: { enabled: Boolean(address) } });
+    args: [address!] as const, chainId: item.chainId as (typeof SUPPORTED_CHAINS)[number]["id"] })), query: { enabled: Boolean(address) } });
   const recipients = useQuery<{ recipients: Recipient[] }>({
     queryKey: ["recipients", address],
     queryFn: () => api("/api/recipients"),
@@ -106,7 +106,7 @@ export function WalletWorkspace() {
   const rows = SENDABLE.map((item) => {
     const index = TOKENS.indexOf(item);
     const value = index < 0 ? eth.data?.value : tokens.data?.[index]?.status === "success" ? tokens.data[index].result as bigint : undefined;
-    return { ...item, value, source: "Aura Wallet", pending: index < 0 ? eth.isPending : tokens.isPending };
+    return { ...item, value, source: `Aura account on ${networkName(item.chainId)}`, pending: index < 0 ? eth.isPending : tokens.isPending };
   });
 
   function openSend(symbol: AssetSymbol = "USDC") {
@@ -117,7 +117,7 @@ export function WalletWorkspace() {
     setAsset(symbol);
     setRecipient("");
     setAmount("");
-    setNetwork(HOME_CHAIN.id);
+    setNetwork(SENDABLE.find((item) => item.symbol === symbol)?.chainId ?? HOME_CHAIN.id);
     setQuote(null);
     setSaveRecipient(false);
     setNickname("");
@@ -137,7 +137,8 @@ export function WalletWorkspace() {
   const selected = rows.find((row) => row.symbol === asset) ?? rows[0];
   const destinations = sendDestinations(selected.id);
   const destination = destinations.find((item) => item.chainId === network) ?? destinations[0];
-  const crossChain = destination.chainId !== HOME_CHAIN.id;
+  // Sent from where the account holds it; anywhere else goes through a route.
+  const crossChain = destination.chainId !== selected.chainId;
   const saved = savedRecipients.find((item) => item.destination.toLowerCase() === recipient.toLowerCase());
   const tagged = Boolean(requestedTag && recipient.toLowerCase() === requestedRecipient.toLowerCase());
   const ownWallet = ownWallets.some((wallet) => wallet === recipient.toLowerCase());
@@ -150,7 +151,7 @@ export function WalletWorkspace() {
   function chooseAsset(symbol: AssetSymbol) {
     setAsset(symbol);
     const next = SENDABLE.find((item) => item.symbol === symbol);
-    if (next && !sendDestinations(next.id).some((item) => item.chainId === network)) setNetwork(HOME_CHAIN.id);
+    if (next && !sendDestinations(next.id).some((item) => item.chainId === network)) setNetwork(next.chainId);
   }
 
   async function getQuote(): Promise<RouteQuote | null> {
@@ -289,7 +290,7 @@ export function WalletWorkspace() {
                   <span>At least<strong>{displayRawAmount(quote.toAmountMinRaw, quote.to.decimals)} {quote.to.symbol}</strong></span>
                   <span>Fees<strong>{feesUsd(quote) ? `About ${feesUsd(quote)}, taken from the amount` : "Taken from the amount"}</strong></span>
                 </>}
-                <span>{crossChain ? "Network fee on Base" : "Network fee"}<strong>Paid by Aura</strong></span>
+                <span>{crossChain ? `Network fee on ${networkName(selected.chainId)}` : "Network fee"}<strong>Paid by Aura</strong></span>
                 {canSave && saveRecipient && <span>Save as<strong>{nickname.trim()}</strong></span>}
               </div>
               <p className="authorityFootnote">{crossChain ? `Transfers can't be reversed. Check that the recipient can receive ${asset} on ${destination.name}.` : "Transfers can't be reversed. Check the address before you confirm."}</p>

@@ -1,45 +1,52 @@
 ---
-title: Tokenized markets
-description: Why Aura doesn't offer tokenized stocks or metals yet, and what it would take.
+title: Tokenized stocks and gold
+description: The tokenized stocks and gold Aura supports, what a token gives you, and how prices work.
 sidebar:
   order: 5
 ---
 
-:::note[Not offered]
-Aura doesn't offer tokenized stocks, metals, or other securities. You can't buy, sell, or hold them through Aura. Offering them depends on issuers being available to Aura and to you.
-:::
+Aura supports ten tokenized stocks issued by Coinbase on Base, and Tether Gold. You can hold them, send them, and buy or sell them through Swap. They show in your Overview under **Stocks** and **Metals**.
 
-A tokenized stock or metal is a token that tracks the price of something outside the blockchain. The token and the thing it tracks are not the same.
+## What's supported
 
-For example, [xStocks describes its products as tracker certificates, not ownership of the underlying shares](https://docs.xstocks.fi/docs/product-legal-overview). A familiar ticker doesn't change what rights you actually get.
+| Asset | Token | Network |
+| --- | --- | --- |
+| Apple | AAPLc | Base |
+| Amazon | AMZNc | Base |
+| Alphabet | GOOGLc | Base |
+| Meta Platforms | METAc | Base |
+| Microsoft | MSFTc | Base |
+| Strategy | MSTRc | Base |
+| NVIDIA | NVDAc | Base |
+| Sandisk | SNDKc | Base |
+| SpaceX | SPCXc | Base |
+| Tesla | TSLAc | Base |
+| Tether Gold | XAUt | Ethereum |
 
-## What we'd need before offering one
+Aura identifies each one by its network and contract address, not its ticker.
 
-A token trading on a blockchain isn't automatically legal for Aura to offer you. Before we list one, we'd need clear answers to these questions:
+## What a tokenized stock is
 
-| Area | Question |
-| --- | --- |
-| Issuer | Who owes you the underlying asset, and under which law? |
-| Your rights | Does the token give you shares, debt, fund units, a contract claim, or only price exposure? |
-| Who can buy | Who may legally receive or trade it? |
-| Where it trades | Which approved venue handles the trade? |
-| Identity checks | Which identity or investor checks apply? |
-| Transfer rules | Can the issuer freeze, take back, or block transfers? |
-| Documents | Are current offering, risk, financial, and redemption documents available? |
-| Custody | Who holds the underlying asset and controls the token? |
-| Pricing | Is the price you see real, independent, and current? |
-| Selling | How can you sell or redeem, and with what limits? |
+A Coinbase tokenized stock is a token on Base that tracks a US company's shares. It isn't a share in your name.
 
-## Eligibility
+- **One token isn't always one share.** When the company pays a dividend or splits its stock, Coinbase changes a multiplier instead of your token balance. Over time, one token can stand for more or less than one share.
+- **Who can hold them.** Coinbase says its tokenized stocks are only for people in eligible places outside the US. Check that this applies to you.
+- **Transfers can be blocked.** The issuer can block transfers to or from some addresses, such as sanctioned ones. A blocked send fails and nothing moves.
+- **Buying and selling.** You trade the token with other holders through Swap, at the market's price. Only Coinbase's approved partners can create or redeem tokens for real shares.
 
-If we offer these later, you'll likely need identity checks, and some countries or investor types may be excluded. You might be allowed to keep or redeem a holding but not buy more. If any required fact is missing or out of date, Aura won't offer access. A disclaimer is no substitute.
+## What Tether Gold is
 
-## Available on a blockchain isn't the same as allowed
+One XAUt is backed by one troy ounce of physical gold held for Tether. It's issued on Ethereum, not Base, so your Aura account holds it on Ethereum, at the same address as on Base. Buying it moves your money from Base to Ethereum through LI.FI, and the route's fees come out of the amount. Aura pays the Ethereum network fee when you send or sell it.
 
-A token may show in a wallet or trade on a decentralized exchange and still be wrong, or unlawful, for Aura to offer you. Being technically reachable doesn't settle securities, sanctions, consumer-protection, or tax questions.
+## Prices
 
-## Different tokens, different risks
+Aura values stocks and gold with Chainlink price feeds.
 
-A token backed by government bonds, a private-credit token, and a synthetic stock carry different issuer, liquidity, and legal risks. If we offer them, we'll show where any return comes from rather than one headline number.
+- **Stock prices** follow US market hours. At night, at weekends, and on holidays, the feed holds the last price. For a stock, it's the token's total-return value: the share price with the token's multiplier applied.
+- **Gold** uses Chainlink's gold price. Tether Gold usually trades close to it.
+- The Overview shows when each price was published, for example "Price as of Fri 4:00 PM".
+- If a price is more than four days old, Aura shows the value as unavailable rather than an old number.
 
-See the [risk disclosure](/legal/risk-disclosure/).
+## Risks
+
+A token's price can move quickly, and markets for these tokens can be thinner than for the shares or gold themselves. The issuer, the network, and the route you trade through each add their own risk. See the [risk disclosure](/legal/risk-disclosure/).

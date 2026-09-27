@@ -13,9 +13,11 @@ const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" 
 const groups: Array<{ key: HoldingGroup; title: string }> = [
   { key: "cash", title: "Cash" },
   { key: "crypto", title: "Crypto" },
+  { key: "stocks", title: "Stocks" },
+  { key: "metals", title: "Metals" },
   { key: "earn", title: "Earn" }
 ];
-const sources: Record<string, string> = { base: "Base", "aave:base": "Aave on Base", "sky:ethereum": "Sky on Ethereum" };
+const sources: Record<string, string> = { base: "Base", ethereum: "Ethereum", "aave:base": "Aave on Base", "sky:ethereum": "Sky on Ethereum" };
 
 function usdText(cents: number | null) {
   return cents === null ? "Unavailable" : usd.format(cents / 100);
@@ -31,13 +33,19 @@ function timeText(iso: string) {
   return new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
 }
 
+/** Stock, gold, and euro prices pause outside market hours; say when the one used was published. */
+function priceTime(iso: string) {
+  return new Date(iso).toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit" });
+}
+
 function HoldingRow({ holding, index }: { holding: Holding; index: number }) {
   return <div className="tableRow" data-testid={`holding-${holding.id}`}>
     <span className={`assetToken token${index % 3}`}>{holding.symbol.slice(0, 1)}</span>
     <span><strong>{holding.label}</strong><small>{holding.symbol}</small></span>
     <span>{sources[holding.source] ?? holding.source}</span>
     <span className="sensitiveAmount">{amountText(holding)}</span>
-    <span className="sensitiveAmount"><strong>{holding.status === "unavailable" ? "Unavailable" : usdText(holding.usdCents)}</strong></span>
+    <span className="sensitiveAmount"><strong>{holding.status === "unavailable" ? "Unavailable" : usdText(holding.usdCents)}</strong>
+      {holding.priceObservedAt && holding.usdCents !== null && <small>Price as of {priceTime(holding.priceObservedAt)}</small>}</span>
   </div>;
 }
 

@@ -14,17 +14,17 @@ Each asset is identified by network and contract, never by ticker:
 | `id`, `chainId`, `address` | `<chainId>:<lowercase contract>`, or `<chainId>:native` for the network's coin |
 | `symbol`, `name`, `decimals` | Must match the contract; `pnpm assets:check` verifies them on chain |
 | `category` | `cash`, `crypto`, `stock`, or `metal`. Cash is its own group in the Overview; the rest show under crypto. Crypto, stocks, and metals are also the categories in Invest |
-| `price` | How the dollar value is read, for totals and daily limits: `usd` (stablecoins at $1) or a Kraken market (`eth`, `btc`). A new kind of asset (gold, stocks) needs a new price source added in `lib/actions/valuation.ts` and `lib/overview/read.ts` first |
+| `price` | How the dollar value is read, for totals and daily limits: `usd` (dollar stablecoins at $1), a Kraken market (`eth`, `btc`), or a `chainlink` feed on Base (stocks, gold, the euro) with its decimals, name, and maximum age (four days, so weekend and holiday closes still count). A feed older than that, or with no positive answer, makes the value unavailable (`lib/assets/prices.ts`) |
 | `uses` | What it may be used for (below) |
 | `note` | Optional line shown to customers, for example what a wrapped asset represents |
 
 | Use | Where it applies | Checked on the server by |
 | --- | --- | --- |
-| `hold` | Read and shown in the Overview (Base only) | `lib/overview/read.ts` |
+| `hold` | Read and shown in the Overview. On Base, except an asset only issued elsewhere, which the account holds there at the same address (Tether Gold on Ethereum) | `lib/overview/read.ts` |
 | `deposit` | Added from a connected wallet on its network; bridged to the same asset on Base, which must have `hold` | `POST /api/deposits/quote` |
 | `send` | Sent from the Aura account, which holds funds on Base. It can arrive on another network where the same asset has `swap` (`sendDestinations`) | `buildTransfer` in `lib/actions/transfer.ts`; `GET /api/routes/quote` for other networks |
 | `swap` | Swapped, or received on another network through Swap or Send | `GET /api/routes/quote`, `GET /api/swap/assets` |
-| `invest` | Listed in Invest (Base only) | `lib/invest/catalog.ts`, then the route quote |
+| `invest` | Listed in Invest | `lib/invest/catalog.ts`, then the route quote |
 
 ## Adding an asset
 
@@ -32,7 +32,7 @@ Adding is a reviewed code change, so a mistaken or compromised admin account can
 
 1. Add an entry to `ASSETS` with the contract from the issuer's own documentation, and the uses it should have.
 2. If it needs a price source Aura doesn't have yet, add it first.
-3. Run `pnpm assets:check`. It confirms each contract exists, and that its decimals and symbol match the entry.
+3. Run `pnpm assets:check`. It confirms each contract exists, and that its decimals and symbol match the entry. For a `chainlink` price, it also checks the feed's name and decimals, and that it has a positive answer.
 4. Run `pnpm test:unit`, open a pull request, and merge. Dev deploys on merge.
 
 ## Pausing an asset
@@ -43,7 +43,11 @@ Use it when a stablecoin loses its peg, an issuer halts transfers, or a bridge o
 
 ## Tokenized stocks and metals
 
-They're added like any other asset, with category `stock` or `metal`, and appear in Invest once registered. Two technical checks matter before adding one:
+Registered today: the ten Coinbase tokenized stocks on Base (`AAPLc` … `TSLAc`) and Tether Gold (`XAUt`) on Ethereum.
 
-- **Transfers:** some issuers only allow transfers between approved wallets. A token like that fails in swaps and sends even though it's registered.
-- **Price:** the Overview and daily limits need a dollar price. Stablecoins and ETH/BTC are covered today; gold and stocks need a feed first.
+- **Coinbase stocks are B20 tokens.** They're precompiles, not deployed contracts: `eth_getCode` returns a one-byte `0xef` marker, which `assets:check` accepts. They use 8 decimals and standard ERC-20 transfers and events.
+- **Multiplier.** Dividends and splits change a multiplier instead of balances, so a token isn't permanently one share. Each Coinbase Chainlink feed reports the token's total-return value (share price × multiplier), so token amount × feed price is the dollar value. Aura doesn't show a share count.
+- **Transfers.** The issuer's policy can block addresses. A blocked transfer reverts and shows as failed.
+- **Eligibility.** Coinbase says these tokens are only for persons in eligible places outside the US. The product owner decided Aura lists them without its own eligibility check.
+- **Tether Gold** is only issued on Ethereum. The account holds it there, and buying it is a LI.FI route from Base. Its value uses Chainlink's XAU/USD feed on Base. Sends and sales are Ethereum actions, with gas sponsored by Privy on Ethereum. Aura pays that gas.
+- **Not on Base:** PAX Gold and S&P 500 or Nasdaq trackers. There's no reliable token for them yet, so they aren't registered. The only "XAUt"-like tokens on Base are a thin third-party wrapper (`oXAUT`) and an unrelated token at XAUt0's Arbitrum address. Neither is Tether Gold.

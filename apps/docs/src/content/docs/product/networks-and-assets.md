@@ -14,7 +14,7 @@ To add money from another network, use **Deposit > From your wallet**. Aura move
 | Network | Chain ID | Fee asset | What you can do |
 | --- | ---: | --- | --- |
 | Base | 8453 | ETH | Your Aura account: deposit, send, swap, invest, and earn with Aave |
-| Ethereum | 1 | ETH | Deposit ETH or USDC, swap, and Sky savings |
+| Ethereum | 1 | ETH | Deposit ETH or USDC, swap, Sky savings, and Tether Gold, which your account holds here |
 | Arbitrum | 42161 | ETH | Deposit ETH or USDC, and swap |
 | Optimism | 10 | ETH | Deposit ETH or USDC, and swap |
 | Polygon | 137 | POL | Deposit USDC, and swap |
@@ -31,8 +31,12 @@ On Base, your main balance view shows:
 
 - ETH;
 - USDC, at Circle's official Base contract;
+- EURC, Circle's euro stablecoin;
 - WETH, at Base's standard contract;
-- cbBTC, Coinbase's wrapped bitcoin.
+- cbBTC, Coinbase's wrapped bitcoin;
+- ten tokenized stocks issued by Coinbase. See [tokenized stocks and gold](/product/tokenized-markets/).
+
+It also shows Tether Gold (XAUt), which is only issued on Ethereum, so your account holds it there.
 
 A token can arrive at your address without showing in Aura. It hasn't disappeared. Aura just doesn't recognize or price it yet. Check unknown tokens on a block explorer, and don't interact with tokens you didn't expect.
 

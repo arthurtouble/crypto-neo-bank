@@ -1,19 +1,20 @@
 import { assetsFor, type AssetCategory } from "@/lib/assets/registry";
 
 /**
- * What Invest offers: the registry's assets with the "invest" use, all on
- * Base and bought through the shared LI.FI route module. A category with no
- * registered assets shows as not available yet.
+ * What Invest offers: the registry's assets with the "invest" use, bought
+ * through the shared LI.FI route module. They're on Base, except Tether Gold,
+ * which is held on Ethereum. A category with no registered assets shows as
+ * not available yet.
  */
 export type InvestCategory = "crypto" | "stocks" | "metals";
 
-export type InvestAsset = { assetId: string; symbol: string; name: string; decimals: number; category: InvestCategory; note?: string };
+export type InvestAsset = { assetId: string; chainId: number; symbol: string; name: string; decimals: number; category: InvestCategory; note?: string };
 
 const categoryOf: Partial<Record<AssetCategory, InvestCategory>> = { crypto: "crypto", stock: "stocks", metal: "metals" };
 
-export const investAssets: readonly InvestAsset[] = assetsFor("invest", 8453).flatMap((asset) => {
+export const investAssets: readonly InvestAsset[] = assetsFor("invest").flatMap((asset) => {
   const category = categoryOf[asset.category];
-  return category ? [{ assetId: asset.id, symbol: asset.symbol, name: asset.name, decimals: asset.decimals, category, ...(asset.note ? { note: asset.note } : {}) }] : [];
+  return category ? [{ assetId: asset.id, chainId: asset.chainId, symbol: asset.symbol, name: asset.name, decimals: asset.decimals, category, ...(asset.note ? { note: asset.note } : {}) }] : [];
 });
 
 const labels: Record<InvestCategory, string> = { crypto: "Crypto", stocks: "Stocks", metals: "Metals" };

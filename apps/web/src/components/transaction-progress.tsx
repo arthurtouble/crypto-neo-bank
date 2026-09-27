@@ -27,7 +27,7 @@ function copy(label: string, phase: ActionPhase, action: ActionView | null) {
   switch (action?.status) {
     case "settling": return action.destinationChainId
       ? { step: 3, title: `${label} sent`, detail: `It's waiting for the bridge to deliver it on ${networkName(action.destinationChainId)}, usually within 30 minutes. You can close this and track it in Transactions.` }
-      : { step: 3, title: `${label} sent`, detail: "It becomes final on Base in about 15 minutes. You can close this and track it in Transactions." };
+      : { step: 3, title: `${label} sent`, detail: `It becomes final on ${networkName(action.chainId)} in about 15 minutes. You can close this and track it in Transactions.` };
     case "confirmed": return { step: 3, title: `${label} complete`, detail: "The network confirmed it." };
     case "failed": return { step: 3, title: `${label} failed`, detail: failureText(action.failureReason) };
     case "expired": return { step: 3, title: `${label} not confirmed`, detail: "We didn't receive it in time. If you confirmed it in your wallet, check Transactions." };

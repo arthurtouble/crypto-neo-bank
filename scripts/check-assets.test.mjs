@@ -39,3 +39,26 @@ test("symbols decode from ABI strings and from bytes32", () => {
   assert.equal(decodeSymbol(abiString("cbBTC")), "cbBTC");
   assert.equal(decodeSymbol(`0x${Buffer.from("MKR").toString("hex").padEnd(64, "0")}`), "MKR");
 });
+
+test("a Base B20 token (a precompile with a 0xef marker) passes, and its Chainlink feed must match", async () => {
+  const stock = { ...token, symbol: "AAPLc", decimals: 8,
+    price: { kind: "chainlink", feed: "0x0000000000000000000000000000000000000fee", decimals: 8, maxAgeSeconds: 345600, label: "Coinbase AAPL" } };
+  const feedChain = ({ description = "Coinbase AAPL", feedDecimals = 8, answer = 34_151_300_000n } = {}) => async (_url, init) => {
+    const { method, params } = JSON.parse(init.body);
+    if (method === "eth_getCode") return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: "0xef" }));
+    const { to, data } = params[0];
+    const feed = to === stock.price.feed;
+    const result = data === "0x313ce567" ? word(feed ? feedDecimals : 8) : data === "0x95d89b41" ? abiString("AAPLc")
+      : data === "0x7284e416" ? abiString(description) : `0x${word(1).slice(2)}${word(answer).slice(2)}${word(0).slice(2).repeat(3)}`;
+    return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result }));
+  };
+  const passing = await checkAssets({ assets: [stock], fetcher: feedChain(), env: {} });
+  assert.equal(passing.ok, true);
+  assert.match(passing.lines[0], /price feed Coinbase AAPL/);
+  for (const [fetcher, reason] of [[feedChain({ description: "Coinbase AMZN" }), /price feed is "Coinbase AMZN"/],
+    [feedChain({ feedDecimals: 18 }), /price feed has 18 decimals/], [feedChain({ answer: 0n }), /no positive answer/]]) {
+    const result = await checkAssets({ assets: [stock], fetcher, env: {} });
+    assert.equal(result.ok, false);
+    assert.match(result.lines[0], reason);
+  }
+});

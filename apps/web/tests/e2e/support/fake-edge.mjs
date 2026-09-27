@@ -41,8 +41,13 @@ const abi = parseAbi([
   "struct Call3 { address target; bool allowFailure; bytes callData; }",
   "struct Result { bool success; bytes returnData; }",
   "function aggregate3(Call3[] calls) payable returns (Result[] returnData)",
-  "function getEthBalance(address addr) view returns (uint256 balance)"
+  "function getEthBalance(address addr) view returns (uint256 balance)",
+  // Chainlink price feeds.
+  "function latestRoundData() view returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound)"
 ]);
+
+/** Chainlink feeds on Base the fake answers, with 8 decimals: Apple, gold (XAU/USD), and the euro. */
+export const FEEDS = { apple: "0x787f13dea48db0897cbcdd985de77809d837f988", gold: "0x5213ebb69743b85644dbb6e25cdf994afbb8cf31", euro: "0xc91d87e81fab8f93699ecf7ee9b44d11e1d53f0f" };
 const ZERO = "0x0000000000000000000000000000000000000000";
 
 /** The Aave receipt token the fake reports for an underlying asset. Tests set its balance to give an Aave deposit. */
@@ -55,6 +60,9 @@ const initialState = () => ({
   // balances[chainId][token or "native"][owner] = raw amount as a decimal string
   balances: {},
   prices: { eth: "2500", btc: "60000" },
+  // Chainlink answers (dollars) and when they were published, in seconds ago. A feed not listed reverts.
+  feeds: { [FEEDS.apple]: "341.51", [FEEDS.gold]: "4285.62", [FEEDS.euro]: "1.14" },
+  feedAgeSeconds: 3600,
   // Names of edges that fail: "rpc:<chainId>", "kraken", "privy", "lifi".
   down: [],
   // The next transaction a connected wallet sends reverts on chain.
@@ -124,6 +132,8 @@ export function startFakeEdge({ port }) {
     const hash = `0x${randomBytes(32).toString("hex")}`;
     state.head += 1;
     state.txs[hash] = { ...tx, from: tx.from.toLowerCase(), to: tx.to.toLowerCase(), blockNumber: state.head };
+    // When everything is final, the chain has moved on: enough blocks for any network's confirmations (Ethereum needs 12).
+    if (state.finalizeAll) state.head += 64;
     return hash;
   }
 
@@ -233,6 +243,13 @@ export function startFakeEdge({ port }) {
     const { functionName, args } = decodeFunctionData({ abi, data });
     if (functionName === "getEthBalance") return encodeFunctionResult({ abi, functionName, result: balance(chainId, "native", args[0]) });
     if (functionName === "balanceOf") return encodeFunctionResult({ abi, functionName, result: balance(chainId, to, args[0]) });
+    if (functionName === "latestRoundData") {
+      const usd = state.feeds[to.toLowerCase()];
+      if (!usd) throw new Error("no feed");
+      const [whole, fraction = ""] = usd.split(".");
+      const updatedAt = BigInt(Math.floor(Date.now() / 1000) - state.feedAgeSeconds);
+      return encodeFunctionResult({ abi, functionName, result: [1n, BigInt(whole + fraction.padEnd(8, "0").slice(0, 8)), updatedAt, updatedAt, 1n] });
+    }
     if (functionName === "convertToAssets") return encodeFunctionResult({ abi, functionName, result: args[0] * SKY_RATE[0] / SKY_RATE[1] });
     if (functionName === "aggregate3") return encodeFunctionResult({ abi, functionName, result: args[0].map((call) => {
       try { return { success: true, returnData: ethCall(chainId, { to: call.target, data: call.callData }) }; }

@@ -15,9 +15,9 @@ Your Aura account is a wallet that Privy makes when you sign in, and you control
 | --- | --- | --- |
 | Overview | Your balances on Base, Aave positions, and Sky savings on Ethereum | Values come from live reads. If a read fails, Aura shows it as unavailable |
 | Deposit | Your address and QR code on Base, adding money from a connected wallet on Base, Ethereum, Arbitrum, Optimism, or Polygon, and paying by card through Privy | From another network, money is moved to the same asset on Base. Bank deposits are coming soon |
-| Send | Send ETH, USDC, WETH, or cbBTC to an address, a saved recipient, an Aura tag, or your own linked wallet, on Base or, for ETH and USDC, another network. Save new recipients with a name as you send | Your controls apply, and you confirm with your passkey. Bank payouts are coming soon |
+| Send | Send ETH, USDC, EURC, WETH, cbBTC, tokenized stocks, or Tether Gold to an address, a saved recipient, an Aura tag, or your own linked wallet, on Base or, for ETH and USDC, another network. Save new recipients with a name as you send | Your controls apply, and you confirm with your passkey. Bank payouts are coming soon |
 | Swap | Swap assets and move them between networks, using routes found by LI.FI | Quotes last 45 seconds. A move between networks is complete only when it arrives |
-| Invest | Buy crypto assets through the same routes as Swap | Tokenized stocks and metals aren't offered |
+| Invest | Buy crypto, ten Coinbase tokenized stocks, and Tether Gold through the same routes as Swap | Coinbase says its tokenized stocks are only for eligible people outside the US. Tether Gold is held on Ethereum |
 | Earn | Supply and withdraw on Aave (Base). Deposit to and withdraw from Sky savings (Ethereum) | Rates change. Neither is a bank deposit |
 | Transactions and Insights | Your Aura activity, plus chain and Aave history where available | Exports say what they cover |
 | Aura tag | A public page where people can pay you in crypto | Bank and card payments on the page aren't available |
@@ -31,7 +31,6 @@ Your Aura account is a wallet that Privy makes when you sign in, and you control
 | Bank accounts and bank transfers | Built with Bridge. Waiting for Bridge's approval. Bridge will verify your identity and hold the bank relationship |
 | Cards | Waiting for a card program with Rain or Bridge |
 | Cashback and rewards | Waiting for a funded partner program |
-| Tokenized stocks and metals | Depend on issuers being available. Not offered |
 | Card payments on Aura tag pages | Not available |
 | Borrowing | Not offered |
 
