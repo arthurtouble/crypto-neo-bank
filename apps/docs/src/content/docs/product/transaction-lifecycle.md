@@ -1,9 +1,9 @@
 ---
-title: Activity and transaction states
-description: What submitted, on its way, complete, failed, and not confirmed mean.
+title: Transactions and their status
+description: What Transactions lists, what pending, completed, failed, and not confirmed mean, and how exports and statements work.
 ---
 
-Transactions shows more than successful payments. It records what Aura saw at each step, so you can tell a request apart from a settled result. Getting a quote doesn't add anything to the list.
+Transactions lists the money you send, swap, move, and put in Earn with Aura, and the money you receive. Getting a quote doesn't add anything to the list. If you start something and don't confirm it in time, it shows as **Not confirmed**.
 
 ## How a money movement works
 
@@ -17,43 +17,54 @@ Transactions shows more than successful payments. It records what Aura saw at ea
 
 | Status | Meaning |
 | --- | --- |
-| **Blocked** | A feature switch or one of your controls stopped the request. Nothing was sent. |
-| **Submitted** | You confirmed and a transaction hash exists. Aura is still checking. |
-| **On its way** | A move between networks has left the first network. It hasn't arrived yet. |
-| **Complete** | The transaction matches what you reviewed, the network finalized it, and the expected transfer or deposit appeared. A move between networks must also arrive. |
-| **Failed** | The network rejected it, the route failed, or the result didn't match what you reviewed. Transactions shows the reason. |
-| **Not confirmed** | Aura didn't get a transaction hash in time. Check the transaction before you try again. This isn't the same as failed. |
+| **Pending** | You confirmed it, and it's on its way. Aura is checking it, or waiting for the network to make it final. A move between networks stays pending until it arrives. |
+| **Completed** | The transaction matches what you reviewed, the network made it final, and the expected transfer or deposit appeared. A move between networks must also arrive. |
+| **Failed** | The network rejected it, the route failed, or the result didn't match what you reviewed. The receipt shows the reason. |
+| **Not confirmed** | You didn't confirm it in time, so nothing was sent. Check your activity before you try again. This isn't the same as failed. |
 
-A transaction hash only proves something was submitted. Before Aura marks a transaction complete, it compares what was signed, and what it did, with what Aura prepared. A receipt alone isn't enough. Aura keeps checking until the network treats the transaction as final, because earlier blocks can occasionally be rewritten.
+A transaction hash only proves something was submitted. Before Aura marks a transaction completed, it compares what was signed, and what it did, with what Aura prepared. Aura keeps checking until the network treats the transaction as final, because earlier blocks can occasionally be rewritten. On Base that takes 15 to 25 minutes.
 
-Open any item to see its journey, step by step, with the time of each step. A send on Base goes from sent, to included on Base, to final and complete. A send to another network goes from sent from Base, to confirmed on Base, to delivered on the other network, to complete. Only the step in progress shows as loading, and the journey updates by itself while you watch. It's only ever added to, never edited. The blockchain or partner still decides whether it settled.
+Open any item to see its receipt. For something you did in Aura, the receipt shows its journey, step by step, with the time of each step. A send on Base goes from sent, to included on Base, to final and complete. A send to another network goes from sent from Base, to confirmed on Base, to delivered on the other network, to complete. The journey updates by itself while you watch. **Full history** opens the same transaction on its own page.
 
-Transactions can also show your Aave history from an outside source. Each record shows where it came from. Outside history doesn't mean Aura started or checked that transaction.
+## Money you receive
 
-## Exports
+Money sent to your Aura address shows as **Received**: a deposit from an exchange, a payment from someone else, or a transfer from your own wallet. Aura lists the assets it supports on the networks where your account holds them: Base, and Ethereum for Tether Gold. Tokens Aura doesn't support are left out, so unsolicited tokens don't clutter your list.
 
-Before it creates a file, the export dialog tells you what's in your current view. It shows how many rows have network receipts, how many came straight from the protocol, and how many have a US dollar estimate.
+A deposit is **Pending** until its network makes it final, then **Completed**. The receipt shows who sent it and a link to the network.
 
-- **Activity CSV** includes dates, amounts, statuses, sources, and transaction hashes.
-- **Tax Support CSV** adds where each record came from, with clearly marked blanks for tax classification and cost basis.
+Aura reads received money from Alchemy's record of the network, and doesn't store it. If that record can't be read, Transactions tells you some deposits may be missing, rather than showing none. The list shows your most recent deposits; a monthly statement covers a whole month. ETH sent to you by a smart contract, rather than a wallet, may not be listed.
 
-Aura doesn't guess a purchase price, gain or loss, or tax treatment when it doesn't have the evidence. Missing cost basis shows as **Unavailable**, and tax classification shows as **Review required**. The file supports your records. It isn't a bank statement, a tax return, or tax advice.
+The value shown for money you received is today's value, not its value when it arrived.
 
-Aave history comes in pages and can be temporarily unavailable. If the data is partial or missing, the export tells you. It won't pretend the file is complete.
+## Aave history
+
+Transactions can also show your Aave history, from Aave. Each record shows where it came from. Outside history doesn't mean Aura started or checked that transaction.
+
+## Exports and statements
+
+**Export** downloads a CSV file:
+
+- **This list** has the transactions you see, with your filters: date, description, status, amounts, assets, who it was with, estimated US dollar value, network, transaction, and source.
+- **Tax-support preview** is the same list, with blanks marked for tax classification and cost basis.
+- **Monthly statement** has everything in a calendar month, oldest first: what you did in Aura and money you received. If received money for that month can't all be read, Aura doesn't give you a statement that's missing it. Try again later.
+
+Aura doesn't guess a purchase price, gain or loss, or tax treatment. Missing cost basis shows as **Unavailable**, and tax classification shows as **Review required**. These files support your records. They aren't bank statements, tax returns, or tax advice.
+
+## Insights
+
+Insights adds up your completed transactions for a period: money in (received), money out (sent), put to work (added to Earn), and moved (swaps and moves between networks). Anything without a US dollar value is counted separately, never as zero. If received money can't all be read, money in shows as **Unavailable**.
 
 ## Moves between networks
 
-When you move an asset between networks, the first network confirming doesn't prove delivery. Transactions shows confirmation on Base and delivery on the other network as separate steps.
+When you move an asset between networks, the first network confirming doesn't prove delivery. The journey shows confirmation on Base and delivery on the other network as separate steps.
 
-Aura marks the move complete only after LI.FI reports delivery and Aura sees at least the minimum amount arrive. If less arrives, a refund is reported, or delivery fails, Transactions tells you.
+Aura marks the move completed only after LI.FI reports delivery and Aura sees at least the minimum amount arrive. If less arrives, a refund is reported, or delivery fails, the receipt tells you.
 
-If a move is unresolved for more than 15 minutes, our operations team is alerted. That starts an investigation. It doesn't mean the move failed.
+If a transaction is still waiting for the network after 15 minutes, or still pending after 2 hours, our operations team is alerted. That starts an investigation. It doesn't mean the transaction failed.
 
-## Replaced and repeated transactions
+## Before you retry
 
-A wallet can replace a pending transaction with a new one. Block explorers may then show the original as dropped or replaced. Aura keeps the full history rather than rewriting it as one request.
-
-Before retrying anything uncertain, check your wallet's activity and a block explorer. Repeating a transfer can mean paying twice.
+Before retrying anything uncertain, check Transactions and a block explorer. Repeating a transfer can mean paying twice.
 
 ## What Aura can't reverse
 

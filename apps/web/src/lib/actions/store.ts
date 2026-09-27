@@ -112,6 +112,14 @@ export async function listActions(db: D1Database, subject: string, limit = 50): 
   return rows.results.map(fromRow);
 }
 
+/** Every transaction hash the customer's actions produced, on either network, lowercased. */
+export async function listActionHashes(db: D1Database, subject: string): Promise<string[]> {
+  const rows = await db.prepare(`SELECT transaction_hash AS hash FROM actions WHERE subject_reference = ?1 AND transaction_hash IS NOT NULL
+    UNION SELECT destination_transaction_hash FROM actions WHERE subject_reference = ?1 AND destination_transaction_hash IS NOT NULL`)
+    .bind(subject).all<{ hash: string }>();
+  return rows.results.map((row) => row.hash.toLowerCase());
+}
+
 /** Settled or submitted actions created in [start, end), oldest first. */
 export async function listActionsBetween(db: D1Database, subject: string, start: Date, end: Date): Promise<StoredAction[]> {
   const rows = await db.prepare(`SELECT * FROM actions WHERE subject_reference = ? AND status NOT IN ('prepared', 'expired')

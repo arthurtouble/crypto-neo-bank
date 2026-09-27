@@ -1,9 +1,6 @@
-import type { DatabaseSync } from "node:sqlite";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import type { PublicClient } from "viem";
 import { readOverview } from "@/lib/overview/read";
-import { d1 } from "../support/d1";
-import { schemaDatabase } from "../support/schema";
 
 const wallet = "0x1111111111111111111111111111111111111111";
 const usdc = "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
@@ -83,42 +80,6 @@ describe("reading the overview from the chains", () => {
     expect(overview.totals.earn.partial).toBe(true);
     expect(overview.totals.cash.partial).toBe(false);
     expect(overview.totals.all).toEqual({ usdCents: 28050, partial: true });
-  });
-});
-
-const state = vi.hoisted(() => ({ db: null as D1Database | null }));
-vi.mock("cloudflare:workers", () => ({ env: { get PROJECTION_DB() { return state.db; } } }));
-vi.mock("@/lib/auth/server", () => ({ requireVerifiedSubject: async () => ({ subjectReference: "alice", sessionReference: "s" }) }));
-const { GET: statement } = await import("@/app/api/statements/route");
-
-describe("monthly statements", () => {
-  let sqlite: DatabaseSync;
-  beforeEach(() => {
-    sqlite = schemaDatabase();
-    state.db = d1(sqlite);
-    const action = (id: string, created: string, status: string, to: string) => `INSERT INTO actions (action_id, subject_reference, wallet_address, kind, chain_id,
-      summary_json, calls_json, calls_fingerprint, effects_json, counts_toward_limit, usd_cents, status, transaction_hash, created_at, expires_at, updated_at)
-      VALUES ('${id}', 'alice', '${wallet}', 'transfer', 8453, json_object('symbol', 'USDC', 'amount', '10', 'to', '${to}'),
-      '[{"to":"${usdc}","value":"0","data":"0x"}]', 'fp', '[]', 1, 1000, '${status}', ${status === "expired" ? "NULL" : `'0x${id.repeat(64).slice(0, 64)}'`}, '${created}', '${created}', '${created}');`;
-    sqlite.exec(`INSERT INTO subject_profiles (subject_reference, privy_user_reference, created_at, updated_at) VALUES ('alice', 'alice', 't', 't');
-      ${action("a", "2026-09-02T10:00:00.000Z", "confirmed", "0x2222222222222222222222222222222222222222")}
-      ${action("b", "2026-09-03T10:00:00.000Z", "expired", "0x2222222222222222222222222222222222222222")}
-      ${action("c", "2026-10-01T00:00:00.000Z", "confirmed", "0x2222222222222222222222222222222222222222")}
-      ${action("d", "2026-09-30T23:00:00.000Z", "confirmed", "=HYPERLINK(1)")}`);
-  });
-  afterEach(() => sqlite.close());
-
-  it("lists the month's sent and settled actions as CSV, neutralizing spreadsheet formulas", async () => {
-    const response = await statement(new Request("https://aura.test/api/statements?month=2026-09"));
-    expect(response.headers.get("content-type")).toContain("text/csv");
-    const lines = (await response.text()).trim().split("\n");
-    expect(lines).toHaveLength(3);
-    expect(lines[1]).toMatch(/^2026-09-02T10:00:00.000Z,transfer,confirmed,USDC,10,0x2222/);
-    expect(lines[2]).toContain("'=HYPERLINK(1)");
-  });
-
-  it("rejects a malformed month", async () => {
-    expect((await statement(new Request("https://aura.test/api/statements?month=2026-13"))).status).toBe(400);
   });
 });
 

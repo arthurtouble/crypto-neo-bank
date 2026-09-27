@@ -27,6 +27,7 @@ Use the helpers in `support/session.ts`:
 - `edge("/__reset")` clears the fake between tests.
 - `newCustomer({ connectedWallet: true })` also links a MetaMask-like wallet (`customer.externalWallets[0]`). It sends through the fake edge, which moves balances and keeps receipts like a chain. `edge("/__sent")` lists what it sent. `edge("/__state", { revertNext: true })` makes the next one revert.
 - `edge("/__state", { bridge: { status: "DONE", substatus: "COMPLETED" } })` sets what LI.FI reports for a bridge (`PENDING`, `COMPLETED`, or `REFUNDED`).
+- `edge("/__receive", { chainId, to, token, amount, from })` sends money to an address from outside Aura. The fake node answers Alchemy's `alchemy_getAssetTransfers` from its own transactions and logs, so it appears in Transactions; `down: ["transfers"]` makes that index fail.
 - `setFeature(page, "cross_chain", true)` flips a feature switch through the real operations API, as the test operator.
 - In the browser, `localStorage` `aura-e2e-wallet` = `reject` makes the connected wallet refuse, and `aura-e2e-card` = `fail` makes the card flow fail. Card payments are recorded in `window.__auraE2E.fundWallet`.
 

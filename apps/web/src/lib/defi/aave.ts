@@ -62,11 +62,6 @@ export type AaveBaseActivityItem = {
   asset?: string;
   amount?: string;
   estimatedUsd?: number;
-  destination: "Aave V3";
-  source: "Aave V3";
-  sourceKind: "chain";
-  authority: "Aave Protocol API and Base";
-  events: Array<{ type: "intent_confirmed"; occurredAt: string }>;
 };
 
 export type AaveBaseActivity = {
@@ -118,12 +113,7 @@ export function normalizeAaveBaseActivity(value: unknown): AaveBaseActivity {
       chainId: 8453,
       asset: typeof reserve?.symbol === "string" ? reserve.symbol : undefined,
       amount,
-      estimatedUsd: estimatedUsd !== undefined && Number.isFinite(estimatedUsd) ? estimatedUsd : undefined,
-      destination: "Aave V3",
-      source: "Aave V3",
-      sourceKind: "chain",
-      authority: "Aave Protocol API and Base",
-      events: [{ type: "intent_confirmed", occurredAt: createdAt }]
+      estimatedUsd: estimatedUsd !== undefined && Number.isFinite(estimatedUsd) ? estimatedUsd : undefined
     }];
   });
   const pageInfo = root?.pageInfo && typeof root.pageInfo === "object" && !Array.isArray(root.pageInfo) ? root.pageInfo as Record<string, unknown> : undefined;
