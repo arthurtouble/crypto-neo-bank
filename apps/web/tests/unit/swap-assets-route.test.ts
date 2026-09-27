@@ -26,12 +26,22 @@ describe("Swap asset catalog API", () => {
     const response = await request("?q=usd&chainIds=8453,1");
     expect(response.status).toBe(200);
     expect(response.headers.get("Cache-Control")).toBe("no-store");
-    const body = await response.json() as { assets: Array<{ id: string; verification: string; eligibility: string }>; source: string };
+    const body = await response.json() as { assets: Array<{ id: string; eligibility: string }>; source: string };
     expect(body.source).toBe("Aura registry");
     expect(body.assets.map((asset) => asset.id)).toEqual([baseUsdc, "1:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"]);
-    expect(body.assets.every((asset) => asset.verification === "verified" && asset.eligibility === "eligible")).toBe(true);
+    expect(body.assets.every((asset) => asset.eligibility === "eligible")).toBe(true);
     const byContract = await (await request("?q=0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf&chainIds=8453")).json() as { assets: Array<{ symbol: string }> };
     expect(byContract.assets.map((asset) => asset.symbol)).toEqual(["cbBTC"]);
+  });
+
+  it("lists only what the account can hold for the side that pays", async () => {
+    const all = await (await request("?q=usdc")).json() as { assets: Array<{ id: string }> };
+    const held = await (await request("?q=usdc&held=1")).json() as { assets: Array<{ id: string }> };
+    expect(all.assets.length).toBe(5);
+    expect(held.assets.map((asset) => asset.id)).toEqual([baseUsdc]);
+    const gold = await (await request("?q=gold&held=1")).json() as { assets: Array<{ id: string }> };
+    expect(gold.assets.map((asset) => asset.id)).toEqual(["1:0x68749665ff8d2d112fa859aa293f07a622782f38"]);
+    expect((await request("?q=x&held=yes")).status).toBe(400);
   });
 
   it("never finds a contract outside the registry, even by exact address", async () => {

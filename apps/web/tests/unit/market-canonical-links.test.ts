@@ -5,7 +5,8 @@ describe("canonical Market to Swap links", () => {
   it("maps reviewed Kraken market IDs, not matching symbols", () => {
     expect(marketSwapAssetId({ id: "eth-usd", symbol: "eth" })).toBe("8453:native");
     expect(marketSwapAssetId({ id: "usdc-usd", symbol: "usdc" })).toBe("8453:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913");
-    expect(marketSwapAssetId({ id: "link-usd", symbol: "link" })).toBe("8453:0x88fb150bdc53a65fe94dea0c9ba0a6daf8c6e196");
+    // LINK isn't a registered asset, so it has no Swap link.
+    expect(marketSwapAssetId({ id: "link-usd", symbol: "link" })).toBeNull();
     expect(marketSwapAssetId({ id: "unknown-usd", symbol: "eth" })).toBeNull();
     expect(marketSwapAssetId({ id: "eth-usd", symbol: "scam" })).toBeNull();
     expect(marketSwapAssetId({ id: "btc-usd", symbol: "btc" })).toBeNull();

@@ -20,7 +20,7 @@ class InvalidSearch extends Error {}
 function parseQuery(request: Request) {
   const params = new URL(request.url).searchParams;
   for (const key of params.keys()) {
-    if (!["q", "chainIds", "import"].includes(key) || params.getAll(key).length !== 1) throw new InvalidSearch("Invalid asset search.");
+    if (!["q", "chainIds", "import", "held"].includes(key) || params.getAll(key).length !== 1) throw new InvalidSearch("Invalid asset search.");
   }
   const imported = params.get("import");
   if (imported !== null) {
@@ -35,7 +35,9 @@ function parseQuery(request: Request) {
     return Number(value);
   });
   if (chainIds.length < 1 || chainIds.some((id) => !supportedIds.has(id)) || new Set(chainIds).size !== chainIds.length) throw new InvalidSearch("Unsupported network.");
-  return { kind: "search" as const, query, chainIds };
+  const held = params.get("held");
+  if (held !== null && held !== "1") throw new InvalidSearch("Invalid filter.");
+  return { kind: "search" as const, query, chainIds, held: held === "1" };
 }
 
 /** Swap's asset list: the registry's swappable assets, searchable. A contract outside the registry is never found. */
@@ -50,5 +52,5 @@ async (request: Request, { traceId }) => {
     if (!asset) return json({ error: "asset_not_found", message: "This asset isn't supported.", traceId }, 404);
     return json({ asset: catalogAsset(asset, (await pausedAssets(env.PROJECTION_DB)).get(asset.id)) });
   }
-  return json(await getCatalogPage(env.PROJECTION_DB, { query: input.query, chainIds: input.chainIds }));
+  return json(await getCatalogPage(env.PROJECTION_DB, { query: input.query, chainIds: input.chainIds, held: input.held }));
 });

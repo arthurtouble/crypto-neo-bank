@@ -107,13 +107,18 @@ export function useAction(options: { label?: string; onSettled?: (action: Action
   const run = useCallback((input: ActionInput) =>
     runPrepared(async () => (await api<{ action: ActionView }>("/api/actions", { method: "POST", json: input })).action), [api, runPrepared]);
 
+  // The poll reads these through refs: a screen that re-renders often (a quote countdown) must not restart its timer.
+  const pollDeps = useRef({ api, queryClient, toast });
+  useEffect(() => { pollDeps.current = { api, queryClient, toast }; }, [api, queryClient, toast]);
+  const actionId = action?.id ?? null;
   useEffect(() => {
-    if (phase !== "tracking" || !action) return;
+    if (phase !== "tracking" || !actionId) return;
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout>;
     const poll = async () => {
+      const { api, queryClient, toast } = pollDeps.current;
       try {
-        const current = (await api<{ action: ActionView }>(`/api/actions/${action.id}`)).action;
+        const current = (await api<{ action: ActionView }>(`/api/actions/${actionId}`)).action;
         if (cancelled) return;
         setAction(current);
         if (actionSettled(current)) {
@@ -131,7 +136,7 @@ export function useAction(options: { label?: string; onSettled?: (action: Action
     };
     timer = setTimeout(poll, POLL_MS);
     return () => { cancelled = true; clearTimeout(timer); };
-  }, [phase, action, api, queryClient, toast]);
+  }, [phase, actionId]);
 
   const reset = useCallback(() => { setPhase("idle"); setAction(null); setError(null); setOutcomeUnknown(false); }, []);
 
