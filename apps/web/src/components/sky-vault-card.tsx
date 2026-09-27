@@ -37,7 +37,7 @@ export function SkyVaultCard() {
         <label>USDC amount<input type="text" inputMode="decimal" value={amount} autoComplete="off" required disabled={locked}
           onChange={(event) => edit(() => setAmount(event.target.value))} placeholder="0 USDC" /></label></div>
       <button className="button primary" type="submit" disabled={locked || earn.phase === "done" || !walletAddress || !amount.trim()}>
-        {earn.phase === "preparing" ? "Checking" : earn.phase === "signing" ? "Confirm in your wallet" : earn.phase === "tracking" ? "Waiting for Ethereum"
+        {earn.phase === "preparing" ? "Checking" : earn.phase === "signing" ? "Confirm with your passkey" : earn.phase === "tracking" ? "Waiting for Ethereum"
           : earn.outcomeUnknown ? "Check Transactions first" : labels[direction]}</button>
       <TransactionProgress label={labels[direction]} phase={earn.phase} action={earn.action} outcomeUnknown={earn.outcomeUnknown} />
     </form>
