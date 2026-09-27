@@ -79,6 +79,40 @@ test("the Overview values every holding in dollars and totals cash, crypto, and 
   await expect(page.getByText(/total leaves them out/)).toHaveCount(0);
 });
 
+test("stocks, the euro, and Tether Gold on Ethereum are valued from their feeds, with the price time shown", async ({ page }) => {
+  const customer = await newCustomer();
+  await setBalances(customer.wallet, {
+    8453: { [ASSETS.usdc]: "10000000", [ASSETS.eurc]: "100000000", [ASSETS.apple]: "250000000" }, // 10 USDC, 100 EURC, 2.5 Apple
+    1: { [ASSETS.xaut]: "500000" }                                                                  // 0.5 XAUt, on Ethereum
+  });
+  await openOverview(page, customer);
+
+  await expect(page.getByTestId("total-cash")).toHaveText("$124.00", { timeout: 30_000 });
+  await expect(page.getByTestId("total-stocks")).toHaveText("$853.77");
+  await expect(page.getByTestId("total-metals")).toHaveText("$2,142.81");
+  await expect(page.getByTestId("portfolio-total")).toHaveText("$3,120.58");
+  await expect(page.getByRole("region", { name: "Stocks" })).toContainText("Apple");
+  await expect(row(page, `8453:${ASSETS.apple}`)).toContainText("2.5 AAPLc");
+  await expect(row(page, `8453:${ASSETS.apple}`)).toContainText("Price as of");
+  await expect(row(page, `1:${ASSETS.xaut}`)).toContainText("Ethereum");
+  await expect(row(page, `1:${ASSETS.xaut}`)).toContainText("0.5 XAUt");
+  await expect(row(page, `8453:${ASSETS.eurc}`)).toContainText("100 EURC");
+  await expect(row(page, `8453:${ASSETS.eurc}`)).toContainText("$114.00");
+});
+
+test("a feed older than four days leaves the value unavailable, never the old price", async ({ page }) => {
+  const customer = await newCustomer();
+  await setBalances(customer.wallet, { 8453: { [ASSETS.usdc]: "10000000", [ASSETS.apple]: "250000000" } });
+  await edge("/__state", { feedAgeSeconds: 5 * 24 * 3600 });
+  await openOverview(page, customer);
+
+  await expect(row(page, `8453:${ASSETS.apple}`)).toContainText("2.5 AAPLc", { timeout: 30_000 });
+  await expect(row(page, `8453:${ASSETS.apple}`)).toContainText("Unavailable");
+  await expect(row(page, `8453:${ASSETS.apple}`)).not.toContainText("Price as of");
+  await expect(page.getByTestId("portfolio-total")).toHaveText("$10.00");
+  await expect(page.getByText(/total leaves them out/)).toBeVisible();
+});
+
 test("a returning customer goes straight to the Overview", async ({ page }) => {
   const customer = await newCustomer();
   await setBalances(customer.wallet, { 8453: { [ASSETS.usdc]: "5000000" } });

@@ -17,7 +17,8 @@ export type AssetCategory = "cash" | "crypto" | "stock" | "metal";
 
 /**
  * What an asset may be used for.
- * - hold: read and shown in the Overview (Base only, where the account holds funds).
+ * - hold: read and shown in the Overview. The account holds funds on Base; an asset
+ *   that only exists on another network (Tether Gold on Ethereum) is held there, at the same address.
  * - deposit: added from a connected wallet on its network (bridged to Base if needed).
  * - send: sent from the Aura account.
  * - swap: bought or sold in Swap, or received on another network.
@@ -25,8 +26,16 @@ export type AssetCategory = "cash" | "crypto" | "stock" | "metal";
  */
 export type AssetUse = "hold" | "deposit" | "send" | "swap" | "invest";
 
-/** How the US dollar value is read, for totals and daily limits. */
-export type PriceSource = { kind: "usd" } | { kind: "kraken"; market: "eth" | "btc" };
+/**
+ * How the US dollar value is read, for totals and daily limits.
+ * - usd: a dollar stablecoin, counted at $1.
+ * - kraken: a fresh one-minute Kraken candle.
+ * - chainlink: a Chainlink feed on Base, in dollars per whole token. Stock and
+ *   forex feeds pause outside market hours and hold the last value, so a feed
+ *   may be up to `maxAgeSeconds` old; older than that, the value is unavailable.
+ */
+export type PriceSource = { kind: "usd" } | { kind: "kraken"; market: "eth" | "btc" }
+  | { kind: "chainlink"; feed: `0x${string}`; decimals: number; maxAgeSeconds: number; label: string };
 
 export type RegisteredAsset = {
   /** `<chainId>:<lowercase contract>` or `<chainId>:native`. */
@@ -80,6 +89,30 @@ export function sendDestinations(assetId: string): Array<{ chainId: number; name
 const usd: PriceSource = { kind: "usd" };
 const ether: PriceSource = { kind: "kraken", market: "eth" };
 const bitcoin: PriceSource = { kind: "kraken", market: "btc" };
+/** Weekends and a holiday Monday: a market-hours feed can hold Friday's close for up to four days. */
+const MARKET_HOURS_MAX_AGE = 4 * 24 * 3600;
+const chainlink = (feed: string, label: string): PriceSource =>
+  ({ kind: "chainlink", feed: feed.toLowerCase() as `0x${string}`, decimals: 8, maxAgeSeconds: MARKET_HOURS_MAX_AGE, label });
+
+/**
+ * Coinbase tokenized stocks on Base (B20 tokens, 8 decimals). One token isn't
+ * permanently one share: dividends and splits change a multiplier. Each feed
+ * reports the token's total-return value (share price × multiplier), so a
+ * token amount × the feed price is its dollar value. Only for persons in
+ * eligible places outside the US (Coinbase's terms).
+ */
+const STOCKS: ReadonlyArray<[symbol: string, name: string, address: string, feed: string]> = [
+  ["AAPLc", "Apple", "0xb200000000000000000000c2e324d24d7eecd1fb", "0x787f13dea48db0897cbcdd985de77809d837f988"],
+  ["AMZNc", "Amazon", "0xb200000000000000000000d9192b6b456483c2e8", "0x06a8e4b3abb3b7543d8396fb2b763d22820cb295"],
+  ["GOOGLc", "Alphabet", "0xb2000000000000000000002d0ba3164cc74f58b7", "0x5bf49e0ffa937ce2fff033c739ad7c634c4d34f2"],
+  ["METAc", "Meta Platforms", "0xb2000000000000000000008bc8786b856e61707c", "0x6526ae6797a76123638b863aee4dd27ba4e4b27d"],
+  ["MSFTc", "Microsoft", "0xb200000000000000000000ab99cfa739e253872b", "0xeb10a6c9aa7e537aed766c08c35dae35b321b18c"],
+  ["MSTRc", "Strategy", "0xb2000000000000000000004884b426556b92883d", "0xb3ce282cd188b35da0e38d8bc7d58e33173d202a"],
+  ["NVDAc", "NVIDIA", "0xb20000000000000000000078ee7ce2fe4908108c", "0x04689a41629776563e6822f76f2e57d148d28513"],
+  ["SNDKc", "Sandisk", "0xb200000000000000000000397293cb8cda9a10c5", "0x388b0dc46c0fb05a74bee0994fa5b02c6fcca2ea"],
+  ["SPCXc", "SpaceX", "0xb2000000000000000000007b9fcbd005511acbd5", "0x6a634b235903c4ad6376892180d6ff8612e3fa68"],
+  ["TSLAc", "Tesla", "0xb2000000000000000000001e800a7f5189430cd0", "0xfaf869185383a24f8cb00e27bda6b63b9905dcb4"]
+];
 
 function asset(chainId: number, address: `0x${string}` | null, details: Omit<RegisteredAsset, "id" | "chainId" | "address">): RegisteredAsset {
   const contract = address?.toLowerCase() as `0x${string}` | undefined;
@@ -93,6 +126,16 @@ export const ASSETS: readonly RegisteredAsset[] = [
   asset(BASE, "0x4200000000000000000000000000000000000006", { symbol: "WETH", name: "Wrapped Ether", decimals: 18, category: "crypto", price: ether, uses: ["hold", "send", "swap"] }),
   asset(BASE, "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf", { symbol: "cbBTC", name: "Bitcoin (Coinbase Wrapped BTC)", decimals: 8, category: "crypto", price: bitcoin,
     uses: ["hold", "send", "swap", "invest"], note: "Bitcoin held by Coinbase, 1:1" }),
+  asset(BASE, "0x60a3e35cc302bfa44cb288bc5a4f316fdb1adb42", { symbol: "EURC", name: "Euro Coin", decimals: 6, category: "cash",
+    price: chainlink("0xc91d87e81fab8f93699ecf7ee9b44d11e1d53f0f", "EUR / USD"), uses: ["hold", "deposit", "send", "swap"], note: "Euro stablecoin issued by Circle" }),
+  ...STOCKS.map(([symbol, name, address, feed]) => asset(BASE, address as `0x${string}`, { symbol, name, decimals: 8, category: "stock",
+    price: chainlink(feed, `Coinbase ${symbol.slice(0, -1)}`), uses: ["hold", "send", "swap", "invest"], note: `${name} stock, tokenized by Coinbase` })),
+
+  // Ethereum: Tether Gold isn't issued on Base, so the account holds it on Ethereum at the same address.
+  // One XAUt is one troy ounce of gold, valued with Chainlink's gold price.
+  asset(ETHEREUM, "0x68749665ff8d2d112fa859aa293f07a622782f38", { symbol: "XAUt", name: "Tether Gold", decimals: 6, category: "metal",
+    price: chainlink("0x5213ebb69743b85644dbb6e25cdf994afbb8cf31", "XAU / USD"), uses: ["hold", "send", "swap", "invest"],
+    note: "One troy ounce of gold, held on Ethereum" }),
 
   // Other networks: deposit sources, and destinations for sending to another network.
   asset(ETHEREUM, null, { symbol: "ETH", name: "Ether", decimals: 18, category: "crypto", price: ether, uses: ["deposit", "swap"] }),

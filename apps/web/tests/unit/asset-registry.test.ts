@@ -30,8 +30,16 @@ describe("the asset registry", () => {
     }
   });
 
-  it("holds, sends, and invests only on Base, where the account keeps funds", () => {
-    for (const use of ["hold", "send", "invest"] as const) expect(assetsFor(use).every((asset) => asset.chainId === 8453), use).toBe(true);
+  it("holds, sends, and invests on Base, where the account keeps funds, and only Tether Gold on Ethereum, where it's issued", () => {
+    for (const use of ["hold", "send", "invest"] as const) {
+      expect(assetsFor(use).filter((asset) => asset.chainId !== 8453).map((asset) => asset.id), use).toEqual(["1:0x68749665ff8d2d112fa859aa293f07a622782f38"]);
+    }
+  });
+
+  it("values every stock, gold, and the euro from a Chainlink feed on Base", () => {
+    for (const asset of ASSETS.filter((item) => item.category === "stock" || item.category === "metal" || item.symbol === "EURC")) {
+      expect(asset.price, asset.symbol).toMatchObject({ kind: "chainlink", decimals: 8, maxAgeSeconds: 4 * 24 * 3600 });
+    }
   });
 
   it("gives every deposit source the same asset on Base to land in, and every network something to deposit", () => {
@@ -40,12 +48,15 @@ describe("the asset registry", () => {
     expect(depositSource(137, "ETH")).toBeNull();
   });
 
-  it("offers today's assets: USDC, ETH, WETH, and cbBTC on Base, with ETH and USDC deposits from four other networks", () => {
-    expect(assetsFor("send").map((asset) => asset.symbol)).toEqual(["ETH", "USDC", "WETH", "cbBTC"]);
+  const STOCKS = ["AAPLc", "AMZNc", "GOOGLc", "METAc", "MSFTc", "MSTRc", "NVDAc", "SNDKc", "SPCXc", "TSLAc"];
+
+  it("offers today's assets: cash, crypto, the ten Coinbase stocks, and Tether Gold, with ETH and USDC deposits from four other networks", () => {
+    expect(assetsFor("send").map((asset) => asset.symbol)).toEqual(["ETH", "USDC", "WETH", "cbBTC", "EURC", ...STOCKS, "XAUt"]);
     expect(assetsFor("deposit").map((asset) => `${asset.symbol}@${asset.chainId}`)).toEqual(
-      ["ETH@8453", "USDC@8453", "ETH@1", "USDC@1", "ETH@42161", "USDC@42161", "ETH@10", "USDC@10", "USDC@137"]);
-    expect(investAssets.map((asset) => asset.symbol)).toEqual(["ETH", "cbBTC"]);
-    expect(investCategories.map((category) => [category.key, category.available])).toEqual([["crypto", true], ["stocks", false], ["metals", false]]);
+      ["ETH@8453", "USDC@8453", "EURC@8453", "ETH@1", "USDC@1", "ETH@42161", "USDC@42161", "ETH@10", "USDC@10", "USDC@137"]);
+    expect(investAssets.map((asset) => asset.symbol)).toEqual(["ETH", "cbBTC", ...STOCKS, "XAUt"]);
+    expect(investCategories.map((category) => [category.key, category.available])).toEqual([["crypto", true], ["stocks", true], ["metals", true]]);
+    expect(assetsFor("hold").filter((asset) => asset.category === "stock").every((asset) => asset.decimals === 8 && asset.id.startsWith("8453:0xb2"))).toBe(true);
   });
 
   it("finds an asset only for the uses it has", () => {
@@ -59,6 +70,15 @@ describe("the asset registry", () => {
     const kraken = vi.fn(async () => Response.json({ error: [], result: { XETHZUSD: [[Math.floor(Date.now() / 1000) - 30, "2000", "2000", "2000", "2000", "2000", "1", 1]] } }));
     expect(await valueAsset({ assetId: "8453:native", amountRaw: "500000000000000000", decimals: 18 }, { fetcher: kraken })).toMatchObject({ usdCents: 100000 });
     expect(await valueAsset({ assetId: "8453:0x1111111111111111111111111111111111111111", amountRaw: "1", decimals: 18 })).toEqual({ usdCents: null, source: null });
+  });
+
+  it("values a stock and gold from their feeds, and an unavailable feed as unknown", async () => {
+    const apple = "8453:0xb200000000000000000000c2e324d24d7eecd1fb";
+    const feed = vi.fn(async (source: { feed: string }) => ({ usd: source.feed === "0x787f13dea48db0897cbcdd985de77809d837f988" ? "341.51" : "4285.62", observedAt: "2026-09-25T20:00:00.000Z" }));
+    // 2.5 Apple tokens (8 decimals) at $341.51, rounded up for limits.
+    expect(await valueAsset({ assetId: apple, amountRaw: "250000000", decimals: 8 }, { feed })).toEqual({ usdCents: 85378, source: "chainlink:0x787f13dea48db0897cbcdd985de77809d837f988" });
+    expect(await valueAsset({ assetId: "1:0x68749665ff8d2d112fa859aa293f07a622782f38", amountRaw: "100000", decimals: 6 }, { feed })).toMatchObject({ usdCents: 42857 });
+    expect(await valueAsset({ assetId: apple, amountRaw: "250000000", decimals: 8 }, { feed: async () => null })).toEqual({ usdCents: null, source: null });
   });
 });
 

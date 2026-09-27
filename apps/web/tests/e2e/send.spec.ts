@@ -381,3 +381,30 @@ test("a token contract is refused as the recipient on another network too", asyn
   await expect(page.locator(".toastRegion")).toContainText("token contract");
   await setFeature(page, "cross_chain", false);
 });
+
+test("a tokenized stock can be sent on Base, and Tether Gold on Ethereum, where it's held", async ({ page }) => {
+  const customer = await newCustomer({ mfa: ["passkey"] });
+  await setBalances(customer.wallet, { 8453: { [ASSETS.usdc]: "1000000", [ASSETS.apple]: "300000000" }, 1: { [ASSETS.xaut]: "1000000" } });
+  await acceptTerms(page, customer);
+  await setIdentity(page, customer, { signedIn: true });
+  await page.goto("/app/send");
+  await expect(page.getByRole("heading", { name: "Send crypto" })).toBeVisible({ timeout: 30_000 });
+
+  await fillSend(page, { asset: "AAPLc", amount: "1.25", to: RECIPIENT });
+  await expect(dialog(page).getByLabel("Network").locator("option")).toHaveText(["Base"]);
+  await reviewAndConfirm(page);
+  await expect(toast(page, "Transfer complete")).toBeVisible({ timeout: 30_000 });
+  expect(await balance(page, customer, `8453:${ASSETS.apple}`)).toBe("175000000");
+  await page.locator(".toastRegion").getByRole("button").first().click().catch(() => undefined);
+  await dialog(page).getByRole("button", { name: "Close" }).click();
+
+  await fillSend(page, { asset: "XAUt", amount: "0.25", to: RECIPIENT });
+  await expect(dialog(page).getByLabel("Network").locator("option")).toHaveText(["Ethereum"]);
+  await expect(dialog(page)).toContainText("1 XAUt available");
+  await dialog(page).getByRole("button", { name: "Review" }).click();
+  await expect(page.getByTestId("send-review")).toContainText("NetworkEthereum");
+  await expect(page.getByTestId("send-review")).toContainText("Network feePaid by Aura");
+  await dialog(page).getByRole("button", { name: "Confirm and send" }).click();
+  await expect.poll(async () => (await relayed()).find((item) => item.chainId === 1)?.success, { timeout: 30_000 }).toBe(true);
+  await expect.poll(async () => balance(page, customer, `1:${ASSETS.xaut}`), { timeout: 30_000 }).toBe("750000");
+});

@@ -17,6 +17,8 @@ const PUBLIC_RPC = {
 };
 const DECIMALS = "0x313ce567";
 const SYMBOL = "0x95d89b41";
+const DESCRIPTION = "0x7284e416";
+const LATEST_ROUND = "0xfeaf968c";
 
 /** Decode an ABI string, or a bytes32 symbol as some older tokens return. */
 export function decodeSymbol(hex) {
@@ -47,13 +49,27 @@ export async function checkAssets({ assets = ASSETS, fetcher = fetch, env = proc
         lines.push(`ok    ${label}: native coin`);
         continue;
       }
+      // Base's B20 tokens (Coinbase stocks) are precompiles with a one-byte 0xef marker, not deployed bytecode.
       const code = await call(asset.chainId, "eth_getCode", [asset.address, "latest"]);
       if (!code || code === "0x") throw new Error("no contract code");
       const decimals = Number.parseInt(await call(asset.chainId, "eth_call", [{ to: asset.address, data: DECIMALS }, "latest"]), 16);
       if (decimals !== asset.decimals) throw new Error(`contract has ${decimals} decimals; the registry says ${asset.decimals}`);
       const symbol = decodeSymbol(await call(asset.chainId, "eth_call", [{ to: asset.address, data: SYMBOL }, "latest"]));
       if (symbol !== asset.symbol) throw new Error(`contract symbol is ${JSON.stringify(symbol)}; the registry says ${JSON.stringify(asset.symbol)}`);
-      lines.push(`ok    ${label}: contract, ${decimals} decimals, symbol ${symbol}`);
+      let feedNote = "";
+      if (asset.price?.kind === "chainlink") {
+        // Chainlink feeds are read on Base: the right feed, its decimals, and a positive answer.
+        const feed = asset.price.feed;
+        const description = decodeSymbol(await call(8453, "eth_call", [{ to: feed, data: DESCRIPTION }, "latest"]));
+        if (description !== asset.price.label) throw new Error(`price feed is ${JSON.stringify(description)}; the registry says ${JSON.stringify(asset.price.label)}`);
+        const feedDecimals = Number.parseInt(await call(8453, "eth_call", [{ to: feed, data: DECIMALS }, "latest"]), 16);
+        if (feedDecimals !== asset.price.decimals) throw new Error(`price feed has ${feedDecimals} decimals; the registry says ${asset.price.decimals}`);
+        const round = await call(8453, "eth_call", [{ to: feed, data: LATEST_ROUND }, "latest"]);
+        const answer = BigInt(`0x${round.slice(2 + 64, 2 + 128)}`);
+        if (answer === 0n || answer >= 2n ** 255n) throw new Error("price feed has no positive answer");
+        feedNote = `, price feed ${description}`;
+      }
+      lines.push(`ok    ${label}: contract, ${decimals} decimals, symbol ${symbol}${feedNote}`);
     } catch (error) {
       failures.push(label);
       lines.push(`FAIL  ${label}: ${error instanceof Error ? error.message : String(error)}`);

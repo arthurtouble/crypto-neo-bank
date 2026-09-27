@@ -5,9 +5,9 @@ sidebar:
   order: 2
 ---
 
-You can send ETH, USDC, WETH, or cbBTC from your Aura account. Send to any address, a saved recipient, a public Aura tag, or one of your own linked wallets.
+You can send ETH, USDC, EURC, WETH, cbBTC, the Coinbase tokenized stocks, and Tether Gold from your Aura account. Send to any address, a saved recipient, a public Aura tag, or one of your own linked wallets.
 
-Your money is held on Base. You can also choose the network it arrives on: ETH can go to Ethereum, Arbitrum, or Optimism, and USDC can go to those and Polygon. WETH and cbBTC are sent on Base only.
+Your money is held on Base. You can also choose the network it arrives on: ETH can go to Ethereum, Arbitrum, or Optimism, and USDC can go to those and Polygon. The other assets are sent on the network where your account holds them: Base, or Ethereum for Tether Gold.
 
 Aura checks that sending is switched on and applies any controls you've set. It won't send to your own Aura address or to a token's contract address. Then it builds the exact transaction.
 

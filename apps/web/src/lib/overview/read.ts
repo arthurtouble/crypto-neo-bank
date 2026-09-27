@@ -1,13 +1,15 @@
 import { createPublicClient, erc20Abi, fallback, getAddress, http, parseAbi, type PublicClient } from "viem";
 import { base, mainnet } from "viem/chains";
 import { krakenUsd } from "@/lib/actions/valuation";
+import { chainlinkUsd, type FeedPrice } from "@/lib/assets/prices";
 import { rpcEndpoints } from "@/lib/actions/chain";
 import { AAVE_BASE_ASSETS, AAVE_BASE_V3_MARKET } from "@/lib/defi/aave";
 import { SKY_SUSDS, skyVaultAbi } from "@/lib/defi/sky-call-policy";
 import { assetsFor, type PriceSource } from "@/lib/assets/registry";
 
-/** Cash is stablecoins in the account, crypto is other assets in the account, earn is Aave and Sky deposits. */
-export type HoldingGroup = "cash" | "crypto" | "earn";
+/** Cash is stablecoins, then crypto, tokenized stocks, and metals in the account; earn is Aave and Sky deposits. */
+export type HoldingGroup = "cash" | "crypto" | "stocks" | "metals" | "earn";
+const GROUP_OF = { cash: "cash", crypto: "crypto", stock: "stocks", metal: "metals" } as const;
 
 /** One balance, with where it came from and when. An unavailable read never shows a number. */
 export type Holding = {
@@ -21,6 +23,8 @@ export type Holding = {
   amountRaw: string | null;
   usdCents: number | null;
   observedAt: string;
+  /** When the price was last published, for a feed that pauses outside market hours (stocks, gold, the euro). */
+  priceObservedAt?: string;
 };
 
 export type Overview = {
@@ -31,7 +35,9 @@ export type Overview = {
   observedAt: string;
 };
 
-type Clients = { base: PublicClient; ethereum: PublicClient; price: (asset: "eth" | "btc") => Promise<string | null> };
+type Priced = Exclude<PriceSource, { kind: "usd" }>;
+type Clients = { base: PublicClient; ethereum: PublicClient; price: (source: Priced) => Promise<FeedPrice | null> };
+const ETHER: Priced = { kind: "kraken", market: "eth" };
 
 const poolAbi = parseAbi([
   "struct ReserveDataLegacy { uint256 configuration; uint128 liquidityIndex; uint128 currentLiquidityRate; uint128 variableBorrowIndex; uint128 currentVariableBorrowRate; uint128 currentStableBorrowRate; uint40 lastUpdateTimestamp; uint16 id; address aTokenAddress; address stableDebtTokenAddress; address variableDebtTokenAddress; address interestRateStrategyAddress; uint128 accruedToTreasury; uint128 unbacked; uint128 isolationModeTotalDebt; }",
@@ -44,9 +50,19 @@ function client(chain: typeof base | typeof mainnet): PublicClient {
 
 export function defaultClients(): Clients {
   const now = new Date();
-  const prices = new Map<string, Promise<string | null>>();
-  return { base: client(base), ethereum: client(mainnet),
-    price: (asset) => { if (!prices.has(asset)) prices.set(asset, krakenUsd(asset, now)); return prices.get(asset)!; } };
+  const baseClient = client(base);
+  const prices = new Map<string, Promise<FeedPrice | null>>();
+  const fetchPrice = async (source: Priced): Promise<FeedPrice | null> => {
+    if (source.kind === "chainlink") return chainlinkUsd(source, now, baseClient);
+    const usd = await krakenUsd(source.market, now);
+    return usd === null ? null : { usd, observedAt: now.toISOString() };
+  };
+  return { base: baseClient, ethereum: client(mainnet),
+    price: (source) => {
+      const key = source.kind === "chainlink" ? source.feed : source.market;
+      if (!prices.has(key)) prices.set(key, fetchPrice(source));
+      return prices.get(key)!;
+    } };
 }
 
 function cents(raw: bigint, decimals: number, price: string | null): number | null {
@@ -67,35 +83,42 @@ export async function readOverview(wallet: string, clients: Clients = defaultCli
   const owner = getAddress(wallet);
   const observedAt = now.toISOString();
   const read = async (id: string, group: HoldingGroup, label: string, symbol: string, decimals: number, source: string,
-    amount: () => Promise<bigint>, price: () => Promise<string | null>, keepZero = false): Promise<Holding | null> => {
+    amount: () => Promise<bigint>, price: () => Promise<FeedPrice | null>, keepZero = false): Promise<Holding | null> => {
     try {
       const raw = await amount();
       if (raw === 0n && !keepZero) return null;
-      return { id, group, label, symbol, decimals, source, status: "observed", amountRaw: raw.toString(), usdCents: raw === 0n ? 0 : cents(raw, decimals, await price()), observedAt };
+      const priced = raw === 0n ? null : await price();
+      return { id, group, label, symbol, decimals, source, status: "observed", amountRaw: raw.toString(),
+        usdCents: raw === 0n ? 0 : cents(raw, decimals, priced?.usd ?? null), observedAt,
+        ...(priced && priced.observedAt !== observedAt ? { priceObservedAt: priced.observedAt } : {}) };
     } catch {
       return { id, group, label, symbol, decimals, source, status: "unavailable", amountRaw: null, usdCents: null, observedAt };
     }
   };
-  const par = async () => "1";
-  const priceOf = (source: PriceSource) => source.kind === "usd" ? par : () => clients.price(source.market);
-  const token = (address: string) => () => clients.base.readContract({ address: address as `0x${string}`, abi: erc20Abi, functionName: "balanceOf", args: [owner] });
+  const par = async (): Promise<FeedPrice> => ({ usd: "1", observedAt });
+  const priceOf = (source: PriceSource) => source.kind === "usd" ? par : () => clients.price(source);
+  const networks = { 8453: { client: clients.base, source: "base" }, 1: { client: clients.ethereum, source: "ethereum" } } as const;
   const tasks: Array<Promise<Holding | null>> = [
-    // Every registered asset the account can hold on Base. Cash always shows, even at zero.
-    ...assetsFor("hold", 8453).map((asset) => read(asset.id, asset.category === "cash" ? "cash" : "crypto", asset.name, asset.symbol, asset.decimals, "base",
-      asset.address === null ? () => clients.base.getBalance({ address: owner }) : token(asset.address),
-      priceOf(asset.price), asset.category === "cash")),
+    // Every registered asset the account can hold, on Base and (for assets only issued there) Ethereum. USDC always shows, even at zero.
+    ...assetsFor("hold").map((asset) => {
+      const network = networks[asset.chainId as keyof typeof networks];
+      return read(asset.id, GROUP_OF[asset.category], asset.name, asset.symbol, asset.decimals, network.source,
+        asset.address === null ? () => network.client.getBalance({ address: owner })
+          : () => network.client.readContract({ address: asset.address!, abi: erc20Abi, functionName: "balanceOf", args: [owner] }),
+        priceOf(asset.price), asset.symbol === "USDC");
+    }),
     ...Object.entries(AAVE_BASE_ASSETS).map(([symbol, asset]) => read(`aave:8453:${asset.toLowerCase()}`, "earn", `Aave ${symbol}`, symbol,
       symbol === "USDC" ? 6 : 18, "aave:base", async () => {
         const reserve = await clients.base.readContract({ address: AAVE_BASE_V3_MARKET, abi: poolAbi, functionName: "getReserveData", args: [asset] });
         return clients.base.readContract({ address: reserve.aTokenAddress, abi: erc20Abi, functionName: "balanceOf", args: [owner] });
-      }, symbol === "USDC" ? par : () => clients.price("eth"))),
+      }, symbol === "USDC" ? par : () => clients.price(ETHER))),
     read("sky:1:susds", "earn", "Sky savings", "USDS", 18, "sky:ethereum", async () => {
       const shares = await clients.ethereum.readContract({ address: SKY_SUSDS, abi: skyVaultAbi, functionName: "balanceOf", args: [owner] });
       return shares === 0n ? 0n : clients.ethereum.readContract({ address: SKY_SUSDS, abi: skyVaultAbi, functionName: "convertToAssets", args: [shares] });
     }, par)
   ];
   const holdings = (await Promise.all(tasks)).filter((item): item is Holding => item !== null);
-  const totals = { cash: { usdCents: 0, partial: false }, crypto: { usdCents: 0, partial: false }, earn: { usdCents: 0, partial: false }, all: { usdCents: 0, partial: false } };
+  const totals = Object.fromEntries((["cash", "crypto", "stocks", "metals", "earn", "all"] as const).map((key) => [key, { usdCents: 0, partial: false }])) as Overview["totals"];
   for (const holding of holdings) {
     for (const total of [totals[holding.group], totals.all]) {
       if (holding.usdCents === null) total.partial = true;

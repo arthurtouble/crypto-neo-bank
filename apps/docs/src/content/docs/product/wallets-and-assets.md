@@ -25,12 +25,15 @@ Your main balance view shows:
 | --- | --- | --- |
 | ETH | Base | Crypto |
 | USDC | Base | Cash |
+| EURC | Base | Cash |
 | WETH | Base | Crypto |
 | cbBTC | Base | Crypto |
+| Ten Coinbase tokenized stocks | Base | Stocks |
+| Tether Gold (XAUt) | Ethereum | Metals |
 | Aave USDC and WETH you've supplied | Base | Earn |
 | Sky savings | Ethereum | Earn |
 
-Each item shows a US dollar value, and Overview adds them up into a total.
+Each item shows a US dollar value, and Overview adds them up into a total. Stock, gold, and euro prices pause outside market hours, so those rows say when their price was published.
 
 Balances can update at slightly different times in Aura, in your wallet, and on a block explorer. To confirm a payment, check the transaction on the right network's block explorer.
 

@@ -1,3 +1,4 @@
+import { chainlinkUsd } from "@/lib/assets/prices";
 import { registeredAsset } from "@/lib/assets/registry";
 import { localEdgeUrl } from "@/lib/testing/local-edge";
 
@@ -47,14 +48,20 @@ export async function krakenUsd(asset: KrakenAsset, now: Date, fetcher: typeof f
 /**
  * Each registered asset's price source decides its value. Stablecoins count
  * at $1 even below peg, so a depeg never lowers a limit check. Ether and
- * bitcoin use a fresh Kraken candle. Anything else uses the route provider's
- * quoted value when there is one.
+ * bitcoin use a fresh Kraken candle; stocks, gold, and the euro use their
+ * Chainlink feed within its allowed age. Anything else uses the route
+ * provider's quoted value when there is one.
  */
 export async function valueAsset(input: { assetId: string; amountRaw: string; decimals: number; quotedUsd?: string | null },
-  options: { now?: Date; fetcher?: typeof fetch } = {}): Promise<Valuation> {
+  options: { now?: Date; fetcher?: typeof fetch; feed?: typeof chainlinkUsd } = {}): Promise<Valuation> {
   const price = registeredAsset(input.assetId)?.price;
   const raw = BigInt(input.amountRaw);
   if (price?.kind === "usd") return { usdCents: centsOf(raw, input.decimals, { numerator: 1n, scale: 1n }), source: "stablecoin:par" };
+  if (price?.kind === "chainlink") {
+    const feed = await (options.feed ?? chainlinkUsd)(price, options.now ?? new Date());
+    const parsed = feed ? decimal(feed.usd) : null;
+    if (parsed && parsed.numerator > 0n) return { usdCents: centsOf(raw, input.decimals, parsed), source: `chainlink:${price.feed}` };
+  }
   const market: KrakenAsset | null = price?.kind === "kraken" ? price.market : null;
   if (market) {
     const price = await krakenUsd(market, options.now ?? new Date(), options.fetcher ?? fetch);

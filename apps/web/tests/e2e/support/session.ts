@@ -13,7 +13,11 @@ export const ASSETS = {
   cbbtc: "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf",
   aaveUsdc: aTokenFor("0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"),
   aaveWeth: aTokenFor("0x4200000000000000000000000000000000000006"),
-  skySavings: "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd"
+  skySavings: "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+  eurc: "0x60a3e35cc302bfa44cb288bc5a4f316fdb1adb42",
+  apple: "0xb200000000000000000000c2e324d24d7eecd1fb",
+  // Tether Gold, held on Ethereum.
+  xaut: "0x68749665ff8d2d112fa859aa293f07a622782f38"
 } as const;
 
 /** Change what the fake Privy, chains, and price feed return. */
