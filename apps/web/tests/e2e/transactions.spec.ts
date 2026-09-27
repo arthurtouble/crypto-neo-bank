@@ -1,0 +1,173 @@
+import { readFile } from "node:fs/promises";
+import type { Page } from "@playwright/test";
+import { expect, test } from "./support/fixtures";
+import { acceptTerms, ASSETS, edge, newCustomer, setBalances, setFeature, setIdentity, type Customer } from "./support/session";
+
+// Feature 7 in docs/overview/feature-readiness.md: Transactions. The chain
+// (and Alchemy's transfer index over it), Privy, and the passkey are the local
+// fake; Aura's pages, API routes, verifier, and D1 run for real.
+
+const FRIEND = "0x5555555555555555555555555555555555555555";
+const SPAM = "0x9999999999999999999999999999999999999999";
+const dialog = (page: Page) => page.getByRole("dialog");
+const rows = (page: Page) => page.locator(".activityRow");
+const month = () => new Date().toISOString().slice(0, 7);
+
+/** A signed-in customer with a passkey and 50 USDC on Base. */
+async function signIn(page: Page) {
+  const customer = await newCustomer({ mfa: ["passkey"] });
+  await setBalances(customer.wallet, { 8453: { [ASSETS.usdc]: "50000000" } });
+  await acceptTerms(page, customer);
+  await setIdentity(page, customer, { signedIn: true });
+  return customer;
+}
+
+/** Send 10 USDC to a friend through Send, as a customer would. */
+async function send(page: Page) {
+  await page.goto("/app/send");
+  await page.getByRole("button", { name: "Send", exact: true }).first().click();
+  await dialog(page).getByLabel("Amount").fill("10");
+  await dialog(page).getByLabel("To").fill(FRIEND);
+  await dialog(page).getByRole("button", { name: "Review" }).click();
+  await dialog(page).getByRole("button", { name: "Confirm and send" }).click();
+  await expect(page.locator(".toastRegion").getByText("Transfer complete", { exact: true })).toBeVisible({ timeout: 30_000 });
+}
+
+const receive = (customer: Customer, amount: string, token: string = ASSETS.usdc, chainId = 8453) => edge("/__receive", { chainId, to: customer.wallet, token, amount, from: FRIEND });
+
+async function download(page: Page, click: () => Promise<void>) {
+  const [file] = await Promise.all([page.waitForEvent("download"), click()]);
+  return readFile((await file.path())!, "utf8");
+}
+
+test.beforeEach(async ({ page }) => {
+  await edge("/__reset");
+  await setFeature(page, "direct_transfers", true);
+});
+
+test.beforeAll(async ({ request }) => {
+  await edge("/__reset");
+  const customer = await newCustomer();
+  for (const path of ["/app/transactions", "/app/insights", "/app/send", "/api/activity"]) await request.get(path, { headers: { Authorization: `Bearer ${customer.token}` }, timeout: 120_000 });
+});
+
+test("money sent and money received both show, with who, where, and a link to the network", async ({ page }) => {
+  const customer = await signIn(page);
+  await send(page);
+  await receive(customer, "20000000");
+  // Unregistered tokens sent to the account are never listed.
+  await receive(customer, "1000", SPAM);
+  await page.goto("/app/transactions");
+
+  await expect(rows(page)).toHaveCount(2, { timeout: 30_000 });
+  await expect(rows(page).nth(0)).toContainText("Received");
+  await expect(rows(page).nth(0)).toContainText("20 USDC");
+  await expect(rows(page).nth(0)).toContainText("Completed");
+  await expect(rows(page).nth(1)).toContainText("Sent");
+  await expect(rows(page).nth(1)).toContainText("10 USDC");
+
+  await rows(page).nth(0).click();
+  await expect(dialog(page)).toContainText(`From${FRIEND}`);
+  await expect(dialog(page)).toContainText("Alchemy, Base");
+  await expect(dialog(page).getByTestId("incoming-finality")).toHaveText("Final on Base.");
+  await expect(dialog(page).getByRole("link", { name: /View on the network/ })).toHaveAttribute("href", /^https:\/\/basescan\.org\/tx\/0x[0-9a-f]{64}$/);
+  await dialog(page).getByRole("button", { name: "Close" }).click();
+
+  await page.getByLabel("Category").selectOption("Received");
+  await expect(rows(page)).toHaveCount(1);
+  await page.getByLabel("Category").selectOption("Sent");
+  await expect(rows(page)).toHaveCount(1);
+  await expect(rows(page)).toContainText("Sent");
+  await page.getByLabel("Category").selectOption("All");
+  await page.getByPlaceholder("Search activity").fill("nothing like this");
+  await expect(page.getByText("No matching activity")).toBeVisible();
+
+  // The sent transaction's full history, described the same way.
+  await page.getByPlaceholder("Search activity").fill("");
+  await rows(page).nth(1).click();
+  await dialog(page).getByRole("link", { name: "Full history" }).click();
+  await expect(page.getByRole("heading", { name: "Sent 10 USDC" })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText("Completed").first()).toBeVisible();
+  await expect(page.getByText(FRIEND)).toBeVisible();
+});
+
+test("a deposit shows as pending until its block is final, then completes", async ({ page }) => {
+  await edge("/__state", { finalizeAll: false });
+  const customer = await signIn(page);
+  await receive(customer, "5000000");
+  await page.goto("/app/transactions");
+  await expect(rows(page)).toHaveCount(1, { timeout: 30_000 });
+  await expect(rows(page)).toContainText("Pending");
+  await page.getByLabel("Status").selectOption("Pending");
+  await expect(rows(page)).toHaveCount(1);
+  await rows(page).click();
+  await expect(dialog(page).getByTestId("incoming-finality")).toContainText("Waiting for Base to make it final");
+  await dialog(page).getByRole("button", { name: "Close" }).click();
+
+  await edge("/__state", { finalizeAll: true });
+  await page.reload();
+  await expect(rows(page).first()).toContainText("Completed", { timeout: 30_000 });
+});
+
+test("Tether Gold received on Ethereum is listed too", async ({ page }) => {
+  const customer = await signIn(page);
+  await receive(customer, "250000", ASSETS.xaut, 1);
+  await page.goto("/app/transactions");
+  await expect(rows(page)).toHaveCount(1, { timeout: 30_000 });
+  await expect(rows(page)).toContainText("0.25 XAUt");
+  await expect(rows(page)).toContainText("Ethereum");
+});
+
+test("an empty account says so", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/app/transactions");
+  await expect(page.getByText("No activity yet")).toBeVisible({ timeout: 30_000 });
+});
+
+test("when received money can't be read, the list says deposits may be missing and still shows what it has", async ({ page }) => {
+  const customer = await signIn(page);
+  await send(page);
+  await receive(customer, "20000000");
+  await edge("/__state", { down: ["transfers"] });
+  await page.goto("/app/transactions");
+  await expect(page.getByText("Money you received can't be read right now")).toBeVisible({ timeout: 30_000 });
+  await expect(rows(page)).toHaveCount(1);
+  await expect(rows(page)).toContainText("Sent");
+});
+
+test("the list exports as CSV, and a month downloads as a statement, or is refused when it can't be complete", async ({ page }) => {
+  const customer = await signIn(page);
+  await send(page);
+  await receive(customer, "20000000");
+  await page.goto("/app/transactions");
+  await expect(rows(page)).toHaveCount(2, { timeout: 30_000 });
+
+  await page.getByRole("button", { name: "Export" }).click();
+  const list = await download(page, () => dialog(page).getByRole("button", { name: /This list/ }).click());
+  expect(list.split("\n")[0]).toContain('"Date","Description","Status","Amount","Asset"');
+  expect(list).toContain('"Received","Completed","20","USDC"');
+  expect(list).toContain('"Sent","Completed","10","USDC"');
+
+  await expect(dialog(page).getByLabel("Monthly statement")).toHaveValue(month());
+  const statement = await download(page, () => dialog(page).getByRole("button", { name: "Download" }).click());
+  expect(statement.trim().split("\n")).toHaveLength(3);
+  expect(statement).toContain('"Received"');
+
+  await edge("/__state", { down: ["transfers"] });
+  await dialog(page).getByRole("button", { name: "Download" }).click();
+  await expect(dialog(page).getByRole("alert")).toContainText("can't all be read right now");
+});
+
+test("Insights counts money in and money out, and says when money in can't be known", async ({ page }) => {
+  const customer = await signIn(page);
+  await send(page);
+  await receive(customer, "20000000");
+  await page.goto("/app/insights");
+  await expect(page.getByTestId("money-in")).toHaveText("$20", { timeout: 30_000 });
+  await expect(page.getByTestId("money-out")).toHaveText("$10");
+
+  await edge("/__state", { down: ["transfers"] });
+  await page.reload();
+  await expect(page.getByTestId("money-in")).toHaveText("Unavailable", { timeout: 30_000 });
+  await expect(page.getByTestId("money-out")).toHaveText("$10");
+});

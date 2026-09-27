@@ -48,7 +48,7 @@ export async function buildRoute(db: D1Database, input: RouteInput, subject: str
     calls: callSchema.array().parse(JSON.parse(row.calls_json)),
     effects: effectSchema.array().parse(economics.effects),
     summary: { from: economics.from, to: economics.to, fromAmountRaw: row.from_amount_raw, toAmountRaw: row.to_amount_raw,
-      toAmountMinRaw: row.to_amount_min_raw, tool: row.tool, recipient, fromAmountUsd: economics.fromAmountUsd,
+      toAmountMinRaw: row.to_amount_min_raw, tool: row.tool, recipient, external, fromAmountUsd: economics.fromAmountUsd,
       networkFeeUsd: economics.networkFeeUsd, providerFeeUsd: economics.providerFeeUsd, priceImpactPercent: economics.priceImpactPercent },
     // Swapping or moving between the customer's own balances is not spending.
     countsTowardLimit: external,

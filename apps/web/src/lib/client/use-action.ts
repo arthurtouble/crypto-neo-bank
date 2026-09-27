@@ -14,7 +14,7 @@ export type ActionView = {
   id: string; kind: "transfer" | "earn" | "route"; chainId: number;
   status: "prepared" | "submitted" | "settling" | "confirmed" | "failed" | "expired";
   summary: Record<string, unknown>; calls?: Call[]; usdCents: number | null; transactionHash: string | null;
-  destinationChainId: number | null; destinationTransactionHash: string | null; failureReason: string | null;
+  destinationChainId: number | null; destinationTransactionHash: string | null; failureReason: string | null; createdAt: string;
 };
 
 export type ActionPhase = "idle" | "preparing" | "signing" | "tracking" | "done";

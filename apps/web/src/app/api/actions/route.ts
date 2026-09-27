@@ -1,6 +1,5 @@
 import { env } from "cloudflare:workers";
 import { actionInputSchema, prepareAction } from "@/lib/actions/prepare";
-import { listActions } from "@/lib/actions/store";
 import { requireVerifiedSubject } from "@/lib/auth/server";
 import { requireActionWallet, requireMoneyMfa } from "@/lib/auth/wallet";
 import { route } from "@/lib/http/route";
@@ -20,12 +19,4 @@ export const POST = route("actions.prepare", { invalid: "invalid_action", unavai
   const prepared = await prepareAction(env.PROJECTION_DB, subject.subjectReference, wallet, input);
   if (!prepared.ok) return Response.json({ error: prepared.block.code, message: prepared.block.message, traceId }, { status: 409 });
   return Response.json({ action: actionView(prepared.action), traceId }, { status: 201 });
-});
-
-/** The customer's recent actions, newest first. Prepared actions that were never signed are left out. */
-export const GET = route("actions.list", { unavailable: "actions_unavailable" }, async (request, { traceId }) => {
-  const subject = await requireVerifiedSubject(request);
-  await enforceRateLimit(env.PROJECTION_DB, { namespace: "actions_list", subject: subject.subjectReference, limit: 120, windowSeconds: 60 });
-  const limit = Math.min(100, Math.max(1, Number(new URL(request.url).searchParams.get("limit") ?? 50) || 50));
-  return Response.json({ actions: (await listActions(env.PROJECTION_DB, subject.subjectReference, limit)).map(actionView), traceId });
 });

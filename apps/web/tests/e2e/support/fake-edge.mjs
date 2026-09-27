@@ -90,7 +90,7 @@ const initialState = () => ({
   // Chainlink answers (dollars) and when they were published, in seconds ago. A feed not listed reverts.
   feeds: { [FEEDS.apple]: "341.51", [FEEDS.gold]: "4285.62", [FEEDS.euro]: "1.14" },
   feedAgeSeconds: 3600,
-  // Names of edges that fail: "rpc:<chainId>", "kraken", "privy", "lifi".
+  // Names of edges that fail: "rpc:<chainId>", "kraken", "privy", "lifi", "transfers" (Alchemy's transfer index).
   down: [],
   // The next transaction a connected wallet sends reverts on chain.
   revertNext: false,
@@ -163,7 +163,7 @@ export function startFakeEdge({ port }) {
   function mine(tx) {
     const hash = `0x${randomBytes(32).toString("hex")}`;
     state.head += 1;
-    state.txs[hash] = { ...tx, from: tx.from.toLowerCase(), to: tx.to.toLowerCase(), blockNumber: state.head };
+    state.txs[hash] = { ...tx, from: tx.from.toLowerCase(), to: tx.to.toLowerCase(), blockNumber: state.head, at: new Date().toISOString() };
     // When everything is final, the chain has moved on: enough blocks for any network's confirmations (Ethereum needs 12).
     if (state.finalizeAll) state.head += 64;
     return hash;
@@ -339,12 +339,43 @@ export function startFakeEdge({ port }) {
     throw new Error(`unsupported call ${functionName}`);
   }
 
+  /** Alchemy's transfer index: native and token transfers to an address, newest first, from the chain's own transactions and logs. */
+  function assetTransfers(chainId, { toAddress }) {
+    const owner = toAddress.toLowerCase();
+    const topic = encodeEventTopics({ abi: [transferEvent], eventName: "Transfer" })[0];
+    const rows = [];
+    for (const [hash, tx] of Object.entries(state.txs)) {
+      if (tx.chainId !== chainId || !tx.success) continue;
+      const common = { blockNum: `0x${tx.blockNumber.toString(16)}`, hash, to: owner, metadata: { blockTimestamp: tx.at } };
+      if (tx.to === owner && BigInt(tx.value ?? "0x0") > 0n) rows.push({ ...common, uniqueId: `${hash}:external`, from: tx.from, category: "external", rawContract: { value: tx.value, address: null } });
+      tx.logs.forEach((log, index) => {
+        if (log.topics?.[0] !== topic || `0x${log.topics[2].slice(26)}`.toLowerCase() !== owner) return;
+        rows.push({ ...common, uniqueId: `${hash}:log:${index}`, from: `0x${log.topics[1].slice(26)}`, category: "erc20", rawContract: { value: log.data, address: log.address } });
+      });
+    }
+    return { transfers: rows.sort((a, b) => Number.parseInt(b.blockNum, 16) - Number.parseInt(a.blockNum, 16)) };
+  }
+
+  /** Money arriving from outside Aura: someone sends a token (or ETH) to an address. */
+  function receive({ chainId, to, token = "native", amount, from = "0x5555555555555555555555555555555555555555" }) {
+    const value = BigInt(amount);
+    const key = token.toLowerCase();
+    state.balances[chainId] ??= {}; state.balances[chainId][key] ??= {};
+    state.balances[chainId][key][to.toLowerCase()] = (balance(chainId, key, to) + value).toString();
+    return key === "native"
+      ? mine({ chainId, from, to, value: `0x${value.toString(16)}`, input: "0x", success: true, logs: [] })
+      : mine({ chainId, from, to: key, value: "0x0", input: "0x", success: true, logs: [{ address: key,
+        topics: encodeEventTopics({ abi: [transferEvent], eventName: "Transfer", args: { from, to } }), data: encodeAbiParameters([{ type: "uint256" }], [value]) }] });
+  }
+
   function rpc(chainId, request) {
     const { id, method, params } = request;
     const result = (value) => ({ jsonrpc: "2.0", id, result: value });
     if (method === "eth_chainId") return result(`0x${chainId.toString(16)}`);
     if (method === "eth_blockNumber") return result(`0x${state.head.toString(16)}`);
     if (method === "eth_getBlockByNumber") return result(block(params[0]));
+    if (method === "alchemy_getAssetTransfers") return state.down.includes("transfers") ? { jsonrpc: "2.0", id, error: { code: -32000, message: "unavailable" } }
+      : result(assetTransfers(chainId, params[0]));
     if (method === "eth_getBalance") return result(`0x${balance(chainId, "native", params[0]).toString(16)}`);
     if (method === "eth_getTransactionReceipt") return result(receipt(params[0]));
     if (method === "eth_getTransactionByHash") {
@@ -449,6 +480,7 @@ export function startFakeEdge({ port }) {
       }
       return send(200, { ok: true });
     }
+    if (url.pathname === "/__receive") return send(200, { hash: receive(body) });
     if (url.pathname === "/__wallet/send") {
       if (down(`rpc:${body.chainId}`)) return send(503, { error: "unavailable" });
       return send(200, { hash: sendTransaction(body) });

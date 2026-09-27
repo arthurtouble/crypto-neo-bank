@@ -45,13 +45,15 @@ const rowLimit = 5_000;
 /** Everything exportable about one customer, table by table, with the retention reason. */
 export async function exportSubjectData(db: D1Database, subjectReference: string) {
   const exported = tables.filter((table) => subjectDataInventory[table].export);
-  const results = await db.batch(exported.map((table) =>
-    db.prepare(`SELECT * FROM ${table} WHERE subject_reference = ? LIMIT ${rowLimit + 1}`).bind(subjectReference)));
-  return Object.fromEntries(exported.map((table, index) => {
-    const rows = results[index].results;
-    return [table, { rows: rows.slice(0, rowLimit), truncated: rows.length > rowLimit, erasedOnDeletion: subjectDataInventory[table].erase,
-      reason: subjectDataInventory[table].reason }];
-  }));
+  const results = await db.batch([...exported.map((table) =>
+    db.prepare(`SELECT * FROM ${table} WHERE subject_reference = ? LIMIT ${rowLimit + 1}`).bind(subjectReference)),
+  // An action's status history has no subject column of its own; it belongs to the customer through the action.
+  db.prepare(`SELECT e.* FROM action_events e JOIN actions a ON a.action_id = e.action_id WHERE a.subject_reference = ? LIMIT ${rowLimit + 1}`).bind(subjectReference)]);
+  const section = (rows: unknown[], erase: boolean, reason: string) => ({ rows: rows.slice(0, rowLimit), truncated: rows.length > rowLimit, erasedOnDeletion: erase, reason });
+  return {
+    ...Object.fromEntries(exported.map((table, index) => [table, section(results[index].results, subjectDataInventory[table].erase, subjectDataInventory[table].reason)])),
+    action_events: section(results[exported.length].results, false, "Status history of financial transactions, kept with the actions")
+  };
 }
 
 /** Delete every erasable row in one batch; retained evidence is listed with its reason. */

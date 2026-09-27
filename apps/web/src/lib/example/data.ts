@@ -1,4 +1,3 @@
-import type { ActionView } from "@/lib/client/use-action";
 import type { Overview } from "@/lib/overview/read";
 
 /**
@@ -24,17 +23,6 @@ export const exampleOverview: Overview = {
   totals: { cash: { usdCents: 842000, partial: false }, crypto: { usdCents: 1438000, partial: false }, stocks: { usdCents: 409800, partial: false },
     metals: { usdCents: 214000, partial: false }, earn: { usdCents: 265000, partial: false }, all: { usdCents: 3168800, partial: false } }
 };
-
-const exampleAction = (id: string, kind: ActionView["kind"], summary: Record<string, unknown>, usdCents: number, created: string): ActionView & { createdAt: string } => ({
-  id, kind, chainId: 8453, status: "confirmed", summary, usdCents, transactionHash: null, destinationChainId: null,
-  destinationTransactionHash: null, failureReason: null, createdAt: created
-});
-
-export const exampleActions = [
-  exampleAction("example-1", "transfer", { symbol: "USDC", amount: "120", to: "0x000000000000000000000000000000000000e0b2" }, 12000, "2026-01-14T18:20:00.000Z"),
-  exampleAction("example-2", "route", { from: { symbol: "USDC", decimals: 6 }, to: { symbol: "cbBTC", decimals: 8 }, fromAmountRaw: "500000000", toAmountRaw: "830000" }, 50000, "2026-01-12T09:05:00.000Z"),
-  exampleAction("example-3", "earn", { protocol: "aave", direction: "deposit", symbol: "USDC", amount: "1000" }, 100000, "2026-01-08T15:40:00.000Z")
-];
 
 export const exampleSecurityPolicy = {
   accountLocked: false, enforceAddressBook: false, dailyLimitUsd: null, newAddressDelayHours: 4, policyVersion: 1, updatedAt: at, enforcement: "aura" as const

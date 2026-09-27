@@ -90,7 +90,11 @@ describe("data-rights requests", () => {
     INSERT INTO product_events (event_id, subject_reference, session_reference, event_name, surface, properties_json, occurred_at)
       VALUES ('e1', 'alice', 's', 'activation_viewed', '/app', '{}', '2026-09-25T00:00:00Z');
     INSERT INTO audit_events (audit_id, subject_reference, actor_type, actor_reference, action, target_type, target_reference, evidence_json, occurred_at)
-      VALUES ('a1', 'alice', 'customer', 'alice', 'x', 'y', 'z', '{}', '2026-09-25T00:00:00Z');`);
+      VALUES ('a1', 'alice', 'customer', 'alice', 'x', 'y', 'z', '{}', '2026-09-25T00:00:00Z');
+    INSERT INTO actions (action_id, subject_reference, wallet_address, kind, chain_id, summary_json, calls_json, calls_fingerprint, effects_json,
+      counts_toward_limit, status, created_at, expires_at, updated_at)
+      VALUES ('act1', 'alice', '0x1111111111111111111111111111111111111111', 'transfer', 8453, '{}', '[{"to":"0x833589fcd6edb6e08f4c7c32d4f71b54bda02913","value":"0","data":"0x"}]', 'fp', '[]', 1, 'prepared', 't', 't', 't');
+    INSERT INTO action_events (event_id, action_id, event_type, evidence_json, occurred_at) VALUES ('ev1', 'act1', 'prepared', '{}', 't');`);
   const open = async (requestType: "export" | "delete") => (await (await post(requestData, { requestType })).json() as { requestId: string }).requestId;
   const act = (id: string, action: string) => fulfil(new Request("https://aura.test", { method: "PATCH", body: JSON.stringify({ action }) }),
     { params: Promise.resolve({ requestId: id }) });
@@ -107,6 +111,8 @@ describe("data-rights requests", () => {
     expect(body.export.audit_events.rows.length).toBeGreaterThan(0);
     expect(body.export.audit_events.reason).toMatch(/audit/i);
     expect(body.export).not.toHaveProperty("action_passkey_challenges");
+    // A transaction's status history comes with it, although its table has no customer column.
+    expect(body.export.action_events.rows).toHaveLength(1);
   });
 
   it("erases erasable data, keeps evidence, and cannot be fulfilled twice", async () => {

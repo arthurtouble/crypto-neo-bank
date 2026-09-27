@@ -17,24 +17,17 @@ Saving a name does not authorize a transfer. Every transfer still passes authent
 
 ## Activity and receipts
 
-Activity is a rebuildable view of Aura actions and their observed chain or provider evidence. Each row can show:
+Transactions is a rebuildable view of Aura actions, money received without an action, and Aave history. Each row shows a description (Sent, Received, Swapped, Moved between networks, Added to Earn, Withdrawn from Earn), status, amount and asset (both sides for a swap), network, who it was with, and a link to the network. Aura actions also show their journey.
 
-- customer-facing description and category;
-- status;
-- amount and asset when present;
-- destination summary;
-- Aura reference and public transaction link when recorded.
-
-The CSV export is an **Aura activity record**, not a bank statement, tax statement, or complete wallet history. Provider statements and blockchain records remain authoritative.
+Exports (the list, a tax-support preview, and a monthly statement) are records of this activity, not bank statements, tax statements, or complete wallet histories. Provider statements and blockchain records remain authoritative.
 
 ## Status language
 
 | Aura display | Evidence |
 |---|---|
-| Submitted | A transaction hash was reported; verification is not finished. |
-| On its way | The source operation is confirmed; cross-chain delivery is not yet observed. |
-| Complete | Operation identity, finality, and expected effects (and delivery, for cross-chain) were verified. |
+| Pending | Submitted, or matched and waiting for finality or cross-chain delivery. For money received: waiting for finality. |
+| Completed | Operation identity, finality, and expected effects (and delivery, for cross-chain) were verified. For money received: its block is final. |
 | Failed | The chain, route, or verifier reported failure, with a reason. |
-| Not confirmed | No hash arrived before the action expired. The customer is told to check wallet activity; it is never shown as failed. |
+| Not confirmed | The action wasn't signed and submitted before it expired. Never shown as failed. |
 
 Source confirmation is never presented as cross-network destination delivery. Initial provider acceptance is never presented as completed bank settlement.

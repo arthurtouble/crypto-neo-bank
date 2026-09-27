@@ -41,12 +41,12 @@ const examples: Record<CustomerSection | "overview", Example> = {
   transactions: { title: "Transactions", items: [
     { label: "Sent", value: "250 USDC", note: "Example network transaction" },
     { label: "Swap", value: "100 USDC → ETH", note: "Example route" },
-    { label: "Card dispute", value: "Issuer required", note: "Contact support; issuer submission is not connected" }
+    { label: "Received", value: "500 USDC", note: "Example deposit from an exchange" }
   ] },
   insights: { title: "Insights", items: [
-    { label: "Spending", value: "$1,245", note: "Example monthly spending" },
-    { label: "Investments", value: "$5,960", note: "Example holdings" },
-    { label: "Coverage", value: "Complete", note: "Real gaps are shown, never filled in" }
+    { label: "Money in", value: "$1,500", note: "Example month of deposits" },
+    { label: "Money out", value: "$1,245", note: "Example month of sends" },
+    { label: "Put to work", value: "$1,000", note: "Example Earn deposits" }
   ] },
   settings: { title: "Settings", items: [
     { label: "Account", value: "Sign-in and passkeys", note: "Review current session and recovery" },
