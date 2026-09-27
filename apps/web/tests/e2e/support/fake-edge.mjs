@@ -333,7 +333,7 @@ export function startFakeEdge({ port }) {
       catch { return { success: false, returnData: "0x" }; }
     }) });
     if (functionName === "getReserveData") return encodeFunctionResult({ abi, functionName, result: {
-      configuration: 0n, liquidityIndex: 0n, currentLiquidityRate: 0n, variableBorrowIndex: 0n, currentVariableBorrowRate: 0n, currentStableBorrowRate: 0n,
+      configuration: 0n, liquidityIndex: 0n, currentLiquidityRate: 37_777_000_000_000_000_000_000_000n, variableBorrowIndex: 0n, currentVariableBorrowRate: 0n, currentStableBorrowRate: 0n,
       lastUpdateTimestamp: 0, id: 0, aTokenAddress: aTokenFor(args[0]), stableDebtTokenAddress: ZERO, variableDebtTokenAddress: ZERO,
       interestRateStrategyAddress: ZERO, accruedToTreasury: 0n, unbacked: 0n, isolationModeTotalDebt: 0n } });
     throw new Error(`unsupported call ${functionName}`);

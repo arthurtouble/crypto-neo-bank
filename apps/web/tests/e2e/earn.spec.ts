@@ -67,7 +67,8 @@ test("USDC goes into Aave and comes back out, checked against Aave's own events"
   const [supply] = await relayed();
   expect(supply.calls!.map((call) => call.to.toLowerCase())).toEqual([ASSETS.usdc, AAVE_POOL]);
   expect(await held(page, customer, `aave:8453:${ASSETS.usdc}`)).toBe("10000000");
-  await expect(page.getByTestId("position-aave-USDC")).toHaveText("Your position: 10 USDC", { timeout: 20_000 });
+  await expect(page.getByTestId("position-aave-USDC")).toContainText("(10 USDC when read)", { timeout: 20_000 });
+  await expect(page.getByTestId("position-aave-USDC").locator(".liveAmount")).toHaveText(/^\$10\.\d{8}$/);
 
   await page.locator(".toastRegion").getByRole("button").first().click().catch(() => undefined);
   await act(page, "Aave USDC", "Withdraw", "4");
@@ -82,7 +83,7 @@ test("USDC goes into a Morpho vault, and Withdraw all redeems every share", asyn
   await expect(toast(page, "Deposit complete")).toBeVisible({ timeout: 30_000 });
   const [deposit] = await relayed();
   expect(deposit.calls!.map((call) => call.to.toLowerCase())).toEqual([ASSETS.usdc, VAULTS.steakhouse]);
-  await expect(page.getByTestId("position-steakhouse-prime-usdc")).toContainText("Your position: 19.99", { timeout: 20_000 });
+  await expect(page.getByTestId("position-steakhouse-prime-usdc")).toContainText(/\(19\.99\d* USDC when read\)/, { timeout: 20_000 });
 
   await page.locator(".toastRegion").getByRole("button").first().click().catch(() => undefined);
   await form(page, "Steakhouse Prime USDC").getByLabel("Action").selectOption("withdraw");
@@ -95,7 +96,7 @@ test("USDC goes into a Morpho vault, and Withdraw all redeems every share", asyn
 test("an exact amount can be withdrawn from a Morpho vault", async ({ page }) => {
   // 100 Gauntlet shares, worth 105 USDC.
   const customer = await openEarn(page, { [VAULTS.gauntlet]: "100000000000000000000" });
-  await expect(page.getByTestId("position-gauntlet-usdc-prime")).toHaveText("Your position: 105 USDC", { timeout: 20_000 });
+  await expect(page.getByTestId("position-gauntlet-usdc-prime")).toContainText("(105 USDC when read)", { timeout: 20_000 });
   await act(page, "Gauntlet USDC Prime", "Withdraw", "30");
   await expect(toast(page, "Withdraw complete")).toBeVisible({ timeout: 30_000 });
   expect(await held(page, customer, `8453:${ASSETS.usdc}`)).toBe("30000000");
@@ -160,4 +161,20 @@ test("cancelling the passkey prompt deposits nothing", async ({ page }) => {
   await act(page, "Aave USDC", "Deposit", "5");
   await expect(toast(page, "Cancelled")).toBeVisible({ timeout: 20_000 });
   expect(await relayed()).toEqual([]);
+});
+
+test("a position grows in real time at its yearly rate, to 8 decimals", async ({ page }) => {
+  // 100 Steakhouse shares, worth 105 USDC, earning 4.41% a year.
+  await openEarn(page, { [VAULTS.steakhouse]: "100000000000000000000" });
+  const position = page.getByTestId("position-steakhouse-prime-usdc").locator(".liveAmount");
+  await expect(position).toHaveText(/^\$105\.\d{8}$/, { timeout: 20_000 });
+  const read = async () => Number((await position.textContent())!.replace(/[$,]/g, ""));
+  const first = await read();
+  await page.waitForTimeout(1_500);
+  expect(await read()).toBeGreaterThan(first);
+
+  // The Overview's Earn rows grow the same way.
+  await page.goto("/app");
+  await expect(page.getByTestId(`holding-morpho:8453:${VAULTS.steakhouse}`)).toContainText("Earning 4.41% a year", { timeout: 30_000 });
+  await expect(page.getByTestId(`holding-morpho:8453:${VAULTS.steakhouse}`).locator(".liveAmount")).toHaveText(/^\$105\.\d{8}$/);
 });

@@ -4,7 +4,7 @@ import { krakenUsd } from "@/lib/actions/valuation";
 import { chainlinkUsd, type FeedPrice } from "@/lib/assets/prices";
 import { rpcEndpoints } from "@/lib/actions/chain";
 import { AAVE_BASE_ASSETS, AAVE_BASE_V3_MARKET } from "@/lib/defi/aave";
-import { MORPHO_VAULTS, vaultAbi } from "@/lib/defi/morpho";
+import { MORPHO_VAULTS, morphoVaultRates, vaultAbi, type VaultRates } from "@/lib/defi/morpho";
 import { assetsFor, type PriceSource } from "@/lib/assets/registry";
 
 /** Cash is stablecoins, then crypto, tokenized stocks, and metals in the account; earn is Aave and Morpho deposits. */
@@ -25,6 +25,8 @@ export type Holding = {
   observedAt: string;
   /** When the price was last published, for a feed that pauses outside market hours (stocks, gold, the euro). */
   priceObservedAt?: string;
+  /** For an Earn position: the yearly rate it earns at, so a screen can show it growing between reads. */
+  apyPct?: number;
 };
 
 export type Overview = {
@@ -36,7 +38,14 @@ export type Overview = {
 };
 
 type Priced = Exclude<PriceSource, { kind: "usd" }>;
-type Clients = { base: PublicClient; ethereum: PublicClient; price: (source: Priced) => Promise<FeedPrice | null> };
+type Clients = { base: PublicClient; ethereum: PublicClient; price: (source: Priced) => Promise<FeedPrice | null>; vaultRates?: () => Promise<VaultRates> };
+
+/** Aave's liquidity rate is a per-second-compounded APR in ray (1e27); this is the yearly rate it compounds to. */
+export function aaveSupplyApyPct(liquidityRateRay: bigint | undefined): number | undefined {
+  if (typeof liquidityRateRay !== "bigint" || liquidityRateRay < 0n) return undefined;
+  const apr = Number(liquidityRateRay) / 1e27;
+  return Math.round((Math.expm1(apr)) * 1_000_000) / 10_000;
+}
 const ETHER: Priced = { kind: "kraken", market: "eth" };
 
 const poolAbi = parseAbi([
@@ -97,6 +106,9 @@ export async function readOverview(wallet: string, clients: Clients = defaultCli
   };
   const par = async (): Promise<FeedPrice> => ({ usd: "1", observedAt });
   const priceOf = (source: PriceSource) => source.kind === "usd" ? par : () => clients.price(source);
+  // Read Morpho's rates at most once, and only if the account has a vault position.
+  let rates: Promise<VaultRates> | null = null;
+  const vaultRates = () => (rates ??= (clients.vaultRates ?? (() => morphoVaultRates()))());
   const networks = { 8453: { client: clients.base, source: "base" }, 1: { client: clients.ethereum, source: "ethereum" } } as const;
   const tasks: Array<Promise<Holding | null>> = [
     // Every registered asset the account can hold, on Base and (for assets only issued there) Ethereum. USDC always shows, even at zero.
@@ -107,16 +119,26 @@ export async function readOverview(wallet: string, clients: Clients = defaultCli
           : () => network.client.readContract({ address: asset.address!, abi: erc20Abi, functionName: "balanceOf", args: [owner] }),
         priceOf(asset.price), asset.symbol === "USDC");
     }),
-    ...Object.entries(AAVE_BASE_ASSETS).map(([symbol, asset]) => read(`aave:8453:${asset.toLowerCase()}`, "earn", `Aave ${symbol}`, symbol,
-      symbol === "USDC" ? 6 : 18, "aave:base", async () => {
+    ...Object.entries(AAVE_BASE_ASSETS).map(async ([symbol, asset]) => {
+      // The reserve gives both the aToken to read and the rate the position earns at.
+      let apyPct: number | undefined;
+      const holding = await read(`aave:8453:${asset.toLowerCase()}`, "earn", `Aave ${symbol}`, symbol, symbol === "USDC" ? 6 : 18, "aave:base", async () => {
         const reserve = await clients.base.readContract({ address: AAVE_BASE_V3_MARKET, abi: poolAbi, functionName: "getReserveData", args: [asset] });
+        apyPct = aaveSupplyApyPct(reserve.currentLiquidityRate);
         return clients.base.readContract({ address: reserve.aTokenAddress, abi: erc20Abi, functionName: "balanceOf", args: [owner] });
-      }, symbol === "USDC" ? par : () => clients.price(ETHER))),
-    // Morpho vault shares, valued at what they redeem for in USDC.
-    ...MORPHO_VAULTS.map((vault) => read(`morpho:8453:${vault.address}`, "earn", vault.name, vault.assetSymbol, vault.assetDecimals, "morpho:base", async () => {
-      const shares = await clients.base.readContract({ address: vault.address, abi: vaultAbi, functionName: "balanceOf", args: [owner] });
-      return shares === 0n ? 0n : clients.base.readContract({ address: vault.address, abi: vaultAbi, functionName: "convertToAssets", args: [shares] });
-    }, par))
+      }, symbol === "USDC" ? par : () => clients.price(ETHER));
+      return holding && apyPct !== undefined ? { ...holding, apyPct } : holding;
+    }),
+    // Morpho vault shares, valued at what they redeem for in USDC, with each vault's net rate from Morpho when it can be read.
+    ...MORPHO_VAULTS.map(async (vault) => {
+      const holding = await read(`morpho:8453:${vault.address}`, "earn", vault.name, vault.assetSymbol, vault.assetDecimals, "morpho:base", async () => {
+        const shares = await clients.base.readContract({ address: vault.address, abi: vaultAbi, functionName: "balanceOf", args: [owner] });
+        return shares === 0n ? 0n : clients.base.readContract({ address: vault.address, abi: vaultAbi, functionName: "convertToAssets", args: [shares] });
+      }, par);
+      if (!holding || holding.status !== "observed") return holding;
+      const rate = (await vaultRates())?.rates.find((item) => item.vaultId === vault.id);
+      return rate ? { ...holding, apyPct: rate.netApyPct } : holding;
+    })
   ];
   const holdings = (await Promise.all(tasks)).filter((item): item is Holding => item !== null);
   const totals = Object.fromEntries((["cash", "crypto", "stocks", "metals", "earn", "all"] as const).map((key) => [key, { usdCents: 0, partial: false }])) as Overview["totals"];

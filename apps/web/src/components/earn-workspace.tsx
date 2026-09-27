@@ -7,6 +7,7 @@ import { useAuraWallet } from "@/lib/client/use-aura-wallet";
 import { useOverview } from "@/lib/client/queries";
 import type { AaveBaseReserve } from "@/lib/defi/aave";
 import { EarnAction, type EarnOption } from "./earn-action";
+import { LiveAmount, positionUsd } from "./live-amount";
 
 type AaveResponse = { reserves: AaveBaseReserve[]; observedAt: string };
 type VaultsResponse = { vaults: Array<{ id: string; address: string; name: string; curator: string; assetSymbol: string;
@@ -79,8 +80,10 @@ export function EarnWorkspace() {
             <div><span>Can be withdrawn now</span><strong>{card.liquidity ?? "Unavailable"}</strong></div>
             <div><span>Total deposits</span><strong>{card.deposits ?? "Unavailable"}</strong></div>
           </div>
-          <p className="authorityFootnote" data-testid={`position-${card.key}`}>Your position: {held?.status === "observed" && held.amountRaw
-            ? `${Number(held.amountRaw) / 10 ** held.decimals} ${held.symbol}` : held?.status === "unavailable" ? "Unavailable" : `0 ${card.symbol}`}</p>
+          <p className="authorityFootnote" data-testid={`position-${card.key}`}>Your position: {held?.status === "unavailable" ? "Unavailable"
+            : held?.amountRaw && held.amountRaw !== "0" && positionUsd(held) !== null
+              ? <><LiveAmount usd={positionUsd(held)!} apyPct={held.apyPct} observedAt={held.observedAt} /> ({Number(held.amountRaw) / 10 ** held.decimals} {held.symbol} when read)</>
+              : held?.amountRaw && held.amountRaw !== "0" ? `${Number(held.amountRaw) / 10 ** held.decimals} ${held.symbol}` : `0 ${card.symbol}`}</p>
           <EarnAction option={card.option} symbol={card.symbol} hasPosition={Boolean(held?.amountRaw && held.amountRaw !== "0")} />
         </article>;
       })}

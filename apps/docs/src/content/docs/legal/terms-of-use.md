@@ -43,7 +43,7 @@ Through Aura you can:
 - send assets on Base to an address or an Aura tag;
 - swap assets, and move them to or from other networks, using routes found by LI.FI, an independent service that chooses among third-party bridges and exchanges;
 - buy crypto assets through those same routes;
-- supply and withdraw assets on Aave, a lending protocol on Base, and deposit into and withdraw from Sky savings (sUSDS) on Ethereum;
+- supply and withdraw assets on Aave, a lending protocol on Base, and deposit USDC into and withdraw it from reviewed Morpho vaults on Base;
 - create a public Aura tag payment page; and
 - manage your settings, data, and support cases.
 
@@ -85,7 +85,7 @@ Never share a seed phrase, private key, recovery secret, or one-time code with a
 
 ## 8. Third-party services
 
-Privy, LI.FI and the bridges and exchanges it routes through, Aave, Sky, Spark, Base, Ethereum and other networks, token issuers, and any partner we add later are independent of us. Their own terms and privacy notices apply.
+Privy, LI.FI and the bridges and exchanges it routes through, Aave, Morpho and the vault curators, Base, Ethereum and other networks, token issuers, and any partner we add later are independent of us. Their own terms and privacy notices apply.
 
 We don't control their availability, contracts, governance, security, pricing, or decisions. Showing a quote, route, asset, or protocol is not an endorsement. It is not a statement that it suits you.
 

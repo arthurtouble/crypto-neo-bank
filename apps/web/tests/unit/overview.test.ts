@@ -23,7 +23,8 @@ function fakeClient(reads: (call: Read) => unknown, balance?: () => bigint): Pub
 
 const baseReads = (call: Read) => {
   const address = call.address.toLowerCase();
-  if (call.functionName === "getReserveData") return { aTokenAddress: address === "0xa238dd80c259a72e81d7e4664a9801593f98d1c5" && String(call.args?.[0]).toLowerCase() === usdc ? aUsdc : "0x0000000000000000000000000000000000000001" };
+  // 3.85% a year as Aave's per-second APR in ray: ln(1.0385) ≈ 0.037777.
+  if (call.functionName === "getReserveData") return { currentLiquidityRate: 37_777_000_000_000_000_000_000_000n, aTokenAddress: address === "0xa238dd80c259a72e81d7e4664a9801593f98d1c5" && String(call.args?.[0]).toLowerCase() === usdc ? aUsdc : "0x0000000000000000000000000000000000000001" };
   if (address === usdc) return 125_500_000n;
   if (address === cbbtc) return 1_000_000n;
   if (address === aUsdc) return 50_000_000n;
@@ -42,7 +43,9 @@ describe("reading the overview from the chains", () => {
       ethereum: fakeClient((call) => { if (call.functionName === "balanceOf") return call.address.toLowerCase() === xaut ? 500_000n : 0n; throw new Error("unexpected"); }),
       price: async (source) => source.kind === "chainlink"
         ? { usd: source.label === "XAU / USD" ? "4285.62" : "341.51", observedAt: friday }
-        : { usd: source.market === "btc" ? "60000.5" : "2500", observedAt: now.toISOString() }
+        : { usd: source.market === "btc" ? "60000.5" : "2500", observedAt: now.toISOString() },
+      vaultRates: async () => ({ rates: [{ vaultId: "gauntlet-usdc-prime", netApyPct: 4.38, totalAssetsUsd: 1, liquidityUsd: 1 },
+        { vaultId: "steakhouse-prime-usdc", netApyPct: 4.41, totalAssetsUsd: 1, liquidityUsd: 1 }], observedAt: now.toISOString(), source: "Morpho API" })
     }, now);
     expect(overview.holdings.map((item) => [item.group, item.symbol, item.source, item.amountRaw, item.usdCents])).toEqual([
       // Registry order; the page groups them.
@@ -55,6 +58,8 @@ describe("reading the overview from the chains", () => {
       ["earn", "USDC", "aave:base", "50000000", 5000],
       ["earn", "USDC", "morpho:base", "105000000", 10500]
     ]);
+    // Earn positions carry the yearly rate they grow at: Aave's from its reserve, Morpho's from its API.
+    expect(overview.holdings.filter((item) => item.group === "earn").map((item) => [item.source, item.apyPct])).toEqual([["aave:base", 3.85], ["morpho:base", 4.38]]);
     // A feed that pauses outside market hours says when its price was published; live prices don't.
     expect(overview.holdings.find((item) => item.symbol === "AAPLc")?.priceObservedAt).toBe(friday);
     expect(overview.holdings.find((item) => item.symbol === "ETH")?.priceObservedAt).toBeUndefined();
@@ -114,5 +119,21 @@ describe("monthly statements", () => {
 
   it("rejects a malformed month", async () => {
     expect((await statement(new Request("https://aura.test/api/statements?month=2026-13"))).status).toBe(400);
+  });
+});
+
+describe("an Earn position growing between reads", () => {
+  it("compounds at the yearly rate from the last chain value, and never shrinks", async () => {
+    const { grownAmount } = await import("@/components/live-amount");
+    const at = "2026-01-01T00:00:00.000Z";
+    expect(grownAmount(100, 5, at, Date.parse("2027-01-01T00:00:00.000Z"))).toBeCloseTo(105, 6);
+    expect(grownAmount(100, 5, at, Date.parse(at) + 1000)).toBeGreaterThan(100);
+    expect(grownAmount(100, 5, at, Date.parse(at) - 5000)).toBe(100);
+  });
+
+  it("turns Aave's ray APR into the rate it compounds to", async () => {
+    const { aaveSupplyApyPct } = await import("@/lib/overview/read");
+    expect(aaveSupplyApyPct(37_777_000_000_000_000_000_000_000n)).toBe(3.85);
+    expect(aaveSupplyApyPct(undefined)).toBeUndefined();
   });
 });

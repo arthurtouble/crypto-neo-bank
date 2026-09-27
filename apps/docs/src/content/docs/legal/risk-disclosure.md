@@ -41,9 +41,9 @@ A stablecoin can lose its target price, become hard to sell, be frozen, or fail.
 
 ## Earn risk
 
-Aave and Sky rates are variable. They can fall to zero, or be outweighed by losses on the token, fees, tax, difficulty withdrawing, or protocol failure.
+Aave and Morpho vault rates are variable. They can fall to zero, or be outweighed by losses on the token, fees, tax, difficulty withdrawing, or protocol failure.
 
-A position in Aave or Sky is not a bank deposit. It is not covered by deposit insurance unless a specific regulated product says otherwise.
+A position in Aave or a Morpho vault is not a bank deposit. It is not covered by deposit insurance unless a specific regulated product says otherwise.
 
 ## Swap and cross-network risk
 
@@ -57,7 +57,7 @@ Prices can move fast or be manipulated. A quote can go stale, and liquidity can 
 
 ## Provider and regulatory risk
 
-Privy, Base, Ethereum, Aave, Sky, Spark, LI.FI, the bridges and exchanges it uses, stablecoin issuers, and future partners can change, suspend, or end their services.
+Privy, Base, Ethereum, Aave, Morpho and the vault curators, LI.FI, the bridges and exchanges it uses, stablecoin issuers, and future partners can change, suspend, or end their services.
 
 Laws, sanctions, tax rules, or a provider's rules can restrict access, transfers, redemption, or recovery.
 

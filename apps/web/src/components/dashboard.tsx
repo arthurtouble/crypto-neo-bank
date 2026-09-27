@@ -7,6 +7,7 @@ import { formatUnits } from "viem";
 import { ApiError } from "@/lib/client/api";
 import { useOverview } from "@/lib/client/queries";
 import type { Holding, HoldingGroup, Overview } from "@/lib/overview/read";
+import { LiveAmount, positionUsd } from "./live-amount";
 import { MovePreviousAccount } from "./move-previous-account";
 
 const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
@@ -44,7 +45,9 @@ function HoldingRow({ holding, index }: { holding: Holding; index: number }) {
     <span><strong>{holding.label}</strong><small>{holding.symbol}</small></span>
     <span>{sources[holding.source] ?? holding.source}</span>
     <span className="sensitiveAmount">{amountText(holding)}</span>
-    <span className="sensitiveAmount"><strong>{holding.status === "unavailable" ? "Unavailable" : usdText(holding.usdCents)}</strong>
+    <span className="sensitiveAmount"><strong>{holding.status === "unavailable" ? "Unavailable"
+      : holding.group === "earn" && positionUsd(holding) !== null ? <LiveAmount usd={positionUsd(holding)!} apyPct={holding.apyPct} observedAt={holding.observedAt} /> : usdText(holding.usdCents)}</strong>
+      {holding.group === "earn" && holding.apyPct !== undefined && holding.usdCents ? <small>Earning {holding.apyPct.toFixed(2)}% a year</small> : null}
       {holding.priceObservedAt && holding.usdCents !== null && <small>Price as of {priceTime(holding.priceObservedAt)}</small>}</span>
   </div>;
 }
