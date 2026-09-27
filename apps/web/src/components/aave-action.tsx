@@ -38,7 +38,7 @@ export function AaveAction({ actions, symbols }: { actions: readonly Direction[]
     </div>
     <div className="aavePreviewButtons">
       <button className="button primary" type="submit" disabled={locked || earn.phase === "done" || !earn.wallet.address || !amount.trim()}>
-        {earn.phase === "preparing" ? "Checking" : earn.phase === "signing" ? "Confirm in your wallet" : earn.phase === "tracking" ? "Waiting for the network"
+        {earn.phase === "preparing" ? "Checking" : earn.phase === "signing" ? "Confirm with your passkey" : earn.phase === "tracking" ? "Waiting for the network"
           : earn.outcomeUnknown ? "Check Transactions first" : labels[direction]}
       </button>
     </div>

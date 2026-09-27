@@ -3,6 +3,7 @@
 import { Check, CircleAlert, ExternalLink, LoaderCircle, X } from "lucide-react";
 import Link from "next/link";
 import { SUPPORTED_CHAINS } from "@/config/chains";
+import { networkName } from "@/lib/assets/registry";
 import { failureText } from "@/lib/client/action-copy";
 import { actionSettled, type ActionPhase, type ActionView } from "@/lib/client/use-action";
 
@@ -22,10 +23,10 @@ function explorerUrl(chainId: number | null, hash: string | null) {
 
 function copy(label: string, phase: ActionPhase, action: ActionView | null) {
   if (phase === "preparing") return { step: 0, title: `Preparing ${label.toLowerCase()}`, detail: "Checking your limits and building the transaction." };
-  if (phase === "signing") return { step: 1, title: "Confirm in your wallet", detail: "Review the request, then confirm it." };
+  if (phase === "signing") return { step: 1, title: "Confirm with your passkey", detail: "Review the request, then confirm it." };
   switch (action?.status) {
     case "settling": return action.destinationChainId
-      ? { step: 2, title: "On its way", detail: "The first transaction is confirmed. We're waiting for delivery." }
+      ? { step: 2, title: "On its way", detail: `It left Base. The bridge delivers it on ${networkName(action.destinationChainId)} once Base finalizes the block, usually within 30 minutes. You can leave this screen.` }
       : { step: 3, title: `${label} sent`, detail: "It's on Base and becomes final in about 15 minutes." };
     case "confirmed": return { step: 3, title: `${label} complete`, detail: "The network confirmed it." };
     case "failed": return { step: 3, title: `${label} failed`, detail: failureText(action.failureReason) };

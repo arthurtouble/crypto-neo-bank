@@ -114,7 +114,7 @@ function PayoutForm({ banks }: { banks: Recipient[] }) {
     <p>You sign a USDC transfer to Bridge. Bridge sends the dollars to your bank after it receives the USDC.</p>
     <TransactionProgress label="Bank transfer" phase={phase} action={action} outcomeUnknown={outcomeUnknown} />
     <button className="button primary" style={{ marginTop: 14 }} disabled={busy || tracking || !bank || !amountValid}>
-      {phase === "preparing" ? "Checking…" : phase === "signing" ? "Confirm in your wallet" : "Review and send"}
+      {phase === "preparing" ? "Checking…" : phase === "signing" ? "Confirm with your passkey" : "Review and send"}
     </button>
   </form>;
 }

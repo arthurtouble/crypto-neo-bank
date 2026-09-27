@@ -151,7 +151,7 @@ export function SwapWorkspace() {
       {swap.phase === "done"
         ? <button className="button primary full swapReviewAction" type="button" onClick={() => { swap.reset(); setQuote(null); setAmount(""); }}>New swap</button>
         : swap.phase !== "idle"
-          ? <button className="button primary full swapReviewAction" type="button" disabled><LoaderCircle className="spin" size={16} /> {swap.phase === "preparing" ? "Checking" : swap.phase === "signing" ? "Confirm in your wallet" : "Swapping"}</button>
+          ? <button className="button primary full swapReviewAction" type="button" disabled><LoaderCircle className="spin" size={16} /> {swap.phase === "preparing" ? "Checking" : swap.phase === "signing" ? "Confirm with your passkey" : "Swapping"}</button>
           : remaining === 0 || quoteUsed
             ? <button className="button secondary full swapReviewAction" type="button" disabled={quoting || swap.outcomeUnknown} onClick={() => void getQuote()}><RefreshCw size={16} /> {remaining === 0 ? "Quote expired. Refresh" : "Get a new quote"}</button>
             : <button className="button primary full swapReviewAction" type="button" onClick={() => void confirm()}>Swap</button>}
