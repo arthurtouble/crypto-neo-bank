@@ -3,7 +3,7 @@ title: Money actions
 description: How Aura prepares, signs, verifies, and records every customer money movement.
 ---
 
-Every customer money movement is an **action**: a send, an earn deposit or withdrawal, a swap, a cross-chain deposit or withdrawal, or an invest order. All of them use one pipeline, one table, and one verifier. Provider-specific code only builds calls and describes the expected effects.
+Every customer money movement is an **action**: a send, an earn deposit or withdrawal, a swap, or a cross-chain deposit or withdrawal. All of them use one pipeline, one table, and one verifier. Provider-specific code only builds calls and describes the expected effects.
 
 ## Accounts
 
@@ -65,7 +65,7 @@ D1 records are projections. A `confirmed` row reflects chain evidence Aura obser
 | `earn` | `lib/actions/earn.ts` (`lib/defi/aave-call-policy.ts`, `lib/defi/morpho.ts`) | Aave on Base: exact approve + Pool `supply`, or Pool `withdraw`. Morpho vault on Base: exact USDC approve + ERC-4626 `deposit` for the account, or `withdraw` of an exact amount, or `redeem` of every share ("Withdraw all"). Before building, the server re-reads the vault's `asset()` (must be USDC) and, for Vault V2, its four access gates (must be unset); otherwise it refuses with `contract_changed`. Deposits need enough USDC, withdrawals enough shares | Aave `Supply`/`Withdraw` for the wallet. Morpho: the vault's `Deposit` (sender and owner = account, exact assets, plus exactly that USDC paid from the account to the vault) or `Withdraw` (sender, receiver, and owner = account, exact assets for `withdraw` or exact shares for `redeem`). A market that can't release enough liquidity reverts the withdrawal, and nothing moves |
 | `route` | `lib/actions/route.ts` | LI.FI approval (if needed) + LI.FI call | source debit of the exact amount; same-chain minimum output, or cross-chain delivery |
 
-Swap, invest, cross-chain deposit, and cross-chain withdrawal are all `route` actions. They differ in presentation, not mechanics.
+Swap, cross-chain deposit, and cross-chain withdrawal are all `route` actions. They differ in presentation, not mechanics.
 
 - **Paying side.** The source must be an asset the account holds (the registry's `hold` use): Base, or Tether Gold on Ethereum. `GET /api/routes/quote` refuses anything else with `unsupported_asset`, and the pay-side picker only lists held assets (`GET /api/swap/assets?held=1`). A route from Ethereum is an Ethereum action, relayed and gas-sponsored like one on Base.
 - **Price impact.** Above `MAX_PRICE_IMPACT_PERCENT` (3%), the quote is refused with `price_impact` and the lost percentage, so the customer can try a smaller amount. Other failed checks are `no_route`, and a LI.FI outage or rate limit is `provider_unavailable`.

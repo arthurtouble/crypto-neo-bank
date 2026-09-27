@@ -4,7 +4,6 @@ import { usePrivy } from "@privy-io/react-auth";
 import { useQuery } from "@tanstack/react-query";
 import { exampleActions, exampleMoneyAccount, exampleOverview, exampleRecipients, exampleSecurityPolicy } from "@/lib/example/data";
 import type { Overview } from "@/lib/overview/read";
-import type { InvestAsset, InvestCategory } from "@/lib/invest/catalog";
 import { useApi } from "./api";
 import type { ActionView } from "./use-action";
 
@@ -32,11 +31,3 @@ export const useSecurityPolicy = () => useScreenQuery<{ policy: typeof exampleSe
 export const useRecipients = () => useScreenQuery<{ recipients: typeof exampleRecipients }>("recipients", "/api/recipients", { recipients: exampleRecipients });
 export const useMoneyAccount = () => useScreenQuery<Record<string, unknown>>("money-account", "/api/money/account", exampleMoneyAccount);
 
-/** The invest catalog is public, so guests see the real one. */
-export function useInvestCatalog() {
-  return useQuery({ queryKey: ["invest-catalog"], queryFn: async () => {
-    const response = await fetch("/api/invest/catalog");
-    if (!response.ok) throw new Error("The invest list is unavailable.");
-    return response.json() as Promise<{ categories: Array<{ key: InvestCategory; label: string; available: boolean; note?: string }>; assets: InvestAsset[] }>;
-  }, staleTime: 300_000 });
-}

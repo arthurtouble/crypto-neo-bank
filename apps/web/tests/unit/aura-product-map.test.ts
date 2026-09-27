@@ -4,7 +4,7 @@ import { customerSections, legacySectionDestination, navigation } from "@/lib/pr
 describe("Aura product map", () => {
   it("exposes only the approved customer sections", () => {
     expect(customerSections).toEqual([
-      "deposit", "send", "swap", "earn", "invest", "cards",
+      "deposit", "send", "swap", "earn", "cards",
       "rewards", "transactions", "insights", "settings", "support"
     ]);
     expect(navigation.flatMap((group) => group.items.map((item) => item.href))).toEqual([
@@ -17,6 +17,9 @@ describe("Aura product map", () => {
     expect(legacySectionDestination("goals")).toBe("/app");
     expect(legacySectionDestination("concierge")).toBe("/app/support");
     expect(legacySectionDestination("borrow")).toBe("/app/earn");
+    // Invest was cut: stocks, gold, and crypto are bought in Swap.
+    expect(legacySectionDestination("invest")).toBe("/app/swap");
+    expect(legacySectionDestination("markets")).toBe("/app/swap");
     expect(legacySectionDestination("operations")).toBeNull();
   });
 });

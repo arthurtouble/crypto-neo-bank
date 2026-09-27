@@ -3,7 +3,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ASSETS, assetFor, assetsFor, registeredAsset } from "@/lib/assets/registry";
 import { requireAsset, requireNotPaused } from "@/lib/assets/pauses";
 import { depositDestination, depositSource, DEPOSIT_NETWORKS } from "@/lib/deposits/networks";
-import { investAssets, investCategories } from "@/lib/invest/catalog";
 import { valueAsset } from "@/lib/actions/valuation";
 import { d1 } from "../support/d1";
 import { schemaDatabase } from "../support/schema";
@@ -30,8 +29,8 @@ describe("the asset registry", () => {
     }
   });
 
-  it("holds, sends, and invests on Base, where the account keeps funds, and only Tether Gold on Ethereum, where it's issued", () => {
-    for (const use of ["hold", "send", "invest"] as const) {
+  it("holds and sends on Base, where the account keeps funds, and only Tether Gold on Ethereum, where it's issued", () => {
+    for (const use of ["hold", "send"] as const) {
       expect(assetsFor(use).filter((asset) => asset.chainId !== 8453).map((asset) => asset.id), use).toEqual(["1:0x68749665ff8d2d112fa859aa293f07a622782f38"]);
     }
   });
@@ -54,14 +53,13 @@ describe("the asset registry", () => {
     expect(assetsFor("send").map((asset) => asset.symbol)).toEqual(["ETH", "USDC", "WETH", "cbBTC", "EURC", ...STOCKS, "XAUt"]);
     expect(assetsFor("deposit").map((asset) => `${asset.symbol}@${asset.chainId}`)).toEqual(
       ["ETH@8453", "USDC@8453", "EURC@8453", "ETH@1", "USDC@1", "ETH@42161", "USDC@42161", "ETH@10", "USDC@10", "USDC@137"]);
-    expect(investAssets.map((asset) => asset.symbol)).toEqual(["ETH", "cbBTC", ...STOCKS, "XAUt"]);
-    expect(investCategories.map((category) => [category.key, category.available])).toEqual([["crypto", true], ["stocks", true], ["metals", true]]);
+    expect(assetsFor("swap").filter((asset) => asset.category === "stock" || asset.category === "metal").map((asset) => asset.symbol)).toEqual([...STOCKS, "XAUt"]);
     expect(assetsFor("hold").filter((asset) => asset.category === "stock").every((asset) => asset.decimals === 8 && asset.id.startsWith("8453:0xb2"))).toBe(true);
   });
 
   it("finds an asset only for the uses it has", () => {
     expect(assetFor(baseUsdc.toUpperCase().replace("0X", "0x"), "send")?.symbol).toBe("USDC");
-    expect(assetFor(baseUsdc, "invest")).toBeNull();
+    expect(assetFor("8453:0x4200000000000000000000000000000000000006", "deposit")).toBeNull();
     expect(registeredAsset("8453:0x1111111111111111111111111111111111111111")).toBeNull();
   });
 
@@ -89,7 +87,7 @@ describe("pausing an asset", () => {
 
   it("refuses an unregistered asset, a use it doesn't have, and a paused asset", async () => {
     await expect(requireAsset(state.db!, "8453:0x1111111111111111111111111111111111111111", "send")).rejects.toMatchObject({ status: 422, code: "unsupported_asset" });
-    await expect(requireAsset(state.db!, baseUsdc, "invest")).rejects.toMatchObject({ status: 422, code: "unsupported_asset" });
+    await expect(requireAsset(state.db!, "8453:0x4200000000000000000000000000000000000006", "deposit")).rejects.toMatchObject({ status: 422, code: "unsupported_asset" });
     expect((await requireAsset(state.db!, baseUsdc, "send")).symbol).toBe("USDC");
     await patch({ assetId: baseUsdc, paused: true, reason: "Depeg under review" });
     await expect(requireAsset(state.db!, baseUsdc, "send")).rejects.toMatchObject({ status: 503, code: "asset_paused", message: "USDC is paused right now. Try again later." });

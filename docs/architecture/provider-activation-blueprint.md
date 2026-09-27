@@ -21,7 +21,7 @@ Preview mode may show complete workflows and eligibility gates, but never fabric
 | Card issuing | Bridge through Stripe Issuing, subject to program approval | Rain | Card, controls, wallet provisioning | Issuer approval, cardholder KYC, program terms, disputes, auth webhooks |
 | Merchant rewards | Kard | Card-network rewards provider | Offers, reward history, activation | Program agreement, customer enrolment, transaction-match webhook |
 | Tag card payments | Acquiring or payment-link provider | — | Public Aura tag payment page | Merchant approval, hosted payment link, refunds, disputes, webhooks |
-| Tokenized stocks and metals | Eligible issuer and execution venue | — | Invest discovery and eligibility | Country/instrument approval, order lifecycle, custody and redemption records |
+| Tokenized stocks and metals | Coinbase tokenized stocks on Base and Tether Gold, bought through LI.FI routes in Swap | — | Swap, with Chainlink reference prices | Country and eligibility rules for Coinbase stocks, issuer redemption records |
 
 ## Bridge activation
 

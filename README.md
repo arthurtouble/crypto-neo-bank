@@ -4,7 +4,7 @@ Aura is the customer-facing financial app in this repository. The existing infra
 
 ## Product
 
-Visitors can browse every section with fictional, labeled example data. Anyone can sign in. Personal data needs a verified session, and financial actions are gated by server-side feature switches, account locks, per-account daily limits, and transaction policy. The customer navigation is Overview, Deposit, Send, Swap, Earn, Invest, Cards, Rewards, Transactions, Insights, Settings, and Support.
+Visitors can browse every section with fictional, labeled example data. Anyone can sign in. Personal data needs a verified session, and financial actions are gated by server-side feature switches, account locks, per-account daily limits, and transaction policy. The customer navigation is Overview, Deposit, Send, Swap, Earn, Cards, Rewards, Transactions, Insights, Settings, and Support.
 
 Wallet and protocol balances come from public chains and providers. Fiat, card, and securities records come from connected providers. D1 stores projections, policies, audit evidence, consent, cases, and recovery records; it is not the authority for balances or settlement.
 

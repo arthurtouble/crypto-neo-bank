@@ -7,7 +7,7 @@ test("landing introduces Aura and its provider boundaries", async ({ page }) => 
   await expect(page.getByText("Spend anywhere, invest in global markets, and get incredible rewards. All from one app.")).toBeVisible();
   await expect(page.getByRole("link", { name: "Get Started" })).toHaveCount(4);
   await expect(page.locator('a[href="/apply"], a[href="/tour"]')).toHaveCount(0);
-  for (const title of ["A home for all your assets", "Spend", "Earn", "Send", "Invest", "Rewards", "Security"]) {
+  for (const title of ["A home for all your assets", "Spend", "Earn", "Send", "Swap", "Rewards", "Security"]) {
     await expect(page.getByRole("heading", { name: title, exact: true })).toHaveCount(1);
   }
   await expect(page.locator("#faq details")).toHaveCount(5);
@@ -40,7 +40,7 @@ test("landing is accessible and fits common widths", async ({ page }) => {
 
 test("retired endpoints are gone", async ({ request }) => {
   for (const path of ["/api/growth/waitlist", "/api/goals", "/api/portfolio", "/api/portfolio/history", "/api/beta/access",
-    "/api/demo/session", "/api/markets/orders", "/api/support/assistant", "/api/defi/aave/preview", "/api/intents/evaluate", "/api/swap/review"]) {
+    "/api/demo/session", "/api/markets/orders", "/api/support/assistant", "/api/defi/aave/preview", "/api/intents/evaluate", "/api/swap/review", "/api/invest/catalog"]) {
     expect((await request.get(path)).status(), path).toBe(404);
   }
 });

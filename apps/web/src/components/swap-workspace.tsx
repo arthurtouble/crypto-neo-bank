@@ -12,7 +12,7 @@ import { useAction } from "@/lib/client/use-action";
 import type { AssetId, CatalogAsset } from "@/lib/swap/assets";
 import { assetNetwork } from "@/lib/swap/picker-model";
 import { displayRawAmount, formatEstimatedFeeUsd } from "@/lib/swap/review-model";
-import { parseSwapDeepLink } from "@/lib/markets/swap-links";
+import { parseSwapDeepLink } from "@/lib/swap/links";
 import { SwapAssetPicker } from "./swap-asset-picker";
 import { useToast } from "./toast";
 import { TransactionProgress } from "./transaction-progress";

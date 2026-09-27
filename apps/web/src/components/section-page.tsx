@@ -11,11 +11,10 @@ const SettingsWorkspace = dynamic(() => import("./settings-workspace").then((mod
 const OperationsWorkspace = dynamic(() => import("./operations-workspace").then((mod) => mod.OperationsWorkspace));
 const RewardsWorkspace = dynamic(() => import("./rewards-workspace").then((mod) => mod.RewardsWorkspace));
 const SupportWorkspace = dynamic(() => import("./support-workspace").then((mod) => mod.SupportWorkspace));
-const InvestWorkspace = dynamic(() => import("./invest-workspace").then((mod) => mod.InvestWorkspace));
 
 const titles: Record<CustomerSection | "operations", string> = {
   deposit: "Deposit", send: "Send", swap: "Swap", earn: "Earn",
-  invest: "Invest", cards: "Cards", rewards: "Rewards", transactions: "Transactions",
+  cards: "Cards", rewards: "Rewards", transactions: "Transactions",
   insights: "Insights", settings: "Settings", support: "Support", operations: "Operations"
 };
 
@@ -25,7 +24,6 @@ export function SectionPage({ section }: { section: CustomerSection | "operation
     {(section === "deposit" || section === "send") && <MoneyWorkspace mode={section} />}
     {section === "swap" && <SwapWorkspace />}
     {section === "earn" && <EarnWorkspace />}
-    {section === "invest" && <InvestWorkspace />}
     {section === "cards" && <CardWorkspace />}
     {section === "rewards" && <RewardsWorkspace />}
     {section === "transactions" && <ActivityWorkspace />}

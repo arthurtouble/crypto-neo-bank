@@ -28,11 +28,6 @@ const examples: Record<CustomerSection | "overview", Example> = {
     { label: "Aave", value: "USDC", note: "Variable rate, protocol risk" },
     { label: "Morpho", value: "USDC vaults", note: "Steakhouse and Gauntlet curate them on Base" }
   ] },
-  invest: { title: "Invest", items: [
-    { label: "Crypto", value: "Supported swaps", note: "Live route and asset checks required" },
-    { label: "Tokenized stocks", value: "Unavailable", note: "Eligibility and venue required" },
-    { label: "Metals", value: "Unavailable", note: "Issuer and order provider required" }
-  ] },
   cards: { title: "Cards", items: [
     { label: "Card", value: "Not issued", note: "Bridge or Rain issuer connection required" },
     { label: "Controls", value: "Freeze · limits · PIN", note: "Issuer-supported controls only" },

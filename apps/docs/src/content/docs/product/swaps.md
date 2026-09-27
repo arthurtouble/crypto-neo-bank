@@ -3,7 +3,7 @@ title: Swap
 description: How Aura quotes, checks, and completes swaps.
 ---
 
-Swap exchanges one supported asset for another, on the same network or between networks. You can buy and sell crypto, the euro stablecoin, tokenized stocks, and Tether Gold. Invest uses the same routes.
+Swap exchanges one supported asset for another, on the same network or between networks. You can buy and sell crypto, the euro stablecoin, tokenized stocks, and Tether Gold.
 
 You pay with something your account holds: an asset on Base, or Tether Gold on Ethereum. You can receive any supported asset, on Base or another supported network.
 

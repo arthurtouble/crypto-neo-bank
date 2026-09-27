@@ -65,7 +65,7 @@ Laws, sanctions, tax rules, or a provider's rules can restrict access, transfers
 
 A token may not give you the legal rights its name suggests. Its value and your rights can be affected by the issuer's insolvency, transfer restrictions, market closures, corporate actions, how the underlying asset is held, and which laws apply.
 
-Aura does not currently offer tokenized stocks, metals, or other securities.
+Aura supports ten tokenized stocks issued by Coinbase and Tether Gold. A Coinbase tokenized stock is not a share in your name, and Coinbase says they are only for eligible people outside the US. Tether Gold depends on Tether holding the gold behind it.
 
 ## Operational risk
 

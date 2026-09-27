@@ -1,5 +1,5 @@
 export const customerSections = [
-  "deposit", "send", "swap", "earn", "invest", "cards",
+  "deposit", "send", "swap", "earn", "cards",
   "rewards", "transactions", "insights", "settings", "support"
 ] as const;
 
@@ -13,8 +13,7 @@ export const navigation = [
     { label: "Swap", href: "/app/swap" }
   ] },
   { group: "Grow", items: [
-    { label: "Earn", href: "/app/earn" },
-    { label: "Invest", href: "/app/invest" }
+    { label: "Earn", href: "/app/earn" }
   ] },
   { group: "Everyday", items: [
     { label: "Cards", href: "/app/cards" },
@@ -30,7 +29,7 @@ export const navigation = [
 
 const legacy: Record<string, string> = {
   transfers: "/app/deposit", assets: "/app", exchange: "/app/swap",
-  markets: "/app/invest", card: "/app/cards", activity: "/app/transactions",
+  markets: "/app/swap", invest: "/app/swap", card: "/app/cards", activity: "/app/transactions",
   goals: "/app", benefits: "/app/rewards", concierge: "/app/support",
   security: "/app/settings", status: "/app/support", borrow: "/app/earn"
 };

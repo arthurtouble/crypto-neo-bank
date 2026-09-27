@@ -7,7 +7,7 @@ sidebar:
 
 ## Look around
 
-Open Aura to browse Overview, Deposit, Send, Swap, Earn, Invest, Cards, Rewards, Transactions, Insights, Settings, and Support. When you're signed out, every value is a labeled example. You don't need an account to look around.
+Open Aura to browse Overview, Deposit, Send, Swap, Earn, Cards, Rewards, Transactions, Insights, Settings, and Support. When you're signed out, every value is a labeled example. You don't need an account to look around.
 
 ## Sign in
 
