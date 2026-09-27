@@ -1,5 +1,6 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "./support/fixtures";
+import { LIFI_DIAMOND } from "./support/fake-edge.mjs";
 import { acceptTerms, asCustomer, ASSETS, edge, newCustomer, setBalances, setFeature, setIdentity, type Customer } from "./support/session";
 
 // Feature 3 in docs/overview/feature-readiness.md: sending from the Aura
@@ -44,6 +45,7 @@ async function reviewAndConfirm(page: Page) {
 test.beforeEach(async ({ page }) => {
   await edge("/__reset");
   await setFeature(page, "direct_transfers", true);
+  await setFeature(page, "cross_chain", false);
 });
 
 test.beforeAll(async ({ request }) => {
@@ -138,7 +140,8 @@ test("the customer can send to their own connected wallet in one tap", async ({ 
   const customer = await openSend(page, { connectedWallet: true });
   const own = customer.externalWallets[0];
   await fillSend(page, { amount: "2" });
-  await dialog(page).getByRole("button", { name: `Send to my wallet · ${own.slice(0, 6)}…${own.slice(-4)}` }).click();
+  await dialog(page).getByRole("group", { name: "Recipients" }).getByRole("button", { name: `My wallet ${own.slice(0, 6)}…${own.slice(-4)}` }).click();
+  await expect(page.getByTestId("recipient-status")).toHaveText("Your wallet");
   await dialog(page).getByRole("button", { name: "Review" }).click();
   await expect(page.getByTestId("send-review")).toContainText("Your wallet");
   await dialog(page).getByRole("button", { name: "Confirm and send" }).click();
@@ -151,7 +154,10 @@ test("a saved recipient can be picked by name", async ({ page }) => {
   await asCustomer(page, customer, "POST", "/api/security/addresses", { address: RECIPIENT, label: "Sam" });
   await page.reload();
   await fillSend(page, { amount: "3" });
-  await dialog(page).getByLabel("Saved recipient").selectOption({ label: `Sam · ${RECIPIENT.slice(0, 6)}…${RECIPIENT.slice(-4)}` });
+  await dialog(page).getByRole("group", { name: "Recipients" }).getByRole("button", { name: /^Sam/ }).click();
+  await expect(dialog(page).getByLabel("To")).toHaveValue(RECIPIENT);
+  await expect(page.getByTestId("recipient-status")).toHaveText("Saved recipient: Sam");
+  await expect(dialog(page).getByLabel("Save as a recipient")).toHaveCount(0);
   await dialog(page).getByRole("button", { name: "Review" }).click();
   await expect(page.getByTestId("send-review")).toContainText("Sam");
   await dialog(page).getByRole("button", { name: "Confirm and send" }).click();
@@ -184,6 +190,8 @@ test("an unknown Aura tag isn't found", async ({ page }) => {
 });
 
 test("the customer's controls are enforced on the server: daily limit, saved recipients only, waiting period, and lock", async ({ page }) => {
+  // Four full attempts, each with a reload.
+  test.setTimeout(60_000);
   const customer = await openSend(page);
   const attempt = async (message: string) => {
     await fillSend(page, { amount: "12.5", to: RECIPIENT });
@@ -275,4 +283,88 @@ test("bank transfers are shown as coming soon", async ({ page }) => {
   await openSend(page);
   const bank = page.getByRole("region", { name: "Send to a bank" });
   await expect(bank.getByText("Coming soon", { exact: true })).toBeVisible();
+});
+
+test("a new address can be saved as a recipient, with a name, as it's sent to", async ({ page }) => {
+  await openSend(page);
+  await fillSend(page, { amount: "2", to: RECIPIENT });
+  await expect(page.getByTestId("recipient-status")).toHaveText("New address. Check it carefully.");
+  await dialog(page).getByLabel("Save as a recipient").check();
+  await dialog(page).getByRole("button", { name: "Review" }).click();
+  await expect(dialog(page).getByRole("alert")).toHaveText("Give this recipient a name.");
+  await dialog(page).getByLabel("Name").fill("Alex");
+  await dialog(page).getByRole("button", { name: "Review" }).click();
+  await expect(page.getByTestId("send-review")).toContainText("Save asAlex");
+  await dialog(page).getByRole("button", { name: "Confirm and send" }).click();
+  await expect(toast(page, "Recipient saved")).toBeVisible({ timeout: 20_000 });
+  await expect(toast(page, "Transfer complete")).toBeVisible({ timeout: 30_000 });
+
+  // Next time it's one tap. New recipients start with the waiting period, which only matters with saved-recipients-only on.
+  await dialog(page).getByRole("button", { name: "Close" }).click();
+  await fillSend(page, { amount: "1" });
+  await dialog(page).getByRole("group", { name: "Recipients" }).getByRole("button", { name: /^Alex.*waiting period/ }).click();
+  await expect(page.getByTestId("recipient-status")).toContainText("Saved recipient: Alex. In its waiting period until");
+});
+
+test("USDC can be sent to another network: LI.FI's fees come out of the amount, and delivery is checked there", async ({ page }) => {
+  const customer = await openSend(page);
+  await setFeature(page, "cross_chain", true);
+  await fillSend(page, { amount: "10", to: RECIPIENT });
+  await expect(dialog(page).getByLabel("Network").locator("option")).toHaveText(["Base", "Ethereum", "Arbitrum", "Optimism", "Polygon"]);
+  await dialog(page).getByLabel("Network").selectOption("Arbitrum");
+  await expect(dialog(page)).toContainText("Its fees come out of the amount");
+  await dialog(page).getByRole("button", { name: "Review" }).click();
+
+  const review = page.getByTestId("send-review");
+  await expect(review).toContainText("10 USDC");
+  await expect(review).toContainText("NetworkArbitrum");
+  await expect(review).toContainText("They receiveAbout 9.95 USDC");
+  await expect(review).toContainText("At least9.9 USDC");
+  await expect(review).toContainText("About $0.50, taken from the amount");
+  await expect(review).toContainText("Network fee on BasePaid by Aura");
+  expect(await relayed()).toEqual([]);
+
+  await dialog(page).getByRole("button", { name: "Confirm and send" }).click();
+  await expect.poll(async () => (await relayed()).length, { timeout: 30_000 }).toBe(1);
+  const [operation] = await relayed();
+  expect(operation.calls!.map((call) => call.to.toLowerCase())).toEqual([ASSETS.usdc, LIFI_DIAMOND]);
+  expect(await balance(page, customer, `8453:${ASSETS.usdc}`)).toBe("40000000");
+
+  // Complete only once LI.FI reports delivery and the payout is on Arbitrum.
+  await expect(toast(page, "Transfer complete")).toHaveCount(0);
+  await edge("/__state", { bridge: { status: "DONE", substatus: "COMPLETED" } });
+  await expect(toast(page, "Transfer complete")).toBeVisible({ timeout: 45_000 });
+  await setFeature(page, "cross_chain", false);
+});
+
+test("sending to another network needs both the send and cross-network switches, and only offers networks where the asset is registered", async ({ page }) => {
+  await openSend(page, { balances: { [ASSETS.usdc]: "50000000", [ASSETS.weth]: "1000000000000000000" } });
+  await fillSend(page, { asset: "WETH", amount: "0.1", to: RECIPIENT });
+  await expect(dialog(page).getByLabel("Network").locator("option")).toHaveText(["Base"]);
+  await dialog(page).getByLabel("Asset").selectOption("USDC");
+  await dialog(page).getByLabel("Network").selectOption("Polygon");
+  await dialog(page).getByRole("button", { name: "Review" }).click();
+  await expect(toast(page, "No quote")).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator(".toastRegion")).toContainText("Sending to other networks isn't available right now.");
+  await expect(page.getByTestId("send-review")).toHaveCount(0);
+
+  await setFeature(page, "cross_chain", true);
+  await setFeature(page, "direct_transfers", false);
+  await page.locator(".toastRegion").getByRole("button", { name: /close|dismiss/i }).first().click().catch(() => undefined);
+  await dialog(page).getByRole("button", { name: "Review" }).click();
+  await expect(page.locator(".toastRegion")).toContainText("isn't available right now", { timeout: 20_000 });
+  await expect(page.getByTestId("send-review")).toHaveCount(0);
+  await setFeature(page, "cross_chain", false);
+  expect(await relayed()).toEqual([]);
+});
+
+test("a token contract is refused as the recipient on another network too", async ({ page }) => {
+  await openSend(page);
+  await setFeature(page, "cross_chain", true);
+  await fillSend(page, { amount: "1", to: ASSETS.usdc });
+  await dialog(page).getByLabel("Network").selectOption("Optimism");
+  await dialog(page).getByRole("button", { name: "Review" }).click();
+  await expect(toast(page, "No quote")).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator(".toastRegion")).toContainText("token contract");
+  await setFeature(page, "cross_chain", false);
 });

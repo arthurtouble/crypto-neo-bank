@@ -16,7 +16,7 @@ A zero Aura fee doesn't make every action free.
 | Cost | Where it comes from |
 | --- | --- |
 | Network fee | The blockchain. Aura pays it for actions from your account. When you add money from your own wallet, that wallet pays it |
-| Bridge or exchange fee | The route LI.FI finds for your swap or move. When you add money from another network, it comes out of the amount |
+| Bridge or exchange fee | The route LI.FI finds for your swap or move. When you add money from another network, or send to one, it comes out of the amount |
 | Card fee | The card provider, when you pay by card. It shows the fee before you pay |
 | Price impact or slippage | Available liquidity and market moves |
 | Partner fee | A future bank, card, or rewards partner |

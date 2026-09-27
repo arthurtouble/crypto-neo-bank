@@ -41,7 +41,7 @@ describe("wallet balance authority", () => {
   it("offers the customer's own linked wallet as a destination, never the Privy signer", () => {
     search.params = "sendTo=0x4444444444444444444444444444444444444444";
     const html = renderToStaticMarkup(createElement(WalletWorkspace)).replaceAll("<!-- -->", "");
-    expect(html).toContain("Send to my wallet · 0xabe0…6b54");
+    expect(html).toContain("<strong>My wallet</strong><small>0xabe0…6b54</small>");
     expect(html).not.toContain("0x2222…2222");
   });
 });

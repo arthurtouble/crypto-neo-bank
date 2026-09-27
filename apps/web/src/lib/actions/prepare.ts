@@ -12,10 +12,12 @@ import { z } from "zod";
 export const actionInputSchema = z.discriminatedUnion("kind", [transferInputSchema, earnInputSchema, routeInputSchema]);
 export type ActionInput = z.infer<typeof actionInputSchema>;
 
-function featureFor(action: BuiltAction): FeatureKey {
+function featureFor(action: BuiltAction): FeatureKey | FeatureKey[] {
   if (action.kind === "transfer") return "direct_transfers";
   if (action.kind === "earn") return "defi_actions";
-  return action.destinationChainId ? "cross_chain" : "swaps";
+  const route = action.destinationChainId ? "cross_chain" : "swaps";
+  // A route that pays someone else is a send, so the send switch applies too.
+  return action.recipient ? [route, "direct_transfers"] : route;
 }
 
 function build(db: D1Database, input: ActionInput, subject: string, wallet: string, now: Date): Promise<BuiltAction> {
@@ -38,8 +40,8 @@ export async function precheckAction(db: D1Database, subject: string, built: Bui
 
 /** Check, value, and store an action built elsewhere, such as a bank payout's funding transfer. */
 export async function prepareBuiltAction(db: D1Database, subject: string, wallet: string, built: BuiltAction,
-  feature: (action: BuiltAction) => FeatureKey, now = new Date()): Promise<Prepared> {
-  await requireFeature(db, feature(built));
+  feature: (action: BuiltAction) => FeatureKey | FeatureKey[], now = new Date()): Promise<Prepared> {
+  for (const key of [feature(built)].flat()) await requireFeature(db, key);
   await requireNotPaused(db, built.valuation.assetId);
   const valuation = await valueAsset(built.valuation, { now });
   const controls = await loadControls(db, subject, built.recipient ?? null, now);

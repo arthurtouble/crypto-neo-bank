@@ -68,6 +68,9 @@ const initialState = () => ({
   relayed: {},
   // What LI.FI reports for a bridge: PENDING, or DONE with substatus COMPLETED or REFUNDED.
   bridge: { status: "PENDING", substatus: null },
+  // The latest quote, and the delivery each bridged transaction got once LI.FI reported it done.
+  lastQuote: null,
+  deliveries: {},
   approvals: {},
   // Every transaction a connected wallet sent, for tests to inspect.
   sent: []
@@ -131,6 +134,12 @@ export function startFakeEdge({ port }) {
       const value = BigInt(call.value ?? "0x0");
       const data = call.data ?? "0x";
       if (data === "0x") { moves.push({ token: "native", to: call.to, amount: value }); continue; }
+      if (call.to.toLowerCase() === LIFI_DIAMOND) {
+        // A route: the Diamond takes the ETH sent, or the tokens approved earlier in the batch. LI.FI reports delivery later.
+        const approved = moves.findLast((item) => item.approve);
+        moves.push(value > 0n ? { token: "native", to: LIFI_DIAMOND, amount: value } : { token: approved.token, to: LIFI_DIAMOND, amount: approved.amount });
+        continue;
+      }
       const { functionName, args } = decodeFunctionData({ abi, data });
       if (functionName === "transfer") moves.push({ token: call.to, to: args[0], amount: args[1] });
       else if (functionName === "approve") moves.push({ approve: true, token: call.to, amount: args[1] });
@@ -264,6 +273,7 @@ export function startFakeEdge({ port }) {
     const native = /^0x0{40}$/i.test(q.fromToken);
     const tokenOf = (address, chainId) => native ? { address, chainId, decimals: 18, symbol: "ETH" } : { address, chainId, decimals: 6, symbol: "USDC" };
     const fromAmount = BigInt(q.fromAmount);
+    state.lastQuote = { toChain: Number(q.toChain), toToken: native ? null : q.toToken.toLowerCase(), toAddress: q.toAddress.toLowerCase(), toAmount: fromAmount * 995n / 1000n };
     return {
       id: randomUUID(), tool: "across",
       action: { fromChainId: Number(q.fromChain), toChainId: Number(q.toChain), fromToken: tokenOf(q.fromToken, Number(q.fromChain)),
@@ -278,8 +288,27 @@ export function startFakeEdge({ port }) {
   function lifiStatus(url) {
     const q = Object.fromEntries(url.searchParams);
     const { status, substatus } = state.bridge;
+    const delivered = status === "DONE" && substatus !== "REFUNDED";
     return { status, substatus: substatus ?? undefined, tool: q.bridge, sending: { txHash: q.txHash, chainId: Number(q.fromChain) },
-      receiving: status === "DONE" && substatus !== "REFUNDED" ? { txHash: `0x${"d".repeat(64)}`, chainId: Number(q.toChain) } : undefined };
+      receiving: delivered ? { txHash: deliver(q.txHash), chainId: Number(q.toChain) } : undefined };
+  }
+
+  /** The bridge's payout on the destination network, mined once per source transaction: the quoted amount to the recipient. */
+  function deliver(sourceHash) {
+    if (state.deliveries[sourceHash]) return state.deliveries[sourceHash];
+    const quote = state.lastQuote;
+    if (!quote) return (state.deliveries[sourceHash] = `0x${"d".repeat(64)}`);
+    const token = quote.toToken ?? "native";
+    state.balances[quote.toChain] ??= {};
+    state.balances[quote.toChain][token] ??= {};
+    state.balances[quote.toChain][token][quote.toAddress] = (balance(quote.toChain, token, quote.toAddress) + quote.toAmount).toString();
+    const logs = quote.toToken ? [{ address: quote.toToken, topics: encodeEventTopics({ abi: [transferEvent], eventName: "Transfer", args: { from: LIFI_DIAMOND, to: quote.toAddress } }),
+      data: encodeAbiParameters([{ type: "uint256" }], [quote.toAmount]) }] : [];
+    state.deliveries[sourceHash] = mine({ chainId: quote.toChain, from: LIFI_DIAMOND, to: quote.toToken ?? quote.toAddress,
+      value: quote.toToken ? "0x0" : `0x${quote.toAmount.toString(16)}`, input: "0x", success: true, logs });
+    // The destination keeps producing blocks, so the payout gathers the confirmations it needs (64 on Polygon).
+    state.head += 64;
+    return state.deliveries[sourceHash];
   }
 
   function kraken(url) {

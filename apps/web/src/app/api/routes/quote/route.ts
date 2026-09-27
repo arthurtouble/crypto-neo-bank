@@ -3,9 +3,10 @@ import { isAddress } from "viem";
 import { z } from "zod";
 import { quoteRoute, RouteQuoteError } from "@/lib/actions/lifi";
 import { saveRouteQuote } from "@/lib/actions/route";
+import { refuseTokenContract } from "@/lib/actions/transfer";
 import { requireVerifiedSubject } from "@/lib/auth/server";
 import { requireActionWallet } from "@/lib/auth/wallet";
-import { featureEnabled } from "@/lib/features/flags";
+import { featureEnabled, type FeatureKey } from "@/lib/features/flags";
 import { errorResponse, route } from "@/lib/http/route";
 import { ensureSubjectProfile } from "@/lib/profile/ensure";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
@@ -30,10 +31,14 @@ async (request, { traceId }) => {
   // Only registered, unpaused assets can be quoted; anything else is refused before LI.FI is asked.
   const [from, to] = await Promise.all([requireCatalogAsset(env.PROJECTION_DB, input.from), requireCatalogAsset(env.PROJECTION_DB, input.to)]);
   const crossChain = from.chainId !== to.chainId;
-  if (!await featureEnabled(env.PROJECTION_DB, crossChain ? "cross_chain" : "swaps"))
-    return Response.json({ error: "feature_unavailable", traceId }, { status: 503 });
   const wallet = await requireActionWallet(subject.subjectReference);
   const recipient = (input.recipient ?? wallet).toLowerCase();
+  const external = recipient !== wallet.toLowerCase();
+  // Paying someone else is a send: the send switch applies as well.
+  const features: FeatureKey[] = [crossChain ? "cross_chain" : "swaps", ...(external ? ["direct_transfers" as const] : [])];
+  for (const key of features)
+    if (!await featureEnabled(env.PROJECTION_DB, key)) return Response.json({ error: "feature_unavailable", traceId }, { status: 503 });
+  if (external) refuseTokenContract(recipient);
   const now = new Date();
   const quoted = await quoteRoute({ from, to, amount: input.amount, wallet, recipient, slippageBps: input.slippageBps });
   await ensureSubjectProfile(env.PROJECTION_DB, subject.subjectReference, now);
