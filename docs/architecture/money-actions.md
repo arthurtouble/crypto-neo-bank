@@ -93,7 +93,7 @@ Bank limits come from Bridge once connected and appear beside these.
 ## Data
 
 - `actions`: one row per action. Calls, effects, and review summary are immutable after insert. Status moves forward only: `prepared` → `submitted` → `settling` → `confirmed`, or `failed` / `expired`.
-- `action_events`: append-only evidence (submission, checks, delivery).
+- `action_events`: append-only evidence (submission, status changes, delivery). A route to another network also gets two milestones, each recorded once: `source_final` when the source transaction is final, and `delivered` when the payout is seen on the destination network. The Transactions journey (`action-journey.tsx`) is built from these.
 - `route_quotes`: server-held LI.FI quotes, deleted after expiry unless used by an action.
 
 ## API

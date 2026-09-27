@@ -148,6 +148,13 @@ async function appendEvent(db: D1Database, actionId: string, type: string, evide
     .bind(crypto.randomUUID(), actionId, type, JSON.stringify(evidence), now.toISOString()).run();
 }
 
+/** Record a milestone once, the first time it's reached. */
+async function appendMilestone(db: D1Database, actionId: string, type: "source_final" | "delivered", now: Date, evidence: Record<string, unknown> = {}) {
+  await db.prepare(`INSERT INTO action_events (event_id, action_id, event_type, evidence_json, occurred_at)
+      SELECT ?, ?, ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM action_events WHERE action_id = ? AND event_type = ?)`)
+    .bind(crypto.randomUUID(), actionId, type, JSON.stringify(evidence), now.toISOString(), actionId, type).run();
+}
+
 export type SubmitResult = "submitted" | "already_submitted" | "hash_in_use" | "not_submittable";
 
 /** Bind a reported transaction hash to an action, once. A late report after expiry is accepted; the chain decides. */
@@ -207,6 +214,10 @@ export async function applyVerification(db: D1Database, action: StoredAction, re
   await db.prepare(`UPDATE actions SET status = ?, destination_transaction_hash = COALESCE(destination_transaction_hash, ?),
       failure_reason = COALESCE(?, failure_reason), settled_at = COALESCE(settled_at, ?), checked_at = ?, updated_at = ?
     WHERE action_id = ?`).bind(next, destinationHash, failure, settledAt, at, at, action.id).run();
+  // A route to another network has two milestones before it's complete: final on the source network, then delivered.
+  if (action.destinationChainId && (result.status === "confirmed" || (result.status === "settling" && result.reason !== "finality")))
+    await appendMilestone(db, action.id, "source_final", now);
+  if (action.destinationChainId && destinationHash) await appendMilestone(db, action.id, "delivered", now, { destinationHash });
   if (next !== action.status) await appendEvent(db, action.id, next, { ...result }, now);
   return { ...action, status: next, destinationTransactionHash: destinationHash, failureReason: failure ?? action.failureReason,
     settledAt: action.settledAt ?? settledAt, checkedAt: at };

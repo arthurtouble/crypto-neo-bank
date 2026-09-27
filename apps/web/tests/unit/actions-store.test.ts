@@ -92,7 +92,29 @@ describe("submission and status", () => {
     expect(await getAction(db, "alice", stored.id)).toMatchObject({ status: "confirmed", destinationTransactionHash: `0x${"c".repeat(64)}`, settledAt: now.toISOString() });
     expect(() => sqlite.exec(`UPDATE actions SET status = 'submitted' WHERE action_id = '${stored.id}'`)).toThrow(/forward/);
     expect(sqlite.prepare("SELECT event_type FROM action_events WHERE action_id = ? ORDER BY rowid").all(stored.id).map((row) => (row as { event_type: string }).event_type))
-      .toEqual(["submitted", "settling", "confirmed"]);
+      .toEqual(["submitted", "source_final", "settling", "delivered", "confirmed"]);
+  });
+
+  it("records a route's milestones once: final on the source network, then delivered", async () => {
+    const events = (id: string) => sqlite.prepare("SELECT event_type FROM action_events WHERE action_id = ? ORDER BY rowid").all(id)
+      .map((row) => (row as { event_type: string }).event_type);
+    const route = (await getAction(db, "alice", (await insertAction(db, action({ destinationChainId: 1 }), now))!))!;
+    await recordSubmission(db, route, hash, now);
+    let current = (await getAction(db, "alice", route.id))!;
+    current = await applyVerification(db, current, { status: "settling", reason: "finality" }, now);
+    expect(events(route.id)).toEqual(["submitted", "settling"]);
+    current = await applyVerification(db, current, { status: "settling", reason: "awaiting_delivery" }, now);
+    current = await applyVerification(db, current, { status: "settling", reason: "awaiting_delivery" }, now);
+    expect(events(route.id)).toEqual(["submitted", "settling", "source_final"]);
+    current = await applyVerification(db, current, { status: "settling", reason: "confirmations", destinationHash: `0x${"d".repeat(64)}` }, now);
+    await applyVerification(db, current, { status: "confirmed", destinationHash: `0x${"d".repeat(64)}` }, now);
+    expect(events(route.id)).toEqual(["submitted", "settling", "source_final", "delivered", "confirmed"]);
+
+    // A send on Base has no milestones of its own.
+    const transfer = (await getAction(db, "alice", (await insertAction(db, action({ callsFingerprint: "0xother" }), now))!))!;
+    await recordSubmission(db, transfer, `0x${"b".repeat(64)}`, now);
+    await applyVerification(db, (await getAction(db, "alice", transfer.id))!, { status: "confirmed" }, now);
+    expect(events(transfer.id)).toEqual(["submitted", "confirmed"]);
   });
 
   it("keeps what the customer reviewed and signed immutable", async () => {
