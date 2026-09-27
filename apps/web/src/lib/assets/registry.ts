@@ -49,6 +49,34 @@ const ARBITRUM = 42161;
 const OPTIMISM = 10;
 const POLYGON = 137;
 
+/** The networks Aura supports. Base is where the account holds funds; the others are for deposits and sends. */
+export const NETWORKS = [
+  { chainId: BASE, name: "Base" },
+  { chainId: ETHEREUM, name: "Ethereum" },
+  { chainId: ARBITRUM, name: "Arbitrum" },
+  { chainId: OPTIMISM, name: "Optimism" },
+  { chainId: POLYGON, name: "Polygon" }
+] as const;
+
+export function networkName(chainId: number): string {
+  return NETWORKS.find((network) => network.chainId === chainId)?.name ?? `Network ${chainId}`;
+}
+
+/**
+ * Where a Base asset can be sent: Base itself, and every other network where
+ * the same asset is registered to be received ("swap"). Sending elsewhere goes
+ * through a LI.FI route, with its fees taken from the amount.
+ */
+export function sendDestinations(assetId: string): Array<{ chainId: number; name: string; asset: RegisteredAsset }> {
+  const source = assetFor(assetId, "send");
+  if (!source) return [];
+  return NETWORKS.flatMap((network) => {
+    const asset = network.chainId === source.chainId ? source
+      : ASSETS.find((item) => item.chainId === network.chainId && item.symbol === source.symbol && item.uses.includes("swap"));
+    return asset ? [{ chainId: network.chainId, name: network.name, asset }] : [];
+  });
+}
+
 const usd: PriceSource = { kind: "usd" };
 const ether: PriceSource = { kind: "kraken", market: "eth" };
 const bitcoin: PriceSource = { kind: "kraken", market: "btc" };

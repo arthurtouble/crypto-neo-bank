@@ -7,7 +7,7 @@ sidebar:
 
 Aura is in preview. You can explore every section without signing in, using labeled example data. Anyone can sign in, and you accept the terms of use the first time you do.
 
-Your Aura account is a wallet that Privy makes when you sign in, and you control it. Aura pays the network fee for actions from your account. The features below are built, but each one stays switched off until it has been tested with real funds. On our development version, we've made a real deposit from Ethereum to Base. We're testing sends now.
+Your Aura account is a wallet that Privy makes when you sign in, and you control it. Aura pays the network fee for actions from your account. The features below are built, but each one stays switched off until it has been tested with real funds. On our development version, we've made a real deposit from Ethereum to Base and a real send on Base. We're testing sends to other networks now.
 
 ## Built, switched on as each is ready
 
@@ -15,7 +15,7 @@ Your Aura account is a wallet that Privy makes when you sign in, and you control
 | --- | --- | --- |
 | Overview | Your balances on Base, Aave positions, and Sky savings on Ethereum | Values come from live reads. If a read fails, Aura shows it as unavailable |
 | Deposit | Your address and QR code on Base, adding money from a connected wallet on Base, Ethereum, Arbitrum, Optimism, or Polygon, and paying by card through Privy | From another network, money is moved to the same asset on Base. Bank deposits are coming soon |
-| Send | Send ETH, USDC, WETH, or cbBTC on Base to an address, a saved recipient, an Aura tag, or your own linked wallet | Your controls apply, and you confirm with your passkey. Bank payouts are coming soon |
+| Send | Send ETH, USDC, WETH, or cbBTC to an address, a saved recipient, an Aura tag, or your own linked wallet, on Base or, for ETH and USDC, another network. Save new recipients with a name as you send | Your controls apply, and you confirm with your passkey. Bank payouts are coming soon |
 | Swap | Swap assets and move them between networks, using routes found by LI.FI | Quotes last 45 seconds. A move between networks is complete only when it arrives |
 | Invest | Buy crypto assets through the same routes as Swap | Tokenized stocks and metals aren't offered |
 | Earn | Supply and withdraw on Aave (Base). Deposit to and withdraw from Sky savings (Ethereum) | Rates change. Neither is a bank deposit |

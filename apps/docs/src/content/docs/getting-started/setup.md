@@ -39,7 +39,7 @@ A token Aura doesn't support can still arrive at your address without showing in
 
 ## Receive and send
 
-Use **Deposit** to see your address and QR code, add money from a wallet you've connected, or pay by card. Use **Send** to pay an address, a saved recipient, an Aura tag, or one of your own linked wallets.
+Use **Deposit** to see your address and QR code, add money from a wallet you've connected, or pay by card. Use **Send** to pay an address, a saved recipient, an Aura tag, or one of your own linked wallets, on Base or another network. You can save a new address with a name as you send.
 
 Check the review before you confirm with your passkey. A signed transaction usually can't be reversed. If a transfer seems slow, check the transaction before you try again.
 

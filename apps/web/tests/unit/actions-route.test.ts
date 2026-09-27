@@ -2,7 +2,9 @@ import type { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { decodeFunctionData, erc20Abi } from "viem";
 import { LIFI_DIAMOND, quoteRoute, validateRoute, type RouteQuoteRequest } from "@/lib/actions/lifi";
+import { prepareAction } from "@/lib/actions/prepare";
 import { buildRoute, markQuoteUsed, saveRouteQuote } from "@/lib/actions/route";
+import { ensureSubjectProfile } from "@/lib/profile/ensure";
 import type { CatalogAsset } from "@/lib/swap/assets";
 import { d1 } from "../support/d1";
 import { schemaDatabase } from "../support/schema";
@@ -106,6 +108,18 @@ describe("server-held route quotes", () => {
   it("counts a payout to someone else toward limits and recipient rules", async () => {
     const built = await buildRoute(db, { kind: "route", quoteId: await saved(external) }, "alice", wallet, new Date(now));
     expect(built).toMatchObject({ countsTowardLimit: true, recipient: external });
+  });
+
+  it("needs the send switch as well as the cross-network switch to pay someone else on another network", async () => {
+    await ensureSubjectProfile(db, "alice", new Date(now));
+    sqlite.exec("UPDATE feature_flags SET enabled = CASE flag_key WHEN 'cross_chain' THEN 1 ELSE 0 END");
+    const own = await prepareAction(db, "alice", wallet, { kind: "route", quoteId: await saved() }, new Date(now));
+    expect(own.ok).toBe(true);
+    await expect(prepareAction(db, "alice", wallet, { kind: "route", quoteId: await saved(external) }, new Date(now)))
+      .rejects.toMatchObject({ status: 503 });
+    sqlite.exec("UPDATE feature_flags SET enabled = 1 WHERE flag_key = 'direct_transfers'");
+    const payout = await prepareAction(db, "alice", wallet, { kind: "route", quoteId: await saved(external) }, new Date(now));
+    expect(payout).toMatchObject({ ok: true, action: { kind: "route", destinationChainId: 42161, summary: { recipient: external } } });
   });
 
   it("refuses another customer's, an expired, or a used quote", async () => {

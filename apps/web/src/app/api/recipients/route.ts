@@ -17,9 +17,11 @@ export const GET = route("recipients.get", { unavailable: "recipients_unavailabl
   const [wallets, banks, recent] = await env.PROJECTION_DB.batch([
     env.PROJECTION_DB.prepare("SELECT entry_id, address, label, available_at, last_used_at FROM address_book_entries WHERE subject_reference = ? ORDER BY COALESCE(last_used_at, created_at) DESC").bind(subject.subjectReference),
     env.PROJECTION_DB.prepare("SELECT beneficiary_id, display_name, account_hint, rail, verification_status, last_used_at FROM bank_beneficiary_projections WHERE subject_reference = ? AND verification_status != 'removed' ORDER BY COALESCE(last_used_at, observed_at) DESC").bind(subject.subjectReference),
-    env.PROJECTION_DB.prepare(`SELECT json_extract(summary_json, '$.to') AS address, MAX(created_at) AS used_at
-      FROM actions WHERE subject_reference = ? AND kind = 'transfer' AND status IN ('submitted', 'settling', 'confirmed')
-      GROUP BY json_extract(summary_json, '$.to') ORDER BY used_at DESC LIMIT 8`).bind(subject.subjectReference)
+    // Sends on Base (transfers) and to other networks (routes that pay someone else).
+    env.PROJECTION_DB.prepare(`SELECT address, MAX(created_at) AS used_at FROM (
+        SELECT COALESCE(json_extract(summary_json, '$.to'), json_extract(summary_json, '$.recipient')) AS address, wallet_address, created_at
+        FROM actions WHERE subject_reference = ? AND kind IN ('transfer', 'route') AND status IN ('submitted', 'settling', 'confirmed'))
+      WHERE address IS NOT NULL AND address != wallet_address GROUP BY address ORDER BY used_at DESC LIMIT 8`).bind(subject.subjectReference)
   ]);
   const now = Date.now();
   const savedAddresses = new Set((wallets.results as unknown as WalletRow[]).map((row) => row.address.toLowerCase()));

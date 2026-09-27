@@ -1,5 +1,5 @@
-import { arbitrum, base, mainnet, optimism, polygon } from "viem/chains";
-import { assetsFor, type RegisteredAsset } from "@/lib/assets/registry";
+import { base } from "viem/chains";
+import { assetsFor, NETWORKS, type RegisteredAsset } from "@/lib/assets/registry";
 
 /**
  * Where a customer can deposit from, and what arrives on Base. Deposits keep
@@ -9,13 +9,7 @@ import { assetsFor, type RegisteredAsset } from "@/lib/assets/registry";
  */
 export type DepositSymbol = string;
 
-export const DEPOSIT_NETWORKS = [
-  { chainId: base.id, name: "Base" },
-  { chainId: mainnet.id, name: "Ethereum" },
-  { chainId: arbitrum.id, name: "Arbitrum" },
-  { chainId: optimism.id, name: "Optimism" },
-  { chainId: polygon.id, name: "Polygon" }
-] as const;
+export const DEPOSIT_NETWORKS = NETWORKS;
 
 export function depositSymbols(chainId: number): DepositSymbol[] {
   return assetsFor("deposit", chainId).map((asset) => asset.symbol);

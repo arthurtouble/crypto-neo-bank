@@ -22,8 +22,8 @@ Each asset is identified by network and contract, never by ticker:
 | --- | --- | --- |
 | `hold` | Read and shown in the Overview (Base only) | `lib/overview/read.ts` |
 | `deposit` | Added from a connected wallet on its network; bridged to the same asset on Base, which must have `hold` | `POST /api/deposits/quote` |
-| `send` | Sent from the Aura account (Base only) | `buildTransfer` in `lib/actions/transfer.ts` |
-| `swap` | Swapped, or received on another network | `GET /api/routes/quote`, `GET /api/swap/assets` |
+| `send` | Sent from the Aura account, which holds funds on Base. It can arrive on another network where the same asset has `swap` (`sendDestinations`) | `buildTransfer` in `lib/actions/transfer.ts`; `GET /api/routes/quote` for other networks |
+| `swap` | Swapped, or received on another network through Swap or Send | `GET /api/routes/quote`, `GET /api/swap/assets` |
 | `invest` | Listed in Invest (Base only) | `lib/invest/catalog.ts`, then the route quote |
 
 ## Adding an asset

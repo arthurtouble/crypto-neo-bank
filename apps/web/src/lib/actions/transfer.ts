@@ -25,14 +25,19 @@ export function rawAmount(amount: string, decimals: number): bigint {
   return raw;
 }
 
+/** A token's own contract can't use what it receives; sending there loses the funds. */
+export function refuseTokenContract(to: string) {
+  const address = to.toLowerCase();
+  if (ASSETS.some((item) => item.address === address)) throw new ActionInputError("invalid_recipient", "That's a token contract, not a wallet. Check the address.");
+}
+
 /** Send a registered asset on Base from the customer's account to an address. */
 export async function buildTransfer(db: D1Database, input: TransferInput, wallet: string): Promise<BuiltAction> {
   const asset = await requireAsset(db, input.assetId, "send");
   if (asset.chainId !== 8453) throw new ActionInputError("unsupported_asset", "Sending is available for assets on Base.");
   const to = input.to.toLowerCase() as `0x${string}`;
   if (to === wallet.toLowerCase()) throw new ActionInputError("invalid_recipient", "This is your own address.");
-  // A token's own contract can't use what it receives; sending there loses the funds.
-  if (ASSETS.some((item) => item.address === to)) throw new ActionInputError("invalid_recipient", "That's a token contract, not a wallet. Check the address.");
+  refuseTokenContract(to);
   const amountRaw = rawAmount(input.amount, asset.decimals);
   const valuation = { assetId: asset.id, amountRaw: amountRaw.toString(), decimals: asset.decimals };
   const summary = { assetId: asset.id, symbol: asset.symbol, decimals: asset.decimals, amount: input.amount, amountRaw: amountRaw.toString(), to };

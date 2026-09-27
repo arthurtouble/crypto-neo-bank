@@ -771,3 +771,11 @@
 .portfolioTotal small { color: var(--muted); font-size: var(--type-caption); }
 .dashboardPage > section.panel.widePanel + section.panel.widePanel { margin-top: 16px; }
 .dashboardPage .panelHeading { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+/* Send: saved recipients, own wallets, and recent addresses as one-tap choices. */
+.productShell .recipientChoices { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px; }
+.productShell .recipientChoices button { min-width: 0; padding: 8px 10px; display: grid; gap: 2px; text-align: left; border: 1px solid var(--hairline-strong); border-radius: var(--radius-control); background: var(--surface); color: var(--text); font: inherit; cursor: pointer; }
+.productShell .recipientChoices button[aria-pressed="true"] { border-color: var(--accent); }
+.productShell .recipientChoices strong { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.productShell .recipientChoices small { color: var(--text-tertiary); font-family: var(--font-technical); font-size: 9px; }
+.productShell .checkRow { display: flex; gap: 8px; align-items: center; font-size: 11px; }
+.productShell .checkRow input { accent-color: var(--accent); }
