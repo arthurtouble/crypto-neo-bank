@@ -26,7 +26,7 @@ Run `pnpm test:mainnet-readiness` to verify chain IDs, allowlisted USDC contract
 7. Card funding: open Pay by card, complete a small card purchase in Privy's flow, and confirm the USDC arrives on Base.
 8. Send: on Base, send to an address, a saved recipient, an Aura tag, and an own linked wallet. Save a new address with a name while sending, and see it offered next time. Send a small amount of USDC to another network; check the amount received and fees in the review, and that the action is complete only after delivery. Observe cooling for a new recipient, check the review step, approve with the passkey, and confirm the action reaches `confirmed`. Confirm a send to the account's own address or to a registered token contract is refused.
 9. Swap and cross-chain: quote a route, check price impact and slippage, sign approval and route as one operation, and confirm source and destination states are shown separately.
-10. Earn: Aave supply and withdraw on Base; Sky deposit and withdraw on Ethereum.
+10. Earn: Aave supply and withdraw of USDC and WETH on Base; deposit, withdraw an amount, and withdraw all in each Morpho vault (Steakhouse Prime USDC, Gauntlet USDC Prime) on Base.
 11. Controls: turn on account lock, a daily limit, and saved-recipients-only; confirm preparation is blocked. Pause an asset in the operations console and confirm actions in it are refused.
 12. Failure: reject a wallet prompt, let a quote expire, and let an action expire unsubmitted; verify clear recovery. Confirm Privy paid the gas for each action.
 13. Support: submit normal and urgent cases without exposing secrets; verify operator triage.

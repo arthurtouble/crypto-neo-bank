@@ -13,8 +13,8 @@ To add money from another network, use **Deposit > From your wallet**. Aura move
 
 | Network | Chain ID | Fee asset | What you can do |
 | --- | ---: | --- | --- |
-| Base | 8453 | ETH | Your Aura account: deposit, send, swap, invest, and earn with Aave |
-| Ethereum | 1 | ETH | Deposit ETH or USDC, swap, Sky savings, and Tether Gold, which your account holds here |
+| Base | 8453 | ETH | Your Aura account: deposit, send, swap, invest, and earn with Aave and Morpho |
+| Ethereum | 1 | ETH | Deposit ETH or USDC, swap, and Tether Gold, which your account holds here |
 | Arbitrum | 42161 | ETH | Deposit ETH or USDC, and swap |
 | Optimism | 10 | ETH | Deposit ETH or USDC, and swap |
 | Polygon | 137 | POL | Deposit USDC, and swap |

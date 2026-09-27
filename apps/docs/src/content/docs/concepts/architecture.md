@@ -40,7 +40,7 @@ These checks can stop a movement inside Aura. They can't stop someone who uses a
 
 Base is the home network. Aura reads balances, positions, and transaction receipts directly from the networks and protocol contracts.
 
-- **Earn** uses Aave on Base and Sky savings on Ethereum.
+- **Earn** uses Aave and two Morpho USDC vaults, all on Base.
 - **Swaps and moves between networks** use routes found by LI.FI, which chooses among third-party bridges and exchanges.
 
 ### Aura's own records

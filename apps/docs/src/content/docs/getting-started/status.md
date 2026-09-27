@@ -13,12 +13,12 @@ Your Aura account is a wallet that Privy makes when you sign in, and you control
 
 | Area | What it does | Good to know |
 | --- | --- | --- |
-| Overview | Your balances on Base, Aave positions, and Sky savings on Ethereum | Values come from live reads. If a read fails, Aura shows it as unavailable |
+| Overview | Your balances on Base, and your Aave and Morpho positions | Values come from live reads. If a read fails, Aura shows it as unavailable |
 | Deposit | Your address and QR code on Base, adding money from a connected wallet on Base, Ethereum, Arbitrum, Optimism, or Polygon, and paying by card through Privy | From another network, money is moved to the same asset on Base. Bank deposits are coming soon |
 | Send | Send ETH, USDC, EURC, WETH, cbBTC, tokenized stocks, or Tether Gold to an address, a saved recipient, an Aura tag, or your own linked wallet, on Base or, for ETH and USDC, another network. Save new recipients with a name as you send | Your controls apply, and you confirm with your passkey. Bank payouts are coming soon |
 | Swap | Buy and sell crypto, the euro stablecoin, tokenized stocks, and Tether Gold, and move assets between networks, using routes found by LI.FI | Quotes last 45 seconds. Aura pays the network fee; route fees come out of the amount. A move between networks is complete only when it arrives |
 | Invest | Buy crypto, ten Coinbase tokenized stocks, and Tether Gold through the same routes as Swap | Coinbase says its tokenized stocks are only for eligible people outside the US. Tether Gold is held on Ethereum |
-| Earn | Supply and withdraw on Aave (Base). Deposit to and withdraw from Sky savings (Ethereum) | Rates change. Neither is a bank deposit |
+| Earn | Supply USDC or WETH to Aave, or deposit USDC in one of two Morpho vaults, all on Base. Withdraw when you like | Rates change. Withdrawals depend on each market's liquidity. None is a bank deposit |
 | Transactions and Insights | Your Aura activity, plus chain and Aave history where available | Exports say what they cover |
 | Aura tag | A public page where people can pay you in crypto | Bank and card payments on the page aren't available |
 | Settings | Sign-in, passkey, recovery, key export, optional account lock, daily limit, and saved-recipients-only mode, notification choices, and data export and deletion | Your controls are off until you turn them on |

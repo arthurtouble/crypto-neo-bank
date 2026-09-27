@@ -23,11 +23,12 @@ All onchain movements follow [money actions](money-actions.md).
 - LI.FI supplies route state; the chains remain authoritative for their transactions.
 - The action stays `settling` until delivery is verified.
 
-## Earn (Aave V3 on Base, Sky on Ethereum)
+## Earn (Aave V3 and Morpho vaults on Base)
 
-`Customer request → Aurel controls → exact approval + supply/withdraw in one operation → protocol contracts → Supply/Withdraw or vault events verified`
+`Customer request → Aurel controls → on-chain vault re-check (Morpho) → exact approval + supply/deposit, or withdraw/redeem, in one operation → protocol contracts → Aave Supply/Withdraw or the vault's Deposit/Withdraw events verified`
 
-- The protocols determine rates and liquidity.
+- The protocols determine rates and liquidity. Morpho vault curators (Steakhouse Financial, Gauntlet) choose which markets each vault lends to. Displayed rates come from Aave's data service and Morpho's public API and are unavailable when the read fails.
+- A vault withdrawal depends on its markets' liquidity; if they can't release enough, the transaction reverts and nothing moves.
 - Aurel cannot guarantee liquidity or returns.
 
 ## Future regulated fiat conversion
