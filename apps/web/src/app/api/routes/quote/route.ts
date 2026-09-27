@@ -37,7 +37,7 @@ const schema = z.object({
   slippageBps: z.coerce.number().int().min(1).max(300).default(50)
 });
 
-/** A server-held LI.FI quote for a swap, invest order, or cross-chain move. */
+/** A server-held LI.FI quote for a swap or cross-chain move. */
 export const GET = route("routes.quote", { invalid: "invalid_quote_request", unavailable: "quote_unavailable",
   onError: (error, context) => error instanceof RouteQuoteError
     ? errorResponse(error.code === "provider_unavailable" ? 503 : 422, error.code, context, { message: error.message }) : undefined },

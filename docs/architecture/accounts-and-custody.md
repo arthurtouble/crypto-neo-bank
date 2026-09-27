@@ -43,7 +43,7 @@ Earlier builds used a Privy Kernel smart wallet as the account. Customers who st
 | --- | --- |
 | Bank accounts, KYC, bank payouts | Bridge, direct adapter |
 | Cards | Rain, direct adapter |
-| Swaps, invest, cross-chain moves | LI.FI route module |
+| Swaps and cross-chain moves | LI.FI route module |
 | Earn | Aave v3 and Morpho vaults on Base, built in Aura |
 | Customer controls and limits | Aura's server |
 | Balances | Read from the chain |

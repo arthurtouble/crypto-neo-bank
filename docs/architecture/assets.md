@@ -13,7 +13,7 @@ Each asset is identified by network and contract, never by ticker:
 | --- | --- |
 | `id`, `chainId`, `address` | `<chainId>:<lowercase contract>`, or `<chainId>:native` for the network's coin |
 | `symbol`, `name`, `decimals` | Must match the contract; `pnpm assets:check` verifies them on chain |
-| `category` | `cash`, `crypto`, `stock`, or `metal`. Cash is its own group in the Overview; the rest show under crypto. Crypto, stocks, and metals are also the categories in Invest |
+| `category` | `cash`, `crypto`, `stock`, or `metal`. Each category is its own group in the Overview (Cash, Crypto, Stocks, Metals) |
 | `price` | How the dollar value is read, for totals and daily limits: `usd` (dollar stablecoins at $1), a Kraken market (`eth`, `btc`), or a `chainlink` feed on Base (stocks, gold, the euro) with its decimals, name, and maximum age (four days, so weekend and holiday closes still count). A feed older than that, or with no positive answer, makes the value unavailable (`lib/assets/prices.ts`) |
 | `uses` | What it may be used for (below) |
 | `note` | Optional line shown to customers, for example what a wrapped asset represents |
@@ -24,7 +24,6 @@ Each asset is identified by network and contract, never by ticker:
 | `deposit` | Added from a connected wallet on its network; bridged to the same asset on Base, which must have `hold` | `POST /api/deposits/quote` |
 | `send` | Sent from the Aura account, which holds funds on Base. It can arrive on another network where the same asset has `swap` (`sendDestinations`) | `buildTransfer` in `lib/actions/transfer.ts`; `GET /api/routes/quote` for other networks |
 | `swap` | Swapped, or received on another network through Swap or Send | `GET /api/routes/quote`, `GET /api/swap/assets` |
-| `invest` | Listed in Invest | `lib/invest/catalog.ts`, then the route quote |
 
 ## Adding an asset
 

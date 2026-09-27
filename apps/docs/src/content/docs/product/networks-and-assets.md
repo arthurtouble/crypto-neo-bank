@@ -13,7 +13,7 @@ To add money from another network, use **Deposit > From your wallet**. Aura move
 
 | Network | Chain ID | Fee asset | What you can do |
 | --- | ---: | --- | --- |
-| Base | 8453 | ETH | Your Aura account: deposit, send, swap, invest, and earn with Aave and Morpho |
+| Base | 8453 | ETH | Your Aura account: deposit, send, swap, and earn with Aave and Morpho |
 | Ethereum | 1 | ETH | Deposit ETH or USDC, swap, and Tether Gold, which your account holds here |
 | Arbitrum | 42161 | ETH | Deposit ETH or USDC, and swap |
 | Optimism | 10 | ETH | Deposit ETH or USDC, and swap |
@@ -25,7 +25,7 @@ To add money from another network, use **Deposit > From your wallet**. Aura move
 
 A token's symbol isn't a safe way to identify it. Unrelated tokens can share a name and symbol. Aura identifies each asset by its network and contract address together.
 
-Aura supports a reviewed list of assets. Deposit, Send, Swap, and Invest only offer assets on that list, and Aura's servers refuse anything else.
+Aura supports a reviewed list of assets. Deposit, Send, and Swap only offer assets on that list, and Aura's servers refuse anything else.
 
 On Base, your main balance view shows:
 

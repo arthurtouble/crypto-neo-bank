@@ -3,7 +3,7 @@ title: Daily money flows
 description: Recipients, activity receipts, exports, and their authority boundaries.
 ---
 
-Aura uses **Deposit**, **Send**, **Swap**, **Earn**, and **Invest**. Networks, providers, and protocols appear when the customer must make a material choice.
+Aura uses **Deposit**, **Send**, **Swap**, and **Earn**. Stocks and gold are bought in Swap. Networks, providers, and protocols appear when the customer must make a material choice.
 
 ## Recipients
 

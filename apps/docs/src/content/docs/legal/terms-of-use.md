@@ -42,12 +42,12 @@ Through Aura you can:
 - see supported balances and positions on public blockchains;
 - send assets on Base to an address or an Aura tag;
 - swap assets, and move them to or from other networks, using routes found by LI.FI, an independent service that chooses among third-party bridges and exchanges;
-- buy crypto assets through those same routes;
+- buy and sell crypto, the euro stablecoin, tokenized stocks, and Tether Gold through those same routes;
 - supply and withdraw assets on Aave, a lending protocol on Base, and deposit USDC into and withdraw it from reviewed Morpho vaults on Base;
 - create a public Aura tag payment page; and
 - manage your settings, data, and support cases.
 
-These features may be switched off, and some may not be available to you yet. Aura does not currently offer bank accounts, bank transfers, cards, cashback, rewards, borrowing, or tokenized stocks or metals. Seeing one of these in the app does not mean it is available.
+These features may be switched off, and some may not be available to you yet. Aura does not currently offer bank accounts, bank transfers, cards, cashback, rewards, or borrowing. Seeing one of these in the app does not mean it is available.
 
 Aura is not a bank, broker, custodian, exchange, insurer, fiduciary, or investment adviser, unless a screen expressly says otherwise.
 

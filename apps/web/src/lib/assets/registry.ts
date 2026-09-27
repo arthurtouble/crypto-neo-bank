@@ -12,7 +12,7 @@
  * docs/architecture/assets.md); pausing never hides what a customer holds.
  */
 
-/** Where an asset appears: cash in the Overview, or a category in Invest. */
+/** How an asset is grouped in the Overview. */
 export type AssetCategory = "cash" | "crypto" | "stock" | "metal";
 
 /**
@@ -22,9 +22,8 @@ export type AssetCategory = "cash" | "crypto" | "stock" | "metal";
  * - deposit: added from a connected wallet on its network (bridged to Base if needed).
  * - send: sent from the Aura account.
  * - swap: bought or sold in Swap, or received on another network.
- * - invest: listed in Invest.
  */
-export type AssetUse = "hold" | "deposit" | "send" | "swap" | "invest";
+export type AssetUse = "hold" | "deposit" | "send" | "swap";
 
 /**
  * How the US dollar value is read, for totals and daily limits.
@@ -121,20 +120,20 @@ function asset(chainId: number, address: `0x${string}` | null, details: Omit<Reg
 
 export const ASSETS: readonly RegisteredAsset[] = [
   // Base: where the Aura account holds funds.
-  asset(BASE, null, { symbol: "ETH", name: "Ether", decimals: 18, category: "crypto", price: ether, uses: ["hold", "deposit", "send", "swap", "invest"] }),
+  asset(BASE, null, { symbol: "ETH", name: "Ether", decimals: 18, category: "crypto", price: ether, uses: ["hold", "deposit", "send", "swap"] }),
   asset(BASE, "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", { symbol: "USDC", name: "USD Coin", decimals: 6, category: "cash", price: usd, uses: ["hold", "deposit", "send", "swap"] }),
   asset(BASE, "0x4200000000000000000000000000000000000006", { symbol: "WETH", name: "Wrapped Ether", decimals: 18, category: "crypto", price: ether, uses: ["hold", "send", "swap"] }),
   asset(BASE, "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf", { symbol: "cbBTC", name: "Bitcoin (Coinbase Wrapped BTC)", decimals: 8, category: "crypto", price: bitcoin,
-    uses: ["hold", "send", "swap", "invest"], note: "Bitcoin held by Coinbase, 1:1" }),
+    uses: ["hold", "send", "swap"], note: "Bitcoin held by Coinbase, 1:1" }),
   asset(BASE, "0x60a3e35cc302bfa44cb288bc5a4f316fdb1adb42", { symbol: "EURC", name: "Euro Coin", decimals: 6, category: "cash",
     price: chainlink("0xc91d87e81fab8f93699ecf7ee9b44d11e1d53f0f", "EUR / USD"), uses: ["hold", "deposit", "send", "swap"], note: "Euro stablecoin issued by Circle" }),
   ...STOCKS.map(([symbol, name, address, feed]) => asset(BASE, address as `0x${string}`, { symbol, name, decimals: 8, category: "stock",
-    price: chainlink(feed, `Coinbase ${symbol.slice(0, -1)}`), uses: ["hold", "send", "swap", "invest"], note: `${name} stock, tokenized by Coinbase` })),
+    price: chainlink(feed, `Coinbase ${symbol.slice(0, -1)}`), uses: ["hold", "send", "swap"], note: `${name} stock, tokenized by Coinbase` })),
 
   // Ethereum: Tether Gold isn't issued on Base, so the account holds it on Ethereum at the same address.
   // One XAUt is one troy ounce of gold, valued with Chainlink's gold price.
   asset(ETHEREUM, "0x68749665ff8d2d112fa859aa293f07a622782f38", { symbol: "XAUt", name: "Tether Gold", decimals: 6, category: "metal",
-    price: chainlink("0x5213ebb69743b85644dbb6e25cdf994afbb8cf31", "XAU / USD"), uses: ["hold", "send", "swap", "invest"],
+    price: chainlink("0x5213ebb69743b85644dbb6e25cdf994afbb8cf31", "XAU / USD"), uses: ["hold", "send", "swap"],
     note: "One troy ounce of gold, held on Ethereum" }),
 
   // Other networks: deposit sources, and destinations for sending to another network.

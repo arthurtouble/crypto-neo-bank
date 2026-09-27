@@ -15,7 +15,7 @@ import { ClientIdentity } from "./client-identity";
 const iconByPage: Record<string, typeof icons.dashboard> = {
   Overview: icons.dashboard, Deposit: icons.received, Send: icons.sent,
   Swap: icons.activity, Earn: icons.earn, Borrow: icons.money,
-  Invest: icons.assets, Cards: icons.card, Rewards: icons.benefits,
+  Cards: icons.card, Rewards: icons.benefits,
   Transactions: icons.activity, Insights: icons.earn, Settings: icons.settings,
   Support: icons.security
 };

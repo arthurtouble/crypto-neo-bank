@@ -39,7 +39,7 @@ A feature is done only when all of these are true:
 | 3 | Send | To an address, a saved recipient, an Aura tag, or the customer's own wallets; limits and cooling period; the passkey requirement and enrollment; the network it arrives on (Base, or another network through LI.FI with fees from the amount); saving a new address as a named recipient from Send; bank payouts shown as coming soon | Done ([#23](https://github.com/arthurtouble/crypto-neo-bank/pull/23), [#24](https://github.com/arthurtouble/crypto-neo-bank/pull/24), [#26](https://github.com/arthurtouble/crypto-neo-bank/pull/26)) |
 | 4 | Swap | On Base between any registered assets, both ways; to and from other networks, including selling Tether Gold from Ethereum; slippage setting; the same sent-and-tracked handoff as Send | Done ([#29](https://github.com/arthurtouble/crypto-neo-bank/pull/29)) |
 | 5 | Earn | Aave on Base (USDC, WETH) and two Morpho USDC vaults (Steakhouse, Gauntlet); positions grow live at their yearly rate; Sky cut; Syrup deferred | Done ([#30](https://github.com/arthurtouble/crypto-neo-bank/pull/30), [#31](https://github.com/arthurtouble/crypto-neo-bank/pull/31)) |
-| 6 | Invest | Catalog and buying | In progress |
+| 6 | Invest | Catalog and buying. Cut on 27 September 2026: crypto, tokenized stocks, and Tether Gold are bought in Swap, and `/app/invest` redirects there | Cut |
 | 7 | Transactions | History, receipts, CSV export, background re-check; incoming deposits (today only actions the account sent are listed) | Not started |
 | 8 | Settings and security | Limits, recipients, account lock, passkey, Aura tag, data export and deletion, notifications | Not started |
 | 9 | Support and feedback | Support cases, feedback | Not started |

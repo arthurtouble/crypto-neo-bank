@@ -3,7 +3,7 @@ title: Product principles
 description: What Aura is for, and the choices that shape it.
 ---
 
-Aura is a money app built around stablecoins and your own wallet. It brings together sending, swapping, investing in crypto, and earning. Once partners are approved, it will add bank transfers and cards.
+Aura is a money app built around stablecoins and your own wallet. It brings together sending, swapping between crypto, tokenized stocks, and gold, and earning. Once partners are approved, it will add bank transfers and cards.
 
 We're not putting a bank-shaped skin over crypto. We want several independent financial systems to feel like one app, without hiding where your money sits, who controls it, or what can go wrong.
 

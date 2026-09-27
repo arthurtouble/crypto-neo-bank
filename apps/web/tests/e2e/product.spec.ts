@@ -49,12 +49,21 @@ test("theme and private access gate remain usable", async ({ page }) => {
 
 test("every Aura section is browsable with labeled fictional data", async ({ page }) => {
   test.setTimeout(90_000);
-  for (const section of ["deposit", "send", "swap", "earn", "invest", "cards", "rewards", "transactions", "insights", "settings", "support"]) {
+  for (const section of ["deposit", "send", "swap", "earn", "cards", "rewards", "transactions", "insights", "settings", "support"]) {
     await page.goto(`/app/${section}`);
     await expect(page.getByRole("heading", { name: section[0].toUpperCase() + section.slice(1), exact: true })).toBeVisible();
     await expect(page.getByText("Example data", { exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "Sign in to continue" })).toBeVisible();
   }
+});
+
+test("Invest was cut: old links open Swap, where stocks, gold, and crypto are bought", async ({ page }) => {
+  for (const path of ["/app/invest", "/app/markets"]) {
+    await page.goto(path);
+    await expect(page).toHaveURL(/\/app\/swap$/);
+    await expect(page.getByRole("heading", { name: "Swap", exact: true })).toBeVisible();
+  }
+  await expect(page.getByRole("navigation").getByRole("link", { name: "Invest" })).toHaveCount(0);
 });
 
 test("unknown Aura tags do not expose recipient information", async ({ page }) => {
