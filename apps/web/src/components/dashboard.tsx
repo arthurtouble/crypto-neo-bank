@@ -17,7 +17,7 @@ const groups: Array<{ key: HoldingGroup; title: string }> = [
   { key: "metals", title: "Metals" },
   { key: "earn", title: "Earn" }
 ];
-const sources: Record<string, string> = { base: "Base", ethereum: "Ethereum", "aave:base": "Aave on Base", "sky:ethereum": "Sky on Ethereum" };
+const sources: Record<string, string> = { base: "Base", ethereum: "Ethereum", "aave:base": "Aave on Base", "morpho:base": "Morpho on Base" };
 
 function usdText(cents: number | null) {
   return cents === null ? "Unavailable" : usd.format(cents / 100);

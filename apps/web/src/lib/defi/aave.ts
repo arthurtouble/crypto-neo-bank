@@ -1,16 +1,11 @@
 import { z } from "zod";
 
+import { localEdgeUrl } from "@/lib/testing/local-edge";
+
 const AAVE_MCP_URL = "https://mcp.aave.com/";
-export const AAVE_BASE_V3_MARKET = "0xA238Dd80C259a72e81d7e4664a9801593F98d1c5";
-export const AAVE_BASE_PROTOCOL = {
-  provider: "0xe20fCBdBfFC4Dd138cE8b2E6FBb6CB49777ad64D",
-  dataProvider: "0x0F43731EB8d45A581f4a36DD74F5f358bc90C73A",
-  oracle: "0x2Cc0Fc26eD4563A5ce5e8bdcfe1A2878676Ae156"
-} as const;
-export const AAVE_BASE_ASSETS = {
-  USDC: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
-  WETH: "0x4200000000000000000000000000000000000006"
-} as const;
+import { AAVE_BASE_V3_MARKET } from "./aave-contracts";
+
+export { AAVE_BASE_ASSETS, AAVE_BASE_PROTOCOL, AAVE_BASE_V3_MARKET } from "./aave-contracts";
 
 const mcpEnvelopeSchema = z.object({
   result: z.object({ structuredContent: z.unknown().optional(), content: z.array(z.object({ type: z.string(), text: z.string().optional() })).optional() }).optional(),
@@ -18,7 +13,7 @@ const mcpEnvelopeSchema = z.object({
 });
 
 export async function callAaveTool<T>(name: string, args: Record<string, unknown>): Promise<T> {
-  const response = await fetch(AAVE_MCP_URL, {
+  const response = await fetch(localEdgeUrl("AAVE_API_URL") ?? AAVE_MCP_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json", "User-Agent": "Aura/1.0" },
     body: JSON.stringify({ jsonrpc: "2.0", id: crypto.randomUUID(), method: "tools/call", params: { name, arguments: args } }),
@@ -55,20 +50,6 @@ export async function getAaveBaseMarkets(user?: string) {
   const market = result.data.v3.markets.find((item) => item.market.toLowerCase() === AAVE_BASE_V3_MARKET.toLowerCase());
   if (!market) throw new Error("The governed Aave Base market is unavailable.");
   return { ...market, observedAt: new Date().toISOString(), authority: "Aave Protocol API and Base contracts" as const };
-}
-
-export async function getAaveBasePosition(user: string) {
-  const [positions, summary, rewards] = await Promise.all([
-    callAaveTool<unknown>("get_user_positions", { user, version: "v3", chainId: 8453 }),
-    callAaveTool<unknown>("get_user_summary", { user, version: "v3", chainId: 8453 }),
-    callAaveTool<unknown>("get_user_rewards", { user, version: "v3" }).catch(() => null)
-  ]);
-  return {
-    overview: normalizeAavePosition(positions, summary),
-    rewards: normalizeAaveBaseRewards(rewards),
-    observedAt: new Date().toISOString(),
-    authority: "Aave Protocol API and Base contracts" as const
-  };
 }
 
 export type AaveBaseActivityItem = {
@@ -179,85 +160,4 @@ function firstScalar(value: unknown, names: Set<string>): string | undefined {
   }
   for (const child of Object.values(value as Record<string, unknown>)) { const found = firstScalar(child, names); if (found !== undefined) return found; }
   return undefined;
-}
-
-export function normalizeAavePosition(positions: unknown, summary: unknown) {
-  const positionRoot = recordAt(positions, ["data", "v3"]);
-  const summaryRoot = recordAt(summary, ["data", "v3"]);
-  if (!Array.isArray(positionRoot?.supplies) || !Array.isArray(positionRoot?.borrows) || !Array.isArray(summaryRoot?.markets))
-    throw new Error("Incomplete Aave position response.");
-  const isBase = (item: unknown): item is Record<string, unknown> => Boolean(item) && typeof item === "object" && !Array.isArray(item)
-    && String((item as Record<string, unknown>).market).toLowerCase() === AAVE_BASE_V3_MARKET.toLowerCase();
-  const supplies = positionRoot.supplies.filter(isBase);
-  const borrows = positionRoot.borrows.filter(isBase);
-  const markets = summaryRoot.markets.filter(isBase);
-  if (markets.length > 1) throw new Error("Incomplete Aave position response.");
-  const debts = borrows.map((item) => {
-    if (typeof item.symbol !== "string" || typeof item.balance !== "string" || typeof item.balanceUsd !== "string"
-      || !/^\d+(?:\.\d+)?$/.test(item.balance) || !/^\d+(?:\.\d+)?$/.test(item.balanceUsd))
-      throw new Error("Incomplete Aave debt response.");
-    return { symbol: item.symbol, amount: item.balance, usd: item.balanceUsd };
-  });
-  const marketsWithPosition = supplies.length || borrows.length ? 1 : 0;
-  return {
-    marketsWithPosition,
-    supplyGroups: supplies.length,
-    borrowGroups: borrows.length,
-    debts,
-    healthFactor: firstScalar(markets[0], new Set(["healthFactor", "health_factor"])),
-    netWorthUsd: firstScalar(markets[0], new Set(["netWorthUSD", "netWorthUsd", "net_worth_usd"]))
-  };
-}
-
-export type AaveReward = {
-  symbol: string;
-  name: string;
-  amount: string;
-  usd: string;
-  tokenAddress: string;
-};
-
-export type AaveBaseRewards = {
-  items: AaveReward[];
-  totalUsd: string;
-  partial: boolean;
-  claimAvailable: boolean;
-  sourceStatus: "available" | "none" | "unavailable";
-};
-
-function rewardRows(value: unknown) {
-  const root = recordAt(value, ["data", "v3"]);
-  const rewards = Array.isArray(root?.rewards) ? root.rewards : [];
-  return { root, rewards: rewards.filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object" && !Array.isArray(item)) };
-}
-
-export function normalizeAaveBaseRewards(value: unknown): AaveBaseRewards {
-  if (value === null || value === undefined) return { items: [], totalUsd: "0", partial: false, claimAvailable: false, sourceStatus: "unavailable" };
-  const { root, rewards } = rewardRows(value);
-  const base = rewards.find((item) => Number(item.chainId ?? item.chain) === 8453);
-  const claimable = Array.isArray(base?.claimable) ? base.claimable : [];
-  const items = claimable.flatMap((item): AaveReward[] => {
-    if (!item || typeof item !== "object" || Array.isArray(item)) return [];
-    const record = item as Record<string, unknown>;
-    const amount = record.amount && typeof record.amount === "object" && !Array.isArray(record.amount) ? record.amount as Record<string, unknown> : undefined;
-    const decimal = amount?.amount && typeof amount.amount === "object" && !Array.isArray(amount.amount) ? amount.amount as Record<string, unknown> : undefined;
-    const currency = record.currency && typeof record.currency === "object" && !Array.isArray(record.currency) ? record.currency as Record<string, unknown> : undefined;
-    if (!currency || typeof currency.symbol !== "string" || typeof currency.address !== "string" || typeof decimal?.value !== "string") return [];
-    return [{
-      symbol: currency.symbol,
-      name: typeof currency.name === "string" ? currency.name : currency.symbol,
-      amount: decimal.value,
-      usd: typeof amount?.usd === "string" ? amount.usd : "0",
-      tokenAddress: currency.address
-    }];
-  });
-  const totalUsd = items.reduce((sum, item) => sum + (Number(item.usd) || 0), 0);
-  const transaction = base?.transaction && typeof base.transaction === "object" && !Array.isArray(base.transaction) ? base.transaction as Record<string, unknown> : undefined;
-  return {
-    items,
-    totalUsd: totalUsd.toFixed(8).replace(/\.?0+$/, "") || "0",
-    partial: Boolean(root?.partial),
-    claimAvailable: items.length > 0 && Boolean(transaction),
-    sourceStatus: items.length > 0 ? "available" : "none"
-  };
 }

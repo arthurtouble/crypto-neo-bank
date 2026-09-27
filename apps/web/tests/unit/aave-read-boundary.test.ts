@@ -6,8 +6,7 @@ const state = vi.hoisted(() => ({
   WalletOwnershipError: httpErrors.WalletOwnershipError,
   authenticated: false,
   linked: false,
-  marketCalls: 0,
-  positionCalls: 0
+  marketCalls: 0
 }));
 vi.mock("@/lib/auth/server", () => ({
   AuthenticationError: state.AuthenticationError,
@@ -25,18 +24,16 @@ vi.mock("@/lib/auth/wallet", () => ({
 }));
 vi.mock("@/lib/defi/aave", () => ({
   getAaveBaseMarkets: async (address?: string) => { state.marketCalls++; return { address }; },
-  getAaveBasePosition: async (address: string) => { state.positionCalls++; return { address }; }
 }));
 
 import { GET as markets } from "@/app/api/defi/aave/markets/route";
-import { GET as positions } from "@/app/api/defi/aave/positions/route";
 
 
 const address = "0x2222222222222222222222222222222222222222";
 const request = (path: string) => new Request(`https://aura.test${path}`);
 
 describe("Aave read boundaries", () => {
-  beforeEach(() => Object.assign(state, { authenticated: false, linked: false, marketCalls: 0, positionCalls: 0 }));
+  beforeEach(() => Object.assign(state, { authenticated: false, linked: false, marketCalls: 0 }));
 
   it("keeps general market data public without a wallet", async () => {
     const response = await markets(request("/api/defi/aave/markets"));
@@ -55,17 +52,5 @@ describe("Aave read boundaries", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("Cache-Control")).toBe("private, no-store");
     expect(state.marketCalls).toBe(1);
-  });
-
-  it("requires a verified session and wallet ownership before positions", async () => {
-    const path = `/api/defi/aave/positions?address=${address}`;
-    expect((await positions(request(path))).status).toBe(401);
-    state.authenticated = true;
-    expect((await positions(request(path))).status).toBe(403);
-    state.linked = true;
-    const response = await positions(request(path));
-    expect(response.status).toBe(200);
-    expect(response.headers.get("Cache-Control")).toBe("private, no-store");
-    expect(state.positionCalls).toBe(1);
   });
 });
