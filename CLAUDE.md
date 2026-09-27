@@ -24,7 +24,7 @@ pnpm build
 ```
 
 A single unit test: `pnpm --filter @aurel/web exec vitest run tests/unit/<file>.test.ts`.
-CI (`.github/workflows/ci.yml`) runs lint, `typecheck:all`, `test:unit`, build, e2e, and `test:recovery`. Run the first three before pushing.
+CI (`.github/workflows/ci.yml`) runs lint, `typecheck:all`, `test:unit`, build, and `test:recovery` in one job, and e2e as two parallel jobs (desktop and mobile Chromium; the tests share one fake chain, so each project runs one test at a time). Run the first three before pushing.
 
 ## Current plan: feature readiness
 
