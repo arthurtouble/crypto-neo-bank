@@ -49,7 +49,7 @@ const status = await request("/api/status");
 const statusBody = await status.json().catch(() => ({}));
 assert([200, 503].includes(status.status) && Array.isArray(statusBody.components), `public status returns bounded component state (${status.status})`);
 
-for (const path of ["/api/activity", "/api/defi/aave/positions?address=0x000000000000000000000000000000000000dEaD", "/api/ops/summary", "/api/ops/features", "/api/ops/analytics"]) {
+for (const path of ["/api/activity", "/api/overview", "/api/ops/summary", "/api/ops/features", "/api/ops/analytics"]) {
   const response = await request(path);
   assert([401, 403].includes(response.status), `${path} rejects an unauthenticated request (${response.status})`);
 }

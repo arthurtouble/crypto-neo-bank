@@ -31,7 +31,7 @@ Your main balance view shows:
 | Ten Coinbase tokenized stocks | Base | Stocks |
 | Tether Gold (XAUt) | Ethereum | Metals |
 | Aave USDC and WETH you've supplied | Base | Earn |
-| Sky savings | Ethereum | Earn |
+| Morpho USDC vaults (Steakhouse Prime USDC, Gauntlet USDC Prime) | Base | Earn |
 
 Each item shows a US dollar value, and Overview adds them up into a total. Stock, gold, and euro prices pause outside market hours, so those rows say when their price was published.
 
@@ -45,7 +45,7 @@ Aura leaves out assets it doesn't recognize rather than guessing their value. A 
 
 ## Earn positions
 
-Aura reads the USDC and WETH you've supplied directly from Aave on Base. It reads your Sky savings from Ethereum. If a read fails, Aura shows the position as unavailable rather than an old value.
+Aura reads the USDC and WETH you've supplied directly from Aave on Base. It reads your Morpho vault shares from Base and shows what they're worth in USDC. If a read fails, Aura shows the position as unavailable rather than an old value.
 
 A position doesn't tell you what you've earned, your cost basis, or a tax value. Aura leaves those blank until it has complete history to back them up.
 

@@ -1,6 +1,6 @@
 import { decodeEventLog, erc20Abi, parseAbiItem } from "viem";
 import { AAVE_BASE_V3_MARKET } from "@/lib/defi/aave";
-import { skyConversionLimit, SKY_SUSDS, SKY_USDC, SKY_USDC_ACTIONS } from "@/lib/defi/sky-call-policy";
+import { MORPHO_USDC } from "@/lib/defi/morpho";
 import { observeTransaction, requiredConfirmations, type ChainObservation } from "./chain";
 import { LifiStatusError, readLifiTransferStatus } from "./lifi-status";
 import { sameAddress, type Call, type Effect } from "./types";
@@ -29,9 +29,10 @@ const aaveEvents = {
   aave_supply: parseAbiItem("event Supply(address indexed reserve, address user, address indexed onBehalfOf, uint256 amount, uint16 indexed referralCode)"),
   aave_withdraw: parseAbiItem("event Withdraw(address indexed reserve, address indexed user, address indexed to, uint256 amount)")
 };
-const skyEvents = {
-  sky_deposit: parseAbiItem("event Deposit(address indexed sender, address indexed owner, uint256 assets, uint256 shares)"),
-  sky_withdraw: parseAbiItem("event Withdraw(address indexed sender, address indexed receiver, address indexed owner, uint256 assets, uint256 shares)")
+/** ERC-4626 events, as Morpho vaults emit them. */
+const vaultEvents = {
+  deposit: parseAbiItem("event Deposit(address indexed sender, address indexed owner, uint256 assets, uint256 shares)"),
+  withdraw: parseAbiItem("event Withdraw(address indexed sender, address indexed receiver, address indexed owner, uint256 assets, uint256 shares)")
 };
 
 function decode<const T extends readonly unknown[]>(abi: T, log: Log) {
@@ -72,23 +73,31 @@ export function effectPresent(effect: Exclude<Effect, { type: "delivery" }>, wal
           ? sameAddress(String(event.args.onBehalfOf), wallet) && event.args.referralCode === 0
           : sameAddress(String(event.args.to), wallet);
       });
-    case "sky_deposit":
-    case "sky_withdraw": {
-      const amount = BigInt(effect.amountRaw);
-      const usdc = transfers(logs, SKY_USDC).filter((item) => effect.type === "sky_deposit"
-        ? sameAddress(item.from, wallet) && sameAddress(item.to, SKY_USDC_ACTIONS)
-        : sameAddress(item.to, wallet)).reduce((sum, item) => sum + item.value, 0n);
-      const vault = logs.filter((log) => sameAddress(log.address, SKY_SUSDS)).filter((log) => {
-        const event = decode([skyEvents[effect.type]], log);
-        if (!event || !sameAddress(String(event.args.sender), SKY_USDC_ACTIONS) || !sameAddress(String(event.args.owner), wallet)
-          || (event.args.shares as bigint) <= 0n) return false;
-        const assets = event.args.assets as bigint;
-        return effect.type === "sky_deposit"
-          ? assets >= skyConversionLimit("deposit", amount)
-          : sameAddress(String(event.args.receiver), SKY_USDC_ACTIONS) && assets > 0n && assets <= skyConversionLimit("withdraw", amount);
+    case "morpho_deposit": {
+      // The vault's own Deposit event, from and for the account, for exactly the amount, backed by the USDC leaving the account.
+      const assets = BigInt(effect.assetsRaw);
+      const deposited = logs.some((log) => {
+        if (!sameAddress(log.address, effect.vault)) return false;
+        const event = decode([vaultEvents.deposit], log);
+        return Boolean(event && sameAddress(String(event.args.sender), wallet) && sameAddress(String(event.args.owner), wallet)
+          && event.args.assets === assets && (event.args.shares as bigint) > 0n);
       });
-      return usdc === amount && vault.length === 1;
+      const paid = transfers(logs, MORPHO_USDC).filter((item) => sameAddress(item.from, wallet) && sameAddress(item.to, effect.vault))
+        .reduce((sum, item) => sum + item.value, 0n);
+      return deposited && paid === assets;
     }
+    case "morpho_withdraw":
+    case "morpho_redeem":
+      // The vault's own Withdraw event: the account's shares, paid to the account, for exactly the amount or every share.
+      return logs.some((log) => {
+        if (!sameAddress(log.address, effect.vault)) return false;
+        const event = decode([vaultEvents.withdraw], log);
+        if (!event || !sameAddress(String(event.args.sender), wallet) || !sameAddress(String(event.args.receiver), wallet)
+          || !sameAddress(String(event.args.owner), wallet)) return false;
+        return effect.type === "morpho_withdraw"
+          ? event.args.assets === BigInt(effect.assetsRaw) && (event.args.shares as bigint) > 0n
+          : event.args.shares === BigInt(effect.sharesRaw) && (event.args.assets as bigint) > 0n;
+      });
   }
 }
 

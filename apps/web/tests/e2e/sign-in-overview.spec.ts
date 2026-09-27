@@ -1,5 +1,6 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "./support/fixtures";
+import { VAULTS } from "./support/fake-edge.mjs";
 import { acceptTerms, ASSETS, edge, newCustomer, setBalances, setIdentity, type Customer } from "./support/session";
 
 // Feature 1 in docs/overview/feature-readiness.md: sign-in, terms, and the
@@ -12,9 +13,9 @@ const funded = {
     native: "2000000000000000000",           // 2 ETH at $2,500
     [ASSETS.weth]: "100000000000000000",     // 0.1 WETH
     [ASSETS.cbbtc]: "1000000",               // 0.01 cbBTC at $60,000
-    [ASSETS.aaveUsdc]: "50000000"            // 50 USDC in Aave
-  },
-  1: { [ASSETS.skySavings]: "100000000000000000000" } // 100 sUSDS shares = 105 USDS
+    [ASSETS.aaveUsdc]: "50000000",           // 50 USDC in Aave
+    [VAULTS.gauntlet]: "100000000000000000000" // 100 Morpho vault shares = 105 USDC
+  }
 };
 
 async function openOverview(page: Page, customer: Customer) {
@@ -72,9 +73,9 @@ test("the Overview values every holding in dollars and totals cash, crypto, and 
   await expect(row(page, `8453:${ASSETS.cbbtc}`)).toContainText("$600.00");
   await expect(row(page, `aave:8453:${ASSETS.usdc}`)).toContainText("Aave on Base");
   await expect(row(page, `aave:8453:${ASSETS.usdc}`)).toContainText("$50.00");
-  await expect(row(page, "sky:1:susds")).toContainText("Sky on Ethereum");
-  await expect(row(page, "sky:1:susds")).toContainText("105 USDS");
-  await expect(row(page, "sky:1:susds")).toContainText("$105.00");
+  await expect(row(page, `morpho:8453:${VAULTS.gauntlet}`)).toContainText("Morpho on Base");
+  await expect(row(page, `morpho:8453:${VAULTS.gauntlet}`)).toContainText("105 USDC");
+  await expect(row(page, `morpho:8453:${VAULTS.gauntlet}`)).toContainText("$105.00");
   await expect(page.getByText(/Read from the chains at/)).toBeVisible();
   await expect(page.getByText(/total leaves them out/)).toHaveCount(0);
 });
@@ -136,9 +137,11 @@ test("a balance that can't be read shows as unavailable, never as a number", asy
   await edge("/__state", { down: ["rpc:1"] });
   await openOverview(page, customer);
 
-  await expect(row(page, "sky:1:susds")).toContainText("Unavailable", { timeout: 30_000 });
-  await expect(page.getByTestId("portfolio-total")).toHaveText("$6,025.50");
-  await expect(page.getByTestId("total-earn")).toHaveText("$50.00 + unavailable");
+  // Tether Gold is held on Ethereum, so it's the one that can't be read.
+  await expect(row(page, `1:${ASSETS.xaut}`)).toContainText("Unavailable", { timeout: 30_000 });
+  await expect(page.getByTestId("portfolio-total")).toHaveText("$6,130.50");
+  await expect(page.getByTestId("total-metals")).toHaveText("$0.00 + unavailable");
+  await expect(page.getByTestId("total-earn")).toHaveText("$155.00");
   await expect(page.getByText(/total leaves them out/)).toBeVisible();
 });
 

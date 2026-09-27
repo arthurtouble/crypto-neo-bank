@@ -2,43 +2,90 @@
 
 import { usePrivy } from "@privy-io/react-auth";
 import { useQuery } from "@tanstack/react-query";
-import { Check, LoaderCircle, ShieldCheck } from "lucide-react";
+import { LoaderCircle, ShieldCheck } from "lucide-react";
 import { useAuraWallet } from "@/lib/client/use-aura-wallet";
+import { useOverview } from "@/lib/client/queries";
 import type { AaveBaseReserve } from "@/lib/defi/aave";
-import { AaveAction } from "./aave-action";
-import { SkyVaultCard } from "./sky-vault-card";
+import { EarnAction, type EarnOption } from "./earn-action";
 
-type MarketResponse = { market: string; chainId: number; name: string; reserves: AaveBaseReserve[]; observedAt: string; authority: string };
+type AaveResponse = { reserves: AaveBaseReserve[]; observedAt: string };
+type VaultsResponse = { vaults: Array<{ id: string; address: string; name: string; curator: string; assetSymbol: string;
+  rate: { netApyPct: number; totalAssetsUsd: number; liquidityUsd: number } | null }>; observedAt: string | null };
 
+const millions = (usd: number) => `$${(usd / 1_000_000).toFixed(1)}m`;
+
+type Card = { key: string; option: EarnOption; symbol: string; title: string; by: string; about: string;
+  apy: string | null; liquidity: string | null; deposits: string | null; positionId: string };
+
+/**
+ * Earn on Base: supply USDC or WETH to Aave, or deposit USDC into a Morpho
+ * vault. Rates are live market data, shown as unavailable when they can't be
+ * read. Your position comes from the chain, through the Overview.
+ */
 export function EarnWorkspace() {
   const { getAccessToken } = usePrivy();
   const { address } = useAuraWallet();
-  const market = useQuery<MarketResponse>({
+  const overview = useOverview();
+  const aave = useQuery<AaveResponse>({
     queryKey: ["aave-base-market", address],
     queryFn: async () => {
       const token = address ? await getAccessToken() : null;
       const response = await fetch(`/api/defi/aave/markets${address ? `?address=${address}` : ""}`, { headers: token ? { Authorization: `Bearer ${token}` } : undefined, cache: "no-store" });
-      if (!response.ok) throw new Error("Live Aave market data is unavailable.");
-      return response.json() as Promise<MarketResponse>;
+      if (!response.ok) throw new Error("Aave rates are unavailable right now.");
+      return response.json() as Promise<AaveResponse>;
+    },
+    refetchInterval: 60_000
+  });
+  const vaults = useQuery<VaultsResponse>({
+    queryKey: ["morpho-vaults"],
+    queryFn: async () => {
+      const response = await fetch("/api/defi/morpho/vaults", { cache: "no-store" });
+      if (!response.ok) throw new Error("Morpho rates are unavailable right now.");
+      return response.json() as Promise<VaultsResponse>;
     },
     refetchInterval: 60_000
   });
 
+  const reserve = (symbol: string) => aave.data?.reserves.find((item) => item.symbol === symbol);
+  const cards: Card[] = [
+    ...(["USDC", "WETH"] as const).map((symbol): Card => {
+      const data = reserve(symbol);
+      return { key: `aave-${symbol}`, option: { protocol: "aave", asset: symbol, label: `Aave ${symbol}` }, symbol, title: `Aave ${symbol}`, by: "Aave on Base",
+        about: `Lend ${symbol} to Aave's market on Base. The rate moves with borrowing demand.`,
+        apy: data ? `${data.supplyApyPct}%` : null, liquidity: data ? millions(Number(data.availableLiquidity.usd)) : null,
+        deposits: data ? millions(Number(data.totalSuppliedUsd)) : null,
+        positionId: `aave:8453:${(symbol === "USDC" ? "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913" : "0x4200000000000000000000000000000000000006")}` };
+    }),
+    ...(vaults.data?.vaults ?? []).map((vault): Card => ({ key: vault.id, option: { protocol: "morpho", vault: vault.id, label: vault.name }, symbol: vault.assetSymbol,
+      title: vault.name, by: `Morpho on Base, curated by ${vault.curator}`,
+      about: `A USDC vault that ${vault.curator} spreads across Morpho lending markets. No fee.`,
+      apy: vault.rate ? `${vault.rate.netApyPct.toFixed(2)}%` : null, liquidity: vault.rate ? millions(vault.rate.liquidityUsd) : null,
+      deposits: vault.rate ? millions(vault.rate.totalAssetsUsd) : null, positionId: `morpho:8453:${vault.address}` }))
+  ];
+  const position = (id: string) => overview.data?.holdings.find((holding) => holding.id === id);
+
   return <>
-    <div className="notice"><ShieldCheck size={18} /><span><strong>You stay in control.</strong> Aave positions use your wallet and your signature. Rates vary, contracts can fail, and principal is not guaranteed.</span></div>
-    {market.isPending && <section className="panel walletLoading"><LoaderCircle className="spin" size={20} /><div><strong>Reading Base markets</strong><span>Loading current Aave liquidity and rates.</span></div></section>}
-    {market.error && <div className="sandboxAlert error" role="alert">{market.error.message}</div>}
+    <div className="notice"><ShieldCheck size={18} /><span><strong>Your account holds every position.</strong> Rates change, withdrawals depend on each market&apos;s liquidity, and your deposit isn&apos;t guaranteed.</span></div>
+    {(aave.isPending || vaults.isPending) && <section className="panel walletLoading"><LoaderCircle className="spin" size={20} /><div><strong>Reading rates</strong><span>Loading Aave and Morpho on Base.</span></div></section>}
     <div className="strategyGrid">
-      <SkyVaultCard />
-      {market.data?.reserves.filter((reserve) => ["USDC", "WETH"].includes(reserve.symbol)).map((reserve) => <article className="panel strategyCard" key={reserve.symbol}>
-        <div className="strategyTop"><span className="strategyGlyph">A3</span><span className="statusBadge neutral"><i /> Aave on Base</span></div>
-        <p className="eyebrow">AAVE V3</p><h2>Earn with {reserve.symbol}</h2>
-        <p>Supply {reserve.symbol} directly to Aave on Base. Your wallet controls the position; Aura does not operate a vault.</p>
-        <div className="strategyMetrics"><div><span>Supply APY</span><strong>{reserve.supplyApyPct}%</strong></div><div><span>Liquidity</span><strong>${(Number(reserve.availableLiquidity.usd) / 1_000_000).toFixed(1)}m</strong></div><div><span>Borrow APY</span><strong>{reserve.borrowApyPct}%</strong></div></div>
-        <div className="exposureList"><span><Check size={13} /> Variable rate</span><span><Check size={13} /> Aave governance</span><span><Check size={13} /> Withdraw subject to liquidity</span></div>
-        <AaveAction actions={["supply", "withdraw"]} symbols={[reserve.symbol]} />
-      </article>)}
+      {cards.map((card) => {
+        const held = position(card.positionId);
+        return <article className="panel strategyCard" key={card.key} aria-label={card.title}>
+          <div className="strategyTop"><span className="statusBadge neutral"><i /> {card.by}</span></div>
+          <h2>{card.title}</h2>
+          <p>{card.about}</p>
+          <div className="strategyMetrics">
+            <div><span>Rate (APY)</span><strong data-testid={`apy-${card.key}`}>{card.apy ?? "Unavailable"}</strong></div>
+            <div><span>Can be withdrawn now</span><strong>{card.liquidity ?? "Unavailable"}</strong></div>
+            <div><span>Total deposits</span><strong>{card.deposits ?? "Unavailable"}</strong></div>
+          </div>
+          <p className="authorityFootnote" data-testid={`position-${card.key}`}>Your position: {held?.status === "observed" && held.amountRaw
+            ? `${Number(held.amountRaw) / 10 ** held.decimals} ${held.symbol}` : held?.status === "unavailable" ? "Unavailable" : `0 ${card.symbol}`}</p>
+          <EarnAction option={card.option} symbol={card.symbol} hasPosition={Boolean(held?.amountRaw && held.amountRaw !== "0")} />
+        </article>;
+      })}
     </div>
-    {market.data && <p className="authorityFootnote">Observed {new Date(market.data.observedAt).toLocaleTimeString()} · Authority: {market.data.authority} · Spot APY is not a forecast.</p>}
+    {(aave.error || vaults.error) && <p className="authorityFootnote" role="status">{[aave.error?.message, vaults.error?.message].filter(Boolean).join(" ")}</p>}
+    <p className="authorityFootnote">Rates are current, not a forecast. Aave rates come from Aave, Morpho rates from Morpho, and your positions from the chain.</p>
   </>;
 }

@@ -23,6 +23,12 @@ const kernelAbi = parseAbi(["function execute(bytes32 mode, bytes executionCalld
 const beforeExecution = parseAbiItem("event BeforeExecution()");
 const userOperationEvent = parseAbiItem("event UserOperationEvent(bytes32 indexed userOpHash, address indexed sender, address indexed paymaster, uint256 nonce, bool success, uint256 actualGasCost, uint256 actualGasUsed)");
 const transferEvent = parseAbiItem("event Transfer(address indexed from, address indexed to, uint256 value)");
+const aaveSupplyEvent = parseAbiItem("event Supply(address indexed reserve, address user, address indexed onBehalfOf, uint256 amount, uint16 indexed referralCode)");
+const aaveWithdrawEvent = parseAbiItem("event Withdraw(address indexed reserve, address indexed user, address indexed to, uint256 amount)");
+const vaultDepositEvent = parseAbiItem("event Deposit(address indexed sender, address indexed owner, uint256 assets, uint256 shares)");
+const vaultWithdrawEvent = parseAbiItem("event Withdraw(address indexed sender, address indexed receiver, address indexed owner, uint256 assets, uint256 shares)");
+const eventLog = (address, event, args, data) => ({ address, topics: encodeEventTopics({ abi: [event], eventName: event.name, args }),
+  data: encodeAbiParameters(data.map(([type]) => ({ type })), data.map(([, value]) => value)) });
 
 /** LI.FI's Diamond, the only contract a bridge quote may call. */
 export const LIFI_DIAMOND = "0x1231deb6f5749ef6ce6943a275a1d3e7486f4eae";
@@ -36,6 +42,18 @@ const abi = parseAbi([
   "struct ReserveDataLegacy { uint256 configuration; uint128 liquidityIndex; uint128 currentLiquidityRate; uint128 variableBorrowIndex; uint128 currentVariableBorrowRate; uint128 currentStableBorrowRate; uint40 lastUpdateTimestamp; uint16 id; address aTokenAddress; address stableDebtTokenAddress; address variableDebtTokenAddress; address interestRateStrategyAddress; uint128 accruedToTreasury; uint128 unbacked; uint128 isolationModeTotalDebt; }",
   "function getReserveData(address asset) view returns (ReserveDataLegacy)",
   "function transfer(address to, uint256 amount) returns (bool)",
+  // Aave's pool and ERC-4626 vaults.
+  "function supply(address asset, uint256 amount, address onBehalfOf, uint16 referralCode)",
+  "function withdraw(address asset, uint256 amount, address to) returns (uint256)",
+  "function withdraw(uint256 assets, address receiver, address owner) returns (uint256)",
+  "function deposit(uint256 assets, address receiver) returns (uint256)",
+  "function redeem(uint256 shares, address receiver, address owner) returns (uint256)",
+  "function asset() view returns (address)",
+  "function previewWithdraw(uint256 assets) view returns (uint256)",
+  "function receiveSharesGate() view returns (address)",
+  "function sendSharesGate() view returns (address)",
+  "function receiveAssetsGate() view returns (address)",
+  "function sendAssetsGate() view returns (address)",
   "function approve(address spender, uint256 amount) returns (bool)",
   // Multicall3, which wagmi uses to batch reads.
   "struct Call3 { address target; bool allowFailure; bytes callData; }",
@@ -56,8 +74,13 @@ const ZERO = "0x0000000000000000000000000000000000000000";
 
 /** The Aave receipt token the fake reports for an underlying asset. Tests set its balance to give an Aave deposit. */
 export const aTokenFor = (underlying) => `0xa7a7${underlying.toLowerCase().slice(6)}`;
-/** Sky savings shares convert to assets at 1.05. */
-export const SKY_RATE = [105n, 100n];
+/** Aave's Base pool, and the Morpho USDC vaults Aura offers. Vault shares (18 decimals) redeem for 1.05 USDC (6 decimals) each. */
+export const AAVE_POOL = "0xa238dd80c259a72e81d7e4664a9801593f98d1c5";
+export const VAULTS = { steakhouse: "0xbeef0e0834849acc03f0089f01f4f1eeb06873c9", gauntlet: "0xee8f4ec5672f09119b96ab6fb59c27e1b7e44b61" };
+const VAULT_SET = new Set(Object.values(VAULTS));
+const USDC_BASE = "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
+const sharesToAssets = (shares) => shares * 105n / 100n / 10n ** 12n;
+const assetsToShares = (assets) => (assets * 10n ** 12n * 100n + 104n) / 105n;
 
 const initialState = () => ({
   users: { [OPERATOR.userId]: { wallet: OPERATOR.wallet } },
@@ -163,12 +186,35 @@ export function startFakeEdge({ port }) {
         continue;
       }
       const { functionName, args } = decodeFunctionData({ abi, data });
+      const to = call.to.toLowerCase();
       if (functionName === "transfer") moves.push({ token: call.to, to: args[0], amount: args[1] });
       else if (functionName === "approve") moves.push({ approve: true, token: call.to, amount: args[1] });
+      else if (to === AAVE_POOL && functionName === "supply") {
+        // Aave: the asset goes to the pool, the account gets aTokens one for one.
+        const [asset, amount, onBehalfOf] = args;
+        moves.push({ token: asset, to: AAVE_POOL, amount }, { mint: true, token: aTokenFor(asset), to: onBehalfOf.toLowerCase(), amount, from: ZERO },
+          { log: eventLog(AAVE_POOL, aaveSupplyEvent, { reserve: asset, onBehalfOf, referralCode: 0 }, [["address", from], ["uint256", amount]]) });
+      } else if (to === AAVE_POOL && functionName === "withdraw") {
+        const [asset, amount, receiver] = args;
+        moves.push({ burn: true, token: aTokenFor(asset), amount }, { mint: true, token: asset, to: receiver.toLowerCase(), amount, from: AAVE_POOL },
+          { log: eventLog(AAVE_POOL, aaveWithdrawEvent, { reserve: asset, user: from, to: receiver }, [["uint256", amount]]) });
+      } else if (VAULT_SET.has(to) && functionName === "deposit") {
+        // A Morpho vault: USDC in, shares out at the vault's rate.
+        const [assets, receiver] = args;
+        const shares = assets * 10n ** 12n * 100n / 105n;
+        moves.push({ token: USDC_BASE, to, amount: assets }, { mint: true, token: to, to: receiver.toLowerCase(), amount: shares, from: ZERO },
+          { log: eventLog(to, vaultDepositEvent, { sender: from, owner: receiver }, [["uint256", assets], ["uint256", shares]]) });
+      } else if (VAULT_SET.has(to) && (functionName === "withdraw" || functionName === "redeem")) {
+        const [amount, receiver, owner] = args;
+        const [assets, shares] = functionName === "withdraw" ? [amount, assetsToShares(amount)] : [sharesToAssets(amount), amount];
+        if (state.vaultIlliquid) throw new Error("not enough liquidity");
+        moves.push({ burn: true, token: to, amount: shares }, { mint: true, token: USDC_BASE, to: receiver.toLowerCase(), amount: assets, from: to },
+          { log: eventLog(to, vaultWithdrawEvent, { sender: from, receiver, owner }, [["uint256", assets], ["uint256", shares]]) });
+      }
       else throw new Error(`unsupported ${functionName}`);
     }
     const needed = new Map();
-    for (const move of moves) if (!move.approve && !move.mint) needed.set(move.token.toLowerCase(), (needed.get(move.token.toLowerCase()) ?? 0n) + move.amount);
+    for (const move of moves) if (!move.approve && !move.mint && !move.log) needed.set(move.token.toLowerCase(), (needed.get(move.token.toLowerCase()) ?? 0n) + move.amount);
     for (const [token, amount] of needed) if (balance(chainId, token, from) < amount) throw new Error("insufficient balance");
     return moves;
   }
@@ -177,12 +223,19 @@ export function startFakeEdge({ port }) {
     const logs = [];
     for (const item of moves) {
       if (item.approve) { state.approvals[`${chainId}:${from.toLowerCase()}`] = { token: item.token.toLowerCase(), amount: item.amount }; continue; }
+      if (item.log) { logs.push(item.log); continue; }
+      if (item.burn) {
+        const key = item.token.toLowerCase();
+        state.balances[chainId][key][from.toLowerCase()] = (balance(chainId, key, from) - item.amount).toString();
+        logs.push({ address: key, topics: encodeEventTopics({ abi: [transferEvent], eventName: "Transfer", args: { from, to: ZERO } }), data: encodeAbiParameters([{ type: "uint256" }], [item.amount]) });
+        continue;
+      }
       if (item.mint) {
         // The Diamond pays the swap's output from its own liquidity.
         const key = item.token.toLowerCase();
         state.balances[chainId] ??= {}; state.balances[chainId][key] ??= {};
         state.balances[chainId][key][item.to] = (balance(chainId, key, item.to) + item.amount).toString();
-        if (item.token !== "native") logs.push({ address: key, topics: encodeEventTopics({ abi: [transferEvent], eventName: "Transfer", args: { from: LIFI_DIAMOND, to: item.to } }),
+        if (item.token !== "native") logs.push({ address: key, topics: encodeEventTopics({ abi: [transferEvent], eventName: "Transfer", args: { from: item.from ?? LIFI_DIAMOND, to: item.to } }),
           data: encodeAbiParameters([{ type: "uint256" }], [item.amount]) });
         continue;
       }
@@ -271,7 +324,10 @@ export function startFakeEdge({ port }) {
       const updatedAt = BigInt(Math.floor(Date.now() / 1000) - state.feedAgeSeconds);
       return encodeFunctionResult({ abi, functionName, result: [1n, BigInt(whole + fraction.padEnd(8, "0").slice(0, 8)), updatedAt, updatedAt, 1n] });
     }
-    if (functionName === "convertToAssets") return encodeFunctionResult({ abi, functionName, result: args[0] * SKY_RATE[0] / SKY_RATE[1] });
+    if (functionName === "convertToAssets") return encodeFunctionResult({ abi, functionName, result: sharesToAssets(args[0]) });
+    if (functionName === "previewWithdraw") return encodeFunctionResult({ abi, functionName, result: assetsToShares(args[0]) });
+    if (functionName === "asset") return encodeFunctionResult({ abi, functionName, result: USDC_BASE });
+    if (functionName.endsWith("Gate")) return encodeFunctionResult({ abi, functionName, result: state.vaultGate ?? ZERO });
     if (functionName === "aggregate3") return encodeFunctionResult({ abi, functionName, result: args[0].map((call) => {
       try { return { success: true, returnData: ethCall(chainId, { to: call.target, data: call.callData }) }; }
       catch { return { success: false, returnData: "0x" }; }
@@ -439,6 +495,15 @@ export function startFakeEdge({ port }) {
     }
 
     // LI.FI.
+    // Aave's data service (an MCP tool call) and Morpho's GraphQL API: rates, deposits, and liquidity. "aave" and "morpho" in `down` make them fail.
+    if (url.pathname === "/aave") return down("aave") ? send(503, { error: "unavailable" }) : send(200, { jsonrpc: "2.0", id: body?.id, result: { structuredContent: { data: { v3: { markets: [{
+      market: "0xA238Dd80C259a72e81d7e4664a9801593F98d1c5", chainId: 8453, name: "AaveV3Base", reserves: [
+        { symbol: "USDC", underlyingToken: USDC_BASE, supplyApyPct: "3.85", borrowApyPct: "5.10", totalSuppliedUsd: "310000000", canSupply: true, canBorrow: true, availableLiquidity: { value: "90000000", usd: "90000000" } },
+        { symbol: "WETH", underlyingToken: "0x4200000000000000000000000000000000000006", supplyApyPct: "1.95", borrowApyPct: "2.60", totalSuppliedUsd: "420000000", canSupply: true, canBorrow: true, availableLiquidity: { value: "40000", usd: "100000000" } }
+      ] }] } } } } });
+    if (url.pathname === "/morpho") return down("morpho") ? send(503, { errors: [{ message: "unavailable" }] }) : send(200, { data: {
+      steakhouse_prime_usdc: { netApy: 0.0441, totalAssetsUsd: 444_000_000, liquidityUsd: 163_000_000 },
+      gauntlet_usdc_prime: { state: { netApy: 0.0438, totalAssetsUsd: 415_000_000 }, liquidity: { usd: 175_000_000 } } } });
     if (url.pathname === "/lifi/v1/quote") return down("lifi") ? send(503, { message: "unavailable" })
       : state.lifiQuote === "no_route" ? send(404, { message: "No available quotes for the requested transfer" }) : send(200, lifiQuote(url));
     if (url.pathname === "/lifi/v1/status") return down("lifi") ? send(503, { message: "unavailable" }) : send(200, lifiStatus(url));
@@ -459,6 +524,8 @@ export function startFakeEdge({ port }) {
       RPC_URL_8453: `http://127.0.0.1:${port}/rpc/8453`,
       KRAKEN_API_URL: `http://127.0.0.1:${port}/kraken`,
       LIFI_API_URL: `http://127.0.0.1:${port}/lifi`,
+      AAVE_API_URL: `http://127.0.0.1:${port}/aave`,
+      MORPHO_API_URL: `http://127.0.0.1:${port}/morpho`,
       RPC_URL_10: `http://127.0.0.1:${port}/rpc/10`,
       RPC_URL_137: `http://127.0.0.1:${port}/rpc/137`,
       RPC_URL_42161: `http://127.0.0.1:${port}/rpc/42161`,

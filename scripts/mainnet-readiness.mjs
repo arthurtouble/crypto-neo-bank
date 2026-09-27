@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { AAVE_BASE_ASSETS, AAVE_BASE_PROTOCOL, AAVE_BASE_V3_MARKET } from "../apps/web/src/lib/defi/aave.ts";
+import { AAVE_BASE_ASSETS, AAVE_BASE_PROTOCOL, AAVE_BASE_V3_MARKET } from "../apps/web/src/lib/defi/aave-contracts.ts";
 import { LIFI_DIAMOND } from "../apps/web/src/lib/actions/lifi-diamond.ts";
 
 const chains = [

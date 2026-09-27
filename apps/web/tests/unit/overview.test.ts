@@ -13,6 +13,7 @@ const weth = "0x4200000000000000000000000000000000000006";
 const apple = "0xb200000000000000000000c2e324d24d7eecd1fb";
 const xaut = "0x68749665ff8d2d112fa859aa293f07a622782f38";
 const friday = "2026-09-25T20:00:00.000Z";
+const gauntlet = "0xee8f4ec5672f09119b96ab6fb59c27e1b7e44b61";
 const now = new Date("2026-09-25T12:00:00.000Z");
 
 type Read = { address: string; functionName: string; args?: readonly unknown[] };
@@ -28,6 +29,8 @@ const baseReads = (call: Read) => {
   if (address === aUsdc) return 50_000_000n;
   if (address === weth) return 10n ** 17n;
   if (address === apple) return 250_000_000n;
+  // 100 Gauntlet vault shares, worth 105 USDC.
+  if (address === gauntlet) return call.functionName === "convertToAssets" ? 105_000_000n : 100n * 10n ** 18n;
   return 0n;
 };
 
@@ -49,30 +52,32 @@ describe("reading the overview from the chains", () => {
       ["crypto", "cbBTC", "base", "1000000", 60000],
       ["stocks", "AAPLc", "base", "250000000", 85377],
       ["metals", "XAUt", "ethereum", "500000", 214281],
-      ["earn", "USDC", "aave:base", "50000000", 5000]
+      ["earn", "USDC", "aave:base", "50000000", 5000],
+      ["earn", "USDC", "morpho:base", "105000000", 10500]
     ]);
     // A feed that pauses outside market hours says when its price was published; live prices don't.
     expect(overview.holdings.find((item) => item.symbol === "AAPLc")?.priceObservedAt).toBe(friday);
     expect(overview.holdings.find((item) => item.symbol === "ETH")?.priceObservedAt).toBeUndefined();
     expect(overview.totals).toEqual({ cash: { usdCents: 12550, partial: false }, crypto: { usdCents: 585000, partial: false },
       stocks: { usdCents: 85377, partial: false }, metals: { usdCents: 214281, partial: false },
-      earn: { usdCents: 5000, partial: false }, all: { usdCents: 902208, partial: false } });
+      earn: { usdCents: 15500, partial: false }, all: { usdCents: 912708, partial: false } });
     expect(overview.holdings.every((item) => item.observedAt === now.toISOString() && item.source)).toBe(true);
   });
 
   it("marks a failed read unavailable instead of showing a number, and flags the group as partial", async () => {
+    const steakhouse = "0xbeef0e0834849acc03f0089f01f4f1eeb06873c9";
     const overview = await readOverview(wallet, {
-      base: fakeClient(baseReads),
+      base: fakeClient((call) => { if (call.address.toLowerCase() === steakhouse) throw new Error("rpc down"); return baseReads(call); }),
       ethereum: fakeClient(() => { throw new Error("rpc down"); }),
       price: async () => null
     }, now);
     expect(overview.holdings.find((item) => item.symbol === "ETH")).toMatchObject({ status: "unavailable", amountRaw: null, usdCents: null });
-    expect(overview.holdings.find((item) => item.label === "Sky savings")).toMatchObject({ status: "unavailable" });
+    expect(overview.holdings.find((item) => item.label === "Steakhouse Prime USDC")).toMatchObject({ status: "unavailable", source: "morpho:base" });
     expect(overview.holdings.find((item) => item.symbol === "cbBTC")).toMatchObject({ status: "observed", amountRaw: "1000000", usdCents: null });
     expect(overview.totals.crypto.partial).toBe(true);
     expect(overview.totals.earn.partial).toBe(true);
     expect(overview.totals.cash.partial).toBe(false);
-    expect(overview.totals.all).toEqual({ usdCents: 17550, partial: true });
+    expect(overview.totals.all).toEqual({ usdCents: 28050, partial: true });
   });
 });
 

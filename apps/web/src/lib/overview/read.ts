@@ -4,10 +4,10 @@ import { krakenUsd } from "@/lib/actions/valuation";
 import { chainlinkUsd, type FeedPrice } from "@/lib/assets/prices";
 import { rpcEndpoints } from "@/lib/actions/chain";
 import { AAVE_BASE_ASSETS, AAVE_BASE_V3_MARKET } from "@/lib/defi/aave";
-import { SKY_SUSDS, skyVaultAbi } from "@/lib/defi/sky-call-policy";
+import { MORPHO_VAULTS, vaultAbi } from "@/lib/defi/morpho";
 import { assetsFor, type PriceSource } from "@/lib/assets/registry";
 
-/** Cash is stablecoins, then crypto, tokenized stocks, and metals in the account; earn is Aave and Sky deposits. */
+/** Cash is stablecoins, then crypto, tokenized stocks, and metals in the account; earn is Aave and Morpho deposits. */
 export type HoldingGroup = "cash" | "crypto" | "stocks" | "metals" | "earn";
 const GROUP_OF = { cash: "cash", crypto: "crypto", stock: "stocks", metal: "metals" } as const;
 
@@ -112,10 +112,11 @@ export async function readOverview(wallet: string, clients: Clients = defaultCli
         const reserve = await clients.base.readContract({ address: AAVE_BASE_V3_MARKET, abi: poolAbi, functionName: "getReserveData", args: [asset] });
         return clients.base.readContract({ address: reserve.aTokenAddress, abi: erc20Abi, functionName: "balanceOf", args: [owner] });
       }, symbol === "USDC" ? par : () => clients.price(ETHER))),
-    read("sky:1:susds", "earn", "Sky savings", "USDS", 18, "sky:ethereum", async () => {
-      const shares = await clients.ethereum.readContract({ address: SKY_SUSDS, abi: skyVaultAbi, functionName: "balanceOf", args: [owner] });
-      return shares === 0n ? 0n : clients.ethereum.readContract({ address: SKY_SUSDS, abi: skyVaultAbi, functionName: "convertToAssets", args: [shares] });
-    }, par)
+    // Morpho vault shares, valued at what they redeem for in USDC.
+    ...MORPHO_VAULTS.map((vault) => read(`morpho:8453:${vault.address}`, "earn", vault.name, vault.assetSymbol, vault.assetDecimals, "morpho:base", async () => {
+      const shares = await clients.base.readContract({ address: vault.address, abi: vaultAbi, functionName: "balanceOf", args: [owner] });
+      return shares === 0n ? 0n : clients.base.readContract({ address: vault.address, abi: vaultAbi, functionName: "convertToAssets", args: [shares] });
+    }, par))
   ];
   const holdings = (await Promise.all(tasks)).filter((item): item is Holding => item !== null);
   const totals = Object.fromEntries((["cash", "crypto", "stocks", "metals", "earn", "all"] as const).map((key) => [key, { usdCents: 0, partial: false }])) as Overview["totals"];

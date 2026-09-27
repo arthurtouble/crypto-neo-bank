@@ -31,7 +31,7 @@ None of these can tell you whether the person on the other end is honest.
 
 ## A protocol fails
 
-A contract can have a bug, be upgraded, get a bad price feed, run short of liquidity, or change through governance. Building exact transactions on the server cuts the chance of touching an unknown contract. It can't make a protocol safe.
+A contract can have a bug, be upgraded, get a bad price feed, run short of liquidity, or change through governance. A vault curator can lend to riskier markets. Building exact transactions on the server cuts the chance of touching an unknown contract. It can't make a protocol safe.
 
 We keep our integrations narrow, watch for important changes, and stop preparing affected actions when we can't operate or review them safely.
 
@@ -55,7 +55,7 @@ Because blockchains and partners hold your actual money, losing Aura's database 
 
 ## A service we depend on goes down
 
-Cloudflare, Privy, blockchain data services, LI.FI, Aave, or a future partner could be unavailable. When that happens, Aura shows the affected feature as unavailable. It never treats a timeout as a completed action.
+Cloudflare, Privy, blockchain data services, LI.FI, Aave, Morpho, or a future partner could be unavailable. When that happens, Aura shows the affected feature as unavailable. It never treats a timeout as a completed action.
 
 ## Outside what Aura can do
 
