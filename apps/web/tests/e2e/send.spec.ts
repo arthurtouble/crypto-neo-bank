@@ -190,6 +190,8 @@ test("an unknown Aura tag isn't found", async ({ page }) => {
 });
 
 test("the customer's controls are enforced on the server: daily limit, saved recipients only, waiting period, and lock", async ({ page }) => {
+  // Four full attempts, each with a reload.
+  test.setTimeout(60_000);
   const customer = await openSend(page);
   const attempt = async (message: string) => {
     await fillSend(page, { amount: "12.5", to: RECIPIENT });
