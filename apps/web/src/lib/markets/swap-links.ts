@@ -7,8 +7,7 @@ const USDC = assetId(8453, "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913");
 // against one specific contract; a matching ticker never creates a Swap link.
 const marketAssets: Readonly<Record<string, { symbol: string; assetId: AssetId }>> = {
   "eth-usd": { symbol: "eth", assetId: ETH },
-  "usdc-usd": { symbol: "usdc", assetId: USDC },
-  "link-usd": { symbol: "link", assetId: assetId(8453, "0x88Fb150BDc53A65fe94Dea0c9BA0a6dAf8C6e196") }
+  "usdc-usd": { symbol: "usdc", assetId: USDC }
 };
 
 export function marketSwapAssetId(market: { id: string; symbol: string }): AssetId | null {

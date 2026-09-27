@@ -46,6 +46,10 @@ const abi = parseAbi([
   "function latestRoundData() view returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound)"
 ]);
 
+/** Token decimals the fake's LI.FI echoes back, as LI.FI reports them. Anything else is a 6-decimal stablecoin. */
+const DECIMALS = { "0xb200000000000000000000c2e324d24d7eecd1fb": 8, "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf": 8,
+  "0x4200000000000000000000000000000000000006": 18 };
+
 /** Chainlink feeds on Base the fake answers, with 8 decimals: Apple, gold (XAU/USD), and the euro. */
 export const FEEDS = { apple: "0x787f13dea48db0897cbcdd985de77809d837f988", gold: "0x5213ebb69743b85644dbb6e25cdf994afbb8cf31", euro: "0xc91d87e81fab8f93699ecf7ee9b44d11e1d53f0f" };
 const ZERO = "0x0000000000000000000000000000000000000000";
@@ -76,6 +80,11 @@ const initialState = () => ({
   relayed: {},
   // What LI.FI reports for a bridge: PENDING, or DONE with substatus COMPLETED or REFUNDED.
   bridge: { status: "PENDING", substatus: null },
+  // LI.FI quotes: "ok", "no_route" (404), or "impact" (dollar values showing 10% lost). `lifiUsd` sets the dollar values;
+  // `swapShortfall` makes a same-network swap pay out 95% of the minimum, which the verifier must catch.
+  lifiQuote: "ok",
+  lifiUsd: null,
+  swapShortfall: false,
   // The latest quote, and the delivery each bridged transaction got once LI.FI reported it done.
   lastQuote: null,
   deliveries: {},
@@ -148,6 +157,9 @@ export function startFakeEdge({ port }) {
         // A route: the Diamond takes the ETH sent, or the tokens approved earlier in the batch. LI.FI reports delivery later.
         const approved = moves.findLast((item) => item.approve);
         moves.push(value > 0n ? { token: "native", to: LIFI_DIAMOND, amount: value } : { token: approved.token, to: LIFI_DIAMOND, amount: approved.amount });
+        // A swap on the same network pays out in the same operation; a bridge pays out later on the other network.
+        const quote = state.lastQuote;
+        if (quote && quote.toChain === chainId) moves.push({ mint: true, token: quote.toToken ?? "native", to: quote.toAddress, amount: quote.toAmount });
         continue;
       }
       const { functionName, args } = decodeFunctionData({ abi, data });
@@ -156,7 +168,7 @@ export function startFakeEdge({ port }) {
       else throw new Error(`unsupported ${functionName}`);
     }
     const needed = new Map();
-    for (const move of moves) if (!move.approve) needed.set(move.token.toLowerCase(), (needed.get(move.token.toLowerCase()) ?? 0n) + move.amount);
+    for (const move of moves) if (!move.approve && !move.mint) needed.set(move.token.toLowerCase(), (needed.get(move.token.toLowerCase()) ?? 0n) + move.amount);
     for (const [token, amount] of needed) if (balance(chainId, token, from) < amount) throw new Error("insufficient balance");
     return moves;
   }
@@ -165,6 +177,15 @@ export function startFakeEdge({ port }) {
     const logs = [];
     for (const item of moves) {
       if (item.approve) { state.approvals[`${chainId}:${from.toLowerCase()}`] = { token: item.token.toLowerCase(), amount: item.amount }; continue; }
+      if (item.mint) {
+        // The Diamond pays the swap's output from its own liquidity.
+        const key = item.token.toLowerCase();
+        state.balances[chainId] ??= {}; state.balances[chainId][key] ??= {};
+        state.balances[chainId][key][item.to] = (balance(chainId, key, item.to) + item.amount).toString();
+        if (item.token !== "native") logs.push({ address: key, topics: encodeEventTopics({ abi: [transferEvent], eventName: "Transfer", args: { from: LIFI_DIAMOND, to: item.to } }),
+          data: encodeAbiParameters([{ type: "uint256" }], [item.amount]) });
+        continue;
+      }
       move(chainId, item.token, from, item.to, item.amount);
       if (item.token !== "native") logs.push({ address: item.token.toLowerCase(), topics: encodeEventTopics({ abi: [transferEvent], eventName: "Transfer", args: { from, to: item.to } }),
         data: encodeAbiParameters([{ type: "uint256" }], [item.amount]) });
@@ -288,14 +309,23 @@ export function startFakeEdge({ port }) {
   function lifiQuote(url) {
     const q = Object.fromEntries(url.searchParams);
     const native = /^0x0{40}$/i.test(q.fromToken);
-    const tokenOf = (address, chainId) => native ? { address, chainId, decimals: 18, symbol: "ETH" } : { address, chainId, decimals: 6, symbol: "USDC" };
+    const tokenOf = (address, chainId) => /^0x0{40}$/i.test(address) ? { address, chainId, decimals: 18, symbol: "ETH" }
+      : { address, chainId, decimals: DECIMALS[address.toLowerCase()] ?? 6, symbol: "TOKEN" };
     const fromAmount = BigInt(q.fromAmount);
-    state.lastQuote = { toChain: Number(q.toChain), toToken: native ? null : q.toToken.toLowerCase(), toAddress: q.toAddress.toLowerCase(), toAmount: fromAmount * 995n / 1000n };
+    // A same-asset quote keeps 99.5% (99% minimum); a swap to another asset pays out one unit of it per unit paid, scaled by decimals.
+    const scale = (tokenOf(q.toToken, 0).decimals - tokenOf(q.fromToken, 0).decimals);
+    const converted = scale >= 0 ? fromAmount * 10n ** BigInt(scale) : fromAmount / 10n ** BigInt(-scale);
+    const toAmount = converted * 995n / 1000n;
+    const toMin = converted * 990n / 1000n;
+    const toNative = /^0x0{40}$/i.test(q.toToken);
+    state.lastQuote = { fromChain: Number(q.fromChain), toChain: Number(q.toChain), toToken: toNative ? null : q.toToken.toLowerCase(), toAddress: q.toAddress.toLowerCase(),
+      toAmount: state.swapShortfall ? toMin * 95n / 100n : toAmount };
+    const usd = state.lifiQuote === "impact" ? { fromAmountUSD: "10.00", toAmountUSD: "9.00" } : state.lifiUsd ?? {};
     return {
       id: randomUUID(), tool: "across",
       action: { fromChainId: Number(q.fromChain), toChainId: Number(q.toChain), fromToken: tokenOf(q.fromToken, Number(q.fromChain)),
         toToken: tokenOf(q.toToken, Number(q.toChain)), fromAmount: q.fromAmount, fromAddress: q.fromAddress, toAddress: q.toAddress, slippage: Number(q.slippage) },
-      estimate: { fromAmount: q.fromAmount, toAmount: (fromAmount * 995n / 1000n).toString(), toAmountMin: (fromAmount * 990n / 1000n).toString(),
+      estimate: { fromAmount: q.fromAmount, toAmount: toAmount.toString(), toAmountMin: toMin.toString(), ...usd,
         approvalAddress: LIFI_DIAMOND, gasCosts: [{ amountUSD: "0.10" }], feeCosts: [{ amountUSD: "0.50" }] },
       transactionRequest: { to: LIFI_DIAMOND, data: "0x4630a0d8" + "00".repeat(32), value: native ? `0x${fromAmount.toString(16)}` : "0x0",
         chainId: Number(q.fromChain), from: q.fromAddress }
@@ -409,7 +439,8 @@ export function startFakeEdge({ port }) {
     }
 
     // LI.FI.
-    if (url.pathname === "/lifi/v1/quote") return down("lifi") ? send(503, { message: "unavailable" }) : send(200, lifiQuote(url));
+    if (url.pathname === "/lifi/v1/quote") return down("lifi") ? send(503, { message: "unavailable" })
+      : state.lifiQuote === "no_route" ? send(404, { message: "No available quotes for the requested transfer" }) : send(200, lifiQuote(url));
     if (url.pathname === "/lifi/v1/status") return down("lifi") ? send(503, { message: "unavailable" }) : send(200, lifiStatus(url));
 
     // Kraken.

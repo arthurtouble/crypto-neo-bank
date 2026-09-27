@@ -397,11 +397,6 @@
 .swapPickerTrust { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); font-size: 12px; white-space: nowrap; }
 .swapPickerMore { width: 100%; min-height: 42px; margin-top: 8px; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--surface); color: var(--accent); font: 650 13px var(--font-body); cursor: pointer; }
 .swapPickerMore:hover { background: color-mix(in srgb, var(--accent) 5%, var(--surface)); }
-.swapPickerRisk { display: grid; gap: 15px; }
-.swapPickerRisk strong { font-size: 16px; }
-.swapPickerRisk code { padding: 12px; overflow-wrap: anywhere; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--surface-muted); color: var(--text); font-size: 12px; }
-.swapPickerRisk p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.5; }
-.swapPickerActions { display: flex; justify-content: flex-end; gap: 9px; }
 @media (max-width: 560px) { .swapPickerDialog { top: auto; bottom: 0; left: 0; width: 100%; max-height: calc(100dvh - 16px); padding: 20px 16px max(20px, env(safe-area-inset-bottom)); transform: none; border-radius: 18px 18px 0 0; } .swapPickerTrust { font-size: 11px; } }
 @media (prefers-reduced-motion: reduce) { .swapPickerTrigger, .swapPickerOption, .swapPickerMore { transition: none; } }
 .swapForm { margin-top: 22px; display: grid; grid-template-columns: minmax(0, 1fr) 42px minmax(0, 1fr); align-items: center; gap: 10px; }
@@ -444,8 +439,6 @@
 .swapAssetList button { width: 100%; padding: 11px 8px; border-radius: 9px; }
 .swapAssetList p { padding: 16px 8px; opacity: .65; }
 @media (max-width: 540px) { .aurelSwap { margin-top: 8px; } .aurelSwapCard { padding: 14px; } .swapAmountRow { padding: 12px; } .swapAmountRow input, .swapAmountRow output { font-size: 27px; } }
-.swapRiskCheck { display: flex; align-items: flex-start; gap: 10px; margin-top: 18px; color: var(--muted); font-size: var(--type-body-small); line-height: 1.5; cursor: pointer; }
-.swapRiskCheck input { width: 17px; height: 17px; flex: 0 0 auto; margin-top: 2px; accent-color: var(--accent); }
 .swapReviewAction { margin-top: 14px; }
 .swapReviewStatus { margin: 14px 0 0; padding: 13px 15px; display: grid; gap: 4px; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--surface); color: var(--muted); font-size: var(--type-body-small); line-height: 1.5; }
 .swapReviewStatus strong { color: var(--text); font-size: var(--type-body); }

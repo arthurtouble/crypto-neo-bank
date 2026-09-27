@@ -14,6 +14,8 @@ const state = vi.hoisted(() => ({ db: null as D1Database | null, quoted: [] as A
 vi.mock("cloudflare:workers", () => ({ env: { get PROJECTION_DB() { return state.db; } } }));
 vi.mock("@/lib/auth/server", () => ({ AuthenticationError: httpErrors.AuthenticationError, requireVerifiedSubject: async () => ({ subjectReference: "did:privy:alice" }) }));
 vi.mock("@/lib/auth/wallet", () => ({ requireActionWallet: async () => wallet }));
+vi.mock("@/lib/assets/prices", () => ({ chainlinkUsd: async (source: { label: string }) =>
+  source.label === "Coinbase AAPL" ? { usd: "341.51", observedAt: "2026-09-25T20:00:00.000Z" } : null }));
 vi.mock("@/lib/security/rate-limit", () => ({ RateLimitError: httpErrors.RateLimitError, enforceRateLimit: async () => undefined }));
 vi.mock("@/lib/actions/lifi", async (original) => ({ ...await original<typeof import("@/lib/actions/lifi")>(),
   quoteRoute: async (request: { recipient: string }) => {
@@ -26,7 +28,8 @@ vi.mock("@/lib/actions/lifi", async (original) => ({ ...await original<typeof im
 const { GET } = await import("@/app/api/routes/quote/route");
 const { GET: listRecipients } = await import("@/app/api/recipients/route");
 const { ensureSubjectProfile } = await import("@/lib/profile/ensure");
-const quote = (recipient?: string) => GET(new Request(`https://aura.test/api/routes/quote?${new URLSearchParams({ from: baseUsdc, to: arbUsdc, amount: "10", ...(recipient ? { recipient } : {}) })}`));
+const quote = (recipient?: string, from = baseUsdc, to = arbUsdc) => GET(new Request(`https://aura.test/api/routes/quote?${new URLSearchParams({ from, to, amount: "10", ...(recipient ? { recipient } : {}) })}`));
+const apple = "8453:0xb200000000000000000000c2e324d24d7eecd1fb";
 
 describe("where a Base asset can be sent", () => {
   it("offers Base, then every network where the same asset is registered to be received", () => {
@@ -55,6 +58,18 @@ describe("GET /api/routes/quote for a send to another network", () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({ quote: { recipient: friend, toAmountRaw: "9950000", toAmountMinRaw: "9900000" } });
     expect(state.quoted.map((item) => item.recipient)).toEqual([wallet, friend]);
+  });
+
+  it("pays only from what the account holds, and adds a stock's reference price and time", async () => {
+    sqlite.exec("UPDATE feature_flags SET enabled = 1");
+    const fromArbitrum = await quote(undefined, arbUsdc, baseUsdc);
+    expect(fromArbitrum.status).toBe(422);
+    expect(await fromArbitrum.json()).toMatchObject({ error: "unsupported_asset" });
+    const buy = await (await quote(undefined, baseUsdc, apple)).json() as { quote: { references: unknown[] } };
+    expect(buy.quote.references).toEqual([{ assetId: apple, usd: "341.51", observedAt: "2026-09-25T20:00:00.000Z" }]);
+    const plain = await (await quote(undefined, baseUsdc, "8453:native")).json() as { quote: { references: unknown[] } };
+    expect(plain.quote.references).toEqual([]);
+    expect(state.quoted).toHaveLength(2);
   });
 
   it("refuses a token contract as the recipient before LI.FI is asked", async () => {

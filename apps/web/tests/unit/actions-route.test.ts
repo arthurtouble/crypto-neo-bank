@@ -13,7 +13,7 @@ const wallet = "0x1111111111111111111111111111111111111111";
 const external = "0x2222222222222222222222222222222222222222";
 const now = Date.parse("2026-09-25T12:00:00.000Z");
 const asset = (chainId: number, address: string | null, symbol: string, decimals: number): CatalogAsset => ({
-  id: `${chainId}:${address ?? "native"}`, chainId, address, symbol, name: symbol, decimals, logoUrl: null, verification: "verified", eligibility: "eligible" });
+  id: `${chainId}:${address ?? "native"}`, chainId, address, symbol, name: symbol, decimals, logoUrl: null, eligibility: "eligible" });
 const baseUsdc = asset(8453, "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", "USDC", 6);
 const baseEth = asset(8453, null, "ETH", 18);
 const arbUsdc = asset(42161, "0xaf88d065e77c8cc2239327c5edb3a432268e5831", "USDC", 6);
@@ -71,6 +71,13 @@ describe("validating a LI.FI quote", () => {
     ["another destination asset", lifiQuote({ to: asset(42161, "0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9", "USDT", 6) })]
   ])("rejects %s", (_name, quote) => {
     expect(validateRoute(quote, request, now)).toBeNull();
+  });
+
+  it("says when price impact is the reason, so a smaller amount can work", async () => {
+    const fetcher = (async () => Response.json(lifiQuote({ toUsd: "9.00" }))) as unknown as typeof fetch;
+    await expect(quoteRoute(request, { now: () => now, fetcher })).rejects.toMatchObject({ code: "price_impact", message: expect.stringContaining("10.0%") });
+    const other = (async () => Response.json(lifiQuote({ txTo: external }))) as unknown as typeof fetch;
+    await expect(quoteRoute(request, { now: () => now, fetcher: other })).rejects.toMatchObject({ code: "no_route" });
   });
 
   it("pays out to an external recipient only when asked", () => {

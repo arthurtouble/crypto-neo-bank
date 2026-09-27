@@ -67,6 +67,11 @@ D1 records are projections. A `confirmed` row reflects chain evidence Aura obser
 
 Swap, invest, cross-chain deposit, and cross-chain withdrawal are all `route` actions. They differ in presentation, not mechanics.
 
+- **Paying side.** The source must be an asset the account holds (the registry's `hold` use): Base, or Tether Gold on Ethereum. `GET /api/routes/quote` refuses anything else with `unsupported_asset`, and the pay-side picker only lists held assets (`GET /api/swap/assets?held=1`). A route from Ethereum is an Ethereum action, relayed and gas-sponsored like one on Base.
+- **Price impact.** Above `MAX_PRICE_IMPACT_PERCENT` (3%), the quote is refused with `price_impact` and the lost percentage, so the customer can try a smaller amount. Other failed checks are `no_route`, and a LI.FI outage or rate limit is `provider_unavailable`.
+- **Reference prices.** For feed-priced assets (stocks, gold, the euro), the quote includes each Chainlink reference price and its time. The review warns when the quoted price is more than 2% away.
+- **Handoff.** Once a route is `settling`, the screen shows it as sent and stops holding the customer. Transactions tracks the rest.
+
 ## Routes (LI.FI)
 
 `GET /api/routes/quote` asks LI.FI for a quote with the Aura account as sender and recipient, validates it, and stores it server-side as a `route_quote` with a short expiry. The browser receives an opaque quote ID, never raw calldata to trust.

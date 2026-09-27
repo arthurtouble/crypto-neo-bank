@@ -40,7 +40,7 @@ export type ValidatedRoute = {
 };
 
 export class RouteQuoteError extends Error {
-  readonly code: "invalid_request" | "no_route" | "provider_unavailable";
+  readonly code: "invalid_request" | "no_route" | "price_impact" | "provider_unavailable";
   constructor(code: RouteQuoteError["code"], message: string) { super(message); this.name = "RouteQuoteError"; this.code = code; }
 }
 
@@ -59,6 +59,9 @@ function usdTotal(costs: Array<{ amountUSD?: string }> | undefined): number | nu
   }
   return total;
 }
+
+/** A quote that loses more than this to price impact is refused. */
+export const MAX_PRICE_IMPACT_PERCENT = 3;
 
 function priceImpact(fromUsd?: string, toUsd?: string): number | null {
   const from = Number(fromUsd); const to = Number(toUsd);
@@ -95,9 +98,7 @@ export function validateRoute(response: unknown, request: RouteQuoteRequest, now
   if (value !== (native ? raw : 0n)) return null;
   if (!native && (!estimate.approvalAddress || estimate.approvalAddress.toLowerCase() !== LIFI_DIAMOND)) return null;
   const impact = priceImpact(estimate.fromAmountUSD, estimate.toAmountUSD);
-  const unverified = request.from.verification === "unverified" || request.to.verification === "unverified";
-  if (impact !== null && impact > (unverified ? 1 : 3)) return null;
-  if (unverified && impact === null) return null;
+  if (impact !== null && impact > MAX_PRICE_IMPACT_PERCENT) return null;
 
   const main: Call = { to: LIFI_DIAMOND, value: value.toString(), data: tx.data.toLowerCase() as `0x${string}` };
   const calls: Call[] = native ? [main] : [{
@@ -162,6 +163,12 @@ export async function quoteRoute(request: RouteQuoteRequest, dependencies: { fet
   try { body = await readBoundedJson(response); }
   catch { throw new RouteQuoteError("provider_unavailable", "The route provider returned an invalid response."); }
   const route = validateRoute(body, request, (dependencies.now ?? Date.now)());
-  if (!route) throw new RouteQuoteError("no_route", "No route passed Aura's checks for this amount right now.");
+  if (!route) {
+    const estimate = (body as { estimate?: { fromAmountUSD?: string; toAmountUSD?: string } } | null)?.estimate;
+    const impact = priceImpact(estimate?.fromAmountUSD, estimate?.toAmountUSD);
+    if (impact !== null && impact > MAX_PRICE_IMPACT_PERCENT)
+      throw new RouteQuoteError("price_impact", `This would lose about ${impact.toFixed(1)}% to price impact. Try a smaller amount.`);
+    throw new RouteQuoteError("no_route", "No route passed Aura's checks for this amount right now.");
+  }
   return route;
 }

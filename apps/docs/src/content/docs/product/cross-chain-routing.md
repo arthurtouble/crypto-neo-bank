@@ -3,7 +3,7 @@ title: Cross-chain routes
 description: How moves between networks are quoted, signed, and tracked.
 ---
 
-You can use Swap to move an asset from one network to another, or choose another network in Send to pay someone there. This is how you withdraw to a network other than Base. To add money from another network, use **Deposit > From your wallet**. Aura moves it to the same asset on Base, using a route LI.FI finds. Bridge fees come out of the amount, and your wallet pays the fee on the network you send from.
+You can use Swap to move an asset from one network to another, or choose another network in Send to pay someone there. This is how you withdraw to a network other than Base. To add money from another network, use **Deposit > From your wallet**. Aura moves it to the same asset on Base, using a route LI.FI finds. Bridge fees come out of the amount. Your wallet pays the fee on the network you send from, while Aura pays it for moves from your Aura account.
 
 ## Getting a quote
 
