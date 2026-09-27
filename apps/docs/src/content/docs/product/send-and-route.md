@@ -35,7 +35,7 @@ Choose the network in Send. Aura finds a route through LI.FI, an independent ser
 
 A quote lasts a short time. If it runs out before you confirm, Aura gets a new one and shows it to you first.
 
-Delivery usually takes up to 30 minutes, because many bridges wait for Base to finalize the block first. You can leave the screen while it's on its way. The payment is complete only when LI.FI reports delivery and Aura finds the transfer to the recipient on that network. If the bridge refunds it, the money comes back to your account on Base. See [cross-chain routes](/product/cross-chain-routing/).
+Delivery usually takes up to 30 minutes, because many bridges wait for Base to finalize the block first. Once it leaves Base, Send shows it as sent, and you can close it. Follow the rest in Transactions. The payment is complete only when LI.FI reports delivery and Aura finds the transfer to the recipient on that network. If the bridge refunds it, the money comes back to your account on Base. See [cross-chain routes](/product/cross-chain-routing/).
 
 ## Sending to a bank
 

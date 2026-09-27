@@ -26,7 +26,7 @@ Transactions shows more than successful payments. It records what Aura saw at ea
 
 A transaction hash only proves something was submitted. Before Aura marks a transaction complete, it compares what was signed, and what it did, with what Aura prepared. A receipt alone isn't enough. Aura keeps checking until the network treats the transaction as final, because earlier blocks can occasionally be rewritten.
 
-Open any item to see its timeline. The timeline is only ever added to, never edited. The blockchain or partner still decides whether it settled.
+Open any item to see its journey, step by step, with the time of each step. A send on Base goes from sent, to included on Base, to final and complete. A send to another network goes from sent from Base, to confirmed on Base, to delivered on the other network, to complete. Only the step in progress shows as loading, and the journey updates by itself while you watch. It's only ever added to, never edited. The blockchain or partner still decides whether it settled.
 
 Transactions can also show your Aave history from an outside source. Each record shows where it came from. Outside history doesn't mean Aura started or checked that transaction.
 
@@ -43,7 +43,7 @@ Aave history comes in pages and can be temporarily unavailable. If the data is p
 
 ## Moves between networks
 
-When you move an asset between networks, the first network confirming doesn't prove delivery. Transactions shows the first transaction and the delivery separately.
+When you move an asset between networks, the first network confirming doesn't prove delivery. Transactions shows confirmation on Base and delivery on the other network as separate steps.
 
 Aura marks the move complete only after LI.FI reports delivery and Aura sees at least the minimum amount arrive. If less arrives, a refund is reported, or delivery fails, Transactions tells you.
 

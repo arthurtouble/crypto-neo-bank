@@ -779,3 +779,15 @@
 .productShell .recipientChoices small { color: var(--text-tertiary); font-family: var(--font-technical); font-size: 9px; }
 .productShell .checkRow { display: flex; gap: 8px; align-items: center; font-size: 11px; }
 .productShell .checkRow input { accent-color: var(--accent); }
+/* A transaction's journey: one row per step, only the current one in progress. */
+.actionJourney { margin: 0 0 20px; padding: 0; display: grid; list-style: none; text-align: left; }
+.actionJourney li { position: relative; min-height: 46px; display: grid; grid-template-columns: 20px 1fr; gap: 10px; }
+.actionJourney li:not(:last-child)::after { content: ""; position: absolute; left: 9px; top: 20px; bottom: 0; width: 1px; background: var(--border); }
+.actionJourney i { position: relative; z-index: 1; width: 20px; height: 20px; display: grid; place-items: center; border: 1px solid var(--border); border-radius: 50%; background: var(--surface-raised); color: var(--muted); }
+.actionJourney li.done i { border-color: var(--accent); background: var(--accent); color: var(--surface-raised); }
+.actionJourney li.current i { border-color: var(--accent); color: var(--accent); }
+.actionJourney li.failed i { border-color: var(--danger); color: var(--danger); }
+.actionJourney strong, .actionJourney small { display: block; }
+.actionJourney strong { font-size: var(--type-label); }
+.actionJourney li.waiting strong { color: var(--muted); }
+.actionJourney small { margin-top: 3px; color: var(--muted); font-size: var(--type-caption); }

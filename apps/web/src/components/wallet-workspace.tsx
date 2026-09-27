@@ -88,7 +88,9 @@ export function WalletWorkspace() {
   const transfer = useAction({ label: "Transfer" });
   const { address, ready } = transfer.wallet;
   const sending = transfer.busy;
-  const inFlight = transfer.phase !== "idle" || transfer.outcomeUnknown;
+  // Once it has left the account, it's sent: the customer can close this or start another. Transactions tracks the rest.
+  const handedOff = transfer.action?.status === "settling";
+  const inFlight = (transfer.phase !== "idle" && transfer.phase !== "done" && !handedOff) || transfer.outcomeUnknown;
   const eth = useBalance({ address, chainId: HOME_CHAIN.id, query: { enabled: Boolean(address) } });
   const tokens = useReadContracts({ contracts: TOKENS.map((item) => ({ address: item.address!, abi: erc20Abi, functionName: "balanceOf" as const,
     args: [address!] as const, chainId: HOME_CHAIN.id })), query: { enabled: Boolean(address) } });
@@ -110,7 +112,7 @@ export function WalletWorkspace() {
   function openSend(symbol: AssetSymbol = "USDC") {
     if (sending) return;
     // Keep an unsettled or uncertain transfer on screen instead of starting a new one.
-    if (transfer.phase === "tracking" || transfer.outcomeUnknown) { setModal("send"); return; }
+    if ((transfer.phase === "tracking" && !handedOff) || transfer.outcomeUnknown) { setModal("send"); return; }
     transfer.reset();
     setAsset(symbol);
     setRecipient("");
@@ -293,7 +295,7 @@ export function WalletWorkspace() {
               <p className="authorityFootnote">{crossChain ? `Transfers can't be reversed. Check that the recipient can receive ${asset} on ${destination.name}.` : "Transfers can't be reversed. Check the address before you confirm."}</p>
               {formError && <p className="formError" role="alert">{formError}</p>}
               <TransactionProgress label="Transfer" phase={transfer.phase} action={transfer.action} outcomeUnknown={transfer.outcomeUnknown} />
-              {transfer.phase === "done"
+              {transfer.phase === "done" || handedOff
                 ? <button type="button" className="button primary full" onClick={() => { transfer.reset(); setAmount(""); setQuote(null); setReviewing(false); }}><Send size={16} /> New transfer</button>
                 : <>
                   <button type="button" className="button primary full" disabled={inFlight || quoting} onClick={() => void confirmSend()}>{sending ? <LoaderCircle className="spin" size={16} /> : <Send size={16} />}{transfer.outcomeUnknown ? "Check Transactions first" : transfer.phase === "tracking" ? "Sending" : transfer.phase === "preparing" ? "Checking" : sending ? "Confirm with your passkey" : "Confirm and send"}</button>

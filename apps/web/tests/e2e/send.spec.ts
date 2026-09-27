@@ -330,10 +330,23 @@ test("USDC can be sent to another network: LI.FI's fees come out of the amount, 
   expect(operation.calls!.map((call) => call.to.toLowerCase())).toEqual([ASSETS.usdc, LIFI_DIAMOND]);
   expect(await balance(page, customer, `8453:${ASSETS.usdc}`)).toBe("40000000");
 
-  // Complete only once LI.FI reports delivery and the payout is on Arbitrum.
+  // Once it has left Base, the Send screen is done with it: sent, no spinner, and a way to track it.
+  const progress = dialog(page).getByRole("status");
+  await expect(progress).toContainText("Transfer sent", { timeout: 30_000 });
+  await expect(progress).toContainText("waiting for the bridge to deliver it on Arbitrum");
+  await expect(progress.locator(".spin")).toHaveCount(0);
+  await expect(dialog(page).getByRole("button", { name: "New transfer" })).toBeEnabled();
   await expect(toast(page, "Transfer complete")).toHaveCount(0);
+
+  // Transactions shows the journey, with only the current step in progress, and completes once the payout is on Arbitrum.
+  await progress.getByRole("link", { name: "Track in Transactions" }).click();
+  await expect(page).toHaveURL(/\/app\/transactions\?open=/);
+  const journey = dialog(page).getByRole("list", { name: "Progress" });
+  await expect(journey.getByRole("listitem")).toHaveText([/^Sent from Base/, /^Confirmed on Base/, /^Delivered on ArbitrumIn progress/, /^Complete$/], { timeout: 30_000 });
+  await expect(journey.locator(".spin")).toHaveCount(1);
   await edge("/__state", { bridge: { status: "DONE", substatus: "COMPLETED" } });
-  await expect(toast(page, "Transfer complete")).toBeVisible({ timeout: 45_000 });
+  await expect(journey.locator("li.done")).toHaveCount(4, { timeout: 45_000 });
+  await expect(journey.locator(".spin")).toHaveCount(0);
   await setFeature(page, "cross_chain", false);
 });
 
