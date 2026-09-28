@@ -45,6 +45,6 @@ A feature is done only when all of these are true:
 | 9 | Support and feedback | Support cases, feedback | Not started |
 | 10 | Bank and cards | Bridge and Rain adapters complete behind off switches | Not started |
 | 11 | Rewards and Insights | Keep, simplify, or cut | Not started |
-| 12 | Operations console | Feature switches, issues, reconciliation | Not started |
+| 12 | Operations console | A separate operator app in the monorepo (`apps/ops`, its own Worker behind Cloudflare Access) over every operator API: customers and account status (look up, lock, close, reopen), money movement and each action's journey, flows and funnels, stats, feature switches, asset pauses, issues, reconciliation, support cases. Replaces the console inside the customer app | Not started |
 
 Status values: Not started, In progress, Done (with the pull request link), Cut.

@@ -67,6 +67,14 @@ describe("sending an action through Privy", () => {
     expect(state.rpc).not.toHaveBeenCalled();
   });
 
+  it("a lock also stops an action prepared before it", async () => {
+    const id = await prepared();
+    sqlite.exec("UPDATE security_profiles SET account_locked = 1");
+    expect(await (await authorize(new Request("https://aura.test", json()), params(id))).json()).toMatchObject({ error: "account_locked" });
+    expect(await (await submit(new Request("https://aura.test", json({ signature })), params(id))).json()).toMatchObject({ error: "account_locked" });
+    expect(state.rpc).not.toHaveBeenCalled();
+  });
+
   it("tells a rejected request apart from one whose outcome is unknown", async () => {
     const id = await prepared();
     state.rpc = vi.fn(async () => { throw Object.assign(new Error("bad signature"), { status: 401 }); });

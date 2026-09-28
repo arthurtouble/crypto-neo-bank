@@ -52,7 +52,11 @@ CREATE TABLE subject_profiles (
   country_code TEXT,
   onboarding_state TEXT NOT NULL DEFAULT 'wallet_ready',
   created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL
+  updated_at TEXT NOT NULL,
+  -- Set by an operator when the customer asks to close an account with no funds left (apps/web/src/lib/account/closure.ts).
+  closed_at TEXT,
+  closed_by TEXT,
+  closed_reason TEXT
 );
 
 CREATE TABLE wallet_policies (
@@ -251,17 +255,6 @@ CREATE UNIQUE INDEX idx_provider_customer_external
 CREATE UNIQUE INDEX idx_provider_customer_onboarding
   ON provider_customer_links(provider, onboarding_reference);
 
-CREATE TABLE data_requests (
-  request_id TEXT PRIMARY KEY,
-  subject_reference TEXT NOT NULL,
-  request_type TEXT NOT NULL CHECK (request_type IN ('export','delete','withdraw_consent')),
-  status TEXT NOT NULL CHECK (status IN ('received','processing','completed','rejected')),
-  requested_at TEXT NOT NULL,
-  completed_at TEXT,
-  handled_by TEXT,
-  evidence_json TEXT NOT NULL DEFAULT '{}'
-);
-
 CREATE TABLE bank_beneficiary_projections (
   beneficiary_id TEXT PRIMARY KEY,
   subject_reference TEXT NOT NULL,
@@ -351,6 +344,19 @@ CREATE TABLE security_profiles (
   daily_limit_cents INTEGER CHECK (daily_limit_cents IS NULL OR daily_limit_cents > 0),
   updated_at TEXT NOT NULL,
   policy_version INTEGER NOT NULL DEFAULT 1 CHECK (policy_version >= 1),
+  FOREIGN KEY (subject_reference) REFERENCES subject_profiles(subject_reference)
+);
+
+-- One-time passkey confirmations for sensitive changes (apps/web/src/lib/security/step-up.ts).
+CREATE TABLE step_up_challenges (
+  challenge_id TEXT PRIMARY KEY,
+  subject_reference TEXT NOT NULL,
+  purpose TEXT NOT NULL,
+  payload_hash TEXT NOT NULL,
+  message TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  expires_at TEXT NOT NULL,
+  used_at TEXT,
   FOREIGN KEY (subject_reference) REFERENCES subject_profiles(subject_reference)
 );
 

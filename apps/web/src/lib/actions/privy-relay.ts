@@ -19,12 +19,15 @@ export type SendCallsBody = {
   params: { calls: Array<{ to: string; data: string; value: string }> };
 };
 
-/** Privy's authorization signature input, signed by the customer in the browser. */
-export type AuthorizationRequest = {
+/** A message the customer's wallet signs to confirm a security change (`lib/security/step-up.ts`). */
+export type PersonalSignBody = { method: "personal_sign"; chain_type: "ethereum"; params: { message: string; encoding: "utf-8" } };
+
+/** Privy's authorization signature input, signed by the customer in the browser. Privy asks for their passkey first. */
+export type AuthorizationRequest<Body = SendCallsBody> = {
   version: 1;
   method: "POST";
   url: string;
-  body: SendCallsBody;
+  body: Body;
   headers: { "privy-app-id": string; "privy-idempotency-key": string; "privy-request-expiry": string };
 };
 
@@ -46,6 +49,31 @@ export function sendCallsRequest(input: { appId: string; walletId: string; chain
       "privy-request-expiry": String(input.expiresAt.getTime())
     }
   };
+}
+
+export function personalSignRequest(input: { appId: string; walletId: string; message: string; idempotencyKey: string; expiresAt: Date }): AuthorizationRequest<PersonalSignBody> {
+  return {
+    version: 1,
+    method: "POST",
+    url: `${privyApiUrl()}/v1/wallets/${input.walletId}/rpc`,
+    body: { method: "personal_sign", chain_type: "ethereum", params: { message: input.message, encoding: "utf-8" } },
+    headers: { "privy-app-id": input.appId, "privy-idempotency-key": input.idempotencyKey, "privy-request-expiry": String(input.expiresAt.getTime()) }
+  };
+}
+
+/**
+ * Have Privy sign a confirmation with the customer's wallet. Privy only does
+ * so for a valid authorization signature from the customer, which their
+ * passkey unlocks, so a successful answer proves a fresh passkey check.
+ */
+export async function relayPersonalSign(privy: PrivyClient, walletId: string, request: AuthorizationRequest<PersonalSignBody>, signature: string): Promise<string> {
+  const response = await privy.wallets().rpc(walletId, {
+    ...request.body,
+    idempotency_key: request.headers["privy-idempotency-key"],
+    request_expiry: Number(request.headers["privy-request-expiry"]),
+    authorization_context: { signatures: [signature] }
+  });
+  return (response.data as { signature: string }).signature;
 }
 
 /** Relay a signed request. The SDK rebuilds the same payload, so the customer's signature must match it exactly. */

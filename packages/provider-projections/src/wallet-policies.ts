@@ -31,14 +31,3 @@ export async function applyWalletPolicy(db: ProjectionDatabase, subjectReference
     .bind(policy.policyId, subjectReference, policy.policyType, configuration, policy.enabled ? 1 : 0, source.observedAt).run();
   return { status: result.meta.changes ? "applied" : "stale", projection: "wallet_policies" };
 }
-
-export async function readWalletPolicies(db: ProjectionDatabase, subjectReference: string): Promise<WalletPolicy[]> {
-  const rows = await db.prepare(`SELECT policy_id, policy_type, configuration_json, enabled, updated_at
-    FROM wallet_policies WHERE subject_reference = ? ORDER BY policy_type`).bind(subjectReference)
-    .all<{ policy_id: string; policy_type: WalletPolicy["policyType"]; configuration_json: string; enabled: number; updated_at: string }>();
-  return rows.results.map((row) => {
-    let configuration: Record<string, unknown> = {};
-    try { configuration = JSON.parse(row.configuration_json) as Record<string, unknown>; } catch { /* keep an empty record */ }
-    return { policyId: row.policy_id, policyType: row.policy_type, configuration, enabled: row.enabled === 1, updatedAt: row.updated_at };
-  });
-}

@@ -4,13 +4,14 @@ import { usePrivy } from "@privy-io/react-auth";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertOctagon, Check, Clock3, LoaderCircle, LockKeyhole, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
+import type { AuthorizationRequest } from "@/lib/actions/privy-relay";
 import { ApiError, useApi } from "@/lib/client/api";
+import { useAuraWallet } from "@/lib/client/use-aura-wallet";
 import { useToast } from "./toast";
 
 type Policy = { accountLocked: boolean; enforceAddressBook: boolean; dailyLimitUsd: number | null; newAddressDelayHours: number;
   policyVersion: number; updatedAt: string; enforcement: "aura" };
 type PolicyChange = Partial<Pick<Policy, "accountLocked" | "enforceAddressBook" | "dailyLimitUsd" | "newAddressDelayHours">>;
-type WalletPolicy = { policyId: string; policyType: string; enabled: boolean; updatedAt: string };
 type Entry = { entryId: string; address: string; label: string; createdAt: string; availableAt: string; lastUsedAt?: string };
 
 function short(value: string) { return `${value.slice(0, 7)}…${value.slice(-5)}`; }
@@ -32,13 +33,26 @@ export function SecurityPolicyControls() {
   const [delayDraft, setDelayDraft] = useState<string | null>(null);
 
   const policy = useQuery({ queryKey: ["security-policy", user?.id], enabled: Boolean(user),
-    queryFn: () => api<{ policy: Policy; walletPolicies?: WalletPolicy[] }>("/api/security/policy") });
+    queryFn: () => api<{ policy: Policy }>("/api/security/policy") });
   const addresses = useQuery({ queryKey: ["address-book", user?.id], enabled: Boolean(user),
     queryFn: () => api<{ entries: Entry[] }>("/api/security/addresses") });
+  const { authorize, enrollPasskey } = useAuraWallet();
   const update = useMutation({
-    mutationFn: (changes: PolicyChange) => api<{ policy: Policy }>("/api/security/policy", { method: "PATCH", json: changes }),
+    // Tightening applies at once. Loosening asks for a passkey confirmation of that exact change, then sends it again with the signature.
+    mutationFn: async (changes: PolicyChange) => {
+      try { return await api<{ policy: Policy }>("/api/security/policy", { method: "PATCH", json: changes }); }
+      catch (error) {
+        if (!(error instanceof ApiError) || error.code !== "confirmation_required") throw error;
+        const { challengeId, request } = error.body as { challengeId: string; request: AuthorizationRequest<unknown> };
+        const signature = await authorize(request);
+        return api<{ policy: Policy }>("/api/security/policy", { method: "PATCH", json: { ...changes, confirmation: { challengeId, signature } } });
+      }
+    },
     onSuccess: () => toast.success("Controls updated"),
-    onError: (error) => toast.error("Controls not updated", error instanceof ApiError && error.code === "security_policy_changed" ? error.message : "Try again."),
+    onError: (error) => {
+      if (error instanceof ApiError && error.code === "mfa_required") { toast.error("Add a passkey first", "Loosening a control needs your passkey."); enrollPasskey(); return; }
+      toast.error("Controls not changed", error instanceof ApiError ? error.message : "You cancelled the passkey check, so nothing changed.");
+    },
     onSettled: async () => { setDailyDraft(null); setDelayDraft(null); await queryClient.invalidateQueries({ queryKey: ["security-policy", user?.id] }); }
   });
 
@@ -77,21 +91,16 @@ export function SecurityPolicyControls() {
   return <>
     <section className="panel securityPolicyPanel"><div className="panelHeading"><div><h2>Transaction controls</h2></div><span className={`statusBadge ${current.accountLocked ? "warning" : "good"}`}><i /> {current.accountLocked ? "Locked" : "Active"}</span></div>
       <div className="policyControlRows">
-        <label><span><LockKeyhole size={17} /><b>Emergency lock<small>Block new outgoing transfers.</small></b></span><input type="checkbox" checked={current.accountLocked} disabled={update.isPending} onChange={(event) => update.mutate({ accountLocked: event.target.checked })} /></label>
-        <label><span><Check size={17} /><b>Saved recipients only<small>Only send to saved recipients.</small></b></span><input type="checkbox" checked={current.enforceAddressBook} disabled={update.isPending} onChange={(event) => update.mutate({ enforceAddressBook: event.target.checked })} /></label>
+        <label><span><LockKeyhole size={17} /><b>Emergency lock<small>Stop all sends, swaps, and Earn moves. Unlocking needs your passkey.</small></b></span><input type="checkbox" checked={current.accountLocked} disabled={update.isPending} onChange={(event) => update.mutate({ accountLocked: event.target.checked })} /></label>
+        <label><span><Check size={17} /><b>Saved recipients only<small>Only send to saved recipients, after their wait.</small></b></span><input type="checkbox" checked={current.enforceAddressBook} disabled={update.isPending} onChange={(event) => update.mutate({ enforceAddressBook: event.target.checked })} /></label>
         <label><span><AlertOctagon size={17} /><b>Daily transfer limit<small>Leave empty for no limit.</small></b></span><input type="number" min="1" step="1" placeholder="No limit" disabled={update.isPending} value={dailyDraft ?? (current.dailyLimitUsd === null ? "" : String(current.dailyLimitUsd))} onChange={(event) => setDailyDraft(event.target.value)} onBlur={() => saveDailyLimit(current.dailyLimitUsd)} /><em>USD</em></label>
-        <label><span><Clock3 size={17} /><b>Wait before new recipients<small>Hours before a new saved recipient can receive.</small></b></span><input type="number" min="0" max="168" step="1" disabled={update.isPending} value={delayDraft ?? String(current.newAddressDelayHours)} onChange={(event) => setDelayDraft(event.target.value)} onBlur={() => saveDelay(current.newAddressDelayHours)} /><em>Hours</em></label>
+        <label><span><Clock3 size={17} /><b>Wait before new recipients<small>Hours before a new saved recipient can receive, when sending is limited to saved recipients.</small></b></span><input type="number" min="0" max="168" step="1" disabled={update.isPending} value={delayDraft ?? String(current.newAddressDelayHours)} onChange={(event) => setDelayDraft(event.target.value)} onBlur={() => saveDelay(current.newAddressDelayHours)} /><em>Hours</em></label>
       </div>
-      <p className="sourceCaption">Changes apply right away. These controls apply to transfers Aura prepares.</p>
+      <p className="sourceCaption">Making a control stricter applies right away. Loosening one needs your passkey. These controls apply to everything Aura prepares.</p>
     </section>
     <section className="panel addressBookPanel"><div className="panelHeading"><div><h2>Saved recipients</h2><p className="sourceCaption">{current.newAddressDelayHours === 0 ? "New recipients are ready right away." : `New recipients are ready after ${current.newAddressDelayHours} hours.`}</p></div></div>
       <form onSubmit={(event) => void addAddress(event)} className="addressForm"><label className="fieldLabel">Label<input value={label} onChange={(event) => setLabel(event.target.value)} placeholder="Treasury wallet" /></label><label className="fieldLabel">EVM address<input value={address} onChange={(event) => setAddress(event.target.value.trim())} placeholder="0x…" spellCheck={false} /></label><button className="button secondary" disabled={!address || !label}><Plus size={14} /> Save</button></form>
       <div className="addressList">{addresses.data?.entries.length ? addresses.data.entries.map((entry) => { const cooling = new Date(entry.availableAt) > new Date(); return <div key={entry.entryId}><span className={cooling ? "pending" : "ready"}>{cooling ? <Clock3 size={13} /> : <Check size={13} />}{cooling ? "Waiting" : "Ready"}</span><div><strong>{entry.label}</strong><small>{short(entry.address)} · {cooling ? `available ${new Date(entry.availableAt).toLocaleString()}` : "ready"}</small></div><button aria-label={`Remove ${entry.label}`} onClick={() => void removeAddress(entry.entryId)}><Trash2 size={14} /></button></div>; }) : <div className="emptyAddress">No saved recipients yet.</div>}</div>
     </section>
-    {policy.data.walletPolicies?.length ? <section className="panel securityPolicyPanel"><div className="panelHeading"><div><h2>Wallet provider rules</h2>
-      <p className="sourceCaption">Enforced by your wallet provider when it signs. Aura shows them here; change them with the provider.</p></div></div>
-      <div className="addressList">{policy.data.walletPolicies.map((rule) => <div key={rule.policyId}><span className={rule.enabled ? "ready" : "pending"}>{rule.enabled ? <Check size={13} /> : <Clock3 size={13} />}</span>
-        <strong>{rule.policyType.replaceAll("_", " ")}</strong><small>{rule.enabled ? "On" : "Off"} · updated {new Date(rule.updatedAt).toLocaleString()}</small></div>)}</div>
-    </section> : null}
   </>;
 }

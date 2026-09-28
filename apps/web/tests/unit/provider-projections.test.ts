@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   applyProviderEvent, claimProviderCommand, readCurrentCardAccount, readCurrentEntitlements, readMembership, readPreferences,
-  readWalletPolicies, settleProviderCommand, updatePreferences, type ProjectionDatabase, type ProviderEvent
+  settleProviderCommand, updatePreferences, type ProjectionDatabase, type ProviderEvent
 } from "@aurel/provider-projections";
 
 const migrations = resolve(process.cwd(), "../../infra/d1/migrations");
@@ -124,8 +124,9 @@ describe("wallet policy projection", () => {
     await applyProviderEvent(db, event("wallet.policy.updated", policy, { provider: "privy" }));
     await applyProviderEvent(db, event("wallet.policy.updated", { ...policy, policyId: "pol-2", configuration: { dailyUsd: 250 } },
       { provider: "privy", createdAt: "2026-09-25T11:00:00.000Z" }));
-    expect(await readWalletPolicies(db, "alice")).toEqual([{ policyId: "pol-2", policyType: "spend_limit",
-      configuration: { dailyUsd: 250, provider: "privy" }, enabled: true, updatedAt: "2026-09-25T11:00:00.000Z" }]);
+    expect((await db.prepare("SELECT policy_id, policy_type, configuration_json, enabled, updated_at FROM wallet_policies WHERE subject_reference = ?")
+      .bind("alice").all()).results).toEqual([{ policy_id: "pol-2", policy_type: "spend_limit",
+      configuration_json: JSON.stringify({ dailyUsd: 250, provider: "privy" }), enabled: 1, updated_at: "2026-09-25T11:00:00.000Z" }]);
   });
 });
 
