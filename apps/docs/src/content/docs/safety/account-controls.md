@@ -22,7 +22,7 @@ Money only leaves your account after you add a passkey or an authenticator app. 
 
 ## Emergency lock
 
-Turn on the lock if something looks wrong: an unexpected prompt, a recipient you don't recognize, or signs someone else has access. Then secure your sign-in and recovery methods too.
+Turn on the lock if something looks wrong: an unexpected prompt, a recipient you don't recognize, or signs someone else has access. Then secure your sign-in methods too. If you think someone else has access, **Support → Report a problem → Lock and report** locks your account and opens a chat with our team in one step.
 
 The lock stops Aura preparing or sending any money movement, including one you started but haven't confirmed yet. It doesn't freeze your wallet, reverse a transaction already sent, or stop activity in another app. Unlocking needs your passkey.
 

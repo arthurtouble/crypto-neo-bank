@@ -78,10 +78,10 @@ Customers download their own data in Settings → Data and privacy (`GET /api/pr
 
 Aura doesn't delete a customer's records on request. To close an account:
 
-1. The customer asks through support (Settings → Close your account opens a prefilled case).
-2. Confirm it's them through the support case, never through a new channel.
+1. The customer asks in the support chat (Settings → Close your account opens Support, where "Ask to close" starts a prefilled Intercom conversation).
+2. Confirm it's them in that conversation: Intercom shows the verified Aura user ID (from the Messenger identity token), never trust a claim made in a new channel.
 3. In the operations console → Accounts, search by email, wallet, or Privy user ID. The console shows each balance and why the account can't be closed yet: funds left, a balance that couldn't be read, or a transaction in progress. Ask the customer to move the rest out.
-4. When it's empty, press Close account and give the support case as the reason. The server checks again, closes it, locks it, unpublishes the Aura tag, and records it in the audit log.
+4. When it's empty, press Close account and give the Intercom conversation link as the reason. The server checks again, closes it, locks it, unpublishes the Aura tag, and records it in the audit log.
 5. A closed account can still download its data and contact support. If money arrives later, or the customer comes back, reopen it with a reason; it stays locked until they unlock it with their passkey.
 
 Other rights, such as correcting data, go through support. Answer within the legal deadline for the customer's country, and record what was kept and why.

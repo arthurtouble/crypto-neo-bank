@@ -19,7 +19,7 @@ That lowers the risk of Aura losing track of your money. It doesn't mean Aura ke
 | Your security settings | Your choices, stored by Aura | Applies them inside Aura and records changes |
 | Future bank balance | The bank partner | Shows the partner's record |
 | Identity verification | The partner, once live | Uses only the status it needs |
-| Support cases | Aura | Keeps the request, how it was handled, and the outcome |
+| Support chats | Intercom | Keeps the conversation, how it was handled, and the outcome |
 | Product analytics | Aura | Measures a fixed list of events. Never used for balances |
 
 ## What can be rebuilt

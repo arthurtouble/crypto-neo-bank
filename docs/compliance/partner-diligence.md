@@ -36,7 +36,7 @@ Cloudflare Workers hosts the application and APIs. D1 stores non-authoritative p
 - Account lock, saved-recipients-only mode, new-recipient cooling, and optional daily limit.
 - Signed, timestamped, replay-resistant provider webhook intake.
 - Idempotent queue processing, dead-letter evidence and scheduled reconciliation.
-- Deny-all-by-default operator authorization, structured audit evidence and support cases.
+- Deny-all-by-default operator authorization, structured audit evidence, and support conversations in Intercom tied to verified Aura identities.
 - Security headers, API abuse limits, CI, CodeQL, dependency audit and recovery drill.
 
 ## Requested partner capabilities

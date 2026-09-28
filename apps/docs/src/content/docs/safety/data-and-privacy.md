@@ -41,8 +41,8 @@ Different records need different retention periods. Security and complaint recor
 
 Every table in Aura that holds your data is labeled as erasable or kept, with a reason. An automated test fails if a new one is missing a label.
 
-- **Erasable:** preferences, analytics, feedback, your public Aura tag, and history we can rebuild from partners and the blockchain.
-- **Kept as evidence:** money movements, security settings, consent, and support cases.
+- **Erasable:** preferences, analytics, your public Aura tag, and history we can rebuild from partners and the blockchain.
+- **Kept as evidence:** money movements, security settings, consent, and support chats (held in Intercom).
 
 Retention periods for each country, and a process for legal holds, will be set before launch.
 

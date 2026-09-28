@@ -20,7 +20,6 @@ const routes = files(apiRoot, (name) => name === "route.ts").map((path) => ({
 /** Public or special-contract routes that intentionally do not use the shared wrapper. */
 const unwrapped: Record<string, string> = {
   "health": "public liveness probe with its own dependency report",
-  "status": "public status page data",
   "auth/session": "session probe returns authenticated:false rather than an error body",
   "aura-tags/[tag]": "public payment page; every failure is an indistinguishable 404",
   "webhooks/[provider]": "provider-signed ingress; each provider's own scheme, with replay handling"
@@ -47,7 +46,8 @@ describe("API route inventory", () => {
       "markets/eligibility", "markets/instruments", "portfolio/history", "portfolio/refresh", "portfolio/materialize",
       "portfolio/tax-support", "support/assistant", "money/transfers", "defi/aave/rewards", "defi/aave/preview",
       "intents/evaluate", "intents/prepare", "intents/status", "intents/reconcile", "swap/quote", "swap/review", "swap/prepare",
-      "swap/approval", "defi/aave/action", "defi/aave/receipt", "defi/sky/action", "defi/sky/receipt"];
+      "swap/approval", "defi/aave/action", "defi/aave/receipt", "defi/sky/action", "defi/sky/receipt",
+      "support/cases", "feedback", "status", "ops/incidents"];
     const existing = new Set(routes.map((item) => item.path));
     expect(retired.filter((path) => existing.has(path))).toEqual([]);
   });

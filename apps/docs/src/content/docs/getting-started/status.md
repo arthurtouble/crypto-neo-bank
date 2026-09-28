@@ -21,7 +21,7 @@ Your Aura account is a wallet that Privy makes when you sign in, and you control
 | Transactions and Insights | What you send, swap, move, and earn with Aura, money you receive, and Aave history. Export the list or a monthly statement | Money you receive shows as completed once it's in a block, and final about 20 minutes later on Base. If it can't be read, Aura says so and won't give an incomplete statement |
 | Aura tag | A public page where people can pay you in crypto | Bank and card payments on the page aren't available |
 | Settings | Adding or changing your email, passkey, key export, optional account lock, daily limit, saved-recipients-only mode, and wait for new recipients, your Aura tag, notifications in the app, by email, and in your browser, and downloading your data | Your controls are off until you turn them on |
-| Support | Open and follow support cases | |
+| Support | Chat with Aura's assistant and team, help articles, and reporting a problem: lock your account if someone else may be using it, or report money sent to a scam | Card disputes arrive with cards |
 
 ## Not available yet
 

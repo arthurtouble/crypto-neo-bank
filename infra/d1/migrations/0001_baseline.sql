@@ -180,56 +180,12 @@ CREATE INDEX product_events_name_idx ON product_events(event_name, occurred_at D
 
 CREATE INDEX product_events_subject_idx ON product_events(subject_reference, occurred_at DESC);
 
-CREATE TABLE support_cases (
-  case_id TEXT PRIMARY KEY,
-  subject_reference TEXT NOT NULL,
-  action_id TEXT,
-  category TEXT NOT NULL,
-  priority TEXT NOT NULL,
-  status TEXT NOT NULL,
-  summary TEXT NOT NULL,
-  created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL,
-  FOREIGN KEY (subject_reference) REFERENCES subject_profiles(subject_reference),
-  FOREIGN KEY (action_id) REFERENCES actions(action_id)
-);
-
-CREATE INDEX support_cases_queue_idx ON support_cases(status, priority, created_at);
-
 CREATE TABLE operational_checks (
   check_key TEXT PRIMARY KEY,
   status TEXT NOT NULL,
   details_json TEXT NOT NULL,
   checked_at TEXT NOT NULL
 );
-
-CREATE TABLE customer_feedback (
-  feedback_id TEXT PRIMARY KEY,
-  subject_reference TEXT NOT NULL,
-  surface TEXT NOT NULL,
-  sentiment TEXT NOT NULL CHECK (sentiment IN ('positive', 'neutral', 'negative')),
-  category TEXT NOT NULL,
-  message TEXT NOT NULL,
-  status TEXT NOT NULL DEFAULT 'new' CHECK (status IN ('new', 'reviewed', 'planned', 'closed')),
-  created_at TEXT NOT NULL,
-  FOREIGN KEY (subject_reference) REFERENCES subject_profiles(subject_reference)
-);
-
-CREATE INDEX customer_feedback_queue_idx ON customer_feedback(status, created_at);
-
-CREATE TABLE incident_updates (
-  incident_id TEXT PRIMARY KEY,
-  title TEXT NOT NULL,
-  status TEXT NOT NULL CHECK (status IN ('investigating', 'identified', 'monitoring', 'resolved')),
-  impact TEXT NOT NULL,
-  message TEXT NOT NULL,
-  started_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL,
-  resolved_at TEXT,
-  published INTEGER NOT NULL DEFAULT 0
-);
-
-CREATE INDEX incident_updates_public_idx ON incident_updates(published, updated_at DESC);
 
 -- The customer's account at a regulated provider (Bridge, Rain). The provider is authoritative for its status.
 CREATE TABLE provider_customer_links (

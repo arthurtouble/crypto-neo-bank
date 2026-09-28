@@ -88,17 +88,8 @@ test("public health exposes dependencies without secrets", async ({ request }) =
   expect(JSON.stringify(payload)).not.toMatch(/secret|token|password/i);
 });
 
-test("public status exposes bounded component state and no secrets", async ({ request }) => {
-  const response = await request.get("/api/status");
-  expect([200, 503]).toContain(response.status());
-  const payload = await response.json();
-  expect(payload).toHaveProperty("components");
-  expect(payload).toHaveProperty("incidents");
-  expect(JSON.stringify(payload)).not.toMatch(/app.secret|private.key|bearer/i);
-});
-
 test("private APIs fail closed without an authenticated subject", async ({ request }) => {
-  for (const path of ["/api/activity", "/api/insights", "/api/cards", "/api/aura-tags", "/api/actions/00000000-0000-4000-8000-000000000000", "/api/money/account", "/api/recipients", "/api/ops/summary", "/api/ops/features", "/api/ops/analytics", "/api/security/policy"]) {
+  for (const path of ["/api/activity", "/api/insights", "/api/cards", "/api/aura-tags", "/api/actions/00000000-0000-4000-8000-000000000000", "/api/money/account", "/api/recipients", "/api/ops/summary", "/api/ops/features", "/api/ops/analytics", "/api/security/policy", "/api/support/messenger", "/api/support/fin/activity?user_id=did:privy:abcdefgh12345678"]) {
     const response = await request.get(path);
     expect([401, 403], path).toContain(response.status());
     expect(response.headers()["cache-control"], path).toContain("no-store");
@@ -106,13 +97,11 @@ test("private APIs fail closed without an authenticated subject", async ({ reque
   }
 });
 
-test("feedback and financial actions fail closed without authentication", async ({ request }) => {
+test("financial actions fail closed without authentication", async ({ request }) => {
   const quote = await request.get("/api/routes/quote?from=8453:native&to=8453:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913&amount=1");
   expect(quote.status()).toBe(401);
   const action = await request.post("/api/actions", { data: { kind: "earn", protocol: "aave", direction: "deposit", asset: "USDC", amount: "1" } });
   expect(action.status()).toBe(401);
-  const feedback = await request.post("/api/feedback", { data: { surface: "/app", sentiment: "neutral", category: "usability", message: "This is a useful test message." } });
-  expect(feedback.status()).toBe(401);
 });
 
 test("provider webhooks reject unsigned events and unknown providers", async ({ request }) => {

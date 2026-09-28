@@ -9,7 +9,7 @@ const state = vi.hoisted(() => ({ db: null as D1Database | null, subject: "alice
 vi.mock("cloudflare:workers", () => ({ env: { get PROJECTION_DB() { return state.db; } } }));
 vi.mock("@/lib/auth/server", () => ({ requireVerifiedSubject: async () => ({ subjectReference: state.subject, sessionReference: "session" }) }));
 vi.mock("@/lib/auth/wallet", () => ({ requireActionWallet: async () => wallet }));
-vi.mock("@/lib/auth/privy", () => ({ privyClient: () => { throw new Error("Privy isn't reachable in unit tests"); } }));
+vi.mock("@/lib/auth/privy", () => ({ privyClient: () => { throw new Error("Privy isn't reachable in unit tests"); }, privyEmail: async () => { throw new Error("Privy isn't reachable in unit tests"); } }));
 vi.mock("@/lib/activity/incoming", async (original) => ({ ...await original<object>(), readIncoming: async () => ({ transfers: [], status: "available", partial: false, observedAt: "t" }) }));
 
 const { notify, listNotifications, markAllRead, securityNotice, receivedNotice, actionNotice } = await import("@/lib/notifications/store");

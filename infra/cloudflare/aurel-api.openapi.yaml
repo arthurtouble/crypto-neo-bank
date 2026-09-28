@@ -17,20 +17,12 @@ paths:
               schema:
                 $ref: "#/components/schemas/Health"
         "503": { description: A required dependency is unavailable }
-  /api/status:
+  /api/support/messenger:
     get:
-      operationId: publicStatus
+      operationId: supportMessenger
       responses:
-        "200": { description: Bounded public component and incident status }
-        "503": { description: Status evidence is unavailable }
-  /api/feedback:
-    post:
-      operationId: feedback
-      responses:
-        "201": { description: Feedback accepted }
-        "400": { description: Invalid feedback }
+        "200": { description: Intercom app ID and a signed identity token, or appId null when support chat is off }
         "401": { description: Authentication required }
-        "429": { description: Feedback rate limit reached }
   /api/auth/session:
     get:
       operationId: session

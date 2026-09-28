@@ -1,6 +1,6 @@
 import { buildPushPayload, type PushSubscription } from "@block65/webcrypto-web-push";
 import { readPreferences } from "@aurel/provider-projections";
-import { privyClient } from "@/lib/auth/privy";
+import { privyEmail } from "@/lib/auth/privy";
 import { localEdgeUrl } from "@/lib/testing/local-edge";
 import { notify, type Notice, type NotificationKind } from "./store";
 
@@ -19,12 +19,6 @@ type Pending = { notification_id: string; subject_reference: string; kind: Notif
   email_status: string; push_status: string; delivery_attempts: number; closed_at: string | null };
 type Channel = "sent" | "skipped" | "failed" | "retry";
 export type Deps = { fetcher?: typeof fetch; email?: (subject: string) => Promise<string | null>; now?: Date };
-
-/** The customer's verified email from Privy, if they signed in with one. */
-async function privyEmail(subject: string): Promise<string | null> {
-  const user = await privyClient().users()._get(subject) as { linked_accounts: Array<{ type: string; address?: string }> };
-  return user.linked_accounts.find((account) => account.type === "email" && account.address)?.address ?? null;
-}
 
 const appLink = (link: string | null) => `${(process.env.APP_ORIGIN ?? "").replace(/\/$/, "")}${link ?? "/app"}`;
 

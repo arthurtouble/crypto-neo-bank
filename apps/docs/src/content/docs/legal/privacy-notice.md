@@ -30,7 +30,7 @@ Public blockchains record your transactions permanently.
 
 **Choices you make.** Notification choices, consent to product-update emails, which version of these documents you accepted and when, and your public Aura tag if you create one.
 
-**Support and feedback.** Messages, complaint details, and feedback you send us.
+**Support.** Your chats with Aura's assistant and team, and complaint details you send us.
 
 **Partner information.** Once a partner such as Bridge (bank transfers) or Rain (cards) is live, we store references and statuses it reports. Examples are a card's status and last four digits, benefit entitlements, bank-transfer instructions, and rules your wallet provider enforces. Identity documents, screening results, and full card numbers stay with those partners.
 
@@ -45,7 +45,7 @@ Public blockchains record your transactions permanently.
 | Provide the service you asked for | Account, wallet, transactions, choices | Contract |
 | Keep accounts and funds safe, and prevent fraud and abuse | Security settings, technical data, records of changes | Legitimate interests; legal obligation |
 | Prove what you agreed to and when | Document acceptance and consent records | Legal obligation; legitimate interests |
-| Answer support requests and complaints | Support and feedback | Contract; legal obligation |
+| Answer support requests and complaints | Support chats, and the account details needed to help | Contract; legal obligation |
 | Improve reliability and the product | Product events, diagnostics | Legitimate interests |
 | Send product-update emails | Email and consent record | Consent, which you can withdraw at any time |
 
@@ -65,7 +65,8 @@ We do not sell personal data or use it for third-party advertising. We do not ma
 We share data only as needed to run Aura:
 
 - **Privy** for sign-in and your wallet;
-- **Cloudflare** for hosting, security, and storage, including Turnstile, which checks that support requests come from a person;
+- **Cloudflare** for hosting, security, and storage;
+- **Intercom**, which runs support chat and its AI assistant, Fin. It receives your Aura user ID, your email if your account has one, your wallet address, what you write in the chat, and, when you ask about your money, your latest transactions;
 - blockchain data services, to read balances and transactions;
 - **Resend**, which sends our emails. It receives your email address and the notice;
 - your browser's push service (for example Google's for Chrome, Apple's for Safari, or Mozilla's for Firefox), when you turn on browser notifications. The notice is encrypted so that only your browser can read it;
@@ -86,10 +87,10 @@ Our service providers may process data outside your country.
 
 | Data | Kept |
 | --- | --- |
-| Preferences, product events, feedback, public Aura tag, and account history we can rebuild | While your account is open, then as the retention schedule allows |
+| Preferences, product events, public Aura tag, and account history we can rebuild | While your account is open, then as the retention schedule allows |
 | Transactions, security settings, and records of changes to them | As long as required for security, fraud prevention, and financial record-keeping laws |
 | Consent and document-acceptance records | As long as we rely on them, plus the applicable limitation period |
-| Support cases and complaints | For the complaint-handling retention period in each country |
+| Support chats and complaints | For the complaint-handling retention period in each country, kept in Intercom |
 | Diagnostic logs and rate-limit counters | Days to weeks |
 
 **[Placeholder: exact periods for each launch country must be set before launch.]**

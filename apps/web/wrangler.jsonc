@@ -14,13 +14,11 @@
     "PRODUCT_MODE": "mainnet-preview",
     "BRIDGE_API_BASE_URL": "https://api.bridge.xyz/v0",
     "NEXT_PUBLIC_PRIVY_APP_ID": "cmub5evr4013l0cjs0w5dijlb",
-    "NEXT_PUBLIC_TURNSTILE_SITE_KEY": "0x4AAAAAAE_LD5ONaf0OITS8",
-    "TURNSTILE_HOSTNAMES": "aurel-financial-os.aurel-events.workers.dev",
     "ADMIN_PRIVY_SUBJECTS": "",
     "REQUIRE_CF_ACCESS": "false"
   },
   "secrets": {
-    "required": ["PRIVY_APP_SECRET", "TURNSTILE_SECRET"]
+    "required": ["PRIVY_APP_SECRET"]
   },
   "d1_databases": [
     {
@@ -43,8 +41,6 @@
         "PRODUCT_MODE": "mainnet-preview",
         "BRIDGE_API_BASE_URL": "https://api.bridge.xyz/v0",
         "NEXT_PUBLIC_PRIVY_APP_ID": "cmub5evr4013l0cjs0w5dijlb",
-        "NEXT_PUBLIC_TURNSTILE_SITE_KEY": "1x00000000000000000000AA",
-        "TURNSTILE_HOSTNAMES": "aura-dev.aurel-events.workers.dev,localhost",
         "ADMIN_PRIVY_SUBJECTS": "",
         "LIFI_INTEGRATOR": "aurel",
         "LIFI_INTEGRATOR_FEE": "0",
@@ -52,10 +48,9 @@
         // Notifications. Resend only sends from onboarding@resend.dev, to the Resend account's own address, until a domain is verified.
         "EMAIL_FROM": "Aura <onboarding@resend.dev>",
         "APP_ORIGIN": "https://aura-dev.aurel-events.workers.dev",
-        "VAPID_PUBLIC_KEY": "BKy2yu17XoDp4trj5IYoWspZslphAaCT4v7wrfVdHj9DdNh46tispIXt2YHqt5VRw263I6zHh7C8hQWZWLCJUhI"
-      },
-      "secrets": {
-        "required": ["TURNSTILE_SECRET"]
+        "VAPID_PUBLIC_KEY": "BKy2yu17XoDp4trj5IYoWspZslphAaCT4v7wrfVdHj9DdNh46tispIXt2YHqt5VRw263I6zHh7C8hQWZWLCJUhI",
+        // Support chat. The identity-verification secret is the INTERCOM_IDENTITY_SECRET secret.
+        "INTERCOM_APP_ID": "rn8vf9xv"
       },
       "d1_databases": [{
         "binding": "PROJECTION_DB",

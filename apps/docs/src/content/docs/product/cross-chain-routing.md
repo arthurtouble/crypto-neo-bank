@@ -20,6 +20,6 @@ When the first network confirms, the move has started. That doesn't mean it has 
 1. Open the transaction in Transactions.
 2. Check it on both networks' block explorers.
 3. Don't repeat the move yet. Repeating it can send your funds twice.
-4. If it's still unresolved, open a support case with the transaction hash.
+4. If it's still unresolved, chat with support in Aura and include the transaction hash.
 
 Never share a private key or recovery phrase, including with Aura support.

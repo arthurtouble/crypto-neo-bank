@@ -13,6 +13,7 @@ import { PrivyAccountButton } from "./privy-account-button";
 import { ClientIdentity } from "./client-identity";
 import { AccountClosedGate } from "./account-closed";
 import { NotificationBell } from "./notification-bell";
+import { SupportChatProvider } from "./support-chat";
 
 const iconByPage: Record<string, typeof icons.dashboard> = {
   Overview: icons.dashboard, Deposit: icons.received, Send: icons.sent,
@@ -57,7 +58,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <CommandMenu />
           <div className="headerRight"><span className="networkStatus"><i /> Secure Connection</span><NotificationBell /><ThemeToggle /><PrivyAccountButton /></div>
         </header>
-        <main className="productContent"><AccountClosedGate>{children}</AccountClosedGate></main>
+        <main className="productContent"><SupportChatProvider><AccountClosedGate>{children}</AccountClosedGate></SupportChatProvider></main>
       </div>
     </div>
   );
