@@ -1,7 +1,7 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Copy } from "lucide-react";
 import { useState, type FormEvent } from "react";
-import { api, when } from "./api";
+import { api, short, when } from "./api";
 
 type Holding = { label: string; symbol: string; amountRaw: string | null; status: string };
 type Account = { subjectReference: string; wallet: string; closedAt: string | null; closedReason: string | null; eligible: boolean; blockers: string[];
@@ -24,6 +24,34 @@ function ReasonAction({ label, disabled, onSubmit, pending }: { label: string; d
   </form>;
 }
 
+type Row = { subjectReference: string; createdAt: string; closedAt: string | null; accountLocked: boolean; auraTag: string | null;
+  bankStatus: string | null; cardStatus: string | null; actions: number; lastActivityAt: string | null };
+
+/** Every customer, newest sign-up first, 50 at a time. */
+function AllCustomers({ onOpen }: { onOpen: (subject: string) => void }) {
+  const list = useInfiniteQuery({
+    queryKey: ["customers"], initialPageParam: null as string | null,
+    queryFn: ({ pageParam }) => api<{ customers: Row[]; next: string | null }>(`customers${pageParam ? `?after=${encodeURIComponent(pageParam)}` : ""}`),
+    getNextPageParam: (last) => last.next
+  });
+  const rows = list.data?.pages.flatMap((page) => page.customers) ?? [];
+  return <section aria-labelledby="all-customers-heading">
+    <h2 id="all-customers-heading">All customers</h2>
+    {list.isError && <div className="notice error" role="alert">{list.error.message}</div>}
+    <div className="tableWrap"><table>
+      <thead><tr><th scope="col">Joined</th><th scope="col">Customer</th><th scope="col">Status</th><th scope="col">Bank</th><th scope="col">Card</th>
+        <th scope="col">Transactions</th><th scope="col">Last activity</th></tr></thead>
+      <tbody>{rows.map((row) => <tr key={row.subjectReference} className="clickable" onClick={() => onOpen(row.subjectReference)} data-testid="ops-customer-row">
+        <td>{when(row.createdAt)}</td>
+        <td><button className="link" onClick={(event) => { event.stopPropagation(); onOpen(row.subjectReference); }}>{row.auraTag ? `@${row.auraTag}` : short(row.subjectReference)}</button></td>
+        <td>{row.closedAt ? <span className="badge bad">Closed</span> : row.accountLocked ? <span className="badge warn">Locked</span> : <span className="badge good">Open</span>}</td>
+        <td>{row.bankStatus ?? "—"}</td><td>{row.cardStatus ?? "—"}</td><td>{row.actions}</td><td>{when(row.lastActivityAt)}</td></tr>)}</tbody>
+    </table></div>
+    {list.isSuccess && !rows.length && <p className="muted">No customers yet.</p>}
+    {list.hasNextPage && <button className="button" disabled={list.isFetchingNextPage} onClick={() => void list.fetchNextPage()}>{list.isFetchingNextPage ? "Loading…" : "Load more"}</button>}
+  </section>;
+}
+
 export function Customers({ onMovement }: { onMovement: (subject: string) => void }) {
   const client = useQueryClient();
   const [input, setInput] = useState("");
@@ -33,8 +61,10 @@ export function Customers({ onMovement }: { onMovement: (subject: string) => voi
   const act = useMutation({
     mutationFn: ({ action, reason }: { action: "lock" | "close" | "reopen"; reason: string }) =>
       api(`accounts/${encodeURIComponent(lookup.data!.account.subjectReference)}/${action}`, { method: "POST", json: { reason } }),
-    onSuccess: () => client.invalidateQueries({ queryKey: ["customer", query] })
+    onSuccess: () => { void client.invalidateQueries({ queryKey: ["customer", query] }); void client.invalidateQueries({ queryKey: ["customers"] }); }
   });
+  const open = (subject: string) => { act.reset(); setInput(subject); setQuery(subject); };
+  const showAll = () => { act.reset(); setInput(""); setQuery(""); };
   function find(event: FormEvent) { event.preventDefault(); act.reset(); if (input.trim() === query) void lookup.refetch(); else setQuery(input.trim()); }
   const data = lookup.data;
   const profile = data?.profile;
@@ -44,7 +74,9 @@ export function Customers({ onMovement }: { onMovement: (subject: string) => voi
     <form className="search" onSubmit={find}>
       <label>Customer<input value={input} onChange={(event) => setInput(event.target.value)} placeholder="Privy user ID, email, wallet address, or Aura tag" /></label>
       <button className="button primary" disabled={input.trim().length < 3}>Find</button>
+      {query && <button type="button" className="button quiet" onClick={showAll}>All customers</button>}
     </form>
+    {!query && <AllCustomers onOpen={open} />}
     {lookup.isFetching && <p className="muted">Looking up…</p>}
     {lookup.isError && <div className="notice error" role="alert">{lookup.error.message}</div>}
     {data && profile && <article className="customer" data-testid="ops-customer">
