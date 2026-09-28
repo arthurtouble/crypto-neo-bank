@@ -21,6 +21,7 @@ export const subjectDataInventory = {
   user_preferences: { export: true, reason: "Notification choices" },
   onboarding_progress: { export: true, reason: "Guide progress; recreated on next sign-in" },
   product_events: { export: true, reason: "Product analytics" },
+  incoming_observations: { export: true, reason: "Money received, as the chain showed it; rebuildable from the chain" },
   consent_events: { export: true, reason: "Proof of consent and withdrawal" },
   consent_evidence: { export: true, reason: "Proof of accepted terms and disclosures" },
   audit_events: { export: true, reason: "Security and financial audit trail" },

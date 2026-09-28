@@ -13,7 +13,7 @@ const { resetAccessKeys, verifyAccessToken } = await import("@/lib/auth/access")
 const { GET: features } = await import("@/app/api/ops/features/route");
 const { GET: findAccount } = await import("@/app/api/ops/accounts/route");
 const { POST: lock } = await import("@/app/api/ops/accounts/[subject]/lock/route");
-const { GET: listActions } = await import("@/app/api/ops/actions/route");
+const { GET: listMovement } = await import("@/app/api/ops/movement/route");
 const { GET: actionDetail } = await import("@/app/api/ops/actions/[id]/route");
 const { POST: checkNow } = await import("@/app/api/ops/actions/[id]/check/route");
 const { GET: stats } = await import("@/app/api/ops/stats/route");
@@ -167,7 +167,7 @@ describe("money movement", () => {
     insert("a5", "did:privy:bob", "submitted", "2026-09-28T11:55:00.000Z", { submitted: "2026-09-28T11:55:00.000Z" });
   });
 
-  const ids = async (query: string) => ((await (await listActions(await asOperator(`/api/ops/actions${query}`))).json()) as { actions: Array<{ id: string }> }).actions.map((item) => item.id);
+  const ids = async (query: string) => ((await (await listMovement(await asOperator(`/api/ops/movement${query}`))).json()) as { rows: Array<{ id: string }> }).rows.map((item) => item.id);
 
   it("lists every customer's actions, newest first, without unsigned ones, and filters them", async () => {
     expect(await ids("")).toEqual(["a5", "a3", "a2", "a1"]);
@@ -177,7 +177,22 @@ describe("money movement", () => {
     // Submitted an hour ago with no receipt is stuck; five minutes ago isn't yet.
     expect(await ids("?stuck=1")).toEqual(["a3"]);
     expect(await ids(`?before=${encodeURIComponent("2026-09-28T00:00:00.000Z")}`)).toEqual(["a2", "a1"]);
-    expect((await listActions(await asOperator("/api/ops/actions?status=nope"))).status).toBe(400);
+    expect((await listMovement(await asOperator("/api/ops/movement?status=nope"))).status).toBe(400);
+  });
+
+  it("merges money received from outside Aura into the feed by time, and filters it", async () => {
+    sqlite.exec(`INSERT INTO incoming_observations (transfer_id, subject_reference, wallet_address, chain_id, transaction_hash, from_address, asset_id, symbol, decimals,
+      amount_raw, amount, final, source, received_at, observed_at) VALUES
+      ('incoming:8453:0xabc:log:0', 'did:privy:bob', '0x1111111111111111111111111111111111111111', 8453, '0xabc', '0x5555555555555555555555555555555555555555',
+       '8453:usdc', 'USDC', 6, '7000000', '7', 1, 'Alchemy, Base', '2026-09-28T11:30:00.000Z', 't')`);
+    expect(await ids("")).toEqual(["a5", "incoming:8453:0xabc:log:0", "a3", "a2", "a1"]);
+    const body = await (await listMovement(await asOperator("/api/ops/movement?kind=received"))).json() as { rows: Array<Record<string, unknown>> };
+    expect(body.rows).toEqual([expect.objectContaining({ origin: "incoming", label: "Received", amountText: "7 USDC", statusText: "Completed", subject: "did:privy:bob",
+      counterparty: "0x5555555555555555555555555555555555555555", source: "Alchemy, Base" })]);
+    // Status, kind, and stuck are about Aura actions, so they leave received money out.
+    expect(await ids("?status=failed")).toEqual(["a2"]);
+    expect(await ids("?kind=transfer")).toEqual(["a5", "a3", "a1"]);
+    expect(await ids(`?subject=${encodeURIComponent("did:privy:bob")}`)).toEqual(["a5", "incoming:8453:0xabc:log:0", "a2"]);
   });
 
   it("shows an action's journey, and checks an open one against the chain on request", async () => {

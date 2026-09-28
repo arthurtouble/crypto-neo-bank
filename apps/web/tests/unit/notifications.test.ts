@@ -212,6 +212,9 @@ describe("noticing money received", () => {
     };
     expect(await scanIncoming(db, { now: later, read })).toEqual(["alice"]);
     expect((await listNotifications(db, "alice")).notifications.map((item) => item.title)).toEqual(["Received 1 USDC"]);
+    // Everything it saw is kept for operators, old money included; only new money is announced.
+    expect(sqlite.prepare("SELECT subject_reference, amount, symbol FROM incoming_observations ORDER BY received_at").all())
+      .toEqual([{ subject_reference: "alice", amount: "1", symbol: "USDC" }, { subject_reference: "alice", amount: "1", symbol: "USDC" }]);
     // Checked 30 seconds ago at most: not again yet.
     expect(await scanIncoming(db, { now: new Date(later.getTime() + 10_000), read })).toEqual([]);
     expect(excluded).toHaveLength(1);

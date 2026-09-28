@@ -10,7 +10,8 @@ import { migrationsDirectory } from "../support/schema";
  * with the next numbered file, apply it, then add it here.
  */
 const APPLIED: Record<string, string> = {
-  "0001_baseline.sql": "e4753039344c01f53cad5794edb7d6a004ded7ac1d6123ec446856591bcf63a3"
+  "0001_baseline.sql": "e4753039344c01f53cad5794edb7d6a004ded7ac1d6123ec446856591bcf63a3",
+  "0002_incoming_observations.sql": "dbdbdfed897eff33a534c9b473d0da36da35817856f0f695d3ad77b3f79d85a4"
 };
 
 const files = readdirSync(migrationsDirectory).filter((name) => name.endsWith(".sql")).sort();

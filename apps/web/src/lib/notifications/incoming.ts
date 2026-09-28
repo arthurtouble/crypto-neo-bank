@@ -1,4 +1,5 @@
 import { readIncoming } from "@/lib/activity/incoming";
+import { recordIncoming } from "@/lib/activity/observations";
 import { listActionHashes } from "@/lib/actions/store";
 import { readBankDeposits } from "@/lib/money/bank-activity";
 import { notify, receivedNotice } from "./store";
@@ -36,6 +37,7 @@ export async function scanIncoming(db: D1Database, options: { subject?: string; 
   for (const watch of rows.results) {
     await db.prepare("UPDATE incoming_watches SET checked_at = ? WHERE subject_reference = ?").bind(now.toISOString(), watch.subject_reference).run();
     const incoming = await (options.read ?? readIncoming)(watch.wallet_address, { exclude: await listActionHashes(db, watch.subject_reference), now });
+    await recordIncoming(db, watch.subject_reference, watch.wallet_address, incoming.transfers, now);
     const fresh = incoming.transfers.filter((transfer) => transfer.receivedAt >= watch.watched_since);
     // A bank deposit arrives from Bridge's address; say it's from the bank.
     const bank = fresh.length ? await (options.bankDeposits ?? readBankDeposits)(db, watch.subject_reference) : new Map();
