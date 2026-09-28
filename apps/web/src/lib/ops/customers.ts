@@ -34,6 +34,48 @@ export async function findCustomer(db: D1Database, query: string): Promise<strin
   return findSubject(value);
 }
 
+export type CustomerRow = { subjectReference: string; createdAt: string; closedAt: string | null; accountLocked: boolean; auraTag: string | null;
+  bankStatus: string | null; cardStatus: string | null; actions: number; lastActivityAt: string | null };
+
+/**
+ * Every customer, newest sign-up first, a page at a time. The cursor is the
+ * last row's sign-up time and ID, so customers who signed up in the same
+ * instant are never skipped or repeated.
+ */
+export async function listCustomers(db: D1Database, options: { limit?: number; after?: { createdAt: string; subject: string } } = {}): Promise<{ customers: CustomerRow[]; next: string | null }> {
+  const limit = Math.min(Math.max(options.limit ?? 50, 1), 100);
+  const after = options.after;
+  const rows = await db.prepare(`SELECT p.subject_reference, p.created_at, p.closed_at,
+      COALESCE(s.account_locked, 0) AS account_locked,
+      (SELECT tag FROM aura_tags t WHERE t.subject_reference = p.subject_reference AND t.active = 1) AS aura_tag,
+      (SELECT status FROM provider_customer_links l WHERE l.subject_reference = p.subject_reference AND l.provider = 'bridge') AS bank_status,
+      (SELECT status FROM card_account_projections c WHERE c.subject_reference = p.subject_reference ORDER BY c.observed_at DESC LIMIT 1) AS card_status,
+      (SELECT COUNT(*) FROM actions a WHERE a.subject_reference = p.subject_reference AND a.status != 'prepared') AS actions,
+      (SELECT MAX(created_at) FROM actions a WHERE a.subject_reference = p.subject_reference AND a.status != 'prepared') AS last_activity_at
+    FROM subject_profiles p LEFT JOIN security_profiles s ON s.subject_reference = p.subject_reference
+    ${after ? "WHERE (p.created_at < ?1 OR (p.created_at = ?1 AND p.subject_reference < ?2))" : ""}
+    ORDER BY p.created_at DESC, p.subject_reference DESC LIMIT ${after ? "?3" : "?1"}`)
+    .bind(...(after ? [after.createdAt, after.subject, limit + 1] : [limit + 1]))
+    .all<{ subject_reference: string; created_at: string; closed_at: string | null; account_locked: number; aura_tag: string | null; bank_status: string | null;
+      card_status: string | null; actions: number; last_activity_at: string | null }>();
+  const page = rows.results.slice(0, limit);
+  const last = page.at(-1);
+  return {
+    customers: page.map((row) => ({ subjectReference: row.subject_reference, createdAt: row.created_at, closedAt: row.closed_at, accountLocked: Boolean(row.account_locked),
+      auraTag: row.aura_tag, bankStatus: row.bank_status, cardStatus: row.card_status, actions: row.actions, lastActivityAt: row.last_activity_at })),
+    next: rows.results.length > limit && last ? btoa(JSON.stringify([last.created_at, last.subject_reference])) : null
+  };
+}
+
+/** Read a cursor from `listCustomers`; anything else is null. */
+export function readCustomerCursor(cursor: string | null): { createdAt: string; subject: string } | null {
+  if (!cursor) return null;
+  try {
+    const [createdAt, subject] = JSON.parse(atob(cursor)) as unknown[];
+    return typeof createdAt === "string" && typeof subject === "string" && subject.length <= 200 ? { createdAt, subject } : null;
+  } catch { return null; }
+}
+
 export async function customerProfile(db: D1Database, subject: string): Promise<CustomerProfile> {
   const [profile, controls, tag, bank, card, actions] = await Promise.all([
     db.prepare("SELECT created_at, closed_at, closed_reason FROM subject_profiles WHERE subject_reference = ?").bind(subject)

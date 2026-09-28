@@ -24,11 +24,11 @@ async function openOps(page: Page, hash = "customers") {
   await page.goto(`${OPS}/#${hash}`);
 }
 
-const customers = (page: Page) => page.getByRole("region", { name: "Customers" });
+const customers = (page: Page) => page.getByRole("region", { name: "Customers", exact: true });
 const customerCard = (page: Page) => page.getByTestId("ops-customer");
 
 async function find(page: Page, query: string) {
-  await customers(page).getByLabel("Customer").fill(query);
+  await customers(page).getByRole("textbox", { name: "Customer" }).fill(query);
   await customers(page).getByRole("button", { name: "Find" }).click();
 }
 
@@ -52,7 +52,7 @@ test("only an operator Cloudflare Access signed in reaches operations", async ({
     const outsider = await other.newPage();
     await outsider.goto(`${OPS}/#customers`);
     await expect(outsider.getByRole("alert")).toContainText("Your sign-in expired. Reload the page to sign in again.", { timeout: 30_000 });
-    await expect(outsider.getByRole("region", { name: "Customers" })).toHaveCount(0);
+    await expect(outsider.getByRole("region", { name: "Customers", exact: true })).toHaveCount(0);
     await other.close();
   }
   // A customer's Privy session is never an operator's.
@@ -110,6 +110,24 @@ test("an operator finds a customer, locks the account, and closes it only once i
   // A search that matches nobody says so.
   await find(page, "nobody@example.com");
   await expect(customers(page).getByRole("alert")).toContainText("No customer matches that search.", { timeout: 30_000 });
+});
+
+test("the customer list shows everyone, newest first, and opens each customer", async ({ page, context }) => {
+  const customer = await newCustomer();
+  await acceptTerms(page, customer);
+  await signedInToOps(context);
+  await openOps(page);
+  const list = page.getByRole("region", { name: "All customers" });
+  const row = list.getByTestId("ops-customer-row").first();
+  // The newest sign-up is first.
+  await expect(row).toContainText(customer.userId.slice(0, 10), { timeout: 30_000 });
+  await expect(row).toContainText("Open");
+  await row.click();
+  await expect(customerCard(page)).toContainText(customer.userId, { timeout: 30_000 });
+  await expect(list).toHaveCount(0);
+  await customers(page).getByRole("button", { name: "All customers" }).click();
+  await expect(page.getByRole("region", { name: "All customers" }).getByTestId("ops-customer-row").first()).toBeVisible({ timeout: 30_000 });
+  await expect(customerCard(page)).toHaveCount(0);
 });
 
 test("money movement lists every customer's transactions, filters them, and opens each one's journey", async ({ page, context, browser }) => {

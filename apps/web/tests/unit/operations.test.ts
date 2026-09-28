@@ -113,6 +113,28 @@ describe("customers", () => {
     expect((await findAccount(await asOperator("/api/ops/accounts?q=ab"))).status).toBe(400);
   });
 
+  it("lists every customer newest first, a page at a time, without skipping or repeating", async () => {
+    const { GET: customers } = await import("@/app/api/ops/customers/route");
+    // Two sign-ups in the same instant, then older ones.
+    sqlite.exec(`INSERT INTO subject_profiles (subject_reference, privy_user_reference, created_at, updated_at, closed_at) VALUES
+      ('did:privy:bob', 'did:privy:bob', '2026-09-10T00:00:00.000Z', 't', NULL), ('did:privy:carol', 'did:privy:carol', '2026-09-10T00:00:00.000Z', 't', '2026-09-20T00:00:00.000Z'),
+      ('did:privy:dan', 'did:privy:dan', '2026-08-01T00:00:00.000Z', 't', NULL);
+      INSERT INTO security_profiles (subject_reference, account_locked, updated_at) VALUES ('did:privy:bob', 1, 't');`);
+    const page = async (after?: string) => await (await customers(await asOperator(`/api/ops/customers?limit=2${after ? `&after=${encodeURIComponent(after)}` : ""}`))).json() as
+      { customers: Array<{ subjectReference: string; auraTag: string | null; accountLocked: boolean; closedAt: string | null; bankStatus: string | null }>; next: string | null };
+    const first = await page();
+    // Carol and Bob signed up in the same instant; Alice on 1 September; Dan in August.
+    expect(first.customers.map((row) => row.subjectReference)).toEqual(["did:privy:carol", "did:privy:bob"]);
+    expect(first.customers[0].closedAt).toBe("2026-09-20T00:00:00.000Z");
+    expect(first.customers[1].accountLocked).toBe(true);
+    const second = await page(first.next!);
+    expect(second.customers.map((row) => row.subjectReference)).toEqual(["did:privy:alice", "did:privy:dan"]);
+    expect(second.customers[0]).toMatchObject({ auraTag: "alice", bankStatus: "active", accountLocked: false });
+    expect(second.next).toBeNull();
+    expect((await customers(await asOperator("/api/ops/customers?after=nonsense"))).status).toBe(400);
+    expect((await customers(new Request("https://aura.test/api/ops/customers"))).status).toBe(401);
+  });
+
   it("locks an account for the customer's protection, once, with the operator's email in the audit and a notice to the customer", async () => {
     const send = async (subject = "did:privy:alice", reason = "Customer reported a stolen phone") => lock(new Request("https://aura.test", {
       method: "POST", body: JSON.stringify({ reason }), headers: { "Cf-Access-Jwt-Assertion": await token() } }), { params: Promise.resolve({ subject: encodeURIComponent(subject) }) });
