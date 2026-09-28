@@ -55,7 +55,8 @@ See [account controls](/safety/account-controls/).
 ## How we separate access
 
 - Customer features need a verified sign-in.
-- Our operations tools need a separate, named list of staff accounts. If the list is empty, nobody has access.
+- Our operations tools are a separate app with their own staff sign-in, open only to a named list of staff. Aura checks that sign-in on every request, and if it isn't set up, nobody has access. Your Aura sign-in never opens them.
+- Every change our staff make, such as locking or closing an account, is recorded with who made it.
 - Networks, assets, and contracts are checked before you confirm.
 - Our production secrets stay on the server. They're never in the browser or our source code.
 - Updates from partners must carry a valid signature and timestamp before we process them.

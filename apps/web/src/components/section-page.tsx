@@ -8,16 +8,15 @@ const CardWorkspace = dynamic(() => import("./card-workspace").then((mod) => mod
 const ActivityWorkspace = dynamic(() => import("./activity-workspace").then((mod) => mod.ActivityWorkspace));
 const InsightsWorkspace = dynamic(() => import("./insights-workspace").then((mod) => mod.InsightsWorkspace));
 const SettingsWorkspace = dynamic(() => import("./settings-workspace").then((mod) => mod.SettingsWorkspace));
-const OperationsWorkspace = dynamic(() => import("./operations-workspace").then((mod) => mod.OperationsWorkspace));
 const SupportWorkspace = dynamic(() => import("./support-workspace").then((mod) => mod.SupportWorkspace));
 
-const titles: Record<CustomerSection | "operations", string> = {
+const titles: Record<CustomerSection, string> = {
   deposit: "Deposit", send: "Send", swap: "Swap", earn: "Earn",
   cards: "Cards", transactions: "Transactions",
-  insights: "Insights", settings: "Settings", support: "Support", operations: "Operations"
+  insights: "Insights", settings: "Settings", support: "Support"
 };
 
-export function SectionPage({ section }: { section: CustomerSection | "operations" }) {
+export function SectionPage({ section }: { section: CustomerSection }) {
   return <div>
     <section className="pageIntro compact"><div><h1>{titles[section]}</h1></div></section>
     {(section === "deposit" || section === "send") && <MoneyWorkspace mode={section} />}
@@ -28,6 +27,5 @@ export function SectionPage({ section }: { section: CustomerSection | "operation
     {section === "insights" && <InsightsWorkspace />}
     {section === "settings" && <SettingsWorkspace />}
     {section === "support" && <SupportWorkspace />}
-    {section === "operations" && <OperationsWorkspace />}
   </div>;
 }

@@ -4,9 +4,9 @@ import { readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { featureEnabled, featureKeys, requireFeature, FeatureUnavailableError } from "@/lib/features/flags";
 
-function database(enabled: number | null, audience = "all"): D1Database {
+function database(enabled: number | null): D1Database {
   return {
-    prepare: () => ({ bind: () => ({ first: async () => enabled === null ? null : { enabled, audience } }) })
+    prepare: () => ({ bind: () => ({ first: async () => enabled === null ? null : { enabled } }) })
   } as unknown as D1Database;
 }
 
@@ -25,11 +25,6 @@ describe("dedicated Swap kill switch", () => {
   it("can be switched on or off independently of direct transfers", async () => {
     expect(await featureEnabled(database(1), "swaps")).toBe(true);
     expect(await featureEnabled(database(0), "swaps")).toBe(false);
-  });
-
-  it("does not expose an operations-only flag to customer routes", async () => {
-    expect(await featureEnabled(database(1, "operations"), "direct_transfers")).toBe(false);
-    await expect(requireFeature(database(1, "operations"), "direct_transfers")).rejects.toBeInstanceOf(FeatureUnavailableError);
   });
 
   it("leaves every money-movement flag disabled in a fresh migrated database", () => {

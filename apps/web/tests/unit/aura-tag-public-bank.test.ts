@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 const state = vi.hoisted(() => ({ bankEnabled: 0 }));
 vi.mock("cloudflare:workers", () => ({ env: { PROJECTION_DB: { prepare(sql: string) { return { bind() { return { async first() {
   if (sql.includes("rate_limit_windows")) return { hits: 1, reset_at: Date.now() + 60_000 };
-  if (sql.includes("feature_flags")) return { enabled: 1, audience: "all" };
+  if (sql.includes("feature_flags")) return { enabled: 1 };
   return sql.includes("FROM aura_tags")
     ? { tag: "alice", subject_reference: "owner", receiving_address: "0x000000000000000000000000000000000000dEaD", display_name: "Alice", public_bank_enabled: state.bankEnabled }
     : { external_customer_id: "customer-1" };

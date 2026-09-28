@@ -250,7 +250,6 @@ CREATE TABLE asset_pauses (
 CREATE TABLE feature_flags (
   flag_key TEXT PRIMARY KEY,
   enabled INTEGER NOT NULL DEFAULT 0,
-  audience TEXT NOT NULL DEFAULT 'all' CHECK (audience IN ('all', 'operations')),
   configuration_json TEXT NOT NULL DEFAULT '{}',
   updated_at TEXT NOT NULL,
   updated_by TEXT NOT NULL
@@ -455,11 +454,11 @@ CREATE TABLE route_quotes (
 
 CREATE INDEX route_quotes_expiry_idx ON route_quotes(expires_at) WHERE action_id IS NULL;
 
-INSERT INTO feature_flags (flag_key, enabled, audience, configuration_json, updated_at, updated_by) VALUES
-  ('direct_transfers', 0, 'all', '{}', '2026-09-25T00:00:00.000Z', 'baseline'),
-  ('swaps', 0, 'all', '{}', '2026-09-25T00:00:00.000Z', 'baseline'),
-  ('cross_chain', 0, 'all', '{}', '2026-09-25T00:00:00.000Z', 'baseline'),
-  ('defi_actions', 0, 'all', '{}', '2026-09-25T00:00:00.000Z', 'baseline'),
-  ('fiat_accounts', 0, 'all', '{}', '2026-09-25T00:00:00.000Z', 'baseline'),
-  ('payment_cards', 0, 'all', '{}', '2026-09-25T00:00:00.000Z', 'baseline'),
-  ('card_wallets', 0, 'all', '{}', '2026-09-25T00:00:00.000Z', 'baseline');
+INSERT INTO feature_flags (flag_key, enabled, configuration_json, updated_at, updated_by) VALUES
+  ('direct_transfers', 0, '{}', '2026-09-25T00:00:00.000Z', 'baseline'),
+  ('swaps', 0, '{}', '2026-09-25T00:00:00.000Z', 'baseline'),
+  ('cross_chain', 0, '{}', '2026-09-25T00:00:00.000Z', 'baseline'),
+  ('defi_actions', 0, '{}', '2026-09-25T00:00:00.000Z', 'baseline'),
+  ('fiat_accounts', 0, '{}', '2026-09-25T00:00:00.000Z', 'baseline'),
+  ('payment_cards', 0, '{}', '2026-09-25T00:00:00.000Z', 'baseline'),
+  ('card_wallets', 0, '{}', '2026-09-25T00:00:00.000Z', 'baseline');

@@ -99,7 +99,7 @@ test("public health exposes dependencies without secrets", async ({ request }) =
 });
 
 test("private APIs fail closed without an authenticated subject", async ({ request }) => {
-  for (const path of ["/api/activity", "/api/insights", "/api/cards", "/api/aura-tags", "/api/actions/00000000-0000-4000-8000-000000000000", "/api/money/account", "/api/recipients", "/api/ops/summary", "/api/ops/features", "/api/ops/analytics", "/api/security/policy", "/api/support/messenger", "/api/support/fin/activity?user_id=did:privy:abcdefgh12345678"]) {
+  for (const path of ["/api/activity", "/api/insights", "/api/cards", "/api/aura-tags", "/api/actions/00000000-0000-4000-8000-000000000000", "/api/money/account", "/api/recipients", "/api/ops/summary", "/api/ops/features", "/api/ops/stats", "/api/security/policy", "/api/support/messenger", "/api/support/fin/activity?user_id=did:privy:abcdefgh12345678"]) {
     const response = await request.get(path);
     expect([401, 403], path).toContain(response.status());
     expect(response.headers()["cache-control"], path).toContain("no-store");

@@ -42,6 +42,7 @@ jobs:
       - run: pnpm --filter @aurel/web exec wrangler d1 migrations apply aura-dev-projections --remote --env dev
       - run: pnpm events:deploy:dev
       - run: pnpm deploy:dev
+      - run: pnpm ops:deploy:dev
       - run: pnpm docs:deploy:dev
       - run: pnpm test:deployment
         env:

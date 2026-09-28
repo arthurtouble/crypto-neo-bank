@@ -3,14 +3,14 @@ title: Internal security review
 description: Current findings, accepted risks, mitigations, and release conclusion.
 ---
 
-> **Update 25 September 2026:** the private-beta invitation gate was removed. Findings about invitation codes, cohorts, country gating, and beta transaction caps no longer apply; open access relies on feature switches, account locks, and daily limits ([launch controls](../operations/launch-controls.md)). Later on 25 September, money movement moved to the [money actions](../architecture/money-actions.md) pipeline and provider webhooks moved to per-provider endpoints; the controls list below reflects that. The rest of this review is unchanged.
+> **Update 25 September 2026:** the private-beta invitation gate was removed. Findings about invitation codes, cohorts, country gating, and beta transaction caps no longer apply; open access relies on feature switches, account locks, and daily limits ([launch controls](../operations/launch-controls.md)). Later on 25 September, money movement moved to the [money actions](../architecture/money-actions.md) pipeline and provider webhooks moved to per-provider endpoints; the controls list below reflects that. On 28 September, operator access moved to a separate operations app behind Cloudflare Access, with the token verified by the web app; the operator bullet and the Access finding below reflect that. The rest of this review is unchanged.
 
 Reviewed 22 September 2026. Scope: application authentication, private-beta access, transaction preparation, provider events, data authority, operational recovery, Cloudflare configuration and release controls. This is an internal engineering review, not the independent review required for public launch.
 
 ## Positive controls verified in code
 
 - Protected APIs derive the customer subject from a server-verified Privy access token.
-- Operations access denies everyone unless an exact Privy subject is configured.
+- Operator APIs (`/api/ops/*`) accept only a Cloudflare Access token that the web app verifies itself: signature against the team's published keys, issuer, the operations application's audience, expiry, and a person's email (`lib/auth/access.ts`). Service tokens and customer Privy sessions are refused, and with no Access configuration every operator request is refused. The operator's email is recorded on every change.
 - Aurel cannot independently sign customer wallet transactions.
 - Actions are prepared server-side as exact calls; approvals are exact and batched with the action.
 - The verifier requires decoded calls to equal prepared calls, finality, expected events, and cross-chain delivery before `confirmed`.
@@ -27,7 +27,7 @@ Reviewed 22 September 2026. Scope: application authentication, private-beta acce
 
 | Severity | Finding | Required closure |
 |---|---|---|
-| High launch gate | WAF/API rate rules, API Shield and operator Access are not active | Configure after custom domain and operator identity are approved; capture evidence |
+| High launch gate | WAF/API rate rules and API Shield are not active; Cloudflare Access for the operations app isn't turned on yet, so operator APIs refuse everyone | Turn on Access for the operations Worker and set `CF_ACCESS_TEAM_DOMAIN` and `CF_ACCESS_AUD`; configure the rest after the custom domain is approved; capture evidence |
 | High launch gate | No independent application/security assessment | Independent review with no unresolved critical/high issues |
 | Medium | External log retention, alert routing and named incident coverage are unset | Configure receiver/export and exercise notification |
 | Medium | Real-wallet acceptance matrix is incomplete | Execute the [acceptance test plan](../operations/acceptance-test-plan.md) with designated funded test wallets |

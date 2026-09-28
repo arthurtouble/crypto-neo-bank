@@ -11,7 +11,8 @@ import { createPrivateKey, generateKeyPairSync, randomBytes, randomUUID, sign } 
 import { decodeFunctionData, encodeAbiParameters, encodeEventTopics, encodeFunctionData, encodeFunctionResult, parseAbi, parseAbiItem } from "viem";
 
 /** The Privy user who may use the operations API in tests (feature switches). */
-export const OPERATOR = { userId: "did:privy:e2e-operator", wallet: "0x00000000000000000000000000000000000e2e01" };
+/** The operator Cloudflare Access lets into the operations app in tests, and the ops app's Access audience. */
+export const OPERATOR = { email: "operator@aura-e2e.test", audience: "aura-ops-e2e" };
 /** Where Privy's sponsored operations land: EntryPoint v0.7, called by a bundler. */
 export const ENTRY_POINT = "0x0000000071727de22e5e9d8baf0edac6f37da032";
 const BUNDLER = "0x000000000000000000000000000000000000b0b0";
@@ -89,7 +90,7 @@ const sharesToAssets = (shares) => shares * 105n / 100n / 10n ** 12n;
 const assetsToShares = (assets) => (assets * 10n ** 12n * 100n + 104n) / 105n;
 
 const initialState = () => ({
-  users: { [OPERATOR.userId]: { wallet: OPERATOR.wallet } },
+  users: {},
   // balances[chainId][token or "native"][owner] = raw amount as a decimal string
   balances: {},
   prices: { eth: "2500", btc: "60000" },
@@ -135,7 +136,17 @@ export function startFakeEdge({ port }) {
   const { privateKey, publicKey } = generateKeyPairSync("ec", { namedCurve: "P-256" });
   const verificationKey = publicKey.export({ type: "spki", format: "pem" }).toString();
   let state = initialState();
+  // Cloudflare Access: the team's signing key, published as JWKS, and tokens for operators.
+  const access = generateKeyPairSync("rsa", { modulusLength: 2048 });
+  const accessJwk = { ...access.publicKey.export({ format: "jwk" }), kid: "e2e-access-key", alg: "RS256", use: "sig" };
+  function cfAccessToken({ email = OPERATOR.email, audience = OPERATOR.audience, expiresIn = 3600, key = access.privateKey } = {}) {
+    const now = Math.floor(Date.now() / 1000);
+    const input = `${base64urlOf({ alg: "RS256", kid: "e2e-access-key", typ: "JWT" })}.${base64urlOf({ aud: [audience], email, sub: randomUUID(), iss: `http://127.0.0.1:${port}/access`,
+      iat: now, nbf: now, exp: now + expiresIn, type: "app", identity_nonce: randomUUID() })}`;
+    return `${input}.${sign("sha256", Buffer.from(input), key).toString("base64url")}`;
+  }
 
+  const base64urlOf = (value) => Buffer.from(JSON.stringify(value)).toString("base64url");
   const base64url = (value) => Buffer.from(typeof value === "string" ? value : JSON.stringify(value)).toString("base64url");
   function accessToken(userId, { expiresIn = 3600 } = {}) {
     const now = Math.floor(Date.now() / 1000);
@@ -495,6 +506,8 @@ export function startFakeEdge({ port }) {
     // Test controls.
     if (url.pathname === "/__reset") { state = initialState(); return send(200, { ok: true }); }
     if (url.pathname === "/__state") { state = { ...state, ...body, users: { ...state.users, ...body?.users }, balances: { ...state.balances, ...body?.balances } }; return send(200, { ok: true }); }
+    if (url.pathname === "/__access") return send(200, { token: cfAccessToken({ ...body, key: body?.forged ? generateKeyPairSync("rsa", { modulusLength: 2048 }).privateKey : access.privateKey }) });
+    if (url.pathname === "/access/cdn-cgi/access/certs") return send(200, { keys: [accessJwk], public_cert: { kid: "e2e-access-key" } });
     if (url.pathname === "/__session") return send(200, { token: accessToken(body.userId, body) });
     if (url.pathname === "/__sent") return send(200, { sent: state.sent });
     if (url.pathname === "/__link-email") { state.users[body.userId] = { ...state.users[body.userId], email: body.email }; return send(200, { ok: true }); }
@@ -809,7 +822,8 @@ export function startFakeEdge({ port }) {
       RPC_URL_10: `http://127.0.0.1:${port}/rpc/10`,
       RPC_URL_137: `http://127.0.0.1:${port}/rpc/137`,
       RPC_URL_42161: `http://127.0.0.1:${port}/rpc/42161`,
-      ADMIN_PRIVY_SUBJECTS: OPERATOR.userId,
+      CF_ACCESS_TEAM_DOMAIN: `http://127.0.0.1:${port}/access`,
+      CF_ACCESS_AUD: OPERATOR.audience,
       RESEND_API_URL: `http://127.0.0.1:${port}/resend`,
       RESEND_API_KEY: "re_e2e_fake",
       EMAIL_FROM: "Aura <notices@aura-e2e.test>",

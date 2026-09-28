@@ -1,6 +1,5 @@
 import { readFile } from "node:fs/promises";
 import type { Page } from "@playwright/test";
-import { OPERATOR } from "./support/fake-edge.mjs";
 import { expect, test } from "./support/fixtures";
 import { acceptTerms, asCustomer, ASSETS, edge, newCustomer, setBalances, setIdentity, type Customer } from "./support/session";
 
@@ -124,38 +123,4 @@ test("the customer's data downloads straight away, and nothing offers to delete 
   expect(data.subjectReference).toBe(customer.userId);
   expect(data.data).toHaveProperty("security_profiles");
   await expect(page.getByRole("link", { name: "Contact support" })).toHaveAttribute("href", "/app/support?topic=close-account");
-});
-
-test("an operator closes an account only once it's empty; the customer then sees it's closed", async ({ page, browser }) => {
-  const customer = await newCustomer({ mfa: ["passkey"] });
-  await setBalances(customer.wallet, { 8453: { [ASSETS.usdc]: "2500000" } });
-  await acceptTerms(page, customer);
-
-  const { token } = await edge("/__session", { userId: OPERATOR.userId });
-  const operator: Customer = { userId: OPERATOR.userId, wallet: OPERATOR.wallet as `0x${string}`, email: "operator@example.com", token: token!, externalWallets: [] };
-  const opsPage = await browser.newPage();
-  await acceptTerms(opsPage, operator);
-  await setIdentity(opsPage, operator, { signedIn: true });
-  await opsPage.goto("/app/operations");
-  const accounts = opsPage.getByRole("region", { name: "Accounts" });
-  await accounts.getByLabel("Customer").fill(customer.email);
-  await accounts.getByRole("button", { name: "Find" }).click();
-  await expect(accounts.getByTestId("ops-account")).toContainText("It still holds USD Coin", { timeout: 30_000 });
-  await expect(accounts.getByRole("button", { name: "Close account" })).toBeDisabled();
-
-  await setBalances(customer.wallet, { 8453: { [ASSETS.usdc]: "0" } });
-  await accounts.getByRole("button", { name: "Find" }).click();
-  await expect(accounts.getByRole("button", { name: "Close account" })).toBeEnabled({ timeout: 30_000 });
-  opsPage.once("dialog", (dialog) => void dialog.accept("Support case 42"));
-  await accounts.getByRole("button", { name: "Close account" }).click();
-  await expect(accounts.getByTestId("ops-account")).toContainText("Reason: Support case 42", { timeout: 30_000 });
-  await opsPage.close();
-
-  await setIdentity(page, customer, { signedIn: true });
-  await page.goto("/app");
-  await expect(page.getByTestId("account-closed")).toContainText("This account is closed", { timeout: 30_000 });
-  // Support stays open, and chat still works for a closed account.
-  await page.getByRole("link", { name: "Contact support" }).click();
-  await expect(page.getByRole("heading", { name: "Get help" })).toBeVisible({ timeout: 30_000 });
-  await expect(page.getByRole("button", { name: "Chat", exact: true })).toBeEnabled({ timeout: 20_000 });
 });

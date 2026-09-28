@@ -45,9 +45,15 @@ for (const path of ["/app", "/app/deposit", "/app/earn", "/app/support"]) {
 const unknownTag = await request(`/pay/${crypto.randomUUID().replaceAll("-", "")}`);
 assert(unknownTag.ok && (await unknownTag.text()).includes("Payment page unavailable"), "unknown Aura tag reveals no recipient");
 
-for (const path of ["/api/activity", "/api/overview", "/api/ops/summary", "/api/ops/features", "/api/ops/analytics"]) {
+for (const path of ["/api/activity", "/api/overview", "/api/ops/summary", "/api/ops/features", "/api/ops/stats"]) {
   const response = await request(path);
   assert([401, 403].includes(response.status), `${path} rejects an unauthenticated request (${response.status})`);
+}
+
+// Operator APIs take only a Cloudflare Access token that verifies; a made-up one is refused.
+for (const path of ["/api/ops/me", "/api/ops/accounts?q=someone@example.com"]) {
+  const response = await request(path, { headers: { "Cf-Access-Jwt-Assertion": "eyJhbGciOiJSUzI1NiIsImtpZCI6Im5vcGUifQ.eyJlbWFpbCI6Im1lQGV4YW1wbGUuY29tIn0.c2ln" } });
+  assert([401, 403].includes(response.status), `${path} rejects a forged operator token (${response.status})`);
 }
 
 for (const path of ["/api/swap/assets?q=USD", "/api/routes/quote?from=8453:native&to=8453:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913&amount=1", "/api/actions/00000000-0000-4000-8000-000000000000"]) {

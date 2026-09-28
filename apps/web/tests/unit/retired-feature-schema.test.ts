@@ -19,7 +19,6 @@ it("fresh schema keeps consent and security controls without retired feature or 
   const names = new Set((db.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all() as Array<{ name: string }>).map((row) => row.name));
   for (const name of ["security_profiles", "feature_flags", "consent_events", "audit_events"]) expect(names.has(name)).toBe(true);
   expect(db.prepare("SELECT name FROM sqlite_master WHERE type = 'trigger' AND name = 'actions_status_forward'").get()).toBeTruthy();
-  expect(db.prepare("SELECT COUNT(*) AS n FROM feature_flags WHERE audience = 'beta'").get()).toMatchObject({ n: 0 });
   expect(db.prepare("SELECT COUNT(*) AS n FROM feature_flags WHERE enabled = 1").get()).toMatchObject({ n: 0 });
   for (const name of retired) expect(names.has(name)).toBe(false);
   const dangling = db.prepare(`SELECT name FROM sqlite_master WHERE sql IS NOT NULL AND (${retired.map(() => "sql LIKE ?").join(" OR ")})`).all(...retired.map((name) => `%${name}%`));

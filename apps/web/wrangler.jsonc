@@ -14,8 +14,9 @@
     "PRODUCT_MODE": "mainnet-preview",
     "BRIDGE_API_BASE_URL": "https://api.bridge.xyz/v0",
     "NEXT_PUBLIC_PRIVY_APP_ID": "cmub5evr4013l0cjs0w5dijlb",
-    "ADMIN_PRIVY_SUBJECTS": "",
-    "REQUIRE_CF_ACCESS": "false"
+    // Cloudflare Access for the operations app (apps/ops): the team domain and the ops application's audience tag. Empty refuses every operator.
+    "CF_ACCESS_TEAM_DOMAIN": "",
+    "CF_ACCESS_AUD": ""
   },
   "secrets": {
     "required": ["PRIVY_APP_SECRET"]
@@ -41,10 +42,10 @@
         "PRODUCT_MODE": "mainnet-preview",
         "BRIDGE_API_BASE_URL": "https://api.bridge.xyz/v0",
         "NEXT_PUBLIC_PRIVY_APP_ID": "cmub5evr4013l0cjs0w5dijlb",
-        "ADMIN_PRIVY_SUBJECTS": "",
+        "CF_ACCESS_TEAM_DOMAIN": "",
+        "CF_ACCESS_AUD": "",
         "LIFI_INTEGRATOR": "aurel",
         "LIFI_INTEGRATOR_FEE": "0",
-        "REQUIRE_CF_ACCESS": "false",
         // Notifications. Resend only sends from onboarding@resend.dev, to the Resend account's own address, until a domain is verified.
         "EMAIL_FROM": "Aura <onboarding@resend.dev>",
         "APP_ORIGIN": "https://aura-dev.aurel-events.workers.dev",

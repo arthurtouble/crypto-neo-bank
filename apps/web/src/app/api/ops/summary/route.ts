@@ -1,5 +1,5 @@
 import { env } from "cloudflare:workers";
-import { requireOperationsAdmin } from "@/lib/auth/admin";
+import { requireOperator } from "@/lib/auth/access";
 import { route } from "@/lib/http/route";
 
 type CountRow = { status: string; count: number };
@@ -7,7 +7,7 @@ type IssueRow = { issue_id: string; issue_type: string; severity: string; source
 type CheckRow = { check_key: string; status: string; details_json: string; checked_at: string };
 
 export const GET = route("ops.summary.get", { unavailable: "ops_unavailable" }, async (request: Request) => {
-  await requireOperationsAdmin(request);
+  await requireOperator(request);
   const [intents, receipts, issues, funnel, reliability, checks] = await env.PROJECTION_DB.batch([
     env.PROJECTION_DB.prepare("SELECT status, COUNT(*) AS count FROM actions GROUP BY status"),
     env.PROJECTION_DB.prepare("SELECT processing_status AS status, COUNT(*) AS count FROM webhook_receipts GROUP BY processing_status"),
