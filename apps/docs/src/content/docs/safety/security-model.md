@@ -32,8 +32,10 @@ You review the transaction in Aura, then confirm with your passkey or cancel. Au
 The blockchain, or the partner, decides whether a movement settles. Aura then reads the blockchain itself. It marks a movement complete only when:
 
 - what was signed matches what Aura prepared;
-- the network has finalized it; and
+- it's in a block on the network; and
 - the expected transfer or deposit appears.
+
+Aura keeps checking until the network makes it final, about 20 minutes later on Base, and shows when it is.
 
 For a move between networks, Aura also waits for it to arrive. Aura's database is never the final record of your balance.
 

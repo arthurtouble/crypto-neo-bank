@@ -21,10 +21,10 @@ export type ActionPhase = "idle" | "preparing" | "signing" | "tracking" | "done"
 
 const POLL_MS = 2_000;
 const terminal = new Set(["confirmed", "failed", "expired"]);
-/** Done from the customer's side: finished, or a same-chain action that matched on the chain and only awaits finality. */
 /** Toast key for the passkey prompt, cleared once the customer adds one. */
 export const MFA_REQUIRED_TOAST = "mfa-required";
 
+/** Done from the customer's side: finished, or a same-chain action that matched on the chain and only awaits finality. */
 export const actionSettled = (action: ActionView) => terminal.has(action.status) || (action.status === "settling" && !action.destinationChainId);
 
 /**
@@ -126,7 +126,8 @@ export function useAction(options: { label?: string; onSettled?: (action: Action
           const name = labelRef.current;
           if (current.status === "failed") toast.error(`${name} failed`, failureText(current.failureReason));
           else if (current.status === "expired") toast.error(`${name} not confirmed`, "We didn't receive it in time. If you confirmed it, check Transactions.");
-          else toast.success(current.status === "confirmed" || current.destinationChainId ? `${name} complete` : `${name} sent`);
+          // Like mainstream wallets, a same-network action is complete once it is in a block and matches; finality follows in Transactions.
+          else toast.success(`${name} complete`);
           await queryClient.invalidateQueries();
           settledRef.current?.(current);
           return;

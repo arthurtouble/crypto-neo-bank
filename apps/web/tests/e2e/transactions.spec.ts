@@ -91,22 +91,21 @@ test("money sent and money received both show, with who, where, and a link to th
   await expect(page.getByText(FRIEND)).toBeVisible();
 });
 
-test("a deposit shows as pending until its block is final, then completes", async ({ page }) => {
+test("a deposit is completed once in a block, and final when Base finalizes it", async ({ page }) => {
   await edge("/__state", { finalizeAll: false });
   const customer = await signIn(page);
   await receive(customer, "5000000");
   await page.goto("/app/transactions");
   await expect(rows(page)).toHaveCount(1, { timeout: 30_000 });
-  await expect(rows(page)).toContainText("Pending");
-  await page.getByLabel("Status").selectOption("Pending");
-  await expect(rows(page)).toHaveCount(1);
+  await expect(rows(page)).toContainText("Completed");
   await rows(page).click();
-  await expect(dialog(page).getByTestId("incoming-finality")).toContainText("Waiting for Base to make it final");
+  await expect(dialog(page).getByTestId("incoming-finality")).toHaveText("Received. Base makes it final in about 20 minutes.");
   await dialog(page).getByRole("button", { name: "Close" }).click();
 
   await edge("/__state", { finalizeAll: true });
   await page.reload();
-  await expect(rows(page).first()).toContainText("Completed", { timeout: 30_000 });
+  await rows(page).first().click();
+  await expect(dialog(page).getByTestId("incoming-finality")).toHaveText("Final on Base.", { timeout: 30_000 });
 });
 
 test("Tether Gold received on Ethereum is listed too", async ({ page }) => {

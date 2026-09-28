@@ -24,8 +24,8 @@ function steps(action: ActionView, events: readonly ActionEvent[]): Step[] {
   }
   return [
     { key: "sent", label: `Sent on ${source}`, done: sent, at: at("submitted") },
-    { key: "settling", label: `Included on ${source}`, done: confirmed || action.status === "settling", at: at("settling") },
-    { key: "confirmed", label: `Final on ${source}. Complete`, done: confirmed, at: at("confirmed") }
+    { key: "settling", label: `Complete on ${source}`, done: confirmed || action.status === "settling", at: at("settling") },
+    { key: "confirmed", label: `Final on ${source}`, done: confirmed, at: at("confirmed") }
   ];
 }
 

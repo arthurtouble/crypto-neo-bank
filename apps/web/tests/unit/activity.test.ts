@@ -41,8 +41,9 @@ const transfer = (n: number, receivedAt: string, amountRaw = "5000000") => parse
 describe("reading money that arrived without an action", () => {
   it("lists registered assets the account holds, from someone else, complete once final", () => {
     expect(parseTransfer(erc20(usdc, 5_000_000n), 8453, wallet, 100n)).toMatchObject({ assetId: `8453:${usdc}`, symbol: "USDC", amount: "5",
-      from: "0x2222222222222222222222222222222222222222", status: "completed", source: "Alchemy, Base", receivedAt: "2026-09-10T12:00:00.000Z" });
-    expect(parseTransfer(erc20(usdc, 5_000_000n), 8453, wallet, 99n)?.status).toBe("pending");
+      from: "0x2222222222222222222222222222222222222222", status: "completed", final: true, source: "Alchemy, Base", receivedAt: "2026-09-10T12:00:00.000Z" });
+    // Complete once in a block, like mainstream wallets; final once the block is.
+    expect(parseTransfer(erc20(usdc, 5_000_000n), 8453, wallet, 99n)).toMatchObject({ status: "completed", final: false });
     // Tether Gold is held on Ethereum.
     expect(parseTransfer(erc20(xaut, 1_000_000n), 1, wallet, 100n)).toMatchObject({ symbol: "XAUt", amount: "1" });
   });
@@ -110,7 +111,10 @@ describe("one entry per transaction", () => {
     expect(actionEntry(action({ kind: "earn", summary: { protocol: "morpho", vaultName: "Steakhouse Prime USDC", direction: "withdraw", symbol: "USDC", decimals: 6, amount: "all", amountRaw: "1000000" } })))
       .toMatchObject({ type: "earn_withdraw", amount: "1", counterparty: "Steakhouse Prime USDC" });
     expect(actionEntry(action({ status: "expired" })).status).toBe("not_confirmed");
-    expect(actionEntry(action({ status: "settling" })).status).toBe("pending");
+    expect(actionEntry(action({ status: "settling" }))).toMatchObject({ status: "completed", final: false });
+    expect(actionEntry(action())).toMatchObject({ status: "completed", final: true });
+    // A move to another network stays pending until it arrives.
+    expect(actionEntry(action({ status: "settling", destinationChainId: 1 })).status).toBe("pending");
     expect(actionEntry(action({ summary: { symbol: "USDC", amount: "25", to: friend, bankPayout: { bankName: "Chase", lastFour: "4321" } } })).counterparty).toBe("Chase ending 4321");
   });
 
@@ -121,8 +125,8 @@ describe("one entry per transaction", () => {
 
   it("exports the same columns everywhere, and neutralizes spreadsheet formulas", () => {
     const csv = entriesCsv([actionEntry(action({ summary: { symbol: "USDC", amount: "10", to: "=HYPERLINK(1)" } }))], () => "Base").trim().split("\n");
-    expect(csv[0]).toBe('"Date","Description","Status","Amount","Asset","Received amount","Received asset","Counterparty","Estimated USD","Network","Transaction","Source"');
-    expect(csv[1]).toContain('"Sent","Completed","10","USDC","","","\'=HYPERLINK(1)","10.00","Base"');
+    expect(csv[0]).toBe('"Date","Description","Status","Amount","Asset","Received amount","Received asset","Counterparty","Estimated USD","Network","Transaction","Final","Source"');
+    expect(csv[1]).toContain('"Sent","Completed","10","USDC","","","\'=HYPERLINK(1)","10.00","Base","0x0000000000000000000000000000000000000000000000000000000000000009","Yes"');
   });
 });
 

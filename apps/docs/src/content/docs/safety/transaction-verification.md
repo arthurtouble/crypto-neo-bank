@@ -18,8 +18,10 @@ Any token approval and the action it enables are confirmed together, as one step
 A transaction hash means something was sent to the network. It doesn't prove the result you expected. Aura checks that:
 
 - the transaction came from your wallet and contains exactly what Aura prepared;
-- the network has finalized it;
+- it's in a block on the network;
 - the expected transfer, deposit, or withdrawal happened.
+
+Then Aura marks it completed, as mainstream wallets do. Aura keeps checking until the network makes it final, about 20 minutes later on Base, and the receipt shows when it is. If the result changed before then, Aura would mark it failed.
 
 For a move between networks, Aura also waits for LI.FI to report delivery, and checks that at least the minimum amount reached your wallet on the other network.
 

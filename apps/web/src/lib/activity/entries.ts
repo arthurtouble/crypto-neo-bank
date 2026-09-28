@@ -32,6 +32,8 @@ export type ActivityEntry = {
   destinationChainId?: number;
   destinationTransactionHash?: string;
   failureReason?: string;
+  /** Completed and in a final block. A completed entry that isn't final yet can, very rarely, still be reversed. */
+  final?: boolean;
   source: string;
 };
 
@@ -43,16 +45,23 @@ export type ActionLike = { id: string; kind: "transfer" | "earn" | "route"; chai
 type RouteSide = { symbol?: string; decimals?: number };
 const raw = (value: unknown, decimals: unknown) => typeof value === "string" && /^\d+$/.test(value) && typeof decimals === "number" ? formatUnits(BigInt(value), decimals) : undefined;
 
-export function entryStatus(status: string): EntryStatus {
-  if (status === "confirmed") return "completed";
-  if (status === "failed") return "failed";
-  if (status === "expired") return "not_confirmed";
-  return "pending";
+/**
+ * An action's status as customers see it. Like mainstream wallets, a
+ * same-network action is completed once it is in a block and fully matches
+ * what was prepared (`settling`); `confirmed` adds that its block is final.
+ * A move to another network stays pending until it arrives.
+ */
+export function entryStatus(status: string, crossNetwork = false): { status: EntryStatus; final: boolean } {
+  if (status === "confirmed") return { status: "completed", final: true };
+  if (status === "settling" && !crossNetwork) return { status: "completed", final: false };
+  if (status === "failed") return { status: "failed", final: false };
+  if (status === "expired") return { status: "not_confirmed", final: false };
+  return { status: "pending", final: false };
 }
 
 export function actionEntry(action: ActionLike): ActivityEntry {
   const summary = action.summary;
-  const base = { id: action.id, origin: "aura" as const, status: entryStatus(action.status), createdAt: action.createdAt, chainId: action.chainId,
+  const base = { id: action.id, origin: "aura" as const, ...entryStatus(action.status, action.destinationChainId !== null), createdAt: action.createdAt, chainId: action.chainId,
     estimatedUsd: action.usdCents === null ? undefined : action.usdCents / 100, transactionHash: action.transactionHash ?? undefined,
     failureReason: action.failureReason ?? undefined, source: "Aura" };
   if (action.kind === "route") {
@@ -81,7 +90,7 @@ export function actionEntry(action: ActionLike): ActivityEntry {
 export function incomingEntry(transfer: IncomingTransfer, usdCentsPerUnit?: number | null): ActivityEntry {
   const value = usdCentsPerUnit === undefined || usdCentsPerUnit === null ? undefined
     : Math.round(Number(BigInt(transfer.amountRaw) * BigInt(usdCentsPerUnit) / 10n ** BigInt(transfer.decimals))) / 100;
-  return { id: transfer.id, origin: "incoming", type: "received", status: transfer.status, createdAt: transfer.receivedAt, chainId: transfer.chainId,
+  return { id: transfer.id, origin: "incoming", type: "received", status: transfer.status, final: transfer.final, createdAt: transfer.receivedAt, chainId: transfer.chainId,
     asset: transfer.symbol, amount: transfer.amount, counterparty: transfer.from, estimatedUsd: value, transactionHash: transfer.transactionHash,
     source: transfer.source };
 }
@@ -131,13 +140,14 @@ function csvCell(value: string | number | undefined) {
 }
 
 export const CSV_COLUMNS = ["Date", "Description", "Status", "Amount", "Asset", "Received amount", "Received asset", "Counterparty", "Estimated USD",
-  "Network", "Transaction", "Source"] as const;
+  "Network", "Transaction", "Final", "Source"] as const;
 
 /** Every export and statement uses these columns, one row per entry. */
 export function entriesCsv(entries: ActivityEntry[], networkName: (chainId: number) => string, extra?: { header: string[]; row: (entry: ActivityEntry) => Array<string | number | undefined> }) {
   const header = [...CSV_COLUMNS, ...(extra?.header ?? [])];
   const rows = entries.map((entry) => [entry.createdAt, entryLabel(entry.type), statusLabel(entry.status), entry.amount, entry.asset,
-    entry.toAmount, entry.toAsset, entry.counterparty, entry.estimatedUsd?.toFixed(2), networkName(entry.chainId), entry.transactionHash, entry.source,
+    entry.toAmount, entry.toAsset, entry.counterparty, entry.estimatedUsd?.toFixed(2), networkName(entry.chainId), entry.transactionHash,
+    entry.status === "completed" ? (entry.final ? "Yes" : "Not yet") : "", entry.source,
     ...(extra?.row(entry) ?? [])]);
   return [header, ...rows].map((row) => row.map(csvCell).join(",")).join("\n") + "\n";
 }

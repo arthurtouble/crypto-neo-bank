@@ -56,8 +56,8 @@ function Receipt({ entry, onClose }: { entry: ActivityEntry; onClose: () => void
         {entry.failureReason && <span>Reason<strong>{entry.failureReason}</strong></span>}
       </div>
       {entry.origin === "aura" ? <ReceiptJourney id={entry.id} />
-        : entry.origin === "incoming" ? <p className="modalRisk" data-testid="incoming-finality">{entry.status === "completed"
-          ? `Final on ${networkName(entry.chainId)}.` : `Arrived. Waiting for ${networkName(entry.chainId)} to make it final, which usually takes a few minutes.`}</p> : null}
+        : entry.origin === "incoming" ? <p className="modalRisk" data-testid="incoming-finality">{entry.final
+          ? `Final on ${networkName(entry.chainId)}.` : `Received. ${networkName(entry.chainId)} makes it final in about 20 minutes.`}</p> : null}
       {entry.origin === "aura" && <Link className="button secondary full" href={`/app/transactions/${entry.id}`}>Full history</Link>}
       {links.map((link) => <a className="button secondary full" key={link.name} href={link.url!} target="_blank" rel="noreferrer">{link.name} <ExternalLink size={14} /></a>)}
       {!links.length && <div className="modalRisk">No transaction has been recorded for this yet.</div>}
