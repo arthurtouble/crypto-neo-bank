@@ -1,38 +1,52 @@
 "use client";
 
-import { useExportWallet, useMfa, useMfaEnrollment, usePrivy, useSetWalletRecovery, useWallets } from "@privy-io/react-auth";
-import { Check, Download, Fingerprint, KeyRound, LoaderCircle, ShieldCheck } from "lucide-react";
+import { useExportWallet, useLinkAccount, useMfa, useMfaEnrollment, usePrivy, useWallets } from "@privy-io/react-auth";
+import { useUpdateEmail } from "@privy-io/react-auth/ui";
+import { Download, Fingerprint, LoaderCircle, Mail } from "lucide-react";
 import { useMemo, useState } from "react";
-import { SecurityPolicyControls } from "./security-policy-controls";
 import { useToast } from "./toast";
 
+/**
+ * How the customer signs in and protects the account. Privy holds the sign-in
+ * methods and the wallet key: an email added here is verified by Privy with a
+ * one-time code, becomes a way to sign in (so the account isn't tied to one
+ * wallet), and is where Aura sends email notices. Aura doesn't keep a copy.
+ */
 export function SecurityCenter() {
   const { user } = usePrivy();
   const { wallets } = useWallets();
   const { mfaMethods } = useMfa();
   const { showMfaEnrollmentModal } = useMfaEnrollment();
-  const { setWalletRecovery } = useSetWalletRecovery();
   const { exportWallet } = useExportWallet();
-  const [working, setWorking] = useState<string | null>(null);
   const toast = useToast();
+  const [exporting, setExporting] = useState(false);
+  const { linkEmail } = useLinkAccount({
+    onSuccess: ({ linkMethod }) => { if (linkMethod === "email") toast.success("Email added"); },
+    onError: (error) => { if (error !== "exited_link_flow") toast.error("Email not added", "Try again."); }
+  });
+  const { update: updateEmail } = useUpdateEmail();
   const wallet = useMemo(() => wallets.find((item) => item.walletClientType === "privy") ?? wallets[0], [wallets]);
   // The server accepts a passkey or an authenticator app for money (`requireMoneyMfa`), so either counts here.
   const passkeyReady = mfaMethods.includes("passkey") || mfaMethods.includes("totp");
+  const email = user?.email?.address;
 
-  async function run(label: string, action: () => Promise<unknown>) {
-    setWorking(label);
-    try { await action(); toast.success(`${label} completed`); }
-    catch (error) { toast.error(`${label} not completed`, error instanceof Error ? error.message : undefined); }
-    finally { setWorking(null); }
+  async function exportKey() {
+    if (!wallet) return;
+    setExporting(true);
+    try { await exportWallet({ address: wallet.address }); }
+    catch { toast.error("Key not exported", "Try again."); }
+    finally { setExporting(false); }
   }
 
-  const controls = [
-    { icon: Fingerprint, title: "Passkey", note: passkeyReady ? "Needed to move money and to loosen your controls" : "Add one to move money", state: passkeyReady ? "Added" : "Add", action: () => showMfaEnrollmentModal() },
-    { icon: KeyRound, title: "Recovery", note: "Review how you'd get back into your wallet", state: "Review", action: () => run("Recovery setup", () => setWalletRecovery()) },
-    { icon: Download, title: "Wallet export", note: "Export your wallet's key", state: "Export", action: () => wallet ? run("Wallet export", () => exportWallet({ address: wallet.address })) : undefined }
-  ];
-
-  return <><div className="contentGrid"><section className="panel widePanel"><div className="panelHeading"><div><h2>Account protection</h2><p className="sourceCaption">{user?.email?.address ? `Signed in as ${user.email.address}` : "Signed in"}</p></div><span className={`statusBadge ${passkeyReady ? "good" : "neutral"}`}><i /> {passkeyReady ? "Passkey added" : "No passkey yet"}</span></div>
-    <div className="securityChecklist">{controls.map(({ icon: Icon, title, note, state, action }) => <div key={title}><span className={state === "Added" ? "good" : "warn"}><Icon size={19} /></span><div><strong>{title}</strong><small>{note}</small></div>{action ? <button disabled={Boolean(working)} onClick={action}>{working && title.startsWith(working.split(" ")[0]) ? <LoaderCircle className="spin" size={14} /> : state}</button> : <b className="securityState"><Check size={14} /> {state}</b>}</div>)}</div>
-  </section><aside className="panel connectionPanel"><h3>You stay in control</h3><div className="securityPrinciple"><ShieldCheck size={17} /><span><strong>You approve every transfer</strong></span></div><div className="securityPrinciple"><KeyRound size={17} /><span><strong>You can export your wallet</strong></span></div></aside></div><SecurityPolicyControls /></>;
+  return <section className="panel settingsPanel" aria-labelledby="sign-in-heading"><h2 id="sign-in-heading">Sign-in and security</h2>
+    <div className="settingRow" id="email"><span className="settingIcon"><Mail size={17} /></span>
+      <div><strong>Email</strong><small>{email ? `${email}. Used to sign in and for email notices.` : "Add an email to get notices by email and to sign in without your wallet."}</small></div>
+      <button onClick={() => email ? updateEmail() : linkEmail()}>{email ? "Change" : "Add email"}</button></div>
+    <div className="settingRow"><span className="settingIcon"><Fingerprint size={17} /></span>
+      <div><strong>Passkey</strong><small>{passkeyReady ? "Added. Needed to move money and to loosen your controls." : "Add one to move money."}</small></div>
+      {passkeyReady ? <span className="settingState">Added</span> : <button onClick={() => showMfaEnrollmentModal()}>Add passkey</button>}</div>
+    <div className="settingRow"><span className="settingIcon"><Download size={17} /></span>
+      <div><strong>Wallet key</strong><small>Export your account&apos;s key to use it in another wallet. Anyone with the key can move your money.</small></div>
+      <button disabled={!wallet || exporting} onClick={() => void exportKey()}>{exporting ? <LoaderCircle className="spin" size={14} /> : "Export"}</button></div>
+  </section>;
 }

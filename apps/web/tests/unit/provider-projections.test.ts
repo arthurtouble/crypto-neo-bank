@@ -132,11 +132,10 @@ describe("wallet policy projection", () => {
 
 describe("preferences", () => {
   it("returns defaults, then merges partial updates", async () => {
-    expect(await readPreferences(db, "alice")).toMatchObject({ notifications: { transactionEmail: true, transactionPush: true }, updatedAt: null });
-    await updatePreferences(db, "alice", { notifications: { transactionEmail: false } }, "2026-09-25T10:00:00.000Z");
-    await updatePreferences(db, "alice", { notifications: { transactionPush: false } }, "2026-09-25T10:05:00.000Z");
-    expect(await readPreferences(db, "alice")).toEqual({
-      notifications: { transactionEmail: false, transactionPush: false }, updatedAt: "2026-09-25T10:05:00.000Z" });
+    expect(await readPreferences(db, "alice")).toMatchObject({ notifications: { transactionEmail: true }, updatedAt: null });
+    await updatePreferences(db, "alice", { notifications: {} }, "2026-09-25T10:00:00.000Z");
+    await updatePreferences(db, "alice", { notifications: { transactionEmail: false } }, "2026-09-25T10:05:00.000Z");
+    expect(await readPreferences(db, "alice")).toEqual({ notifications: { transactionEmail: false }, updatedAt: "2026-09-25T10:05:00.000Z" });
   });
 
   it("falls back to defaults if a stored document is unreadable", async () => {

@@ -16,8 +16,8 @@ const lock = (page: Page) => page.getByRole("checkbox", { name: /Emergency lock/
 const outbox = async () => { const { emails, pushes } = await edge("/__outbox"); return { emails: emails!, pushes: pushes! }; };
 const emailsTo = async (customer: Customer) => (await outbox()).emails.filter((email) => email.to.includes(customer.email)).map((email) => email.subject);
 
-async function signIn(page: Page) {
-  const customer = await newCustomer({ mfa: ["passkey"] });
+async function signIn(page: Page, options: { email?: boolean } = {}) {
+  const customer = await newCustomer({ mfa: ["passkey"], ...options });
   await setBalances(customer.wallet, { 8453: { [ASSETS.usdc]: "50000000" } });
   await acceptTerms(page, customer);
   await setIdentity(page, customer, { signedIn: true });
@@ -137,7 +137,7 @@ test("a browser that blocks notifications says so", async ({ page, context }) =>
   await context.clearPermissions();
   await page.addInitScript(() => { Object.defineProperty(Notification, "permission", { get: () => "denied" }); });
   await page.goto("/app/settings");
-  await expect(page.getByText(/Notifications are blocked for Aura in this browser's settings\./)).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText(/Blocked for Aura in this browser's settings\./)).toBeVisible({ timeout: 30_000 });
   await expect(page.getByRole("button", { name: "Browser notifications" })).toHaveCount(0);
 });
 
@@ -161,4 +161,31 @@ test("the customer's own transactions show in the bell without a second toast", 
   await bell(page).click();
   await expect(page.getByRole("dialog", { name: "Notifications" }).getByText(/10 USDC/)).toBeVisible();
   await expect(page.locator(".toastRegion").getByText(/10 USDC/)).toHaveCount(0);
+});
+
+test("a customer who signed up with a wallet adds an email, verified by Privy, and then gets email notices there", async ({ page }) => {
+  const customer = await signIn(page, { email: false });
+  await page.goto("/app/settings");
+  await expect(page.getByText("Add an email to get notices by email and to sign in without your wallet.")).toBeVisible({ timeout: 30_000 });
+  // No email yet: nothing to toggle, and product news isn't offered.
+  await expect(page.getByRole("button", { name: "Transaction emails" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Product news" })).toHaveCount(0);
+
+  // Closing Privy's email flow changes nothing.
+  await page.getByRole("button", { name: "Add email" }).click();
+  await expect(page.getByText("Add an email to get notices by email and to sign in without your wallet.")).toBeVisible();
+
+  await page.evaluate(() => localStorage.setItem("aura-e2e-link-email", "new-owner@example.com"));
+  await page.getByRole("button", { name: "Add email" }).click();
+  await expect(toast(page, "Email added")).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByText("new-owner@example.com. Used to sign in and for email notices.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Transaction emails" })).toHaveText("On");
+  await expect(page.getByRole("button", { name: "Product news" })).toHaveText("Off");
+
+  // Aura reads the address from Privy when it sends, so the next notice goes there.
+  await lock(page).click();
+  await expect(toast(page, "Controls updated")).toBeVisible({ timeout: 20_000 });
+  await expect.poll(async () => (await outbox()).emails.filter((email) => email.to.includes("new-owner@example.com")).map((email) => email.subject), { timeout: 20_000 })
+    .toEqual(["Your account is locked"]);
+  expect(customer.email).toBe("");
 });

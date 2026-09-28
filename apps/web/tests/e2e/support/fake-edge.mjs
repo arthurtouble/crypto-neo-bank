@@ -475,6 +475,7 @@ export function startFakeEdge({ port }) {
     if (url.pathname === "/__state") { state = { ...state, ...body, users: { ...state.users, ...body?.users }, balances: { ...state.balances, ...body?.balances } }; return send(200, { ok: true }); }
     if (url.pathname === "/__session") return send(200, { token: accessToken(body.userId, body) });
     if (url.pathname === "/__sent") return send(200, { sent: state.sent });
+    if (url.pathname === "/__link-email") { state.users[body.userId] = { ...state.users[body.userId], email: body.email }; return send(200, { ok: true }); }
     if (url.pathname === "/__outbox") return send(200, { emails: state.emails, pushes: state.pushes });
     if (url.pathname === "/__balances") {
       // Set individual balances without touching any other wallet's.

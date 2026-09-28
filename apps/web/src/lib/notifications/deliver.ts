@@ -6,8 +6,9 @@ import { notify, type Notice, type NotificationKind } from "./store";
 
 /**
  * Deliver pending notices by email (Resend) and browser push (Web Push with
- * VAPID). Security notices always go out; the others follow the customer's
- * choices in Settings. A closed account gets only security notices. A
+ * VAPID). Security notices are always emailed; transaction emails follow the
+ * customer's choice in Settings. Push goes to each browser where the customer
+ * turned it on. A closed account gets only security notices. A
  * channel that fails is retried on later runs, up to MAX_ATTEMPTS, then
  * marked failed. The in-app list never depends on delivery.
  */
@@ -87,7 +88,8 @@ export async function deliverPending(db: D1Database, options: { subject?: string
     const preferences = (await readPreferences(db, notice.subject_reference)).notifications;
     const always = notice.kind === "security";
     const open = notice.closed_at === null;
-    const wanted = { email: always || (open && preferences.transactionEmail), push: open && (always || preferences.transactionPush) };
+    // Push goes to every browser the customer turned it on in; turning it off there is the choice.
+    const wanted = { email: always || (open && preferences.transactionEmail), push: open };
     const settle = async (status: string, want: boolean, send: () => Promise<Channel>): Promise<string> => {
       if (status !== "pending") return status;
       if (!want) return "skipped";

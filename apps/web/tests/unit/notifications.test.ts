@@ -106,7 +106,7 @@ describe("delivering notices", () => {
   });
 
   it("follows the customer's choices for transaction notices, but always sends security notices", async () => {
-    sqlite.exec(`INSERT INTO user_preferences (subject_reference, value_json, updated_at) VALUES ('alice', '{"notifications":{"transactionEmail":false,"transactionPush":false}}', 't')`);
+    sqlite.exec(`INSERT INTO user_preferences (subject_reference, value_json, updated_at) VALUES ('alice', '{"notifications":{"transactionEmail":false}}', 't')`);
     await notify(db, "alice", receivedNotice(transfer("t1", now.toISOString())), now);
     await notify(db, "alice", securityNotice("locked", "Locked.", "2"), new Date(now.getTime() + 1));
     const fake = edge();

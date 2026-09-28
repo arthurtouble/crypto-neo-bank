@@ -103,10 +103,10 @@ Depending on where you live, you may have the right to:
 - receive a copy of it; and
 - complain to a regulator.
 
-In **Settings → Data and privacy** you can:
+In **Settings** you can:
 
-- **Download my data.** Get a copy of everything Aura holds about your account straight away, table by table, with the reason each record is kept.
-- **Product update emails.** Turn them on or off at any time.
+- **Download my data** (under Your data and account). Get a copy of everything Aura holds about your account straight away, table by table, with the reason each record is kept.
+- **Product news** (under Notifications). Turn product-update emails on or off at any time.
 
 To close your account, or to use another right, such as correcting your data, contact support. We close an account once it holds no funds. We keep transaction, security, consent, and support records where the law or account safety requires it, and we'll tell you what we keep and why. Nothing Aura does can delete blockchain history or records held by Privy or other providers.
 

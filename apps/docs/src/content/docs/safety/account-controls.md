@@ -18,7 +18,7 @@ Aura gives you a few optional controls. When you make one stricter, it applies r
 
 ## Passkey
 
-Money only leaves your account after you add a passkey or an authenticator app. Add one in **Settings**, under **Account protection**. If you haven't, Aura asks you to add one the first time you move money. You confirm each money action with it, and each change that loosens a control. Unlike the controls above, it isn't optional for moving money. An authenticator app counts the same.
+Money only leaves your account after you add a passkey or an authenticator app. Add one in **Settings**, under **Sign-in and security**. If you haven't, Aura asks you to add one the first time you move money. You confirm each money action with it, and each change that loosens a control. Unlike the controls above, it isn't optional for moving money. An authenticator app counts the same.
 
 ## Emergency lock
 

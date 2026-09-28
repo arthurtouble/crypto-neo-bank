@@ -1,15 +1,15 @@
 "use client";
 
-import { BookOpen, Eye, EyeOff, UserX } from "lucide-react";
-import Link from "next/link";
+import { Eye, EyeOff, SunMoon } from "lucide-react";
 import { useEffect, useState } from "react";
-import { FeedbackPanel } from "./feedback-panel";
 import { NotificationPreferences } from "./notification-preferences";
 import { DataRightsPanel } from "./data-rights-panel";
 import { SecurityCenter } from "./security-center";
+import { SecurityPolicyControls } from "./security-policy-controls";
 import { AuraTagControls } from "./aura-tag-controls";
 import { ThemeToggle } from "./theme-toggle";
 
+/** Settings: sign-in and security, transaction controls, Aura tag, notifications, this device, and the customer's data. */
 export function SettingsWorkspace() {
   const [hidden, setHidden] = useState(false);
   useEffect(() => {
@@ -21,13 +21,16 @@ export function SettingsWorkspace() {
     localStorage.setItem("aurel-balance-privacy", value ? "hidden" : "visible");
     document.documentElement.dataset.balancePrivacy = value ? "hidden" : "visible";
   }
-  return <div className="settingsGrid"><SecurityCenter /><AuraTagControls /><section className="panel settingsPanel">
-    <h2>Account and preferences</h2>
-    <div className="settingRow"><span className="settingIcon">{hidden ? <EyeOff size={17} /> : <Eye size={17} />}</span><div><strong>Hide balances on this device</strong></div><button className="settingsToggle" onClick={() => privacy(!hidden)}>{hidden ? "Hidden" : "Visible"}</button></div>
+  return <div className="settingsGrid">
+    <SecurityCenter />
+    <SecurityPolicyControls />
+    <AuraTagControls />
     <NotificationPreferences />
-    <div className="settingRow"><span className="settingIcon"><BookOpen size={17} /></span><div><strong>Documents and disclosures</strong></div><Link href="/docs">Open</Link></div>
-    <div className="settingRow"><span className="settingIcon"><BookOpen size={17} /></span><div><strong>Statements</strong><small>Download a monthly statement from Transactions.</small></div><Link href="/app/transactions">Open</Link></div>
-    <div className="settingRow"><span className="settingIcon"><Eye size={17} /></span><div><strong>Theme</strong></div><ThemeToggle /></div>
-    <div className="settingRow"><span className="settingIcon"><UserX size={17} /></span><div><strong>Close your account</strong><small>Move your money out first, then contact support. We close accounts with no funds left.</small></div><Link href="/app/support?topic=close-account">Contact support</Link></div>
-  </section><DataRightsPanel /><FeedbackPanel /></div>;
+    <section className="panel settingsPanel" aria-labelledby="device-heading"><h2 id="device-heading">This device</h2>
+      <div className="settingRow"><span className="settingIcon">{hidden ? <EyeOff size={17} /> : <Eye size={17} />}</span><div><strong>Hide balances</strong><small>Blur amounts on this device, for when others can see your screen.</small></div>
+        <button className={`settingsToggle ${hidden ? "active" : ""}`} aria-pressed={hidden} aria-label="Hide balances" onClick={() => privacy(!hidden)}>{hidden ? "On" : "Off"}</button></div>
+      <div className="settingRow"><span className="settingIcon"><SunMoon size={17} /></span><div><strong>Theme</strong></div><ThemeToggle /></div>
+    </section>
+    <DataRightsPanel />
+  </div>;
 }
