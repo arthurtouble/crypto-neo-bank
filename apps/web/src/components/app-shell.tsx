@@ -12,6 +12,7 @@ import { ThemeToggle } from "./theme-toggle";
 import { PrivyAccountButton } from "./privy-account-button";
 import { ClientIdentity } from "./client-identity";
 import { AccountClosedGate } from "./account-closed";
+import { NotificationBell } from "./notification-bell";
 
 const iconByPage: Record<string, typeof icons.dashboard> = {
   Overview: icons.dashboard, Deposit: icons.received, Send: icons.sent,
@@ -54,7 +55,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <header className="productHeader">
           <button className="menuButton" onClick={() => setOpen(true)} aria-label="Open navigation" disabled={!mounted}><Menu size={20} /></button>
           <CommandMenu />
-          <div className="headerRight"><span className="networkStatus"><i /> Secure Connection</span><ThemeToggle /><PrivyAccountButton /></div>
+          <div className="headerRight"><span className="networkStatus"><i /> Secure Connection</span><NotificationBell /><ThemeToggle /><PrivyAccountButton /></div>
         </header>
         <main className="productContent"><AccountClosedGate>{children}</AccountClosedGate></main>
       </div>

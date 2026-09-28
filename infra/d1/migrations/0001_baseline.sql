@@ -347,6 +347,51 @@ CREATE TABLE security_profiles (
   FOREIGN KEY (subject_reference) REFERENCES subject_profiles(subject_reference)
 );
 
+-- Notifications: one row per event, shown in the app and delivered by email and browser push (apps/web/src/lib/notifications).
+CREATE TABLE notifications (
+  notification_id TEXT PRIMARY KEY,
+  subject_reference TEXT NOT NULL,
+  kind TEXT NOT NULL CHECK (kind IN ('received', 'completed', 'failed', 'security')),
+  dedupe_key TEXT NOT NULL,
+  title TEXT NOT NULL,
+  body TEXT NOT NULL,
+  link TEXT,
+  created_at TEXT NOT NULL,
+  read_at TEXT,
+  email_status TEXT NOT NULL DEFAULT 'pending' CHECK (email_status IN ('pending', 'sent', 'skipped', 'failed')),
+  push_status TEXT NOT NULL DEFAULT 'pending' CHECK (push_status IN ('pending', 'sent', 'skipped', 'failed')),
+  delivery_attempts INTEGER NOT NULL DEFAULT 0,
+  UNIQUE (subject_reference, dedupe_key),
+  FOREIGN KEY (subject_reference) REFERENCES subject_profiles(subject_reference)
+);
+
+CREATE INDEX notifications_subject_idx ON notifications(subject_reference, created_at);
+CREATE INDEX notifications_pending_idx ON notifications(created_at) WHERE email_status = 'pending' OR push_status = 'pending';
+
+-- Browsers a customer turned on push notifications in.
+CREATE TABLE push_subscriptions (
+  endpoint TEXT PRIMARY KEY,
+  subject_reference TEXT NOT NULL,
+  p256dh TEXT NOT NULL,
+  auth TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  failures INTEGER NOT NULL DEFAULT 0,
+  FOREIGN KEY (subject_reference) REFERENCES subject_profiles(subject_reference)
+);
+
+CREATE INDEX push_subscriptions_subject_idx ON push_subscriptions(subject_reference);
+
+-- Accounts the cron checks for money received, so a notification goes out while the app is closed.
+CREATE TABLE incoming_watches (
+  subject_reference TEXT PRIMARY KEY,
+  wallet_address TEXT NOT NULL,
+  -- Only money received after this is notified, so history isn't announced as new.
+  watched_since TEXT NOT NULL,
+  checked_at TEXT,
+  last_active_at TEXT NOT NULL,
+  FOREIGN KEY (subject_reference) REFERENCES subject_profiles(subject_reference)
+);
+
 -- One-time passkey confirmations for sensitive changes (apps/web/src/lib/security/step-up.ts).
 CREATE TABLE step_up_challenges (
   challenge_id TEXT PRIMARY KEY,

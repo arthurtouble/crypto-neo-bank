@@ -1,6 +1,7 @@
 // A local stand-in for everything outside Aura that end-to-end tests touch:
 // Privy's API and its access tokens, a JSON-RPC node for every supported
-// chain, LI.FI, and the Kraken price feed. Aura's own server code and local D1
+// chain, LI.FI, the Kraken price feed, Resend (email), and a browser push
+// service. Aura's own server code and local D1
 // run for real against it. Tests change what it returns through /__state and
 // mint sessions through /__session. The browser's connected wallet (a fake
 // MetaMask) sends through /__wallet/send, which moves balances like a chain.
@@ -90,7 +91,10 @@ const initialState = () => ({
   // Chainlink answers (dollars) and when they were published, in seconds ago. A feed not listed reverts.
   feeds: { [FEEDS.apple]: "341.51", [FEEDS.gold]: "4285.62", [FEEDS.euro]: "1.14" },
   feedAgeSeconds: 3600,
-  // Names of edges that fail: "rpc:<chainId>", "kraken", "privy", "lifi", "transfers" (Alchemy's transfer index).
+  // Emails sent through the fake Resend, and messages sent to the fake push service.
+  emails: [],
+  pushes: [],
+  // Names of edges that fail: "rpc:<chainId>", "kraken", "privy", "lifi", "transfers" (Alchemy's transfer index), "resend", "push".
   down: [],
   // The next transaction a connected wallet sends reverts on chain.
   revertNext: false,
@@ -471,6 +475,7 @@ export function startFakeEdge({ port }) {
     if (url.pathname === "/__state") { state = { ...state, ...body, users: { ...state.users, ...body?.users }, balances: { ...state.balances, ...body?.balances } }; return send(200, { ok: true }); }
     if (url.pathname === "/__session") return send(200, { token: accessToken(body.userId, body) });
     if (url.pathname === "/__sent") return send(200, { sent: state.sent });
+    if (url.pathname === "/__outbox") return send(200, { emails: state.emails, pushes: state.pushes });
     if (url.pathname === "/__balances") {
       // Set individual balances without touching any other wallet's.
       for (const { chainId, token, owner, amount } of body) {
@@ -553,11 +558,29 @@ export function startFakeEdge({ port }) {
       : state.lifiQuote === "no_route" ? send(404, { message: "No available quotes for the requested transfer" }) : send(200, lifiQuote(url));
     if (url.pathname === "/lifi/v1/status") return down("lifi") ? send(503, { message: "unavailable" }) : send(200, lifiStatus(url));
 
+    // Resend's email API, and a browser push service (Aura sends the fake plain JSON; real push services get it encrypted).
+    if (url.pathname === "/resend/emails") {
+      if (down("resend")) return send(503, { message: "unavailable" });
+      if (req.headers.authorization !== "Bearer re_e2e_fake") return send(401, { message: "API key is invalid" });
+      state.emails.push({ ...body, idempotencyKey: req.headers["idempotency-key"] });
+      return send(200, { id: randomUUID() });
+    }
+    const pushed = /^\/push\/([^/]+)$/.exec(url.pathname);
+    if (pushed) {
+      if (down("push")) return send(503, { error: "unavailable" });
+      state.pushes.push({ subscription: pushed[1], ...body });
+      return send(201, {});
+    }
+
     // Kraken.
     if (url.pathname === "/kraken/0/public/OHLC") return down("kraken") ? send(503, { error: ["EService:Unavailable"] }) : send(200, kraken(url));
 
     send(404, { error: `no fake for ${url.pathname}` });
   });
+
+  // Aura's key for signing push messages, made fresh for each run.
+  const vapid = generateKeyPairSync("ec", { namedCurve: "P-256" }).privateKey.export({ format: "jwk" });
+  const vapidPublic = Buffer.concat([Buffer.from([4]), Buffer.from(vapid.x, "base64url"), Buffer.from(vapid.y, "base64url")]).toString("base64url");
 
   return new Promise((resolve) => server.listen(port, "127.0.0.1", () => resolve({
     verificationKey,
@@ -574,7 +597,13 @@ export function startFakeEdge({ port }) {
       RPC_URL_10: `http://127.0.0.1:${port}/rpc/10`,
       RPC_URL_137: `http://127.0.0.1:${port}/rpc/137`,
       RPC_URL_42161: `http://127.0.0.1:${port}/rpc/42161`,
-      ADMIN_PRIVY_SUBJECTS: OPERATOR.userId
+      ADMIN_PRIVY_SUBJECTS: OPERATOR.userId,
+      RESEND_API_URL: `http://127.0.0.1:${port}/resend`,
+      RESEND_API_KEY: "re_e2e_fake",
+      EMAIL_FROM: "Aura <notices@aura-e2e.test>",
+      APP_ORIGIN: "https://aura-e2e.test",
+      VAPID_PUBLIC_KEY: vapidPublic,
+      VAPID_PRIVATE_KEY: vapid.d
     },
     url: `http://127.0.0.1:${port}`,
     close: () => new Promise((done) => server.close(done))

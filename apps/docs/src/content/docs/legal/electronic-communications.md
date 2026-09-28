@@ -11,7 +11,7 @@ When you accept the terms of use, you agree to receive agreements, disclosures, 
 
 ## How we deliver records
 
-We deliver records in the app. Once a notification service is connected, we'll also use email or push notifications.
+We deliver records in the app. We also send notices by email to your sign-in email address, and as browser notifications in the browsers where you turn them on.
 
 A partner you use, such as Bridge once it is live, may send its own records under its own terms. Keep your sign-in email up to date.
 
@@ -19,11 +19,9 @@ A partner you use, such as Bridge once it is live, may send its own records unde
 
 | Message | Your choice |
 | --- | --- |
-| Security notices (for example, sign-in, account lock, and limit changes) | Always sent, because they protect your account |
-| Transaction updates by email or push | On by default. Change them in Settings → Account and preferences |
+| Security notices (for example, locking your account, loosening a control, saving a new recipient, and closing your account) | Always sent by email and in the app, because they protect your account. Also as a browser notification where you turned those on |
+| Transaction notices (money you receive, and when what you send, swap, or earn completes or fails) by email or browser notification | On by default. Change them in Settings → Notifications |
 | Product-update emails | Off unless you turn them on in Settings → Data & Privacy |
-
-We save your choices now. They apply as soon as delivery is connected.
 
 ## What you need
 

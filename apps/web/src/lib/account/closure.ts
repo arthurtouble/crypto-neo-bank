@@ -1,5 +1,7 @@
 import { requireActionWallet } from "@/lib/auth/wallet";
 import { privyClient } from "@/lib/auth/privy";
+import { announce } from "@/lib/notifications/deliver";
+import { securityNotice } from "@/lib/notifications/store";
 import { readOverview, type Overview } from "@/lib/overview/read";
 
 /**
@@ -77,7 +79,9 @@ export async function closeAccount(db: D1Database, subject: string, operator: st
     db.prepare("UPDATE security_profiles SET account_locked = 1, policy_version = policy_version + 1, updated_at = ? WHERE subject_reference = ?").bind(at, subject),
     db.prepare("UPDATE aura_tags SET public_enabled = 0, public_bank_enabled = 0, updated_at = ? WHERE subject_reference = ?").bind(at, subject)
   ]);
-  return (closed.meta.changes ?? 0) === 1;
+  if ((closed.meta.changes ?? 0) !== 1) return false;
+  await announce(db, subject, securityNotice("closed", "Your Aura account was closed at your request. You can still download your data and contact support.", at));
+  return true;
 }
 
 /** Reopen a closed account. It stays locked until the customer unlocks it with their passkey. */
@@ -88,5 +92,7 @@ export async function reopenAccount(db: D1Database, subject: string, operator: s
       .bind(at, subject),
     audit(db, subject, operator, "account.reopened", reason, at)
   ]);
-  return (reopened.meta.changes ?? 0) === 1;
+  if ((reopened.meta.changes ?? 0) !== 1) return false;
+  await announce(db, subject, securityNotice("reopened", "Your Aura account was reopened. It stays locked until you unlock it in Settings with your passkey.", at));
+  return true;
 }

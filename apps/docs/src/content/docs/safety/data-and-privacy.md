@@ -17,7 +17,8 @@ Aura keeps as little financial data as it can, because your money lives on the b
 | Identity verification, once live | Our partner | Doesn't keep your documents. Uses only the status it needs |
 | Support and complaints | Aura | Keeps enough to investigate and reply |
 | Consent and documents you accepted | Aura | Records which version you saw or accepted, and when |
-| Notification choices | Your choices | Keeps them until you change or delete them |
+| Notification choices | Your choices | Keeps them until you change them |
+| Notices sent to you | Aura | Keeps each notice and whether it was delivered, and where to send browser notifications until you turn them off |
 | Card, reward, and wallet-rule records, once live | The card issuer, reward partner, or wallet provider | Keeps the status the partner reports, with its source and time |
 | Product analytics | Aura | Accepts only a fixed list of events. Never used for balances |
 | Partner updates | The partner and Aura | Keeps them so we can retry, reconcile, and investigate |

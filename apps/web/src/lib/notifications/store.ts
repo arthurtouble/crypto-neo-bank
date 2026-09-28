@@ -1,0 +1,67 @@
+import { actionEntry, entryAmount, entryLabel, incomingEntry } from "@/lib/activity/entries";
+import type { IncomingTransfer } from "@/lib/activity/incoming";
+import type { StoredAction } from "@/lib/actions/store";
+import { networkName } from "@/lib/assets/registry";
+import { failureText } from "@/lib/client/action-copy";
+
+/**
+ * One notice per event, kept in D1 so the app can show it and email and push
+ * can deliver it (`deliver.ts`). The dedupe key makes each event notify once,
+ * however many times it is observed.
+ */
+export type NotificationKind = "received" | "completed" | "failed" | "security";
+export type Notice = { kind: NotificationKind; dedupeKey: string; title: string; body: string; link?: string };
+export type NotificationView = { id: string; kind: NotificationKind; title: string; body: string; link: string | null; createdAt: string; read: boolean };
+
+const short = (value: string) => value.length > 14 ? `${value.slice(0, 6)}…${value.slice(-4)}` : value;
+
+/** Record a notice once. Returns true if it is new. */
+export async function notify(db: D1Database, subject: string, notice: Notice, now = new Date()): Promise<boolean> {
+  const result = await db.prepare(`INSERT INTO notifications (notification_id, subject_reference, kind, dedupe_key, title, body, link, created_at)
+    SELECT ?, ?, ?, ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM subject_profiles WHERE subject_reference = ?)
+    ON CONFLICT (subject_reference, dedupe_key) DO NOTHING`)
+    .bind(crypto.randomUUID(), subject, notice.kind, notice.dedupeKey, notice.title, notice.body, notice.link ?? null, now.toISOString(), subject).run();
+  return (result.meta.changes ?? 0) > 0;
+}
+
+export async function listNotifications(db: D1Database, subject: string, limit = 30): Promise<{ notifications: NotificationView[]; unread: number }> {
+  const [rows, unread] = await db.batch([
+    db.prepare(`SELECT notification_id, kind, title, body, link, created_at, read_at FROM notifications WHERE subject_reference = ?
+      ORDER BY created_at DESC LIMIT ?`).bind(subject, limit),
+    db.prepare("SELECT COUNT(*) AS n FROM notifications WHERE subject_reference = ? AND read_at IS NULL").bind(subject)
+  ]);
+  type Row = { notification_id: string; kind: NotificationKind; title: string; body: string; link: string | null; created_at: string; read_at: string | null };
+  return { notifications: (rows.results as Row[]).map((row) => ({ id: row.notification_id, kind: row.kind, title: row.title, body: row.body, link: row.link,
+    createdAt: row.created_at, read: row.read_at !== null })), unread: (unread.results[0] as { n: number }).n };
+}
+
+export async function markAllRead(db: D1Database, subject: string, now = new Date()) {
+  await db.prepare("UPDATE notifications SET read_at = ? WHERE subject_reference = ? AND read_at IS NULL").bind(now.toISOString(), subject).run();
+}
+
+/** A customer's own action finished: complete (in a block and matching, or delivered) or failed. */
+export function actionNotice(action: StoredAction, outcome: "completed" | "failed"): Notice {
+  const entry = actionEntry(action);
+  const label = entryLabel(entry.type);
+  const amount = entryAmount(entry);
+  const link = `/app/transactions?open=${encodeURIComponent(action.id)}`;
+  if (outcome === "failed") return { kind: "failed", dedupeKey: `action:${action.id}:failed`, title: `${label}${amount ? ` ${amount}` : ""} didn't go through`,
+    body: failureText(action.failureReason), link };
+  const where = entry.destinationChainId ? `${networkName(entry.chainId)} to ${networkName(entry.destinationChainId)}` : networkName(entry.chainId);
+  return { kind: "completed", dedupeKey: `action:${action.id}:completed`, title: `${label}${amount ? ` ${amount}` : ""}`,
+    body: `${entry.counterparty ? `To ${short(entry.counterparty)}, on` : "On"} ${where}.`, link };
+}
+
+export function receivedNotice(transfer: IncomingTransfer): Notice {
+  const entry = incomingEntry(transfer);
+  return { kind: "received", dedupeKey: `received:${transfer.id}`, title: `Received ${entryAmount(entry)}`,
+    body: `From ${short(transfer.from)}, on ${networkName(transfer.chainId)}.`, link: `/app/transactions?open=${encodeURIComponent(entry.id)}` };
+}
+
+/** Changes to the account's security. Always delivered, whatever the customer's notification choices. */
+export function securityNotice(event: "locked" | "loosened" | "recipient_saved" | "closed" | "reopened", detail: string, reference: string): Notice {
+  const titles = { locked: "Your account is locked", loosened: "Your controls changed", recipient_saved: "New saved recipient",
+    closed: "Your account is closed", reopened: "Your account is open again" } as const;
+  return { kind: "security", dedupeKey: `security:${event}:${reference}`, title: titles[event],
+    body: `${detail} If this wasn't you, lock your account in Settings and contact support.`, link: event === "closed" ? "/app/support" : "/app/settings" };
+}

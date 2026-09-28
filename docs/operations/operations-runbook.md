@@ -14,6 +14,7 @@ Aurel can lose its D1 data without losing customer funds because Privy, contract
 3. Reconcile provider transfer/card states and onchain positions against the latest Aurel projection.
 4. Escalate stale observations; do not silently display them as current.
 5. Review actions left `submitted` or `settling`, and sample confirmed actions against their chain evidence.
+6. Review notices whose email or push is `failed`, or still `pending` after several cron runs (`SELECT kind, email_status, push_status, delivery_attempts FROM notifications WHERE email_status IN ('pending','failed') OR push_status IN ('pending','failed')`). The cron logs `notifications.deliver.failed`; a run of Resend refusals usually means the sending domain or key changed.
 
 ## Webhook incident
 
@@ -46,6 +47,7 @@ Aurel can lose its D1 data without losing customer funds because Privy, contract
 
 1. Run `pnpm lint`, `pnpm typecheck:all`, `pnpm test:unit`, `pnpm test:e2e`, and `pnpm deploy:dry-run`.
 2. Apply pending D1 migrations before code that requires the new schema.
+   Notifications need, per environment: a Resend domain verified for `EMAIL_FROM` and the `RESEND_API_KEY` secret (a send-only key), `APP_ORIGIN`, and a VAPID key pair made for that environment (`VAPID_PUBLIC_KEY` as a variable, `VAPID_PRIVATE_KEY` as a secret). Without them, email or push is skipped and the in-app notices still work.
 3. Run `pnpm release:upload` to create an undeployed candidate and use its preview URL for smoke tests.
 4. On a custom domain, configure version affinity before splitting traffic so a session receives consistent code and static assets.
 5. Deploy the candidate initially to a small percentage with `wrangler versions deploy <old>@95 <candidate>@5`, observe errors and key journeys, then promote deliberately.

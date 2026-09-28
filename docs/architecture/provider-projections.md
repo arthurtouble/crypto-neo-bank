@@ -36,7 +36,10 @@ Payload schemas are strict (`cardAccountEventSchema`, `membershipEventSchema`, `
 
 ## Aura-owned tables in the same package
 
-- `user_preferences`: notification choices (`GET`/`PATCH /api/preferences`). Saved now, honored once a delivery service is connected. Security notices are always sent.
+- `user_preferences`: notification choices (`GET`/`PATCH /api/preferences`), honored by `lib/notifications/deliver.ts`. Security notices are always sent.
+- `notifications`: one row per notice (money received, an action completed or failed, a security change), unique per customer and event (`dedupe_key`), with per-channel delivery status. Recorded by `lib/notifications/store.ts`; the in-app list never depends on delivery.
+- `push_subscriptions`: each browser's Web Push endpoint and keys (`PUT`/`DELETE /api/notifications/push`). Removed when the push service answers 404 or 410.
+- `incoming_watches`: which accounts to check for money received, since when, and when last checked (`lib/notifications/incoming.ts`). Only transfers after `watched_since` notify; watching stops 30 days after the customer was last active.
 - `command_idempotency`: `claimProviderCommand` and `settleProviderCommand` stop a retried request from sending the same provider command twice. Bank account commands use it; card issuance should use it when Rain connects.
 
 ## Bridge commands

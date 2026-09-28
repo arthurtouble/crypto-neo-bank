@@ -36,7 +36,7 @@ The reset drops every table in `aura-dev-projections`, applies the current schem
 
 ## Configuration
 
-- Secrets are set with `wrangler secret put --env dev`, never in `wrangler.jsonc`. `PRIVY_APP_SECRET`, the Turnstile test secret, and a development-only webhook signing secret are installed only on `aura-dev`. The local copy of the webhook secret is in the ignored `.aura-dev-webhook-secret`.
+- Secrets are set with `wrangler secret put --env dev`, never in `wrangler.jsonc`. `PRIVY_APP_SECRET`, the Turnstile test secret, and a development-only webhook signing secret are installed only on `aura-dev`. The local copy of the webhook secret is in the ignored `.aura-dev-webhook-secret`. Notifications use `RESEND_API_KEY` (a send-only Resend key) and `VAPID_PRIVATE_KEY`, both secrets on `aura-dev` only; `EMAIL_FROM`, `APP_ORIGIN`, and `VAPID_PUBLIC_KEY` are variables. No sending domain is verified in Resend yet, so it sends only from `onboarding@resend.dev` and only to the Resend account owner's address; notices to anyone else are marked `failed` for email and still show in the app and by push.
 - Turnstile uses [Cloudflare's test keys](https://developers.cloudflare.com/turnstile/troubleshooting/testing/), which are not a production bot control.
 - The origin is in Privy's allowed domains. Anyone can sign in; the first sign-in asks for acceptance of the current terms.
 - Never set live provider modes or copy production secrets here.

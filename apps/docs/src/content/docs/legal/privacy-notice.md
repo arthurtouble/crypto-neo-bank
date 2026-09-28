@@ -26,6 +26,8 @@ Public blockchains record your transactions permanently.
 
 **Security settings.** Your account lock, daily limit, saved recipients and their labels, saved-recipients-only mode, waiting period for new recipients, and a record of changes to these settings.
 
+**Notifications.** The notices Aura shows you in the app and sends by email or browser notification, whether each was delivered, and, for each browser where you turn on notifications, the address its push service gave it.
+
 **Choices you make.** Notification choices, consent to product-update emails, which version of these documents you accepted and when, and your public Aura tag if you create one.
 
 **Support and feedback.** Messages, complaint details, and feedback you send us.
@@ -65,6 +67,8 @@ We share data only as needed to run Aura:
 - **Privy** for sign-in and your wallet;
 - **Cloudflare** for hosting, security, and storage, including Turnstile, which checks that support requests come from a person;
 - blockchain data services, to read balances and transactions;
+- **Resend**, which sends our emails. It receives your email address and the notice;
+- your browser's push service (for example Google's for Chrome, Apple's for Safari, or Mozilla's for Firefox), when you turn on browser notifications. The notice is encrypted so that only your browser can read it;
 - **LI.FI**, which receives your wallet address, the assets, and the amount when you ask for a quote. The bridges and exchanges it uses see your transaction;
 - **Bridge** and **Rain**, once live, for the services you choose to use with them;
 - support tools and professional advisers; and

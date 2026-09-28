@@ -780,3 +780,15 @@
 .actionJourney strong { font-size: var(--type-label); }
 .actionJourney li.waiting strong { color: var(--muted); }
 .actionJourney small { margin-top: 3px; color: var(--muted); font-size: var(--type-caption); }
+
+/* Notifications */
+.notificationBell { position: relative; }
+.notificationBell .iconButton { position: relative; display: grid; place-items: center; width: 36px; height: 36px; border-radius: var(--radius-control); }
+.notificationCount { position: absolute; top: 2px; right: 0; min-width: 16px; height: 16px; padding: 0 4px; display: grid; place-items: center; border-radius: 8px; background: var(--accent); color: var(--surface); font-size: 10px; font-weight: 600; }
+.notificationPanel { position: absolute; z-index: 60; top: calc(100% + 8px); right: 0; width: min(360px, calc(100vw - 32px)); max-height: 70vh; overflow: auto; padding: 14px; display: grid; gap: 10px; border: 1px solid var(--border); border-radius: var(--radius-panel); background: var(--surface-raised); box-shadow: var(--shadow-popover); color: var(--text); }
+.notificationPanel h2 { margin: 0; font-size: var(--type-body); }
+.notificationPanel ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; }
+.notificationPanel li a { display: grid; gap: 2px; padding: 8px 10px; border-radius: var(--radius-control); color: var(--text); text-decoration: none; }
+.notificationPanel li a:hover { background: var(--surface-muted); }
+.notificationPanel li.unread a { background: var(--accent-soft); }
+.notificationPanel small, .notificationPanel time { color: var(--text-secondary); font-size: var(--type-caption); }

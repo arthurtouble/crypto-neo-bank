@@ -22,6 +22,12 @@ export async function saveWalletAddress(database: D1Database, subjectReference: 
     WHERE subject_reference = ? AND chain_family = 'evm' AND address = ?`)
     .bind(subjectReference, address).first<{ entry_id: string; address: string; label: string; created_at: string; available_at: string }>();
   if (!row) throw new Error("Saved wallet address could not be read.");
+  // A new recipient is a security event (renaming one isn't).
+  if (row.created_at === timestamp) {
+    const [{ securityNotice }, { announce }] = await Promise.all([import("@/lib/notifications/store"), import("@/lib/notifications/deliver")]);
+    const wait = row.available_at > timestamp ? ` It can receive from ${new Date(row.available_at).toUTCString()}.` : "";
+    await announce(database, subjectReference, securityNotice("recipient_saved", `${row.label} (${row.address.slice(0, 6)}…${row.address.slice(-4)}) was saved as a recipient.${wait}`, row.entry_id), now);
+  }
   return row;
 }
 
