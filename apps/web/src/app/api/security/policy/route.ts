@@ -5,6 +5,8 @@ import { requireActionAccount, requireMoneyMfa } from "@/lib/auth/wallet";
 import { errorResponse, route } from "@/lib/http/route";
 import { ensureSubjectProfile } from "@/lib/profile/ensure";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
+import { announce } from "@/lib/notifications/deliver";
+import { securityNotice } from "@/lib/notifications/store";
 import { loosening } from "@/lib/security/policy";
 import { completeStepUp, createStepUp } from "@/lib/security/step-up";
 
@@ -88,5 +90,10 @@ export const PATCH = route("security.policy.patch", { unavailable: "security_pol
         JSON.stringify({ changes: input, confirmedWithPasskey: reasons.length > 0, sessionReference: subject.sessionReference }), now)
   ]);
   if (result.meta.changes !== 1) return errorResponse(409, "security_policy_changed", context, { message: "Your controls changed in another session. Refresh and try again." });
+  // Locking and loosening are security events: the customer always hears about them.
+  const version = String(current.policy_version + 1);
+  const notice = !current.account_locked && next.accountLocked ? securityNotice("locked", "Your Aura account was locked. Nothing can be sent until you unlock it with your passkey.", version)
+    : reasons.length ? securityNotice("loosened", `Your controls were changed to ${reasons.join(", ")}, confirmed with your passkey.`, version) : null;
+  if (notice) await announce(env.PROJECTION_DB, subject.subjectReference, notice);
   return Response.json({ policy: serialize(await readPolicy(env.PROJECTION_DB, subject.subjectReference)), traceId: context.traceId });
 });

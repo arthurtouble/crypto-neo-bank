@@ -48,7 +48,11 @@
         "ADMIN_PRIVY_SUBJECTS": "",
         "LIFI_INTEGRATOR": "aurel",
         "LIFI_INTEGRATOR_FEE": "0",
-        "REQUIRE_CF_ACCESS": "false"
+        "REQUIRE_CF_ACCESS": "false",
+        // Notifications. Resend only sends from onboarding@resend.dev, to the Resend account's own address, until a domain is verified.
+        "EMAIL_FROM": "Aura <onboarding@resend.dev>",
+        "APP_ORIGIN": "https://aura-dev.aurel-events.workers.dev",
+        "VAPID_PUBLIC_KEY": "BKy2yu17XoDp4trj5IYoWspZslphAaCT4v7wrfVdHj9DdNh46tispIXt2YHqt5VRw263I6zHh7C8hQWZWLCJUhI"
       },
       "secrets": {
         "required": ["TURNSTILE_SECRET"]

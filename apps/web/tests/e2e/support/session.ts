@@ -20,11 +20,13 @@ export const ASSETS = {
 } as const;
 
 /** Change what the fake Privy, chains, and price feed return. */
-export async function edge(path: "/__reset" | "/__state" | "/__session" | "/__sent" | "/__balances" | "/__receive", body: unknown = {}) {
+export async function edge(path: "/__reset" | "/__state" | "/__session" | "/__sent" | "/__balances" | "/__receive" | "/__outbox", body: unknown = {}) {
   const response = await fetch(`${edgeUrl}${path}`, { method: "POST", body: JSON.stringify(body) });
   if (!response.ok) throw new Error(`fake edge ${path} failed: ${response.status}`);
   return response.json() as Promise<{ token?: string; sent?: Array<{ hash: string; chainId: number; from: string; to: string; data: string; value: string; success: boolean;
-    relayed?: boolean; calls?: Array<{ to: string; data: string; value: string }> }> }>;
+    relayed?: boolean; calls?: Array<{ to: string; data: string; value: string }> }>;
+    emails?: Array<{ from: string; to: string[]; subject: string; text: string; idempotencyKey: string }>;
+    pushes?: Array<{ subscription: string; title: string; body: string; link: string }> }>;
 }
 
 export type Customer = { userId: string; wallet: `0x${string}`; email: string; token: string; externalWallets: `0x${string}`[]; mfa?: string[] };

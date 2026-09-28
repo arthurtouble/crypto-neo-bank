@@ -66,12 +66,14 @@ describe("closing an account", () => {
     expect(sqlite.prepare("SELECT actor_reference, evidence_json FROM audit_events WHERE action = 'account.closed'").get())
       .toEqual({ actor_reference: "operator-1", evidence_json: JSON.stringify({ reason: "Support case 42" }) });
     expect(await (await post(close, { reason: "Again" })).json()).toMatchObject({ error: "already_closed" });
+    expect(sqlite.prepare("SELECT kind, title, link FROM notifications").all()).toEqual([{ kind: "security", title: "Your account is closed", link: "/app/support" }]);
 
     expect((await post(reopen, { reason: "Customer came back" })).status).toBe(200);
     expect(sqlite.prepare("SELECT closed_at FROM subject_profiles").get()).toEqual({ closed_at: null });
     // It stays locked until the customer unlocks it with their passkey.
     expect(sqlite.prepare("SELECT account_locked FROM security_profiles").get()).toEqual({ account_locked: 1 });
     expect(await (await post(reopen, { reason: "Again" })).json()).toMatchObject({ error: "not_closed" });
+    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM notifications WHERE title = 'Your account is open again'").get()).toEqual({ n: 1 });
   });
 
   it("finds a customer by wallet or Privy ID, and says when nobody matches", async () => {

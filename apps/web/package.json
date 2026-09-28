@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "@aurel/provider-projections": "workspace:*",
+    "@block65/webcrypto-web-push": "2.0.0",
     "@coinbase/wallet-sdk": "4.3.2",
     "@fontsource-variable/archivo": "5.3.0",
     "@privy-io/node": "^0.34.0",

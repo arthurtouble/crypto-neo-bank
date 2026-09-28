@@ -48,6 +48,8 @@ describe("customer transaction controls", () => {
     expect((await patch({ dailyLimitUsd: 200 })).status).toBe(200);
     expect(state.signed).toEqual([]);
     expect(sqlite.prepare("SELECT COUNT(*) AS n FROM audit_events WHERE action = 'security.policy.updated'").get()).toEqual({ n: 2 });
+    // Locking is a security notice; tightening a limit isn't.
+    expect(sqlite.prepare("SELECT kind, title FROM notifications").all()).toEqual([{ kind: "security", title: "Your account is locked" }]);
   });
 
   it("needs a fresh passkey confirmation, checked by Privy, to loosen anything", async () => {
@@ -63,6 +65,8 @@ describe("customer transaction controls", () => {
     expect(await read()).toMatchObject({ accountLocked: false, dailyLimitUsd: null, policyVersion: 3 });
     expect(JSON.parse((sqlite.prepare("SELECT evidence_json FROM audit_events WHERE action = 'security.policy.updated' ORDER BY occurred_at DESC LIMIT 1").get() as { evidence_json: string }).evidence_json))
       .toMatchObject({ confirmedWithPasskey: true });
+    expect(sqlite.prepare("SELECT body FROM notifications WHERE title = 'Your controls changed'").get())
+      .toEqual({ body: expect.stringContaining("changed to unlock your account, remove your daily limit, confirmed with your passkey") });
     // Every other loosening needs one too.
     for (const change of [{ enforceAddressBook: false }, { newAddressDelayHours: 1 }]) expect((await patch(change)).status).toBe(428);
     await patch({ dailyLimitUsd: 100 });

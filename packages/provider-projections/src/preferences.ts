@@ -2,8 +2,9 @@ import { z } from "zod";
 import type { ProjectionDatabase } from "./database";
 
 /**
- * Customer-owned notification choices. They are saved now and honored once a
- * delivery provider is connected; security notices are never optional.
+ * Customer-owned notification choices for transaction notices by email and
+ * push (apps/web/src/lib/notifications/deliver.ts). Security notices are
+ * never optional.
  * Marketing email is consent, not a preference: see consent_events.
  */
 export const preferencesSchema = z.object({
