@@ -10,7 +10,6 @@ vi.mock("@/lib/auth/server", () => ({ AuthenticationError: httpErrors.Authentica
   requireVerifiedSubject: async () => ({ subjectReference: "alice", sessionReference: "session-a" }) }));
 
 import { applyProviderEvent, type ProjectionDatabase } from "@aurel/provider-projections";
-import { GET as cards } from "@/app/api/cards/route";
 import { GET as readPreferences, PATCH as patchPreferences } from "@/app/api/preferences/route";
 import { GET as rewards } from "@/app/api/rewards/route";
 
@@ -41,28 +40,8 @@ beforeEach(() => {
 afterEach(() => sqlite.close());
 
 const get = (handler: (request: Request) => Promise<Response>, path: string) => handler(new Request(`https://aura.test${path}`));
-const providerEvent = (type: string, data: Record<string, unknown>, provider: "bridge" | "privy" | "rain" = "rain") => applyProviderEvent(d1(sqlite) as unknown as ProjectionDatabase, {
+const providerEvent = (type: string, data: Record<string, unknown>, provider: "bridge" | "privy" | "stripe" = "stripe") => applyProviderEvent(d1(sqlite) as unknown as ProjectionDatabase, {
   id: crypto.randomUUID(), provider, type, subjectReference: "alice", providerObjectId: "object-1", createdAt: "2026-09-25T10:00:00.000Z", data });
-
-describe("card route", () => {
-  beforeEach(async () => {
-    await providerEvent("card.account.updated", { cardReference: "card-1", customerReference: "cust-1", status: "active",
-      network: "visa", lastFour: "1234", dailyLimit: "2500" });
-  });
-
-  it("does not show a stored card while the card program is switched off", async () => {
-    const response = await get(cards, "/api/cards");
-    expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({ state: "setup_required", card: null, controls: { freeze: "setup_required", terminate: "setup_required" } });
-  });
-
-  it("shows the issuer-reported card once the card program is on, without enabling controls", async () => {
-    sqlite.exec("UPDATE feature_flags SET enabled = 1, audience = 'all' WHERE flag_key = 'payment_cards'");
-    const body = await (await get(cards, "/api/cards")).json() as Record<string, unknown>;
-    expect(body).toMatchObject({ state: "active", card: { status: "active", lastFour: "1234", network: "visa", dailyLimit: "2500", currency: "USD" },
-      controls: { freeze: "setup_required" }, source: { provider: "rain", observedAt: "2026-09-25T10:00:00.000Z" } });
-  });
-});
 
 describe("rewards route", () => {
   it("reports not connected when no provider has reported anything", async () => {

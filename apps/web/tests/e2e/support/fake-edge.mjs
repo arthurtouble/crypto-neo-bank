@@ -24,6 +24,7 @@ const kernelAbi = parseAbi(["function execute(bytes32 mode, bytes executionCalld
 const beforeExecution = parseAbiItem("event BeforeExecution()");
 const userOperationEvent = parseAbiItem("event UserOperationEvent(bytes32 indexed userOpHash, address indexed sender, address indexed paymaster, uint256 nonce, bool success, uint256 actualGasCost, uint256 actualGasUsed)");
 const transferEvent = parseAbiItem("event Transfer(address indexed from, address indexed to, uint256 value)");
+const approvalEvent = parseAbiItem("event Approval(address indexed owner, address indexed spender, uint256 value)");
 const aaveSupplyEvent = parseAbiItem("event Supply(address indexed reserve, address user, address indexed onBehalfOf, uint256 amount, uint16 indexed referralCode)");
 const aaveWithdrawEvent = parseAbiItem("event Withdraw(address indexed reserve, address indexed user, address indexed to, uint256 amount)");
 const vaultDepositEvent = parseAbiItem("event Deposit(address indexed sender, address indexed owner, uint256 assets, uint256 shares)");
@@ -56,6 +57,7 @@ const abi = parseAbi([
   "function receiveAssetsGate() view returns (address)",
   "function sendAssetsGate() view returns (address)",
   "function approve(address spender, uint256 amount) returns (bool)",
+  "function allowance(address owner, address spender) view returns (uint256)",
   // Multicall3, which wagmi uses to batch reads.
   "struct Call3 { address target; bool allowFailure; bytes callData; }",
   "struct Result { bool success; bytes returnData; }",
@@ -81,7 +83,8 @@ export const VAULTS = { steakhouse: "0xbeef0e0834849acc03f0089f01f4f1eeb06873c9"
 const VAULT_SET = new Set(Object.values(VAULTS));
 const USDC_BASE = "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
 /** Bridge: the address its USD account deliveries come from, and where a payout's USDC goes. */
-export const BRIDGE = { sender: "0x00000000000000000000000000000000b41d6e01", payoutDeposit: "0x00000000000000000000000000000000b41d6e02" };
+export const BRIDGE = { sender: "0x00000000000000000000000000000000b41d6e01", payoutDeposit: "0x00000000000000000000000000000000b41d6e02",
+  cardsSpender: "0x00000000000000000000000000000000b41d6e03" };
 const sharesToAssets = (shares) => shares * 105n / 100n / 10n ** 12n;
 const assetsToShares = (assets) => (assets * 10n ** 12n * 100n + 104n) / 105n;
 
@@ -97,7 +100,11 @@ const initialState = () => ({
   emails: [],
   pushes: [],
   // Bridge: KYC links, customers' USD accounts and their deposit history, saved banks, and transfers.
-  bridgeXyz: { kycLinks: {}, accounts: {}, history: {}, externalAccounts: {}, transfers: {} },
+  bridgeXyz: { kycLinks: {}, accounts: {}, history: {}, externalAccounts: {}, transfers: {}, cards: {} },
+  // Stripe Issuing: cards, authorizations, settled transactions, disputes, and the ephemeral keys handed to the browser.
+  stripe: { cards: {}, authorizations: [], transactions: [], disputes: [], keys: {} },
+  // ERC-20 allowances: allowances["chainId:token:owner:spender"] = raw amount.
+  allowances: {},
   // Names of edges that fail: "rpc:<chainId>", "kraken", "privy", "lifi", "transfers" (Alchemy's transfer index), "resend", "push".
   down: [],
   // The next transaction a connected wallet sends reverts on chain.
@@ -196,7 +203,7 @@ export function startFakeEdge({ port }) {
       const { functionName, args } = decodeFunctionData({ abi, data });
       const to = call.to.toLowerCase();
       if (functionName === "transfer") moves.push({ token: call.to, to: args[0], amount: args[1] });
-      else if (functionName === "approve") moves.push({ approve: true, token: call.to, amount: args[1] });
+      else if (functionName === "approve") moves.push({ approve: true, token: call.to, spender: args[0], amount: args[1] });
       else if (to === AAVE_POOL && functionName === "supply") {
         // Aave: the asset goes to the pool, the account gets aTokens one for one.
         const [asset, amount, onBehalfOf] = args;
@@ -230,7 +237,13 @@ export function startFakeEdge({ port }) {
   function apply(chainId, from, moves) {
     const logs = [];
     for (const item of moves) {
-      if (item.approve) { state.approvals[`${chainId}:${from.toLowerCase()}`] = { token: item.token.toLowerCase(), amount: item.amount }; continue; }
+      if (item.approve) {
+        state.approvals[`${chainId}:${from.toLowerCase()}`] = { token: item.token.toLowerCase(), amount: item.amount };
+        state.allowances[`${chainId}:${item.token.toLowerCase()}:${from.toLowerCase()}:${item.spender.toLowerCase()}`] = item.amount.toString();
+        logs.push({ address: item.token.toLowerCase(), topics: encodeEventTopics({ abi: [approvalEvent], eventName: "Approval", args: { owner: from, spender: item.spender } }),
+          data: encodeAbiParameters([{ type: "uint256" }], [item.amount]) });
+        continue;
+      }
       if (item.log) { logs.push(item.log); continue; }
       if (item.burn) {
         const key = item.token.toLowerCase();
@@ -325,6 +338,8 @@ export function startFakeEdge({ port }) {
     const { functionName, args } = decodeFunctionData({ abi, data });
     if (functionName === "getEthBalance") return encodeFunctionResult({ abi, functionName, result: balance(chainId, "native", args[0]) });
     if (functionName === "balanceOf") return encodeFunctionResult({ abi, functionName, result: balance(chainId, to, args[0]) });
+    if (functionName === "allowance") return encodeFunctionResult({ abi, functionName,
+      result: BigInt(state.allowances[`${chainId}:${to.toLowerCase()}:${args[0].toLowerCase()}:${args[1].toLowerCase()}`] ?? "0") });
     if (functionName === "latestRoundData") {
       const usd = state.feeds[to.toLowerCase()];
       if (!usd) throw new Error("no feed");
@@ -467,7 +482,10 @@ export function startFakeEdge({ port }) {
     const url = new URL(req.url, `http://127.0.0.1:${port}`);
     const chunks = [];
     for await (const chunk of req) chunks.push(chunk);
-    const body = chunks.length ? JSON.parse(Buffer.concat(chunks).toString()) : null;
+    const raw = Buffer.concat(chunks).toString();
+    // Stripe takes form-encoded bodies; everything else here is JSON.
+    const form = req.headers["content-type"]?.startsWith("application/x-www-form-urlencoded") ? new URLSearchParams(raw) : null;
+    const body = chunks.length && !form ? JSON.parse(raw) : null;
     // The browser's fake wallet and wagmi reads come from the app's origin.
     const cors = { "access-control-allow-origin": "*", "access-control-allow-headers": "content-type", "access-control-allow-methods": "GET, POST, OPTIONS" };
     const send = (status, payload) => { res.writeHead(status, { "content-type": "application/json", ...cors }); res.end(JSON.stringify(payload)); };
@@ -504,6 +522,49 @@ export function startFakeEdge({ port }) {
       transfer.state = body.state;
       return send(200, transfer);
     }
+    // Bridge approves (or not) a verified customer for cards, and creates their Stripe cardholder.
+    if (url.pathname === "/__bridge/cards") {
+      const link = Object.values(state.bridgeXyz.kycLinks).find((item) => item.email === body.email);
+      if (!link?.customer_id) return send(404, { error: "no verified customer" });
+      state.bridgeXyz.cards[link.customer_id] = { status: body.status ?? "approved", cardholder: (body.status ?? "approved") === "approved" ? `ich_${link.customer_id}` : null };
+      return send(200, { ok: true });
+    }
+    // A purchase with the card: Stripe asks, Bridge pulls the USDC from the account just in time, or it's declined.
+    if (url.pathname === "/__stripe/authorize") {
+      const card = Object.values(state.stripe.cards).at(-1);
+      if (!card) return send(404, { error: "no card" });
+      const cents = Math.round(Number(body.amount) * 100);
+      const raw = BigInt(cents) * 10_000n;
+      const owner = card.crypto_wallet.address.toLowerCase();
+      const allowanceKey = `8453:${USDC_BASE}:${owner}:${BRIDGE.cardsSpender}`;
+      const daily = card.spending_controls.spending_limits.find((limit) => limit.interval === "daily")?.amount ?? Infinity;
+      const spentToday = state.stripe.authorizations.filter((item) => item.card === card.id && item.approved).reduce((sum, item) => sum + item.amount, 0);
+      const approved = card.status === "active" && cents + spentToday <= daily && BigInt(state.allowances[allowanceKey] ?? "0") >= raw && balance(8453, USDC_BASE, owner) >= raw;
+      let hash = null;
+      if (approved) {
+        state.allowances[allowanceKey] = (BigInt(state.allowances[allowanceKey]) - raw).toString();
+        move(8453, USDC_BASE, owner, BRIDGE.cardsSpender, raw);
+        hash = mine({ chainId: 8453, from: BRIDGE.cardsSpender, to: USDC_BASE, value: "0x0", input: "0x", success: true,
+          logs: [{ address: USDC_BASE, topics: encodeEventTopics({ abi: [transferEvent], eventName: "Transfer", args: { from: owner, to: BRIDGE.cardsSpender } }),
+            data: encodeAbiParameters([{ type: "uint256" }], [raw]) }] });
+      }
+      const authorization = { id: `iauth_${randomUUID().slice(0, 8)}`, object: "issuing.authorization", card: card.id, amount: cents, currency: "usd", approved,
+        status: approved ? "pending" : "closed", created: Math.floor(Date.now() / 1000), merchant_data: { name: body.merchant ?? "Corner Cafe" },
+        crypto_transactions: hash ? [{ crypto_transaction_confirmed: { transaction_hash: hash, amount: (cents / 100).toFixed(2) } }] : [] };
+      state.stripe.authorizations.push(authorization);
+      return send(200, authorization);
+    }
+    // The merchant settles the latest pending purchase.
+    if (url.pathname === "/__stripe/capture") {
+      const authorization = state.stripe.authorizations.findLast((item) => item.status === "pending");
+      if (!authorization) return send(404, { error: "nothing to capture" });
+      authorization.status = "closed";
+      const transaction = { id: `ipi_${randomUUID().slice(0, 8)}`, object: "issuing.transaction", card: authorization.card, type: "capture", amount: -authorization.amount,
+        currency: "usd", created: Math.floor(Date.now() / 1000), authorization: authorization.id, dispute: null, merchant_data: authorization.merchant_data };
+      state.stripe.transactions.push(transaction);
+      return send(200, transaction);
+    }
+    if (url.pathname === "/__stripe/state") return send(200, state.stripe);
     if (url.pathname === "/__outbox") return send(200, { emails: state.emails, pushes: state.pushes });
     if (url.pathname === "/__balances") {
       // Set individual balances without touching any other wallet's.
@@ -603,6 +664,14 @@ export function startFakeEdge({ port }) {
         return send(200, bridge.kycLinks[id]);
       }
       if (link) return bridge.kycLinks[link[1]] ? send(200, bridge.kycLinks[link[1]]) : send(404, { message: "not found" });
+      const customer = /^\/customers\/([^/]+)$/.exec(path);
+      if (customer) {
+        const cards = bridge.cards[customer[1]];
+        return send(200, { id: customer[1], status: "active", stripe_cardholder_id: cards?.cardholder ?? null,
+          endorsements: [{ name: "base", status: "approved" }, ...(cards ? [{ name: "cards", status: cards.status, requirements: { issues: cards.status === "incomplete" ? ["Confirm your address"] : [] } }] : [])] });
+      }
+      const cardsLink = /^\/customers\/([^/]+)\/kyc_link$/.exec(path);
+      if (cardsLink) return send(200, { url: `https://bridge.aura-e2e.test/cards/${cardsLink[1]}?endorsement=${url.searchParams.get("endorsement")}` });
       const accounts = /^\/customers\/([^/]+)\/virtual_accounts$/.exec(path);
       if (accounts && req.method === "POST") {
         const customer = accounts[1];
@@ -631,6 +700,74 @@ export function startFakeEdge({ port }) {
       }
       if (transfer) return bridge.transfers[transfer[1]] ? send(200, bridge.transfers[transfer[1]]) : send(404, { message: "not found" });
       return send(404, { message: `no fake for ${path}` });
+    }
+
+    // What Stripe's frames show for a card, only with an ephemeral key made for that card and nonce.
+    if (url.pathname === "/stripe-js/reveal") {
+      const key = state.stripe.keys[body?.ephemeralKeySecret];
+      if (!key || key.card !== body.cardId || key.nonce !== body.nonce) return send(401, { error: { message: "Invalid ephemeral key" } });
+      const card = state.stripe.cards[key.card];
+      return send(200, { number: `4000 0000 0000 ${card.last4}`, expiry: `${String(card.exp_month).padStart(2, "0")}/${String(card.exp_year).slice(-2)}`, cvc: "314" });
+    }
+
+    // Stripe Issuing: secret key checked, form-encoded in, JSON out.
+    if (url.pathname.startsWith("/stripe/v1/")) {
+      if (down("stripe")) return send(503, { error: { message: "unavailable" } });
+      if (req.headers.authorization !== "Bearer sk_test_e2e") return send(401, { error: { message: "Invalid API Key provided" } });
+      const path = url.pathname.slice("/stripe/v1".length);
+      const stripe = state.stripe;
+      const field = (name) => form?.get(name) ?? undefined;
+      const list = (items) => send(200, { object: "list", data: [...items].reverse(), has_more: false });
+      if (path === "/issuing/cards" && req.method === "POST") {
+        const id = `ic_${randomUUID().slice(0, 8)}`;
+        stripe.cards[id] = { id, object: "issuing.card", brand: "Visa", cardholder: field("cardholder"), currency: "usd", type: field("type"), status: field("status") ?? "active",
+          last4: String(1000 + Object.keys(stripe.cards).length * 1111).slice(-4), exp_month: 9, exp_year: 2029,
+          crypto_wallet: { chain: field("crypto_wallet[chain]"), currency: field("crypto_wallet[currency]"), type: field("crypto_wallet[type]"), address: field("crypto_wallet[address]") },
+          spending_controls: { spending_limits: [{ amount: Number(field("spending_controls[spending_limits][0][amount]")), interval: field("spending_controls[spending_limits][0][interval]") }] },
+          wallets: { apple_pay: { eligible: true, ineligible_reason: null }, google_pay: { eligible: true, ineligible_reason: null } } };
+        return send(200, stripe.cards[id]);
+      }
+      const card = /^\/issuing\/cards\/([^/]+)$/.exec(path);
+      if (card) {
+        const item = stripe.cards[card[1]];
+        if (!item) return send(404, { error: { message: "No such issuing card" } });
+        if (req.method === "POST") {
+          if (field("status")) item.status = field("status");
+          const amount = field("spending_controls[spending_limits][0][amount]");
+          if (amount) item.spending_controls = { spending_limits: [{ amount: Number(amount), interval: field("spending_controls[spending_limits][0][interval]") }] };
+        }
+        return send(200, item);
+      }
+      const since = Number(url.searchParams.get("created[gte]") ?? 0);
+      const until = Number(url.searchParams.get("created[lt]") ?? Infinity);
+      const forCard = (items) => items.filter((item) => item.card === url.searchParams.get("card") && item.created >= since && item.created < until);
+      if (path === "/issuing/authorizations") return list(forCard(stripe.authorizations));
+      if (path === "/issuing/transactions") return list(forCard(stripe.transactions));
+      if (path === "/issuing/disputes" && req.method === "POST") {
+        const transaction = stripe.transactions.find((item) => item.id === field("transaction"));
+        if (!transaction) return send(400, { error: { message: "No such transaction" } });
+        const reason = field("evidence[reason]");
+        const dispute = { id: `idp_${randomUUID().slice(0, 8)}`, object: "issuing.dispute", status: "unsubmitted", transaction: transaction.id, amount: -transaction.amount,
+          created: Math.floor(Date.now() / 1000), evidence: { reason, explanation: field(`evidence[${reason}][explanation]`) } };
+        stripe.disputes.push(dispute);
+        return send(200, dispute);
+      }
+      if (path === "/issuing/disputes") return list(stripe.disputes);
+      const submit = /^\/issuing\/disputes\/([^/]+)\/submit$/.exec(path);
+      if (submit) {
+        const dispute = stripe.disputes.find((item) => item.id === submit[1]);
+        if (!dispute || dispute.status !== "unsubmitted") return send(400, { error: { message: "Dispute can't be submitted" } });
+        dispute.status = "submitted";
+        stripe.transactions.find((item) => item.id === dispute.transaction).dispute = dispute.id;
+        return send(200, dispute);
+      }
+      if (path === "/ephemeral_keys" && req.method === "POST") {
+        if (!stripe.cards[field("issuing_card")] || !field("nonce")) return send(400, { error: { message: "Invalid request" } });
+        const secret = `ek_test_${randomBytes(12).toString("hex")}`;
+        stripe.keys[secret] = { card: field("issuing_card"), nonce: field("nonce") };
+        return send(200, { id: `ephkey_${randomUUID().slice(0, 8)}`, object: "ephemeral_key", secret });
+      }
+      return send(404, { error: { message: `no fake for ${path}` } });
     }
 
     // Resend's email API, and a browser push service (Aura sends the fake plain JSON; real push services get it encrypted).
@@ -681,6 +818,10 @@ export function startFakeEdge({ port }) {
       VAPID_PRIVATE_KEY: vapid.d,
       BRIDGE_API_KEY: "bridge-e2e-key",
       BRIDGE_API_BASE_URL: `http://127.0.0.1:${port}/bridge/v0`,
+      STRIPE_API_URL: `http://127.0.0.1:${port}/stripe`,
+      STRIPE_SECRET_KEY: "sk_test_e2e",
+      STRIPE_PUBLISHABLE_KEY: "pk_test_e2e",
+      BRIDGE_CARDS_SPENDER: BRIDGE.cardsSpender,
       INTERCOM_APP_ID: "e2eapp",
       INTERCOM_IDENTITY_SECRET: "e2e-intercom-identity-secret"
     },

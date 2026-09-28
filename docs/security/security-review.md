@@ -15,7 +15,8 @@ Reviewed 22 September 2026. Scope: application authentication, private-beta acce
 - Actions are prepared server-side as exact calls; approvals are exact and batched with the action.
 - The verifier requires decoded calls to equal prepared calls, finality, expected events, and cross-chain delivery before `confirmed`.
 - Actions keep forward-only status transitions and append-only evidence.
-- Provider events are verified per provider (Bridge RSA, Privy Svix; Rain rejected until implemented), with replay protection and idempotent processing.
+- Provider events are verified per provider (Bridge RSA, Privy Svix, Stripe HMAC-SHA256 with a 5-minute tolerance), with replay protection and idempotent processing.
+- Card details are shown only inside Stripe's Issuing Elements frames, with a 15-minute ephemeral key bound to the card and a browser nonce, issued after a fresh passkey confirmation. Aura never receives the card number. Unfreezing a card and raising its daily limit need the same step-up; unfreezing is refused while the account is locked.
 - Queue failures reach a dead-letter queue and a critical issue; scheduled reconciliation runs every five minutes.
 - D1 is not treated as authoritative for customer balances or settlement.
 - Security headers, abuse limits, structured logs, CI, CodeQL, dependency audit and isolated recovery testing exist.

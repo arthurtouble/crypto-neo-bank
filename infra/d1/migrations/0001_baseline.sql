@@ -187,10 +187,10 @@ CREATE TABLE operational_checks (
   checked_at TEXT NOT NULL
 );
 
--- The customer's account at a regulated provider (Bridge, Rain). The provider is authoritative for its status.
+-- The customer's account at a regulated provider (Bridge). The provider is authoritative for its status.
 CREATE TABLE provider_customer_links (
   subject_reference TEXT NOT NULL,
-  provider TEXT NOT NULL CHECK (provider IN ('bridge', 'rain')),
+  provider TEXT NOT NULL CHECK (provider IN ('bridge')),
   -- Bridge creates the customer only after verification, so this can start empty.
   external_customer_id TEXT,
   onboarding_reference TEXT,
@@ -485,4 +485,5 @@ INSERT INTO feature_flags (flag_key, enabled, audience, configuration_json, upda
   ('cross_chain', 0, 'all', '{}', '2026-09-25T00:00:00.000Z', 'baseline'),
   ('defi_actions', 0, 'all', '{}', '2026-09-25T00:00:00.000Z', 'baseline'),
   ('fiat_accounts', 0, 'all', '{}', '2026-09-25T00:00:00.000Z', 'baseline'),
-  ('payment_cards', 0, 'all', '{}', '2026-09-25T00:00:00.000Z', 'baseline');
+  ('payment_cards', 0, 'all', '{}', '2026-09-25T00:00:00.000Z', 'baseline'),
+  ('card_wallets', 0, 'all', '{}', '2026-09-25T00:00:00.000Z', 'baseline');

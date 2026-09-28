@@ -3,11 +3,11 @@ title: Regulated provider requirements matrix
 description: Comparative functional, compliance, operational, and commercial provider requirements.
 ---
 
-Use this matrix for Bridge, Rain and any replacement. Scores remain blank until supported by a contract, current product documentation or a written provider response. A polished demo is not evidence of program approval.
+Use this matrix for Bridge, Stripe Issuing (cards, through Bridge's card program) and any replacement. Rain was dropped. Scores remain blank until supported by a contract, current product documentation or a written provider response. A polished demo is not evidence of program approval.
 
 Scoring: `0` unavailable, `1` material gap, `2` workable with limitations, `3` strong fit. Weight is out of 100.
 
-| Requirement | Weight | Bridge evidence / score | Rain evidence / score | Required written answer |
+| Requirement | Weight | Bridge evidence / score | Stripe Issuing evidence / score | Required written answer |
 |---|---:|---|---|---|
 | Aurel use case and customer ownership accepted | 10 | Pending | Pending | Who contracts with the end customer for each service? |
 | Approved countries and excluded persons | 10 | Pending | Pending | Country-by-country individual and entity matrix |
@@ -32,7 +32,7 @@ A provider is not selectable unless it confirms the use case, customer relations
 
 ## Decision method
 
-1. Aurel sends the same diligence pack and volume scenarios to both providers.
+1. Aurel sends the same diligence pack and volume scenarios to each provider.
 2. Product and engineering validate sandbox parity and failure handling.
 3. Counsel reviews entity, customer contract, licensing reliance, countries, disclosures and data roles.
 4. Operations runs onboarding, transfer, return, freeze, dispute and reconciliation tabletop tests.

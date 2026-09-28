@@ -12,8 +12,8 @@ Aurel prepares, checks, and presents money movements; it is not a bank ledger. A
 | Domain | Authoritative source | What Aurel may store |
 | --- | --- | --- |
 | Wallets and signers | Privy and the configured custody/signer arrangement | Wallet references, user labels, policy-display cache |
-| Fiat accounts, KYC and transfers | Bridge or Rain for the program they operate | Provider object IDs, workflow state, last observed status |
-| Cards and card transactions | Issuer/processor exposed through Bridge or Rain | Card references, redacted display data, pending UI projection |
+| Fiat accounts, KYC and transfers | Bridge | Provider object IDs, workflow state, last observed status |
+| Cards and card transactions | Stripe Issuing (card, controls, authorizations, transactions, disputes) with Bridge (card approval and USDC collection); the spending allowance on Base | Which card is the customer's (`card_account_projections`); nothing else is stored |
 | Crypto balances and DeFi positions | Relevant blockchain and protocol contracts | Indexed projections with chain, block, transaction, and observation metadata |
 | Market value | Named market-data provider | Short-lived, timestamped price observations |
 | Membership and benefits | Aurel policy plus benefit provider | Rebuildable qualification result and entitlement references |
@@ -37,10 +37,12 @@ The demo UI does not require a database. D1 is attached only for webhook replay 
 flowchart LR
     UI[Aurel web client] --> WEB[vinext Worker]
     WEB --> PRIVY[Privy adapter]
-    WEB --> BRIDGE[Bridge or Rain adapter]
+    WEB --> BRIDGE[Bridge adapter]
+    WEB --> STRIPE[Stripe Issuing adapter]
     WEB --> CHAIN[Chains and protocols]
     PRIVY -->|signed event| HOOK[Webhook route]
     BRIDGE -->|signed event| HOOK
+    STRIPE -->|signed event| HOOK
     HOOK --> D1[(D1 replay metadata)]
     HOOK --> QUEUE[Provider-events Queue]
     QUEUE --> CONSUMER[Event consumer Worker]

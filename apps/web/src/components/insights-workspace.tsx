@@ -13,6 +13,8 @@ type Insights = {
   categories: Array<{ name: string; value: number }>;
   /** False when money received couldn't all be read: money in is then unknown, not zero. */
   incomingComplete: boolean;
+  /** False when card payments couldn't all be read: money out is then unknown. */
+  outgoingComplete: boolean;
 };
 
 const periods = [7, 30, 90, 365] as const;
@@ -34,7 +36,7 @@ export function InsightsWorkspace() {
       <div className="panelHeading"><div><h2>Money Insights</h2></div><div className="chartRanges" aria-label="Insight period">{periods.map((period) => <button key={period} className={days === period ? "active" : ""} onClick={() => setDays(period)}>{period === 365 ? "1Y" : `${period}D`}</button>)}</div></div>
       {query.isPending ? <div className="compactState"><LoaderCircle className="spin" size={17} /> Loading insights</div> : query.isError ? <div className="formError">{query.error.message}</div> : <>
         <div className="insightMetrics">
-          <article><span><ArrowUpRight size={16} /> Money Out</span><strong data-testid="money-out">{money.format(query.data.totals.outgoing)}</strong></article>
+          <article><span><ArrowUpRight size={16} /> Money Out</span><strong data-testid="money-out">{query.data.outgoingComplete ? money.format(query.data.totals.outgoing) : "Unavailable"}</strong></article>
           <article><span><ArrowDownLeft size={16} /> Money In</span><strong data-testid="money-in">{query.data.incomingComplete ? money.format(query.data.totals.incoming) : "Unavailable"}</strong></article>
           <article><span><ChartNoAxesCombined size={16} /> Put to Work</span><strong>{money.format(query.data.totals.allocation)}</strong></article>
           <article><span><Layers3 size={16} /> Moved</span><strong>{money.format(query.data.totals.movement)}</strong></article>
@@ -43,7 +45,7 @@ export function InsightsWorkspace() {
         {query.data.totals.unvalued > 0 && <p className="authorityFootnote">{query.data.totals.unvalued} completed action{query.data.totals.unvalued === 1 ? "" : "s"} could not be valued in dollars and is excluded.</p>}
       </>}
     </section>
-    <p className="authorityFootnote">Insights use completed transactions: yours from Aura, and money you received. Received amounts are valued at today&apos;s price. They aren&apos;t a bank statement or tax report.</p>
+    <p className="authorityFootnote">Insights use completed transactions: yours from Aura, card payments, and money you received. Received amounts are valued at today&apos;s price. They aren&apos;t a bank statement or tax report.</p>
   </div>;
 }
 

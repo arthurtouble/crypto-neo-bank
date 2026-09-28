@@ -40,7 +40,7 @@ beforeEach(() => {
 afterEach(() => sqlite.close());
 
 const event = (type: string, data: Record<string, unknown>, overrides: Partial<ProviderEvent> = {}): ProviderEvent => ({
-  id: crypto.randomUUID(), provider: "bridge", type, subjectReference: "alice", providerObjectId: "object-1",
+  id: crypto.randomUUID(), provider: type === "card.account.updated" ? "stripe" : "bridge", type, subjectReference: "alice", providerObjectId: "object-1",
   createdAt: "2026-09-25T10:00:00.000Z", data, ...overrides
 });
 const card = { cardReference: "card-1", customerReference: "cust-1", status: "active", formFactor: "virtual", network: "visa",
@@ -65,7 +65,7 @@ describe("card account projection", () => {
   it("stores the issuer-reported card and reads it back", async () => {
     expect(await applyProviderEvent(db, event("card.account.updated", card))).toEqual({ status: "applied", projection: "card_account_projections" });
     expect(await readCurrentCardAccount(db, "alice")).toMatchObject({ cardReference: "card-1", status: "active", lastFour: "4242",
-      network: "visa", dailyLimit: "2500.00", provider: "bridge", observedAt: "2026-09-25T10:00:00.000Z" });
+      network: "visa", dailyLimit: "2500.00", provider: "stripe", observedAt: "2026-09-25T10:00:00.000Z" });
   });
 
   it("never lets an older event overwrite a newer observation", async () => {
@@ -80,7 +80,7 @@ describe("card account projection", () => {
     await applyProviderEvent(db, event("card.account.updated", card));
     const later = { createdAt: "2026-09-25T12:00:00.000Z" };
     expect(await applyProviderEvent(db, event("card.account.updated", card, { ...later, subjectReference: "bob" }))).toMatchObject({ status: "stale" });
-    expect(await applyProviderEvent(db, event("card.account.updated", card, { ...later, provider: "rain" }))).toMatchObject({ status: "stale" });
+    expect(await applyProviderEvent(db, event("card.account.updated", card, { ...later, provider: "bridge" }))).toMatchObject({ reason: "unsupported_event" });
     expect(await readCurrentCardAccount(db, "bob")).toBeNull();
   });
 

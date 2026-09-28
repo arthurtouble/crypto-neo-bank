@@ -2,7 +2,7 @@ export const APP_ID: string;
 export const OPERATOR: { userId: string; wallet: `0x${string}` };
 export const LIFI_DIAMOND: `0x${string}`;
 export const ENTRY_POINT: `0x${string}`;
-export const BRIDGE: { sender: `0x${string}`; payoutDeposit: `0x${string}` };
+export const BRIDGE: { sender: `0x${string}`; payoutDeposit: `0x${string}`; cardsSpender: `0x${string}` };
 export const FEEDS: { apple: string; gold: string; euro: string };
 export const AAVE_POOL: string;
 export const VAULTS: { steakhouse: string; gauntlet: string };

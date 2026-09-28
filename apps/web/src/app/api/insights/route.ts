@@ -13,7 +13,7 @@ export const GET = route("insights.get", { unavailable: "insights_unavailable" }
   const days = [7, 30, 90, 365].includes(requestedDays) ? requestedDays : 30;
   const now = new Date();
   const wallet = await requireActionWallet(subject.subjectReference);
-  const { entries, complete } = await readPeriod(env.PROJECTION_DB, subject.subjectReference, wallet, new Date(now.getTime() - days * 86_400_000), now);
-  // Without every incoming transfer, money in is unknown, not zero.
-  return Response.json({ ...buildInsights(entries, now, days), incomingComplete: complete, observedAt: now.toISOString(), traceId });
+  const { entries, complete, cardComplete } = await readPeriod(env.PROJECTION_DB, subject.subjectReference, wallet, new Date(now.getTime() - days * 86_400_000), now);
+  // Without every incoming transfer and card refund, money in is unknown, not zero; without every card payment, so is money out.
+  return Response.json({ ...buildInsights(entries, now, days), incomingComplete: complete, outgoingComplete: cardComplete, observedAt: now.toISOString(), traceId });
 });

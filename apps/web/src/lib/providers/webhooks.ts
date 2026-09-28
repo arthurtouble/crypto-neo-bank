@@ -6,11 +6,12 @@ export type NormalizedEvent = {
   createdAt: string;
   data: Record<string, unknown>;
   /** How to find the Aura customer: directly, or through the provider's customer ID. */
-  subject: { kind: "subject"; value: string } | { kind: "provider_customer"; value: string } | { kind: "provider_onboarding"; value: string } | null;
+  subject: { kind: "subject"; value: string } | { kind: "provider_customer"; value: string } | { kind: "provider_onboarding"; value: string }
+    | { kind: "provider_card"; value: string } | null;
 };
 
 export type WebhookProvider = {
-  name: "bridge" | "privy" | "rain";
+  name: "bridge" | "privy" | "stripe";
   /** The secret the signature is checked against. Absent means the provider is not connected. */
   secret: () => string | undefined;
   verify: (input: { headers: Headers; rawBody: string; secret: string; nowMs: number }) => Promise<boolean>;

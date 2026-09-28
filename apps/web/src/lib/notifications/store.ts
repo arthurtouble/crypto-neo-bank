@@ -64,6 +64,16 @@ export function bankPayoutNotice(action: StoredAction, state: string): Notice {
     body: `${payoutStateText(state)}.`, link };
 }
 
+/** A card purchase was approved or declined. */
+export function cardSpendNotice(spend: { authorizationId: string; amountCents: number; approved: boolean; merchant: string | null }): Notice {
+  const amount = `$${(Math.abs(spend.amountCents) / 100).toFixed(2)}`;
+  const where = spend.merchant ? ` at ${spend.merchant}` : "";
+  return spend.approved
+    ? { kind: "completed", dedupeKey: `card:${spend.authorizationId}`, title: `Card: ${amount}${where}`, body: "Paid from your USDC on Base.", link: "/app/cards" }
+    : { kind: "failed", dedupeKey: `card:${spend.authorizationId}`, title: `Card declined: ${amount}${where}`,
+      body: "Check your card's spending allowance, daily limit, and USDC balance.", link: "/app/cards" };
+}
+
 export function receivedNotice(transfer: IncomingTransfer, bank?: { senderName: string | null; bankName: string | null }): Notice {
   const entry = incomingEntry(transfer, undefined, bank);
   return { kind: "received", dedupeKey: `received:${transfer.id}`, title: bank ? `Bank deposit: ${entryAmount(entry)}` : `Received ${entryAmount(entry)}`,
@@ -72,9 +82,11 @@ export function receivedNotice(transfer: IncomingTransfer, bank?: { senderName: 
 }
 
 /** Changes to the account's security. Always delivered, whatever the customer's notification choices. */
-export function securityNotice(event: "locked" | "loosened" | "recipient_saved" | "closed" | "reopened", detail: string, reference: string): Notice {
+export function securityNotice(event: "locked" | "loosened" | "recipient_saved" | "closed" | "reopened" | "card_created" | "card_unfrozen" | "card_limit_raised",
+  detail: string, reference: string): Notice {
   const titles = { locked: "Your account is locked", loosened: "Your controls changed", recipient_saved: "New saved recipient",
-    closed: "Your account is closed", reopened: "Your account is open again" } as const;
+    closed: "Your account is closed", reopened: "Your account is open again", card_created: "Your Aura card is ready",
+    card_unfrozen: "Your card is unfrozen", card_limit_raised: "Your card limit went up" } as const;
   return { kind: "security", dedupeKey: `security:${event}:${reference}`, title: titles[event],
-    body: `${detail} If this wasn't you, lock your account in Settings and contact support.`, link: event === "closed" ? "/app/support" : "/app/settings" };
+    body: `${detail} If this wasn't you, lock your account in Settings and contact support.`, link: event === "closed" ? "/app/support" : event.startsWith("card_") ? "/app/cards" : "/app/settings" };
 }

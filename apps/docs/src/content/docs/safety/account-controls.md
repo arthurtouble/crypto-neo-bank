@@ -26,9 +26,11 @@ Turn on the lock if something looks wrong: an unexpected prompt, a recipient you
 
 The lock stops Aura preparing or sending any money movement, including one you started but haven't confirmed yet. It doesn't freeze your wallet, reverse a transaction already sent, or stop activity in another app. Unlocking needs your passkey.
 
+Once cards are live, locking also tries to freeze your Aura card, and you can't unfreeze it while you're locked. Check the Cards page to be sure it's frozen.
+
 ## Daily limit
 
-The daily limit counts every send, including sends to your own linked wallets, and swaps that pay someone else. Swaps within your own account and Earn deposits and withdrawals don't count.
+The daily limit counts every send, including sends to your own linked wallets, and swaps that pay someone else. Swaps within your own account and Earn deposits and withdrawals don't count. Nor does setting a card allowance: the card has its own daily limit. See [cards and controls](/product/cards-and-controls/).
 
 If you've set a limit and Aura can't work out the value of an amount, it blocks the action rather than skip the check. Prices move, so the dollar value is approximate.
 

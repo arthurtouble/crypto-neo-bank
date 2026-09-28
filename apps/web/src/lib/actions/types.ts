@@ -23,6 +23,8 @@ export const effectSchema = z.discriminatedUnion("type", [
   z.strictObject({ type: z.literal("morpho_withdraw"), vault: address, assetsRaw: rawAmount }),
   z.strictObject({ type: z.literal("morpho_redeem"), vault: address, sharesRaw: rawAmount }),
   z.strictObject({ type: z.literal("erc20_debit"), token: address, amountRaw: rawAmount }),
+  // An ERC-20 approval from the account, for exactly this spender and amount (the card spending allowance).
+  z.strictObject({ type: z.literal("erc20_approval"), token: address, spender: address, amountRaw: rawAmount }),
   z.strictObject({ type: z.literal("erc20_credit_min"), token: address, to: address, minimumRaw: rawAmount }),
   z.strictObject({ type: z.literal("delivery"), tool: z.string().min(1).max(80), destinationChainId: z.number().int().positive(),
     token: address.nullable(), to: address, minimumRaw: rawAmount })

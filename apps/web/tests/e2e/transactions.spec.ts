@@ -154,7 +154,7 @@ test("the list exports as CSV, and a month downloads as a statement, or is refus
 
   await edge("/__state", { down: ["transfers"] });
   await dialog(page).getByRole("button", { name: "Download" }).click();
-  await expect(dialog(page).getByRole("alert")).toContainText("can't all be read right now");
+  await expect(dialog(page).getByRole("alert")).toContainText("activity can't be read right now");
 });
 
 test("Insights counts money in and money out, and says when money in can't be known", async ({ page }) => {

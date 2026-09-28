@@ -5,7 +5,7 @@ description: How bank transfers, cards, and other regulated services would be ad
 
 Aura doesn't offer bank accounts, bank transfers, cards, insurance, or securities today. You may see some of these in the app, but that doesn't mean they're live.
 
-Bank transfers are built with Bridge and are waiting for Bridge's approval. Cards are waiting for a card program with Rain or Bridge.
+Bank transfers are built with Bridge and are waiting for Bridge's approval. Cards are built with Bridge and Stripe, and are waiting for Bridge to approve the card program.
 
 ## Partners do the regulated work
 

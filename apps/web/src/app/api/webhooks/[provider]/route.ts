@@ -3,6 +3,14 @@ import type { ProviderEventMessage } from "@aurel/provider-projections";
 import { sha256Hex } from "@/lib/platform/events";
 import { webhookProviders } from "@/lib/providers/registry";
 import type { NormalizedEvent } from "@/lib/providers/webhooks";
+import { announce } from "@/lib/notifications/deliver";
+import { cardSpendNotice } from "@/lib/notifications/store";
+
+async function announceCardSpend(subject: string, data: Record<string, unknown>, createdAt: string) {
+  const amountCents = typeof data.amountCents === "number" ? data.amountCents : 0;
+  await announce(env.PROJECTION_DB, subject, cardSpendNotice({ authorizationId: String(data.authorizationId ?? ""), amountCents,
+    approved: data.approved === true, merchant: typeof data.merchant === "string" ? data.merchant : null }), new Date(createdAt));
+}
 
 const MAX_BODY_BYTES = 128 * 1024;
 const reply = (status: number, body: Record<string, unknown>) => Response.json(body, { status, headers: { "Cache-Control": "no-store" } });
@@ -10,6 +18,11 @@ const reply = (status: number, body: Record<string, unknown>) => Response.json(b
 async function resolveSubject(provider: string, subject: NormalizedEvent["subject"]): Promise<string | undefined> {
   if (!subject) return undefined;
   if (subject.kind === "subject") return subject.value;
+  if (subject.kind === "provider_card") {
+    const card = await env.PROJECTION_DB.prepare("SELECT subject_reference FROM card_account_projections WHERE provider = ? AND card_reference = ?")
+      .bind(provider, subject.value).first<{ subject_reference: string }>();
+    return card?.subject_reference;
+  }
   const column = subject.kind === "provider_customer" ? "external_customer_id" : "onboarding_reference";
   const link = await env.PROJECTION_DB.prepare(`SELECT subject_reference FROM provider_customer_links WHERE provider = ? AND ${column} = ?`)
     .bind(provider, subject.value).first<{ subject_reference: string }>();
@@ -49,6 +62,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ pro
     VALUES (?, ?, ?, ?, ?, ?, ?, 'received')`)
     .bind(event.id, event.provider, event.type, event.subjectReference ?? null, payloadSha256, event.createdAt, receivedAt).run();
   if (!inserted.meta.changes) return reply(200, { accepted: true, duplicate: true, traceId });
+  // A card purchase is told to the customer straight away; the notice isn't a projection of money.
+  if (event.type === "card.authorization.created" && event.subjectReference) await announceCardSpend(event.subjectReference, event.data, event.createdAt);
   const message: ProviderEventMessage = { event, receivedAt, payloadSha256 };
   try {
     await env.PROVIDER_EVENTS.send(message, { contentType: "json" });

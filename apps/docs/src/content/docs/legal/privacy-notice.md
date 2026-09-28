@@ -32,7 +32,7 @@ Public blockchains record your transactions permanently.
 
 **Support.** Your chats with Aura's assistant and team, and complaint details you send us.
 
-**Partner information.** Once a partner such as Bridge (bank transfers) or Rain (cards) is live, we store references and statuses it reports. Examples are a card's status and last four digits, benefit entitlements, bank-transfer instructions, and rules your wallet provider enforces. Identity documents, screening results, and full card numbers stay with those partners.
+**Partner information.** Once a partner such as Bridge (bank transfers and card approval) or Stripe (cards, issued with Bridge) is live, we store references and statuses it reports. Examples are which card is yours, its status and last four digits, benefit entitlements, bank-transfer instructions, and rules your wallet provider enforces. Identity documents, screening results, and full card numbers stay with those partners. Your card number, expiry date, and security code are shown only in Stripe's own frame; Aura never sees or stores them.
 
 **Technical data.** Browser and device information, IP-derived security signals, rate-limit counters, diagnostic logs, and a short, fixed list of product events (such as "transaction prepared" or "support opened").
 
@@ -58,7 +58,7 @@ We do not sell personal data or use it for third-party advertising. We do not ma
 - Public blockchains and protocols: Base, Ethereum and other supported networks, Aave and Morpho.
 - LI.FI and the bridges and exchanges it routes through, when you ask for a quote or make a swap or cross-network move.
 - Kraken, for the market prices used to value actions against your daily limit.
-- Partners such as Bridge or Rain, once they are live and you choose to use them.
+- Partners such as Bridge or Stripe, once they are live and you choose to use them.
 
 ## Who receives it
 
@@ -71,7 +71,8 @@ We share data only as needed to run Aura:
 - **Resend**, which sends our emails. It receives your email address and the notice;
 - your browser's push service (for example Google's for Chrome, Apple's for Safari, or Mozilla's for Firefox), when you turn on browser notifications. The notice is encrypted so that only your browser can read it;
 - **LI.FI**, which receives your wallet address, the assets, and the amount when you ask for a quote. The bridges and exchanges it uses see your transaction;
-- **Bridge** and **Rain**, once live, for the services you choose to use with them;
+- **Bridge**, once live, for bank transfers, identity checks, and card approval, and to take card payments from your USDC;
+- **Stripe**, once live, which issues Aura cards with Bridge. It holds your card details and cardholder record, and processes your card payments and disputes;
 - support tools and professional advisers; and
 - authorities, where the law requires.
 

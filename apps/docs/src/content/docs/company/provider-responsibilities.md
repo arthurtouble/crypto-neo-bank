@@ -16,7 +16,7 @@ Aura brings several independent companies and systems together. Each one has its
 | LI.FI | Finding routes through third-party bridges and exchanges | Aura's own checks, including confirming delivery |
 | Kraken | Market prices Aura uses to value actions against your daily limit | Aura's decision on what to allow |
 | Cloudflare | Hosting, security, and bot checks | Aura's responsibility for your data |
-| Future partners (Bridge, Rain) | Their own accounts, cards, identity checks, and regulated records | Aura's marketing, access controls, security, complaints handling, and oversight |
+| Future partners (Bridge, Stripe) | Their own accounts, cards, identity checks, and regulated records | Aura's marketing, access controls, security, complaints handling, and oversight |
 
 A partner running customer checks doesn't make it responsible for everything Aura says or does. Exact duties will be set in contracts before any regulated feature launches.
 
@@ -46,7 +46,7 @@ Aura checks each route against what you asked for and tracks it until delivery. 
 
 ## Future partners
 
-Bridge (for bank transfers) and Rain or Bridge (for cards) may contract with you directly for their regulated services. They may handle identity checks, sanctions screening, source-of-funds checks, opening accounts or issuing cards, holding funds, monitoring transactions, disputes, and regulatory records.
+Bridge (for bank transfers and card approval) and Stripe (which issues cards with Bridge) may contract with you directly for their regulated services. They may handle identity checks, sanctions screening, source-of-funds checks, opening accounts or issuing cards, holding funds, monitoring transactions, disputes, and regulatory records.
 
 These partners also check Aura before they work with us. They can ask for security documents, compliance procedures, approved countries, forecasts, marketing review, complaint handling, ownership checks, financial information, and named contacts. You signing up with a partner doesn't mean the partner has approved Aura.
 

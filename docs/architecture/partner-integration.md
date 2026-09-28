@@ -87,7 +87,7 @@ pnpm test
 pnpm deploy:dry-run
 ```
 
-Set each connected provider's secrets with `wrangler secret put`: `BRIDGE_API_KEY` and `BRIDGE_WEBHOOK_PUBLIC_KEY` (the PEM from Bridge's webhook endpoint), `PRIVY_WEBHOOK_SECRET` (`whsec_…`), and later `RAIN_WEBHOOK_SECRET`. A provider without its webhook secret returns 503 `provider_not_connected`. See [provider projections](provider-projections.md).
+Set each connected provider's secrets with `wrangler secret put`: `BRIDGE_API_KEY` and `BRIDGE_WEBHOOK_PUBLIC_KEY` (the PEM from Bridge's webhook endpoint), `PRIVY_WEBHOOK_SECRET` (`whsec_…`), and for cards `STRIPE_SECRET_KEY` (`sk_…`) and `STRIPE_WEBHOOK_SECRET` (`whsec_…`). Cards also need two plain variables: `STRIPE_PUBLISHABLE_KEY` (`pk_…`) and `BRIDGE_CARDS_SPENDER` (Bridge's card contract on Base). A provider without its webhook secret returns 503 `provider_not_connected`. See [provider projections](provider-projections.md).
 
 Production and sandbox must use different provider programs, secrets, queues, and D1 databases. Never place secret values in a Wrangler file or shell history.
 
@@ -112,4 +112,16 @@ From Bridge's documentation (apidocs.bridge.xyz), checked 25 September 2026:
 - Every POST needs an `Idempotency-Key`; a reused key with a different body is rejected, and keys expire after 24 hours.
 - Webhook endpoints start disabled and must be enabled with `PUT /webhooks` after creation.
 
-Rain's documentation requires a partner login and has not been reviewed. Rain webhooks are rejected until its signing scheme is implemented from that documentation.
+## Cards: Bridge and Stripe Issuing
+
+Rain was dropped. Cards run on Bridge's card program, issued through Stripe Issuing:
+
+- **Approval.** Bridge approves a verified customer for cards (the `cards` endorsement on `GET /v0/customers/{id}`) and creates their Stripe cardholder (`stripe_cardholder_id`). The customer applies or re-confirms on a Bridge-hosted page from `GET /v0/customers/{id}/kyc_link?endorsement=cards`; the link is short-lived and never stored. Bridge KYC (on Deposit) must come first. Approval lasts 24 hours until a card is created.
+- **Card.** One virtual Visa card per account: `POST /v1/issuing/cards` with a `crypto_wallet` on chain `base`, currency `usdc`, type `standard`, and the customer's Aura wallet as the address. It starts at a 500 USD daily limit, up to 10,000 USD. Stripe is the authority for the card, its controls, authorizations, transactions, and disputes. D1 keeps only which card is the customer's (`card_account_projections`, provider `stripe`).
+- **Funding.** Nothing is prefunded. The customer signs a USDC `approve` on Base to `BRIDGE_CARDS_SPENDER` (an Aura money action, verified from the `Approval` log), and Bridge pulls each purchase just in time. A purchase is declined if the card is frozen, over its daily limit, or beyond the allowance or USDC balance.
+- **Card details.** Shown only in Stripe.js Issuing Elements, with a 15-minute ephemeral key bound to the card and a browser nonce, after a fresh passkey confirmation. Aura never handles the card number.
+- **Phone wallets.** Stripe's "Add to Wallet" button element is a private preview, live mode only. It sits behind `card_wallets` and is untested with real wallets.
+- **Disputes.** `POST /v1/issuing/disputes`, then `/submit`, once per settled transaction within 110 days. Credits return to the account's USDC on Base.
+- **API version.** Pinned to `2026-03-25.preview`. Confirm it with Bridge before going live.
+
+Nothing has run against a real Bridge card program or Stripe account yet; the flow is tested against local fakes (`apps/web/tests/unit/cards.test.ts`, `apps/web/tests/e2e/cards.spec.ts`).

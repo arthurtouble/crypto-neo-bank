@@ -3,7 +3,7 @@ title: Transactions and their status
 description: What Transactions lists, what pending, completed, failed, and not confirmed mean, and how exports and statements work.
 ---
 
-Transactions lists the money you send, swap, move, and put in Earn with Aura, and the money you receive. Getting a quote doesn't add anything to the list. If you start something and don't confirm it in time, it shows as **Not confirmed**.
+Transactions lists the money you send, swap, move, and put in Earn with Aura, your card payments, and the money you receive. Getting a quote doesn't add anything to the list. If you start something and don't confirm it in time, it shows as **Not confirmed**.
 
 ## How a money movement works
 
@@ -38,6 +38,10 @@ Aura reads received money from Alchemy's record of the network, and doesn't stor
 
 The value shown for money you received is today's value, not its value when it arrived.
 
+## Card payments
+
+Card payments come from Stripe, which issues the card. A purchase is **Pending** while the merchant holds the amount, and **Completed** once the merchant settles it. A declined purchase shows as **Failed**; no money moved. Refunds show as money in. The receipt links to the Base transaction in which Bridge took your USDC, and shows any dispute. If Stripe can't be read, Transactions tells you some card payments may be missing, rather than showing none.
+
 ## Aave history
 
 Transactions can also show your Aave history, from Aave. Each record shows where it came from. Outside history doesn't mean Aura started or checked that transaction.
@@ -48,13 +52,13 @@ Transactions can also show your Aave history, from Aave. Each record shows where
 
 - **This list** has the transactions you see, with your filters: date, description, status, amounts, assets, who it was with, estimated US dollar value, network, transaction, and source.
 - **Tax-support preview** is the same list, with blanks marked for tax classification and cost basis.
-- **Monthly statement** has everything in a calendar month, oldest first: what you did in Aura and money you received. If received money for that month can't all be read, Aura doesn't give you a statement that's missing it. Try again later.
+- **Monthly statement** has everything in a calendar month, oldest first: what you did in Aura, card payments, and money you received. If received money or card payments for that month can't all be read, Aura doesn't give you a statement that's missing them. Try again later.
 
 Aura doesn't guess a purchase price, gain or loss, or tax treatment. Missing cost basis shows as **Unavailable**, and tax classification shows as **Review required**. These files support your records. They aren't bank statements, tax returns, or tax advice.
 
 ## Insights
 
-Insights adds up your completed transactions for a period: money in (received), money out (sent), put to work (added to Earn), and moved (swaps and moves between networks). Anything without a US dollar value is counted separately, never as zero. If received money can't all be read, money in shows as **Unavailable**.
+Insights adds up your completed transactions for a period: money in (received, and card refunds), money out (sent, and card payments), put to work (added to Earn), and moved (swaps and moves between networks). Anything without a US dollar value is counted separately, never as zero. If received money can't all be read, money in shows as **Unavailable**; if card payments can't, both money in and money out do.
 
 ## Moves between networks
 

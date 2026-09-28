@@ -15,10 +15,10 @@ Preview mode may show complete workflows and eligibility gates, but never fabric
 
 | Capability | Primary candidate | Alternate | Prepared product surface | Activation dependency |
 | --- | --- | --- | --- | --- |
-| USD accounts, ACH, wire, FedNow, on/off-ramp | Bridge | Rain or Noah, subject to country and product scope | Transfers, account details, recipients, transfer review | Platform approval, customer mapping, KYC link, API key, webhooks |
+| USD accounts, ACH, wire, FedNow, on/off-ramp | Bridge | Noah, subject to country and product scope | Transfers, account details, recipients, transfer review | Platform approval, customer mapping, KYC link, API key, webhooks |
 | Wallet login and signing | Privy | — | Aura account, receive, send, recovery, export | Already integrated; production configuration and monitoring |
 | Cross-network USDC | LI.FI | Socket or provider-native routing when contracted | Exchange with automatic source selection | LI.FI integrated; Socket requires production access, adapter work, route monitoring, and supported-pair policy |
-| Card issuing | Bridge through Stripe Issuing, subject to program approval | Rain | Card, controls, wallet provisioning | Issuer approval, cardholder KYC, program terms, disputes, auth webhooks |
+| Card issuing | Bridge through Stripe Issuing, subject to program approval (built against fakes) | — (Rain dropped) | Virtual Visa card, spending allowance on Base, freeze and daily limit, card details in Stripe's frames, phone wallets, disputes | Bridge card program approval, Stripe account and webhook, `BRIDGE_CARDS_SPENDER`, Stripe preview access for phone wallets, a real card on dev |
 | Merchant rewards | Kard | Card-network rewards provider | Offers, reward history, activation | Program agreement, customer enrolment, transaction-match webhook |
 | Tag card payments | Acquiring or payment-link provider | — | Public Aura tag payment page | Merchant approval, hosted payment link, refunds, disputes, webhooks |
 | Tokenized stocks and metals | Coinbase tokenized stocks on Base and Tether Gold, bought through LI.FI routes in Swap | — | Swap, with Chainlink reference prices | Country and eligibility rules for Coinbase stocks, issuer redemption records |
@@ -39,7 +39,7 @@ Create a USD virtual account with an explicit destination configuration. Sync re
 
 The UI is modeled around `setup_required`, `pending`, and `active`. The read adapter is wired for `BRIDGE_MODE=live`: it requires a linked Bridge customer ID and API key, follows Bridge's customer virtual-account pagination, and returns only complete activated USD instructions. The mode does not enable outgoing transfers or webhooks. Verify the customer mapping, provider approval, and reconciliation before showing instructions.
 
-Bridge's [virtual-account API](https://apidocs.bridge.xyz/api-reference/virtual-accounts/list-virtual-accounts-by-customer) is the source of account status and instructions. Its older standalone [card-provisioning API is deprecated](https://apidocs.bridge.xyz/api-reference/cards/provision-a-card-account); a card program must use the currently approved issuing path and its actual control APIs.
+Bridge's [virtual-account API](https://apidocs.bridge.xyz/api-reference/virtual-accounts/list-virtual-accounts-by-customer) is the source of account status and instructions. Its older standalone [card-provisioning API is deprecated](https://apidocs.bridge.xyz/api-reference/cards/provision-a-card-account); Aura's cards use the current path instead: Bridge's `cards` endorsement and Stripe Issuing, with controls through Stripe's API (see [partner integration](partner-integration.md#cards-bridge-and-stripe-issuing)).
 
 ### Transfers
 
@@ -61,12 +61,16 @@ Production secrets belong in Cloudflare secret bindings, not source control:
 
 ```text
 BRIDGE_API_KEY
-BRIDGE_WEBHOOK_SECRET
+BRIDGE_WEBHOOK_PUBLIC_KEY
+STRIPE_SECRET_KEY
+STRIPE_WEBHOOK_SECRET
 REWARDS_API_KEY
 REWARDS_WEBHOOK_SECRET
 ACQUIRING_API_KEY
 ACQUIRING_WEBHOOK_SECRET
 ```
+
+Cards also need two plain variables, which are not secret: `STRIPE_PUBLISHABLE_KEY` (`pk_…`) and `BRIDGE_CARDS_SPENDER` (Bridge's card contract on Base).
 
 Each service also needs an explicit mode (`preview` or `live`), approved countries, timeout, retry ceiling, circuit breaker, and support owner. Live mode must fail closed when credentials, mappings, or customer approval are missing.
 

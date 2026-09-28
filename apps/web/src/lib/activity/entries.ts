@@ -1,4 +1,5 @@
 import { formatUnits } from "viem";
+import type { CardActivity } from "@/lib/cards/service";
 import { FAILED_PAYOUT_STATES, payoutStateText } from "@/lib/providers/bridge/transfers";
 import type { IncomingTransfer } from "./incoming";
 
@@ -6,12 +7,13 @@ import type { IncomingTransfer } from "./incoming";
  * One row in Transactions, whatever it came from: an Aura action (verified
  * against the chain), money that arrived without one (Alchemy's transfer
  * index), or Aave history (Aave's data service). Shared by the list, the
- * receipt, exports, statements, and Insights, so they always agree.
+ * receipt, exports, statements, and Insights, so they always agree. Card
+ * payments come from Stripe, which issues the card.
  */
-export type EntryType = "sent" | "received" | "bank_deposit" | "bank_payout" | "swap" | "bridge" | "earn_deposit" | "earn_withdraw"
+export type EntryType = "sent" | "received" | "bank_deposit" | "bank_payout" | "card_payment" | "card_refund" | "card_allowance" | "swap" | "bridge" | "earn_deposit" | "earn_withdraw"
   | "borrow" | "repay" | "liquidation" | "collateral_enabled" | "collateral_disabled" | "defi_activity";
 export type EntryStatus = "pending" | "completed" | "failed" | "not_confirmed";
-export type EntryOrigin = "aura" | "incoming" | "aave";
+export type EntryOrigin = "aura" | "incoming" | "aave" | "card";
 
 export type ActivityEntry = {
   id: string;
@@ -37,6 +39,8 @@ export type ActivityEntry = {
   final?: boolean;
   /** A bank payout's progress at Bridge, in words. */
   bankStatus?: string;
+  /** A disputed card payment's dispute status at Stripe. */
+  cardDispute?: string;
   source: string;
 };
 
@@ -96,7 +100,23 @@ export function actionEntry(action: ActionLike): ActivityEntry {
       counterparty: [bank.bankName ?? "Bank account", bank.lastFour ? `ending ${bank.lastFour}` : ""].join(" ").trim(),
       bankStatus: chainDone ? payoutStateText(state ?? "awaiting_funds") : undefined };
   }
+  // Approving the card to spend moves nothing; each purchase does, later.
+  if (summary.cardAllowance) return { ...base, type: "card_allowance", asset: symbol, amount, counterparty: "Aura card", estimatedUsd: undefined };
   return { ...base, type: "sent", asset: symbol, amount, counterparty: typeof summary.to === "string" ? summary.to : undefined };
+}
+
+/**
+ * A card payment, hold, decline, or refund. Bridge takes each purchase from
+ * the account's USDC on Base, one US dollar for one USDC, so its value is the
+ * card amount. A declined or reversed hold moved no money.
+ */
+export function cardEntry(item: CardActivity): ActivityEntry {
+  const status: EntryStatus = item.status === "completed" ? "completed" : item.status === "pending" ? "pending" : "failed";
+  return { id: `card:${item.id}`, origin: "card", type: item.kind === "refund" ? "card_refund" : "card_payment", status, final: status === "completed",
+    createdAt: item.createdAt, chainId: 8453, asset: "USD", amount: item.amountUsd, counterparty: item.merchant ?? "Card payment",
+    estimatedUsd: status === "failed" ? undefined : Number(item.amountUsd), transactionHash: item.transactionHash ?? undefined,
+    failureReason: item.status === "declined" ? "Declined" : item.status === "reversed" ? "Hold released" : undefined,
+    cardDispute: item.dispute?.status, source: "Stripe" };
 }
 
 export function incomingEntry(transfer: IncomingTransfer, usdCentsPerUnit?: number | null, bank?: { senderName: string | null; bankName: string | null }): ActivityEntry {
@@ -110,15 +130,16 @@ export function incomingEntry(transfer: IncomingTransfer, usdCentsPerUnit?: numb
 }
 
 const LABELS: Record<EntryType, string> = {
-  sent: "Sent", received: "Received", bank_deposit: "Bank deposit", bank_payout: "Sent to bank", swap: "Swapped", bridge: "Moved between networks", earn_deposit: "Added to Earn",
+  sent: "Sent", received: "Received", bank_deposit: "Bank deposit", bank_payout: "Sent to bank", card_payment: "Card payment", card_refund: "Card refund", card_allowance: "Card allowance set", swap: "Swapped", bridge: "Moved between networks", earn_deposit: "Added to Earn",
   earn_withdraw: "Withdrawn from Earn", borrow: "Borrowed", repay: "Repaid", liquidation: "Collateral liquidated",
   collateral_enabled: "Enabled collateral", collateral_disabled: "Disabled collateral", defi_activity: "Aave activity"
 };
 export const entryLabel = (type: EntryType) => LABELS[type];
 
-export const CATEGORIES = ["All", "Sent", "Received", "Swaps", "Earn", "Other"] as const;
+export const CATEGORIES = ["All", "Sent", "Received", "Card", "Swaps", "Earn", "Other"] as const;
 export type EntryCategory = Exclude<(typeof CATEGORIES)[number], "All">;
 export function entryCategory(type: EntryType): EntryCategory {
+  if (type === "card_payment" || type === "card_refund" || type === "card_allowance") return "Card";
   if (type === "sent" || type === "bank_payout") return "Sent";
   if (type === "received" || type === "bank_deposit") return "Received";
   if (type === "swap" || type === "bridge") return "Swaps";
@@ -139,8 +160,8 @@ export function entryAmount(entry: ActivityEntry) {
 
 /** Money in, money out, or moved within the account, for Insights. */
 export function entryDirection(type: EntryType): "in" | "out" | "earn" | "moved" | "other" {
-  if (type === "received" || type === "bank_deposit" || type === "borrow") return "in";
-  if (type === "sent" || type === "bank_payout" || type === "repay") return "out";
+  if (type === "received" || type === "bank_deposit" || type === "card_refund" || type === "borrow") return "in";
+  if (type === "sent" || type === "bank_payout" || type === "card_payment" || type === "repay") return "out";
   if (type === "earn_deposit") return "earn";
   if (type === "swap" || type === "bridge") return "moved";
   return "other";
