@@ -32,8 +32,6 @@ export const subjectDataInventory = {
   route_quotes: { export: false, reason: "Short-lived route quotes; used quotes are summarized on their action" },
   card_account_projections: { export: true, reason: "Rebuildable issuer projection" },
   bank_beneficiary_projections: { export: true, reason: "Rebuildable provider projection" },
-  membership_projections: { export: true, reason: "Rebuildable qualification result" },
-  benefit_entitlements: { export: true, reason: "Rebuildable provider projection" },
   wallet_policies: { export: true, reason: "Rebuildable wallet-provider projection" },
   command_idempotency: { export: false, reason: "Short-lived retry protection" },
   webhook_receipts: { export: false, reason: "Provider event replay protection" },

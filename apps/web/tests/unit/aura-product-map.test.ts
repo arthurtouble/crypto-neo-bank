@@ -5,7 +5,7 @@ describe("Aura product map", () => {
   it("exposes only the approved customer sections", () => {
     expect(customerSections).toEqual([
       "deposit", "send", "swap", "earn", "cards",
-      "rewards", "transactions", "insights", "settings", "support"
+      "transactions", "insights", "settings", "support"
     ]);
     expect(navigation.flatMap((group) => group.items.map((item) => item.href))).toEqual([
       "/app", ...customerSections.map((section) => `/app/${section}`)

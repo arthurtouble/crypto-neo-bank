@@ -18,7 +18,7 @@ import { SupportChatProvider } from "./support-chat";
 const iconByPage: Record<string, typeof icons.dashboard> = {
   Overview: icons.dashboard, Deposit: icons.received, Send: icons.sent,
   Swap: icons.activity, Earn: icons.earn, Borrow: icons.money,
-  Cards: icons.card, Rewards: icons.benefits,
+  Cards: icons.card,
   Transactions: icons.activity, Insights: icons.earn, Settings: icons.settings,
   Support: icons.security
 };

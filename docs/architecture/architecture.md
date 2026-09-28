@@ -16,7 +16,6 @@ Aurel prepares, checks, and presents money movements; it is not a bank ledger. A
 | Cards and card transactions | Stripe Issuing (card, controls, authorizations, transactions, disputes) with Bridge (card approval and USDC collection); the spending allowance on Base | Which card is the customer's (`card_account_projections`); nothing else is stored |
 | Crypto balances and DeFi positions | Relevant blockchain and protocol contracts | Indexed projections with chain, block, transaction, and observation metadata |
 | Market value | Named market-data provider | Short-lived, timestamped price observations |
-| Membership and benefits | Aurel policy plus benefit provider | Rebuildable qualification result and entitlement references |
 
 ## Cloudflare platform
 

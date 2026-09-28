@@ -15,7 +15,6 @@ The application already defines stable boundaries for:
 - fiat/stablecoin funding;
 - card eligibility and status;
 - onchain positions and allocation commands;
-- membership and benefits;
 - signed provider events; and
 - reconciliation against named authoritative sources.
 

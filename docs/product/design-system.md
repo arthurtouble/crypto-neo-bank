@@ -67,7 +67,7 @@ Dark mode is a separately composed palette—not an inverted light theme. Black 
 
 ## Navigation and content
 
-- Primary destinations are grouped by purpose: **Home** (Overview, Deposit, Send, Swap), **Grow** (Earn), **Everyday** (Cards, Rewards, Transactions, Insights), and **Account** (Settings, Support).
+- Primary destinations are grouped by purpose: **Home** (Overview, Deposit, Send, Swap), **Grow** (Earn), **Everyday** (Cards, Transactions, Insights), and **Account** (Settings, Support).
 - Destination labels name the user’s object or task. Avoid conceptual labels such as “Money” when “Assets” is more precise.
 - Page titles say what the page is. The single sentence below describes what can be done there; it does not restate the title.
 - Buttons use a concrete verb and object: “Review transfer,” “Connect wallet,” or “Save address.”

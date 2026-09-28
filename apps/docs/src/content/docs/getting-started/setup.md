@@ -7,7 +7,7 @@ sidebar:
 
 ## Look around
 
-Open Aura to browse Overview, Deposit, Send, Swap, Earn, Cards, Rewards, Transactions, Insights, Settings, and Support. When you're signed out, every value is a labeled example. You don't need an account to look around.
+Open Aura to browse Overview, Deposit, Send, Swap, Earn, Cards, Transactions, Insights, Settings, and Support. When you're signed out, every value is a labeled example. You don't need an account to look around.
 
 ## Sign in
 
@@ -43,4 +43,4 @@ Use **Deposit** to see your address and QR code, add money from a wallet you've 
 
 Check the review before you confirm with your passkey. A signed transaction usually can't be reversed. If a transfer seems slow, check the transaction before you try again.
 
-Creating an Aura account doesn't open a bank account, issue a card, or turn on rewards. [See what's available now](/getting-started/status/).
+Creating an Aura account doesn't open a bank account or issue a card. [See what's available now](/getting-started/status/).

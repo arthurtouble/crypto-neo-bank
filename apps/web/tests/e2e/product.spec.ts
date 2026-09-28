@@ -49,7 +49,7 @@ test("theme and private access gate remain usable", async ({ page }) => {
 
 test("every Aura section is browsable with labeled fictional data", async ({ page }) => {
   test.setTimeout(90_000);
-  for (const section of ["deposit", "send", "swap", "earn", "cards", "rewards", "transactions", "insights", "settings", "support"]) {
+  for (const section of ["deposit", "send", "swap", "earn", "cards", "transactions", "insights", "settings", "support"]) {
     await page.goto(`/app/${section}`);
     await expect(page.getByRole("heading", { name: section[0].toUpperCase() + section.slice(1), exact: true })).toBeVisible();
     await expect(page.getByText("Example data", { exact: true })).toBeVisible();
@@ -64,6 +64,16 @@ test("Invest was cut: old links open Swap, where stocks, gold, and crypto are bo
     await expect(page.getByRole("heading", { name: "Swap", exact: true })).toBeVisible();
   }
   await expect(page.getByRole("navigation").getByRole("link", { name: "Invest" })).toHaveCount(0);
+});
+
+test("Rewards was cut: old links open Cards", async ({ page }) => {
+  for (const path of ["/app/rewards", "/app/benefits"]) {
+    await page.goto(path);
+    await expect(page).toHaveURL(/\/app\/cards$/);
+    await expect(page.getByRole("heading", { name: "Cards", exact: true })).toBeVisible();
+  }
+  await expect(page.getByRole("navigation").getByRole("link", { name: "Rewards" })).toHaveCount(0);
+  expect((await page.request.get("/api/rewards")).status()).toBe(404);
 });
 
 test("unknown Aura tags do not expose recipient information", async ({ page }) => {

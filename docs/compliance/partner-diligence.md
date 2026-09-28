@@ -12,7 +12,7 @@ Aura is open to anyone who signs in; each provider feature launches behind its o
 ## Product and customer
 
 - Intended customer: digitally sophisticated internationally mobile professionals, founders and investors who already hold stablecoins.
-- Initial proposition: one calm interface for self-controlled wallets, USDC movement, curated DeFi, security policy, support and membership.
+- Initial proposition: one calm interface for self-controlled wallets, USDC movement, curated DeFi, security policy and support.
 - No house token, deposit promise, guaranteed yield or balance-sheet lending.
 - Proposed initial limits: USD 25,000 of Aurel-prepared movement per rolling 24 hours; USD 1,000 new-destination threshold with a 24-hour cooling period.
 - Provider geography: a provider feature is offered only in countries the provider and launch counsel accept in writing. Aura itself is available to anyone who can use it lawfully.

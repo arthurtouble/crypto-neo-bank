@@ -4,14 +4,14 @@ import { expect, test } from "@playwright/test";
 test("landing introduces Aura and its provider boundaries", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Your Smart Account" })).toBeVisible();
-  await expect(page.getByText("Spend anywhere, invest in global markets, and get incredible rewards. All from one app.")).toBeVisible();
+  await expect(page.getByText("Spend anywhere, invest in global markets, and earn on your money. All from one app.")).toBeVisible();
   await expect(page.getByRole("link", { name: "Get Started" })).toHaveCount(4);
   await expect(page.locator('a[href="/apply"], a[href="/tour"]')).toHaveCount(0);
-  for (const title of ["A home for all your assets", "Spend", "Earn", "Send", "Swap", "Rewards", "Security"]) {
+  for (const title of ["A home for all your assets", "Spend", "Earn", "Send", "Swap", "Security"]) {
     await expect(page.getByRole("heading", { name: title, exact: true })).toHaveCount(1);
   }
   await expect(page.locator("#faq details")).toHaveCount(5);
-  await page.locator("#faq summary").filter({ hasText: "Are bank transfers, cards, and rewards available?" }).click();
+  await page.locator("#faq summary").filter({ hasText: "Are bank transfers and cards available?" }).click();
   await expect(page.getByText("These depend on provider connection", { exact: false })).toBeVisible();
   await expect(page.locator("#footnotes li")).toHaveCount(4);
   await expect(page.getByText(`© ${new Date().getFullYear()} Aura`)).toBeVisible();
@@ -47,7 +47,7 @@ test("retired endpoints are gone", async ({ request }) => {
 });
 
 test("privacy, terms, and account operations fail closed", async ({ request }) => {
-  for (const path of ["/api/ops/accounts?q=someone", "/api/privacy/consent", "/api/privacy/export", "/api/terms", "/api/preferences", "/api/rewards"]) {
+  for (const path of ["/api/ops/accounts?q=someone", "/api/privacy/consent", "/api/privacy/export", "/api/terms", "/api/preferences"]) {
     const response = await request.get(path);
     expect([401, 403], path).toContain(response.status());
     expect(response.headers()["cache-control"], path).toContain("no-store");

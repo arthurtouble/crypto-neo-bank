@@ -2,7 +2,6 @@ import { applyCardAccount } from "./card-accounts";
 import { applyBankPayout } from "./bank-payouts";
 import { applyCustomerLink } from "./customer-links";
 import type { ProjectionDatabase } from "./database";
-import { applyBenefitEntitlement, applyMembership } from "./memberships";
 import type { ApplyResult, ProjectionSource } from "./source";
 import { applyWalletPolicy } from "./wallet-policies";
 
@@ -22,8 +21,6 @@ export const projectionAdapters: Record<string, { providers: readonly string[]; 
   "provider.customer.updated": { providers: ["bridge"], apply: applyCustomerLink },
   "bank.payout.updated": { providers: ["bridge"], apply: applyBankPayout },
   "card.account.updated": { providers: ["stripe"], apply: applyCardAccount },
-  "membership.updated": { providers: ["bridge", "stripe"], apply: applyMembership },
-  "benefit.entitlement.updated": { providers: ["bridge", "stripe"], apply: applyBenefitEntitlement },
   "wallet.policy.updated": { providers: ["privy"], apply: applyWalletPolicy }
 };
 

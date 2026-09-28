@@ -16,4 +16,4 @@ Before Aura prepares a money movement, it checks that:
 
 Your controls are all off until you choose to use them. You still confirm every money action yourself, with your passkey.
 
-Signing in doesn't turn on bank transfers, cards, rewards, or any other feature that needs a partner. [See what's available now](/getting-started/status/).
+Signing in doesn't turn on bank transfers, cards, or any other feature that needs a partner. [See what's available now](/getting-started/status/).
