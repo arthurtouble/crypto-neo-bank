@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 import { AAVE_POOL, VAULTS } from "./support/fake-edge.mjs";
 import { expect, test } from "./support/fixtures";
-import { acceptTerms, asCustomer, ASSETS, edge, newCustomer, setBalances, setFeature, setIdentity, type Customer, setControls } from "./support/session";
+import { acceptTerms, asCustomer, ASSETS, edge, newCustomer, setBalances, setFeature, setIdentity, type Customer, setControls, pauseAsset } from "./support/session";
 
 // Feature 5 in docs/overview/feature-readiness.md: Earn. Aave on Base and two
 // Morpho USDC vaults. Privy's relay, the passkey, the chain (Aave's pool and
@@ -128,9 +128,7 @@ test("the server refuses: switched off, account locked, not enough USDC, or USDC
   await act(page, "Steakhouse Prime USDC", "Deposit", "60");
   await expect(toasts(page)).toContainText("You don't have enough USDC.", { timeout: 20_000 });
 
-  const { token } = await edge("/__session", { userId: "did:privy:e2e-operator" });
-  const pause = (paused: boolean) => page.request.patch("/api/ops/assets", { headers: { Authorization: `Bearer ${token}`, Connection: "close" },
-    data: { assetId: `8453:${ASSETS.usdc}`, ...(paused ? { paused, reason: "Test" } : { paused }) } });
+  const pause = (paused: boolean) => pauseAsset(page, `8453:${ASSETS.usdc}`, paused);
   await pause(true);
   await act(page, "Aave USDC", "Deposit", "5");
   await expect(toasts(page)).toContainText("USDC is paused right now", { timeout: 20_000 });

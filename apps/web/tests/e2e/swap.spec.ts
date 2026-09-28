@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 import { LIFI_DIAMOND } from "./support/fake-edge.mjs";
 import { expect, test } from "./support/fixtures";
-import { acceptTerms, asCustomer, ASSETS, edge, newCustomer, setBalances, setFeature, setIdentity, type Customer } from "./support/session";
+import { acceptTerms, asCustomer, ASSETS, edge, newCustomer, setBalances, setFeature, setIdentity, type Customer, pauseAsset } from "./support/session";
 
 // Feature 4 in docs/overview/feature-readiness.md: Swap. LI.FI, Privy's
 // sponsored relay, the passkey, the chains, and Chainlink are the local fake;
@@ -164,9 +164,7 @@ test("switched off, or with a paused asset, there is no quote and nothing is sen
   await expect(toasts(page)).toContainText("Swaps aren't available right now.", { timeout: 20_000 });
 
   await setFeature(page, "swaps", true);
-  const { token } = await edge("/__session", { userId: "did:privy:e2e-operator" });
-  const pause = (paused: boolean) => page.request.patch("/api/ops/assets", { headers: { Authorization: `Bearer ${token}`, Connection: "close" },
-    data: { assetId: `8453:${ASSETS.usdc}`, ...(paused ? { paused, reason: "Test" } : { paused }) } });
+  const pause = (paused: boolean) => pauseAsset(page, `8453:${ASSETS.usdc}`, paused);
   await pause(true);
   await page.getByRole("button", { name: "Get quote" }).click();
   await expect(toasts(page)).toContainText("USDC is paused right now", { timeout: 20_000 });

@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "./support/fixtures";
 import { LIFI_DIAMOND } from "./support/fake-edge.mjs";
-import { acceptTerms, asCustomer, ASSETS, edge, newCustomer, setBalances, setFeature, setIdentity, type Customer, setControls } from "./support/session";
+import { acceptTerms, asCustomer, ASSETS, edge, newCustomer, setBalances, setFeature, setIdentity, type Customer, setControls, pauseAsset } from "./support/session";
 
 // Feature 3 in docs/overview/feature-readiness.md: sending from the Aura
 // account on Base. The passkey prompt, Privy's sponsored relay, and the chain
@@ -241,13 +241,12 @@ test("while sending is switched off, the customer is told and nothing is sent", 
 });
 
 test("a paused asset can't be sent", async ({ page }) => {
-  const { token } = await edge("/__session", { userId: "did:privy:e2e-operator" });
   await openSend(page);
-  await page.request.patch("/api/ops/assets", { headers: { Authorization: `Bearer ${token}`, Connection: "close" }, data: { assetId: `8453:${ASSETS.usdc}`, paused: true, reason: "Test" } });
+  await pauseAsset(page, `8453:${ASSETS.usdc}`, true);
   await fillSend(page, { amount: "1", to: RECIPIENT });
   await reviewAndConfirm(page);
   await expect(page.locator(".toastRegion")).toContainText("USDC is paused right now", { timeout: 20_000 });
-  await page.request.patch("/api/ops/assets", { headers: { Authorization: `Bearer ${token}`, Connection: "close" }, data: { assetId: `8453:${ASSETS.usdc}`, paused: false } });
+  await pauseAsset(page, `8453:${ASSETS.usdc}`, false);
   expect(await relayed()).toEqual([]);
 });
 

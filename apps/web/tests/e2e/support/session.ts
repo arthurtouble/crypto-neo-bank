@@ -78,6 +78,13 @@ export async function operatorHeaders(options: { email?: string; audience?: stri
   return { "Cf-Access-Jwt-Assertion": token! };
 }
 
+/** Pause or resume a registered asset through the operations API, as an operator would. */
+export async function pauseAsset(page: Page, assetId: string, paused: boolean) {
+  const response = await page.request.patch("/api/ops/assets", { headers: { ...await operatorHeaders(), ...fresh },
+    data: paused ? { assetId, paused, reason: "Test" } : { assetId, paused } });
+  if (!response.ok()) throw new Error(`pausing ${assetId} failed: ${response.status()}`);
+}
+
 /** Turn a feature switch on or off through the operations API, as an operator would. */
 export async function setFeature(page: Page, key: string, enabled: boolean) {
   const response = await page.request.patch("/api/ops/features", { headers: { ...await operatorHeaders(), ...fresh }, data: { key, enabled } });
