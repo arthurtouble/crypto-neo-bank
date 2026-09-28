@@ -3,7 +3,7 @@ title: Feature readiness
 description: The feature-by-feature pass that makes every customer flow work end to end before the redesign.
 ---
 
-Agreed on 26 September 2026. This is the working plan until every feature below is done. Update the status table in the same pull request that changes a feature.
+Agreed on 26 September 2026. This was the working plan until every feature below was done or cut, on 28 September 2026. Step 2 continues in [redesign](redesign.md). Update the status table in the same pull request that changes a feature.
 
 ## The plan
 
