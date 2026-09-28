@@ -49,8 +49,9 @@ function Receipt({ entry, onClose }: { entry: ActivityEntry; onClose: () => void
         <span>Status<strong>{statusLabel(entry.status)}</strong></span>
         <span>Date<strong>{new Date(entry.createdAt).toLocaleString()}</strong></span>
         <span>Network<strong>{networkName(entry.chainId)}{entry.destinationChainId ? ` to ${networkName(entry.destinationChainId)}` : ""}</strong></span>
-        {entry.counterparty && <span>{entry.type === "received" || entry.type === "bank_deposit" ? "From" : "To"}<strong>{entry.counterparty}</strong></span>}
+        {entry.counterparty && <span>{entry.type === "received" || entry.type === "bank_deposit" || entry.type === "card_refund" ? "From" : "To"}<strong>{entry.counterparty}</strong></span>}
         {entry.bankStatus && <span>Bank<strong data-testid="bank-status">{entry.bankStatus}</strong></span>}
+        {entry.cardDispute && <span>Dispute<strong>{entry.cardDispute === "submitted" ? "Under review" : entry.cardDispute === "won" ? "Won" : entry.cardDispute === "lost" ? "Lost" : entry.cardDispute}</strong></span>}
         {entry.estimatedUsd !== undefined && <span>{entry.origin === "incoming" ? "Value today" : "Value"}<strong>${entry.estimatedUsd.toFixed(2)}</strong></span>}
         <span>Source<strong>{entry.source}</strong></span>
         {entry.origin === "aura" && <span>Reference<strong>{entry.id}</strong></span>}
@@ -58,10 +59,14 @@ function Receipt({ entry, onClose }: { entry: ActivityEntry; onClose: () => void
       </div>
       {entry.origin === "aura" ? <ReceiptJourney id={entry.id} />
         : entry.origin === "incoming" ? <p className="modalRisk" data-testid="incoming-finality">{entry.final
-          ? `Final on ${networkName(entry.chainId)}.` : `Received. ${networkName(entry.chainId)} makes it final in about 20 minutes.`}</p> : null}
+          ? `Final on ${networkName(entry.chainId)}.` : `Received. ${networkName(entry.chainId)} makes it final in about 20 minutes.`}</p>
+          : entry.origin === "card" ? <p className="modalRisk" data-testid="card-payment-note">{entry.status === "pending"
+            ? "The merchant hasn't settled this yet. The amount can change or be released." : entry.status === "failed"
+              ? "No money moved." : "Paid with your card from your USDC on Base. Manage or dispute it on Cards."}</p> : null}
+      {entry.origin === "card" && <Link className="button secondary full" href="/app/cards">Open Cards</Link>}
       {entry.origin === "aura" && <Link className="button secondary full" href={`/app/transactions/${entry.id}`}>Full history</Link>}
       {links.map((link) => <a className="button secondary full" key={link.name} href={link.url!} target="_blank" rel="noreferrer">{link.name} <ExternalLink size={14} /></a>)}
-      {!links.length && <div className="modalRisk">No transaction has been recorded for this yet.</div>}
+      {!links.length && entry.origin !== "card" && <div className="modalRisk">No transaction has been recorded for this yet.</div>}
     </section>
   </div>;
 }
@@ -131,6 +136,7 @@ export function ActivityWorkspace() {
       {sources?.incoming.status === "unavailable" && <div className="formWarning" role="status">Money you received can&apos;t be read right now, so some deposits may be missing from this list.</div>}
       {sources?.incoming.partial && <div className="formWarning" role="status">Only your most recent deposits are listed. Use a monthly statement for a full month.</div>}
       {sources?.aave.status === "unavailable" && <div className="formWarning" role="status">Aave history can&apos;t be read right now.</div>}
+      {sources?.card.status === "unavailable" && <div className="formWarning" role="status">Card payments can&apos;t be read from Stripe right now, so some may be missing from this list.</div>}
       <div className="activityFilters">
         <label className="activitySearch"><Search size={15} /><span className="srOnly">Search activity</span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search activity" /></label>
         <label><span className="srOnly">Category</span><select value={category} onChange={(event) => setCategory(event.target.value as typeof category)}>{CATEGORIES.map((item) => <option key={item}>{item}</option>)}</select></label>

@@ -31,7 +31,7 @@ const { PATCH: controls } = await import("@/app/api/cards/controls/route");
 const { POST: detailsKey } = await import("@/app/api/cards/details-key/route");
 const { POST: dispute } = await import("@/app/api/cards/disputes/route");
 const { POST: allowance } = await import("@/app/api/cards/allowance/route");
-const { freezeCardForLock, readCardActivity } = await import("@/lib/cards/service");
+const { freezeCardForLock, readCardActivity, readCardHistory } = await import("@/lib/cards/service");
 const { StripeClient, stripeForm } = await import("@/lib/providers/stripe/client");
 
 type Call = { path: string; method: string; form: URLSearchParams; idempotencyKey: string | null; version: string | null };
@@ -73,7 +73,8 @@ function fakeProviders(url: string, init: RequestInit = {}) {
   if (pathname === "/v1/issuing/authorizations") return Response.json({ data: [
     { id: "iauth_hold", amount: 1200, currency: "usd", approved: true, status: "pending", created: nowSeconds - 60, merchant_data: { name: "Cafe" } },
     { id: "iauth_declined", amount: 90_000, currency: "usd", approved: false, status: "closed", created: nowSeconds - 120, merchant_data: { name: "Shop" } },
-    { id: "iauth_settled", amount: 2500, currency: "usd", approved: true, status: "closed", created: nowSeconds - 3600, merchant_data: { name: "Books" } }] });
+    { id: "iauth_settled", amount: 2500, currency: "usd", approved: true, status: "closed", created: nowSeconds - 3600, merchant_data: { name: "Books" },
+      crypto_transactions: [{ crypto_transaction_confirmed: { transaction_hash: `0x${"AB".repeat(32)}`, amount: "25.00" } }] }], has_more: false });
   if (pathname === "/v1/issuing/transactions") return Response.json({ data: transactions });
   if (pathname === "/v1/issuing/disputes" && method === "GET") return Response.json({ data: disputes });
   if (pathname === "/v1/issuing/disputes") {
@@ -178,6 +179,20 @@ describe("getting a card", () => {
     sqlite.exec("INSERT INTO security_profiles (subject_reference, account_locked, updated_at) VALUES ('alice', 1, 't')");
     expect(await (await create()).json()).toMatchObject({ error: "account_locked" });
     expect(calls.some((call) => call.path === "/v1/issuing/cards")).toBe(false);
+  });
+
+  it("reads every card payment for Transactions, in a time window, with the Base transaction that paid it", async () => {
+    expect(await readCardHistory(state.db!, "alice")).toEqual({ status: "available", partial: false, items: [] });
+    await create();
+    const history = await readCardHistory(state.db!, "alice", { since: new Date(1_000_000_000), until: new Date(2_000_000_000_000) });
+    expect(history).toMatchObject({ status: "available", partial: false });
+    expect(history.items.find((item) => item.id === "ipi_1")).toMatchObject({ transactionHash: `0x${"ab".repeat(32)}`, merchant: "Books" });
+    const [url] = (fetch as unknown as { mock: { calls: Array<[string]> } }).mock.calls.findLast(([called]) => called.includes("/v1/issuing/transactions"))!;
+    const query = new URL(url).searchParams;
+    expect(Object.fromEntries(query)).toEqual({ card: "ic_1", limit: "100", "created[gte]": "1000000", "created[lt]": "2000000000" });
+    // A customer with a card whose payments can't be read sees that, not an empty history.
+    sqlite.exec("UPDATE feature_flags SET enabled = 0 WHERE flag_key = 'payment_cards'");
+    expect(await readCardHistory(state.db!, "alice")).toMatchObject({ status: "unavailable" });
   });
 
   it("shows the allowance as unavailable when Base can't be read, never as zero", async () => {

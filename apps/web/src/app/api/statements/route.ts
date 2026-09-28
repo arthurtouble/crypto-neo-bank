@@ -11,9 +11,10 @@ import { enforceRateLimit } from "@/lib/security/rate-limit";
 const monthSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/);
 
 /**
- * A month of the customer's activity as CSV: Aura actions and money that
- * arrived without one. It is complete or it isn't given: if incoming
- * transfers can't all be read, the statement is refused rather than short.
+ * A month of the customer's activity as CSV: Aura actions, money that
+ * arrived without one, and card payments. It is complete or it isn't given:
+ * if incoming transfers or card payments can't all be read, the statement is
+ * refused rather than short.
  * A record of activity, not a bank statement.
  */
 export const GET = route("statements.get", { invalid: "invalid_month", unavailable: "statement_unavailable" }, async (request, { traceId }) => {
@@ -24,7 +25,7 @@ export const GET = route("statements.get", { invalid: "invalid_month", unavailab
   const end = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + 1, 1));
   const wallet = await requireActionWallet(subject.subjectReference);
   const { entries, complete } = await readPeriod(env.PROJECTION_DB, subject.subjectReference, wallet, start, end);
-  if (!complete) return Response.json({ error: "statement_incomplete", message: "Money you received that month can't all be read right now, so the statement would be incomplete. Try again later.", traceId }, { status: 503 });
+  if (!complete) return Response.json({ error: "statement_incomplete", message: "Some of that month's activity can't be read right now, so the statement would be incomplete. Try again later.", traceId }, { status: 503 });
   return new Response(entriesCsv(entries, networkName), { headers: {
     "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="aura-statement-${month}.csv"`, "Cache-Control": "no-store" } });
 });

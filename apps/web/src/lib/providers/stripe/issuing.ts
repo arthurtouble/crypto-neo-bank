@@ -85,13 +85,23 @@ export function updateCard(stripe: StripeClient, cardId: string, change: { statu
   } });
 }
 
-export async function listAuthorizations(stripe: StripeClient, cardId: string, limit = 30) {
-  return (await stripe.request("/v1/issuing/authorizations", list(authorizationSchema), { query: { card: cardId, limit: String(limit) } })).data;
+/** A card's newest items, optionally only those created in [since, until). Stripe's limit is 100 per page. */
+export type ListWindow = { limit?: number; since?: Date; until?: Date };
+const windowQuery = (cardId: string, { limit = 30, since, until }: ListWindow) => ({ card: cardId, limit: String(limit),
+  ...(since ? { "created[gte]": String(Math.floor(since.getTime() / 1000)) } : {}), ...(until ? { "created[lt]": String(Math.floor(until.getTime() / 1000)) } : {}) });
+
+export async function listAuthorizationPage(stripe: StripeClient, cardId: string, window: ListWindow = {}) {
+  const page = await stripe.request("/v1/issuing/authorizations", list(authorizationSchema), { query: windowQuery(cardId, window) });
+  return { data: page.data, hasMore: page.has_more === true };
 }
 
-export async function listTransactions(stripe: StripeClient, cardId: string, limit = 30) {
-  return (await stripe.request("/v1/issuing/transactions", list(transactionSchema), { query: { card: cardId, limit: String(limit) } })).data;
+export async function listTransactionPage(stripe: StripeClient, cardId: string, window: ListWindow = {}) {
+  const page = await stripe.request("/v1/issuing/transactions", list(transactionSchema), { query: windowQuery(cardId, window) });
+  return { data: page.data, hasMore: page.has_more === true };
 }
+
+export const listAuthorizations = async (stripe: StripeClient, cardId: string, limit = 30) => (await listAuthorizationPage(stripe, cardId, { limit })).data;
+export const listTransactions = async (stripe: StripeClient, cardId: string, limit = 30) => (await listTransactionPage(stripe, cardId, { limit })).data;
 
 export async function listDisputes(stripe: StripeClient, limit = 100) {
   return (await stripe.request("/v1/issuing/disputes", list(disputeSchema), { query: { limit: String(limit) } })).data;

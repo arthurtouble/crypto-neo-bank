@@ -4,7 +4,8 @@ import { featureEnabled } from "@/lib/features/flags";
 import { activeBridgeCustomer, bridgeClient } from "@/lib/providers/bridge";
 import { cardsApplicationLink, readCardsApproval } from "@/lib/providers/bridge/cards";
 import { StripeClient } from "@/lib/providers/stripe/client";
-import { getCard, listAuthorizations, listDisputes, listTransactions, type IssuingCard } from "@/lib/providers/stripe/issuing";
+import { getCard, listAuthorizationPage, listDisputes, listTransactionPage, type IssuingAuthorization, type IssuingCard, type IssuingDispute,
+  type IssuingTransaction, type ListWindow } from "@/lib/providers/stripe/issuing";
 
 /**
  * The Aura card: a Visa card issued by Stripe for Bridge, spending the
@@ -23,7 +24,9 @@ export type CardView = { id: string; lastFour: string; brand: string; status: "a
   dailyLimitUsd: number | null; wallets: { applePay: boolean; googlePay: boolean } };
 export type Allowance = { status: "available"; allowanceUsd: string; balanceUsd: string; spender: string; observedAt: string } | { status: "unavailable"; observedAt: string };
 export type CardActivity = { id: string; kind: "payment" | "refund"; status: "pending" | "completed" | "declined" | "reversed"; amountUsd: string;
-  merchant: string | null; createdAt: string; transactionId: string | null; disputable: boolean; dispute: { id: string; status: string } | null };
+  merchant: string | null; createdAt: string; transactionId: string | null; disputable: boolean; dispute: { id: string; status: string } | null;
+  /** The Base transaction in which Bridge took the USDC for it, once Stripe reports one. */
+  transactionHash: string | null };
 
 export type CardState =
   | { state: "unavailable" }
@@ -81,22 +84,57 @@ export async function readAllowance(wallet: `0x${string}`, spender: `0x${string}
 const DISPUTE_WINDOW_MS = 110 * 24 * 3600_000;
 const cents = (amount: number) => (Math.abs(amount) / 100).toFixed(2);
 
-/** The card's recent spending: holds still pending, and settled payments and refunds, with any dispute. */
-export async function readCardActivity(stripe: StripeClient, cardId: string, now = new Date()): Promise<CardActivity[]> {
-  const [authorizations, transactions, disputes] = await Promise.all([listAuthorizations(stripe, cardId), listTransactions(stripe, cardId), listDisputes(stripe)]);
+const hashOf = (auth: IssuingAuthorization | undefined) => auth?.crypto_transactions?.map((item) => item.crypto_transaction_confirmed?.transaction_hash)
+  .find((hash): hash is string => typeof hash === "string" && /^0x[0-9a-fA-F]{64}$/.test(hash))?.toLowerCase() ?? null;
+
+/** Holds still pending (or declined, or reversed), and settled payments and refunds with any dispute, newest first. */
+export function cardActivity(authorizations: IssuingAuthorization[], transactions: IssuingTransaction[], disputes: IssuingDispute[], now = new Date()): CardActivity[] {
   const disputeFor = new Map(disputes.map((dispute) => [dispute.transaction, dispute]));
+  const authorizationFor = new Map(authorizations.map((auth) => [auth.id, auth]));
   const settled = new Set(transactions.map((transaction) => transaction.authorization).filter(Boolean));
   const holds: CardActivity[] = authorizations.filter((auth) => !settled.has(auth.id) && (auth.status === "pending" || !auth.approved || auth.status === "reversed"))
     .map((auth) => ({ id: auth.id, kind: "payment", status: !auth.approved ? "declined" : auth.status === "reversed" ? "reversed" : "pending", amountUsd: cents(auth.amount),
-      merchant: auth.merchant_data?.name ?? null, createdAt: new Date(auth.created * 1000).toISOString(), transactionId: null, disputable: false, dispute: null }));
+      merchant: auth.merchant_data?.name ?? null, createdAt: new Date(auth.created * 1000).toISOString(), transactionId: null, disputable: false, dispute: null,
+      transactionHash: hashOf(auth) }));
   const posted: CardActivity[] = transactions.map((transaction) => {
     const dispute = disputeFor.get(transaction.id);
     return { id: transaction.id, kind: transaction.type === "refund" ? "refund" : "payment", status: "completed", amountUsd: cents(transaction.amount),
       merchant: transaction.merchant_data?.name ?? null, createdAt: new Date(transaction.created * 1000).toISOString(), transactionId: transaction.id,
       disputable: transaction.type === "capture" && !dispute && now.getTime() - transaction.created * 1000 < DISPUTE_WINDOW_MS,
-      dispute: dispute ? { id: dispute.id, status: dispute.status } : null };
+      dispute: dispute ? { id: dispute.id, status: dispute.status } : null,
+      transactionHash: transaction.authorization ? hashOf(authorizationFor.get(transaction.authorization)) : null };
   });
   return [...holds, ...posted].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+}
+
+/** One card's spending, read from Stripe. `partial` means Stripe had more than one page for the window. */
+async function readOneCard(stripe: StripeClient, cardId: string, window: ListWindow, now: Date) {
+  const [authorizations, transactions, disputes] = await Promise.all([listAuthorizationPage(stripe, cardId, window), listTransactionPage(stripe, cardId, window), listDisputes(stripe)]);
+  return { items: cardActivity(authorizations.data, transactions.data, disputes, now), partial: authorizations.hasMore || transactions.hasMore };
+}
+
+/** The card's recent spending, for the card screen. */
+export async function readCardActivity(stripe: StripeClient, cardId: string, now = new Date()): Promise<CardActivity[]> {
+  return (await readOneCard(stripe, cardId, {}, now)).items;
+}
+
+export type CardHistory = { status: "available" | "unavailable"; partial: boolean; items: CardActivity[] };
+
+/**
+ * Every card payment, hold, decline, and refund on the customer's cards, for
+ * Transactions, statements, and Insights. Stripe is the source. A customer
+ * with a card whose history can't be read gets "unavailable", never an empty list.
+ */
+export async function readCardHistory(db: D1Database, subject: string, window: ListWindow = {}, now = new Date()): Promise<CardHistory> {
+  const { results } = await db.prepare("SELECT card_reference FROM card_account_projections WHERE subject_reference = ? AND provider = 'stripe' ORDER BY observed_at DESC LIMIT 5")
+    .bind(subject).all<{ card_reference: string }>();
+  if (!results.length) return { status: "available", partial: false, items: [] };
+  const provider = await cardsProvider(db);
+  if (!provider) return { status: "unavailable", partial: false, items: [] };
+  try {
+    const cards = await Promise.all(results.map((row) => readOneCard(provider.stripe, row.card_reference, { limit: 100, ...window }, now)));
+    return { status: "available", partial: cards.some((card) => card.partial), items: cards.flatMap((card) => card.items) };
+  } catch { return { status: "unavailable", partial: false, items: [] }; }
 }
 
 /** Everything the card screen needs, in one read. */

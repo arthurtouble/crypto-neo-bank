@@ -47,7 +47,7 @@ Adding the card to your phone's wallet is built but switched off. It needs Strip
 
 ## Card activity
 
-The Cards page lists your card payments: pending holds, declines, paid, refunds, and disputes. Card payments aren't in Transactions yet. Only setting your allowance is.
+The Cards page lists your card payments: pending holds, declines, paid, refunds, and disputes. Transactions lists them too, with everything else that moves money in your account. Filter by **Card** to see only card activity. A payment's receipt links to the Base transaction in which Bridge took your USDC.
 
 ## Disputes
 

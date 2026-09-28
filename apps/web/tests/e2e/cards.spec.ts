@@ -107,7 +107,7 @@ test("without a passkey the card isn't created and the customer is asked to add 
   expect(Object.keys((await edge("/__stripe/state") as unknown as { cards: object }).cards)).toHaveLength(0);
 });
 
-test("the card spends only up to the allowance, and a payment can be disputed", async ({ page }) => {
+test("the card spends only up to the allowance, its payments are in Transactions, and one can be disputed", async ({ page }) => {
   test.setTimeout(120_000);
   await withCard(page);
   await page.goto("/app/cards");
@@ -146,11 +146,21 @@ test("the card spends only up to the allowance, and a payment can be disputed", 
   await expect(paid).toContainText("Dispute submitted", { timeout: 20_000 });
   await expect(paid.getByRole("button", { name: "Dispute" })).toHaveCount(0);
 
-  // Setting the allowance is in Transactions, not as money sent.
+  // Card payments are in Transactions with every other money movement, under Card; setting the allowance is too, not as money sent.
   await page.goto("/app/transactions");
-  const row = page.locator(".activityRow").filter({ hasText: "Card allowance set" });
-  await expect(row).toBeVisible({ timeout: 30_000 });
-  await expect(row).toContainText("Aura card");
+  const payment = page.locator(".activityRow").filter({ hasText: "Card payment" }).filter({ hasText: "Corner Cafe" });
+  await expect(payment).toBeVisible({ timeout: 30_000 });
+  await expect(payment).toContainText("12.50 USD");
+  await expect(page.locator(".activityRow").filter({ hasText: "Card allowance set" })).toContainText("Aura card");
+  await page.getByLabel("Category").selectOption("Card");
+  await expect(page.locator(".activityRow").filter({ hasText: "Card payment" })).toHaveCount(3);
+  await payment.click();
+  const receipt = page.getByRole("dialog");
+  await expect(receipt).toContainText("Completed");
+  await expect(receipt).toContainText("Under review");
+  await expect(receipt.getByTestId("card-payment-note")).toContainText("Paid with your card from your USDC on Base");
+  await expect(receipt.getByRole("link", { name: /View on the network/ })).toHaveAttribute("href", /basescan\.org\/tx\/0x[0-9a-f]{64}$/);
+  await expect(receipt.getByRole("link", { name: "Open Cards" })).toHaveAttribute("href", "/app/cards");
 });
 
 test("freezing stops payments at once; unfreezing and a higher limit need the passkey", async ({ page }) => {

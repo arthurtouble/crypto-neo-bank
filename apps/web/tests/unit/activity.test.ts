@@ -3,7 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { d1 } from "../support/d1";
 import { schemaDatabase } from "../support/schema";
 
-const state = vi.hoisted(() => ({ db: null as D1Database | null, incoming: null as unknown, readWallets: [] as string[] }));
+const state = vi.hoisted(() => ({ db: null as D1Database | null, incoming: null as unknown, readWallets: [] as string[],
+  cards: { status: "available", partial: false, items: [] } as import("@/lib/cards/service").CardHistory }));
 const wallet = "0x1111111111111111111111111111111111111111";
 const friend = "0x2222222222222222222222222222222222222222";
 const usdc = "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
@@ -25,8 +26,12 @@ vi.mock("@/lib/activity/incoming", async (original) => {
   } };
 });
 
+vi.mock("@/lib/cards/service", async (original) => ({ ...await original<object>(),
+  readCardHistory: async (_db: unknown, _subject: string, window: { since?: Date; until?: Date } = {}) => ({ ...state.cards,
+    items: state.cards.items.filter((item) => (!window.since || Date.parse(item.createdAt) >= window.since.getTime()) && (!window.until || Date.parse(item.createdAt) < window.until.getTime())) }) }));
+
 const { parseTransfer, readIncoming } = await vi.importActual<typeof import("@/lib/activity/incoming")>("@/lib/activity/incoming");
-const { actionEntry, entriesCsv, entryAmount, incomingEntry } = await import("@/lib/activity/entries");
+const { actionEntry, cardEntry, entriesCsv, entryAmount, entryCategory, incomingEntry } = await import("@/lib/activity/entries");
 const { buildInsights } = await import("@/lib/insights/presentation");
 const { GET: activity } = await import("@/app/api/activity/route");
 const { GET: statement } = await import("@/app/api/statements/route");
@@ -35,6 +40,9 @@ const { GET: insights } = await import("@/app/api/insights/route");
 type Raw = Parameters<typeof parseTransfer>[0];
 const erc20 = (token: string, value: bigint, overrides: Partial<Raw> = {}): Raw => ({ blockNum: "0x64", uniqueId: `${hash(1)}:log:0`, hash: hash(1), from: friend, to: wallet,
   category: "erc20", rawContract: { value: `0x${value.toString(16)}`, address: token }, metadata: { blockTimestamp: "2026-09-10T12:00:00.000Z" }, ...overrides });
+type CardItem = import("@/lib/cards/service").CardActivity;
+const card = (overrides: Partial<CardItem> = {}): CardItem => ({ id: "ipi_1", kind: "payment", status: "completed", amountUsd: "12.50", merchant: "Corner Cafe",
+  createdAt: "2026-09-12T09:00:00.000Z", transactionId: "ipi_1", disputable: true, dispute: null, transactionHash: hash(30), ...overrides });
 const transfer = (n: number, receivedAt: string, amountRaw = "5000000") => parseTransfer(erc20(usdc, BigInt(amountRaw), { hash: hash(n), uniqueId: `${hash(n)}:log:0`,
   metadata: { blockTimestamp: receivedAt } }), 8453, wallet, 1000n)!;
 
@@ -134,6 +142,28 @@ describe("one entry per transaction", () => {
   });
 });
 
+describe("card payments in Transactions", () => {
+  it("shows payments, refunds, holds, and declines from Stripe, with the Base transaction that paid", () => {
+    expect(cardEntry(card())).toMatchObject({ id: "card:ipi_1", origin: "card", type: "card_payment", status: "completed", final: true, amount: "12.50", asset: "USD",
+      counterparty: "Corner Cafe", estimatedUsd: 12.5, transactionHash: hash(30), chainId: 8453, source: "Stripe" });
+    expect(cardEntry(card({ kind: "refund" })).type).toBe("card_refund");
+    expect(cardEntry(card({ id: "iauth_1", status: "pending", transactionHash: null }))).toMatchObject({ status: "pending", final: false, transactionHash: undefined });
+    const declined = cardEntry(card({ id: "iauth_2", status: "declined" }));
+    // A decline moved no money, so it has no value to count.
+    expect(declined).toMatchObject({ status: "failed", failureReason: "Declined" });
+    expect(declined.estimatedUsd).toBeUndefined();
+    expect(cardEntry(card({ dispute: { id: "idp_1", status: "submitted" } })).cardDispute).toBe("submitted");
+    expect([entryCategory("card_payment"), entryCategory("card_refund"), entryCategory("card_allowance")]).toEqual(["Card", "Card", "Card"]);
+  });
+
+  it("counts card payments as money out and refunds as money in", () => {
+    const result = buildInsights([cardEntry(card()), cardEntry(card({ id: "ipi_2", kind: "refund", amountUsd: "2.50" })), cardEntry(card({ id: "iauth_3", status: "declined" }))],
+      new Date("2026-09-20T00:00:00.000Z"), 30);
+    expect(result.totals).toMatchObject({ outgoing: 12.5, incoming: 2.5, unvalued: 0 });
+    expect(result.completedCount).toBe(2);
+  });
+});
+
 describe("insights", () => {
   it("counts money in, money out, Earn deposits, and swaps from completed entries in the period", () => {
     const now = new Date("2026-09-22T12:00:00Z");
@@ -168,6 +198,7 @@ describe("the Transactions API", () => {
     insert("c", "2026-10-01T00:00:00.000Z", "confirmed", hash(11));
     // The account's own action also shows up in the transfer index; it must not be listed twice.
     state.incoming = { status: "available", partial: false, observedAt: "t", transfers: [transfer(12, "2026-09-15T08:00:00.000Z"), transfer(10, "2026-09-02T10:00:00.000Z")] };
+    state.cards = { status: "available", partial: false, items: [] };
   });
   afterEach(() => sqlite.close());
 
@@ -203,5 +234,23 @@ describe("the Transactions API", () => {
       state.incoming = { status: "available", partial: true, observedAt: "t", transfers: [] };
       expect(await (await insights(new Request("https://aura.test/api/insights?days=30"))).json()).toMatchObject({ incomingComplete: false });
     } finally { vi.useRealTimers(); }
+  });
+
+  it("lists card payments with everything else, and says when Stripe can't be read", async () => {
+    state.cards = { status: "available", partial: false, items: [card()] };
+    const body = await (await activity(new Request("https://aura.test/api/activity"))).json() as import("@/lib/activity/history").History;
+    expect(body.entries.map((entry) => entry.type)).toEqual(["sent", "received", "card_payment", "sent", "sent"]);
+    expect(body.sources.card).toEqual({ status: "available", partial: false });
+    const lines = (await (await statement(new Request("https://aura.test/api/statements?month=2026-09"))).text()).trim().split("\n");
+    expect(lines.slice(1).map((line) => line.split(",")[1])).toEqual(['"Sent"', '"Card payment"', '"Received"']);
+    expect(lines[2]).toContain('"12.50","USD","","","Corner Cafe","12.50","Base"');
+
+    state.cards = { status: "unavailable", partial: false, items: [] };
+    expect((await (await activity(new Request("https://aura.test/api/activity"))).json() as import("@/lib/activity/history").History).sources.card.status).toBe("unavailable");
+    // A statement without every card payment would be short, so it's refused; Insights shows money out as unknown.
+    expect(await (await statement(new Request("https://aura.test/api/statements?month=2026-09"))).json()).toMatchObject({ error: "statement_incomplete" });
+    vi.useFakeTimers({ now: new Date("2026-09-20T00:00:00.000Z"), toFake: ["Date"] });
+    try { expect(await (await insights(new Request("https://aura.test/api/insights?days=30"))).json()).toMatchObject({ outgoingComplete: false, incomingComplete: false }); }
+    finally { vi.useRealTimers(); }
   });
 });

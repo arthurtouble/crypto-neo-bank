@@ -549,7 +549,8 @@ export function startFakeEdge({ port }) {
             data: encodeAbiParameters([{ type: "uint256" }], [raw]) }] });
       }
       const authorization = { id: `iauth_${randomUUID().slice(0, 8)}`, object: "issuing.authorization", card: card.id, amount: cents, currency: "usd", approved,
-        status: approved ? "pending" : "closed", created: Math.floor(Date.now() / 1000), merchant_data: { name: body.merchant ?? "Corner Cafe" }, transactionHash: hash };
+        status: approved ? "pending" : "closed", created: Math.floor(Date.now() / 1000), merchant_data: { name: body.merchant ?? "Corner Cafe" },
+        crypto_transactions: hash ? [{ crypto_transaction_confirmed: { transaction_hash: hash, amount: (cents / 100).toFixed(2) } }] : [] };
       state.stripe.authorizations.push(authorization);
       return send(200, authorization);
     }
@@ -737,7 +738,9 @@ export function startFakeEdge({ port }) {
         }
         return send(200, item);
       }
-      const forCard = (items) => items.filter((item) => item.card === url.searchParams.get("card"));
+      const since = Number(url.searchParams.get("created[gte]") ?? 0);
+      const until = Number(url.searchParams.get("created[lt]") ?? Infinity);
+      const forCard = (items) => items.filter((item) => item.card === url.searchParams.get("card") && item.created >= since && item.created < until);
       if (path === "/issuing/authorizations") return list(forCard(stripe.authorizations));
       if (path === "/issuing/transactions") return list(forCard(stripe.transactions));
       if (path === "/issuing/disputes" && req.method === "POST") {
