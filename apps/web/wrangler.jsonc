@@ -42,8 +42,9 @@
         "PRODUCT_MODE": "mainnet-preview",
         "BRIDGE_API_BASE_URL": "https://api.bridge.xyz/v0",
         "NEXT_PUBLIC_PRIVY_APP_ID": "cmub5evr4013l0cjs0w5dijlb",
-        "CF_ACCESS_TEAM_DOMAIN": "",
-        "CF_ACCESS_AUD": "",
+        // Cloudflare Access in front of aura-dev-ops (the dev operations app). Not secrets: the team domain and the application's audience tag.
+        "CF_ACCESS_TEAM_DOMAIN": "https://red-surf-47a8.cloudflareaccess.com",
+        "CF_ACCESS_AUD": "f6cf8daf909aeae2ca6f06629b529c9068df1a567bac7c89f95a7899fd64b289",
         "LIFI_INTEGRATOR": "aurel",
         "LIFI_INTEGRATOR_FEE": "0",
         // Notifications. Resend only sends from onboarding@resend.dev, to the Resend account's own address, until a domain is verified.
