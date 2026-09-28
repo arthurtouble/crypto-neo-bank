@@ -10,7 +10,7 @@ These files contain operational and security-sensitive context. Keep them in the
 - [Feature readiness](overview/feature-readiness.md): the current feature-by-feature plan, definition of done, and status.
 - [Launch readiness](overview/launch-readiness.md): release gates.
 - [Codebase audit, 25 September 2026](overview/codebase-audit-2026-09-25.md): findings, target architecture, and the refactor plan.
-- [Operations runbook](operations/operations-runbook.md): provider activation, secrets, migrations, reconciliation, and recovery.
+- [Operations runbook](operations/operations-runbook.md): provider activation, secrets, migrations, reconciliation, the operations app (`apps/ops`), and recovery.
 - [Architecture](architecture/architecture.md): systems of record and the rule that D1 never owns money.
 - [Supported assets](architecture/assets.md): the asset registry, how to add an asset, and how to pause one.
 - [Money actions](architecture/money-actions.md): how every customer money movement is prepared, signed, verified, and recorded.

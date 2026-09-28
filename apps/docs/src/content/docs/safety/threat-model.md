@@ -45,7 +45,7 @@ Moves between networks can depend on several contracts, liquidity sources, valid
 
 ## Someone on our team makes a mistake or misuses access
 
-A staff member could misuse access, change settings, mishandle a support chat, or expose logs. We keep customer and staff access separate, limit staff access to a named list, and keep signing out of Aura entirely.
+A staff member could misuse access, change settings, mishandle a support chat, or expose logs. We keep customer and staff access separate, limit staff access to a named list, record who made each change, and keep signing out of Aura entirely. Staff can lock your account to protect it, but only you can unlock it, with your passkey.
 
 That limits what any one of us can do. It doesn't replace access reviews, logging, change control, incident response, and oversight of our suppliers.
 

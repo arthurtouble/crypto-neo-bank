@@ -27,7 +27,7 @@ Each asset is identified by network and contract, never by ticker:
 
 ## Adding an asset
 
-Adding is a reviewed code change, so a mistaken or compromised admin account can never list a token.
+Adding is a reviewed code change, so a mistaken or compromised operator account can never list a token.
 
 1. Add an entry to `ASSETS` with the contract from the issuer's own documentation, and the uses it should have.
 2. If it needs a price source Aura doesn't have yet, add it first.
@@ -36,7 +36,7 @@ Adding is a reviewed code change, so a mistaken or compromised admin account can
 
 ## Pausing an asset
 
-An operator can pause any registered asset from the operations console (Assets), with a reason. It takes effect immediately. It stops deposits from other networks, sends, swaps, purchases, earn deposits, and bank payouts in that asset (`requireAsset` and `requireNotPaused` in `lib/assets/pauses.ts`, and `prepareBuiltAction`). Holdings stay visible, because they are facts on the chain. A deposit on Base itself is a plain transfer from the customer's own wallet that Aura doesn't take part in, so no pause can stop it. Resuming deletes the pause. Both are written to `audit_events`, and pauses are stored in the `asset_pauses` table.
+An operator can pause any registered asset in the operations app (Controls → Assets, `PATCH /api/ops/assets`), with a reason. It takes effect immediately. It stops deposits from other networks, sends, swaps, purchases, earn deposits, and bank payouts in that asset (`requireAsset` and `requireNotPaused` in `lib/assets/pauses.ts`, and `prepareBuiltAction`). Holdings stay visible, because they are facts on the chain. A deposit on Base itself is a plain transfer from the customer's own wallet that Aura doesn't take part in, so no pause can stop it. Resuming deletes the pause. Both are written to `audit_events` with the operator's email, and pauses are stored in the `asset_pauses` table (`paused_by` is the operator's email).
 
 Use it when a stablecoin loses its peg, an issuer halts transfers, or a bridge or contract has a problem.
 

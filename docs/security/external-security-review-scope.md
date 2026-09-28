@@ -10,7 +10,7 @@ description: Required scope and evidence for independent security assessment.
 - The verifier: operation identity (decoded calls equal prepared calls), finality, expected events, and cross-chain delivery.
 - LI.FI quotes: server-held storage, Diamond pinning, price-impact and slippage bounds, and batched ERC-20 approvals.
 - Account lock, daily limit, saved-recipients-only mode, recipient cooling, valuation, and feature switches on every action.
-- Operator authorization, Cloudflare Access activation boundary and feature kill switches.
+- Operator authorization: the operations Worker's forwarding over the service binding (headers passed, paths refused), Cloudflare Access token verification in the web app (signature, key rotation, issuer, audience, expiry, service tokens refused), operator audit records, the operator lock, and feature switches.
 - Per-provider webhook verification (Bridge RSA, Privy Svix, Stripe HMAC-SHA256), customer resolution through `provider_customer_links` (Stripe card events through `card_account_projections`), replay prevention, queue retries, dead-letter processing and reconciliation.
 - D1 migrations, evidence integrity, backup/export/restore, log minimization and incident procedures.
 - Cards: passkey step-up for card details, unfreezing, and raising the limit; the Stripe ephemeral key and nonce binding; the card allowance `approve` (spender pinned to `BRIDGE_CARDS_SPENDER`, verified from the `Approval` log); card ownership checks on controls and disputes.
@@ -18,7 +18,7 @@ description: Required scope and evidence for independent security assessment.
 
 ## Required tests
 
-Test horizontal and vertical authorization, forged Privy/Access headers, transaction-policy bypass, altered calldata, quote tampering, stale quote reuse, hash replay across actions, spoofed events in an unrelated operation, webhook timing/replay, queue poison messages, unsupported asset/network paths, sensitive log leakage and rollback/schema mismatch.
+Test horizontal and vertical authorization, forged Privy tokens, forged or expired Access tokens and tokens for another Access application, direct calls to `/api/ops/*` that skip the operations Worker, transaction-policy bypass, altered calldata, quote tampering, stale quote reuse, hash replay across actions, spoofed events in an unrelated operation, webhook timing/replay, queue poison messages, unsupported asset/network paths, sensitive log leakage and rollback/schema mismatch.
 
 ## Exit standard
 

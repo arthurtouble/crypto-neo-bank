@@ -9,14 +9,20 @@ The application-level controls are already active. The settings below require th
 
 - Product: `app.<approved-domain>` → `aurel-financial-os`
 - Documentation: `docs.<approved-domain>` → `aurel-docs`
+- Operations: `ops.<approved-domain>` → `aurel-ops`, behind Cloudflare Access (below)
 - Aura has no status page; announce incidents through the customer communication templates.
 - Update Privy allowed origins, Intercom's allowed domains, CSP, OpenAPI servers, documentation links and production smoke target together. The CSP (`apps/web/next.config.ts`) allows `https://js.stripe.com` in `script-src` and `https://js.stripe.com https://*.stripe.com` in `frame-src` for Stripe's card details and Add to Wallet frames; keep them when tightening it.
 
 ## Cloudflare Access
 
-Create a self-hosted Access application for both `app.<domain>/app/operations*` and `app.<domain>/api/ops/*`. Allow only named operator identities with MFA. Deny all other identities. Keep the in-application Privy subject allowlist as a second control.
+Operators use the operations app, a separate Worker (`aurel-ops` in production, `aura-dev-ops` in dev). The customer app has no operations pages. Cloudflare Access is the only operator sign-in.
 
-After the Access policy is tested, set `REQUIRE_CF_ACCESS=true`. The application then rejects an operator request that does not carry the Cloudflare Access assertion. Do not enable this variable before the edge policy exists.
+1. Create a self-hosted Access application for the operations Worker's hostname (on dev, its workers.dev route: Workers & Pages → `aura-dev-ops` → Settings → Domains & Routes). In production, give it its own hostname, such as `ops.<domain>`.
+2. Allow only named operator emails, with MFA. Deny everyone else. Don't allow service tokens; the web app refuses them anyway.
+3. Copy the application's AUD tag and the team domain (`https://<team>.cloudflareaccess.com`) into the web app's `CF_ACCESS_AUD` and `CF_ACCESS_TEAM_DOMAIN` variables for that environment, and deploy the web Worker. They aren't secrets.
+4. Sign in to the operations app and check it shows your email. Check that a request to the web app's `/api/ops/*` without a token, or with a made-up one, is refused (the deployment smoke does this).
+
+The web app doesn't rely on the edge alone. Every `/api/ops/*` route verifies the `Cf-Access-Jwt-Assertion` token itself (`requireOperator` in `apps/web/src/lib/auth/access.ts`): the signature against the team's published keys, the issuer, the audience, expiry, and a person's email. So a request that reaches `/api/ops/*` on the web app's own hostname, not through the operations Worker, is refused unless it carries a valid token for the operations application. While either variable is empty, every operator request is refused.
 
 ## WAF rules
 

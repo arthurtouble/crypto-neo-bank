@@ -6,10 +6,12 @@
    - Privy's API, and access tokens signed with a key it generates;
    - a JSON-RPC node for Base (8453) and Ethereum (1);
    - the Kraken price feed;
+   - Cloudflare Access for the operations app: its published keys at `/access/cdn-cgi/access/certs`, and operator tokens from `/__access`;
 2. resets a separate local D1 (`.wrangler/e2e-state`) and applies the baseline schema;
 3. starts `vinext dev` with `AURA_E2E=1`, which:
    - swaps Privy's browser SDK for `support/privy-react-fake.tsx` (see `vite.config.ts`);
-   - points the Worker at the fake through `PRIVY_API_URL`, `PRIVY_VERIFICATION_KEY`, `RPC_URL_<chain>` and `KRAKEN_API_URL`.
+   - points the Worker at the fake through `PRIVY_API_URL`, `PRIVY_VERIFICATION_KEY`, `RPC_URL_<chain>`, `KRAKEN_API_URL`, `CF_ACCESS_TEAM_DOMAIN` and `CF_ACCESS_AUD`;
+4. starts the operations app (`apps/ops`) with Vite on port 43175 (`AUREL_E2E_OPS_PORT`), forwarding its `/api` calls to the web app's `/api/ops`.
 
 Aura's own code runs for real: the pages, the API routes, token verification, the chain reads, and D1. The overrides only take effect for loopback URLs (`src/lib/testing/local-edge.ts`), so they can't change a deployed Worker.
 
@@ -28,7 +30,8 @@ Use the helpers in `support/session.ts`:
 - `newCustomer({ connectedWallet: true })` also links a MetaMask-like wallet (`customer.externalWallets[0]`). It sends through the fake edge, which moves balances and keeps receipts like a chain. `edge("/__sent")` lists what it sent. `edge("/__state", { revertNext: true })` makes the next one revert.
 - `edge("/__state", { bridge: { status: "DONE", substatus: "COMPLETED" } })` sets what LI.FI reports for a bridge (`PENDING`, `COMPLETED`, or `REFUNDED`).
 - `edge("/__receive", { chainId, to, token, amount, from })` sends money to an address from outside Aura. The fake node answers Alchemy's `alchemy_getAssetTransfers` from its own transactions and logs, so it appears in Transactions; `down: ["transfers"]` makes that index fail.
-- `setFeature(page, "cross_chain", true)` flips a feature switch through the real operations API, as the test operator.
+- `setFeature(page, "cross_chain", true)` flips a feature switch through the real operations API, with an operator's Access token.
+- `operatorHeaders({ email, audience, expiresIn, forged })` returns the `Cf-Access-Jwt-Assertion` header Access would add, for calling `/api/ops/*` as an operator, or with a wrong audience, an expired token, or a forged signature. `tests/e2e/ops.spec.ts` drives the operations app this way on desktop and mobile.
 - In the browser, `localStorage` `aura-e2e-wallet` = `reject` makes the connected wallet refuse, and `aura-e2e-card` = `fail` makes the card flow fail. Card payments are recorded in `window.__auraE2E.fundWallet`.
 
 Each feature has one spec named after it, covering every step and failure listed in its pull request.
