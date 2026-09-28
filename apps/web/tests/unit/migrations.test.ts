@@ -1,0 +1,30 @@
+import { createHash } from "node:crypto";
+import { readdirSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { describe, expect, it } from "vitest";
+import { migrationsDirectory } from "../support/schema";
+
+/**
+ * Migrations applied to a real database (dev since 28 September 2026), with
+ * each file's SHA-256. An applied migration never changes: change the schema
+ * with the next numbered file, apply it, then add it here.
+ */
+const APPLIED: Record<string, string> = {
+  "0001_baseline.sql": "e4753039344c01f53cad5794edb7d6a004ded7ac1d6123ec446856591bcf63a3"
+};
+
+const files = readdirSync(migrationsDirectory).filter((name) => name.endsWith(".sql")).sort();
+const sha256 = (name: string) => createHash("sha256").update(readFileSync(resolve(migrationsDirectory, name))).digest("hex");
+
+describe("migrations", () => {
+  it("are numbered in order from 0001, with no gaps", () => {
+    files.forEach((name, index) => expect(name).toMatch(new RegExp(`^${String(index + 1).padStart(4, "0")}_[a-z0-9_]+\\.sql$`)));
+  });
+
+  it("never change once applied", () => {
+    for (const [name, hash] of Object.entries(APPLIED)) {
+      expect(files, `${name} was applied and must stay`).toContain(name);
+      expect(sha256(name), `${name} was applied; add a new numbered migration instead of editing it`).toBe(hash);
+    }
+  });
+});

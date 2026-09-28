@@ -9,7 +9,7 @@ Aura is a crypto-and-fiat money app built on Cloudflare Workers. Infrastructure,
 - `apps/docs`: public Astro docs Worker. Customer-facing copy.
 - `apps/ops`: the operations app (Vite + React, its own Worker behind Cloudflare Access). Its Worker forwards `/api/*` to the web app's `/api/ops/*` over a service binding; those routes verify the Access token (`apps/web/src/lib/auth/access.ts`). Operators never sign in with Privy.
 - `packages/provider-projections`: shared event contract used by web and events.
-- `infra/d1/migrations`: D1 schema (`0001_baseline.sql`, then numbered `NNNN_snake_case.sql` files once production exists), shared by all Workers.
+- `infra/d1/migrations`: D1 schema: `0001_baseline.sql`, then numbered `NNNN_snake_case.sql` files, shared by all Workers.
 - `docs/`: internal docs (architecture, runbooks, security, compliance). Read `docs/README.md` first. Dated files are point-in-time evidence; don't edit them, update the undated doc instead.
 
 ## Commands (repo root)
@@ -46,7 +46,7 @@ Until every row in `docs/overview/feature-readiness.md` is done or cut, all prod
 - Only assets in `apps/web/src/lib/assets/registry.ts` can be shown, deposited, sent, swapped, or bought, and the server checks it (`lib/assets/pauses.ts`). Add assets there in a reviewed change and run `pnpm assets:check`; see `docs/architecture/assets.md`.
 - New customer-data tables must be classified in `apps/web/src/lib/privacy/subject-data.ts`.
 - Financial actions are gated server-side by feature switches (`src/lib/features/flags.ts`, stored in D1), account locks, daily limits, and transaction policy. Never gate only in the UI.
-- Migrations: `infra/d1/migrations/0001_baseline.sql` is the whole schema. No production database has been migrated yet, so edit the baseline directly and reset the dev database (see `docs/operations/aura-development-worker.md`). After the first production migration, migrations become append-only: add a new numbered file, never edit an applied one, and apply migrations before deploying code that needs them.
+- Migrations are append-only, on dev as in production (since 28 September 2026, so dev keeps its history). Never edit a migration that has been applied; `tests/unit/migrations.test.ts` records each applied file's hash and fails if one changes. Add the next numbered file (`0002_snake_case.sql`, …), apply it with `wrangler d1 migrations apply` before deploying code that needs it, then add its hash to that test. Don't reset the dev database to change the schema; `pnpm d1:reset:dev` wipes every dev record and is only for when the owner asks. No production database exists yet.
 - Never put secrets in `wrangler.jsonc`, docs, or tests. Use `wrangler secret put`. `.aura-dev-*` and `.dev.vars` are gitignored for local secrets.
 - Guest pages show fictional example data, and it must be labeled as such.
 

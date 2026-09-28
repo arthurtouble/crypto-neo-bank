@@ -27,13 +27,11 @@ pnpm test:deployment
 
 ## Database
 
-The schema is `infra/d1/migrations/0001_baseline.sql`. Until production is migrated, schema changes edit the baseline, and the dev database is reset rather than migrated:
+The schema is `infra/d1/migrations/0001_baseline.sql` plus numbered migrations after it. Since 28 September 2026, migrations are append-only on dev as they will be in production, so dev keeps its customers and transaction records:
 
-```bash
-pnpm d1:reset:dev
-```
-
-The reset drops every table in `aura-dev-projections`, applies the current schema, and turns back on the feature switches that were on. Development data is disposable. It records the baseline's hash in `dev_schema_state`, and `--if-schema-changed` resets only when the hash differs. The dev deploy uses that, so a merged schema change resets dev by itself.
+- Never edit a migration that has been applied. `apps/web/tests/unit/migrations.test.ts` records each applied file's SHA-256 and fails if one changes.
+- To change the schema, add the next numbered file (`0002_snake_case.sql`, …). Apply it before deploying code that needs it (the dev deploy runs `wrangler d1 migrations apply` first), then add its hash to that test.
+- `pnpm d1:reset:dev` still exists, for when the owner asks for a clean dev database. It drops every table in `aura-dev-projections`, applies every migration, and turns back on the feature switches that were on. It erases every dev customer and transaction record; the chain keeps the transactions themselves.
 
 ## Configuration
 

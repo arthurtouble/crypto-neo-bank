@@ -36,9 +36,7 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # Until production is migrated, schema changes edit the baseline, so the
-      # dev database is reset when the baseline changes. Switches stay as they were.
-      - run: bash scripts/d1-reset-dev.sh --if-schema-changed
+      # Migrations are append-only: new numbered files are applied, and dev keeps its data.
       - run: pnpm --filter @aurel/web exec wrangler d1 migrations apply aura-dev-projections --remote --env dev
       - run: pnpm events:deploy:dev
       - run: pnpm deploy:dev
