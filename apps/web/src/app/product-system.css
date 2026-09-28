@@ -795,3 +795,4 @@
 
 /* Settings */
 .settingState { color: var(--positive); font-size: var(--type-caption); font-weight: 600; }
+.supportActions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
