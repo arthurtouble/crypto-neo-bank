@@ -49,7 +49,8 @@ function Receipt({ entry, onClose }: { entry: ActivityEntry; onClose: () => void
         <span>Status<strong>{statusLabel(entry.status)}</strong></span>
         <span>Date<strong>{new Date(entry.createdAt).toLocaleString()}</strong></span>
         <span>Network<strong>{networkName(entry.chainId)}{entry.destinationChainId ? ` to ${networkName(entry.destinationChainId)}` : ""}</strong></span>
-        {entry.counterparty && <span>{entry.type === "received" ? "From" : "To"}<strong>{entry.counterparty}</strong></span>}
+        {entry.counterparty && <span>{entry.type === "received" || entry.type === "bank_deposit" ? "From" : "To"}<strong>{entry.counterparty}</strong></span>}
+        {entry.bankStatus && <span>Bank<strong data-testid="bank-status">{entry.bankStatus}</strong></span>}
         {entry.estimatedUsd !== undefined && <span>{entry.origin === "incoming" ? "Value today" : "Value"}<strong>${entry.estimatedUsd.toFixed(2)}</strong></span>}
         <span>Source<strong>{entry.source}</strong></span>
         {entry.origin === "aura" && <span>Reference<strong>{entry.id}</strong></span>}
@@ -139,7 +140,7 @@ export function ActivityWorkspace() {
         : query.isError ? <div className="formError">Activity couldn&apos;t be loaded. Try again.</div>
           : filtered.length === 0 ? <div className="emptyState"><Search size={22} /><strong>{entries.length ? "No matching activity" : "No activity yet"}</strong><span>{entries.length ? "Try changing the filters." : "Money you send, receive, swap, or earn will appear here."}</span></div>
             : filtered.map((entry) => <button className="activityRow activityButton" key={entry.id} data-testid={`entry-${entry.id}`} onClick={() => setChosen(entry)}>
-              <span className={`activityIcon ${tone(entry)}`}>{entry.type === "received" && entry.status === "completed" ? <ArrowDownLeft size={14} /> : <StatusIcon entry={entry} />}</span>
+              <span className={`activityIcon ${tone(entry)}`}>{(entry.type === "received" || entry.type === "bank_deposit") && entry.status === "completed" ? <ArrowDownLeft size={14} /> : <StatusIcon entry={entry} />}</span>
               <span><strong>{entryLabel(entry.type)}</strong><small>{new Date(entry.createdAt).toLocaleString()} · {networkName(entry.chainId)}{entry.counterparty ? ` · ${short(entry.counterparty)}` : ""}</small></span>
               <span className="activityAmount"><strong>{entryAmount(entry) ?? "—"}</strong><small className={`intentState ${entry.status}`}>{statusLabel(entry.status)}</small></span>
             </button>)}</div>

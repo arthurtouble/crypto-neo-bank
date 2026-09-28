@@ -4,6 +4,8 @@ import { valueAsset } from "@/lib/actions/valuation";
 import { getAaveBaseActivity, type AaveBaseActivity } from "@/lib/defi/aave";
 import { actionEntry, incomingEntry, type ActivityEntry } from "./entries";
 import { readIncoming, type IncomingRead } from "./incoming";
+import { readBankDeposits, refreshBankPayouts } from "@/lib/money/bank-activity";
+import type { BankDeposit } from "@/lib/providers/bridge/transfers";
 
 const RECHECK_MS = 30_000;
 const MAX_CHECKS = 3;
@@ -12,7 +14,8 @@ export const MAX_ENTRIES = 150;
 export type SourceState = { status: "available" | "unavailable"; partial: boolean };
 export type History = { entries: ActivityEntry[]; sources: { aura: SourceState; incoming: SourceState; aave: SourceState }; observedAt: string };
 
-type Deps = { readIncoming?: typeof readIncoming; aave?: (wallet: string) => Promise<AaveBaseActivity>; check?: typeof checkAction;
+type Deps = { bankDeposits?: (subject: string) => Promise<Map<string, BankDeposit>>; refreshPayouts?: (subject: string) => Promise<unknown>;
+  readIncoming?: typeof readIncoming; aave?: (wallet: string) => Promise<AaveBaseActivity>; check?: typeof checkAction;
   unitCents?: (assetId: string, decimals: number) => Promise<number | null> };
 
 /** What one whole unit of an asset is worth now, in cents, read once per asset per request. */
@@ -25,9 +28,10 @@ function unitPricer(deps: Deps) {
   };
 }
 
-async function incomingEntries(read: IncomingRead, deps: Deps) {
+async function incomingEntries(read: IncomingRead, deps: Deps, bank: Map<string, BankDeposit>) {
   const price = unitPricer(deps);
-  return Promise.all(read.transfers.map(async (transfer) => incomingEntry(transfer, await price(transfer.assetId, transfer.decimals))));
+  return Promise.all(read.transfers.map(async (transfer) => incomingEntry(transfer, await price(transfer.assetId, transfer.decimals),
+    bank.get(transfer.transactionHash.toLowerCase()))));
 }
 
 /**
@@ -37,10 +41,13 @@ async function incomingEntries(read: IncomingRead, deps: Deps) {
  * be read, so a failed read never looks like "nothing happened".
  */
 export async function readHistory(db: D1Database, subject: string, wallet: string, now = new Date(), deps: Deps = {}): Promise<History> {
+  // Pick up a few bank payouts' latest state from Bridge first, in case a webhook is late.
+  await (deps.refreshPayouts ?? ((who: string) => refreshBankPayouts(db, { subject: who, limit: 3, now })))(subject).catch(() => undefined);
   const [stored, hashes] = await Promise.all([listActions(db, subject, 100), listActionHashes(db, subject)]);
-  const [incoming, aave] = await Promise.all([
+  const [incoming, aave, bank] = await Promise.all([
     (deps.readIncoming ?? readIncoming)(wallet, { exclude: hashes, now }),
-    (deps.aave ?? getAaveBaseActivity)(wallet).catch((): AaveBaseActivity => ({ items: [], partial: false, sourceStatus: "unavailable" }))
+    (deps.aave ?? getAaveBaseActivity)(wallet).catch((): AaveBaseActivity => ({ items: [], partial: false, sourceStatus: "unavailable" })),
+    (deps.bankDeposits ?? ((who: string) => readBankDeposits(db, who)))(subject)
   ]);
   // Opening Transactions also advances a few open actions, so they settle even if the customer left the screen they started on.
   const due = stored.filter((action) => (action.status === "submitted" || action.status === "settling") && (action.transactionHash || action.relayReference)
@@ -54,7 +61,7 @@ export async function readHistory(db: D1Database, subject: string, wallet: strin
     chainId: item.chainId, asset: item.asset, amount: item.amount, estimatedUsd: item.estimatedUsd, counterparty: "Aave", transactionHash: item.transactionHash,
     source: "Aave"
   }));
-  const entries = [...own, ...await incomingEntries(incoming, deps), ...aaveEntries]
+  const entries = [...own, ...await incomingEntries(incoming, deps, bank), ...aaveEntries]
     .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)).slice(0, MAX_ENTRIES);
   return { entries, observedAt: now.toISOString(), sources: {
     aura: { status: "available", partial: stored.length >= 100 },
@@ -70,8 +77,9 @@ export async function readHistory(db: D1Database, subject: string, wallet: strin
  */
 export async function readPeriod(db: D1Database, subject: string, wallet: string, start: Date, end: Date, deps: Deps = {}) {
   const [actions, hashes] = await Promise.all([listActionsBetween(db, subject, start, end), listActionHashes(db, subject)]);
-  const incoming = await (deps.readIncoming ?? readIncoming)(wallet, { exclude: hashes, since: start, until: end });
+  const [incoming, bank] = await Promise.all([(deps.readIncoming ?? readIncoming)(wallet, { exclude: hashes, since: start, until: end }),
+    (deps.bankDeposits ?? ((who: string) => readBankDeposits(db, who)))(subject)]);
   const complete = incoming.status === "available" && !incoming.partial;
-  const entries = [...actions.map(actionEntry), ...await incomingEntries(incoming, deps)].sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt));
+  const entries = [...actions.map(actionEntry), ...await incomingEntries(incoming, deps, bank)].sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt));
   return { entries, complete };
 }

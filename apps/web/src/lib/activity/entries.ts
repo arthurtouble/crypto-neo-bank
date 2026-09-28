@@ -1,4 +1,5 @@
 import { formatUnits } from "viem";
+import { FAILED_PAYOUT_STATES, payoutStateText } from "@/lib/providers/bridge/transfers";
 import type { IncomingTransfer } from "./incoming";
 
 /**
@@ -7,7 +8,7 @@ import type { IncomingTransfer } from "./incoming";
  * index), or Aave history (Aave's data service). Shared by the list, the
  * receipt, exports, statements, and Insights, so they always agree.
  */
-export type EntryType = "sent" | "received" | "swap" | "bridge" | "earn_deposit" | "earn_withdraw"
+export type EntryType = "sent" | "received" | "bank_deposit" | "bank_payout" | "swap" | "bridge" | "earn_deposit" | "earn_withdraw"
   | "borrow" | "repay" | "liquidation" | "collateral_enabled" | "collateral_disabled" | "defi_activity";
 export type EntryStatus = "pending" | "completed" | "failed" | "not_confirmed";
 export type EntryOrigin = "aura" | "incoming" | "aave";
@@ -34,13 +35,15 @@ export type ActivityEntry = {
   failureReason?: string;
   /** Completed and in a final block. A completed entry that isn't final yet can, very rarely, still be reversed. */
   final?: boolean;
+  /** A bank payout's progress at Bridge, in words. */
+  bankStatus?: string;
   source: string;
 };
 
 /** The fields of a stored action (or its browser view) an entry needs. */
 export type ActionLike = { id: string; kind: "transfer" | "earn" | "route"; chainId: number; status: string; summary: Record<string, unknown>;
   usdCents: number | null; transactionHash: string | null; destinationChainId: number | null; destinationTransactionHash: string | null;
-  failureReason: string | null; createdAt: string };
+  failureReason: string | null; createdAt: string; bankState?: string | null };
 
 type RouteSide = { symbol?: string; decimals?: number };
 const raw = (value: unknown, decimals: unknown) => typeof value === "string" && /^\d+$/.test(value) && typeof decimals === "number" ? formatUnits(BigInt(value), decimals) : undefined;
@@ -83,20 +86,31 @@ export function actionEntry(action: ActionLike): ActivityEntry {
     return { ...base, type: summary.direction === "withdraw" ? "earn_withdraw" : "earn_deposit", asset: symbol, amount, counterparty: place };
   }
   const bank = summary.bankPayout as { bankName?: string; lastFour?: string } | undefined;
-  return { ...base, type: "sent", asset: symbol, amount,
-    counterparty: bank ? [bank.bankName ?? "Bank account", bank.lastFour ? `ending ${bank.lastFour}` : ""].join(" ").trim() : typeof summary.to === "string" ? summary.to : undefined };
+  if (bank) {
+    // Funding the payout on Base is only half of it: it's complete when Bridge says the bank has it.
+    const state = action.bankState ?? null;
+    const chainDone = base.status === "completed";
+    const status: EntryStatus = base.status === "failed" || base.status === "not_confirmed" ? base.status
+      : state && FAILED_PAYOUT_STATES.has(state) ? "failed" : chainDone && state === "payment_processed" ? "completed" : "pending";
+    return { ...base, type: "bank_payout", status, final: status === "completed" && base.final, asset: symbol, amount,
+      counterparty: [bank.bankName ?? "Bank account", bank.lastFour ? `ending ${bank.lastFour}` : ""].join(" ").trim(),
+      bankStatus: chainDone ? payoutStateText(state ?? "awaiting_funds") : undefined };
+  }
+  return { ...base, type: "sent", asset: symbol, amount, counterparty: typeof summary.to === "string" ? summary.to : undefined };
 }
 
-export function incomingEntry(transfer: IncomingTransfer, usdCentsPerUnit?: number | null): ActivityEntry {
+export function incomingEntry(transfer: IncomingTransfer, usdCentsPerUnit?: number | null, bank?: { senderName: string | null; bankName: string | null }): ActivityEntry {
   const value = usdCentsPerUnit === undefined || usdCentsPerUnit === null ? undefined
     : Math.round(Number(BigInt(transfer.amountRaw) * BigInt(usdCentsPerUnit) / 10n ** BigInt(transfer.decimals))) / 100;
-  return { id: transfer.id, origin: "incoming", type: "received", status: transfer.status, final: transfer.final, createdAt: transfer.receivedAt, chainId: transfer.chainId,
-    asset: transfer.symbol, amount: transfer.amount, counterparty: transfer.from, estimatedUsd: value, transactionHash: transfer.transactionHash,
-    source: transfer.source };
+  return { id: transfer.id, origin: "incoming", type: bank ? "bank_deposit" : "received", status: transfer.status, final: transfer.final, createdAt: transfer.receivedAt,
+    chainId: transfer.chainId, asset: transfer.symbol, amount: transfer.amount,
+    // A bank deposit comes from Bridge's address; who sent it is the bank sender.
+    counterparty: bank ? bank.senderName ?? bank.bankName ?? "Bank transfer" : transfer.from, estimatedUsd: value, transactionHash: transfer.transactionHash,
+    source: bank ? `${transfer.source} · Bridge` : transfer.source };
 }
 
 const LABELS: Record<EntryType, string> = {
-  sent: "Sent", received: "Received", swap: "Swapped", bridge: "Moved between networks", earn_deposit: "Added to Earn",
+  sent: "Sent", received: "Received", bank_deposit: "Bank deposit", bank_payout: "Sent to bank", swap: "Swapped", bridge: "Moved between networks", earn_deposit: "Added to Earn",
   earn_withdraw: "Withdrawn from Earn", borrow: "Borrowed", repay: "Repaid", liquidation: "Collateral liquidated",
   collateral_enabled: "Enabled collateral", collateral_disabled: "Disabled collateral", defi_activity: "Aave activity"
 };
@@ -105,8 +119,8 @@ export const entryLabel = (type: EntryType) => LABELS[type];
 export const CATEGORIES = ["All", "Sent", "Received", "Swaps", "Earn", "Other"] as const;
 export type EntryCategory = Exclude<(typeof CATEGORIES)[number], "All">;
 export function entryCategory(type: EntryType): EntryCategory {
-  if (type === "sent") return "Sent";
-  if (type === "received") return "Received";
+  if (type === "sent" || type === "bank_payout") return "Sent";
+  if (type === "received" || type === "bank_deposit") return "Received";
   if (type === "swap" || type === "bridge") return "Swaps";
   if (type === "earn_deposit" || type === "earn_withdraw" || type.startsWith("collateral_")) return "Earn";
   return "Other";
@@ -125,8 +139,8 @@ export function entryAmount(entry: ActivityEntry) {
 
 /** Money in, money out, or moved within the account, for Insights. */
 export function entryDirection(type: EntryType): "in" | "out" | "earn" | "moved" | "other" {
-  if (type === "received" || type === "borrow") return "in";
-  if (type === "sent" || type === "repay") return "out";
+  if (type === "received" || type === "bank_deposit" || type === "borrow") return "in";
+  if (type === "sent" || type === "bank_payout" || type === "repay") return "out";
   if (type === "earn_deposit") return "earn";
   if (type === "swap" || type === "bridge") return "moved";
   return "other";

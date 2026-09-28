@@ -1,5 +1,6 @@
 import { readIncoming } from "@/lib/activity/incoming";
 import { listActionHashes } from "@/lib/actions/store";
+import { readBankDeposits } from "@/lib/money/bank-activity";
 import { notify, receivedNotice } from "./store";
 
 /**
@@ -23,7 +24,7 @@ export async function watchAccount(db: D1Database, subject: string, wallet: stri
 type Watch = { subject_reference: string; wallet_address: string; watched_since: string };
 
 /** Check watched accounts for new money received and record a notice for each. Returns the customers who got one. */
-export async function scanIncoming(db: D1Database, options: { subject?: string; limit?: number; now?: Date; read?: typeof readIncoming } = {}): Promise<string[]> {
+export async function scanIncoming(db: D1Database, options: { subject?: string; limit?: number; now?: Date; read?: typeof readIncoming; bankDeposits?: typeof readBankDeposits } = {}): Promise<string[]> {
   const now = options.now ?? new Date();
   const due = new Date(now.getTime() - RECHECK_MS).toISOString();
   const rows = await db.prepare(`SELECT w.subject_reference, w.wallet_address, w.watched_since FROM incoming_watches w
@@ -35,9 +36,11 @@ export async function scanIncoming(db: D1Database, options: { subject?: string; 
   for (const watch of rows.results) {
     await db.prepare("UPDATE incoming_watches SET checked_at = ? WHERE subject_reference = ?").bind(now.toISOString(), watch.subject_reference).run();
     const incoming = await (options.read ?? readIncoming)(watch.wallet_address, { exclude: await listActionHashes(db, watch.subject_reference), now });
-    for (const transfer of incoming.transfers) {
-      if (transfer.receivedAt < watch.watched_since) continue;
-      if (await notify(db, watch.subject_reference, receivedNotice(transfer), now)) notified.add(watch.subject_reference);
+    const fresh = incoming.transfers.filter((transfer) => transfer.receivedAt >= watch.watched_since);
+    // A bank deposit arrives from Bridge's address; say it's from the bank.
+    const bank = fresh.length ? await (options.bankDeposits ?? readBankDeposits)(db, watch.subject_reference) : new Map();
+    for (const transfer of fresh) {
+      if (await notify(db, watch.subject_reference, receivedNotice(transfer, bank.get(transfer.transactionHash.toLowerCase())), now)) notified.add(watch.subject_reference);
     }
   }
   return [...notified];

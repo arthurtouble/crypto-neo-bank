@@ -3,6 +3,7 @@ import type { IncomingTransfer } from "@/lib/activity/incoming";
 import type { StoredAction } from "@/lib/actions/store";
 import { networkName } from "@/lib/assets/registry";
 import { failureText } from "@/lib/client/action-copy";
+import { payoutStateText } from "@/lib/providers/bridge/transfers";
 
 /**
  * One notice per event, kept in D1 so the app can show it and email and push
@@ -52,10 +53,22 @@ export function actionNotice(action: StoredAction, outcome: "completed" | "faile
     body: `${entry.counterparty ? `To ${short(entry.counterparty)}, on` : "On"} ${where}.`, link };
 }
 
-export function receivedNotice(transfer: IncomingTransfer): Notice {
-  const entry = incomingEntry(transfer);
-  return { kind: "received", dedupeKey: `received:${transfer.id}`, title: `Received ${entryAmount(entry)}`,
-    body: `From ${short(transfer.from)}, on ${networkName(transfer.chainId)}.`, link: `/app/transactions?open=${encodeURIComponent(entry.id)}` };
+/** A bank payout reached the bank, or came back. */
+export function bankPayoutNotice(action: StoredAction, state: string): Notice {
+  const entry = actionEntry(action);
+  const amount = entryAmount(entry);
+  const link = `/app/transactions?open=${encodeURIComponent(action.id)}`;
+  if (state === "payment_processed") return { kind: "completed", dedupeKey: `bank_payout:${action.id}:processed`,
+    title: `${amount ?? "Your payout"} arrived at your bank`, body: `${entry.counterparty ?? "Your bank account"} has it.`, link };
+  return { kind: "failed", dedupeKey: `bank_payout:${action.id}:${state}`, title: `${amount ?? "Your payout"} didn't reach your bank`,
+    body: `${payoutStateText(state)}.`, link };
+}
+
+export function receivedNotice(transfer: IncomingTransfer, bank?: { senderName: string | null; bankName: string | null }): Notice {
+  const entry = incomingEntry(transfer, undefined, bank);
+  return { kind: "received", dedupeKey: `received:${transfer.id}`, title: bank ? `Bank deposit: ${entryAmount(entry)}` : `Received ${entryAmount(entry)}`,
+    body: bank ? `From ${entry.counterparty}, through Bridge, on ${networkName(transfer.chainId)}.` : `From ${short(transfer.from)}, on ${networkName(transfer.chainId)}.`,
+    link: `/app/transactions?open=${encodeURIComponent(entry.id)}` };
 }
 
 /** Changes to the account's security. Always delivered, whatever the customer's notification choices. */

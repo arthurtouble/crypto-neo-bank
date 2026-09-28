@@ -28,7 +28,7 @@ Your Aura account is a wallet that Privy makes when you sign in, and you control
 | Area | Status |
 | --- | --- |
 | Bank accounts and bank transfers | Built with Bridge. Waiting for Bridge's approval. Bridge will verify your identity and hold the bank relationship |
-| Cards | Waiting for a card program with Rain or Bridge |
+| Cards | Waiting for a card program with Bridge |
 | Cashback and rewards | Waiting for a funded partner program |
 | Card payments on Aura tag pages | Not available |
 | Borrowing | Not offered |

@@ -34,7 +34,7 @@ Borrowing, the support assistant, the partner sandbox and demo provider, regulat
 
 | Area | Required before customer execution |
 | --- | --- |
-| Bridge bank deposits and payouts | Program approval and credentials; activated USD virtual-account instructions are parsed and surfaced when connected, while outgoing beneficiaries, execution, returns, and reconciliation remain to integrate |
+| Bridge bank deposits and payouts | Built behind `fiat_accounts` and tested end to end against a local fake of Bridge: verification, the USD account and its details, bank deposits labeled in Transactions, saved banks, payouts funded by a USDC action and followed until Bridge reports the bank has them (or a return). Needs Bridge approval, `BRIDGE_API_KEY`, `BRIDGE_WEBHOOK_PUBLIC_KEY`, a registered webhook, and a sandbox run |
 | Bridge/Rain cards | Issuer program, card creation and control mutations, wallet provisioning, transaction feed, dispute adapter |
 | Card payments on Aura tag pages | Acquiring/payment-link provider, recipient onboarding, payment state, refunds, and disputes |
 | Account and gas sponsorship | Privy dashboard: TEE execution, gas sponsorship (app pays) on every network Aura sends from, and MFA with passkeys or authenticator apps |
