@@ -30,6 +30,7 @@ Run `pnpm test:mainnet-readiness` to verify chain IDs, allowlisted USDC contract
 11. Controls: turn on account lock, a daily limit, and saved-recipients-only; confirm preparation is blocked. Pause an asset in the operations console and confirm actions in it are refused.
 12. Failure: reject a wallet prompt, let a quote expire, and let an action expire unsubmitted; verify clear recovery. Confirm Privy paid the gas for each action.
 13. Support: submit normal and urgent cases without exposing secrets; verify operator triage.
+14. Cards (once Bridge's card program and Stripe are connected): apply with Bridge, create the card, set a small allowance and confirm it on BaseScan, make a small purchase and confirm Bridge took exactly that amount, trigger a decline over the allowance, freeze and unfreeze (passkey), lower and raise the daily limit (passkey to raise), show card details (passkey), lock the account and confirm the card is frozen in Stripe, and dispute a settled purchase.
 
 ## 100-movement matrix
 

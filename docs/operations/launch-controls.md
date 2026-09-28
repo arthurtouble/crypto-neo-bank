@@ -9,7 +9,7 @@ Aura is open to anyone who signs in. Safety comes from server-side controls, not
 
 ## Controls
 
-- **Feature switches** (`feature_flags`, operations console): `direct_transfers`, `swaps`, `cross_chain`, `defi_actions`, `fiat_accounts`, `payment_cards`. All default off. `POST /api/actions` checks the switch for each action, so switching one off stops new preparation immediately.
+- **Feature switches** (`feature_flags`, operations console): `direct_transfers`, `swaps`, `cross_chain`, `defi_actions`, `fiat_accounts`, `payment_cards`, `card_wallets` (Apple and Google Pay for the card). All default off. `POST /api/actions` checks the switch for each action, and the `/api/cards` routes check `payment_cards`, so switching one off stops new preparation immediately. Turning off `payment_cards` doesn't freeze existing cards at Stripe; freeze them there.
 - **Customer controls** (`security_profiles`, set in Settings and audited; tightening applies immediately, loosening needs a server-verified passkey confirmation):
   - Account lock blocks every action, including ones prepared before it.
   - Daily limit (`daily_limit_cents`, off by default) caps the rolling 24-hour USD value of sends and routes that pay another address. Swaps and earn moves within the customer's own wallet don't count.

@@ -20,7 +20,7 @@ Aurel can lose its D1 data without losing customer funds because Privy, contract
 
 1. Confirm signature rejection or schema failure from structured Worker logs using `traceId`.
 2. Do not disable signature or timestamp verification to restore traffic.
-3. Confirm the provider’s active key or secret and signing format through an authenticated support channel. Bridge signs with RSA (`BRIDGE_WEBHOOK_PUBLIC_KEY`), Privy with Svix (`PRIVY_WEBHOOK_SECRET`); Rain is rejected until its scheme is implemented.
+3. Confirm the provider’s active key or secret and signing format through an authenticated support channel. Bridge signs with RSA (`BRIDGE_WEBHOOK_PUBLIC_KEY`), Privy with Svix (`PRIVY_WEBHOOK_SECRET`), Stripe with HMAC-SHA256 in `Stripe-Signature` (`STRIPE_WEBHOOK_SECRET`).
 4. Rotate the Worker secret if exposure is suspected.
 5. Replay provider events by their stable event IDs. Duplicates are safe because `webhook_receipts.event_id` is unique.
 6. Rebuild affected projections from provider APIs or chains after replay.
@@ -88,11 +88,11 @@ Other rights, such as correcting data, go through support. Answer within the leg
 
 ## Testing provider events in development
 
-Point a Bridge sandbox webhook, or Privy's test events, at the dev Worker's `/api/webhooks/bridge` or `/api/webhooks/privy`, with that provider's sandbox key or secret set on the dev environment. Events resolve to customers through `provider_customer_links`. See [provider projections](../architecture/provider-projections.md). Remove test rows afterwards.
+Point a Bridge sandbox webhook, Privy's test events, or a Stripe test-mode webhook at the dev Worker's `/api/webhooks/bridge`, `/api/webhooks/privy`, or `/api/webhooks/stripe`, with that provider's sandbox key or secret set on the dev environment. Bridge and Privy events resolve to customers through `provider_customer_links`; Stripe card events through `card_account_projections`. See [provider projections](../architecture/provider-projections.md). Remove test rows afterwards.
 
 ## Security escalation
 
-- Freeze or restrict through the authoritative provider first when the contractual program supports it.
+- Freeze or restrict through the authoritative provider first when the contractual program supports it. For a card, that is Stripe: the customer's **Freeze card**, or locking the account in Settings (which also tries to freeze the card). Check in Stripe that the card is `inactive`, since the lock's freeze is best effort.
 - Preserve trace IDs, provider object IDs, chain transaction hashes, timestamps, and consent versions.
 - Never copy full KYC documents, seed phrases, private keys, or unredacted card data into tickets, logs, D1, or chat systems.
 - Treat a provider outage as a degraded dependency, not permission to bypass controls.

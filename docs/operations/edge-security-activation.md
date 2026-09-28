@@ -10,7 +10,7 @@ The application-level controls are already active. The settings below require th
 - Product: `app.<approved-domain>` → `aurel-financial-os`
 - Documentation: `docs.<approved-domain>` → `aurel-docs`
 - Aura has no status page; announce incidents through the customer communication templates.
-- Update Privy allowed origins, Intercom's allowed domains, CSP, OpenAPI servers, documentation links and production smoke target together.
+- Update Privy allowed origins, Intercom's allowed domains, CSP, OpenAPI servers, documentation links and production smoke target together. The CSP (`apps/web/next.config.ts`) allows `https://js.stripe.com` in `script-src` and `https://js.stripe.com https://*.stripe.com` in `frame-src` for Stripe's card details and Add to Wallet frames; keep them when tightening it.
 
 ## Cloudflare Access
 
@@ -37,7 +37,7 @@ Recommended initial edge ceilings, measured before enforcement:
 | `/api/support/cases` POST | 10 per IP / hour | Managed Challenge; application also enforces 5/customer/hour |
 | `/api/support/assistant` POST | 30 per customer/IP / minute | Block excess; application enforces its customer limit |
 | `/api/swap/quote` POST | 60 per customer/IP / 10 minutes | Block excess; application enforces 20/customer/10 minutes |
-| `/api/webhooks/bridge`, `/api/webhooks/privy`, `/api/webhooks/rain` POST | Provider events (Bridge RSA, Privy Svix; Rain rejected until implemented) | Rate high enough for retry bursts; never replace signature verification |
+| `/api/webhooks/bridge`, `/api/webhooks/privy`, `/api/webhooks/stripe` POST | Provider events (Bridge RSA, Privy Svix, Stripe HMAC-SHA256) | Rate high enough for retry bursts; never replace signature verification |
 | `/api/ops/*` | Low operator volume | Access policy first, then strict per-identity/IP limit |
 
 Revisit thresholds using observed traffic distributions. A rate-limit event is not evidence that the customer is malicious.
