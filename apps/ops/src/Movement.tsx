@@ -55,6 +55,36 @@ function Journey({ id, onClose }: { id: string; onClose: () => void }) {
   </aside>;
 }
 
+type Entry = { id: string; origin: "aura" | "incoming" | "aave" | "card"; label: string; amountText: string | null; statusText: string; status: string;
+  createdAt: string; counterparty?: string; source: string; chainId: number; transactionHash?: string };
+type History = { wallet: string; entries: Entry[]; sources: Record<"aura" | "incoming" | "aave" | "card", { status: string; partial: boolean }> };
+
+const sourceNames = { incoming: "Money received from outside Aura", card: "Card payments", aave: "Aave history", aura: "Aura actions" } as const;
+
+/** One customer's whole account history, as they see it in Transactions. Aura actions open their journey. */
+function CustomerHistory({ subject, onOpen }: { subject: string; onOpen: (id: string) => void }) {
+  const history = useQuery({ queryKey: ["history", subject], queryFn: () => api<History>(`customers/${encodeURIComponent(subject)}/history`) });
+  const data = history.data;
+  return <>
+    <p className="muted">Everything on this account, as the customer sees it in Transactions: Aura actions, money received from outside Aura (read from the chain), card payments, and Aave history.</p>
+    {history.isFetching && !data && <p className="muted">Reading the chain…</p>}
+    {history.isError && <div className="notice error" role="alert">{history.error.message}</div>}
+    {data && (Object.keys(sourceNames) as Array<keyof typeof sourceNames>).filter((key) => data.sources[key]?.status === "unavailable" || data.sources[key]?.partial).map((key) =>
+      <div key={key} className="notice error" role="status">{sourceNames[key]} {data.sources[key].status === "unavailable" ? "can't be read right now, so some may be missing." : "shows only the most recent."}</div>)}
+    {data && <div className="tableWrap"><table>
+      <thead><tr><th scope="col">When</th><th scope="col">What</th><th scope="col">Amount</th><th scope="col">Status</th><th scope="col">With</th><th scope="col">Source</th></tr></thead>
+      <tbody>{data.entries.map((entry) => <tr key={`${entry.origin}:${entry.id}`} className={entry.origin === "aura" ? "clickable" : undefined} data-testid="ops-history-entry"
+        onClick={entry.origin === "aura" ? () => onOpen(entry.id) : undefined}>
+        <td>{when(entry.createdAt)}</td>
+        <td>{entry.origin === "aura" ? <button className="link" onClick={(event) => { event.stopPropagation(); onOpen(entry.id); }}>{entry.label}</button> : entry.label}</td>
+        <td>{entry.amountText ?? "—"}</td>
+        <td><span className={`badge ${entry.status === "failed" ? "bad" : entry.status === "completed" ? "good" : "warn"}`}>{entry.statusText}</span></td>
+        <td>{entry.counterparty ? <code>{short(entry.counterparty)}</code> : "—"}</td><td>{entry.source}</td></tr>)}</tbody>
+    </table></div>}
+    {data && !data.entries.length && <p className="muted">Nothing has moved on this account yet.</p>}
+  </>;
+}
+
 export function Movement({ subject, onClearSubject }: { subject: string | null; onClearSubject: () => void }) {
   const [status, setStatus] = useState("");
   const [kind, setKind] = useState("");
@@ -67,6 +97,12 @@ export function Movement({ subject, onClearSubject }: { subject: string | null; 
     getNextPageParam: (last) => last.next
   });
   const rows = list.data?.pages.flatMap((page) => page.actions) ?? [];
+  if (subject) return <section className="panel" aria-labelledby="movement-heading">
+    <h1 id="movement-heading">Money movement</h1>
+    <div className="filters"><span className="chip">Customer <code>{short(subject)}</code><button className="button quiet" onClick={onClearSubject}>Show everyone</button></span></div>
+    <CustomerHistory subject={subject} onOpen={setOpen} />
+    {open && <Journey id={open} onClose={() => setOpen(null)} />}
+  </section>;
 
   return <section className="panel" aria-labelledby="movement-heading">
     <h1 id="movement-heading">Money movement</h1>

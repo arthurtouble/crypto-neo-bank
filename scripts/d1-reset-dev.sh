@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Drop every table in the development D1 and apply the current schema.
-# Development data is disposable; D1 never owns money. Refuses production.
+# Drop every table in the development D1 and apply every migration. This erases
+# every dev customer and transaction record, so run it only when the owner asks:
+# schema changes are new numbered migrations, not resets. Refuses production.
 # Feature switches that were on stay on, and the applied baseline's hash is
 # recorded so a deploy can tell whether the schema changed.
 #
