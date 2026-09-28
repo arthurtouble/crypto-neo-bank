@@ -26,7 +26,9 @@ export type Allowance = { status: "available"; allowanceUsd: string; balanceUsd:
 export type CardActivity = { id: string; kind: "payment" | "refund"; status: "pending" | "completed" | "declined" | "reversed"; amountUsd: string;
   merchant: string | null; createdAt: string; transactionId: string | null; disputable: boolean; dispute: { id: string; status: string } | null;
   /** The Base transaction in which Bridge took the USDC for it, once Stripe reports one. */
-  transactionHash: string | null };
+  transactionHash: string | null;
+  /** The hold a settled payment or refund came from. */
+  authorizationId: string | null };
 
 export type CardState =
   | { state: "unavailable" }
@@ -95,14 +97,15 @@ export function cardActivity(authorizations: IssuingAuthorization[], transaction
   const holds: CardActivity[] = authorizations.filter((auth) => !settled.has(auth.id) && (auth.status === "pending" || !auth.approved || auth.status === "reversed"))
     .map((auth) => ({ id: auth.id, kind: "payment", status: !auth.approved ? "declined" : auth.status === "reversed" ? "reversed" : "pending", amountUsd: cents(auth.amount),
       merchant: auth.merchant_data?.name ?? null, createdAt: new Date(auth.created * 1000).toISOString(), transactionId: null, disputable: false, dispute: null,
-      transactionHash: hashOf(auth) }));
+      transactionHash: hashOf(auth), authorizationId: auth.id }));
   const posted: CardActivity[] = transactions.map((transaction) => {
     const dispute = disputeFor.get(transaction.id);
     return { id: transaction.id, kind: transaction.type === "refund" ? "refund" : "payment", status: "completed", amountUsd: cents(transaction.amount),
       merchant: transaction.merchant_data?.name ?? null, createdAt: new Date(transaction.created * 1000).toISOString(), transactionId: transaction.id,
       disputable: transaction.type === "capture" && !dispute && now.getTime() - transaction.created * 1000 < DISPUTE_WINDOW_MS,
       dispute: dispute ? { id: dispute.id, status: dispute.status } : null,
-      transactionHash: transaction.authorization ? hashOf(authorizationFor.get(transaction.authorization)) : null };
+      transactionHash: transaction.authorization ? hashOf(authorizationFor.get(transaction.authorization)) : null,
+      authorizationId: transaction.authorization ?? null };
   });
   return [...holds, ...posted].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
 }
@@ -133,6 +136,9 @@ export async function readCardHistory(db: D1Database, subject: string, window: L
   if (!provider) return { status: "unavailable", partial: false, items: [] };
   try {
     const cards = await Promise.all(results.map((row) => readOneCard(provider.stripe, row.card_reference, { limit: 100, ...window }, now)));
+    const { recordCardActivity } = await import("./observations");
+    await recordCardActivity(db, subject, cards.flatMap((card, index) => card.items.map((item) => ({ ...item, cardId: results[index].card_reference,
+      disputeStatus: item.dispute?.status ?? null }))), now);
     return { status: "available", partial: cards.some((card) => card.partial), items: cards.flatMap((card) => card.items) };
   } catch { return { status: "unavailable", partial: false, items: [] }; }
 }

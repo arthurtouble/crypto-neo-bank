@@ -19,7 +19,7 @@ Aura keeps as little financial data as it can, because your money lives on the b
 | Consent and documents you accepted | Aura | Records which version you saw or accepted, and when |
 | Notification choices | Your choices | Keeps them until you change them |
 | Notices sent to you | Aura | Keeps each notice and whether it was delivered, and where to send browser notifications until you turn them off |
-| Card and wallet-rule records, once live | The card issuer (Stripe) or wallet provider | Keeps the status the partner reports, with its source and time |
+| Card and wallet-rule records, once live | The card issuer (Stripe) or wallet provider | Keeps the status the partner reports, and a copy of your card payments, with their source and time. Can always be rebuilt |
 | Product analytics | Aura | Accepts only a fixed list of events. Never used for balances |
 | Partner updates | The partner and Aura | Keeps them so we can retry, reconcile, and investigate |
 

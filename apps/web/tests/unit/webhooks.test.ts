@@ -118,6 +118,9 @@ describe("Stripe", () => {
     expect(normalize({ id: "evt_2", type: "issuing_authorization.created", created: 1,
       data: { object: { id: "iauth_1", card: { id: "ic_1" }, amount: 1250, approved: false, merchant_data: { name: "Coffee" } } } }))
       .toMatchObject({ type: "card.authorization.created", subject: { value: "ic_1" }, data: { authorizationId: "iauth_1", amountCents: 1250, approved: false, merchant: "Coffee" } });
+    expect(normalize({ id: "evt_4", type: "issuing_transaction.created", created: 1,
+      data: { object: { id: "ipi_1", card: "ic_1", authorization: { id: "iauth_1" }, amount: -1250, type: "capture", merchant_data: { name: "Coffee" } } } }))
+      .toMatchObject({ type: "card.transaction.created", subject: { value: "ic_1" }, data: { transactionId: "ipi_1", authorizationId: "iauth_1", amountCents: -1250, refund: false } });
     expect(normalize({ id: "evt_3", type: "issuing_dispute.updated", created: 1, data: { object: { id: "idp_1" } } }))
       .toMatchObject({ type: "stripe.issuing_dispute.updated", subject: null });
     expect(normalize({ id: "nope" })).toBeNull();
@@ -179,6 +182,32 @@ describe("POST /api/webhooks/:provider", () => {
     expect(sqlite.prepare("SELECT subject_reference, kind, title FROM notifications").all())
       .toEqual([{ subject_reference: "alice", kind: "failed", title: "Card declined: $12.50 at Coffee" }]);
     expect(state.sent[0]).toMatchObject({ event: { provider: "stripe", type: "card.authorization.created", subjectReference: "alice" } });
+  });
+
+  it("keeps each card purchase for the operations feed, and lets the settled transaction replace its hold", async () => {
+    vi.stubEnv("STRIPE_WEBHOOK_SECRET", "whsec_test");
+    sqlite.exec(`INSERT INTO card_account_projections (card_reference, subject_reference, provider, provider_customer_reference, status, observed_at)
+      VALUES ('ic_1', 'alice', 'stripe', 'ich_1', 'active', 't')`);
+    const send = async (id: string, type: string, object: Record<string, unknown>, created = Math.floor(now / 1000)) => {
+      const body = JSON.stringify({ id, type, created, data: { object: { card: { id: "ic_1" }, ...object } } });
+      return (await POST(new Request("https://aura.test/api/webhooks/stripe", { method: "POST", body, headers: { "stripe-signature": await stripeSignature(body) } }),
+        { params: Promise.resolve({ provider: "stripe" }) })).status;
+    };
+    const rows = () => sqlite.prepare("SELECT activity_id, subject_reference, card_reference, authorization_id, kind, status, amount_usd, merchant FROM card_observations ORDER BY activity_id").all();
+    expect(await send("evt_a", "issuing_authorization.created", { id: "iauth_1", amount: 1250, approved: true, merchant_data: { name: "Coffee" } })).toBe(202);
+    expect(await send("evt_d", "issuing_authorization.created", { id: "iauth_2", amount: 90_000, approved: false, merchant_data: { name: "Big Store" } })).toBe(202);
+    expect(rows()).toEqual([
+      { activity_id: "iauth_1", subject_reference: "alice", card_reference: "ic_1", authorization_id: "iauth_1", kind: "payment", status: "pending", amount_usd: "12.50", merchant: "Coffee" },
+      { activity_id: "iauth_2", subject_reference: "alice", card_reference: "ic_1", authorization_id: "iauth_2", kind: "payment", status: "declined", amount_usd: "900.00", merchant: "Big Store" }]);
+    expect(await send("evt_t", "issuing_transaction.created", { id: "ipi_1", authorization: "iauth_1", amount: -1250, type: "capture", merchant_data: { name: "Coffee" } })).toBe(202);
+    expect(await send("evt_r", "issuing_transaction.created", { id: "ipi_2", authorization: null, amount: 500, type: "refund", merchant_data: { name: "Coffee" } })).toBe(202);
+    // A hold that arrives late for a purchase already settled stays out.
+    expect(await send("evt_a2", "issuing_authorization.created", { id: "iauth_1", amount: 1250, approved: true, merchant_data: { name: "Coffee" } })).toBe(202);
+    expect(rows()).toEqual([
+      { activity_id: "iauth_2", subject_reference: "alice", card_reference: "ic_1", authorization_id: "iauth_2", kind: "payment", status: "declined", amount_usd: "900.00", merchant: "Big Store" },
+      { activity_id: "ipi_1", subject_reference: "alice", card_reference: "ic_1", authorization_id: "iauth_1", kind: "payment", status: "completed", amount_usd: "12.50", merchant: "Coffee" },
+      { activity_id: "ipi_2", subject_reference: "alice", card_reference: "ic_1", authorization_id: null, kind: "refund", status: "completed", amount_usd: "5.00", merchant: "Coffee" }]);
+    expect(state.sent.map((message) => (message as ProviderEventMessage).event.type)).toContain("card.transaction.created");
   });
 });
 

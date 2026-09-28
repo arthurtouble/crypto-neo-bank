@@ -195,6 +195,22 @@ describe("money movement", () => {
     expect(await ids(`?subject=${encodeURIComponent("did:privy:bob")}`)).toEqual(["a5", "incoming:8453:0xabc:log:0", "a2"]);
   });
 
+  it("merges card payments, declines, and refunds into the feed by time, and filters them", async () => {
+    sqlite.exec(`INSERT INTO card_observations (activity_id, subject_reference, card_reference, authorization_id, kind, status, amount_usd, merchant, transaction_hash,
+      dispute_status, occurred_at, observed_at) VALUES
+      ('ipi_1', 'did:privy:alice', 'ic_1', 'iauth_1', 'payment', 'completed', '12.50', 'Corner Cafe', NULL, NULL, '2026-09-28T11:40:00.000Z', 't'),
+      ('iauth_2', 'did:privy:bob', 'ic_2', 'iauth_2', 'payment', 'declined', '900.00', 'Big Store', NULL, NULL, '2026-09-27T10:30:00.000Z', 't')`);
+    expect(await ids("")).toEqual(["a5", "ipi_1", "a3", "a2", "iauth_2", "a1"]);
+    const body = await (await listMovement(await asOperator("/api/ops/movement?kind=card"))).json() as { rows: Array<Record<string, unknown>> };
+    expect(body.rows).toEqual([
+      expect.objectContaining({ origin: "card", label: "Card payment", amountText: "12.50 USD", statusText: "Completed", status: "completed", subject: "did:privy:alice",
+        counterparty: "Corner Cafe", source: "Stripe" }),
+      expect.objectContaining({ origin: "card", statusText: "Declined", status: "failed", subject: "did:privy:bob" })]);
+    expect(await ids("?status=failed")).toEqual(["a2"]);
+    expect(await ids(`?subject=${encodeURIComponent("did:privy:bob")}&kind=card`)).toEqual(["iauth_2"]);
+    expect(await ids(`?kind=card&before=${encodeURIComponent("2026-09-28T00:00:00.000Z")}`)).toEqual(["iauth_2"]);
+  });
+
   it("shows an action's journey, and checks an open one against the chain on request", async () => {
     sqlite.exec(`INSERT INTO action_events (event_id, action_id, event_type, evidence_json, occurred_at) VALUES ('e1', 'a3', 'submitted', '{"hash":"0xabc"}', '2026-09-28T11:00:01.000Z')`);
     const params = (id: string) => ({ params: Promise.resolve({ id }) });

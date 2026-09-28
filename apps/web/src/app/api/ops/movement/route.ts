@@ -6,13 +6,13 @@ import { listMovement } from "@/lib/ops/movement";
 
 const querySchema = z.object({
   status: z.enum(["submitted", "settling", "confirmed", "failed", "expired"]).optional(),
-  kind: z.enum(["transfer", "earn", "route", "received"]).optional(),
+  kind: z.enum(["transfer", "earn", "route", "received", "card"]).optional(),
   subject: z.string().startsWith("did:privy:").max(120).optional(),
   stuck: z.enum(["1"]).optional(),
   before: z.iso.datetime().optional()
 });
 
-/** Money moving across every customer, newest first, 50 at a time: Aura actions and money received from outside Aura. */
+/** Money moving across every customer, newest first, 50 at a time: Aura actions, money received from outside Aura, and card payments. */
 export const GET = route("ops.movement.get", { unavailable: "movement_unavailable", invalid: "invalid_filter" }, async (request, { traceId }) => {
   await requireOperator(request);
   const query = querySchema.parse(Object.fromEntries(new URL(request.url).searchParams));
