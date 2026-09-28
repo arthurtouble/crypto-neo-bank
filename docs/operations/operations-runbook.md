@@ -70,13 +70,19 @@ If Aurel times out after sending a command:
 3. Display “status unknown—checking provider,” never “failed,” until authoritative status is known.
 4. Reconcile the provider object and only then permit a retry.
 
-## Customer data requests
+## Customer data and closing accounts
 
-Customers request an export or deletion in Settings → Data & Privacy. Operators see open requests at `GET /api/ops/privacy/data-requests` and fulfil one with `PATCH /api/ops/privacy/data-requests/{requestId}` and `{"action": "export" | "delete" | "reject"}`.
+Customers download their own data in Settings → Data and privacy (`GET /api/privacy/export`): every exportable table from `lib/privacy/subject-data.ts`, each with the reason it is kept. Nothing needs an operator.
 
-- **Export** returns every exportable table for the customer from `lib/privacy/subject-data.ts`, each with the reason it is kept. Deliver it through the verified support channel, never by public link.
-- **Delete** erases the erasable tables in one batch and records the counts in the request evidence and audit log. Retained tables are listed in the response with their reasons.
-- Complete requests within the legal deadline for the customer's country, and reject only with a recorded reason.
+Aura doesn't delete a customer's records on request. To close an account:
+
+1. The customer asks through support (Settings → Close your account opens a prefilled case).
+2. Confirm it's them through the support case, never through a new channel.
+3. In the operations console → Accounts, search by email, wallet, or Privy user ID. The console shows each balance and why the account can't be closed yet: funds left, a balance that couldn't be read, or a transaction in progress. Ask the customer to move the rest out.
+4. When it's empty, press Close account and give the support case as the reason. The server checks again, closes it, locks it, unpublishes the Aura tag, and records it in the audit log.
+5. A closed account can still download its data and contact support. If money arrives later, or the customer comes back, reopen it with a reason; it stays locked until they unlock it with their passkey.
+
+Other rights, such as correcting data, go through support. Answer within the legal deadline for the customer's country, and record what was kept and why.
 
 ## Testing provider events in development
 

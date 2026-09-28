@@ -82,7 +82,7 @@ Our service providers may process data outside your country.
 
 | Data | Kept |
 | --- | --- |
-| Preferences, product events, feedback, public Aura tag, and account history we can rebuild | Until you delete it or close your account |
+| Preferences, product events, feedback, public Aura tag, and account history we can rebuild | While your account is open, then as the retention schedule allows |
 | Transactions, security settings, and records of changes to them | As long as required for security, fraud prevention, and financial record-keeping laws |
 | Consent and document-acceptance records | As long as we rely on them, plus the applicable limitation period |
 | Support cases and complaints | For the complaint-handling retention period in each country |
@@ -99,13 +99,12 @@ Depending on where you live, you may have the right to:
 - receive a copy of it; and
 - complain to a regulator.
 
-In **Settings → Data & Privacy** you can:
+In **Settings → Data and privacy** you can:
 
-- **Export my data.** Get a copy of everything Aura holds about your account, table by table, with the reason each record is kept.
-- **Delete my data.** Erase your preferences, product events, feedback, public Aura tag, and any account history Aura can rebuild from partners and blockchains. We keep transaction, security, consent, and support records where the law or account safety requires it. The result tells you what was kept.
+- **Download my data.** Get a copy of everything Aura holds about your account straight away, table by table, with the reason each record is kept.
 - **Product update emails.** Turn them on or off at any time.
 
-Deleting data in Aura does not delete blockchain history or records held by Privy or other providers. It does not touch your wallet or your funds.
+To close your account, or to use another right, such as correcting your data, contact support. We close an account once it holds no funds. We keep transaction, security, consent, and support records where the law or account safety requires it, and we'll tell you what we keep and why. Nothing Aura does can delete blockchain history or records held by Privy or other providers.
 
 ## Security
 

@@ -80,12 +80,12 @@ Validation checks the assets, chains, amounts, recipient, slippage, price impact
 
 ## Limits and recipient rules
 
-These are customer settings, off by default, stored in `security_profiles`:
+These are customer settings, off by default, stored in `security_profiles`. Tightening one applies at once. Loosening one (unlock, raise or remove the daily limit, turn off saved recipients only, shorten the wait) needs a passkey confirmation that the server verifies (`lib/security/step-up.ts`): `PATCH /api/security/policy` answers `428 confirmation_required` with a one-time challenge and a Privy `personal_sign` request for a message naming the change; the browser signs that request with the customer's authorization key, which Privy unlocks with their passkey; the server sends it to Privy, and only Privy's signature (it refuses an invalid authorization signature) lets the change through. The challenge is bound to the exact change and the current policy version, expires in 5 minutes, and is used once. Loosening also requires a passkey or authenticator app on the account (`requireMoneyMfa`).
 
-- **Account lock** blocks every action.
+- **Account lock** blocks every action, at preparation and again at authorize and submit, so an action prepared before the lock can't be sent.
 - **Daily limit** (`daily_limit_cents`, null means none) caps the rolling 24-hour USD value of outgoing actions (transfers and routes; earn moves between the customer's own positions and does not count). If a limit is set and an action cannot be valued, it is blocked.
 - **Saved recipients only** (`enforce_address_book`) blocks transfers to unsaved addresses.
-- **New recipient cooling** (`new_address_delay_seconds`, default 4 hours) delays a newly saved address before it counts as saved.
+- **New recipient cooling** (`new_address_delay_seconds`, default 4 hours) delays a newly saved address before it counts as saved. It only applies when saved recipients only is on, and a change doesn't move entries already saved.
 
 Today these are enforced by the server on the actions it prepares. They do not stop a customer who exports their key and signs elsewhere. Onchain or Privy-policy enforcement is a separate, later feature ("Wealth protection"); the settings UI must say which kind of enforcement applies.
 

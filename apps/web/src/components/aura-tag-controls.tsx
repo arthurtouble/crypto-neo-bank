@@ -2,7 +2,7 @@
 
 import { usePrivy } from "@privy-io/react-auth";
 import { useAuraWallet } from "@/lib/client/use-aura-wallet";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useToast } from "./toast";
 
@@ -19,12 +19,16 @@ export function AuraTagControls() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const toast = useToast();
+  const tokenRef = useRef(getAccessToken);
+  useEffect(() => { tokenRef.current = getAccessToken; }, [getAccessToken]);
+  // Load the saved tag once per customer; reloading on every render would wipe what they're typing.
+  const userId = user?.id;
   useEffect(() => {
-    if (!user) return;
+    if (!userId) return;
     let cancelled = false;
     void (async () => {
       try {
-        const token = await getAccessToken();
+        const token = await tokenRef.current();
         if (!token) return;
         const response = await fetch("/api/aura-tags", { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" });
         if (!response.ok) throw new Error("Aura tag settings are unavailable.");
@@ -34,7 +38,7 @@ export function AuraTagControls() {
       } catch (error) { if (!cancelled) setMessage(error instanceof Error ? error.message : "Aura tag settings are unavailable."); }
     })();
     return () => { cancelled = true; };
-  }, [user, getAccessToken]);
+  }, [userId]);
   async function save(event: React.FormEvent) {
     event.preventDefault(); setBusy(true);
     try {

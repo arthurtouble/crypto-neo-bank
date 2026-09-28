@@ -27,13 +27,13 @@ export async function edge(path: "/__reset" | "/__state" | "/__session" | "/__se
     relayed?: boolean; calls?: Array<{ to: string; data: string; value: string }> }> }>;
 }
 
-export type Customer = { userId: string; wallet: `0x${string}`; email: string; token: string; externalWallets: `0x${string}`[] };
+export type Customer = { userId: string; wallet: `0x${string}`; email: string; token: string; externalWallets: `0x${string}`[]; mfa?: string[] };
 
 /** A new customer with their own Privy account and embedded wallet, unique to the test. */
 export async function newCustomer(options: { mfa?: string[]; expiresIn?: number; connectedWallet?: boolean } = {}): Promise<Customer> {
   const id = randomUUID().replaceAll("-", "");
   const externalWallets = options.connectedWallet ? [`0x${id.split("").reverse().join("").padEnd(40, "1").slice(0, 40)}` as `0x${string}`] : [];
-  const customer = { userId: `did:privy:${id}`, wallet: `0x${id.padEnd(40, "0").slice(0, 40)}` as `0x${string}`, email: `${id.slice(0, 8)}@example.com`, externalWallets };
+  const customer = { userId: `did:privy:${id}`, wallet: `0x${id.padEnd(40, "0").slice(0, 40)}` as `0x${string}`, email: `${id.slice(0, 8)}@example.com`, externalWallets, mfa: options.mfa ?? [] };
   await edge("/__state", { users: { [OPERATOR.userId]: { wallet: OPERATOR.wallet },
     [customer.userId]: { wallet: customer.wallet, email: customer.email, mfa: options.mfa ?? [], externalWallets } } });
   const { token } = await edge("/__session", { userId: customer.userId, expiresIn: options.expiresIn });
@@ -55,7 +55,7 @@ export async function setIdentity(page: Page, customer: Customer, options: { sig
   await page.addInitScript(({ session, signedIn }) => {
     localStorage.setItem("aura-e2e-session", JSON.stringify(session));
     if (signedIn) localStorage.setItem("aura-e2e-signed-in", "1");
-  }, { session: { userId: customer.userId, token: customer.token, wallet: customer.wallet, email: customer.email, externalWallets: customer.externalWallets },
+  }, { session: { userId: customer.userId, token: customer.token, wallet: customer.wallet, email: customer.email, externalWallets: customer.externalWallets, mfa: customer.mfa },
     signedIn: options.signedIn ?? false });
 }
 

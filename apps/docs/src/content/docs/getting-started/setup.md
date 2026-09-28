@@ -25,7 +25,7 @@ Aura pays the network fee for actions from your account. You don't need ETH to p
 
 ## Add a passkey
 
-Money only leaves your account after you add a passkey or an authenticator app. Add one in **Settings > Account > Passkey**. If you haven't, Aura asks you to add one the first time you move money. You then confirm each money action with it.
+Money only leaves your account after you add a passkey or an authenticator app. Add one in **Settings**, under **Account protection**. If you haven't, Aura asks you to add one the first time you move money. You then confirm each money action with it.
 
 ## Before you add money
 

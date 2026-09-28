@@ -17,7 +17,7 @@ async function acceptedVersions(subjectReference: string) {
 
 /** Whether the signed-in customer has accepted the current terms and seen the current privacy notice. */
 export const GET = route("terms.get", { unavailable: "terms_unavailable" }, async (request: Request, { traceId }) => {
-  const subject = await requireVerifiedSubject(request);
+  const subject = await requireVerifiedSubject(request, { allowClosed: true });
   const accepted = await acceptedVersions(subject.subjectReference);
   return Response.json({ accepted: current.every((doc) => accepted.has(`${doc.key}@${doc.version}`)),
     documents: current.map((doc) => ({ key: doc.key, version: doc.version, path: doc.path })), traceId });
@@ -25,7 +25,7 @@ export const GET = route("terms.get", { unavailable: "terms_unavailable" }, asyn
 
 /** Record acceptance of exactly the versions the customer was shown. */
 export const POST = route("terms.post", { unavailable: "terms_unavailable", invalid: "invalid_terms_acceptance" }, async (request: Request, context) => {
-  const subject = await requireVerifiedSubject(request);
+  const subject = await requireVerifiedSubject(request, { allowClosed: true });
   const input = acceptSchema.parse(await request.json());
   if (input.termsVersion !== legalDocuments.terms.version || input.privacyVersion !== legalDocuments.privacy.version)
     return Response.json({ error: "terms_changed", documents: current, traceId: context.traceId }, { status: 409 });

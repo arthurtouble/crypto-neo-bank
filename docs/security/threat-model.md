@@ -11,7 +11,7 @@ Customer signing authority remains with the customer's Privy embedded wallet, th
 
 | Threat | Prevent | Detect and recover |
 | --- | --- | --- |
-| Session theft | Privy token verification, short-lived sessions | Customer emergency lock, audit events, Privy session response |
+| Session theft | Privy token verification, short-lived sessions; loosening a control needs a server-verified passkey confirmation, so a stolen session can't undo a lock or a limit | Customer emergency lock, audit events, Privy session response |
 | Destination substitution | Optional saved-recipients-only mode, new-recipient cooling, final wallet confirmation | Action evidence, verified `Transfer` effect, transaction hash, support escalation |
 | Malicious transaction plan | Server-built calls, exact approvals batched with the action, LI.FI Diamond pinned as call target and spender, price-impact cap | Verifier checks decoded calls equal prepared calls and expected events are present; feature switch |
 | Quote tampering | Quotes held server-side (45 s); browser sees only a quote ID | Source debit and minimum output verified onchain |
@@ -22,7 +22,7 @@ Customer signing authority remains with the customer's Privy embedded wallet, th
 | Support social engineering | Never request recovery secrets; support has no signing or action tools | Case audit trail, emergency lock, human escalation |
 | Dependency compromise | Pinned critical dependencies, CI, narrow provider adapters | Disable affected feature, preserve unaffected read paths |
 | Cross-chain partial completion | Route disclosure, source/destination distinction | Action stays `settling` until LI.FI status and the destination receipt show the minimum output |
-| Exported key used elsewhere | Not prevented: Aura controls apply only to actions Aura prepares | Onchain enforcement through a smart-wallet module is a later feature |
+| Exported key used elsewhere | Not prevented: Aura controls apply only to actions Aura prepares | Enforcement at the wallet (for example Privy wallet policies) is a later feature |
 
 ## Explicit non-goals
 

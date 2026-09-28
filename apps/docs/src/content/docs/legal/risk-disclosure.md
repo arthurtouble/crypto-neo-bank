@@ -11,13 +11,13 @@ Digital assets can lose most or all of their value. Only use assets you can affo
 
 ## Self-custody and account risk
 
-Your Aura account is a smart wallet that you control through your Privy sign-in. Aura does not hold your funds or your keys. That means Aura cannot recover access for you, and cannot reverse a valid blockchain transaction.
+Your Aura account is a wallet that you control through your Privy sign-in. Aura does not hold your funds or your keys. That means Aura cannot recover access for you, and cannot reverse a valid blockchain transaction.
 
 Anyone who gains control of your sign-in or recovery methods may be able to control your wallet. A compromised device, email account, sign-in method, or recovery path can lead to loss.
 
 Your access depends on Privy. If Privy is unavailable, or changes or ends its service, you may be unable to reach your wallet through Aura for a time. Learn how Privy's recovery and export work before you hold significant value.
 
-## Smart wallet and network fee risk
+## Wallet and network fee risk
 
 Your account relies on smart-contract wallet software and on services that submit its transactions to the network. These can contain bugs or stop working.
 

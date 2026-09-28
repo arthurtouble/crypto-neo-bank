@@ -32,7 +32,7 @@ Aura's server checks your Privy sign-in on every request. It never trusts an ide
 
 ### Your controls
 
-If you turn them on, Aura applies your account lock, daily limit, saved-recipients-only mode, and the wait before new recipients. They're all off by default.
+If you turn them on, Aura applies your account lock, daily limit, saved-recipients-only mode, and the wait before new recipients. Making one stricter applies at once; loosening one needs your passkey.
 
 These checks can stop a movement inside Aura. They can't stop someone who uses an exported key or another app.
 

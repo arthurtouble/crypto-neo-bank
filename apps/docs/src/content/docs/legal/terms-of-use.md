@@ -33,7 +33,7 @@ A feature may be unavailable to you because of where you are, the asset, a partn
 
 ## 4. What Aura does
 
-Aura is a self-custodial money app. Your Aura account is a smart wallet on the Base network. You control it through your sign-in with Privy, an independent company. Privy handles sign-in, the key that signs for your wallet, recovery, and key export.
+Aura is a self-custodial money app. Your Aura account is a wallet on the Base network that Privy creates when you sign in. You control it through your sign-in with Privy, an independent company. Privy handles sign-in, the key that signs for your wallet, recovery, and key export.
 
 **We never hold your funds or your keys.** We cannot move your assets, and we cannot freeze, recover, or reverse them.
 
@@ -107,7 +107,7 @@ We do not guarantee profit, liquidity, uninterrupted access, recovery, or the va
 
 ## 12. Your data
 
-The [privacy notice](/legal/privacy-notice/) explains what we collect and why. You can export or delete your data and manage email choices in Settings.
+The [privacy notice](/legal/privacy-notice/) explains what we collect and why. You can download your data and manage email choices in Settings. To close your account, contact support once it holds no funds.
 
 ## 13. Suspension and closure
 

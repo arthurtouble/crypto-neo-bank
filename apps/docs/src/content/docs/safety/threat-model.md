@@ -15,7 +15,7 @@ We start from what could go wrong for you, not from security slogans. The outcom
 
 An attacker might get into your email, social account, device, session, or recovery method. Privy runs sign-in and your wallet, and Aura checks every sign-in on its server.
 
-If you've turned them on, your emergency lock, daily limit, and saved-recipients-only mode limit what a stolen session can do through Aura. You still need to keep your devices and recovery methods secure. Stronger sign-in methods reduce phishing risk, but they can't make a compromised device safe.
+If you've turned them on, your emergency lock, daily limit, and saved-recipients-only mode limit what a stolen session can do through Aura, and loosening them needs your passkey, which a stolen session doesn't have. You still need to keep your devices and recovery methods secure. Stronger sign-in methods reduce phishing risk, but they can't make a compromised device safe.
 
 ## Someone tampers with a transaction
 
