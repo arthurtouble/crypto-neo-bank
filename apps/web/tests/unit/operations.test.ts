@@ -193,6 +193,23 @@ describe("money movement", () => {
     expect(await (await checkNow(await asOperator("/api/ops/actions/a1/check", { method: "POST" }), params("a1"))).json()).toMatchObject({ error: "action_not_open" });
   });
 
+  it("shows one customer's whole account history, including money that arrived from outside Aura", async () => {
+    vi.doMock("@/lib/auth/wallet", () => ({ requireActionWallet: async () => "0x1111111111111111111111111111111111111111" }));
+    vi.doMock("@/lib/activity/history", () => ({ readHistory: async (_db: unknown, subject: string, wallet: string) => ({
+      observedAt: "t", sources: { aura: { status: "available", partial: false }, incoming: { status: "unavailable", partial: false } },
+      entries: [{ id: "in-1", origin: "incoming", type: "received", status: "completed", createdAt: "2026-09-28T10:00:00.000Z", chainId: 8453, asset: "USDC", amount: "7",
+        counterparty: `${subject}:${wallet}`, source: "Alchemy, Base" }] }) }));
+    vi.resetModules();
+    const { GET: history } = await import("@/app/api/ops/customers/[subject]/history/route");
+    const params = (subject: string) => ({ params: Promise.resolve({ subject: encodeURIComponent(subject) }) });
+    const body = await (await history(await asOperator("/api/ops/customers/x/history"), params("did:privy:alice"))).json() as Record<string, unknown>;
+    expect(body).toMatchObject({ wallet: "0x1111111111111111111111111111111111111111", sources: { incoming: { status: "unavailable" } },
+      entries: [{ label: "Received", amountText: "7 USDC", statusText: "Completed", counterparty: "did:privy:alice:0x1111111111111111111111111111111111111111" }] });
+    expect((await history(await asOperator("/api/ops/customers/x/history"), params("alice"))).status).toBe(400);
+    vi.doUnmock("@/lib/auth/wallet");
+    vi.doUnmock("@/lib/activity/history");
+  });
+
   it("counts customers, activity, volume by kind, and how far new customers get", async () => {
     sqlite.exec(`INSERT INTO provider_customer_links (subject_reference, provider, status, created_at, updated_at) VALUES ('did:privy:alice', 'bridge', 'active', 't', 't');
       INSERT INTO product_events (event_id, subject_reference, session_reference, event_name, surface, properties_json, occurred_at)

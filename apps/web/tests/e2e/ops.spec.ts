@@ -149,18 +149,25 @@ test("money movement lists every customer's transactions, filters them, and open
   await expect(customerPage.locator(".toastRegion").getByText("Transfer complete", { exact: true })).toBeVisible({ timeout: 30_000 });
   await customerContext.close();
 
+  // Money that arrived from outside Aura: on chain, not an Aura action.
+  await edge("/__receive", { chainId: 8453, to: customer.wallet, token: ASSETS.usdc, amount: "7000000", from: FRIEND });
+
   await signedInToOps(context);
   await openOps(page);
   await find(page, customer.email);
   await customerCard(page).getByRole("button", { name: "Money movement" }).click();
   const movement = page.getByRole("region", { name: "Money movement" });
   await expect(movement.locator(".chip")).toContainText("Customer");
-  const row = movement.getByTestId("ops-action").first();
-  await expect(row).toContainText("Sent", { timeout: 30_000 });
-  await expect(row).toContainText("10 USDC");
-  await expect(row).toContainText("Completed");
+  // One customer's view is everything on their account, as in their Transactions.
+  const entries = movement.getByTestId("ops-history-entry");
+  const received = entries.filter({ hasText: "Received" });
+  await expect(received).toContainText("7 USDC", { timeout: 30_000 });
+  await expect(received).toContainText("Alchemy");
+  const sent = entries.filter({ hasText: "Sent" });
+  await expect(sent).toContainText("10 USDC");
+  await expect(sent).toContainText("Completed");
 
-  await row.getByRole("button", { name: "Sent" }).click();
+  await sent.getByRole("button", { name: "Sent" }).click();
   const journey = page.getByRole("dialog", { name: "Action journey" });
   await expect(journey).toContainText(customer.userId, { timeout: 30_000 });
   await expect(journey).toContainText(`to ${FRIEND}`);
@@ -169,15 +176,16 @@ test("money movement lists every customer's transactions, filters them, and open
   await expect(journey.getByRole("button", { name: "Check the chain now" })).toHaveCount(0);
   await journey.getByRole("button", { name: "Close" }).click();
 
-  await movement.getByLabel("Status").selectOption("failed");
-  await expect(movement.getByText("Nothing matches.")).toBeVisible({ timeout: 30_000 });
-  await movement.getByLabel("Status").selectOption("");
-  await movement.getByLabel("Stuck only").check();
-  await expect(movement.getByText("Nothing matches.")).toBeVisible({ timeout: 30_000 });
-  await movement.getByLabel("Stuck only").uncheck();
+  // Everyone's Aura actions, filtered.
   await movement.getByRole("button", { name: "Show everyone" }).click();
   await expect(movement.locator(".chip")).toHaveCount(0);
-  await expect(movement.getByTestId("ops-action").first()).toBeVisible({ timeout: 30_000 });
+  const mine = movement.getByTestId("ops-action").filter({ hasText: customer.userId.slice(0, 10) });
+  await expect(mine.first()).toContainText("Sent", { timeout: 30_000 });
+  await movement.getByLabel("Status").selectOption("failed");
+  await expect(mine).toHaveCount(0, { timeout: 30_000 });
+  await movement.getByLabel("Status").selectOption("");
+  await movement.getByLabel("Stuck only").check();
+  await expect(mine).toHaveCount(0, { timeout: 30_000 });
 });
 
 test("stats show customers, activity, and the new-customer funnel", async ({ page, context }) => {
