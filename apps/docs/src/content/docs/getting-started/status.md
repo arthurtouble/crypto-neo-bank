@@ -7,7 +7,7 @@ sidebar:
 
 Aura is in preview. You can explore every section without signing in, using labeled example data. Anyone can sign in, and you accept the terms of use the first time you do.
 
-Your Aura account is a wallet that Privy makes when you sign in, and you control it. Aura pays the network fee for actions from your account. The features below are built, but each one stays switched off until it has been tested with real funds. On our development version, we've made a real deposit from Ethereum to Base, a real send on Base, a real send from Base to Ethereum, a real swap from USDC to a tokenized stock, and a real deposit into and withdrawal from a Morpho vault.
+Your Aura account is a wallet that Privy makes when you sign in, and you control it. Aura pays the network fee for actions from your account. The features below are built, but each one stays switched off until it has been tested with real funds. On our development version, we've made a real deposit from Ethereum to Base, a real send on Base, a real send from Base to Ethereum, a real swap from USDC to a tokenized stock, a real deposit into and withdrawal from a Morpho vault, and real money received from another wallet.
 
 ## Built, switched on as each is ready
 
