@@ -1,0 +1,24 @@
+{
+  // The operations app: a React page and a Worker that forwards /api/* to the
+  // web app's /api/ops/* over a service binding. Cloudflare Access sits in
+  // front of it; the web app checks the Access token on every operator request.
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "aurel-ops",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-09-21",
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "services": [{ "binding": "WEB", "service": "aurel-financial-os" }],
+  "observability": { "enabled": true, "logs": { "enabled": true, "head_sampling_rate": 1 } },
+  "env": {
+    "dev": {
+      "name": "aura-dev-ops",
+      "services": [{ "binding": "WEB", "service": "aura-dev" }],
+      "observability": { "enabled": true, "logs": { "enabled": true, "head_sampling_rate": 1 } }
+    }
+  }
+}

@@ -20,7 +20,7 @@
     "docs:deploy": "pnpm --filter @aurel/docs deploy",
     "docs:deploy:dev": "pnpm --filter @aurel/docs deploy:dev",
     "test": "pnpm --filter @aurel/web test",
-    "test:unit": "pnpm --filter @aurel/web test:unit && node --test scripts/mainnet-readiness.test.mjs scripts/check-assets.test.mjs",
+    "test:unit": "pnpm --filter @aurel/web test:unit && pnpm --filter @aurel/ops test && node --test scripts/mainnet-readiness.test.mjs scripts/check-assets.test.mjs",
     "test:e2e": "pnpm --filter @aurel/web test:e2e",
     "test:mainnet-readiness": "node scripts/mainnet-readiness.mjs",
     "test:live:readonly": "pnpm --filter @aurel/web test:live:readonly",
@@ -31,6 +31,8 @@
     "typecheck": "pnpm --filter @aurel/web typecheck",
     "typecheck:all": "pnpm -r typecheck",
     "lint": "pnpm --filter @aurel/web lint",
-    "assets:check": "node scripts/check-assets.mjs"
+    "assets:check": "node scripts/check-assets.mjs",
+    "ops:dev": "pnpm --filter @aurel/ops dev",
+    "ops:deploy:dev": "pnpm --filter @aurel/ops deploy:dev"
   }
 }

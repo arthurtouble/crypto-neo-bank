@@ -139,7 +139,7 @@ export function startFakeEdge({ port }) {
   // Cloudflare Access: the team's signing key, published as JWKS, and tokens for operators.
   const access = generateKeyPairSync("rsa", { modulusLength: 2048 });
   const accessJwk = { ...access.publicKey.export({ format: "jwk" }), kid: "e2e-access-key", alg: "RS256", use: "sig" };
-  function accessToken({ email = OPERATOR.email, audience = OPERATOR.audience, expiresIn = 3600, key = access.privateKey } = {}) {
+  function cfAccessToken({ email = OPERATOR.email, audience = OPERATOR.audience, expiresIn = 3600, key = access.privateKey } = {}) {
     const now = Math.floor(Date.now() / 1000);
     const input = `${base64urlOf({ alg: "RS256", kid: "e2e-access-key", typ: "JWT" })}.${base64urlOf({ aud: [audience], email, sub: randomUUID(), iss: `http://127.0.0.1:${port}/access`,
       iat: now, nbf: now, exp: now + expiresIn, type: "app", identity_nonce: randomUUID() })}`;
@@ -506,7 +506,7 @@ export function startFakeEdge({ port }) {
     // Test controls.
     if (url.pathname === "/__reset") { state = initialState(); return send(200, { ok: true }); }
     if (url.pathname === "/__state") { state = { ...state, ...body, users: { ...state.users, ...body?.users }, balances: { ...state.balances, ...body?.balances } }; return send(200, { ok: true }); }
-    if (url.pathname === "/__access") return send(200, { token: accessToken({ ...body, key: body?.forged ? generateKeyPairSync("rsa", { modulusLength: 2048 }).privateKey : access.privateKey }) });
+    if (url.pathname === "/__access") return send(200, { token: cfAccessToken({ ...body, key: body?.forged ? generateKeyPairSync("rsa", { modulusLength: 2048 }).privateKey : access.privateKey }) });
     if (url.pathname === "/access/cdn-cgi/access/certs") return send(200, { keys: [accessJwk], public_cert: { kid: "e2e-access-key" } });
     if (url.pathname === "/__session") return send(200, { token: accessToken(body.userId, body) });
     if (url.pathname === "/__sent") return send(200, { sent: state.sent });

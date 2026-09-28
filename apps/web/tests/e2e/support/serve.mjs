@@ -30,7 +30,13 @@ const app = spawn("pnpm", ["dev", "--host", "127.0.0.1", "--port", appPort], {
   }
 });
 
-const stop = async () => { app.kill("SIGTERM"); await edge.close(); process.exit(0); };
+// The operations app, in development: its API calls go to the web app's /api/ops/*.
+const opsPort = process.env.AUREL_E2E_OPS_PORT ?? "43175";
+const ops = spawn("pnpm", ["--filter", "@aurel/ops", "exec", "vite", "--host", "127.0.0.1", "--port", opsPort, "--strictPort"], {
+  stdio: "inherit", env: { ...process.env, OPS_API_TARGET: `http://127.0.0.1:${appPort}`, OPS_PORT: opsPort }
+});
+
+const stop = async () => { app.kill("SIGTERM"); ops.kill("SIGTERM"); await edge.close(); process.exit(0); };
 process.on("SIGTERM", stop);
 process.on("SIGINT", stop);
-app.on("exit", async (code) => { await edge.close(); process.exit(code ?? 0); });
+app.on("exit", async (code) => { ops.kill("SIGTERM"); await edge.close(); process.exit(code ?? 0); });
