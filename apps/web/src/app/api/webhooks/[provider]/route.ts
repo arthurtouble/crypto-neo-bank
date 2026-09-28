@@ -5,6 +5,25 @@ import { webhookProviders } from "@/lib/providers/registry";
 import type { NormalizedEvent } from "@/lib/providers/webhooks";
 import { announce } from "@/lib/notifications/deliver";
 import { cardSpendNotice } from "@/lib/notifications/store";
+import { recordCardActivity } from "@/lib/cards/observations";
+
+const usd = (cents: unknown) => typeof cents === "number" ? (Math.abs(cents) / 100).toFixed(2) : "0.00";
+const text = (value: unknown) => typeof value === "string" ? value : null;
+
+/** Keep a card purchase or settlement Stripe reported, for the operations app's money movement. */
+async function recordCardEvent(subject: string, event: Pick<NormalizedEvent, "type" | "data" | "createdAt" | "subject">) {
+  const data = event.data;
+  const cardId = event.subject?.value ?? null;
+  if (event.type === "card.authorization.created" && text(data.authorizationId)) {
+    await recordCardActivity(env.PROJECTION_DB, subject, [{ id: text(data.authorizationId)!, authorizationId: text(data.authorizationId), cardId, kind: "payment",
+      status: data.approved === true ? "pending" : "declined", amountUsd: usd(data.amountCents), merchant: text(data.merchant), createdAt: event.createdAt, transactionHash: null }]);
+  }
+  if (event.type === "card.transaction.created" && text(data.transactionId)) {
+    await recordCardActivity(env.PROJECTION_DB, subject, [{ id: text(data.transactionId)!, authorizationId: text(data.authorizationId), cardId,
+      kind: data.refund === true ? "refund" : "payment", status: "completed", amountUsd: usd(data.amountCents), merchant: text(data.merchant),
+      createdAt: event.createdAt, transactionHash: null }]);
+  }
+}
 
 async function announceCardSpend(subject: string, data: Record<string, unknown>, createdAt: string) {
   const amountCents = typeof data.amountCents === "number" ? data.amountCents : 0;
@@ -64,6 +83,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ pro
   if (!inserted.meta.changes) return reply(200, { accepted: true, duplicate: true, traceId });
   // A card purchase is told to the customer straight away; the notice isn't a projection of money.
   if (event.type === "card.authorization.created" && event.subjectReference) await announceCardSpend(event.subjectReference, event.data, event.createdAt);
+  if (event.type.startsWith("card.") && event.subjectReference) await recordCardEvent(event.subjectReference, { ...event, subject: normalized.subject });
   const message: ProviderEventMessage = { event, receivedAt, payloadSha256 };
   try {
     await env.PROVIDER_EVENTS.send(message, { contentType: "json" });

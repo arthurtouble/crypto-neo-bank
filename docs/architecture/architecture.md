@@ -13,7 +13,7 @@ Aurel prepares, checks, and presents money movements; it is not a bank ledger. A
 | --- | --- | --- |
 | Wallets and signers | Privy and the configured custody/signer arrangement | Wallet references, user labels, policy-display cache |
 | Fiat accounts, KYC and transfers | Bridge | Provider object IDs, workflow state, last observed status |
-| Cards and card transactions | Stripe Issuing (card, controls, authorizations, transactions, disputes) with Bridge (card approval and USDC collection); the spending allowance on Base | Which card is the customer's (`card_account_projections`); nothing else is stored |
+| Cards and card transactions | Stripe Issuing (card, controls, authorizations, transactions, disputes) with Bridge (card approval and USDC collection); the spending allowance on Base | Which card is the customer's (`card_account_projections`), and a replaceable record of card payments as Stripe reported them for operators (`card_observations`) |
 | Crypto balances and DeFi positions | Relevant blockchain and protocol contracts | Indexed projections with chain, block, transaction, and observation metadata |
 | Market value | Named market-data provider | Short-lived, timestamped price observations |
 

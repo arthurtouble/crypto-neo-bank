@@ -2,7 +2,7 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tansta
 import { useState } from "react";
 import { api, short, when } from "./api";
 
-type Row = { id: string; origin: "aura" | "incoming"; label: string; amountText: string | null; statusText: string; status: string; subject: string;
+type Row = { id: string; origin: "aura" | "incoming" | "card"; label: string; amountText: string | null; statusText: string; status: string; subject: string;
   createdAt: string; counterparty: string | null; transactionHash: string | null; chainId: number; source: string };
 type Page = { rows: Row[]; next: string | null };
 type Detail = {
@@ -106,12 +106,12 @@ export function Movement({ subject, onClearSubject }: { subject: string | null; 
 
   return <section className="panel" aria-labelledby="movement-heading">
     <h1 id="movement-heading">Money movement</h1>
-    <p className="muted">Everything moving on Aura, newest first: Aura actions, and money customers received from outside Aura as the chain showed it (recorded within a few minutes). Status and stuck filters show Aura actions only.</p>
+    <p className="muted">Everything moving on Aura, newest first: Aura actions, money customers received from outside Aura as the chain showed it (recorded within a few minutes), and card payments as the card issuer reported them. Status and stuck filters show Aura actions only.</p>
     <div className="filters">
       <label>Status<select value={status} onChange={(event) => setStatus(event.target.value)}>
         <option value="">All</option>{["submitted", "settling", "confirmed", "failed", "expired"].map((value) => <option key={value}>{value}</option>)}</select></label>
       <label>Kind<select value={kind} onChange={(event) => setKind(event.target.value)}>
-        <option value="">All</option><option value="transfer">Send, bank, card</option><option value="route">Swap or move</option><option value="earn">Earn</option><option value="received">Received from outside Aura</option></select></label>
+        <option value="">All</option><option value="transfer">Send, bank, card</option><option value="route">Swap or move</option><option value="earn">Earn</option><option value="received">Received from outside Aura</option><option value="card">Card payments</option></select></label>
       <label className="check"><input type="checkbox" checked={stuck} onChange={(event) => setStuck(event.target.checked)} />Stuck only</label>
       {subject && <span className="chip">Customer <code>{short(subject)}</code><button className="button quiet" onClick={onClearSubject}>Show everyone</button></span>}
     </div>

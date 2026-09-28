@@ -42,7 +42,7 @@ const erc20 = (token: string, value: bigint, overrides: Partial<Raw> = {}): Raw 
   category: "erc20", rawContract: { value: `0x${value.toString(16)}`, address: token }, metadata: { blockTimestamp: "2026-09-10T12:00:00.000Z" }, ...overrides });
 type CardItem = import("@/lib/cards/service").CardActivity;
 const card = (overrides: Partial<CardItem> = {}): CardItem => ({ id: "ipi_1", kind: "payment", status: "completed", amountUsd: "12.50", merchant: "Corner Cafe",
-  createdAt: "2026-09-12T09:00:00.000Z", transactionId: "ipi_1", disputable: true, dispute: null, transactionHash: hash(30), ...overrides });
+  createdAt: "2026-09-12T09:00:00.000Z", transactionId: "ipi_1", disputable: true, dispute: null, transactionHash: hash(30), authorizationId: "iauth_1", ...overrides });
 const transfer = (n: number, receivedAt: string, amountRaw = "5000000") => parseTransfer(erc20(usdc, BigInt(amountRaw), { hash: hash(n), uniqueId: `${hash(n)}:log:0`,
   metadata: { blockTimestamp: receivedAt } }), 8453, wallet, 1000n)!;
 

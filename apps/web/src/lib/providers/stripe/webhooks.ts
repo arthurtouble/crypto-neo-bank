@@ -56,6 +56,14 @@ function normalize(payload: unknown): NormalizedEvent | null {
     return { ...base, type: "card.authorization.created", subject: { kind: "provider_card", value: cardId },
       data: { authorizationId: text(object.id), amountCents: typeof object.amount === "number" ? object.amount : 0, approved: object.approved === true, merchant } };
   }
+  if (event.type === "issuing_transaction.created") {
+    const cardId = id(object.card);
+    if (!cardId || typeof object.amount !== "number") return null;
+    const merchant = (object.merchant_data as { name?: string } | undefined)?.name ?? null;
+    return { ...base, type: "card.transaction.created", subject: { kind: "provider_card", value: cardId },
+      data: { transactionId: text(object.id), authorizationId: id(object.authorization) ?? null, amountCents: object.amount,
+        refund: text(object.type) === "refund", merchant } };
+  }
   const cardId = id(object.card);
   return { ...base, type: `stripe.${event.type}`, data: {}, subject: cardId ? { kind: "provider_card", value: cardId } : null };
 }

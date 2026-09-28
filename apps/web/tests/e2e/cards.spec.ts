@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "./support/fixtures";
-import { acceptTerms, asCustomer, ASSETS, edge, newCustomer, setBalances, setControls, setFeature, setIdentity, type Customer } from "./support/session";
+import { acceptTerms, asCustomer, ASSETS, edge, newCustomer, operatorHeaders, setBalances, setControls, setFeature, setIdentity, type Customer } from "./support/session";
 
 // Feature 10 in docs/overview/feature-readiness.md: Bank and cards, the card
 // half. Bridge (identity and card approval), Stripe Issuing (the card, its
@@ -109,7 +109,7 @@ test("without a passkey the card isn't created and the customer is asked to add 
 
 test("the card spends only up to the allowance, its payments are in Transactions, and one can be disputed", async ({ page }) => {
   test.setTimeout(120_000);
-  await withCard(page);
+  const customer = await withCard(page);
   await page.goto("/app/cards");
   await expect(allowance(page).getByTestId("card-allowance")).toContainText("$0.00", { timeout: 20_000 });
   await expect(allowance(page).getByText("Set an allowance to start using your card.")).toBeVisible();
@@ -161,6 +161,14 @@ test("the card spends only up to the allowance, its payments are in Transactions
   await expect(receipt.getByTestId("card-payment-note")).toContainText("Paid with your card from your USDC on Base");
   await expect(receipt.getByRole("link", { name: /View on the network/ })).toHaveAttribute("href", /basescan\.org\/tx\/0x[0-9a-f]{64}$/);
   await expect(receipt.getByRole("link", { name: "Open Cards" })).toHaveAttribute("href", "/app/cards");
+
+  // Operators see the same purchases in the operations app's money movement, each once.
+  const feed = await page.request.get(`/api/ops/movement?kind=card&subject=${encodeURIComponent(customer.userId)}`, { headers: await operatorHeaders() });
+  expect(feed.status()).toBe(200);
+  const { rows } = await feed.json() as { rows: Array<{ label: string; amountText: string; statusText: string; counterparty: string; source: string }> };
+  expect(rows.map((row) => [row.counterparty, row.amountText, row.statusText]).sort()).toEqual([
+    ["Bookshop", "12.50 USD", "Declined"], ["Corner Cafe", "12.50 USD", "Completed, dispute submitted"], ["Electronics", "40.00 USD", "Declined"]]);
+  expect(rows.every((row) => row.label === "Card payment" && row.source === "Stripe")).toBe(true);
 });
 
 test("freezing stops payments at once; unfreezing and a higher limit need the passkey", async ({ page }) => {

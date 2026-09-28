@@ -187,6 +187,10 @@ describe("getting a card", () => {
     const history = await readCardHistory(state.db!, "alice", { since: new Date(1_000_000_000), until: new Date(2_000_000_000_000) });
     expect(history).toMatchObject({ status: "available", partial: false });
     expect(history.items.find((item) => item.id === "ipi_1")).toMatchObject({ transactionHash: `0x${"ab".repeat(32)}`, merchant: "Books" });
+    // What it read is kept for the operations feed, each purchase once.
+    expect(sqlite.prepare("SELECT activity_id, card_reference, status FROM card_observations ORDER BY activity_id").all()).toEqual([
+      { activity_id: "iauth_declined", card_reference: "ic_1", status: "declined" }, { activity_id: "iauth_hold", card_reference: "ic_1", status: "pending" },
+      { activity_id: "ipi_1", card_reference: "ic_1", status: "completed" }]);
     const [url] = (fetch as unknown as { mock: { calls: Array<[string]> } }).mock.calls.findLast(([called]) => called.includes("/v1/issuing/transactions"))!;
     const query = new URL(url).searchParams;
     expect(Object.fromEntries(query)).toEqual({ card: "ic_1", limit: "100", "created[gte]": "1000000", "created[lt]": "2000000000" });
