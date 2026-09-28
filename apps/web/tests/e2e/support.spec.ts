@@ -57,6 +57,10 @@ test("someone else using the account: Aura locks it first, then opens a chat abo
   await page.getByRole("button", { name: "Lock and report" }).click();
   await expect(toast(page, "Account locked")).toBeVisible({ timeout: 20_000 });
   expect(await asCustomer(page, customer, "GET", "/api/security/policy")).toMatchObject({ policy: { accountLocked: true } });
+  // Locked: Support says so and points to Settings to unlock, instead of offering the lock again.
+  await expect(page.getByText("Your account is locked")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Lock and report" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Unlock in Settings" })).toHaveAttribute("href", "/app/settings");
   await expect.poll(async () => (await calls(page)).find((call) => call[0] === "showNewMessage"))
     .toEqual(["showNewMessage", "Someone else may be using my Aura account. I locked it from Support."]);
 });
