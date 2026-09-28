@@ -55,8 +55,8 @@ To answer in phase 2, before any design work. On 28 September 2026 the owner set
 
 | # | Area | Includes | Status |
 | --- | --- | --- | --- |
-| 1 | Inventory | Every screen and state, with screenshots and what's wrong today | In progress |
-| 2 | Direction | Answers to the open questions; a one-page direction | In progress: waiting for the owner to pick a direction |
+| 1 | Inventory | Every screen and state, with screenshots and what's wrong today | Done ([#54](https://github.com/arthurtouble/crypto-neo-bank/pull/54)) |
+| 2 | Direction | Answers to the open questions; a one-page direction | In progress ([#54](https://github.com/arthurtouble/crypto-neo-bank/pull/54)): waiting for the owner to pick a direction |
 | 3 | Design system | Tokens, components, patterns; new `design-system.md` and reference page | Not started |
 | 4 | App shell | Navigation, header, account menu, notifications inbox, toasts, sign-in and terms | Not started |
 | 5 | Overview | Balances, total, groups | Not started |
