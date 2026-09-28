@@ -27,7 +27,7 @@ Reviewed 22 September 2026. Scope: application authentication, private-beta acce
 
 | Severity | Finding | Required closure |
 |---|---|---|
-| High launch gate | WAF/API rate rules and API Shield are not active; Cloudflare Access for the operations app isn't turned on yet, so operator APIs refuse everyone | Turn on Access for the operations Worker and set `CF_ACCESS_TEAM_DOMAIN` and `CF_ACCESS_AUD`; configure the rest after the custom domain is approved; capture evidence |
+| High launch gate | WAF/API rate rules and API Shield are not active. Cloudflare Access protects the dev operations app (`aura-dev-ops`, 28 September 2026) but not production yet | Turn on Access for the production operations Worker and set `CF_ACCESS_TEAM_DOMAIN` and `CF_ACCESS_AUD` there; configure the rest after the custom domain is approved; capture evidence |
 | High launch gate | No independent application/security assessment | Independent review with no unresolved critical/high issues |
 | Medium | External log retention, alert routing and named incident coverage are unset | Configure receiver/export and exercise notification |
 | Medium | Real-wallet acceptance matrix is incomplete | Execute the [acceptance test plan](../operations/acceptance-test-plan.md) with designated funded test wallets |
