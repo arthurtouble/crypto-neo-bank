@@ -1,5 +1,6 @@
 import app from "vinext/server/app-router-entry";
 import { recheckOpenActions } from "@/lib/actions/recheck";
+import { refreshBankPayouts } from "@/lib/money/bank-activity";
 import { deliverPending } from "@/lib/notifications/deliver";
 import { scanIncoming } from "@/lib/notifications/incoming";
 
@@ -16,6 +17,7 @@ const log = (event: string, scheduledTime: number) => [
 const scheduled: ExportedHandlerScheduledHandler<Cloudflare.Env> = async (controller, env, ctx) => {
   const now = new Date(controller.scheduledTime);
   ctx.waitUntil(recheckOpenActions(env.PROJECTION_DB, now).then(...log("actions.recheck", controller.scheduledTime)));
+  ctx.waitUntil(refreshBankPayouts(env.PROJECTION_DB, { now, limit: 20 }).then(...log("bank.payouts.refresh", controller.scheduledTime)));
   ctx.waitUntil((async () => ({ notified: (await scanIncoming(env.PROJECTION_DB, { now, limit: 20 })).length,
     delivered: await deliverPending(env.PROJECTION_DB, { limit: 50 }) }))().then(...log("notifications.run", controller.scheduledTime)));
 };

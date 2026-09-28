@@ -22,7 +22,7 @@ Larger or unusual transfers can need more information.
 
 ## Adding dollars
 
-Once your account is active, you'll get payment details you can reuse. The sender must use the exact account name, routing details, reference, and transfer type shown in the app.
+Once your account is active, you'll get payment details you can reuse: bank name, beneficiary, account and routing numbers, and which transfer types are accepted. The sender must use the exact details shown in the app. Money that arrives is converted to USDC and delivered to your Aura account on Base, where Transactions shows it as a **Bank deposit** from the sender.
 
 Never send money to example or preview details. Aura shows real details only after Bridge activates your account.
 
@@ -30,7 +30,9 @@ You'll also be able to use these details for your paycheck. When the money arriv
 
 ## Sending to a bank
 
-You'll choose the recipient, amount, and transfer type, then see a final review. A bank or Bridge can still hold, return, or reject a transfer after you submit it. Delivery times are estimates.
+You'll save a US bank account once, then choose it, the amount, and bank transfer (ACH) or wire. You confirm a USDC transfer to an address Bridge gives for that payout, with your passkey, under your account lock and daily limit. Bridge then sends the dollars to your bank.
+
+In Transactions, the payout shows as **Sent to bank** and stays pending until Bridge reports that your bank has it: waiting for your USDC, received by Bridge, sent to your bank, then arrived. A bank transfer usually takes 1 to 3 business days. If your bank returns it, the payout shows as failed with what Bridge is doing about it, and we tell you. A bank or Bridge can still hold, return, or reject a transfer after you submit it. Delivery times are estimates.
 
 ## Where your balance comes from
 

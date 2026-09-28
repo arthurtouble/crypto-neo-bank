@@ -126,6 +126,8 @@ export function useAction(options: { label?: string; onSettled?: (action: Action
           const name = labelRef.current;
           if (current.status === "failed") toast.error(`${name} failed`, failureText(current.failureReason));
           else if (current.status === "expired") toast.error(`${name} not confirmed`, "We didn't receive it in time. If you confirmed it, check Transactions.");
+          // A bank payout is only on its way: Bridge still has to pay the bank.
+          else if (current.summary.bankPayout) toast.success(`${name} sent`, "Bridge sends the dollars to your bank. Track it in Transactions.");
           // Like mainstream wallets, a same-network action is complete once it is in a block and matches; finality follows in Transactions.
           else toast.success(`${name} complete`);
           await queryClient.invalidateQueries();

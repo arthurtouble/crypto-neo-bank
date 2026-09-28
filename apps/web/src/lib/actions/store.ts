@@ -80,13 +80,22 @@ type ActionRow = { action_id: string; subject_reference: string; wallet_address:
   summary_json: string; calls_json: string; effects_json: string; usd_cents: number | null; status: string;
   transaction_hash: string | null; relay_reference: string | null; destination_chain_id: number | null; destination_transaction_hash: string | null;
   failure_reason: string | null; created_at: string; expires_at: string; submitted_at: string | null;
-  settled_at: string | null; checked_at: string | null };
+  settled_at: string | null; checked_at: string | null; bank_state?: string | null };
+
+/**
+ * Actions, with the latest state Bridge reported for a bank payout (from its
+ * webhooks or a read of the transfer). Only a payout's funding action has one.
+ */
+const ACTIONS = `SELECT actions.*, (SELECT json_extract(e.evidence_json, '$.state') FROM action_events e
+  WHERE e.action_id = actions.action_id AND e.event_type = 'bank_payout' ORDER BY e.occurred_at DESC LIMIT 1) AS bank_state FROM actions`;
 
 export type StoredAction = {
   id: string; subject: string; wallet: string; kind: ActionKind; chainId: number; summary: Record<string, unknown>;
   calls: Call[]; effects: Effect[]; usdCents: number | null; status: "prepared" | "submitted" | "settling" | "confirmed" | "failed" | "expired";
   transactionHash: string | null; relayReference: string | null; destinationChainId: number | null; destinationTransactionHash: string | null;
   failureReason: string | null; createdAt: string; expiresAt: string; submittedAt: string | null; settledAt: string | null; checkedAt: string | null;
+  /** Bridge's latest state for a bank payout; null for every other action. */
+  bankState: string | null;
 };
 
 function fromRow(row: ActionRow): StoredAction {
@@ -97,17 +106,17 @@ function fromRow(row: ActionRow): StoredAction {
     usdCents: row.usd_cents, status: row.status as StoredAction["status"], transactionHash: row.transaction_hash, relayReference: row.relay_reference,
     destinationChainId: row.destination_chain_id, destinationTransactionHash: row.destination_transaction_hash,
     failureReason: row.failure_reason, createdAt: row.created_at, expiresAt: row.expires_at, submittedAt: row.submitted_at,
-    settledAt: row.settled_at, checkedAt: row.checked_at
+    settledAt: row.settled_at, checkedAt: row.checked_at, bankState: row.bank_state ?? null
   };
 }
 
 export async function getAction(db: D1Database, subject: string, id: string): Promise<StoredAction | null> {
-  const row = await db.prepare("SELECT * FROM actions WHERE action_id = ? AND subject_reference = ?").bind(id, subject).first<ActionRow>();
+  const row = await db.prepare(`${ACTIONS} WHERE action_id = ? AND subject_reference = ?`).bind(id, subject).first<ActionRow>();
   return row ? fromRow(row) : null;
 }
 
 export async function listActions(db: D1Database, subject: string, limit = 50): Promise<StoredAction[]> {
-  const rows = await db.prepare("SELECT * FROM actions WHERE subject_reference = ? AND status != 'prepared' ORDER BY created_at DESC LIMIT ?")
+  const rows = await db.prepare(`${ACTIONS} WHERE subject_reference = ? AND status != 'prepared' ORDER BY created_at DESC LIMIT ?`)
     .bind(subject, limit).all<ActionRow>();
   return rows.results.map(fromRow);
 }
@@ -122,14 +131,14 @@ export async function listActionHashes(db: D1Database, subject: string): Promise
 
 /** Settled or submitted actions created in [start, end), oldest first. */
 export async function listActionsBetween(db: D1Database, subject: string, start: Date, end: Date): Promise<StoredAction[]> {
-  const rows = await db.prepare(`SELECT * FROM actions WHERE subject_reference = ? AND status NOT IN ('prepared', 'expired')
+  const rows = await db.prepare(`${ACTIONS} WHERE subject_reference = ? AND status NOT IN ('prepared', 'expired')
     AND created_at >= ? AND created_at < ? ORDER BY created_at ASC LIMIT 5000`).bind(subject, start.toISOString(), end.toISOString()).all<ActionRow>();
   return rows.results.map(fromRow);
 }
 
 /** Submitted or settling actions not checked since `checkedBefore`, least recently checked first, across all customers. */
 export async function listDueActions(db: D1Database, checkedBefore: Date, limit: number): Promise<StoredAction[]> {
-  const rows = await db.prepare(`SELECT * FROM actions WHERE status IN ('submitted', 'settling') AND (transaction_hash IS NOT NULL OR relay_reference IS NOT NULL)
+  const rows = await db.prepare(`${ACTIONS} WHERE status IN ('submitted', 'settling') AND (transaction_hash IS NOT NULL OR relay_reference IS NOT NULL)
     AND (checked_at IS NULL OR checked_at < ?) ORDER BY COALESCE(checked_at, '') ASC, created_at ASC LIMIT ?`)
     .bind(checkedBefore.toISOString(), limit).all<ActionRow>();
   return rows.results.map(fromRow);

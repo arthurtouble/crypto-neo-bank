@@ -24,6 +24,8 @@ function explorerUrl(chainId: number | null, hash: string | null) {
 function copy(label: string, phase: ActionPhase, action: ActionView | null) {
   if (phase === "preparing") return { step: 0, title: `Preparing ${label.toLowerCase()}`, detail: "Checking your limits and building the transaction." };
   if (phase === "signing") return { step: 1, title: "Confirm with your passkey", detail: "Review the request, then confirm it." };
+  if (action?.summary.bankPayout && (action.status === "settling" || action.status === "confirmed")) return { step: 3, title: `${label} sent`,
+    detail: "Your USDC reached Bridge's address. Bridge sends the dollars to your bank, usually within 1 to 3 business days for a bank transfer. Track it in Transactions." };
   switch (action?.status) {
     case "settling": return action.destinationChainId
       ? { step: 3, title: `${label} sent`, detail: `It's waiting for the bridge to deliver it on ${networkName(action.destinationChainId)}, usually within 30 minutes. You can close this and track it in Transactions.` }

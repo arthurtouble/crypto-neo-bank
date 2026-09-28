@@ -80,6 +80,8 @@ export const AAVE_POOL = "0xa238dd80c259a72e81d7e4664a9801593f98d1c5";
 export const VAULTS = { steakhouse: "0xbeef0e0834849acc03f0089f01f4f1eeb06873c9", gauntlet: "0xee8f4ec5672f09119b96ab6fb59c27e1b7e44b61" };
 const VAULT_SET = new Set(Object.values(VAULTS));
 const USDC_BASE = "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
+/** Bridge: the address its USD account deliveries come from, and where a payout's USDC goes. */
+export const BRIDGE = { sender: "0x00000000000000000000000000000000b41d6e01", payoutDeposit: "0x00000000000000000000000000000000b41d6e02" };
 const sharesToAssets = (shares) => shares * 105n / 100n / 10n ** 12n;
 const assetsToShares = (assets) => (assets * 10n ** 12n * 100n + 104n) / 105n;
 
@@ -94,6 +96,8 @@ const initialState = () => ({
   // Emails sent through the fake Resend, and messages sent to the fake push service.
   emails: [],
   pushes: [],
+  // Bridge: KYC links, customers' USD accounts and their deposit history, saved banks, and transfers.
+  bridgeXyz: { kycLinks: {}, accounts: {}, history: {}, externalAccounts: {}, transfers: {} },
   // Names of edges that fail: "rpc:<chainId>", "kraken", "privy", "lifi", "transfers" (Alchemy's transfer index), "resend", "push".
   down: [],
   // The next transaction a connected wallet sends reverts on chain.
@@ -476,6 +480,30 @@ export function startFakeEdge({ port }) {
     if (url.pathname === "/__session") return send(200, { token: accessToken(body.userId, body) });
     if (url.pathname === "/__sent") return send(200, { sent: state.sent });
     if (url.pathname === "/__link-email") { state.users[body.userId] = { ...state.users[body.userId], email: body.email }; return send(200, { ok: true }); }
+    // Bridge controls: approve or reject identity verification, deliver a bank deposit, move a payout along.
+    if (url.pathname === "/__bridge/kyc") {
+      const link = Object.values(state.bridgeXyz.kycLinks).find((item) => item.email === body.email);
+      if (!link) return send(404, { error: "no kyc link for that email" });
+      Object.assign(link, body.status === "rejected" ? { kyc_status: "rejected" } : { kyc_status: "approved", tos_status: "approved", customer_id: link.customer_id ?? `cus_${randomUUID().slice(0, 8)}` });
+      return send(200, link);
+    }
+    if (url.pathname === "/__bridge/deposit") {
+      const link = Object.values(state.bridgeXyz.kycLinks).find((item) => item.email === body.email);
+      const account = link?.customer_id && state.bridgeXyz.accounts[link.customer_id];
+      if (!account) return send(404, { error: "no USD account for that email" });
+      const hash = receive({ chainId: 8453, to: account.destination.address, token: USDC_BASE, amount: String(Math.round(Number(body.amount) * 1e6)), from: BRIDGE.sender });
+      (state.bridgeXyz.history[account.id] ??= []).push({ id: randomUUID(), type: "payment_processed", customer_id: link.customer_id, virtual_account_id: account.id,
+        amount: body.amount, currency: "usdc", destination_tx_hash: hash, created_at: new Date().toISOString(),
+        source: { payment_rail: "ach_push", sender_name: body.senderName ?? "Jane Customer", bank_name: "Chase" } });
+      return send(200, { hash });
+    }
+    if (url.pathname === "/__bridge/transfer") {
+      const transfers = Object.values(state.bridgeXyz.transfers);
+      const transfer = body.id ? state.bridgeXyz.transfers[body.id] : transfers.at(-1);
+      if (!transfer) return send(404, { error: "no transfer" });
+      transfer.state = body.state;
+      return send(200, transfer);
+    }
     if (url.pathname === "/__outbox") return send(200, { emails: state.emails, pushes: state.pushes });
     if (url.pathname === "/__balances") {
       // Set individual balances without touching any other wallet's.
@@ -559,6 +587,52 @@ export function startFakeEdge({ port }) {
       : state.lifiQuote === "no_route" ? send(404, { message: "No available quotes for the requested transfer" }) : send(200, lifiQuote(url));
     if (url.pathname === "/lifi/v1/status") return down("lifi") ? send(503, { message: "unavailable" }) : send(200, lifiStatus(url));
 
+    // Bridge's API (bank accounts): api key checked, JSON in and out.
+    if (url.pathname.startsWith("/bridge/v0/")) {
+      if (down("bridge")) return send(503, { message: "unavailable" });
+      if (req.headers["api-key"] !== "bridge-e2e-key") return send(401, { message: "invalid api key" });
+      const path = url.pathname.slice("/bridge/v0".length);
+      const bridge = state.bridgeXyz;
+      const link = /^\/kyc_links(?:\/([^/]+))?$/.exec(path);
+      if (link && req.method === "POST") {
+        const existing = Object.values(bridge.kycLinks).find((item) => item.email === body.email);
+        if (existing) return send(200, existing);
+        const id = `kyc_${randomUUID().slice(0, 8)}`;
+        bridge.kycLinks[id] = { id, email: body.email, full_name: body.full_name, customer_id: null, kyc_link: `https://bridge.aura-e2e.test/kyc/${id}`,
+          tos_link: `https://bridge.aura-e2e.test/tos/${id}`, kyc_status: "not_started", tos_status: "pending" };
+        return send(200, bridge.kycLinks[id]);
+      }
+      if (link) return bridge.kycLinks[link[1]] ? send(200, bridge.kycLinks[link[1]]) : send(404, { message: "not found" });
+      const accounts = /^\/customers\/([^/]+)\/virtual_accounts$/.exec(path);
+      if (accounts && req.method === "POST") {
+        const customer = accounts[1];
+        bridge.accounts[customer] ??= { id: `va_${customer}`, customer_id: customer, status: "activated",
+          destination: { currency: "usdc", payment_rail: "base", address: body.destination.address.toLowerCase() },
+          source_deposit_instructions: { currency: "usd", payment_rails: ["ach_push", "wire"], bank_name: "Lead Bank", bank_address: "1801 Main St, Kansas City, MO",
+            bank_beneficiary_name: "Aura Customer", bank_beneficiary_address: "1 Test St, New York, NY", bank_account_number: "900123456789", bank_routing_number: "101019644" } };
+        return send(200, bridge.accounts[customer]);
+      }
+      if (accounts) return send(200, { data: bridge.accounts[accounts[1]] ? [bridge.accounts[accounts[1]]] : [] });
+      const history = /^\/customers\/([^/]+)\/virtual_accounts\/([^/]+)\/history$/.exec(path);
+      if (history) return send(200, { count: (bridge.history[history[2]] ?? []).length, data: [...(bridge.history[history[2]] ?? [])].reverse() });
+      const external = /^\/customers\/([^/]+)\/external_accounts$/.exec(path);
+      if (external && req.method === "POST") {
+        const id = `ext_${randomUUID().slice(0, 8)}`;
+        bridge.externalAccounts[id] = { id, customer_id: external[1], bank_name: body.bank_name, account_owner_name: body.account_owner_name,
+          account: { last_4: String(body.account?.account_number ?? "").slice(-4) }, active: true };
+        return send(200, bridge.externalAccounts[id]);
+      }
+      const transfer = /^\/transfers(?:\/([^/]+))?$/.exec(path);
+      if (transfer && req.method === "POST") {
+        const id = `tr_${randomUUID().slice(0, 8)}`;
+        bridge.transfers[id] = { id, state: "awaiting_funds", on_behalf_of: body.on_behalf_of, amount: body.amount, destination: body.destination,
+          source_deposit_instructions: { payment_rail: "base", currency: "usdc", to_address: BRIDGE.payoutDeposit, amount: body.amount } };
+        return send(200, bridge.transfers[id]);
+      }
+      if (transfer) return bridge.transfers[transfer[1]] ? send(200, bridge.transfers[transfer[1]]) : send(404, { message: "not found" });
+      return send(404, { message: `no fake for ${path}` });
+    }
+
     // Resend's email API, and a browser push service (Aura sends the fake plain JSON; real push services get it encrypted).
     if (url.pathname === "/resend/emails") {
       if (down("resend")) return send(503, { message: "unavailable" });
@@ -605,6 +679,8 @@ export function startFakeEdge({ port }) {
       APP_ORIGIN: "https://aura-e2e.test",
       VAPID_PUBLIC_KEY: vapidPublic,
       VAPID_PRIVATE_KEY: vapid.d,
+      BRIDGE_API_KEY: "bridge-e2e-key",
+      BRIDGE_API_BASE_URL: `http://127.0.0.1:${port}/bridge/v0`,
       INTERCOM_APP_ID: "e2eapp",
       INTERCOM_IDENTITY_SECRET: "e2e-intercom-identity-secret"
     },

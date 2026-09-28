@@ -89,7 +89,7 @@ These are customer settings, off by default, stored in `security_profiles`. Tigh
 
 Today these are enforced by the server on the actions it prepares. They do not stop a customer who exports their key and signs elsewhere. Onchain or Privy-policy enforcement is a separate, later feature ("Wealth protection"); the settings UI must say which kind of enforcement applies.
 
-Bank limits come from Bridge once connected and appear beside these.
+Bank limits come from Bridge once connected and appear beside these. A bank payout is an ordinary USDC transfer action to the address Bridge names (`lib/actions/payout.ts`), so the lock, daily limit, and passkey apply; its bank-side progress comes from Bridge (`lib/money/bank-activity.ts`) and never changes the action's chain status.
 
 ## Valuation
 
