@@ -115,6 +115,34 @@ export async function getAction(db: D1Database, subject: string, id: string): Pr
   return row ? fromRow(row) : null;
 }
 
+/** Any customer's action, for operators. */
+export async function getActionForOperator(db: D1Database, id: string): Promise<StoredAction | null> {
+  const row = await db.prepare(`${ACTIONS} WHERE action_id = ?`).bind(id).first<ActionRow>();
+  return row ? fromRow(row) : null;
+}
+
+export type ActionFilter = { status?: StoredAction["status"]; kind?: ActionKind; subject?: string; stuck?: boolean; before?: string; limit?: number };
+/** A submitted action is stuck after 15 minutes without a settled receipt; a cross-network one after 2 hours still settling. */
+export const STUCK_SUBMITTED_MS = 15 * 60_000;
+export const STUCK_SETTLING_MS = 2 * 60 * 60_000;
+
+/** Every customer's actions, newest first, for operators. Prepared actions nobody signed are left out. */
+export async function listActionsForOperator(db: D1Database, filter: ActionFilter, now = new Date()): Promise<StoredAction[]> {
+  const where = ["status != 'prepared'"];
+  const values: unknown[] = [];
+  if (filter.status) { where.push("status = ?"); values.push(filter.status); }
+  if (filter.kind) { where.push("kind = ?"); values.push(filter.kind); }
+  if (filter.subject) { where.push("subject_reference = ?"); values.push(filter.subject); }
+  if (filter.before) { where.push("created_at < ?"); values.push(filter.before); }
+  if (filter.stuck) {
+    where.push("((status = 'submitted' AND submitted_at < ?) OR (status = 'settling' AND submitted_at < ?))");
+    values.push(new Date(now.getTime() - STUCK_SUBMITTED_MS).toISOString(), new Date(now.getTime() - STUCK_SETTLING_MS).toISOString());
+  }
+  const rows = await db.prepare(`${ACTIONS} WHERE ${where.join(" AND ")} ORDER BY created_at DESC LIMIT ?`)
+    .bind(...values, Math.min(filter.limit ?? 50, 100)).all<ActionRow>();
+  return rows.results.map(fromRow);
+}
+
 export async function listActions(db: D1Database, subject: string, limit = 50): Promise<StoredAction[]> {
   const rows = await db.prepare(`${ACTIONS} WHERE subject_reference = ? AND status != 'prepared' ORDER BY created_at DESC LIMIT ?`)
     .bind(subject, limit).all<ActionRow>();

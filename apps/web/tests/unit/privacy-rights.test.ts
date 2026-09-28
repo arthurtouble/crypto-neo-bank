@@ -8,7 +8,7 @@ const state = vi.hoisted(() => ({ database: null as unknown }));
 vi.mock("cloudflare:workers", () => ({ env: { get PROJECTION_DB() { return state.database; } } }));
 vi.mock("@/lib/auth/server", () => ({ AuthenticationError: httpErrors.AuthenticationError,
   requireVerifiedSubject: async () => ({ subjectReference: "alice", sessionReference: "session-a" }) }));
-vi.mock("@/lib/auth/admin", () => ({ requireOperationsAdmin: async () => ({ subjectReference: "operator-1" }) }));
+vi.mock("@/lib/auth/access", () => ({ requireOperator: async () => ({ email: "operator-1", subject: "access-operator-1" }) }));
 
 import { GET as consentState, POST as changeConsent } from "@/app/api/privacy/consent/route";
 import { GET as exportData } from "@/app/api/privacy/export/route";

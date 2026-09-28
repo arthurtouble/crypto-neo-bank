@@ -11,9 +11,9 @@ const httpErrors = await vi.hoisted(() => import("@/lib/http/errors"));
 const baseUsdc = "8453:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
 const state = vi.hoisted(() => ({ db: null as D1Database | null, admin: true }));
 vi.mock("cloudflare:workers", () => ({ env: { get PROJECTION_DB() { return state.db; } } }));
-vi.mock("@/lib/auth/admin", () => ({ requireOperationsAdmin: async () => {
+vi.mock("@/lib/auth/access", () => ({ requireOperator: async () => {
   if (!state.admin) throw new httpErrors.AuthorizationError();
-  return { subjectReference: "did:privy:operator" };
+  return { email: "ops@aura.test", subject: "access-operator" };
 } }));
 const { GET: listAssets, PATCH: updateAsset } = await import("@/app/api/ops/assets/route");
 const patch = (body: unknown) => updateAsset(new Request("https://aura.test/api/ops/assets", { method: "PATCH", body: JSON.stringify(body) }));
@@ -99,7 +99,7 @@ describe("pausing an asset", () => {
     expect((await patch({ assetId: baseUsdc, paused: true })).status).toBe(400);
     expect((await patch({ assetId: baseUsdc, paused: true, reason: "Issuer halt" })).status).toBe(200);
     const listed = await (await listAssets(new Request("https://aura.test/api/ops/assets"))).json() as { assets: Array<{ id: string; paused: { reason: string; by: string } | null }> };
-    expect(listed.assets.find((asset) => asset.id === baseUsdc)?.paused).toMatchObject({ reason: "Issuer halt", by: "did:privy:operator" });
+    expect(listed.assets.find((asset) => asset.id === baseUsdc)?.paused).toMatchObject({ reason: "Issuer halt", by: "ops@aura.test" });
     expect(listed.assets.filter((asset) => asset.paused)).toHaveLength(1);
     expect((await patch({ assetId: baseUsdc, paused: false })).status).toBe(200);
     expect(sqlite.prepare("SELECT COUNT(*) AS n FROM asset_pauses").get()).toEqual({ n: 0 });

@@ -7,7 +7,7 @@ import { schemaDatabase } from "../support/schema";
 const wallet = "0x1111111111111111111111111111111111111111";
 const state = vi.hoisted(() => ({ db: null as D1Database | null, holdings: [] as unknown[] }));
 vi.mock("cloudflare:workers", () => ({ env: { get PROJECTION_DB() { return state.db; } } }));
-vi.mock("@/lib/auth/admin", () => ({ requireOperationsAdmin: async () => ({ subjectReference: "operator-1" }) }));
+vi.mock("@/lib/auth/access", () => ({ requireOperator: async () => ({ email: "operator-1", subject: "access-operator-1" }) }));
 vi.mock("@/lib/auth/wallet", () => ({ requireActionWallet: async () => wallet }));
 vi.mock("@/lib/overview/read", () => ({ readOverview: async () => ({ wallet, holdings: state.holdings, totals: {}, observedAt: "2026-09-28T00:00:00.000Z" }) }));
 vi.mock("@/lib/auth/privy", () => ({ privyClient: () => ({

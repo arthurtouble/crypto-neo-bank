@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { randomUUID } from "node:crypto";
-import { aTokenFor, OPERATOR } from "./fake-edge.mjs";
+import { aTokenFor } from "./fake-edge.mjs";
 
 // The dev server drops idle keep-alive sockets after a few seconds; a fresh connection per setup call can't race that.
 const fresh = { Connection: "close" };
@@ -21,7 +21,7 @@ export const ASSETS = {
 
 /** Change what the fake Privy, chains, and price feed return. */
 export async function edge(path: "/__reset" | "/__state" | "/__session" | "/__sent" | "/__balances" | "/__receive" | "/__outbox" | "/__bridge/kyc" | "/__bridge/deposit" | "/__bridge/transfer"
-  | "/__bridge/cards" | "/__stripe/authorize" | "/__stripe/capture" | "/__stripe/state", body: unknown = {}) {
+  | "/__bridge/cards" | "/__stripe/authorize" | "/__stripe/capture" | "/__stripe/state" | "/__access", body: unknown = {}) {
   const response = await fetch(`${edgeUrl}${path}`, { method: "POST", body: JSON.stringify(body) });
   if (!response.ok) throw new Error(`fake edge ${path} failed: ${response.status}`);
   return response.json() as Promise<{ token?: string; sent?: Array<{ hash: string; chainId: number; from: string; to: string; data: string; value: string; success: boolean;
@@ -37,7 +37,7 @@ export async function newCustomer(options: { mfa?: string[]; expiresIn?: number;
   const id = randomUUID().replaceAll("-", "");
   const externalWallets = options.connectedWallet ? [`0x${id.split("").reverse().join("").padEnd(40, "1").slice(0, 40)}` as `0x${string}`] : [];
   const customer = { userId: `did:privy:${id}`, wallet: `0x${id.padEnd(40, "0").slice(0, 40)}` as `0x${string}`, email: options.email === false ? "" : `${id.slice(0, 8)}@example.com`, externalWallets, mfa: options.mfa ?? [] };
-  await edge("/__state", { users: { [OPERATOR.userId]: { wallet: OPERATOR.wallet },
+  await edge("/__state", { users: {
     [customer.userId]: { wallet: customer.wallet, email: customer.email, mfa: options.mfa ?? [], externalWallets } } });
   const { token } = await edge("/__session", { userId: customer.userId, expiresIn: options.expiresIn });
   return { ...customer, token: token! };
@@ -72,10 +72,15 @@ export async function acceptTerms(page: Page, customer: Customer) {
   if (!response.ok()) throw new Error(`accepting terms failed: ${response.status()}`);
 }
 
+/** An operator's Cloudflare Access token for the operations app, as Access adds it to each request. */
+export async function operatorHeaders(options: { email?: string; audience?: string; expiresIn?: number; forged?: boolean } = {}) {
+  const { token } = await edge("/__access", options);
+  return { "Cf-Access-Jwt-Assertion": token! };
+}
+
 /** Turn a feature switch on or off through the operations API, as an operator would. */
 export async function setFeature(page: Page, key: string, enabled: boolean) {
-  const { token } = await edge("/__session", { userId: OPERATOR.userId });
-  const response = await page.request.patch("/api/ops/features", { headers: { Authorization: `Bearer ${token}`, ...fresh }, data: { key, enabled } });
+  const response = await page.request.patch("/api/ops/features", { headers: { ...await operatorHeaders(), ...fresh }, data: { key, enabled } });
   if (!response.ok()) throw new Error(`setting ${key} failed: ${response.status()}`);
 }
 

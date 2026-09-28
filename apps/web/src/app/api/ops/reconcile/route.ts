@@ -1,9 +1,7 @@
 import { env } from "cloudflare:workers";
-import { requireOperationsAdmin } from "@/lib/auth/admin";
+import { requireOperator } from "@/lib/auth/access";
+import { STUCK_SETTLING_MS as STALE_SETTLING_MS, STUCK_SUBMITTED_MS as STALE_SUBMITTED_MS } from "@/lib/actions/store";
 import { route } from "@/lib/http/route";
-
-const STALE_SUBMITTED_MS = 15 * 60_000;
-const STALE_SETTLING_MS = 2 * 60 * 60_000;
 
 function openIssue(db: D1Database, type: string, severity: string, source: string, reference: string, subject: string | null, summary: string, now: string) {
   return db.prepare(`INSERT INTO operational_issues (issue_id, subject_reference, issue_type, severity, source_name, source_reference, summary, status, opened_at)
@@ -14,7 +12,7 @@ function openIssue(db: D1Database, type: string, severity: string, source: strin
 
 /** Open issues for actions that have not settled in time and for provider events that failed. */
 export const POST = route("ops.reconcile.post", { unavailable: "reconciliation_unavailable" }, async (request, { traceId }) => {
-  const admin = await requireOperationsAdmin(request);
+  const operator = await requireOperator(request);
   const now = Date.now();
   const at = new Date(now).toISOString();
   const [stale, failed] = await env.PROJECTION_DB.batch([
@@ -33,6 +31,6 @@ export const POST = route("ops.reconcile.post", { unavailable: "reconciliation_u
   if (statements.length) await env.PROJECTION_DB.batch(statements);
   await env.PROJECTION_DB.prepare(`INSERT INTO audit_events (audit_id, subject_reference, actor_type, actor_reference, action, target_type, target_reference, evidence_json, occurred_at)
     VALUES (?, NULL, 'operator', ?, 'run_reconciliation', 'projection', NULL, ?, ?)`)
-    .bind(crypto.randomUUID(), admin.subjectReference, JSON.stringify({ staleActions: stale.results.length, failedWebhooks: failed.results.length }), at).run();
+    .bind(crypto.randomUUID(), operator.email, JSON.stringify({ staleActions: stale.results.length, failedWebhooks: failed.results.length }), at).run();
   return Response.json({ checked: stale.results.length + failed.results.length, openedCandidates: statements.length, completedAt: at, traceId });
 });
