@@ -54,10 +54,10 @@ Analytics answer narrow questions, like whether people finish setup or hit an er
 
 ## Your choices
 
-In **Settings → Data and privacy** you can:
+In **Settings** you can:
 
-- download everything Aura holds about your account, straight away; and
-- turn product-update emails on or off.
+- download everything Aura holds about your account, straight away (Your data and account); and
+- turn product-update emails on or off (Notifications → Product news).
 
 To close your account, contact support once it holds no funds. Aura keeps your transaction, security, and consent records.
 

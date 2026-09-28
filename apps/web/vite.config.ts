@@ -11,6 +11,7 @@ const fake = (file: string) => fileURLToPath(new URL(`./tests/e2e/support/${file
 export default defineConfig({
   resolve: e2e ? { alias: [
     { find: /^@privy-io\/react-auth\/smart-wallets$/, replacement: fake("privy-smart-wallets-fake.tsx") },
+    { find: /^@privy-io\/react-auth\/ui$/, replacement: fake("privy-ui-fake.tsx") },
     { find: /^@privy-io\/react-auth$/, replacement: fake("privy-react-fake.tsx") },
     { find: /^@privy-io\/wagmi$/, replacement: fake("privy-wagmi-fake.ts") }
   ] } : undefined,

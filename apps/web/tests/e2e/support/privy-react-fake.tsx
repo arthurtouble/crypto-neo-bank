@@ -11,6 +11,9 @@
 // "fail" makes Privy's card flow fail. Approving a money action stands in for
 // the passkey prompt: "aura-e2e-passkey" = "reject" cancels it. Opening
 // Privy's passkey setup is counted in window.__auraE2E.mfaEnrollment.
+// Adding or changing the email (Privy's one-time-code flow) links the address
+// in "aura-e2e-link-email", here and at the fake edge; without it, the
+// customer closes the flow.
 
 import { createElement, Fragment, useSyncExternalStore, type ReactNode } from "react";
 
@@ -106,8 +109,20 @@ export const useFundWallet = () => ({ fundWallet: async (input: unknown) => {
   recorder().fundWallet.push(input);
   if (localStorage.getItem("aura-e2e-card") === "fail") throw new Error("The card payment was declined.");
 } });
+type LinkCallbacks = { onSuccess?: (result: { linkMethod: string }) => void; onError?: (error: string) => void };
+/** Privy's email flow: the customer enters an address and the code sent to it. */
+export async function linkEmailFlow(callbacks: LinkCallbacks, exited: string) {
+  const email = localStorage.getItem("aura-e2e-link-email");
+  const session = read().session;
+  if (!email || !session) return callbacks.onError?.(exited);
+  const response = await fetch(`${__AURA_E2E_EDGE__}/__link-email`, { method: "POST", body: JSON.stringify({ userId: session.userId, email }) });
+  if (!response.ok) return callbacks.onError?.("unknown_error");
+  localStorage.setItem(SESSION_KEY, JSON.stringify({ ...session, email }));
+  notify();
+  callbacks.onSuccess?.({ linkMethod: "email" });
+}
+export const useLinkAccount = (callbacks: LinkCallbacks = {}) => ({ linkEmail: () => void linkEmailFlow(callbacks, "exited_link_flow") });
 export const useExportWallet = () => ({ exportWallet: async () => undefined });
-export const useSetWalletRecovery = () => ({ setWalletRecovery: async () => undefined });
 
 export function PrivyProvider({ children }: { children: ReactNode; appId?: string; config?: unknown }) {
   return createElement(Fragment, null, children);

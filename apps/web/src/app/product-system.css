@@ -792,3 +792,6 @@
 .notificationPanel li a:hover { background: var(--surface-muted); }
 .notificationPanel li.unread a { background: var(--accent-soft); }
 .notificationPanel small, .notificationPanel time { color: var(--text-secondary); font-size: var(--type-caption); }
+
+/* Settings */
+.settingState { color: var(--positive); font-size: var(--type-caption); font-weight: 600; }

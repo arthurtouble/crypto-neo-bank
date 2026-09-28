@@ -51,14 +51,14 @@ A position doesn't tell you what you've earned, your cost basis, or a tax value.
 
 ## Keeping access
 
-Privy handles recovery and export. Aura support will never ask for a seed phrase, private key, recovery secret, or one-time code.
+You get back into your account by signing in with any method linked to it: your email, or the wallet you signed up with. Privy handles key export. Aura support will never ask for a seed phrase, private key, recovery secret, or one-time code.
 
 Before you keep a large amount in your account:
 
-1. check the recovery methods Privy offers you;
+1. add a second way to sign in, such as an email, in Settings → Sign-in and security;
 2. secure the email or wallet you sign in with, and the device that holds your passkey;
 3. understand what exporting your key means;
-4. test recovery with a small balance;
+4. sign in with each method once, while your balance is small;
 5. keep your public address separate from anything you use to recover access.
 
 Exporting your key makes your wallet more portable, and puts more responsibility on you. If you use the key elsewhere, Aura's account lock, daily limit, and recipient settings don't apply.

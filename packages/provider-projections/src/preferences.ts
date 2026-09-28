@@ -9,8 +9,7 @@ import type { ProjectionDatabase } from "./database";
  */
 export const preferencesSchema = z.object({
   notifications: z.object({
-    transactionEmail: z.boolean(),
-    transactionPush: z.boolean()
+    transactionEmail: z.boolean()
   }).strict()
 }).strict();
 export type Preferences = z.infer<typeof preferencesSchema>;
@@ -21,7 +20,7 @@ export const preferencesUpdateSchema = z.object({
 export type PreferencesUpdate = z.infer<typeof preferencesUpdateSchema>;
 
 export const defaultPreferences: Preferences = {
-  notifications: { transactionEmail: true, transactionPush: true }
+  notifications: { transactionEmail: true }
 };
 
 export async function readPreferences(db: ProjectionDatabase, subjectReference: string): Promise<Preferences & { updatedAt: string | null }> {

@@ -69,7 +69,7 @@ test("tightening a control applies at once; loosening it needs the passkey", asy
 
 test("without a passkey, loosening asks the customer to add one and changes nothing", async ({ page }) => {
   const customer = await openSettings(page, { mfa: [] });
-  await expect(page.getByText("No passkey yet")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Add passkey" })).toBeVisible();
   await lock(page).click();
   await expect(toast(page, "Controls updated")).toBeVisible({ timeout: 20_000 });
   await dismissToasts(page);
@@ -80,7 +80,8 @@ test("without a passkey, loosening asks the customer to add one and changes noth
 
 test("an authenticator app counts as the passkey", async ({ page }) => {
   await openSettings(page, { mfa: ["totp"] });
-  await expect(page.getByText("Passkey added")).toBeVisible();
+  await expect(page.getByText(/^Added\. Needed to move money/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Add passkey" })).toHaveCount(0);
 });
 
 test("saved recipients can be added, wait their turn, and be removed", async ({ page }) => {
@@ -116,7 +117,8 @@ test("an Aura tag can be saved and published", async ({ page }) => {
 test("the customer's data downloads straight away, and nothing offers to delete it", async ({ page }) => {
   const customer = await openSettings(page);
   await expect(page.getByText("Delete my data")).toHaveCount(0);
-  for (const placeholder of ["Sessions", "Passcode", "Wallet provider rules"]) await expect(page.getByText(placeholder, { exact: true })).toHaveCount(0);
+  // Only what the customer can use: no placeholders, no recovery review (Privy's wallets recover through the sign-in methods), no feedback box.
+  for (const gone of ["Sessions", "Passcode", "Wallet provider rules", "Recovery", "You stay in control", "Tell us what got in the way", "Statements"]) await expect(page.getByText(gone, { exact: true })).toHaveCount(0);
   const [file] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Download", exact: true }).click()]);
   const data = JSON.parse(await readFile((await file.path())!, "utf8")) as { subjectReference: string; data: Record<string, unknown> };
   expect(data.subjectReference).toBe(customer.userId);
