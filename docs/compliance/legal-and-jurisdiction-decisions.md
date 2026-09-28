@@ -14,7 +14,7 @@ No row below is approved merely by appearing here. Record the decision, date, ac
 | Aurel role for self-controlled wallet/DeFi interface | Open | Counsel characterization and activity-by-activity licensing analysis |
 | KYC/fiat/card allocation | Open | Signed provider agreement and the [responsibility matrix](compliance-responsibility-matrix.md) |
 | Tokenized assets | Disabled | Issuer, venue, distribution, transfer restriction and country review |
-| Membership/rewards | Prepared only | Vendor contracts, tax/consumer terms and entitlement funding |
+| Membership/rewards | Cut | None now. Card cashback, if it returns as its own feature, needs vendor contracts, tax/consumer terms and funding |
 | “Bank”, “account”, “deposit”, insurance and yield language | Restricted | Approved copy library reflecting exact legal product |
 | Privacy roles and data transfers | Open | Privacy notice, DPA, subprocessors, residency and transfer mechanism |
 | Retention/deletion schedule | Open | Category schedule satisfying security, complaints and legal duties |

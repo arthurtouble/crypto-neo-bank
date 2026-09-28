@@ -1,6 +1,6 @@
 ---
 title: Provider projections
-description: How provider events become read models for bank, card, rewards, and wallet-policy integrations.
+description: How provider events become read models for bank, card, and wallet-policy integrations.
 ---
 
 ## Flow
@@ -22,18 +22,15 @@ A failure while applying is retried and ends in the dead-letter queue after five
 | `provider.customer.updated` | bridge | `provider_customer_links` | Bank account onboarding status |
 | `bank.payout.updated` | bridge | `action_events` (`bank_payout`) | Payout status in Transactions |
 | `card.account.updated` | stripe | `card_account_projections` | `GET /api/cards` while `payment_cards` is on (which card is the customer's; the card itself is read from Stripe) |
-| `membership.updated` | bridge, stripe | `membership_projections` | `GET /api/rewards` |
-| `benefit.entitlement.updated` | bridge, stripe | `benefit_entitlements` | `GET /api/rewards` |
 | `wallet.policy.updated` | privy | `wallet_policies` | `GET /api/security/policy` (`walletPolicies`) |
 
-Payload schemas are strict (`cardAccountEventSchema`, `membershipEventSchema`, `benefitEntitlementEventSchema`, `walletPolicyEventSchema`); unknown fields, including card numbers, are rejected.
+Payload schemas are strict (`cardAccountEventSchema`, `walletPolicyEventSchema`); unknown fields, including card numbers, are rejected. The former `membership.updated` and `benefit.entitlement.updated` events were removed with Rewards and are now ignored as unsupported.
 
 ## Ordering and integrity
 
-- Card, membership, and wallet-policy rows only change when the event is newer than the stored observation.
+- Card and wallet-policy rows only change when the event is newer than the stored observation.
 - A card reference never moves to another customer or provider.
-- Benefit consumption only increases, so a late event cannot hand a used benefit back.
-- Projections never authorize money movement. The issuer, benefit provider, and wallet provider remain authoritative.
+- Projections never authorize money movement. The issuer and wallet provider remain authoritative.
 
 ## Aura-owned tables in the same package
 

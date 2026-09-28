@@ -56,7 +56,7 @@ function InOutChart({ data }: { data: Insights }) {
           <line className="chartBaseline" x1={0} x2={width} y1={top + plot} y2={top + plot} />
           {buckets.map((bucket, index) => {
             const x = left + index * slot + (slot - series.length * (barWidth + 2)) / 2;
-            return <g key={bucket.start} onMouseEnter={() => setActive(index)} onFocus={() => setActive(index)} tabIndex={-1}>
+            return <g key={bucket.start} onMouseEnter={() => setActive(index)} onClick={() => setActive(index)} onFocus={() => setActive(index)} tabIndex={-1}>
               <rect className="chartHit" x={left + index * slot} y={top} width={slot} height={plot} />
               {series.map((item, position) => {
                 const value = bucket[item.key];

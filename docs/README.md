@@ -16,7 +16,7 @@ These files contain operational and security-sensitive context. Keep them in the
 - [Money actions](architecture/money-actions.md): how every customer money movement is prepared, signed, verified, and recorded.
 - [Accounts and custody](architecture/accounts-and-custody.md): the Privy embedded-wallet account, how actions are relayed, custody, and leaving Privy.
 - [Screen data](architecture/frontend-data.md): the API each screen reads, and example data for guests.
-- [Provider projections](architecture/provider-projections.md): the event contract for cards, rewards, and wallet policies.
+- [Provider projections](architecture/provider-projections.md): the event contract for bank, cards, and wallet policies.
 
 ## Sections
 

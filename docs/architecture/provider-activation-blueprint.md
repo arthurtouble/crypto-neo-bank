@@ -7,9 +7,9 @@ This is the internal handoff for turning Aura's prepared product surfaces into c
 
 ## Operating rule
 
-Aura stores provider references, projections, preferences, and support metadata. It does not treat its database as the authority for balances, account details, transfer settlement, card status, securities, or rewards. Every adapter must support fresh reads, signed webhooks, idempotent commands, and reconciliation against its source.
+Aura stores provider references, projections, preferences, and support metadata. It does not treat its database as the authority for balances, account details, transfer settlement, card status, or securities. Every adapter must support fresh reads, signed webhooks, idempotent commands, and reconciliation against its source.
 
-Preview mode may show complete workflows and eligibility gates, but never fabricated account numbers, cards, rewards, or completed transfers.
+Preview mode may show complete workflows and eligibility gates, but never fabricated account numbers, cards, or completed transfers.
 
 ## Proposed providers
 
@@ -19,7 +19,6 @@ Preview mode may show complete workflows and eligibility gates, but never fabric
 | Wallet login and signing | Privy | — | Aura account, receive, send, recovery, export | Already integrated; production configuration and monitoring |
 | Cross-network USDC | LI.FI | Socket or provider-native routing when contracted | Exchange with automatic source selection | LI.FI integrated; Socket requires production access, adapter work, route monitoring, and supported-pair policy |
 | Card issuing | Bridge through Stripe Issuing, subject to program approval (built against fakes) | — (Rain dropped) | Virtual Visa card, spending allowance on Base, freeze and daily limit, card details in Stripe's frames, phone wallets, disputes | Bridge card program approval, Stripe account and webhook, `BRIDGE_CARDS_SPENDER`, Stripe preview access for phone wallets, a real card on dev |
-| Merchant rewards | Kard | Card-network rewards provider | Offers, reward history, activation | Program agreement, customer enrolment, transaction-match webhook |
 | Tag card payments | Acquiring or payment-link provider | — | Public Aura tag payment page | Merchant approval, hosted payment link, refunds, disputes, webhooks |
 | Tokenized stocks and metals | Coinbase tokenized stocks on Base and Tether Gold, bought through LI.FI routes in Swap | — | Swap, with Chainlink reference prices | Country and eligibility rules for Coinbase stocks, issuer redemption records |
 
@@ -51,9 +50,9 @@ Never mark a transfer complete from the initial API response. Support returns, r
 
 Provider-created liquidation addresses may accept configured assets and convert them to USD. They are not a universal deposit address. The app must display the exact asset and network returned by the provider and reject unsupported pairs.
 
-## Benefits activation
+## Rewards
 
-Cashback and benefits require a funded program. Record the provider's entitlement, earning, reversal, and fulfilment references. Show a benefit only when the provider confirms eligibility and terms.
+Rewards was cut: no provider reports memberships or benefits. Card cashback may come back as its own feature once cards are live. It would need a funded program, with the provider's earning, reversal, and fulfilment references, and would show only what the provider confirms.
 
 ## Configuration
 
@@ -64,8 +63,6 @@ BRIDGE_API_KEY
 BRIDGE_WEBHOOK_PUBLIC_KEY
 STRIPE_SECRET_KEY
 STRIPE_WEBHOOK_SECRET
-REWARDS_API_KEY
-REWARDS_WEBHOOK_SECRET
 ACQUIRING_API_KEY
 ACQUIRING_WEBHOOK_SECRET
 ```
@@ -81,5 +78,5 @@ Each service also needs an explicit mode (`preview` or `live`), approved countri
 - Authentication, secret rotation, webhook signature, replay, and idempotency tests.
 - Customer support runbooks for pending, rejected, returned, disputed, expired, and provider-outage states.
 - Reconciliation reports proving Aura projections converge to the provider.
-- Legal review of product copy, fees, privacy, complaints, disclosures, and benefit terms.
+- Legal review of product copy, fees, privacy, complaints, and disclosures.
 - Production canary customer and kill switch for each capability.

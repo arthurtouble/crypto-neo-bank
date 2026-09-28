@@ -63,6 +63,9 @@ test("Insights shows money in and out over time, and the card merchants paid mos
   await expect(tooltip).toContainText("Week of");
   await expect(tooltip).toContainText("$20.00");
   await expect(tooltip).toContainText("$50.00");
+  // Tapping another week, as on a phone, reads that one out instead.
+  await hits.first().click();
+  await expect(tooltip).toContainText("$0.00");
   // The same numbers as a table.
   await chart(page).getByText("Show as a table").click();
   await expect(chart(page).getByRole("columnheader", { name: "Week of" })).toBeVisible();

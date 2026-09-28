@@ -32,7 +32,7 @@ Public blockchains record your transactions permanently.
 
 **Support.** Your chats with Aura's assistant and team, and complaint details you send us.
 
-**Partner information.** Once a partner such as Bridge (bank transfers and card approval) or Stripe (cards, issued with Bridge) is live, we store references and statuses it reports. Examples are which card is yours, its status and last four digits, benefit entitlements, bank-transfer instructions, and rules your wallet provider enforces. Identity documents, screening results, and full card numbers stay with those partners. Your card number, expiry date, and security code are shown only in Stripe's own frame; Aura never sees or stores them.
+**Partner information.** Once a partner such as Bridge (bank transfers and card approval) or Stripe (cards, issued with Bridge) is live, we store references and statuses it reports. Examples are which card is yours, its status and last four digits, bank-transfer instructions, and rules your wallet provider enforces. Identity documents, screening results, and full card numbers stay with those partners. Your card number, expiry date, and security code are shown only in Stripe's own frame; Aura never sees or stores them.
 
 **Technical data.** Browser and device information, IP-derived security signals, rate-limit counters, diagnostic logs, and a short, fixed list of product events (such as "transaction prepared" or "support opened").
 

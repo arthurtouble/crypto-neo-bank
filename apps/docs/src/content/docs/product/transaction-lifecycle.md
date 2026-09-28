@@ -60,6 +60,10 @@ Aura doesn't guess a purchase price, gain or loss, or tax treatment. Missing cos
 
 Insights adds up your completed transactions for a period: money in (received, and card refunds), money out (sent, and card payments), put to work (added to Earn), and moved (swaps and moves between networks). Anything without a US dollar value is counted separately, never as zero. If received money can't all be read, money in shows as **Unavailable**; if card payments can't, both money in and money out do.
 
+Pick a period: **7D**, **30D**, **90D**, or **1Y**. **Money in and out** charts both for each day over 7 days, each week (starting Monday) over 30 or 90 days, and each month over a year. Days start at midnight UTC. Point at a bar to see its amounts, or choose **Show as a table**. If money in or money out can't all be read, the chart shows only the other one and tells you. If neither can, it says so.
+
+**Top card merchants** lists the five merchants you paid most by card in the period, with how many payments you made to each. It counts settled payments only. Declines and refunds are left out. If card payments can't all be read, it says so.
+
 ## Moves between networks
 
 When you move an asset between networks, the first network confirming doesn't prove delivery. The journey shows confirmation on Base and delivery on the other network as separate steps.

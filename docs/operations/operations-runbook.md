@@ -39,7 +39,7 @@ Aurel can lose its D1 data without losing customer funds because Privy, contract
 2. Reattach the binding to both Workers.
 3. Restore the latest verified evidence backup before accepting new customer instructions.
 4. Query provider APIs and chains directly.
-5. Rebuild wallet, fiat, card, position, and membership projections with source metadata.
+5. Rebuild wallet, fiat, card, and position projections with source metadata.
 6. Re-run reconciliation. Customer balances must match authoritative systems independently of the D1 restore.
 7. Treat any gap in consent, security-policy, case, or administrative audit evidence as an incident; do not invent or infer missing acceptance.
 

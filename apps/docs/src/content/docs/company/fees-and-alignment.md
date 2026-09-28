@@ -19,7 +19,7 @@ A zero Aura fee doesn't make every action free.
 | Bridge or exchange fee | The route LI.FI finds for your swap or move. When you add money from another network, or send to one, it comes out of the amount |
 | Card fee | The card provider, when you pay by card. It shows the fee before you pay |
 | Price impact or slippage | Available liquidity and market moves |
-| Partner fee | A future bank, card, or rewards partner |
+| Partner fee | A future bank or card partner |
 
 Aura shows the costs it knows about before you confirm. Some are estimates and can change before the transaction goes through.
 
@@ -29,7 +29,6 @@ We may eventually use a mix of:
 
 - a paid membership, with clear pricing;
 - a disclosed share of card fees paid by merchants;
-- rewards funded by partners or merchants;
 - clearly disclosed conversion or service fees;
 - subscriptions for families or businesses;
 - fees for premium support or reporting.
@@ -48,9 +47,7 @@ Aura has no token of its own. An asset or partner should be in Aura because it's
 
 ## Rewards cost someone money
 
-Cashback and other perks aren't free. Someone pays for them. Before we offer any, each needs a funded partner, a cost, usage limits, eligibility rules, the countries it covers, fraud rules, an expiry rule, and someone responsible for support.
-
-Nothing you see about rewards in the app is an entitlement until that's in place.
+Aura doesn't offer cashback, points, or other rewards. Perks aren't free. Someone pays for them. Before we offer any, each needs a funded partner, a cost, usage limits, eligibility rules, the countries it covers, fraud rules, an expiry rule, and someone responsible for support.
 
 ## When fees change
 
