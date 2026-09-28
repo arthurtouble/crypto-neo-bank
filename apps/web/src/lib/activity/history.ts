@@ -5,6 +5,7 @@ import { getAaveBaseActivity, type AaveBaseActivity } from "@/lib/defi/aave";
 import { readCardHistory, type CardHistory } from "@/lib/cards/service";
 import { actionEntry, cardEntry, incomingEntry, type ActivityEntry } from "./entries";
 import { readIncoming, type IncomingRead } from "./incoming";
+import { recordIncoming } from "./observations";
 import { readBankDeposits, refreshBankPayouts } from "@/lib/money/bank-activity";
 import type { BankDeposit } from "@/lib/providers/bridge/transfers";
 
@@ -54,6 +55,7 @@ export async function readHistory(db: D1Database, subject: string, wallet: strin
     (deps.bankDeposits ?? ((who: string) => readBankDeposits(db, who)))(subject),
     cardReader(db, deps, now)(subject, {})
   ]);
+  await recordIncoming(db, subject, wallet, incoming.transfers, now);
   // Opening Transactions also advances a few open actions, so they settle even if the customer left the screen they started on.
   const due = stored.filter((action) => (action.status === "submitted" || action.status === "settling") && (action.transactionHash || action.relayReference)
     && (!action.checkedAt || now.getTime() - Date.parse(action.checkedAt) >= RECHECK_MS)).slice(0, MAX_CHECKS);

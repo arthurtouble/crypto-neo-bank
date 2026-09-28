@@ -2,9 +2,9 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tansta
 import { useState } from "react";
 import { api, short, when } from "./api";
 
-type Row = { id: string; label: string; amountText: string | null; statusText: string; subject: string; kind: string; actionStatus: string;
-  createdAt: string; counterparty?: string; transactionHash?: string; chainId: number };
-type Page = { actions: Row[]; next: string | null };
+type Row = { id: string; origin: "aura" | "incoming"; label: string; amountText: string | null; statusText: string; status: string; subject: string;
+  createdAt: string; counterparty: string | null; transactionHash: string | null; chainId: number; source: string };
+type Page = { rows: Row[]; next: string | null };
 type Detail = {
   action: { id: string; subject: string; wallet: string; kind: string; chainId: number; status: string; summary: Record<string, unknown>; transactionHash: string | null;
     destinationChainId: number | null; destinationTransactionHash: string | null; failureReason: string | null; createdAt: string; submittedAt: string | null;
@@ -93,10 +93,10 @@ export function Movement({ subject, onClearSubject }: { subject: string | null; 
   const filter = new URLSearchParams({ ...(status ? { status } : {}), ...(kind ? { kind } : {}), ...(stuck ? { stuck: "1" } : {}), ...(subject ? { subject } : {}) });
   const list = useInfiniteQuery({
     queryKey: ["actions", filter.toString()], initialPageParam: null as string | null,
-    queryFn: ({ pageParam }) => api<Page>(`actions?${new URLSearchParams({ ...Object.fromEntries(filter), ...(pageParam ? { before: pageParam } : {}) })}`),
+    queryFn: ({ pageParam }) => api<Page>(`movement?${new URLSearchParams({ ...Object.fromEntries(filter), ...(pageParam ? { before: pageParam } : {}) })}`),
     getNextPageParam: (last) => last.next
   });
-  const rows = list.data?.pages.flatMap((page) => page.actions) ?? [];
+  const rows = list.data?.pages.flatMap((page) => page.rows) ?? [];
   if (subject) return <section className="panel" aria-labelledby="movement-heading">
     <h1 id="movement-heading">Money movement</h1>
     <div className="filters"><span className="chip">Customer <code>{short(subject)}</code><button className="button quiet" onClick={onClearSubject}>Show everyone</button></span></div>
@@ -106,21 +106,28 @@ export function Movement({ subject, onClearSubject }: { subject: string | null; 
 
   return <section className="panel" aria-labelledby="movement-heading">
     <h1 id="movement-heading">Money movement</h1>
+    <p className="muted">Everything moving on Aura, newest first: Aura actions, and money customers received from outside Aura as the chain showed it (recorded within a few minutes). Status and stuck filters show Aura actions only.</p>
     <div className="filters">
       <label>Status<select value={status} onChange={(event) => setStatus(event.target.value)}>
         <option value="">All</option>{["submitted", "settling", "confirmed", "failed", "expired"].map((value) => <option key={value}>{value}</option>)}</select></label>
       <label>Kind<select value={kind} onChange={(event) => setKind(event.target.value)}>
-        <option value="">All</option><option value="transfer">Send, bank, card</option><option value="route">Swap or move</option><option value="earn">Earn</option></select></label>
+        <option value="">All</option><option value="transfer">Send, bank, card</option><option value="route">Swap or move</option><option value="earn">Earn</option><option value="received">Received from outside Aura</option></select></label>
       <label className="check"><input type="checkbox" checked={stuck} onChange={(event) => setStuck(event.target.checked)} />Stuck only</label>
       {subject && <span className="chip">Customer <code>{short(subject)}</code><button className="button quiet" onClick={onClearSubject}>Show everyone</button></span>}
     </div>
     {list.isError && <div className="notice error" role="alert">{list.error.message}</div>}
     <div className="tableWrap"><table>
-      <thead><tr><th scope="col">When</th><th scope="col">What</th><th scope="col">Amount</th><th scope="col">Status</th><th scope="col">Customer</th></tr></thead>
-      <tbody>{rows.map((row) => <tr key={row.id} className="clickable" onClick={() => setOpen(row.id)} data-testid="ops-action">
-        <td>{when(row.createdAt)}</td><td><button className="link" onClick={() => setOpen(row.id)}>{row.label}</button></td><td>{row.amountText ?? "—"}</td>
-        <td><span className={`badge ${row.actionStatus === "failed" ? "bad" : row.statusText === "Completed" ? "good" : "warn"}`}>{row.statusText}</span></td>
-        <td><code>{short(row.subject)}</code></td></tr>)}</tbody>
+      <thead><tr><th scope="col">When</th><th scope="col">What</th><th scope="col">Amount</th><th scope="col">Status</th><th scope="col">Customer</th><th scope="col">Source</th></tr></thead>
+      <tbody>{rows.map((row) => {
+        const link = row.origin === "incoming" ? txLink(row.chainId, row.transactionHash) : null;
+        return <tr key={`${row.origin}:${row.id}`} className={row.origin === "aura" ? "clickable" : undefined} onClick={row.origin === "aura" ? () => setOpen(row.id) : undefined} data-testid="ops-action">
+          <td>{when(row.createdAt)}</td>
+          <td>{row.origin === "aura" ? <button className="link" onClick={(event) => { event.stopPropagation(); setOpen(row.id); }}>{row.label}</button>
+            : link ? <a className="link" href={link} target="_blank" rel="noreferrer">{row.label}</a> : row.label}</td>
+          <td>{row.amountText ?? "—"}</td>
+          <td><span className={`badge ${row.status === "failed" ? "bad" : row.statusText === "Completed" ? "good" : "warn"}`}>{row.statusText}</span></td>
+          <td><code>{short(row.subject)}</code></td><td>{row.source}</td></tr>;
+      })}</tbody>
     </table></div>
     {list.isSuccess && !rows.length && <p className="muted">Nothing matches.</p>}
     {list.hasNextPage && <button className="button" disabled={list.isFetchingNextPage} onClick={() => void list.fetchNextPage()}>{list.isFetchingNextPage ? "Loading…" : "Load more"}</button>}

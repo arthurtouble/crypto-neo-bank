@@ -120,7 +120,7 @@ test("the customer list shows everyone, newest first, and opens each customer", 
   const list = page.getByRole("region", { name: "All customers" });
   const row = list.getByTestId("ops-customer-row").first();
   // The newest sign-up is first.
-  await expect(row).toContainText(customer.userId.slice(0, 10), { timeout: 30_000 });
+  await expect(row).toContainText(customer.userId.slice(-6), { timeout: 30_000 });
   await expect(row).toContainText("Open");
   await row.click();
   await expect(customerCard(page)).toContainText(customer.userId, { timeout: 30_000 });
@@ -179,8 +179,16 @@ test("money movement lists every customer's transactions, filters them, and open
   // Everyone's Aura actions, filtered.
   await movement.getByRole("button", { name: "Show everyone" }).click();
   await expect(movement.locator(".chip")).toHaveCount(0);
-  const mine = movement.getByTestId("ops-action").filter({ hasText: customer.userId.slice(0, 10) });
-  await expect(mine.first()).toContainText("Sent", { timeout: 30_000 });
+  const mine = movement.getByTestId("ops-action").filter({ hasText: customer.userId.slice(-6) });
+  await expect(mine.filter({ hasText: "Sent" })).toContainText("10 USDC", { timeout: 30_000 });
+  // Money received from outside Aura is in everyone's feed too, recorded when the chain was read.
+  await expect(mine.filter({ hasText: "Received" })).toContainText("7 USDC");
+  await expect(mine.filter({ hasText: "Received" })).toContainText("Alchemy");
+  await movement.getByLabel("Kind").selectOption("received");
+  await expect(mine.filter({ hasText: "Sent" })).toHaveCount(0, { timeout: 30_000 });
+  await expect(mine.filter({ hasText: "Received" })).toHaveCount(1);
+  await movement.getByLabel("Kind").selectOption("");
+  // Status and stuck are about Aura actions: received money drops out too.
   await movement.getByLabel("Status").selectOption("failed");
   await expect(mine).toHaveCount(0, { timeout: 30_000 });
   await movement.getByLabel("Status").selectOption("");
