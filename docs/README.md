@@ -28,7 +28,7 @@ These files contain operational and security-sensitive context. Keep them in the
 | `operations/` | Runbook, launch controls, incident response, acceptance tests, data retention, edge security, release plans, feature readiness records |
 | `security/` | Threat model, security review, external review scope |
 | `compliance/` | Responsibility matrix, legal and jurisdiction decisions, partner diligence, provider requirements |
-| `product/` | Content style guide, design system, daily money flows, volume and economics inputs |
+| `product/` | Content style guide, design system, redesign direction and its mockups, daily money flows, volume and economics inputs |
 | `archive/` | Dated plans, specs, and release logs kept as historical records |
 
 Files named with a date are point-in-time evidence. Update the undated documents when behavior changes; leave dated records as they were.
