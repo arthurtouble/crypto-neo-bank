@@ -33,11 +33,6 @@ const examples: Record<CustomerSection | "overview", Example> = {
     { label: "Controls", value: "Freeze · daily limit", note: "Spends your USDC on Base, up to the allowance you set" },
     { label: "Wallets", value: "Apple Pay · Google Pay", note: "When Stripe makes them available" }
   ] },
-  rewards: { title: "Rewards", items: [
-    { label: "Cashback", value: "Unavailable", note: "A funded rewards provider is required" },
-    { label: "Benefits", value: "Coming later", note: "Eligibility and terms vary" },
-    { label: "Earned rewards", value: "—", note: "Provider-confirmed only" }
-  ] },
   transactions: { title: "Transactions", items: [
     { label: "Sent", value: "250 USDC", note: "Example network transaction" },
     { label: "Swap", value: "100 USDC → ETH", note: "Example route" },

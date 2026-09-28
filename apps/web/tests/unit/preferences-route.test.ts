@@ -9,9 +9,7 @@ vi.mock("cloudflare:workers", () => ({ env: { get PROJECTION_DB() { return state
 vi.mock("@/lib/auth/server", () => ({ AuthenticationError: httpErrors.AuthenticationError,
   requireVerifiedSubject: async () => ({ subjectReference: "alice", sessionReference: "session-a" }) }));
 
-import { applyProviderEvent, type ProjectionDatabase } from "@aurel/provider-projections";
 import { GET as readPreferences, PATCH as patchPreferences } from "@/app/api/preferences/route";
-import { GET as rewards } from "@/app/api/rewards/route";
 
 let sqlite: DatabaseSync;
 const migrations = resolve(process.cwd(), "../../infra/d1/migrations");
@@ -40,24 +38,6 @@ beforeEach(() => {
 afterEach(() => sqlite.close());
 
 const get = (handler: (request: Request) => Promise<Response>, path: string) => handler(new Request(`https://aura.test${path}`));
-const providerEvent = (type: string, data: Record<string, unknown>, provider: "bridge" | "privy" | "stripe" = "stripe") => applyProviderEvent(d1(sqlite) as unknown as ProjectionDatabase, {
-  id: crypto.randomUUID(), provider, type, subjectReference: "alice", providerObjectId: "object-1", createdAt: "2026-09-25T10:00:00.000Z", data });
-
-describe("rewards route", () => {
-  it("reports not connected when no provider has reported anything", async () => {
-    expect(await (await get(rewards, "/api/rewards")).json()).toMatchObject({ state: "not_connected", membership: null, entitlements: [] });
-  });
-
-  it("returns the current membership and entitlements while cards are on", async () => {
-    sqlite.exec("UPDATE feature_flags SET enabled = 1, audience = 'all' WHERE flag_key = 'payment_cards'");
-    await providerEvent("membership.updated", { tier: "plus", score: 10, renewalAt: "2027-01-01T00:00:00.000Z" });
-    const now = Date.now();
-    await providerEvent("benefit.entitlement.updated", { entitlementId: "ent-1", benefitKey: "atm.fee_refund", status: "active", allowance: 5,
-      periodStart: new Date(now - 86_400_000).toISOString(), periodEnd: new Date(now + 86_400_000).toISOString() });
-    expect(await (await get(rewards, "/api/rewards")).json()).toMatchObject({ state: "observed", membership: { tier: "plus" },
-      entitlements: [{ benefitKey: "atm.fee_refund", allowance: 5, consumed: 0 }] });
-  });
-});
 
 describe("preferences route", () => {
   it("returns defaults, saves a partial update, and rejects unknown fields", async () => {

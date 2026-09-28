@@ -3,7 +3,7 @@ import { DatabaseSync } from "node:sqlite";
 import { resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
-  applyProviderEvent, claimProviderCommand, readCurrentCardAccount, readCurrentEntitlements, readMembership, readPreferences,
+  applyProviderEvent, claimProviderCommand, readCurrentCardAccount, readPreferences,
   settleProviderCommand, updatePreferences, type ProjectionDatabase, type ProviderEvent
 } from "@aurel/provider-projections";
 
@@ -50,6 +50,8 @@ describe("provider event dispatch", () => {
   it("ignores events without a projection, from the wrong provider, or without a subject", async () => {
     expect(await applyProviderEvent(db, event("account.updated", {}))).toMatchObject({ status: "ignored", reason: "unsupported_event" });
     expect(await applyProviderEvent(db, event("wallet.policy.updated", {}, { provider: "bridge" }))).toMatchObject({ reason: "unsupported_event" });
+    // Rewards were cut: nothing records memberships or benefits.
+    expect(await applyProviderEvent(db, event("membership.updated", { tier: "plus" }, { provider: "stripe" }))).toMatchObject({ reason: "unsupported_event" });
     expect(await applyProviderEvent(db, event("card.account.updated", card, { subjectReference: undefined }))).toMatchObject({ reason: "missing_subject" });
   });
 
@@ -87,34 +89,6 @@ describe("card account projection", () => {
   it("does not present a closed card", async () => {
     await applyProviderEvent(db, event("card.account.updated", { ...card, status: "closed" }));
     expect(await readCurrentCardAccount(db, "alice")).toBeNull();
-  });
-});
-
-describe("membership and benefit projections", () => {
-  const membership = { tier: "plus", score: 420, qualification: { balanceDays: 30 }, renewalAt: "2026-12-01T00:00:00.000Z" };
-  const benefit = { entitlementId: "ent-1", benefitKey: "atm.fee_refund", status: "active", allowance: 5, consumed: 2,
-    periodStart: "2026-09-01T00:00:00.000Z", periodEnd: "2026-10-01T00:00:00.000Z" };
-
-  it("stores the latest membership result", async () => {
-    await applyProviderEvent(db, event("membership.updated", membership));
-    expect(await applyProviderEvent(db, event("membership.updated", { ...membership, tier: "basic" }, { createdAt: "2026-09-25T09:00:00.000Z" })))
-      .toMatchObject({ status: "stale" });
-    expect(await readMembership(db, "alice")).toMatchObject({ tier: "plus", score: 420, qualification: { balanceDays: 30 } });
-  });
-
-  it("keeps benefit consumption monotonic and reads only current periods", async () => {
-    await applyProviderEvent(db, event("benefit.entitlement.updated", benefit));
-    await applyProviderEvent(db, event("benefit.entitlement.updated", { ...benefit, consumed: 1 }));
-    await applyProviderEvent(db, event("benefit.entitlement.updated", { ...benefit, entitlementId: "ent-0",
-      periodStart: "2026-08-01T00:00:00.000Z", periodEnd: "2026-09-01T00:00:00.000Z" }));
-    const current = await readCurrentEntitlements(db, "alice", "2026-09-25T00:00:00.000Z");
-    expect(current).toHaveLength(1);
-    expect(current[0]).toMatchObject({ benefitKey: "atm.fee_refund", consumed: 2, allowance: 5, provider: "bridge" });
-  });
-
-  it("rejects a benefit period that ends before it starts", async () => {
-    expect(await applyProviderEvent(db, event("benefit.entitlement.updated", { ...benefit, periodEnd: benefit.periodStart })))
-      .toMatchObject({ reason: "invalid_payload" });
   });
 });
 

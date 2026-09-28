@@ -69,30 +69,6 @@ CREATE TABLE wallet_policies (
   UNIQUE(subject_reference, policy_type)
 );
 
-CREATE TABLE membership_projections (
-  subject_reference TEXT PRIMARY KEY,
-  tier TEXT NOT NULL,
-  score INTEGER NOT NULL,
-  qualification_json TEXT NOT NULL,
-  qualifying_since TEXT,
-  renewal_at TEXT NOT NULL,
-  observed_at TEXT NOT NULL
-);
-
-CREATE TABLE benefit_entitlements (
-  entitlement_id TEXT PRIMARY KEY,
-  subject_reference TEXT NOT NULL,
-  benefit_key TEXT NOT NULL,
-  provider TEXT NOT NULL,
-  status TEXT NOT NULL,
-  allowance INTEGER,
-  consumed INTEGER NOT NULL DEFAULT 0,
-  period_start TEXT NOT NULL,
-  period_end TEXT NOT NULL,
-  provider_reference TEXT,
-  UNIQUE(subject_reference, benefit_key, period_start)
-);
-
 CREATE TABLE operational_issues (
   issue_id TEXT PRIMARY KEY,
   subject_reference TEXT,

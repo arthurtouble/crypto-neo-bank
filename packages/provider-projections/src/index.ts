@@ -4,8 +4,6 @@ export { applyProviderEvent, projectionAdapters, type ProviderEvent, type Provid
 export { applyCustomerLink, customerLinkEventSchema, linkStatus } from "./customer-links";
 export { applyBankPayout, bankPayoutEventSchema } from "./bank-payouts";
 export { applyCardAccount, cardAccountEventSchema, readCurrentCardAccount, type CardAccountProjection } from "./card-accounts";
-export { applyBenefitEntitlement, applyMembership, benefitEntitlementEventSchema, membershipEventSchema,
-  readCurrentEntitlements, readMembership, type BenefitEntitlement, type Membership } from "./memberships";
 export { applyWalletPolicy, walletPolicyEventSchema, type WalletPolicy } from "./wallet-policies";
 export { defaultPreferences, preferencesSchema, preferencesUpdateSchema, readPreferences, updatePreferences,
   type Preferences, type PreferencesUpdate } from "./preferences";

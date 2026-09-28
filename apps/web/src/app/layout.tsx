@@ -6,7 +6,7 @@ import "./product-system.css";
 
 export const metadata: Metadata = {
   title: "Aura — Your Smart Account",
-  description: "Spend anywhere, invest in global markets, and get incredible rewards. All from one app. Availability varies."
+  description: "Spend anywhere, invest in global markets, and earn on your money. All from one app. Availability varies."
 };
 
 // Set only by the dev deploy, so dev shows which commit it runs and production shows nothing.

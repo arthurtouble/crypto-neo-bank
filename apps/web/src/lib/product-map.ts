@@ -1,6 +1,6 @@
 export const customerSections = [
   "deposit", "send", "swap", "earn", "cards",
-  "rewards", "transactions", "insights", "settings", "support"
+  "transactions", "insights", "settings", "support"
 ] as const;
 
 export type CustomerSection = (typeof customerSections)[number];
@@ -17,7 +17,6 @@ export const navigation = [
   ] },
   { group: "Everyday", items: [
     { label: "Cards", href: "/app/cards" },
-    { label: "Rewards", href: "/app/rewards" },
     { label: "Transactions", href: "/app/transactions" },
     { label: "Insights", href: "/app/insights" }
   ] },
@@ -30,7 +29,7 @@ export const navigation = [
 const legacy: Record<string, string> = {
   transfers: "/app/deposit", assets: "/app", exchange: "/app/swap",
   markets: "/app/swap", invest: "/app/swap", card: "/app/cards", activity: "/app/transactions",
-  goals: "/app", benefits: "/app/rewards", concierge: "/app/support",
+  goals: "/app", benefits: "/app/cards", rewards: "/app/cards", concierge: "/app/support",
   security: "/app/settings", status: "/app/support", borrow: "/app/earn"
 };
 

@@ -164,6 +164,35 @@ describe("card payments in Transactions", () => {
   });
 });
 
+describe("insights over time and by merchant", () => {
+  const now = new Date("2026-09-20T12:00:00.000Z");
+  it("buckets money in and out by day for a week, by week (from Monday) up to 90 days, and by month for a year, in UTC", () => {
+    const entries = [cardEntry(card({ createdAt: "2026-09-18T23:30:00.000Z" })), incomingEntry(transfer(6, "2026-09-19T00:10:00.000Z", "20000000"), 100),
+      cardEntry(card({ id: "ipi_r", kind: "refund", amountUsd: "2.00", createdAt: "2026-09-19T08:00:00.000Z" }))];
+    const week = buildInsights(entries, now, 7);
+    expect(week.over.unit).toBe("day");
+    expect(week.over.buckets).toHaveLength(8);
+    expect(week.over.buckets.filter((bucket) => bucket.incoming || bucket.outgoing)).toEqual([
+      { start: "2026-09-18T00:00:00.000Z", incoming: 0, outgoing: 12.5 }, { start: "2026-09-19T00:00:00.000Z", incoming: 22, outgoing: 0 }]);
+    const month = buildInsights(entries, now, 30);
+    expect(month.over.unit).toBe("week");
+    // 20 September 2026 is a Sunday: its week began on Monday the 14th.
+    expect(month.over.buckets.at(-1)).toEqual({ start: "2026-09-14T00:00:00.000Z", incoming: 22, outgoing: 12.5 });
+    const year = buildInsights(entries, now, 365);
+    expect(year.over.unit).toBe("month");
+    expect(year.over.buckets).toHaveLength(13);
+    expect(year.over.buckets.at(-1)).toEqual({ start: "2026-09-01T00:00:00.000Z", incoming: 22, outgoing: 12.5 });
+  });
+
+  it("ranks the card merchants paid most, leaving out declines and refunds", () => {
+    const entries = [cardEntry(card()), cardEntry(card({ id: "ipi_2", amountUsd: "7.50" })), cardEntry(card({ id: "ipi_3", merchant: "Books", amountUsd: "30" })),
+      cardEntry(card({ id: "iauth_d", merchant: "Shop", status: "declined" })), cardEntry(card({ id: "ipi_r", merchant: "Shop", kind: "refund" })),
+      ...["A", "B", "C", "D"].map((merchant, index) => cardEntry(card({ id: `ipi_m${index}`, merchant, amountUsd: "1" })))];
+    expect(buildInsights(entries, now, 30).topMerchants).toEqual([{ name: "Books", total: 30, payments: 1 }, { name: "Corner Cafe", total: 20, payments: 2 },
+      { name: "A", total: 1, payments: 1 }, { name: "B", total: 1, payments: 1 }, { name: "C", total: 1, payments: 1 }]);
+  });
+});
+
 describe("insights", () => {
   it("counts money in, money out, Earn deposits, and swaps from completed entries in the period", () => {
     const now = new Date("2026-09-22T12:00:00Z");

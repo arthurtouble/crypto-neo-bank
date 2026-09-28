@@ -806,3 +806,30 @@
 .cardActivityAmount { display: grid; justify-items: end; gap: 6px; }
 .cardLimitForm { display: flex; gap: 8px; align-items: center; }
 .cardLimitForm input { width: 90px; padding: 7px 9px; border: 1px solid var(--hairline); border-radius: var(--radius-control); background: var(--surface); color: var(--text); }
+
+/* Insights: money in and out over time. Series colors are validated for color-vision deficiency on both surfaces. */
+.insightChart { --series-in: #1baf7a; --series-out: #eb6834; margin: 0 0 30px; }
+html[data-theme="dark"] .insightChart { --series-in: #199e70; --series-out: #d95926; }
+.insightChartHead { margin-bottom: 10px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.insightChartHead h3 { margin: 0; font-size: 17px; }
+.chartLegend { display: flex; gap: 14px; color: var(--muted); font-size: var(--type-label); }
+.chartLegend span, .chartTooltip span { display: inline-flex; align-items: center; gap: 6px; }
+.chartLegend i, .chartTooltip i { width: 10px; height: 10px; border-radius: 3px; }
+.seriesIn { fill: var(--series-in); background: var(--series-in); }
+.seriesOut { fill: var(--series-out); background: var(--series-out); }
+.insightChartPlot { position: relative; }
+.insightChartPlot svg { display: block; width: 100%; height: 170px; overflow: visible; }
+.chartTicks { position: relative; height: 20px; margin-top: 6px; }
+.chartTicks span { position: absolute; top: 0; transform: translateX(-50%); color: var(--muted); font-size: 11px; white-space: nowrap; }
+.chartBaseline { stroke: var(--border); stroke-width: 1; }
+.chartHit { fill: transparent; }
+.chartActive { fill: var(--text); opacity: .05; pointer-events: none; }
+.chartTooltip { position: absolute; top: 0; z-index: 2; min-width: 160px; padding: 10px 12px; display: grid; gap: 5px; margin: 0 6px; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--surface-raised); color: var(--text); font-size: var(--type-label); pointer-events: none; box-shadow: 0 6px 18px rgba(0,0,0,.08); }
+.chartTooltip b { margin-left: auto; padding-left: 12px; font-variant-numeric: tabular-nums; }
+.chartTable { margin-top: 8px; color: var(--muted); font-size: var(--type-label); }
+.chartTable summary { cursor: pointer; }
+.chartTable table { width: 100%; margin-top: 8px; border-collapse: collapse; color: var(--text); }
+.chartTable th, .chartTable td { padding: 6px 4px; border-bottom: 1px solid var(--border); text-align: left; font-variant-numeric: tabular-nums; }
+.chartTable td { text-align: right; }
+.insightCategory > span small { display: block; color: var(--muted); }
+.insightCategories + .insightCategories { margin-top: 26px; }
