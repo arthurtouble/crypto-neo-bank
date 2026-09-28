@@ -1,6 +1,6 @@
 # Accounts and custody
 
-Decision taken on 26 September 2026: the Aura account is the customer's **Privy embedded wallet**, and Privy pays gas for it. Banking and cards stay on direct Bridge and Rain adapters, so fiat and card programs do not depend on Privy.
+Decision taken on 26 September 2026: the Aura account is the customer's **Privy embedded wallet**, and Privy pays gas for it. Banking and cards stay on direct Bridge and Stripe Issuing adapters, so fiat and card programs do not depend on Privy. The card spends the Privy wallet's USDC through an on-chain allowance to Bridge's card contract, signed like any other Aura action.
 
 ## What the account is
 
@@ -42,7 +42,7 @@ Earlier builds used a Privy Kernel smart wallet as the account. Customers who st
 | Area | Provider |
 | --- | --- |
 | Bank accounts, KYC, bank payouts | Bridge, direct adapter |
-| Cards | Rain, direct adapter |
+| Cards | Bridge (card approval, cardholder, USDC collection) and Stripe Issuing (card, controls, authorizations, disputes), direct adapters |
 | Swaps and cross-chain moves | LI.FI route module |
 | Earn | Aave v3 and Morpho vaults on Base, built in Aura |
 | Customer controls and limits | Aura's server |

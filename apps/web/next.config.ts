@@ -11,7 +11,7 @@ const securityHeaders = [
   // Privy-supported smart wallets use a popup and require access to its opener.
   { key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" },
   { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
-  { key: "Content-Security-Policy", value: "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self' https://intercom.help https://api-iam.intercom.io; script-src 'self' 'unsafe-inline' https://*.privy.io https://widget.intercom.io https://js.intercomcdn.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data: https://js.intercomcdn.com https://fonts.intercomcdn.com; media-src 'self' https://js.intercomcdn.com; connect-src 'self' https: wss:; frame-src https://*.privy.io https://intercom-sheets.com https://www.intercom-reporting.com; worker-src 'self' blob:; upgrade-insecure-requests" }
+  { key: "Content-Security-Policy", value: "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self' https://intercom.help https://api-iam.intercom.io; script-src 'self' 'unsafe-inline' https://*.privy.io https://widget.intercom.io https://js.intercomcdn.com https://js.stripe.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data: https://js.intercomcdn.com https://fonts.intercomcdn.com; media-src 'self' https://js.intercomcdn.com; connect-src 'self' https: wss:; frame-src https://*.privy.io https://intercom-sheets.com https://www.intercom-reporting.com https://js.stripe.com https://*.stripe.com; worker-src 'self' blob:; upgrade-insecure-requests" }
 ];
 
 const nextConfig: NextConfig = {

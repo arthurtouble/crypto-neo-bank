@@ -1,0 +1,53 @@
+import { env } from "cloudflare:workers";
+import { z } from "zod";
+import { requireVerifiedSubject } from "@/lib/auth/server";
+import { requireActionWallet } from "@/lib/auth/wallet";
+import { loadControls } from "@/lib/actions/store";
+import { cardsProvider, cardView, MAX_DAILY_LIMIT_USD, readCardState, recordCard, storedCardId } from "@/lib/cards/service";
+import { errorResponse, route } from "@/lib/http/route";
+import { announce } from "@/lib/notifications/deliver";
+import { securityNotice } from "@/lib/notifications/store";
+import { getCard, updateCard } from "@/lib/providers/stripe/issuing";
+import { confirmWithPasskey } from "@/lib/security/confirm";
+import { enforceRateLimit } from "@/lib/security/rate-limit";
+
+const schema = z.strictObject({
+  frozen: z.boolean().optional(),
+  dailyLimitUsd: z.number().int().min(1).max(MAX_DAILY_LIMIT_USD).optional(),
+  confirmation: z.strictObject({ challengeId: z.uuid(), signature: z.string().min(16).max(4096) }).optional()
+}).refine((value) => value.frozen !== undefined || value.dailyLimitUsd !== undefined, "Nothing to change.");
+
+/**
+ * Freeze or unfreeze the card, or change its daily limit. Stripe applies it.
+ * Freezing and lowering the limit apply at once; unfreezing and raising the
+ * limit need a fresh passkey confirmation, and unfreezing needs the account
+ * to be unlocked.
+ */
+export const PATCH = route("cards.controls", { unavailable: "card_unavailable", invalid: "invalid_card_change" }, async (request, context) => {
+  const subject = await requireVerifiedSubject(request);
+  await enforceRateLimit(env.PROJECTION_DB, { namespace: "card_controls", subject: subject.subjectReference, limit: 30, windowSeconds: 600 });
+  const { confirmation, ...change } = schema.parse(await request.json());
+  const provider = await cardsProvider(env.PROJECTION_DB);
+  const cardId = provider && await storedCardId(env.PROJECTION_DB, subject.subjectReference);
+  if (!provider || !cardId) return errorResponse(404, "card_not_found", context, { message: "You don't have a card." });
+  const current = cardView(await getCard(provider.stripe, cardId));
+  const unfreezing = change.frozen === false && current.status === "frozen";
+  const raising = change.dailyLimitUsd !== undefined && (current.dailyLimitUsd === null || change.dailyLimitUsd > current.dailyLimitUsd);
+  const now = new Date();
+  if (unfreezing && (await loadControls(env.PROJECTION_DB, subject.subjectReference, null, now)).accountLocked)
+    return errorResponse(409, "account_locked", context, { message: "Your account is locked. Unlock it in Settings first." });
+  if (unfreezing || raising) {
+    const reasons = [unfreezing ? "unfreeze your card" : "", raising ? `raise your card's daily limit to ${change.dailyLimitUsd} USD` : ""].filter(Boolean);
+    const asked = await confirmWithPasskey(env.PROJECTION_DB, { subject: subject.subjectReference, purpose: "card_controls",
+      payload: { cardId, change, from: { status: current.status, dailyLimitUsd: current.dailyLimitUsd } }, summary: reasons.join(" and "), confirmation, traceId: context.traceId });
+    if (asked) return asked;
+  }
+  const card = await updateCard(provider.stripe, cardId, { status: change.frozen === undefined ? undefined : change.frozen ? "inactive" : "active",
+    dailyLimitCents: change.dailyLimitUsd === undefined ? undefined : change.dailyLimitUsd * 100 }, crypto.randomUUID());
+  const row = await env.PROJECTION_DB.prepare("SELECT provider_customer_reference FROM card_account_projections WHERE card_reference = ?").bind(cardId).first<{ provider_customer_reference: string }>();
+  await recordCard(env.PROJECTION_DB, subject.subjectReference, row?.provider_customer_reference ?? "", card, now);
+  if (unfreezing) await announce(env.PROJECTION_DB, subject.subjectReference, securityNotice("card_unfrozen", `Your card ending ${card.last4} can be used again.`, `${cardId}:${now.toISOString()}`), now);
+  if (raising) await announce(env.PROJECTION_DB, subject.subjectReference, securityNotice("card_limit_raised", `Your card can now spend up to ${change.dailyLimitUsd} USD a day.`, `${cardId}:${now.toISOString()}`), now);
+  const wallet = await requireActionWallet(subject.subjectReference);
+  return Response.json({ ...await readCardState(env.PROJECTION_DB, subject.subjectReference, wallet, now), traceId: context.traceId }, { headers: { "Cache-Control": "private, no-store" } });
+});

@@ -116,6 +116,10 @@ describe("one entry per transaction", () => {
     // A move to another network stays pending until it arrives.
     expect(actionEntry(action({ status: "settling", destinationChainId: 1 })).status).toBe("pending");
     expect(actionEntry(action({ summary: { symbol: "USDC", amount: "25", to: friend, bankPayout: { bankName: "Chase", lastFour: "4321" } } })).counterparty).toBe("Chase ending 4321");
+    // Letting the card spend moves nothing, so it isn't money sent or counted as spending.
+    const allowance = actionEntry(action({ summary: { symbol: "USDC", amount: "50", cardAllowance: { spender: friend } } }));
+    expect(allowance).toMatchObject({ type: "card_allowance", counterparty: "Aura card", amount: "50" });
+    expect(allowance.estimatedUsd).toBeUndefined();
   });
 
   it("values money received at today's price, when there is one", () => {

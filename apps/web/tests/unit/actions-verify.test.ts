@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { encodeFunctionData, erc20Abi } from "viem";
+import { encodeAbiParameters, encodeEventTopics, encodeFunctionData, erc20Abi, parseAbiItem } from "viem";
 import type { ChainObservation } from "@/lib/actions/chain";
 import type { LifiStatusCorroboration } from "@/lib/actions/lifi-status";
 import { ENTRY_POINT_V07, type Log } from "@/lib/actions/user-operation";
@@ -108,5 +108,25 @@ describe("verifying cross-chain delivery", () => {
     expect(await verifyAction(route, { observe: byChain(0n), lifiStatus: lifi("REFUNDED", null) })).toEqual({ status: "failed", reason: "refunded" });
     expect(await verifyAction(route, { observe: byChain(0n), lifiStatus: lifi("FAILED", null) })).toEqual({ status: "failed", reason: "delivery_failed" });
     expect(await verifyAction(route, { observe: byChain(0n), lifiStatus: async () => { throw new Error("down"); } })).toMatchObject({ status: "settling" });
+  });
+});
+
+describe("verifying a card allowance", () => {
+  const spender = "0x5555555555555555555555555555555555555555";
+  const approve = encodeFunctionData({ abi: erc20Abi, functionName: "approve", args: [spender, 50_000_000n] });
+  const allowance: VerifiableAction = { chainId: 8453, walletAddress: wallet, transactionHash: hash, calls: [{ to: usdc, value: "0", data: approve }],
+    effects: [{ type: "erc20_approval", token: usdc, spender, amountRaw: "50000000" }] };
+  const approval = (owner: `0x${string}`, value: bigint): Log => {
+    const abi = [parseAbiItem("event Approval(address indexed owner, address indexed spender, uint256 value)")];
+    return { address: usdc, topics: encodeEventTopics({ abi, eventName: "Approval", args: { owner, spender } }) as string[],
+      data: encodeAbiParameters([{ type: "uint256" }], [value]) };
+  };
+  const withApproval = (log: Log) => observed({ data: handleOpsV07([{ sender: wallet, callData: kernelBatch([{ to: usdc, value: 0n, data: approve }]) }]),
+    logs: [entryLog(ENTRY_POINT_V07, "before"), log, entryLog(ENTRY_POINT_V07, { sender: wallet, success: true })] });
+
+  it("confirms only an Approval log from the account to the card contract for the exact amount", async () => {
+    expect(await verifyAction(allowance, { observe: observe(withApproval(approval(wallet, 50_000_000n))) })).toEqual({ status: "confirmed" });
+    expect(await verifyAction(allowance, { observe: observe(withApproval(approval(wallet, 1n))) })).toMatchObject({ status: "failed" });
+    expect(await verifyAction(allowance, { observe: observe(withApproval(approval(recipient, 50_000_000n))) })).toMatchObject({ status: "failed" });
   });
 });

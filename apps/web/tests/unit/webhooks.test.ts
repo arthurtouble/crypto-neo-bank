@@ -4,7 +4,7 @@ import { applyProviderEvent, type ProjectionDatabase, type ProviderEventMessage 
 import { sha256Hex } from "@/lib/platform/events";
 import { bridgeWebhooks } from "@/lib/providers/bridge/webhooks";
 import { privyWebhooks } from "@/lib/providers/privy/webhooks";
-import { rainWebhooks } from "@/lib/providers/rain/webhooks";
+import { stripeWebhooks } from "@/lib/providers/stripe/webhooks";
 import { d1 } from "../support/d1";
 import { schemaDatabase } from "../support/schema";
 
@@ -91,9 +91,36 @@ describe("Privy (Svix) signatures", () => {
   });
 });
 
-describe("Rain", () => {
-  it("rejects every delivery until its signing scheme is implemented", async () => {
-    expect(await rainWebhooks.verify({ headers: new Headers({ signature: "anything" }), rawBody: "{}", secret: "set", nowMs: now })).toBe(false);
+async function stripeSignature(body: string, secret = "whsec_test", seconds = Math.floor(now / 1000)) {
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const signature = Buffer.from(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`${seconds}.${body}`))).toString("hex");
+  return `t=${seconds},v1=deadbeef,v1=${signature}`;
+}
+
+describe("Stripe", () => {
+  const normalize = (payload: unknown) => stripeWebhooks.normalize(payload, new Headers());
+  const card = JSON.stringify({ id: "evt_1", type: "issuing_card.updated", created: Math.floor(now / 1000),
+    data: { object: { id: "ic_1", status: "inactive", last4: "4242", type: "virtual", cardholder: "ich_1",
+      spending_controls: { spending_limits: [{ amount: 50_000, interval: "daily" }] } } } });
+
+  it("accepts Stripe's signature and rejects a changed body, a wrong secret, and a stale timestamp", async () => {
+    const verify = (headers: string, body = card, secret = "whsec_test") => stripeWebhooks.verify({ headers: new Headers({ "stripe-signature": headers }), rawBody: body, secret, nowMs: now });
+    expect(await verify(await stripeSignature(card))).toBe(true);
+    expect(await verify(await stripeSignature(card), `${card} `)).toBe(false);
+    expect(await verify(await stripeSignature(card), card, "whsec_other")).toBe(false);
+    expect(await verify(await stripeSignature(card, "whsec_test", Math.floor(now / 1000) - 600))).toBe(false);
+    expect(await verify("t=abc,v1=00")).toBe(false);
+  });
+
+  it("turns card changes into the card record and authorizations into a spend notice", () => {
+    expect(normalize(JSON.parse(card))).toMatchObject({ id: "stripe:evt_1", type: "card.account.updated", subject: { kind: "provider_card", value: "ic_1" },
+      data: { cardReference: "ic_1", customerReference: "ich_1", status: "frozen", lastFour: "4242", dailyLimit: "500.00" } });
+    expect(normalize({ id: "evt_2", type: "issuing_authorization.created", created: 1,
+      data: { object: { id: "iauth_1", card: { id: "ic_1" }, amount: 1250, approved: false, merchant_data: { name: "Coffee" } } } }))
+      .toMatchObject({ type: "card.authorization.created", subject: { value: "ic_1" }, data: { authorizationId: "iauth_1", amountCents: 1250, approved: false, merchant: "Coffee" } });
+    expect(normalize({ id: "evt_3", type: "issuing_dispute.updated", created: 1, data: { object: { id: "idp_1" } } }))
+      .toMatchObject({ type: "stripe.issuing_dispute.updated", subject: null });
+    expect(normalize({ id: "nope" })).toBeNull();
   });
 });
 
@@ -132,13 +159,26 @@ describe("POST /api/webhooks/:provider", () => {
   });
 
   it("rejects unknown providers, unconnected providers, and bad signatures without recording anything", async () => {
-    expect((await post("stripe")).status).toBe(404);
+    expect((await post("rain")).status).toBe(404);
     expect((await post("privy")).status).toBe(503);
     expect((await post("bridge", payload, "t=1,v0=abc")).status).toBe(401);
-    vi.stubEnv("RAIN_WEBHOOK_SECRET", "set");
-    expect((await post("rain")).status).toBe(401);
+    vi.stubEnv("STRIPE_WEBHOOK_SECRET", "whsec_test");
+    expect((await post("stripe")).status).toBe(401);
     expect(sqlite.prepare("SELECT COUNT(*) AS n FROM webhook_receipts").get()).toEqual({ n: 0 });
     expect(state.sent).toEqual([]);
+  });
+  it("tells the card's owner about a Stripe card authorization, found through their card", async () => {
+    vi.stubEnv("STRIPE_WEBHOOK_SECRET", "whsec_test");
+    sqlite.exec(`INSERT INTO card_account_projections (card_reference, subject_reference, provider, provider_customer_reference, status, observed_at)
+      VALUES ('ic_1', 'alice', 'stripe', 'ich_1', 'active', 't')`);
+    const body = JSON.stringify({ id: "evt_auth", type: "issuing_authorization.created", created: Math.floor(now / 1000),
+      data: { object: { id: "iauth_1", card: { id: "ic_1" }, amount: 1250, approved: false, merchant_data: { name: "Coffee" } } } });
+    const response = await POST(new Request("https://aura.test/api/webhooks/stripe", { method: "POST", body, headers: { "stripe-signature": await stripeSignature(body) } }),
+      { params: Promise.resolve({ provider: "stripe" }) });
+    expect(response.status).toBe(202);
+    expect(sqlite.prepare("SELECT subject_reference, kind, title FROM notifications").all())
+      .toEqual([{ subject_reference: "alice", kind: "failed", title: "Card declined: $12.50 at Coffee" }]);
+    expect(state.sent[0]).toMatchObject({ event: { provider: "stripe", type: "card.authorization.created", subjectReference: "alice" } });
   });
 });
 

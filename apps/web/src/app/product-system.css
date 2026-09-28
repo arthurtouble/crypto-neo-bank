@@ -796,3 +796,13 @@
 /* Settings */
 .settingState { color: var(--positive); font-size: var(--type-caption); font-weight: 600; }
 .supportActions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+
+/* Card */
+.cardSecureDetails { display: grid; gap: 12px; margin: 16px 0; padding: 16px; border-radius: var(--radius-panel); background: #0f1f18; color: #f5f3ee; }
+.cardSecureDetails span { display: grid; gap: 4px; font-size: var(--type-caption); color: #c9c7c0; }
+.stripeFrame { min-height: 24px; }
+.cardActivityRow .cardDispute { display: grid; gap: 10px; margin-top: 12px; }
+.cardActivityRow .cardDispute textarea { min-height: 90px; padding: 10px; border: 1px solid var(--hairline); border-radius: var(--radius-control); background: var(--surface); color: var(--text); font: inherit; }
+.cardActivityAmount { display: grid; justify-items: end; gap: 6px; }
+.cardLimitForm { display: flex; gap: 8px; align-items: center; }
+.cardLimitForm input { width: 90px; padding: 7px 9px; border: 1px solid var(--hairline); border-radius: var(--radius-control); background: var(--surface); color: var(--text); }

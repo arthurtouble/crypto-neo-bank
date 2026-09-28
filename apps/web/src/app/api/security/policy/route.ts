@@ -5,6 +5,7 @@ import { requireActionAccount, requireMoneyMfa } from "@/lib/auth/wallet";
 import { errorResponse, route } from "@/lib/http/route";
 import { ensureSubjectProfile } from "@/lib/profile/ensure";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
+import { freezeCardForLock } from "@/lib/cards/service";
 import { announce } from "@/lib/notifications/deliver";
 import { securityNotice } from "@/lib/notifications/store";
 import { loosening } from "@/lib/security/policy";
@@ -95,5 +96,7 @@ export const PATCH = route("security.policy.patch", { unavailable: "security_pol
   const notice = !current.account_locked && next.accountLocked ? securityNotice("locked", "Your Aura account was locked. Nothing can be sent until you unlock it with your passkey.", version)
     : reasons.length ? securityNotice("loosened", `Your controls were changed to ${reasons.join(", ")}, confirmed with your passkey.`, version) : null;
   if (notice) await announce(env.PROJECTION_DB, subject.subjectReference, notice);
+  // A lock covers the card too.
+  if (!current.account_locked && next.accountLocked) await freezeCardForLock(env.PROJECTION_DB, subject.subjectReference);
   return Response.json({ policy: serialize(await readPolicy(env.PROJECTION_DB, subject.subjectReference)), traceId: context.traceId });
 });

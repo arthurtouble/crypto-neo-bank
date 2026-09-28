@@ -59,6 +59,13 @@ export function effectPresent(effect: Exclude<Effect, { type: "delivery" }>, wal
     case "erc20_debit":
       return transfers(logs, effect.token).filter((item) => sameAddress(item.from, wallet))
         .reduce((sum, item) => sum + item.value, 0n) === BigInt(effect.amountRaw);
+    case "erc20_approval":
+      return logs.some((log) => {
+        if (!sameAddress(log.address, effect.token)) return false;
+        const event = decode(erc20Abi, log);
+        return event?.eventName === "Approval" && sameAddress(String(event.args.owner), wallet) && sameAddress(String(event.args.spender), effect.spender)
+          && event.args.value === BigInt(effect.amountRaw);
+      });
     case "erc20_credit_min":
       return transfers(logs, effect.token).filter((item) => sameAddress(item.to, effect.to))
         .reduce((sum, item) => sum + item.value, 0n) >= BigInt(effect.minimumRaw);

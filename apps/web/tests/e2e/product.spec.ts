@@ -105,7 +105,7 @@ test("financial actions fail closed without authentication", async ({ request })
 });
 
 test("provider webhooks reject unsigned events and unknown providers", async ({ request }) => {
-  for (const provider of ["bridge", "privy", "rain"]) {
+  for (const provider of ["bridge", "privy", "stripe"]) {
     const response = await request.post(`/api/webhooks/${provider}`, { data: { event_id: "e2e-unsigned", type: "customer.updated" } });
     expect([401, 503], provider).toContain(response.status());
   }

@@ -29,9 +29,9 @@ const examples: Record<CustomerSection | "overview", Example> = {
     { label: "Morpho", value: "USDC vaults", note: "Steakhouse and Gauntlet curate them on Base" }
   ] },
   cards: { title: "Cards", items: [
-    { label: "Card", value: "Not issued", note: "Bridge or Rain issuer connection required" },
-    { label: "Controls", value: "Freeze · limits · PIN", note: "Issuer-supported controls only" },
-    { label: "Wallets", value: "Provisioning", note: "Available after issuer setup" }
+    { label: "Card", value: "Virtual Visa", note: "Issued by Stripe with Bridge once you're approved" },
+    { label: "Controls", value: "Freeze · daily limit", note: "Spends your USDC on Base, up to the allowance you set" },
+    { label: "Wallets", value: "Apple Pay · Google Pay", note: "When Stripe makes them available" }
   ] },
   rewards: { title: "Rewards", items: [
     { label: "Cashback", value: "Unavailable", note: "A funded rewards provider is required" },

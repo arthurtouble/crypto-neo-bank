@@ -66,7 +66,7 @@ for (const path of ["/api/growth/waitlist", "/api/portfolio", "/api/demo/session
   assert(response.status === 404, `${path} is retired (${response.status})`);
 }
 
-for (const provider of ["bridge", "privy", "rain"]) {
+for (const provider of ["bridge", "privy", "stripe"]) {
   const webhook = await request(`/api/webhooks/${provider}`, {
     method: "POST",
     headers: { "content-type": "application/json" },

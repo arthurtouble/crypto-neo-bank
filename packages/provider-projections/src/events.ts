@@ -8,7 +8,7 @@ import { applyWalletPolicy } from "./wallet-policies";
 
 /** The normalized provider event produced by the signed webhook route. */
 export type ProviderEvent = {
-  id: string; provider: "bridge" | "privy" | "rain"; type: string; subjectReference?: string;
+  id: string; provider: "bridge" | "privy" | "stripe"; type: string; subjectReference?: string;
   providerObjectId: string; createdAt: string; data: Record<string, unknown>;
 };
 
@@ -19,11 +19,11 @@ type Adapter = (db: ProjectionDatabase, subjectReference: string, data: unknown,
 
 /** Which provider may report which projection. Anything else is ignored. */
 export const projectionAdapters: Record<string, { providers: readonly string[]; apply: Adapter }> = {
-  "provider.customer.updated": { providers: ["bridge", "rain"], apply: applyCustomerLink },
+  "provider.customer.updated": { providers: ["bridge"], apply: applyCustomerLink },
   "bank.payout.updated": { providers: ["bridge"], apply: applyBankPayout },
-  "card.account.updated": { providers: ["bridge", "rain"], apply: applyCardAccount },
-  "membership.updated": { providers: ["bridge", "rain"], apply: applyMembership },
-  "benefit.entitlement.updated": { providers: ["bridge", "rain"], apply: applyBenefitEntitlement },
+  "card.account.updated": { providers: ["stripe"], apply: applyCardAccount },
+  "membership.updated": { providers: ["bridge", "stripe"], apply: applyMembership },
+  "benefit.entitlement.updated": { providers: ["bridge", "stripe"], apply: applyBenefitEntitlement },
   "wallet.policy.updated": { providers: ["privy"], apply: applyWalletPolicy }
 };
 

@@ -1,0 +1,63 @@
+import { z } from "zod";
+import { timingSafeEqual, type NormalizedEvent, type WebhookProvider } from "../webhooks";
+
+const TOLERANCE_MS = 5 * 60_000;
+
+const hex = (bytes: Uint8Array) => [...bytes].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+
+/**
+ * Stripe signs `<timestamp>.<raw body>` with HMAC-SHA256 and the endpoint's
+ * `whsec_` secret. Header: `Stripe-Signature: t=<seconds>,v1=<hex>[,v1=…]`.
+ * Other schemes (test events add `v0`) are ignored.
+ */
+async function verify({ headers, rawBody, secret, nowMs }: { headers: Headers; rawBody: string; secret: string; nowMs: number }) {
+  const header = headers.get("stripe-signature") ?? "";
+  const parts = header.split(",").map((part) => part.trim().split("=", 2) as [string, string]).filter((part) => part.length === 2);
+  const timestamp = parts.find(([key]) => key === "t")?.[1];
+  const signatures = parts.filter(([key]) => key === "v1").map(([, value]) => value);
+  if (!timestamp || !/^\d+$/.test(timestamp) || !signatures.length || Math.abs(nowMs - Number(timestamp) * 1000) > TOLERANCE_MS) return false;
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const expected = new TextEncoder().encode(hex(new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`${timestamp}.${rawBody}`)))));
+  return signatures.some((signature) => timingSafeEqual(new TextEncoder().encode(signature), expected));
+}
+
+const eventSchema = z.object({ id: z.string().startsWith("evt_"), type: z.string(), created: z.number().int(),
+  data: z.object({ object: z.record(z.string(), z.unknown()) }).passthrough() }).passthrough();
+
+/**
+ * Card events. A card change updates the customer's card record; an
+ * authorization becomes a card-spend notice. Everything else is recorded and
+ * acknowledged.
+ */
+function normalize(payload: unknown): NormalizedEvent | null {
+  const parsed = eventSchema.safeParse(payload);
+  if (!parsed.success) return null;
+  const event = parsed.data;
+  const object = event.data.object;
+  const text = (value: unknown) => typeof value === "string" ? value : undefined;
+  const id = (value: unknown) => text(value) ?? text((value as { id?: unknown } | null)?.id);
+  const base = { id: `stripe:${event.id}`, providerObjectId: text(object.id) ?? event.id, createdAt: new Date(event.created * 1000).toISOString() };
+  if (event.type === "issuing_card.created" || event.type === "issuing_card.updated") {
+    const cardId = text(object.id);
+    const status = text(object.status);
+    const last4 = text(object.last4);
+    if (!cardId || !status) return null;
+    const limits = (object.spending_controls as { spending_limits?: Array<{ amount: number; interval: string }> } | undefined)?.spending_limits ?? [];
+    const daily = limits.find((limit) => limit.interval === "daily");
+    return { ...base, type: "card.account.updated", subject: { kind: "provider_card", value: cardId },
+      data: { cardReference: cardId, customerReference: id(object.cardholder) ?? "unknown", status: status === "inactive" ? "frozen" : status === "canceled" ? "closed" : "active",
+        formFactor: text(object.type) === "physical" ? "physical" : "virtual", network: "visa", ...(last4 ? { lastFour: last4 } : {}),
+        ...(daily ? { dailyLimit: (daily.amount / 100).toFixed(2) } : {}), currency: "USD" } };
+  }
+  if (event.type === "issuing_authorization.created") {
+    const cardId = id(object.card);
+    if (!cardId) return null;
+    const merchant = (object.merchant_data as { name?: string } | undefined)?.name ?? null;
+    return { ...base, type: "card.authorization.created", subject: { kind: "provider_card", value: cardId },
+      data: { authorizationId: text(object.id), amountCents: typeof object.amount === "number" ? object.amount : 0, approved: object.approved === true, merchant } };
+  }
+  const cardId = id(object.card);
+  return { ...base, type: `stripe.${event.type}`, data: {}, subject: cardId ? { kind: "provider_card", value: cardId } : null };
+}
+
+export const stripeWebhooks: WebhookProvider = { name: "stripe", secret: () => process.env.STRIPE_WEBHOOK_SECRET, verify, normalize };

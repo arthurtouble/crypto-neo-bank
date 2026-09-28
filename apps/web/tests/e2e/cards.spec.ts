@@ -1,0 +1,222 @@
+import type { Page } from "@playwright/test";
+import { expect, test } from "./support/fixtures";
+import { acceptTerms, asCustomer, ASSETS, edge, newCustomer, setBalances, setControls, setFeature, setIdentity, type Customer } from "./support/session";
+
+// Feature 10 in docs/overview/feature-readiness.md: Bank and cards, the card
+// half. Bridge (identity and card approval), Stripe Issuing (the card, its
+// controls, purchases, and disputes), Stripe.js, Privy, and the chain are the
+// local fake; Aura's pages, API routes, actions, and D1 run for real.
+
+const toast = (page: Page, title: string) => page.locator(".toastRegion").getByText(title, { exact: true });
+const controls = (page: Page) => page.getByRole("region", { name: "Card controls" });
+const allowance = (page: Page) => page.getByRole("region", { name: "Spending allowance" });
+const activity = (page: Page) => page.getByRole("region", { name: "Card activity" });
+
+async function signIn(page: Page, options: { mfa?: string[]; usdc?: string } = {}) {
+  const customer = await newCustomer({ mfa: options.mfa ?? ["passkey"] });
+  await setBalances(customer.wallet, { 8453: { [ASSETS.usdc]: options.usdc ?? "100000000" } });
+  await acceptTerms(page, customer);
+  await setIdentity(page, customer, { signedIn: true });
+  return customer;
+}
+
+/** Bridge has verified the customer and opened their USD account, as on Deposit. */
+async function verified(page: Page, customer: Customer) {
+  await asCustomer(page, customer, "POST", "/api/money/onboarding", { fullName: "Jane Customer", email: customer.email });
+  await edge("/__bridge/kyc", { email: customer.email });
+  await asCustomer(page, customer, "GET", "/api/money/account");
+}
+
+/** A customer with a card, as after the first test. */
+async function withCard(page: Page, options: { usdc?: string } = {}) {
+  const customer = await signIn(page, options);
+  await verified(page, customer);
+  await edge("/__bridge/cards", { email: customer.email });
+  await asCustomer(page, customer, "POST", "/api/cards");
+  return customer;
+}
+
+async function setAllowance(page: Page, amount: string) {
+  await allowance(page).getByLabel("New allowance in USD").fill(amount);
+  await allowance(page).getByRole("button", { name: "Set allowance" }).click();
+  await expect(toast(page, "Card allowance complete")).toBeVisible({ timeout: 30_000 });
+}
+
+test.beforeEach(async ({ page }) => {
+  await edge("/__reset");
+  await setFeature(page, "fiat_accounts", true);
+  await setFeature(page, "payment_cards", true);
+  await setFeature(page, "card_wallets", false);
+});
+
+test.afterAll(async ({ browser }) => {
+  const page = await browser.newPage();
+  for (const key of ["fiat_accounts", "payment_cards", "card_wallets"]) await setFeature(page, key, false);
+  await page.close();
+});
+
+test("cards are coming soon while the card program is off", async ({ page }) => {
+  await setFeature(page, "payment_cards", false);
+  await signIn(page);
+  await page.goto("/app/cards");
+  await expect(page.getByRole("heading", { name: "Cards are coming soon" })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("button", { name: "Create my card" })).toHaveCount(0);
+});
+
+test("a verified customer applies with Bridge and creates a virtual card", async ({ page, context }) => {
+  test.setTimeout(120_000);
+  const customer = await signIn(page);
+  await page.goto("/app/cards");
+  // Identity comes first, once, on Deposit.
+  await expect(page.getByRole("heading", { name: "Verify your identity first" })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("link", { name: "Verify on Deposit" })).toHaveAttribute("href", "/app/deposit");
+
+  await verified(page, customer);
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Apply for an Aura card" })).toBeVisible({ timeout: 20_000 });
+  // Bridge hosts the card application in a new tab.
+  await context.route("https://bridge.aura-e2e.test/**", (route) => route.fulfill({ contentType: "text/html", body: "<h1>Apply for a card with Bridge</h1>" }));
+  const [bridgeTab] = await Promise.all([context.waitForEvent("page"), page.getByRole("button", { name: "Apply with Bridge" }).click()]);
+  await expect.poll(() => bridgeTab.url()).toMatch(/^https:\/\/bridge\.aura-e2e\.test\/cards\/.+endorsement=cards$/);
+  await bridgeTab.close();
+
+  // Bridge needs more first; then approves.
+  await edge("/__bridge/cards", { email: customer.email, status: "incomplete" });
+  await page.getByRole("button", { name: "Check status" }).click();
+  await expect(page.getByText("Bridge needs more before it can approve a card. (Confirm your address)")).toBeVisible({ timeout: 20_000 });
+  await edge("/__bridge/cards", { email: customer.email });
+  await page.getByRole("button", { name: "Check status" }).click();
+  await expect(page.getByRole("heading", { name: "You're approved" })).toBeVisible({ timeout: 20_000 });
+
+  await page.getByRole("button", { name: "Create my card" }).click();
+  await expect(toast(page, "Your card is ready")).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("region", { name: /^Aura card ending \d{4}$/ })).toBeVisible();
+  await expect(page.getByText("Daily limit $500.00.")).toBeVisible();
+  // The card spends this account's USDC on Base, through Bridge.
+  const { cards } = await edge("/__stripe/state") as unknown as { cards: Record<string, { crypto_wallet: { address: string; chain: string; currency: string } }> };
+  expect(Object.values(cards)).toEqual([expect.objectContaining({ crypto_wallet: expect.objectContaining({ address: customer.wallet, chain: "base", currency: "usdc" }) })]);
+});
+
+test("without a passkey the card isn't created and the customer is asked to add one", async ({ page }) => {
+  const customer = await signIn(page, { mfa: [] });
+  await verified(page, customer);
+  await edge("/__bridge/cards", { email: customer.email });
+  await page.goto("/app/cards");
+  await page.getByRole("button", { name: "Create my card" }).click();
+  await expect(toast(page, "Add a passkey first")).toBeVisible({ timeout: 20_000 });
+  expect(Object.keys((await edge("/__stripe/state") as unknown as { cards: object }).cards)).toHaveLength(0);
+});
+
+test("the card spends only up to the allowance, and a payment can be disputed", async ({ page }) => {
+  test.setTimeout(120_000);
+  await withCard(page);
+  await page.goto("/app/cards");
+  await expect(allowance(page).getByTestId("card-allowance")).toContainText("$0.00", { timeout: 20_000 });
+  await expect(allowance(page).getByText("Set an allowance to start using your card.")).toBeVisible();
+
+  // With no allowance, a purchase is declined and nothing leaves the account.
+  expect(await edge("/__stripe/authorize", { amount: "12.50", merchant: "Bookshop" })).toMatchObject({ approved: false });
+
+  // The customer approves the card to spend up to 50 USDC, with their passkey, like any action.
+  await setAllowance(page, "50");
+  await expect(allowance(page).getByTestId("card-allowance")).toContainText("$50.00", { timeout: 20_000 });
+
+  // Bridge takes exactly the purchase from the account when Stripe approves it.
+  expect(await edge("/__stripe/authorize", { amount: "12.50", merchant: "Corner Cafe" })).toMatchObject({ approved: true });
+  await edge("/__stripe/capture");
+  // More than what's left of the allowance is declined.
+  expect(await edge("/__stripe/authorize", { amount: "40", merchant: "Electronics" })).toMatchObject({ approved: false });
+
+  await page.reload();
+  await expect(allowance(page).getByTestId("card-allowance")).toContainText("$37.50", { timeout: 20_000 });
+  await expect(allowance(page).getByTestId("card-allowance")).toContainText("$87.50");
+  const paid = activity(page).locator(".cardActivityRow").filter({ hasText: "Corner Cafe" });
+  await expect(paid).toContainText("Paid");
+  await expect(paid).toContainText("$12.50");
+  await expect(activity(page).locator(".cardActivityRow").filter({ hasText: "Electronics" })).toContainText("Declined");
+  await expect(activity(page).locator(".cardActivityRow").filter({ hasText: "Bookshop" })).toContainText("Declined");
+
+  // Dispute the payment. A dispute can be sent once.
+  await paid.getByRole("button", { name: "Dispute" }).click();
+  const form = paid.getByRole("form", { name: "Dispute this payment" });
+  await form.getByLabel("What happened?").selectOption("not_received");
+  await form.getByLabel("Tell us more").fill("The order never arrived and the cafe doesn't answer.");
+  await form.getByRole("button", { name: "Send dispute" }).click();
+  await expect(toast(page, "Dispute sent")).toBeVisible({ timeout: 20_000 });
+  await expect(paid).toContainText("Dispute submitted", { timeout: 20_000 });
+  await expect(paid.getByRole("button", { name: "Dispute" })).toHaveCount(0);
+
+  // Setting the allowance is in Transactions, not as money sent.
+  await page.goto("/app/transactions");
+  const row = page.locator(".activityRow").filter({ hasText: "Card allowance set" });
+  await expect(row).toBeVisible({ timeout: 30_000 });
+  await expect(row).toContainText("Aura card");
+});
+
+test("freezing stops payments at once; unfreezing and a higher limit need the passkey", async ({ page }) => {
+  test.setTimeout(120_000);
+  const customer = await withCard(page);
+  await page.goto("/app/cards");
+  await setAllowance(page, "100");
+
+  await controls(page).getByRole("button", { name: "Freeze card" }).click();
+  await expect(toast(page, "Card frozen")).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("region", { name: /^Aura card ending/ })).toContainText("FROZEN");
+  expect(await edge("/__stripe/authorize", { amount: "5" })).toMatchObject({ approved: false });
+
+  // Cancelling the passkey prompt leaves it frozen.
+  await page.evaluate(() => localStorage.setItem("aura-e2e-passkey", "reject"));
+  await controls(page).getByRole("button", { name: "Freeze card" }).click();
+  await expect(toast(page, "Card not changed")).toBeVisible({ timeout: 20_000 });
+  await expect(controls(page).getByText("Card is frozen")).toBeVisible();
+  await page.evaluate(() => localStorage.removeItem("aura-e2e-passkey"));
+  await controls(page).getByRole("button", { name: "Freeze card" }).click();
+  await expect(toast(page, "Card unfrozen")).toBeVisible({ timeout: 20_000 });
+  expect(await edge("/__stripe/authorize", { amount: "5" })).toMatchObject({ approved: true });
+
+  // Lowering the limit applies at once; raising it asks for the passkey.
+  await controls(page).getByLabel("Daily limit in USD").fill("20");
+  await controls(page).getByRole("button", { name: "Save" }).click();
+  await expect(toast(page, "Daily limit updated")).toBeVisible({ timeout: 20_000 });
+  expect(await edge("/__stripe/authorize", { amount: "30" })).toMatchObject({ approved: false });
+  await controls(page).getByLabel("Daily limit in USD").fill("800");
+  await controls(page).getByRole("button", { name: "Save" }).click();
+  await expect(page.getByText("Daily limit $800.00.")).toBeVisible({ timeout: 20_000 });
+
+  // Locking the account in Settings freezes the card, and it stays frozen while locked.
+  await setControls(page, customer, { accountLocked: true });
+  await page.reload();
+  await expect(controls(page).getByText("Card is frozen")).toBeVisible({ timeout: 20_000 });
+  await controls(page).getByRole("button", { name: "Freeze card" }).click();
+  await expect(page.locator(".toastRegion")).toContainText("Your account is locked", { timeout: 20_000 });
+});
+
+test("card details show in Stripe's frame after a passkey check", async ({ page }) => {
+  await withCard(page);
+  await page.goto("/app/cards");
+  await page.getByRole("button", { name: "Show card details" }).click();
+  const dialog = page.getByRole("dialog", { name: "Card details" });
+  await page.evaluate(() => localStorage.setItem("aura-e2e-passkey", "reject"));
+  await dialog.getByRole("button", { name: "Confirm with your passkey" }).click();
+  await expect(toast(page, "Card details not shown")).toBeVisible({ timeout: 20_000 });
+  await expect(dialog.getByTestId("card-secure-details")).not.toContainText("4000");
+
+  await page.evaluate(() => localStorage.removeItem("aura-e2e-passkey"));
+  await dialog.getByRole("button", { name: "Confirm with your passkey" }).click();
+  await expect(dialog.getByTestId("card-secure-details")).toContainText(/4000 0000 0000 \d{4}/, { timeout: 20_000 });
+  await expect(dialog.getByTestId("card-secure-details")).toContainText("09/29");
+  await dialog.getByRole("button", { name: "Close" }).click();
+  await expect(dialog).toHaveCount(0);
+});
+
+test("with phone wallets on, the card can be added to Apple Pay or Google Pay", async ({ page }) => {
+  await withCard(page);
+  await page.goto("/app/cards");
+  await expect(controls(page)).toBeVisible({ timeout: 20_000 });
+  await expect(controls(page).getByText("Apple Pay and Google Pay")).toHaveCount(0);
+  await setFeature(page, "card_wallets", true);
+  await page.reload();
+  await controls(page).getByRole("button", { name: "Add to phone" }).click();
+  await expect(controls(page).getByRole("button", { name: "Add to Apple Wallet" })).toBeVisible({ timeout: 20_000 });
+  await expect(controls(page).getByRole("button", { name: "Add to Google Pay" })).toBeVisible();
+});

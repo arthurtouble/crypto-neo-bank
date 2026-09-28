@@ -8,7 +8,7 @@ import type { IncomingTransfer } from "./incoming";
  * index), or Aave history (Aave's data service). Shared by the list, the
  * receipt, exports, statements, and Insights, so they always agree.
  */
-export type EntryType = "sent" | "received" | "bank_deposit" | "bank_payout" | "swap" | "bridge" | "earn_deposit" | "earn_withdraw"
+export type EntryType = "sent" | "received" | "bank_deposit" | "bank_payout" | "card_allowance" | "swap" | "bridge" | "earn_deposit" | "earn_withdraw"
   | "borrow" | "repay" | "liquidation" | "collateral_enabled" | "collateral_disabled" | "defi_activity";
 export type EntryStatus = "pending" | "completed" | "failed" | "not_confirmed";
 export type EntryOrigin = "aura" | "incoming" | "aave";
@@ -96,6 +96,8 @@ export function actionEntry(action: ActionLike): ActivityEntry {
       counterparty: [bank.bankName ?? "Bank account", bank.lastFour ? `ending ${bank.lastFour}` : ""].join(" ").trim(),
       bankStatus: chainDone ? payoutStateText(state ?? "awaiting_funds") : undefined };
   }
+  // Approving the card to spend moves nothing; each purchase does, later.
+  if (summary.cardAllowance) return { ...base, type: "card_allowance", asset: symbol, amount, counterparty: "Aura card", estimatedUsd: undefined };
   return { ...base, type: "sent", asset: symbol, amount, counterparty: typeof summary.to === "string" ? summary.to : undefined };
 }
 
@@ -110,7 +112,7 @@ export function incomingEntry(transfer: IncomingTransfer, usdCentsPerUnit?: numb
 }
 
 const LABELS: Record<EntryType, string> = {
-  sent: "Sent", received: "Received", bank_deposit: "Bank deposit", bank_payout: "Sent to bank", swap: "Swapped", bridge: "Moved between networks", earn_deposit: "Added to Earn",
+  sent: "Sent", received: "Received", bank_deposit: "Bank deposit", bank_payout: "Sent to bank", card_allowance: "Card allowance set", swap: "Swapped", bridge: "Moved between networks", earn_deposit: "Added to Earn",
   earn_withdraw: "Withdrawn from Earn", borrow: "Borrowed", repay: "Repaid", liquidation: "Collateral liquidated",
   collateral_enabled: "Enabled collateral", collateral_disabled: "Disabled collateral", defi_activity: "Aave activity"
 };
