@@ -45,7 +45,7 @@ Through Aura you can:
 - buy and sell crypto, the euro stablecoin, tokenized stocks, and Tether Gold through those same routes;
 - supply and withdraw assets on Aave, a lending protocol on Base, and deposit USDC into and withdraw it from reviewed Morpho vaults on Base;
 - create a public Aura tag payment page; and
-- manage your settings, data, and support cases.
+- manage your settings and data, and chat with support.
 
 These features may be switched off, and some may not be available to you yet. Aura does not currently offer bank accounts, bank transfers, cards, cashback, rewards, or borrowing. Seeing one of these in the app does not mean it is available.
 

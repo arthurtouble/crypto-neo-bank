@@ -604,7 +604,9 @@ export function startFakeEdge({ port }) {
       EMAIL_FROM: "Aura <notices@aura-e2e.test>",
       APP_ORIGIN: "https://aura-e2e.test",
       VAPID_PUBLIC_KEY: vapidPublic,
-      VAPID_PRIVATE_KEY: vapid.d
+      VAPID_PRIVATE_KEY: vapid.d,
+      INTERCOM_APP_ID: "e2eapp",
+      INTERCOM_IDENTITY_SECRET: "e2e-intercom-identity-secret"
     },
     url: `http://127.0.0.1:${port}`,
     close: () => new Promise((done) => server.close(done))

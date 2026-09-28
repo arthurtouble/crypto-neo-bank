@@ -45,7 +45,7 @@ Base is the home network. Aura reads balances, positions, and transaction receip
 
 ### Aura's own records
 
-Aura keeps records such as your settings, the transactions it prepared and the checks it ran, and your support cases. They make the app fast and let us explain what happened. They are never the final word on your balance.
+Aura keeps records such as your settings, the transactions it prepared and the checks it ran, and your notifications. Support chats are kept by Intercom. They make the app fast and let us explain what happened. They are never the final word on your balance.
 
 ### Background checks
 

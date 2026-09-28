@@ -13,3 +13,9 @@ export function privyClient(): PrivyClient {
     ...(localApi ? { apiUrl: localApi, jwtVerificationKey: process.env.PRIVY_VERIFICATION_KEY } : {}) });
   return client;
 }
+
+/** The customer's verified email from Privy, if their account has one. Aura keeps no copy. */
+export async function privyEmail(subject: string): Promise<string | null> {
+  const user = await privyClient().users()._get(subject) as { linked_accounts: Array<{ type: string; address?: string }> };
+  return user.linked_accounts.find((account) => account.type === "email" && account.address)?.address ?? null;
+}

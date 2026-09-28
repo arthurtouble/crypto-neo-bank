@@ -45,10 +45,6 @@ for (const path of ["/app", "/app/deposit", "/app/earn", "/app/support"]) {
 const unknownTag = await request(`/pay/${crypto.randomUUID().replaceAll("-", "")}`);
 assert(unknownTag.ok && (await unknownTag.text()).includes("Payment page unavailable"), "unknown Aura tag reveals no recipient");
 
-const status = await request("/api/status");
-const statusBody = await status.json().catch(() => ({}));
-assert([200, 503].includes(status.status) && Array.isArray(statusBody.components), `public status returns bounded component state (${status.status})`);
-
 for (const path of ["/api/activity", "/api/overview", "/api/ops/summary", "/api/ops/features", "/api/ops/analytics"]) {
   const response = await request(path);
   assert([401, 403].includes(response.status), `${path} rejects an unauthenticated request (${response.status})`);
@@ -65,7 +61,7 @@ for (const path of ["/api/actions", "/api/actions/00000000-0000-4000-8000-000000
   assert(response.headers.get("cache-control")?.includes("no-store"), `${path} does not cache action responses`);
 }
 
-for (const path of ["/api/growth/waitlist", "/api/portfolio", "/api/demo/session", "/api/markets/orders", "/api/support/assistant", "/api/intents/prepare", "/api/swap/prepare", "/api/defi/aave/action"]) {
+for (const path of ["/api/growth/waitlist", "/api/portfolio", "/api/demo/session", "/api/markets/orders", "/api/support/assistant", "/api/support/cases", "/api/feedback", "/api/intents/prepare", "/api/swap/prepare", "/api/defi/aave/action"]) {
   const response = await request(path, { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
   assert(response.status === 404, `${path} is retired (${response.status})`);
 }

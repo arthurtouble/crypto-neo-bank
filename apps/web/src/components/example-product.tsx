@@ -54,9 +54,9 @@ const examples: Record<CustomerSection | "overview", Example> = {
     { label: "Preferences", value: "Theme and notices", note: "Statements depend on provider" }
   ] },
   support: { title: "Support", items: [
-    { label: "Assistant", value: "Product help", note: "Ask about features and account controls" },
-    { label: "Contact", value: "Open a case", note: "Sign in for account-specific support" },
-    { label: "Docs and FAQs", value: "Browse now", note: "Read about availability and safety" }
+    { label: "Chat", value: "Assistant and team", note: "Sign in to chat about your account" },
+    { label: "Report a problem", value: "Lock and report", note: "If someone else may be using your account" },
+    { label: "Help articles", value: "Browse now", note: "Getting started, safety, and availability" }
   ] }
 };
 

@@ -154,7 +154,8 @@ test("an operator closes an account only once it's empty; the customer then sees
   await setIdentity(page, customer, { signedIn: true });
   await page.goto("/app");
   await expect(page.getByTestId("account-closed")).toContainText("This account is closed", { timeout: 30_000 });
-  // Support stays open.
+  // Support stays open, and chat still works for a closed account.
   await page.getByRole("link", { name: "Contact support" }).click();
-  await expect(page.getByRole("heading", { name: "Contact support" })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole("heading", { name: "Get help" })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole("button", { name: "Chat", exact: true })).toBeEnabled({ timeout: 20_000 });
 });

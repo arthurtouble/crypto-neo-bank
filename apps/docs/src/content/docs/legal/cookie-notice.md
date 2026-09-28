@@ -16,7 +16,7 @@ Aura only uses storage it needs to run and protect the service. It does not use 
 | `aurel-theme` | Aura (local storage) | Your light or dark theme | Until you clear it |
 | `aurel-balance-privacy` | Aura (local storage) | Whether balances are hidden on this device | Until you clear it |
 | Privy session and wallet storage | Privy | Keeps you signed in and your wallet available | Session, or as set by Privy |
-| Turnstile | Cloudflare | Checks that support requests come from a person | Minutes |
+| Messenger | Intercom | Keeps your support chat signed in and remembers your conversations | Up to 9 months |
 | Cloudflare security cookies | Cloudflare | Protects Aura from abuse and attacks | Up to a day |
 
 These are needed for the service you asked for, so Aura has no setting to turn them off. You can block them in your browser, but signing in and core features may stop working.

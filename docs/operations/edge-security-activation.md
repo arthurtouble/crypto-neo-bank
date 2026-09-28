@@ -9,8 +9,8 @@ The application-level controls are already active. The settings below require th
 
 - Product: `app.<approved-domain>` → `aurel-financial-os`
 - Documentation: `docs.<approved-domain>` → `aurel-docs`
-- Status may remain `/app/status` initially; use `status.<approved-domain>` only if incident communication needs an independently deployed service.
-- Update Privy allowed origins, Turnstile hostnames, CSP, OpenAPI servers, documentation links and production smoke target together.
+- Aura has no status page; announce incidents through the customer communication templates.
+- Update Privy allowed origins, Intercom's allowed domains, CSP, OpenAPI servers, documentation links and production smoke target together.
 
 ## Cloudflare Access
 
@@ -24,9 +24,9 @@ Start in log or managed-challenge mode, inspect representative traffic, then enf
 
 1. Managed ruleset for the product hostname.
 2. Block non-HTTPS and unexpected methods where the API contract is explicit.
-3. Managed Challenge for suspicious traffic to `/api/auth/*`, `/api/feedback`, `/api/support/*` and `/api/webhooks/*` while excluding validated provider source ranges only when the provider publishes stable ranges.
+3. Managed Challenge for suspicious traffic to `/api/auth/*`, `/api/support/*` and `/api/webhooks/*` while excluding validated provider source ranges only when the provider publishes stable ranges.
 4. Block requests detected as API fallthrough after the OpenAPI operation inventory is complete.
-5. Never bypass application authentication, Turnstile, webhook signatures or D1-backed abuse limits because an edge rule exists.
+5. Never bypass application authentication, webhook signatures or D1-backed abuse limits because an edge rule exists.
 
 ## Rate limits
 
