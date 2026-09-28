@@ -14,13 +14,13 @@ const caseSchema = z.object({
 });
 
 export const GET = route("support.cases.get", { unavailable: "support_unavailable" }, async (request: Request, { traceId }) => {
-  const subject = await requireVerifiedSubject(request);
+  const subject = await requireVerifiedSubject(request, { allowClosed: true });
   const rows = await env.PROJECTION_DB.prepare("SELECT case_id, action_id, category, priority, status, summary, created_at, updated_at FROM support_cases WHERE subject_reference = ? ORDER BY created_at DESC LIMIT 20").bind(subject.subjectReference).all();
   return Response.json({ cases: rows.results, traceId }, { headers: { "Cache-Control": "no-store" } });
 });
 
 export const POST = route("support.cases.post", { unavailable: "support_unavailable", invalid: "invalid_case", onError: (error, context) => error instanceof RateLimitError ? errorResponse(429, "rate_limited", context, { message: "Too many cases were opened. Use an existing case for follow-up." }, error.headers) : undefined }, async (request: Request, { traceId }) => {
-  const subject = await requireVerifiedSubject(request);
+  const subject = await requireVerifiedSubject(request, { allowClosed: true });
   await enforceRateLimit(env.PROJECTION_DB, { namespace: "support", subject: subject.subjectReference, limit: 5, windowSeconds: 3600 });
   const input = caseSchema.parse(await request.json());
   const turnstile = await verifyTurnstile({ token: input.turnstileToken, remoteIp: request.headers.get("CF-Connecting-IP"), expectedAction: "support_case" });

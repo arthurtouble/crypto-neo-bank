@@ -18,6 +18,11 @@ export class WalletOwnershipError extends HttpError {
   constructor(message = "This wallet is not linked to your account.") { super(403, "wallet_not_linked", message); this.name = "WalletOwnershipError"; }
 }
 
+/** The account was closed by an operator at the customer's request. Only support and the data export stay open. */
+export class AccountClosedError extends HttpError {
+  constructor(message = "This account is closed. Contact support if you need help.") { super(403, "account_closed", message); this.name = "AccountClosedError"; }
+}
+
 export class MfaRequiredError extends HttpError {
   constructor(message = "Add a passkey before you move money.") { super(403, "mfa_required", message); this.name = "MfaRequiredError"; }
 }

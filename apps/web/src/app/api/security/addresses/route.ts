@@ -4,6 +4,7 @@ import { requireVerifiedSubject } from "@/lib/auth/server";
 import { ensureSubjectProfile } from "@/lib/profile/ensure";
 import { removeWalletAddress, saveWalletAddress } from "@/lib/security/wallet-address-book";
 import { route } from "@/lib/http/route";
+import { enforceRateLimit } from "@/lib/security/rate-limit";
 
 const createSchema = z.object({ address: z.string().regex(/^0x[a-fA-F0-9]{40}$/), label: z.string().trim().min(1).max(48) });
 type EntryRow = { entry_id: string; address: string; label: string; created_at: string; available_at: string; last_used_at: string | null };
@@ -17,6 +18,8 @@ export const GET = route("security.addresses.get", { unavailable: "address_book_
 
 export const POST = route("security.addresses.post", { unavailable: "address_create_unavailable", invalid: "invalid_address_entry" }, async (request: Request, { traceId }) => {
   const subject = await requireVerifiedSubject(request);
+  // Shared with saving from Send (`/api/recipients`).
+  await enforceRateLimit(env.PROJECTION_DB, { namespace: "recipient_create", subject: subject.subjectReference, limit: 12, windowSeconds: 3600 });
   const input = createSchema.parse(await request.json());
   await ensureSubjectProfile(env.PROJECTION_DB, subject.subjectReference);
   const saved = await saveWalletAddress(env.PROJECTION_DB, subject.subjectReference, input.address, input.label);
@@ -25,6 +28,7 @@ export const POST = route("security.addresses.post", { unavailable: "address_cre
 
 export const DELETE = route("security.addresses.delete", { unavailable: "address_delete_unavailable" }, async (request: Request, { traceId }) => {
   const subject = await requireVerifiedSubject(request);
+  await enforceRateLimit(env.PROJECTION_DB, { namespace: "recipient_remove", subject: subject.subjectReference, limit: 30, windowSeconds: 3600 });
   const entryId = new URL(request.url).searchParams.get("entryId");
   if (!entryId || !z.string().uuid().safeParse(entryId).success) return Response.json({ error: "invalid_entry_id", traceId }, { status: 400 });
   const row = await env.PROJECTION_DB.prepare("SELECT address FROM address_book_entries WHERE entry_id = ? AND subject_reference = ?").bind(entryId, subject.subjectReference).first<{ address: string }>();

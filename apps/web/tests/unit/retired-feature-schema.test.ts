@@ -10,12 +10,14 @@ const retired = ["savings_goals", "bill_reminder_plans", "subscription_projectio
   "portfolio_price_observations", "portfolio_daily_quantities", "portfolio_daily_results", "portfolio_lots",
   "portfolio_disposals", "portfolio_publications", "portfolio_rebuild_holds", "transaction_intents", "intent_events",
   "intent_prepared_calls", "intent_valuations", "intent_observation_candidates", "intent_observation_checks", "swap_quote_plans",
-  "swap_approval_requests", "swap_destination_observations", "wallet_references"];
+  "swap_approval_requests", "swap_destination_observations", "wallet_references",
+  // Data requests: export is instant, and accounts are closed by an operator, never erased.
+  "data_requests"];
 
 it("fresh schema keeps consent and security controls without retired feature or invitation tables", () => {
   const db = schemaDatabase();
   const names = new Set((db.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all() as Array<{ name: string }>).map((row) => row.name));
-  for (const name of ["security_profiles", "feature_flags", "consent_events", "data_requests", "audit_events"]) expect(names.has(name)).toBe(true);
+  for (const name of ["security_profiles", "feature_flags", "consent_events", "audit_events"]) expect(names.has(name)).toBe(true);
   expect(db.prepare("SELECT name FROM sqlite_master WHERE type = 'trigger' AND name = 'actions_status_forward'").get()).toBeTruthy();
   expect(db.prepare("SELECT COUNT(*) AS n FROM feature_flags WHERE audience = 'beta'").get()).toMatchObject({ n: 0 });
   expect(db.prepare("SELECT COUNT(*) AS n FROM feature_flags WHERE enabled = 1").get()).toMatchObject({ n: 0 });

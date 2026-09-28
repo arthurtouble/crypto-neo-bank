@@ -18,7 +18,7 @@ export function useAuraWallet() {
   const address = embedded?.address.toLowerCase() as `0x${string}` | undefined;
 
   /** Approve a Privy request with the customer's authorization key and return the signature. */
-  const authorize = useCallback(async (request: AuthorizationRequest): Promise<string> =>
+  const authorize = useCallback(async (request: AuthorizationRequest<unknown>): Promise<string> =>
     (await generateAuthorizationSignature(request)).signature, [generateAuthorizationSignature]);
 
   return { address, ready: Boolean(address), authorize, enrollPasskey: showMfaEnrollmentModal };

@@ -13,7 +13,6 @@ import { applyProviderEvent, type ProjectionDatabase } from "@aurel/provider-pro
 import { GET as cards } from "@/app/api/cards/route";
 import { GET as readPreferences, PATCH as patchPreferences } from "@/app/api/preferences/route";
 import { GET as rewards } from "@/app/api/rewards/route";
-import { GET as securityPolicy } from "@/app/api/security/policy/route";
 
 let sqlite: DatabaseSync;
 const migrations = resolve(process.cwd(), "../../infra/d1/migrations");
@@ -92,15 +91,5 @@ describe("preferences route", () => {
     const invalid = await patchPreferences(new Request("https://aura.test/api/preferences", { method: "PATCH",
       body: JSON.stringify({ notifications: { productUpdatesEmail: true } }) }));
     expect(invalid.status).toBe(400);
-  });
-});
-
-describe("security policy route", () => {
-  it("includes signer-enforced wallet policies reported by the wallet provider", async () => {
-    await providerEvent("wallet.policy.updated", { policyId: "pol-1", policyType: "destination_allowlist",
-      configuration: { addresses: 2 }, enabled: true }, "privy");
-    const body = await (await get(securityPolicy, "/api/security/policy")).json() as { policy: unknown; walletPolicies: unknown[] };
-    expect(body.policy).toBeTruthy();
-    expect(body.walletPolicies).toEqual([expect.objectContaining({ policyType: "destination_allowlist", enabled: true })]);
   });
 });

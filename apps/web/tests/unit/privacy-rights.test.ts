@@ -11,8 +11,7 @@ vi.mock("@/lib/auth/server", () => ({ AuthenticationError: httpErrors.Authentica
 vi.mock("@/lib/auth/admin", () => ({ requireOperationsAdmin: async () => ({ subjectReference: "operator-1" }) }));
 
 import { GET as consentState, POST as changeConsent } from "@/app/api/privacy/consent/route";
-import { GET as myRequests, POST as requestData } from "@/app/api/privacy/data-requests/route";
-import { PATCH as fulfil } from "@/app/api/ops/privacy/data-requests/[requestId]/route";
+import { GET as exportData } from "@/app/api/privacy/export/route";
 import { GET as termsState, POST as acceptTerms } from "@/app/api/terms/route";
 import { legalDocuments } from "@/lib/legal/documents";
 import { hasConsent } from "@/lib/privacy/consent-state";
@@ -84,7 +83,7 @@ describe("consent", () => {
   });
 });
 
-describe("data-rights requests", () => {
+describe("data rights", () => {
   const seed = () => sqlite.exec(`
     INSERT INTO user_preferences VALUES ('alice', '{}', '2026-09-25T00:00:00Z');
     INSERT INTO product_events (event_id, subject_reference, session_reference, event_name, surface, properties_json, occurred_at)
@@ -95,41 +94,18 @@ describe("data-rights requests", () => {
       counts_toward_limit, status, created_at, expires_at, updated_at)
       VALUES ('act1', 'alice', '0x1111111111111111111111111111111111111111', 'transfer', 8453, '{}', '[{"to":"0x833589fcd6edb6e08f4c7c32d4f71b54bda02913","value":"0","data":"0x"}]', 'fp', '[]', 1, 'prepared', 't', 't', 't');
     INSERT INTO action_events (event_id, action_id, event_type, evidence_json, occurred_at) VALUES ('ev1', 'act1', 'prepared', '{}', 't');`);
-  const open = async (requestType: "export" | "delete") => (await (await post(requestData, { requestType })).json() as { requestId: string }).requestId;
-  const act = (id: string, action: string) => fulfil(new Request("https://aura.test", { method: "PATCH", body: JSON.stringify({ action }) }),
-    { params: Promise.resolve({ requestId: id }) });
-
-  it("lets a customer see their own requests", async () => {
-    await open("export");
-    expect(await (await get(myRequests)).json()).toMatchObject({ requests: [{ request_type: "export", status: "received" }] });
-  });
-
-  it("exports every exportable table with its retention reason", async () => {
+  it("downloads everything exportable straight away, with each table's reason, and records it", async () => {
     seed();
-    const body = await (await act(await open("export"), "export")).json() as { export: Record<string, { rows: unknown[]; reason: string }> };
-    expect(body.export.user_preferences.rows).toHaveLength(1);
-    expect(body.export.audit_events.rows.length).toBeGreaterThan(0);
-    expect(body.export.audit_events.reason).toMatch(/audit/i);
-    expect(body.export).not.toHaveProperty("action_passkey_challenges");
+    const response = await get(exportData);
+    expect(response.headers.get("content-disposition")).toMatch(/^attachment; filename="aura-data-\d{4}-\d{2}-\d{2}\.json"$/);
+    const body = await response.json() as { data: Record<string, { rows: unknown[]; reason: string }> };
+    expect(body.data.user_preferences.rows).toHaveLength(1);
+    expect(body.data.audit_events.reason).toMatch(/audit/i);
+    expect(body.data).not.toHaveProperty("step_up_challenges");
     // A transaction's status history comes with it, although its table has no customer column.
-    expect(body.export.action_events.rows).toHaveLength(1);
-  });
-
-  it("erases erasable data, keeps evidence, and cannot be fulfilled twice", async () => {
-    seed();
-    const id = await open("delete");
-    const response = await act(id, "delete");
-    expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({ erasure: { erased: { user_preferences: 1, product_events: 1 } } });
-    expect(count("user_preferences")).toBe(0);
-    expect(count("product_events")).toBe(0);
-    expect(count("audit_events")).toBeGreaterThan(0);
-    expect(count("security_profiles")).toBe(1);
-    expect((await act(id, "delete")).status).toBe(409);
-  });
-
-  it("refuses an action that does not match the request", async () => {
-    expect((await act(await open("export"), "delete")).status).toBe(409);
+    expect(body.data.action_events.rows).toHaveLength(1);
+    expect(count("audit_events")).toBe(2);
+    expect(sqlite.prepare("SELECT action FROM audit_events WHERE action = 'data_exported'").get()).toBeTruthy();
   });
 
   it("classifies every table that holds customer data", () => {

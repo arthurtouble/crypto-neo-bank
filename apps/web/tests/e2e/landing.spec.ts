@@ -40,13 +40,14 @@ test("landing is accessible and fits common widths", async ({ page }) => {
 
 test("retired endpoints are gone", async ({ request }) => {
   for (const path of ["/api/growth/waitlist", "/api/goals", "/api/portfolio", "/api/portfolio/history", "/api/beta/access",
-    "/api/demo/session", "/api/markets/orders", "/api/support/assistant", "/api/defi/aave/preview", "/api/intents/evaluate", "/api/swap/review", "/api/invest/catalog"]) {
+    "/api/demo/session", "/api/markets/orders", "/api/support/assistant", "/api/defi/aave/preview", "/api/intents/evaluate", "/api/swap/review", "/api/invest/catalog",
+    "/api/privacy/data-requests", "/api/ops/privacy/data-requests"]) {
     expect((await request.get(path)).status(), path).toBe(404);
   }
 });
 
-test("privacy, terms, and data request operations fail closed", async ({ request }) => {
-  for (const path of ["/api/ops/privacy/data-requests", "/api/privacy/consent", "/api/privacy/data-requests", "/api/terms", "/api/preferences", "/api/rewards"]) {
+test("privacy, terms, and account operations fail closed", async ({ request }) => {
+  for (const path of ["/api/ops/accounts?q=someone", "/api/privacy/consent", "/api/privacy/export", "/api/terms", "/api/preferences", "/api/rewards"]) {
     const response = await request.get(path);
     expect([401, 403], path).toContain(response.status());
     expect(response.headers()["cache-control"], path).toContain("no-store");

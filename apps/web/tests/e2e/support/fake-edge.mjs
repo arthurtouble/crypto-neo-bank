@@ -486,6 +486,13 @@ export function startFakeEdge({ port }) {
       return send(200, { hash: sendTransaction(body) });
     }
 
+    // Privy's REST API: an operator's search by email or wallet address.
+    const lookup = /^\/privy\/v1\/users\/(email|wallet)\/address$/.exec(url.pathname);
+    if (lookup) {
+      const wanted = String(body?.address ?? "").toLowerCase();
+      const match = Object.entries(state.users).find(([, user]) => lookup[1] === "email" ? user.email?.toLowerCase() === wanted : user.wallet?.toLowerCase() === wanted);
+      return match ? send(200, privyUser(match[0])) : send(404, { error: "User not found" });
+    }
     // Privy's REST API.
     const user = /^\/privy\/v1\/users\/([^/]+)$/.exec(url.pathname);
     if (user) {
@@ -499,7 +506,13 @@ export function startFakeEdge({ port }) {
     if (walletRpc) {
       const walletId = decodeURIComponent(walletRpc[1]);
       const owner = Object.entries(state.users).find(([id]) => `wallet-${id}` === walletId);
-      if (!owner || body?.method !== "wallet_sendCalls") return send(404, { error: "wallet not found" });
+      if (!owner || !["wallet_sendCalls", "personal_sign"].includes(body?.method)) return send(404, { error: "wallet not found" });
+      // A passkey confirmation (lib/security/step-up.ts): Privy signs the message only for a valid authorization signature.
+      if (body.method === "personal_sign") {
+        if (state.relay === "reject") return send(400, { error: "Invalid authorization signature" });
+        state.confirmations = [...(state.confirmations ?? []), body.params.message];
+        return send(200, { method: "personal_sign", data: { signature: `0x${"ab".repeat(65)}`, encoding: "hex" } });
+      }
       if (state.relay === "reject") return send(400, { error: "Invalid authorization signature" });
       if (state.relay === "error") return send(500, { error: "internal error" });
       const key = req.headers["privy-idempotency-key"];

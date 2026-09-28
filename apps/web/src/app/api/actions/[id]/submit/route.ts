@@ -2,7 +2,7 @@ import { env } from "cloudflare:workers";
 import { z } from "zod";
 import { relaySendCalls } from "@/lib/actions/privy-relay";
 import { actionRequest } from "@/lib/actions/relay-request";
-import { expireIfStale, getAction, recordRelay, recordSubmission } from "@/lib/actions/store";
+import { expireIfStale, getAction, loadControls, recordRelay, recordSubmission } from "@/lib/actions/store";
 import { privyClient } from "@/lib/auth/privy";
 import { requireVerifiedSubject } from "@/lib/auth/server";
 import { requireActionAccount, requireMoneyMfa } from "@/lib/auth/wallet";
@@ -29,6 +29,10 @@ export const POST = route("actions.submit", { invalid: "invalid_submission", una
 
     if ("signature" in input) {
       await requireMoneyMfa(subject.subjectReference);
+      // A lock also stops actions prepared before it.
+      if ((await loadControls(env.PROJECTION_DB, subject.subjectReference, null, now)).accountLocked) {
+        return errorResponse(409, "account_locked", context, { message: "Your account is locked. Unlock it in Settings to continue." });
+      }
       const action = await expireIfStale(env.PROJECTION_DB, found, now);
       const account = await requireActionAccount(subject.subjectReference);
       const signable = actionRequest(action, account);

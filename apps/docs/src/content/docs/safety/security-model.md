@@ -45,7 +45,7 @@ These are all optional and off until you turn them on. Changes apply right away,
 
 | Control | Starts as | What it does |
 | --- | --- | --- |
-| Emergency lock | Off | Stops Aura preparing any money movement |
+| Emergency lock | Off | Stops every send, swap, and Earn move, including ones you started but haven't confirmed. Unlocking needs your passkey |
 | Daily limit | Off | Caps the US dollar value you send in any 24 hours, including to your own linked wallets. Swaps within your own account and Earn don't count |
 | Saved recipients only | Off | Lets you send only to recipients you've saved |
 | Wait before new recipients | 4 hours | When saved recipients only is on, a newly saved recipient can't receive until the wait ends |

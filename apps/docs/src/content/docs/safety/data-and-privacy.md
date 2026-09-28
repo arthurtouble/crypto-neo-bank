@@ -53,10 +53,11 @@ Analytics answer narrow questions, like whether people finish setup or hit an er
 
 ## Your choices
 
-In **Settings → Data & Privacy** you can:
+In **Settings → Data and privacy** you can:
 
-- export everything Aura holds about your account;
-- delete the data that can be erased; and
+- download everything Aura holds about your account, straight away; and
 - turn product-update emails on or off.
+
+To close your account, contact support once it holds no funds. Aura keeps your transaction, security, and consent records.
 
 The [privacy notice](/legal/privacy-notice/) covers data categories, purposes, recipients, retention, international transfers, and your rights. Our entity details, governing law, and privacy contacts will be finalized before launch.
