@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 import { AAVE_POOL, VAULTS } from "./support/fake-edge.mjs";
 import { expect, test } from "./support/fixtures";
-import { acceptTerms, asCustomer, ASSETS, edge, newCustomer, setBalances, setFeature, setIdentity, type Customer } from "./support/session";
+import { acceptTerms, asCustomer, ASSETS, edge, newCustomer, setBalances, setFeature, setIdentity, type Customer, setControls } from "./support/session";
 
 // Feature 5 in docs/overview/feature-readiness.md: Earn. Aave on Base and two
 // Morpho USDC vaults. Privy's relay, the passkey, the chain (Aave's pool and
@@ -120,10 +120,10 @@ test("the server refuses: switched off, account locked, not enough USDC, or USDC
   await expect(toasts(page)).toContainText("This feature is temporarily unavailable.", { timeout: 20_000 });
 
   await setFeature(page, "defi_actions", true);
-  await asCustomer(page, customer, "PATCH", "/api/security/policy", { accountLocked: true });
+  await setControls(page, customer, { accountLocked: true });
   await form(page, "Steakhouse Prime USDC").getByRole("button", { name: "Deposit", exact: true }).click();
   await expect(toasts(page)).toContainText("Your account is locked", { timeout: 20_000 });
-  await asCustomer(page, customer, "PATCH", "/api/security/policy", { accountLocked: false });
+  await setControls(page, customer, { accountLocked: false });
 
   await act(page, "Steakhouse Prime USDC", "Deposit", "60");
   await expect(toasts(page)).toContainText("You don't have enough USDC.", { timeout: 20_000 });

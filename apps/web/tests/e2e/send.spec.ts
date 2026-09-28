@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "./support/fixtures";
 import { LIFI_DIAMOND } from "./support/fake-edge.mjs";
-import { acceptTerms, asCustomer, ASSETS, edge, newCustomer, setBalances, setFeature, setIdentity, type Customer } from "./support/session";
+import { acceptTerms, asCustomer, ASSETS, edge, newCustomer, setBalances, setFeature, setIdentity, type Customer, setControls } from "./support/session";
 
 // Feature 3 in docs/overview/feature-readiness.md: sending from the Aura
 // account on Base. The passkey prompt, Privy's sponsored relay, and the chain
@@ -151,7 +151,7 @@ test("the customer can send to their own connected wallet in one tap", async ({ 
 
 test("a saved recipient can be picked by name", async ({ page }) => {
   const customer = await openSend(page);
-  await asCustomer(page, customer, "PATCH", "/api/security/policy", { newAddressDelayHours: 0 });
+  await setControls(page, customer, { newAddressDelayHours: 0 });
   await asCustomer(page, customer, "POST", "/api/security/addresses", { address: RECIPIENT, label: "Sam" });
   await page.reload();
   await fillSend(page, { amount: "3" });
@@ -201,13 +201,13 @@ test("the customer's controls are enforced on the server: daily limit, saved rec
     await page.keyboard.press("Escape");
     await page.reload();
   };
-  await asCustomer(page, customer, "PATCH", "/api/security/policy", { dailyLimitUsd: 10 });
+  await setControls(page, customer, { dailyLimitUsd: 10 });
   await attempt("This would go over your daily limit.");
-  await asCustomer(page, customer, "PATCH", "/api/security/policy", { dailyLimitUsd: null, enforceAddressBook: true });
+  await setControls(page, customer, { dailyLimitUsd: null, enforceAddressBook: true });
   await attempt("Your settings only allow sending to saved recipients.");
   await asCustomer(page, customer, "POST", "/api/security/addresses", { address: RECIPIENT, label: "Sam" });
   await attempt("This saved recipient is still in its waiting period.");
-  await asCustomer(page, customer, "PATCH", "/api/security/policy", { enforceAddressBook: false, accountLocked: true });
+  await setControls(page, customer, { enforceAddressBook: false, accountLocked: true });
   await attempt("Your account is locked.");
   expect(await relayed()).toEqual([]);
 });

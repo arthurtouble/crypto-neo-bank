@@ -82,3 +82,18 @@ export async function asCustomer(page: Page, customer: Customer, method: "GET" |
   if (!response.ok()) throw new Error(`${method} ${path} failed: ${response.status()} ${await response.text()}`);
   return response.json() as Promise<Record<string, unknown>>;
 }
+
+/**
+ * Change the customer's controls through the API. Loosening one answers 428
+ * with a passkey confirmation to sign; this signs it with the fake passkey
+ * and sends the change again, as Settings does.
+ */
+export async function setControls(page: Page, customer: Customer, changes: Record<string, unknown>) {
+  const send = (data: unknown) => page.request.fetch("/api/security/policy", { method: "PATCH", headers: { Authorization: `Bearer ${customer.token}`, ...fresh }, data });
+  let response = await send(changes);
+  if (response.status() === 428) {
+    const { challengeId } = await response.json() as { challengeId: string };
+    response = await send({ ...changes, confirmation: { challengeId, signature: "ZTJlLWZha2Utc2lnbmF0dXJlLWZvci10ZXN0cy1vbmx5" } });
+  }
+  if (!response.ok()) throw new Error(`setting controls failed: ${response.status()} ${await response.text()}`);
+}
