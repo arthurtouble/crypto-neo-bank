@@ -28,15 +28,16 @@ pnpm build
 A single unit test: `pnpm --filter @aurel/web exec vitest run tests/unit/<file>.test.ts`.
 CI (`.github/workflows/ci.yml`) runs lint, `typecheck:all`, `test:unit`, build, and `test:recovery` in one job, and e2e as two parallel jobs (desktop and mobile Chromium; the tests share one fake chain, so each project runs one test at a time). Run the first three before pushing.
 
-## Current plan: feature readiness
+## Current plan: redesign
 
-Until every row in `docs/overview/feature-readiness.md` is done or cut, all product work follows it:
+Every row in `docs/overview/feature-readiness.md` is done or cut. Product work now follows `docs/overview/redesign.md`:
 
-- Go feature by feature in the listed order, one branch and pull request per feature. Use the `feature-pass` skill for each one.
-- A feature is done only when it meets the definition of done in that doc: scope confirmed with the product owner, server rules tested, unit tests and signed-in Playwright tests for every customer step (happy path and failures), a small real transaction on dev for money flows, and its area cleaned up.
-- Don't redesign the UI, rewrite copy, or do the final refactor yet. Those come after all features work.
-- Update the status table in the same pull request.
-- Keep docs in sync with the code in the same pull request, for every feature or behavior change: internal docs in `docs/` and public docs in `apps/docs`. Search both for everything the change touches; a doc that describes something that no longer works (or doesn't yet) is a bug.
+- Go area by area in the listed order, one branch and pull request per area. Update the status table in the same pull request.
+- The redesign changes how screens look, not what they do: no changes to server logic, API contracts, D1, switches, or money rules. Raise a needed behavior change as its own pull request.
+- Build screens only from the design system (phase 3 rewrites `docs/product/design-system.md` and `apps/web/public/design-system.html` first). No one-off styles.
+- Existing e2e specs keep passing; update selectors, never the behavior checked.
+- Don't rewrite copy or do the final refactor yet. Those are steps 3 and 4.
+- Keep docs in sync with the code in the same pull request: internal docs in `docs/` and public docs in `apps/docs`.
 
 ## Non-negotiable rules
 

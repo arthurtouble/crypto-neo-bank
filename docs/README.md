@@ -7,7 +7,8 @@ These files contain operational and security-sensitive context. Keep them in the
 ## Start here
 
 - [Build status](overview/build-status.md): what is live, what depends on providers, and what was retired.
-- [Feature readiness](overview/feature-readiness.md): the current feature-by-feature plan, definition of done, and status.
+- [Redesign](overview/redesign.md): the current plan for step 2, the redesign, with its phases, open questions, and status.
+- [Feature readiness](overview/feature-readiness.md): step 1, the feature-by-feature plan, definition of done, and status (done).
 - [Launch readiness](overview/launch-readiness.md): release gates.
 - [Codebase audit, 25 September 2026](overview/codebase-audit-2026-09-25.md): findings, target architecture, and the refactor plan.
 - [Operations runbook](operations/operations-runbook.md): provider activation, secrets, migrations, reconciliation, the operations app (`apps/ops`), and recovery.
