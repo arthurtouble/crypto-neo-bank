@@ -75,13 +75,14 @@ test("USDC goes to an address after a review, with the fee paid by Aura, and the
   expect(await balance(page, customer, `8453:${ASSETS.usdc}`)).toBe("37500000");
 });
 
-test("until the block is final, a matched transfer shows as sent", async ({ page }) => {
+test("a matched transfer is complete once in a block, before Base makes it final", async ({ page }) => {
   await edge("/__state", { finalizeAll: false });
   await openSend(page);
   await fillSend(page, { amount: "1", to: RECIPIENT });
   await reviewAndConfirm(page);
-  await expect(toast(page, "Transfer sent")).toBeVisible({ timeout: 30_000 });
-  await expect(dialog(page).getByText("Transfer sent")).toBeVisible();
+  await expect(toast(page, "Transfer complete")).toBeVisible({ timeout: 30_000 });
+  await expect(dialog(page).getByText("Transfer complete")).toBeVisible();
+  await expect(dialog(page).getByText("Base makes it final in about 20 minutes.")).toBeVisible();
 });
 
 test("ETH and cbBTC can be sent too", async ({ page }) => {

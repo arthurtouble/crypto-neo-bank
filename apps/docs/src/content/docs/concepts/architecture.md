@@ -14,7 +14,7 @@ Every send, swap, move between networks, Earn deposit or withdrawal, and crypto 
 3. **You confirm.** You review the transaction in Aura and confirm it with your passkey.
 4. **Privy submits it.** Aura sends the signed request to Privy, which submits it and pays the network fee.
 5. **The network settles it.** The blockchain accepts or rejects the operation.
-6. **Aura checks the result.** Aura reads the blockchain itself. It marks the movement complete only when the operation matches what was prepared, is final, and shows the expected transfer or deposit. A move between networks also has to arrive.
+6. **Aura checks the result.** Aura reads the blockchain itself. It marks the movement complete once the operation is in a block, matches what was prepared, and shows the expected transfer or deposit, then keeps checking until the network makes it final. A move between networks also has to arrive.
 
 Each step is separate. A quote isn't a transfer. A review isn't a confirmation. A submitted transaction isn't necessarily final.
 

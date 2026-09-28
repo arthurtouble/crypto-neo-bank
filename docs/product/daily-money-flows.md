@@ -25,8 +25,8 @@ Exports (the list, a tax-support preview, and a monthly statement) are records o
 
 | Aura display | Evidence |
 |---|---|
-| Pending | Submitted, or matched and waiting for finality or cross-chain delivery. For money received: waiting for finality. |
-| Completed | Operation identity, finality, and expected effects (and delivery, for cross-chain) were verified. For money received: its block is final. |
+| Pending | Submitted and not yet included, or a cross-chain move waiting for delivery. |
+| Completed | Included, with operation identity and expected effects (and delivery, for cross-chain) verified. Money received: in a block. Marked final once the block is final (about 20 minutes on Base). |
 | Failed | The chain, route, or verifier reported failure, with a reason. |
 | Not confirmed | The action wasn't signed and submitted before it expired. Never shown as failed. |
 

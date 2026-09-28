@@ -17,20 +17,22 @@ Transactions lists the money you send, swap, move, and put in Earn with Aura, an
 
 | Status | Meaning |
 | --- | --- |
-| **Pending** | You confirmed it, and it's on its way. Aura is checking it, or waiting for the network to make it final. A move between networks stays pending until it arrives. |
-| **Completed** | The transaction matches what you reviewed, the network made it final, and the expected transfer or deposit appeared. A move between networks must also arrive. |
+| **Pending** | You confirmed it, and Aura is waiting for it to be included on the network. A move between networks stays pending until it arrives. |
+| **Completed** | It's in a block on the network, and it matches what you reviewed: the expected transfer or deposit appeared. A move between networks must also arrive. Your balance already includes it. |
 | **Failed** | The network rejected it, the route failed, or the result didn't match what you reviewed. The receipt shows the reason. |
 | **Not confirmed** | You didn't confirm it in time, so nothing was sent. Check your activity before you try again. This isn't the same as failed. |
 
-A transaction hash only proves something was submitted. Before Aura marks a transaction completed, it compares what was signed, and what it did, with what Aura prepared. Aura keeps checking until the network treats the transaction as final, because earlier blocks can occasionally be rewritten. On Base that takes 15 to 25 minutes.
+A transaction hash only proves something was submitted. Before Aura marks a transaction completed, it compares what was signed, and what it did, with what Aura prepared.
 
-Open any item to see its receipt. For something you did in Aura, the receipt shows its journey, step by step, with the time of each step. A send on Base goes from sent, to included on Base, to final and complete. A send to another network goes from sent from Base, to confirmed on Base, to delivered on the other network, to complete. The journey updates by itself while you watch. **Full history** opens the same transaction on its own page.
+Like mainstream wallets and apps, Aura shows a transaction on Base as completed once it's in a block, which usually takes a few seconds. Base then makes it **final** about 20 minutes later, once it's settled on Ethereum. Until then a block could, very rarely, be rewritten, so Aura keeps checking and the receipt shows when it's final. Exports show it too.
+
+Open any item to see its receipt. For something you did in Aura, the receipt shows its journey, step by step, with the time of each step. A send on Base goes from sent, to complete on Base, to final on Base. A send to another network goes from sent from Base, to confirmed on Base, to delivered on the other network, to complete. The journey updates by itself while you watch. **Full history** opens the same transaction on its own page.
 
 ## Money you receive
 
 Money sent to your Aura address shows as **Received**: a deposit from an exchange, a payment from someone else, or a transfer from your own wallet. Aura lists the assets it supports on the networks where your account holds them: Base, and Ethereum for Tether Gold. Tokens Aura doesn't support are left out, so unsolicited tokens don't clutter your list.
 
-A deposit is **Pending** until its network makes it final, then **Completed**. The receipt shows who sent it and a link to the network.
+A deposit is **Completed** as soon as it's in a block, like the transactions you make. The receipt shows who sent it, a link to the network, and whether it's final yet.
 
 Aura reads received money from Alchemy's record of the network, and doesn't store it. If that record can't be read, Transactions tells you some deposits may be missing, rather than showing none. The list shows your most recent deposits; a monthly statement covers a whole month. ETH sent to you by a smart contract, rather than a wallet, may not be listed.
 

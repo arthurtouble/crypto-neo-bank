@@ -44,7 +44,7 @@ Bank payouts are coming soon.
 ## What the status means
 
 - **Submitted** means you confirmed and a transaction hash exists.
-- **Complete** means Aura matched the transaction to what you reviewed, waited for the network to finalize it, and found the expected transfer.
+- **Complete** means the transaction is in a block, Aura matched it to what you reviewed, and found the expected transfer. Base makes it final about 20 minutes later; the receipt in Transactions shows when.
 
 Timing can change before you confirm.
 

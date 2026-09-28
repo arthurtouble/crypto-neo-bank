@@ -24,7 +24,7 @@ If the swap needs a token approval, the approval and the swap are sent together,
 
 Aura checks the blockchain itself. A swap is complete when the transaction matches what you reviewed and at least the minimum amount arrived.
 
-Once your swap leaves your account, Swap shows it as sent, and you can close it or start another. Follow the rest in Transactions. A swap on Base is complete once Base finalizes it, in about 15 minutes.
+A swap on Base is complete once it's in a block and Aura finds what you received, usually within seconds. Base makes it final about 20 minutes later. A swap to another network shows as sent once it leaves your account; you can close it or start another, and follow the rest in Transactions.
 
 For a swap between networks, the first network confirming isn't enough. Aura shows it as **On its way** until the asset arrives on the other network, usually within 30 minutes. Selling Tether Gold works the same way, from Ethereum to Base.
 

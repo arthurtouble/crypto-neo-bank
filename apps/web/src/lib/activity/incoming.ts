@@ -13,8 +13,10 @@ import { localEdgeUrl } from "@/lib/testing/local-edge";
  * Only registered assets the account holds are listed, so unsolicited spam
  * tokens never show. Transfers that belong to one of the account's own actions
  * (a swap's output, an Earn withdrawal, a delivery from another network) are
- * left out; the action already shows them. A transfer is complete once its
- * block is final on its network, and pending until then.
+ * left out; the action already shows them. Like mainstream wallets, a
+ * transfer is complete once it is in a block (Base's sequencer gives a near
+ * zero chance of reversal after about 2 seconds), and marked final once its
+ * block is final (about 20 minutes on Base).
  */
 export const INCOMING_NETWORKS = [8453, 1] as const;
 const PAGE = 100;
@@ -31,7 +33,9 @@ export type IncomingTransfer = {
   amount: string;
   blockNumber: number;
   receivedAt: string;
-  status: "pending" | "completed";
+  status: "completed";
+  /** Whether the block is final on its network. Until then a reorg could, very rarely, remove it. */
+  final: boolean;
   source: string;
 };
 
@@ -83,7 +87,7 @@ export function parseTransfer(raw: RawTransfer, chainId: number, wallet: string,
     id: `incoming:${chainId}:${raw.uniqueId ?? `${raw.hash}:${asset.id}`}`.toLowerCase(), chainId, transactionHash: raw.hash.toLowerCase(),
     from: getAddress(raw.from), assetId: asset.id, symbol: asset.symbol, decimals: asset.decimals, amountRaw: value.toString(),
     amount: formatUnits(value, asset.decimals), blockNumber: Number(block), receivedAt,
-    status: block <= finalized ? "completed" : "pending", source: `Alchemy, ${networkName(chainId)}`
+    status: "completed", final: block <= finalized, source: `Alchemy, ${networkName(chainId)}`
   };
 }
 

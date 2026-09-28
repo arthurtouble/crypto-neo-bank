@@ -27,7 +27,7 @@ function copy(label: string, phase: ActionPhase, action: ActionView | null) {
   switch (action?.status) {
     case "settling": return action.destinationChainId
       ? { step: 3, title: `${label} sent`, detail: `It's waiting for the bridge to deliver it on ${networkName(action.destinationChainId)}, usually within 30 minutes. You can close this and track it in Transactions.` }
-      : { step: 3, title: `${label} sent`, detail: `It becomes final on ${networkName(action.chainId)} in about 15 minutes. You can close this and track it in Transactions.` };
+      : { step: 3, title: `${label} complete`, detail: `${networkName(action.chainId)} makes it final in about 20 minutes. You can close this.` };
     case "confirmed": return { step: 3, title: `${label} complete`, detail: "The network confirmed it." };
     case "failed": return { step: 3, title: `${label} failed`, detail: failureText(action.failureReason) };
     case "expired": return { step: 3, title: `${label} not confirmed`, detail: "We didn't receive it in time. If you confirmed it in your wallet, check Transactions." };
@@ -55,8 +55,8 @@ export function TransactionProgress({ label, phase, action, outcomeUnknown }: Pr
   const { step, title, detail } = copy(label, phase, action);
   const failed = action?.status === "failed" || action?.status === "expired";
   const complete = action !== null && !failed && actionSettled(action);
-  // Sent and handed off: nothing for the customer to wait for here.
-  const sent = action?.status === "settling";
+  // Sent to another network and handed off: nothing for the customer to wait for here.
+  const sent = action?.status === "settling" && Boolean(action.destinationChainId);
   const links = [
     ...(sent || complete ? [{ name: "Track in Transactions", url: `/app/transactions?open=${encodeURIComponent(action!.id)}`, internal: true }] : []),
     { name: "View transaction", url: explorerUrl(action?.chainId ?? null, action?.transactionHash ?? null) },
