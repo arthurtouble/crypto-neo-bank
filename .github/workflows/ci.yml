@@ -30,6 +30,7 @@ jobs:
       - run: pnpm typecheck:all
       - run: pnpm test:unit
       - run: pnpm build
+      - run: pnpm --filter @aurel/ops build
       - run: pnpm test:recovery
 
   # The end-to-end tests share one fake chain, so they run one at a time.
