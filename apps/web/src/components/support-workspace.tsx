@@ -1,48 +1,22 @@
 "use client";
 
-import { usePrivy } from "@privy-io/react-auth";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useState } from "react";
 import { BookOpen, LoaderCircle, LockKeyhole, MessageCircle, TriangleAlert, UserX } from "lucide-react";
-import { useApi } from "@/lib/client/api";
 import { useSupportChat } from "./support-chat";
-import { useToast } from "./toast";
 
 const docs = process.env.NEXT_PUBLIC_DOCS_URL ?? "https://aurel-docs.aurel-events.workers.dev";
 
 /**
  * Support: chat (Intercom's Messenger, where Fin answers first and the team
  * takes over), help articles on the docs site, and the problems that need
- * acting on straight away. Card disputes arrive with cards, from the card
- * transaction itself.
+ * acting on straight away. Locking and unlocking the account live in
+ * Settings. Card disputes arrive with cards, from the card transaction itself.
  */
 export function SupportWorkspace() {
   const chat = useSupportChat();
-  const api = useApi();
-  const { user } = usePrivy();
-  const client = useQueryClient();
-  // Shares Settings' query, so locking here shows there and the other way round.
-  const policy = useQuery({ queryKey: ["security-policy", user?.id], enabled: Boolean(user),
-    queryFn: () => api<{ policy: { accountLocked: boolean } }>("/api/security/policy") });
-  const locked = policy.data?.policy.accountLocked === true;
-  const toast = useToast();
   const closing = useSearchParams().get("topic") === "close-account";
-  const [locking, setLocking] = useState(false);
   const ready = chat.status === "ready";
-
-  async function lockAndReport() {
-    setLocking(true);
-    try {
-      const updated = await api<{ policy: { accountLocked: boolean } }>("/api/security/policy", { method: "PATCH", json: { accountLocked: true } });
-      client.setQueryData(["security-policy", user?.id], (current: object | undefined) => ({ ...current, ...updated }));
-      toast.success("Account locked", "Nothing can be sent until you unlock it with your passkey.");
-    } catch {
-      toast.error("Account not locked", "Tell us in the chat and we'll help.");
-    } finally { setLocking(false); }
-    chat.open("Someone else may be using my Aura account. I locked it from Support.");
-  }
 
   const chatButton = (label: string, message?: string) => <button className="button primary" disabled={!ready} onClick={() => chat.open(message)}>
     {chat.status === "loading" ? <LoaderCircle className="spin" size={14} /> : <MessageCircle size={14} />} {label}</button>;
@@ -61,11 +35,9 @@ export function SupportWorkspace() {
     </section>
     <section className="panel settingsPanel" aria-labelledby="report-heading"><h2 id="report-heading">Report a problem</h2>
       <div className="settingRow"><span className="settingIcon"><LockKeyhole size={17} /></span>
-        {locked
-          ? <><div><strong>Your account is locked</strong><small>Nothing can be sent. When you&apos;re sure your account is safe, unlock it in Settings with your passkey.</small></div>
-            <Link className="button secondary" href="/app/settings">Unlock in Settings</Link></>
-          : <><div><strong>Someone else may be using my account</strong><small>We lock your account first, so nothing can be sent, then open a chat with our team.</small></div>
-            <button className="button secondary" disabled={locking || policy.isPending} onClick={() => void lockAndReport()}>{locking ? <LoaderCircle className="spin" size={14} /> : null} Lock and report</button></>}</div>
+        <div><strong>Someone else may be using my account</strong><small>Turn on the emergency lock in Settings first, so nothing can be sent. Then tell us what happened.</small></div>
+        <span className="supportActions"><Link className="button secondary" href="/app/settings#emergency-lock">Lock in Settings</Link>
+          {chatButton("Tell us", "Someone else may be using my Aura account.")}</span></div>
       <div className="settingRow"><span className="settingIcon"><TriangleAlert size={17} /></span>
         <div><strong>I sent money to a scam or the wrong address</strong><small>Blockchain transfers can&apos;t be reversed by Aura or anyone else. Tell us what happened and which transaction, and we&apos;ll help you report it.</small></div>
         {chatButton("Tell us", "I sent money to a scam or the wrong address. The transaction was: ")}</div>

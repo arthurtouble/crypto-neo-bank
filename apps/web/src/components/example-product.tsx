@@ -55,7 +55,7 @@ const examples: Record<CustomerSection | "overview", Example> = {
   ] },
   support: { title: "Support", items: [
     { label: "Chat", value: "Assistant and team", note: "Sign in to chat about your account" },
-    { label: "Report a problem", value: "Lock and report", note: "If someone else may be using your account" },
+    { label: "Report a problem", value: "Tell us", note: "If someone else may be using your account, lock it in Settings first" },
     { label: "Help articles", value: "Browse now", note: "Getting started, safety, and availability" }
   ] }
 };

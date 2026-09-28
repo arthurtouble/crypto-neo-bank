@@ -89,7 +89,7 @@ export function SecurityPolicyControls() {
   if (policy.isError || addresses.isError || !policy.data) return <section className="panel securityPolicyPanel formError">We couldn’t load your controls. Your limits still apply.</section>;
   const current = policy.data.policy;
   return <>
-    <section className="panel securityPolicyPanel"><div className="panelHeading"><div><h2>Transaction controls</h2></div><span className={`statusBadge ${current.accountLocked ? "warning" : "good"}`}><i /> {current.accountLocked ? "Locked" : "Active"}</span></div>
+    <section className="panel securityPolicyPanel" id="emergency-lock"><div className="panelHeading"><div><h2>Transaction controls</h2></div><span className={`statusBadge ${current.accountLocked ? "warning" : "good"}`}><i /> {current.accountLocked ? "Locked" : "Active"}</span></div>
       <div className="policyControlRows">
         <label><span><LockKeyhole size={17} /><b>Emergency lock<small>Stop all sends, swaps, and Earn moves. Unlocking needs your passkey.</small></b></span><input type="checkbox" checked={current.accountLocked} disabled={update.isPending} onChange={(event) => update.mutate({ accountLocked: event.target.checked })} /></label>
         <label><span><Check size={17} /><b>Saved recipients only<small>Only send to saved recipients, after their wait.</small></b></span><input type="checkbox" checked={current.enforceAddressBook} disabled={update.isPending} onChange={(event) => update.mutate({ enforceAddressBook: event.target.checked })} /></label>

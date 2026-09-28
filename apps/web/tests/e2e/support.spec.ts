@@ -8,7 +8,6 @@ import { acceptTerms, asCustomer, ASSETS, edge, newCustomer, setBalances, setIde
 
 type Call = [string, ...unknown[]];
 const calls = (page: Page) => page.evaluate(() => (window as unknown as { __intercomCalls?: Call[] }).__intercomCalls ?? []);
-const toast = (page: Page, title: string) => page.locator(".toastRegion").getByText(title, { exact: true });
 const decode = (part: string) => JSON.parse(Buffer.from(part, "base64url").toString()) as Record<string, unknown>;
 
 async function openSupport(page: Page, path = "/app/support") {
@@ -51,25 +50,26 @@ test("chat opens as the signed-in customer, identified by a token Aura signs", a
   await expect(page.getByText("Open support case")).toHaveCount(0);
 });
 
-test("someone else using the account: Aura locks it first, then opens a chat about it", async ({ page }) => {
+test("someone else using the account: Support points to the lock in Settings, and opens a chat to report it", async ({ page }) => {
   const customer = await openSupport(page);
   await expectIdentified(page, customer);
-  await page.getByRole("button", { name: "Lock and report" }).click();
-  await expect(toast(page, "Account locked")).toBeVisible({ timeout: 20_000 });
-  expect(await asCustomer(page, customer, "GET", "/api/security/policy")).toMatchObject({ policy: { accountLocked: true } });
-  // Locked: Support says so and points to Settings to unlock, instead of offering the lock again.
-  await expect(page.getByText("Your account is locked")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Lock and report" })).toHaveCount(0);
-  await expect(page.getByRole("link", { name: "Unlock in Settings" })).toHaveAttribute("href", "/app/settings");
+  const row = page.locator(".settingRow").filter({ hasText: "Someone else may be using my account" });
+  // Locking and unlocking live in Settings; Support doesn't change the account's controls.
+  await expect(row.getByRole("link", { name: "Lock in Settings" })).toHaveAttribute("href", "/app/settings#emergency-lock");
+  await row.getByRole("button", { name: "Tell us" }).click();
   await expect.poll(async () => (await calls(page)).find((call) => call[0] === "showNewMessage"))
-    .toEqual(["showNewMessage", "Someone else may be using my Aura account. I locked it from Support."]);
+    .toEqual(["showNewMessage", "Someone else may be using my Aura account."]);
+  expect(await asCustomer(page, customer, "GET", "/api/security/policy")).toMatchObject({ policy: { accountLocked: false } });
+  await row.getByRole("link", { name: "Lock in Settings" }).click();
+  await expect(page).toHaveURL(/\/app\/settings#emergency-lock$/);
+  await expect(page.getByRole("checkbox", { name: /Emergency lock/ })).toBeVisible({ timeout: 30_000 });
 });
 
 test("money sent to a scam: Aura says it can't be reversed, and opens a chat to report it", async ({ page }) => {
   const customer = await openSupport(page);
   await expectIdentified(page, customer);
   await expect(page.getByText(/Blockchain transfers can't be reversed by Aura or anyone else\./)).toBeVisible();
-  await page.getByRole("button", { name: "Tell us" }).click();
+  await page.locator(".settingRow").filter({ hasText: "I sent money to a scam" }).getByRole("button", { name: "Tell us" }).click();
   await expect.poll(async () => (await calls(page)).find((call) => call[0] === "showNewMessage")?.[1]).toMatch(/^I sent money to a scam or the wrong address\./);
 });
 
