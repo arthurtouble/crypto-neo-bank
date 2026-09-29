@@ -278,7 +278,7 @@ export function WalletWorkspace({ children }: { children?: React.ReactNode }) {
           </section>
         </div>
         <aside className="mxSide">
-          <section className="mxCard" aria-label="Summary">
+          <section className="mxCard mxSummaryCard" aria-label="Summary">
             <h2>Summary</h2>
             <dl className="mxSummary">{summary.map(([label, value]) => <div key={label}><dt>{label}</dt><dd className={value === "Paid by Aura" ? "mxPositive" : undefined}>{value}</dd></div>)}</dl>
             {crossChain && <p className="mxHint">What arrives, after the route&apos;s fees, shows on the review.</p>}

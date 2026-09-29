@@ -154,6 +154,8 @@
   .appFrame .mxField input, .appFrame .mxField select { font-size: 16px; }
   .appFrame .mxCard .appButton { justify-self: stretch; height: var(--control-height-lg); }
   .appFrame .mxAmountRow { grid-template-columns: minmax(0, 1fr) 110px; }
+  /* The form and its review already say all this on a phone. */
+  .appFrame .mxSummaryCard { display: none; }
   .appFrame .mxPanelHeadRow { flex-wrap: wrap; }
   .appFrame .mxPage .transactionSteps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
