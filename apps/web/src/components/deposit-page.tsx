@@ -103,6 +103,9 @@ export function DepositPage() {
   const { authenticated, ready, login } = usePrivy();
   const { address, ready: walletReady } = useAuraWallet();
   const isExample = ready && !authenticated;
+  // Until Privy knows who this is, label the page as example data (so the first render, and the server's, is labelled)
+  // but show nothing that looks like an account yet.
+  const loading = !ready;
   const [tab, setTab] = useState<Tab>("receive");
   // A link can open one way directly (/app/deposit#bank); read after hydrating so the server render matches.
   useEffect(() => {
@@ -116,9 +119,9 @@ export function DepositPage() {
     window.history.replaceState(null, "", `#${next}`);
   }
 
-  const needsWallet = !isExample && (!walletReady || !address);
+  const needsWallet = loading || (!isExample && (!walletReady || !address));
   return <div className="mxPage">
-    {isExample && <GuestBanner onSignIn={login} ready={ready} />}
+    {(isExample || loading) && <GuestBanner onSignIn={login} ready={ready} />}
     <header className="mxHead"><h1>Deposit</h1></header>
     <div className="mxColumns">
       <div className="mxMain">
@@ -147,7 +150,7 @@ export function DepositPage() {
             {isExample ? <SignInToAdd onSignIn={login} /> : needsWallet || !address ? <SettingUp /> : <AddFromWallet account={address} />}
           </section>}
           {tab === "card" && (needsWallet ? <SettingUp /> : <CardPanel address={account} isExample={isExample} onSignIn={login} />)}
-          {tab === "bank" && (isExample ? <section className="mxPanel" aria-labelledby="deposit-bank">
+          {tab === "bank" && (loading ? <SettingUp /> : isExample ? <section className="mxPanel" aria-labelledby="deposit-bank">
             <div className="mxPanelHead"><h2 id="deposit-bank">Deposit from a bank</h2>
               <p>Bridge, our banking partner, verifies your identity, then gives you US bank details. Deposits arrive as USDC in your Aura account.</p></div>
             <SignInToAdd onSignIn={login} />
