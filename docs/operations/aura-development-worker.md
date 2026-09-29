@@ -6,6 +6,11 @@
 
 Merging to `main` deploys dev. On every push to `main`, without waiting for the `quality` workflow, `.github/workflows/deploy-dev.yml` resets the database if the baseline changed, applies migrations, deploys the events, web, operations, and docs Workers, and runs the deployment smoke. Work happens on branches; open a pull request and merge it right away to ship to dev. CI still runs on `main`; when it fails, dev is running code that failed checks until the fix merges. The workflow can also be run by hand from the Actions tab. It never deploys production.
 
+When GitHub Actions can't run (for example, when the month's included minutes are used up, jobs fail within seconds with no runner), do both jobs by hand:
+
+- **Checks:** `pnpm ci:local` runs what `ci.yml` and `security.yml` run, including `pnpm audit`. Add `--e2e` for both Playwright projects. gitleaks and CodeQL run only if they're installed, and the summary lists what was skipped. Merge once it passes.
+- **Deploy:** after merging, check out `main`, pull, and run `pnpm deploy:dev:all`. It runs the same steps as `deploy-dev.yml` (migrations, the four Workers, the smoke) and stops unless `main` is clean and matches `origin/main`. It needs `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` in the environment and only targets `--env dev`.
+
 It needs two secrets on the `dev` GitHub environment (Settings → Environments → dev): `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`. The token needs Workers Scripts, D1, and Queues edit permissions on the account.
 
 To deploy from a machine instead:

@@ -61,6 +61,7 @@ Every row in `docs/overview/feature-readiness.md` is done or cut. Product work n
 
 - `apps/web/wrangler.jsonc` top level = production (`aurel-financial-os`, D1 `aurel-projections`). `--env dev` = isolated dev (`aura-dev`, D1 `aura-dev-projections`, queue `aura-dev-provider-events`).
 - Default to dev. Every push to `main` deploys dev right away (`.github/workflows/deploy-dev.yml`), with CI running alongside, so work on branches and merge through pull requests. For quick iteration, a pull request can merge once lint, `typecheck:all`, and `test:unit` pass locally, without waiting for CI; a red CI run on `main` is the next thing to fix. To deploy by hand, use `pnpm deploy:dev`, `pnpm events:deploy:dev`, `pnpm docs:deploy:dev`, `pnpm ops:deploy:dev`; migrate with `pnpm --filter @aurel/web exec wrangler d1 migrations apply aura-dev-projections --remote --env dev`; then smoke with `AURA_SMOKE_URL=https://aura-dev.aurel-events.workers.dev AURA_SMOKE_DOCS_URL=https://aura-dev-docs.aurel-events.workers.dev pnpm test:deployment`.
+- When GitHub Actions can't run (no minutes left this month), run `pnpm ci:local` (add `--e2e` for Playwright) before merging, and `pnpm deploy:dev:all` from an up-to-date `main` after merging. See `docs/operations/aura-development-worker.md`.
 - Never deploy, migrate, or change secrets on production without explicit instruction. See `docs/operations/aura-development-worker.md` and `docs/operations/operations-runbook.md`.
 - Wrangler reads `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` from the environment.
 
