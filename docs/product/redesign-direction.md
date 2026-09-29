@@ -25,7 +25,7 @@ The owner hasn't answered these yet. Each has a proposed answer, marked as propo
 
 | Question | Answer |
 | --- | --- |
-| Apps in scope | Proposed: the customer app first, then the landing page and `/pay/[tag]`, then the docs site's look. The ops console gets the new tokens and components but no layout work. |
+| Apps in scope | Proposed: the customer app first, then the landing page and `/pay/[tag]`, then the docs site's look. Owner, 29 September: the ops console gets the new look only, with no layout redesign. |
 | Products liked, and why | Proposed, from the brief: Linear (speed, keyboard, restraint), Mercury (calm, exact tables), Stripe Dashboard (actions in drawers, clear hierarchy), Revolut and Wise (fast money actions on a phone). |
 | Three words | Owner: professional, streamlined, fast. |
 | What to keep from today | Owner: nothing visual. Keep the behavior: labeled example data, review before every money action, literal statuses, unavailable instead of stale. |
@@ -33,7 +33,7 @@ The owner hasn't answered these yet. Each has a proposed answer, marked as propo
 | Wireframes or high fidelity | Proposed: high fidelity in code. The directions below are already quick high-fidelity mockups. |
 | Where design happens | Proposed: in code. The design system reference page (`apps/web/public/design-system.html`) is the source of truth, reviewed in pull requests with screenshots. |
 | Brand assets | Proposed: a new wordmark and app icon are needed for the new look; no illustrations. Asset and provider logos come from their owners. Until then, a text wordmark. |
-| Primary navigation | Proposed in [redesign-journeys.md](redesign-journeys.md#navigation), to lock in phase 2. |
+| Primary navigation | Owner, 29 September: ten sections, not grouped. A sidebar on desktop; on the phone, a floating menu button that opens a sheet of ten tiles. See [redesign-journeys.md](redesign-journeys.md#navigation). |
 
 ## Structure, navigation, and desktop and mobile
 

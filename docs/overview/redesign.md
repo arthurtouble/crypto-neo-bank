@@ -57,10 +57,10 @@ Navigation is settled in phase 2 with the journeys; the rest is answered in phas
 | # | Area | Includes | Status |
 | --- | --- | --- | --- |
 | 1 | Inventory | Every screen and state, with screenshots and what's wrong today | Done ([#54](https://github.com/arthurtouble/crypto-neo-bank/pull/54)) |
-| 2 | Journeys and wireframes | Every journey, navigation, placement, and flow between screens, drawers, sheets, and dialogs, desktop and mobile | In progress ([#54](https://github.com/arthurtouble/crypto-neo-bank/pull/54)): waiting for the owner to lock it |
+| 2 | Journeys and wireframes | Every journey, navigation, placement, and flow between screens, drawers, sheets, and dialogs, desktop and mobile | In progress ([#54](https://github.com/arthurtouble/crypto-neo-bank/pull/54)): decisions answered on 29 September; waiting for the owner to confirm the updated storyboards |
 | 3 | Visual direction | Answers to the open questions; colour, type, and style; a one-page direction | Not started (three early mockups parked) |
 | 4 | Design system | Tokens, components, patterns; new `design-system.md`, `DESIGN.md`, and reference page | Not started |
-| 5 | App shell | Navigation, header, account menu, notifications inbox, toasts, sign-in and terms | Not started |
+| 5 | App shell | Sidebar (desktop), menu button and sheet (phone), header, notifications inbox, toasts, sign-in and terms | Not started |
 | 6 | Overview | Balances, total, groups | Not started |
 | 7 | Money actions | Deposit, Send, Swap, and the shared review, passkey, and tracking steps | Not started |
 | 8 | Earn | Positions and deposit and withdraw | Not started |
@@ -68,7 +68,7 @@ Navigation is settled in phase 2 with the journeys; the rest is answered in phas
 | 10 | Transactions and Insights | List, filters, receipt, detail, export, statement, Insights | Not started |
 | 11 | Settings and support | Settings sections, passkey, limits, recipients, Aura tag, support | Not started |
 | 12 | Landing and public pages | Landing, `/pay/[tag]`, waitlist, docs site look | Not started |
-| 13 | Operations console | `apps/ops` screens, if in scope | Not started |
+| 13 | Operations console | `apps/ops`: the new look only, no layout redesign (decided 29 September) | Not started |
 
 Status values: Not started, In progress, Done (with the pull request link), Cut.
 
