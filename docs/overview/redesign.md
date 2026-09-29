@@ -57,8 +57,8 @@ Navigation is settled in phase 2 with the journeys; the rest is answered in phas
 | # | Area | Includes | Status |
 | --- | --- | --- | --- |
 | 1 | Inventory | Every screen and state, with screenshots and what's wrong today | Done ([#54](https://github.com/arthurtouble/crypto-neo-bank/pull/54)) |
-| 2 | Journeys and wireframes | Every journey, navigation, placement, and flow between screens, drawers, sheets, and dialogs, desktop and mobile | In progress ([#54](https://github.com/arthurtouble/crypto-neo-bank/pull/54)): decisions answered on 29 September; waiting for the owner to confirm the updated storyboards |
-| 3 | Visual direction | Answers to the open questions; colour, type, and style; a one-page direction | Not started (three early mockups parked) |
+| 2 | Journeys and wireframes | Every journey, navigation, placement, and flow between screens, drawers, sheets, and dialogs, desktop and mobile | Done ([#54](https://github.com/arthurtouble/crypto-neo-bank/pull/54)): locked by the owner on 29 September |
+| 3 | Visual direction | Answers to the open questions; colour, type, and style; a one-page direction | In progress |
 | 4 | Design system | Tokens, components, patterns; new `design-system.md`, `DESIGN.md`, and reference page | Not started |
 | 5 | App shell | Sidebar (desktop), menu button and sheet (phone), header, notifications inbox, toasts, sign-in and terms | Not started |
 | 6 | Overview | Balances, total, groups | Not started |

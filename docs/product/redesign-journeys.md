@@ -142,4 +142,4 @@ Answered by the owner on 29 September 2026.
 | Ops console | The new look only, with no layout redesign. |
 | B1 to B6 | All approved. |
 
-Phase 2 locks when the owner confirms the updated storyboards.
+The owner confirmed the storyboards on 29 September 2026. Phase 2 is locked: screens are built to these journeys, and changes to them go through the owner.
