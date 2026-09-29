@@ -35,7 +35,7 @@
   --shadow: 0 16px 50px rgba(11, 23, 32, 0.06);
   --font-body: var(--font-sans), Inter, Arial, sans-serif;
   --font-editorial: var(--font-serif), Georgia, serif;
-  --font-technical: var(--font-mono), monospace;
+  --font-technical: var(--legacy-font-mono), monospace;
 }
 
 * { box-sizing: border-box; }
@@ -407,14 +407,14 @@ html[data-theme="dark"] .heroCopy h1 em { color: var(--accent); }
   --radius-control: 5px;
   --radius-panel: 8px;
   --radius-feature: 12px;
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 24px;
-  --space-6: 32px;
-  --space-7: 48px;
-  --space-8: 64px;
+  --legacy-space-1: 4px;
+  --legacy-space-2: 8px;
+  --legacy-space-3: 12px;
+  --legacy-space-4: 16px;
+  --legacy-space-5: 24px;
+  --legacy-space-6: 32px;
+  --legacy-space-7: 48px;
+  --legacy-space-8: 64px;
   --font-body: "Satoshi", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-editorial: "Satoshi", system-ui, sans-serif;
   --font-accent: var(--font-display), "Iowan Old Style", Baskerville, Georgia, serif;
@@ -443,7 +443,7 @@ body {
 }
 
 .eyebrow {
-  margin-bottom: var(--space-2);
+  margin-bottom: var(--legacy-space-2);
   color: var(--text-tertiary);
   font-family: var(--font-body);
   font-size: 12px;
@@ -740,7 +740,7 @@ body {
   --font-body: var(--font-sans), system-ui, sans-serif;
   --font-editorial: var(--font-sans), system-ui, sans-serif;
   --font-accent: var(--font-display), Georgia, serif;
-  --font-technical: var(--font-mono), ui-monospace, monospace;
+  --font-technical: var(--legacy-font-mono), ui-monospace, monospace;
 
   --ink-950: var(--text);
   --ink-900: #2c2c2e;
@@ -803,7 +803,7 @@ body {
   --font-body: var(--font-sans), system-ui, sans-serif;
   --font-editorial: var(--font-sans), system-ui, sans-serif;
   --font-accent: var(--font-display), Georgia, serif;
-  --font-technical: var(--font-mono), ui-monospace, monospace;
+  --font-technical: var(--legacy-font-mono), ui-monospace, monospace;
   color: var(--text);
   font-family: var(--font-body);
   transition: background-color 220ms var(--ease-out), color 220ms var(--ease-out);
