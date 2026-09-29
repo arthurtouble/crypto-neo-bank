@@ -79,7 +79,7 @@ test("verification Bridge rejects says so and offers no account", async ({ page 
   await edge("/__bridge/kyc", { email: customer.email, status: "rejected" });
   await page.goto("/app/deposit#bank");
   await expect(depositPanel(page).getByText("Bridge couldn't verify your identity. Contact Support.")).toBeVisible({ timeout: 30_000 });
-  await page.goto("/app/send");
+  await page.goto("/app/send#bank");
   await expect(sendPanel(page).getByText(/Set up your bank account on/)).toBeVisible({ timeout: 30_000 });
 });
 
@@ -87,7 +87,7 @@ test("a customer saves a bank account and sends to it; Transactions follows Brid
   test.setTimeout(150_000);
   const customer = await signIn(page, "100000000");
   await verified(page, customer);
-  await page.goto("/app/send");
+  await page.goto("/app/send#bank");
   await sendPanel(page).getByRole("button", { name: "Add bank account" }).click();
   const form = sendPanel(page).getByRole("form", { name: "Add bank account" });
   await form.getByLabel("Account holder name").fill("Jane Customer");
@@ -136,7 +136,7 @@ test("a payout the bank returns shows as failed with what Bridge is doing about 
   const bank = await asCustomer(page, customer, "POST", "/api/money/bank-accounts", { accountOwnerName: "Jane Customer", bankName: "Chase", accountNumber: "123456789",
     routingNumber: "021000021", checkingOrSavings: "checking", address: { streetLine1: "1 Test Street", city: "New York", state: "NY", postalCode: "10001", country: "USA" } });
   expect(bank).toMatchObject({ bankAccount: { lastFour: "6789" } });
-  await page.goto("/app/send");
+  await page.goto("/app/send#bank");
   const payout = sendPanel(page).getByRole("form", { name: "Send to a bank" });
   await payout.getByLabel("Amount in USD").fill("10");
   await payout.getByRole("button", { name: "Review and send" }).click();

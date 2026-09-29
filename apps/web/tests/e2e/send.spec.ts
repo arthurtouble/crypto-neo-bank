@@ -11,7 +11,8 @@ import { acceptTerms, asCustomer, ASSETS, edge, newCustomer, setBalances, setFea
 
 const RECIPIENT = "0x5555555555555555555555555555555555555555";
 const toast = (page: Page, title: string) => page.locator(".toastRegion").getByText(title, { exact: true });
-const dialog = (page: Page) => page.getByRole("dialog");
+// Send is a page (journey J5): the crypto form is the "Send crypto" region.
+const dialog = (page: Page) => page.getByRole("region", { name: "Send crypto" });
 const relayed = async () => ((await edge("/__sent")).sent ?? []).filter((item) => item.relayed);
 
 async function balance(page: Page, customer: Customer, id: string) {
@@ -31,7 +32,6 @@ async function openSend(page: Page, options: { mfa?: string[]; balances?: Record
 }
 
 async function fillSend(page: Page, input: { asset?: string; amount: string; to?: string }) {
-  await page.getByRole("button", { name: "Send", exact: true }).first().click();
   if (input.asset) await dialog(page).getByLabel("Asset").selectOption(input.asset);
   await dialog(page).getByLabel("Amount").fill(input.amount);
   if (input.to !== undefined) await dialog(page).getByLabel("To").fill(input.to);
@@ -281,6 +281,7 @@ test("an operation that reverts on chain is reported as failed, and nothing move
 
 test("bank transfers are shown as coming soon", async ({ page }) => {
   await openSend(page);
+  await page.getByRole("tab", { name: /To a bank account/ }).click();
   const bank = page.getByRole("region", { name: "Send to a bank" });
   await expect(bank.getByText("Coming soon", { exact: true })).toBeVisible();
 });
@@ -300,7 +301,7 @@ test("a new address can be saved as a recipient, with a name, as it's sent to", 
   await expect(toast(page, "Transfer complete")).toBeVisible({ timeout: 30_000 });
 
   // Next time it's one tap. New recipients start with the waiting period, which only matters with saved-recipients-only on.
-  await dialog(page).getByRole("button", { name: "Close" }).click();
+  await dialog(page).getByRole("button", { name: "New transfer" }).click();
   await fillSend(page, { amount: "1" });
   await dialog(page).getByRole("group", { name: "Recipients" }).getByRole("button", { name: /^Alex.*waiting period/ }).click();
   await expect(page.getByTestId("recipient-status")).toContainText("Saved recipient: Alex. In its waiting period until");
@@ -341,7 +342,7 @@ test("USDC can be sent to another network: LI.FI's fees come out of the amount, 
   // Transactions shows the journey, with only the current step in progress, and completes once the payout is on Arbitrum.
   await progress.getByRole("link", { name: "Track in Transactions" }).click();
   await expect(page).toHaveURL(/\/app\/transactions\?open=/);
-  const journey = dialog(page).getByRole("list", { name: "Progress" });
+  const journey = page.getByRole("dialog").getByRole("list", { name: "Progress" });
   await expect(journey.getByRole("listitem")).toHaveText([/^Sent from Base/, /^Confirmed on Base/, /^Delivered on ArbitrumIn progress/, /^Complete$/], { timeout: 30_000 });
   await expect(journey.locator(".spin")).toHaveCount(1);
   await edge("/__state", { bridge: { status: "DONE", substatus: "COMPLETED" } });
@@ -396,7 +397,7 @@ test("a tokenized stock can be sent on Base, and Tether Gold on Ethereum, where 
   await expect(toast(page, "Transfer complete")).toBeVisible({ timeout: 30_000 });
   expect(await balance(page, customer, `8453:${ASSETS.apple}`)).toBe("175000000");
   await page.locator(".toastRegion").getByRole("button").first().click().catch(() => undefined);
-  await dialog(page).getByRole("button", { name: "Close" }).click();
+  await dialog(page).getByRole("button", { name: "New transfer" }).click();
 
   await fillSend(page, { asset: "XAUt", amount: "0.25", to: RECIPIENT });
   await expect(dialog(page).getByLabel("Network").locator("option")).toHaveText(["Ethereum"]);
