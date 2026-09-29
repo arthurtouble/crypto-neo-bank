@@ -161,7 +161,7 @@
 .mxPickerSearch:focus-within { border-color: var(--color-focus); box-shadow: 0 0 0 1px var(--color-focus); }
 .mxPickerSearch svg { width: 16px; height: 16px; flex: none; }
 .mxPickerSearch input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; color: var(--color-text); font: inherit; }
-.mxPickerResults { flex: 1; min-height: 200px; overflow-y: auto; overscroll-behavior: contain; display: grid; align-content: start; gap: 2px; }
+.mxPickerResults { flex: 1; min-height: 200px; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; gap: 2px; }
 .mxPickerState { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-2); color: var(--color-text-secondary); font-size: var(--text-small-size); }
 .mxPickerState svg { width: 16px; height: 16px; }
 .mxPickerState button { border: 0; background: none; color: var(--color-accent); font: inherit; font-weight: var(--weight-medium); cursor: pointer; }
@@ -171,7 +171,8 @@
 .mxPickerOption:disabled { opacity: .45; cursor: not-allowed; }
 .mxPickerGlyph { width: 32px; height: 32px; flex: none; display: grid; place-items: center; border-radius: var(--radius-pill); background: var(--color-muted); color: var(--color-text-secondary); font-size: var(--text-small-size); font-weight: var(--weight-semibold); }
 .mxPickerIdentity { flex: 1; min-width: 0; display: grid; }
-.mxPickerIdentity strong { display: flex; align-items: baseline; gap: var(--space-2); font-weight: var(--weight-semibold); }
+.mxPickerIdentity strong { display: flex; align-items: baseline; gap: var(--space-2); min-width: 0; font-weight: var(--weight-semibold); }
+.mxPickerIdentity strong small { min-width: 0; }
 .mxPickerIdentity small { overflow: hidden; color: var(--color-text-secondary); font-size: var(--text-small-size); font-weight: var(--weight-regular); text-overflow: ellipsis; white-space: nowrap; }
 .mxPickerIdentity > span { overflow: hidden; color: var(--color-text-tertiary); font-size: var(--text-caption-size); text-overflow: ellipsis; white-space: nowrap; }
 .mxPickerTrust { display: inline-flex; align-items: center; gap: 4px; color: var(--color-text-secondary); font-size: var(--text-caption-size); white-space: nowrap; }

@@ -153,7 +153,8 @@ export function SwapWorkspace() {
           <div className="mxSwapSettings"><span className="mxLabel" id="swap-slippage">Max slippage</span>
             <div className="appSegmented" role="group" aria-labelledby="swap-slippage">{[10, 50, 100].map((value) => <button type="button" key={value} disabled={inFlight} aria-pressed={slippageBps === value} onClick={() => { setSlippageBps(value); clearQuote(); }}>{value / 100}%</button>)}</div></div>
           {error && <p className="mxFieldError" role="alert">{error}</p>}
-          <button className="appButton appButtonPrimary appButtonLarge" type="submit" disabled={quoting || inFlight || !address || !source || !destination}>
+          {/* One primary action at a time: once there's a quote, Swap is it. */}
+          <button className={`appButton appButtonLarge${quote ? "" : " appButtonPrimary"}`} type="submit" disabled={quoting || inFlight || !address || !source || !destination}>
             {quoting ? <><LoaderCircle className="spin" aria-hidden="true" /> Getting quote</> : !address ? "Preparing your wallet" : "Get quote"}
           </button>
         </form>
