@@ -21,7 +21,8 @@ The root layout loads `design-tokens.css` for the whole app. Areas rebuilt in ph
 | Area | Where | Status |
 | --- | --- | --- |
 | App shell: sidebar, top bar, phone header, menu button and sheet, account menu, notifications, toasts, terms and account screens | `apps/web/src/app/shell.css`, classes prefixed `app` | Rebuilt |
-| Pages inside the shell | `globals.css`, `product-system.css` | Old look until their area is rebuilt |
+| Overview: total, group chips, holdings table or list, holding detail, recent transactions, guest example, empty account | `apps/web/src/app/overview.css`, classes prefixed `ov`; the shared guest banner is in `shell.css` | Rebuilt |
+| Other pages inside the shell | `globals.css`, `product-system.css` | Old look until their area is rebuilt |
 
 ## Principles
 

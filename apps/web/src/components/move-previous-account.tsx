@@ -69,12 +69,14 @@ export function MovePreviousAccount() {
   }
 
   return (
-    <section className="panel">
-      <h2>Move funds to your new account</h2>
-      <p>Aura now uses a new account address. Your previous account still holds {holdings.map((item) =>
-        `${Number(formatUnits(item.raw, item.decimals)).toLocaleString(undefined, { maximumFractionDigits: 6 })} ${item.symbol}`).join(", ")}.</p>
-      <button className="button primary" disabled={phase === "confirm"} onClick={() => void move()}>
-        {phase === "confirm" ? <LoaderCircle className="spin" size={16} /> : <ArrowRight size={16} />}{phase === "confirm" ? "Confirm the move" : "Move everything"}
+    <section className="ovNotice ovMove" aria-label="Move funds to your new account">
+      <div>
+        <h2>Move funds to your new account</h2>
+        <p>Aura now uses a new account address. Your previous account still holds {holdings.map((item) =>
+          `${Number(formatUnits(item.raw, item.decimals)).toLocaleString(undefined, { maximumFractionDigits: 6 })} ${item.symbol}`).join(", ")}.</p>
+      </div>
+      <button className="appButton appButtonPrimary" disabled={phase === "confirm"} onClick={() => void move()}>
+        {phase === "confirm" ? <LoaderCircle className="spin" aria-hidden="true" /> : <ArrowRight aria-hidden="true" />}{phase === "confirm" ? "Confirm the move" : "Move everything"}
       </button>
     </section>
   );

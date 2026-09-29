@@ -1,0 +1,154 @@
+/*
+ * Overview (redesign area 6, journey J3), from the design tokens only. Desktop: total, group chips, one holdings
+ * table, and recent transactions beside it; a holding opens in a side panel. Phone: total, quick buttons, chips,
+ * a list; a holding opens as a pushed screen.
+ */
+
+.appFrame .ovPage { display: grid; gap: var(--gap-section); font-family: var(--font-sans); font-size: var(--text-body-size); line-height: var(--text-body-line); color: var(--color-text); font-variant-numeric: tabular-nums; }
+.appFrame .ovPage h1, .appFrame .ovPage h2, .appFrame .ovPage h3, .appFrame .ovPage p { margin: 0; }
+.appFrame .ovPage small { font-size: var(--text-small-size); line-height: var(--text-small-line); color: var(--color-text-secondary); }
+.appFrame .ovPage svg.lucide { width: 16px; height: 16px; }
+
+/* Title and actions */
+.appFrame .ovHead { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); }
+.appFrame .ovHead h1 { font-size: var(--text-title-1-size); line-height: var(--text-title-1-line); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-tight); }
+.appFrame .ovHeadActions { display: flex; gap: var(--space-2); }
+
+/* Total */
+.appFrame .ovTotal { display: grid; gap: var(--space-1); }
+.appFrame .ovLabel { color: var(--color-text-secondary); font-size: var(--text-small-size); font-weight: var(--weight-medium); }
+.appFrame .ovTotalValue { font-size: var(--text-display-size); line-height: var(--text-display-line); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-tight); }
+.appFrame .ovCents { color: var(--color-text-secondary); font-size: .55em; letter-spacing: 0; }
+.appFrame .ovTotal small { color: var(--color-text-secondary); }
+.appFrame .ovPartial { color: var(--color-warning); }
+.appFrame .ovUnavailable { color: var(--color-warning); }
+
+/* Quick buttons (phone only) */
+.appFrame .ovQuick { display: none; }
+
+/* Group chips */
+.appFrame .ovChips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.appFrame .ovChip { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 var(--space-3); border: 1px solid var(--color-line); border-radius: var(--radius-pill); background: var(--color-surface); color: var(--color-text-secondary); font: var(--weight-medium) var(--text-small-size) / 1 var(--font-sans); white-space: nowrap; cursor: pointer; transition: background var(--duration-fast) var(--ease-enter); }
+.appFrame .ovChip strong { color: var(--color-text); font-weight: var(--weight-semibold); }
+.appFrame .ovChip:hover { background: var(--color-hover); }
+.appFrame .ovChip[aria-pressed="true"] { background: var(--color-text); border-color: var(--color-text); color: var(--color-canvas); }
+.appFrame .ovChip[aria-pressed="true"] strong { color: var(--color-canvas); }
+.appFrame .ovChip:focus-visible, .appFrame .ovRow:focus-visible, .appFrame .ovRecentRow:focus-visible, .appFrame .ovQuick a:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+
+/* Columns */
+.appFrame .ovColumns { display: grid; grid-template-columns: minmax(0, 1fr) var(--side-column); gap: var(--gap-section); align-items: start; }
+.appFrame .ovMainColumn { display: grid; gap: var(--space-4); min-width: 0; }
+
+/* Cards */
+.appFrame .ovCard { background: var(--color-surface); border: 1px solid var(--color-line); border-radius: var(--radius-lg); box-shadow: var(--shadow-1); min-width: 0; }
+.appFrame .ovCardHead { display: flex; align-items: center; justify-content: space-between; padding: var(--space-3) var(--space-3) var(--space-2) var(--space-5); }
+.appFrame .ovCardHead h2 { font-size: var(--text-title-3-size); line-height: var(--text-title-3-line); font-weight: var(--weight-semibold); }
+
+/* Holdings table */
+.appFrame .ovTable { overflow: hidden; }
+.appFrame .ovTableHead, .appFrame .ovRow { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-4); align-items: center; padding: 0 var(--space-5); }
+.appFrame .ovTableHead { height: 40px; border-bottom: 1px solid var(--color-line); color: var(--color-text-secondary); font-size: var(--text-caption-size); font-weight: var(--weight-medium); }
+.appFrame .ovTableHead span:not(:first-child) { text-align: right; }
+.appFrame .ovGroup + .ovGroup { border-top: 1px solid var(--color-line); }
+.appFrame .ovGroupTitle { padding: var(--space-3) var(--space-5) var(--space-1); color: var(--color-text-secondary); font-size: var(--text-caption-size); line-height: var(--text-caption-line); font-weight: var(--weight-medium); }
+.appFrame .ovRow { width: 100%; min-height: var(--row-height); padding-block: var(--space-2); border: 0; background: none; color: var(--color-text); font: inherit; text-align: left; cursor: pointer; transition: background var(--duration-fast) var(--ease-enter); }
+.appFrame .ovRow + .ovRow { border-top: 1px solid var(--color-line); }
+.appFrame .ovRow:hover { background: var(--color-hover); }
+.appFrame .ovAsset { display: flex; align-items: center; gap: var(--space-3); min-width: 0; }
+.appFrame .ovAsset > span:last-child { display: grid; min-width: 0; }
+.appFrame .ovAsset strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: var(--weight-medium); }
+.appFrame .ovToken, .ovPanel .ovToken { width: 32px; height: 32px; flex: none; display: grid; place-items: center; border-radius: var(--radius-pill); background: var(--color-muted); color: var(--color-text-secondary); font: var(--weight-semibold) 9px / 1 var(--font-sans); letter-spacing: .02em; }
+.appFrame .ovAmount { text-align: right; color: var(--color-text-secondary); }
+.appFrame .ovValue { display: grid; justify-items: end; text-align: right; }
+.appFrame .ovValue strong { font-weight: var(--weight-medium); }
+
+/* Recent */
+.appFrame .ovRecentList { margin: 0; padding: 0 0 var(--space-2); list-style: none; display: grid; }
+.appFrame .ovRecentRow { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; gap: var(--space-3); align-items: center; min-height: var(--row-height); padding: var(--space-2) var(--space-5); color: var(--color-text); text-decoration: none; }
+.appFrame a.ovRecentRow:hover { background: var(--color-hover); }
+.appFrame .ovRecentList li + li .ovRecentRow { border-top: 1px solid var(--color-line); }
+.appFrame .ovRecentIcon { width: 32px; height: 32px; display: grid; place-items: center; border-radius: var(--radius-pill); background: var(--color-muted); color: var(--color-text-secondary); }
+.appFrame .ovRecentWhat, .appFrame .ovRecentAmount { display: grid; min-width: 0; }
+.appFrame .ovRecentWhat strong { font-weight: var(--weight-medium); }
+.appFrame .ovRecentAmount { justify-items: end; text-align: right; }
+.appFrame .ovRecentAmount strong { font-weight: var(--weight-medium); white-space: nowrap; }
+.appFrame .ovIn { color: var(--color-positive); }
+.appFrame .ovStatus { display: inline-flex; align-items: center; gap: 6px; font-size: var(--text-caption-size) !important; }
+.appFrame .ovStatus::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--color-text-tertiary); }
+.appFrame .ovStatus-completed::before { background: var(--color-positive); }
+.appFrame .ovStatus-pending::before { background: var(--color-warning); }
+.appFrame .ovStatus-failed::before { background: var(--color-negative); }
+.appFrame .ovRecentNote { padding: var(--space-2) var(--space-5) var(--space-5); color: var(--color-text-secondary); font-size: var(--text-small-size); }
+
+/* Empty account */
+.appFrame .ovEmpty { display: grid; gap: var(--space-5); justify-items: start; padding: var(--space-6); }
+.appFrame .ovEmpty h2 { font-size: var(--text-title-2-size); line-height: var(--text-title-2-line); font-weight: var(--weight-semibold); }
+.appFrame .ovEmpty p { color: var(--color-text-secondary); }
+.appFrame .ovWays { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4) var(--space-6); width: 100%; }
+.appFrame .ovWays li { display: flex; gap: var(--space-3); align-items: center; }
+.appFrame .ovWays li > span:last-child { display: grid; }
+.appFrame .ovWays strong { font-weight: var(--weight-medium); }
+.appFrame .ovWayIcon { width: 36px; height: 36px; flex: none; display: grid; place-items: center; border-radius: var(--radius-md); background: var(--color-accent-soft); color: var(--color-accent); }
+
+/* Notices: errors, the expired session, moving from a previous account */
+.appFrame .ovNotice { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); background: var(--color-accent-soft); }
+.appFrame .ovNoticeError { background: var(--color-negative-soft); }
+.appFrame .ovMove h2 { font-size: var(--text-body-size); font-weight: var(--weight-semibold); }
+.appFrame .ovMove p { color: var(--color-text-secondary); font-size: var(--text-small-size); }
+
+/* Loading */
+.appFrame .ovLoading { display: grid; gap: var(--gap-section); }
+.appFrame .ovSkel { display: block; height: 12px; border-radius: 4px; background: var(--color-muted); }
+.appFrame .ovSkelBig { height: 36px; width: 240px; margin: 4px 0; }
+.appFrame .ovSkelRow { display: flex; justify-content: space-between; align-items: center; gap: var(--space-4); min-height: var(--row-height); padding: 0 var(--space-5); }
+.appFrame .ovSkelRow .ovSkel:first-child { width: 40%; }
+.appFrame .ovSkelRow .ovSkel:last-child { width: 20%; }
+@media (prefers-reduced-motion: no-preference) { .appFrame .ovSkel { animation: ovPulse 1.4s ease-in-out infinite; } }
+@keyframes ovPulse { 50% { opacity: .5; } }
+
+/* Holding detail: a side panel on desktop, a pushed screen on the phone */
+.ovScrim { position: fixed; inset: 0; z-index: 70; background: var(--color-scrim); }
+.ovPanel { position: fixed; z-index: 71; top: 0; right: 0; bottom: 0; width: min(420px, 100vw); overflow-y: auto; display: grid; align-content: start; gap: var(--space-5); padding: var(--space-4) var(--space-5) var(--space-6); background: var(--color-raised); color: var(--color-text); box-shadow: var(--shadow-2); font-family: var(--font-sans); font-size: var(--text-body-size); line-height: var(--text-body-line); font-variant-numeric: tabular-nums; animation: ovPanelIn var(--duration-base) var(--ease-enter); }
+.ovPanelHead { display: flex; align-items: center; gap: var(--space-3); }
+.ovPanelHead h2 { flex: 1; margin: 0; font-size: var(--text-title-2-size); line-height: var(--text-title-2-line); font-weight: var(--weight-semibold); }
+.ovPanelBack { display: none !important; }
+.ovFacts { margin: 0; display: grid; border-top: 1px solid var(--color-line); }
+.ovFacts div { display: flex; justify-content: space-between; align-items: start; gap: var(--space-4); padding: var(--space-3) 0; border-bottom: 1px solid var(--color-line); }
+.ovFacts dt { color: var(--color-text-secondary); }
+.ovFacts dd { margin: 0; text-align: right; font-weight: var(--weight-medium); }
+.ovFacts .ovValue { display: grid; justify-items: end; }
+.ovFacts small { color: var(--color-text-secondary); font-size: var(--text-small-size); font-weight: var(--weight-regular); }
+.ovFacts .ovUnavailable { color: var(--color-warning); }
+.ovNote { margin: 0; color: var(--color-text-secondary); font-size: var(--text-small-size); }
+.ovPanelActions { display: grid; gap: var(--space-2); }
+@keyframes ovPanelIn { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .ovPanel { animation: none; } }
+
+/* Tablet: recent goes below the holdings */
+@media (max-width: 1023px) {
+  .appFrame .ovColumns { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Phone */
+@media (max-width: 767px) {
+  .appFrame .ovHeadActions, .appFrame .ovSideColumn, .appFrame .ovTableHead { display: none; }
+  .appFrame .ovQuick { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-2); }
+  .appFrame .ovQuick a { display: grid; justify-items: center; gap: 6px; color: var(--color-text); font-size: var(--text-small-size); font-weight: var(--weight-medium); text-decoration: none; }
+  .appFrame .ovQuick a > span { width: 48px; height: 48px; display: grid; place-items: center; border-radius: var(--radius-pill); background: var(--color-accent-soft); color: var(--color-accent); }
+  .appFrame .ovQuick svg.lucide { width: 20px; height: 20px; }
+  .appFrame .ovChips { flex-wrap: nowrap; overflow-x: auto; margin: 0 calc(-1 * var(--page-pad-x)); padding: 0 var(--page-pad-x); scrollbar-width: none; }
+  .appFrame .ovRow { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "asset value" "amount value"; row-gap: 0; padding-inline: var(--space-4); }
+  .appFrame .ovAsset { grid-area: asset; }
+  .appFrame .ovAmount { grid-area: amount; padding-left: 44px; text-align: left; font-size: var(--text-small-size); }
+  .appFrame .ovValue { grid-area: value; }
+  .appFrame .ovGroupTitle { padding-inline: var(--space-4); }
+  .appFrame .ovWays { grid-template-columns: minmax(0, 1fr); }
+  .appFrame .ovEmpty { padding: var(--space-5) var(--space-4); }
+  .appFrame .ovEmpty .appButton { width: 100%; height: var(--control-height-lg); }
+  .appFrame .ovNotice { flex-direction: column; align-items: stretch; }
+  .ovPanel { width: 100vw; padding-top: calc(var(--space-2) + env(safe-area-inset-top)); box-shadow: none; }
+  .ovScrim { display: none; }
+  .ovPanelBack { display: grid !important; margin-left: calc(-1 * var(--space-2)); }
+  .ovPanelClose { display: none !important; }
+  .ovPanelActions { position: sticky; bottom: 0; padding-bottom: env(safe-area-inset-bottom); background: var(--color-raised); }
+}
