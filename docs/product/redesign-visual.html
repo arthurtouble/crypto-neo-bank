@@ -1,0 +1,277 @@
+<title>Aura visual direction</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Hanken+Grotesk:wght@400;500;600;700&display=swap">
+<style>
+/* Page: a review board. Switches on top; the desktop screen, then four phone screens, all built on the locked storyboards. */
+:root {
+  --page: #f4f5f7; --panel: #ffffff; --ink: #111317; --ink2: #5c626d; --line: #dfe2e7; --focus: #2952d9;
+  --pf: "Geist", system-ui, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --page: #0c0e12; --panel: #15181e; --ink: #eceef2; --ink2: #9aa1ad; --line: #262a33; --focus: #7b97ff; color-scheme: dark; } }
+:root[data-theme="dark"] { --page: #0c0e12; --panel: #15181e; --ink: #eceef2; --ink2: #9aa1ad; --line: #262a33; --focus: #7b97ff; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { background: var(--page); color: var(--ink); font: 14px/1.5 var(--pf); padding-inline: 16px; padding-block: 0 64px; }
+.board { max-width: 1640px; margin: 0 auto; }
+.head { padding-block: 28px 8px; display: grid; gap: 6px; max-width: 80ch; }
+.head h1 { margin: 0; font-size: 24px; line-height: 1.2; }
+.head p { margin: 0; color: var(--ink2); }
+.controls { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10; background: var(--page); display: flex; flex-wrap: wrap; gap: 10px 22px; padding-block: 12px; border-bottom: 1px solid var(--line); margin-bottom: 20px; }
+.controls .lbl { display: block; font-size: 12px; color: var(--ink2); margin-bottom: 3px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--panel); }
+.seg button { font: 500 13px var(--pf); color: var(--ink2); background: none; border: 0; padding: 7px 12px; cursor: pointer; }
+.seg button[aria-pressed="true"] { color: var(--ink); background: var(--page); box-shadow: inset 0 -2px 0 var(--ink); }
+button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.cap { font-size: 12px; color: var(--ink2); margin: 0 0 6px; }
+.scroller { overflow-x: auto; border-radius: 12px; border: 1px solid var(--line); margin-bottom: 28px; width: fit-content; max-width: 100%; }
+.phones { display: flex; flex-wrap: wrap; gap: 22px; }
+.phones figure { margin: 0; display: grid; gap: 6px; }
+.phones figcaption { font-size: 12px; color: var(--ink2); }
+.notes { max-width: 90ch; margin-top: 28px; display: grid; gap: 8px; }
+.notes h2 { font-size: 16px; margin: 0; }
+.notes ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; color: var(--ink2); }
+
+/* ———— Mock tokens: light, then dark; accent and type switch per variant ———— */
+.v { --bg: #f7f8fa; --surface: #ffffff; --raised: #ffffff; --muted: #f1f3f6; --text: #0f1115; --text2: #5b6270; --text3: #8a909c; --line: #e6e8ec; --line2: #d6d9df;
+  --accent: #2952d9; --accent-hover: #2146c2; --on-accent: #ffffff; --accent-soft: #eef2fe; --pos: #0f7b52; --neg: #c1372b; --warn: #9a5a00; --warn-soft: #fdf5e8;
+  --shadow: 0 1px 2px rgb(16 24 40 / .05); --shadow-pop: 0 12px 32px rgb(16 24 40 / .14);
+  --r-s: 6px; --r-m: 8px; --r-l: 10px;
+  --f: "Geist", system-ui, sans-serif; --mono: "Geist Mono", ui-monospace, monospace;
+  background: var(--bg); color: var(--text); font: 14px/1.45 var(--f); font-variant-numeric: tabular-nums; position: relative; overflow: hidden; }
+.v.navy { --accent: #1c3a7a; --accent-hover: #162f64; --accent-soft: #edf1f8; }
+.v.hanken { --f: "Hanken Grotesk", system-ui, sans-serif; }
+.v.dark { --bg: #0b0d11; --surface: #12151b; --raised: #181c23; --muted: #1b1f27; --text: #edeff3; --text2: #a3a9b5; --text3: #707784; --line: #20242d; --line2: #2c313c;
+  --accent: #7b97ff; --accent-hover: #93aaff; --on-accent: #0b0d11; --accent-soft: #19213b; --pos: #3ecf8e; --neg: #ff7a6b; --warn: #f0ab4a; --warn-soft: #2a2114;
+  --shadow: 0 1px 2px rgb(0 0 0 / .4); --shadow-pop: 0 16px 40px rgb(0 0 0 / .5); }
+.v.dark.navy { --accent: #6f8fdb; --accent-hover: #86a2e6; --accent-soft: #172036; }
+.v * { margin: 0; }
+.v svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+/* Buttons, inputs, chips */
+.v .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 36px; padding: 0 14px; border-radius: var(--r-s); border: 1px solid var(--line2); background: var(--surface); color: var(--text); font: 500 14px var(--f); box-shadow: var(--shadow); white-space: nowrap; }
+.v .btn.pri { background: var(--accent); border-color: var(--accent); color: var(--on-accent); box-shadow: none; }
+.v .btn.full { width: 100%; height: 44px; font-size: 15px; }
+.v .btn.ghost { border-color: transparent; box-shadow: none; background: none; color: var(--accent); padding: 0 6px; }
+.v .field { display: grid; gap: 6px; }
+.v .field > span { font-size: 13px; font-weight: 500; color: var(--text2); }
+.v .input { height: 40px; border: 1px solid var(--line2); border-radius: var(--r-s); background: var(--surface); padding: 0 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--text); }
+.v .input.ph { color: var(--text3); }
+.v .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.v .chip { height: 30px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text2); }
+.v .chip b { font-weight: 500; color: var(--text); }
+.v .chip.on { background: var(--text); color: var(--bg); border-color: var(--text); }
+.v .chip.on b { color: var(--bg); }
+.v .chip.warn b { color: var(--warn); }
+.v .seg2 { display: inline-flex; background: var(--muted); border-radius: var(--r-m); padding: 3px; }
+.v .seg2 span { padding: 6px 12px; border-radius: var(--r-s); font-size: 13px; font-weight: 500; color: var(--text2); }
+.v .seg2 .on { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+.v .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-l); box-shadow: var(--shadow); }
+.v .card-h { display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; border-bottom: 1px solid var(--line); }
+.v .card-h h3 { font-size: 14px; font-weight: 600; }
+.v .muted { color: var(--text2); }
+.v .faint { color: var(--text3); }
+.v .pos { color: var(--pos); }
+.v .warn { color: var(--warn); }
+.v .tok { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 600; background: var(--muted); color: var(--text2); flex: none; }
+.v .pill { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; color: var(--text2); }
+.v .pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--pos); }
+.v .pill.pending::before { background: var(--warn); }
+.v .pill.fail::before { background: var(--neg); }
+.v .kv { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+.v .kv:last-child { border-bottom: 0; }
+.v .kv span { color: var(--text2); }
+.v .kv b { font-weight: 500; text-align: right; }
+.v .mono { font-family: var(--mono); font-size: 13px; }
+.v .note { display: flex; gap: 8px; align-items: flex-start; background: var(--warn-soft); color: var(--text); border-radius: var(--r-m); padding: 10px 12px; font-size: 13px; }
+.v .note svg { color: var(--warn); width: 16px; height: 16px; margin-top: 1px; }
+.v .brand { display: flex; align-items: center; gap: 9px; font-weight: 650; font-size: 18px; letter-spacing: -.01em; }
+.v .brand svg { width: 22px; height: 22px; stroke: var(--accent); stroke-width: 2.4; }
+
+/* ———— Desktop ———— */
+.v.desk { width: 1240px; height: 800px; display: grid; grid-template-columns: 232px 1fr; }
+.v .side { border-right: 1px solid var(--line); background: var(--surface); padding: 18px 12px; display: grid; align-content: start; gap: 2px; }
+.v .side .brand { padding: 2px 10px 18px; }
+.v .nav { display: flex; align-items: center; gap: 11px; height: 36px; padding: 0 10px; border-radius: var(--r-s); color: var(--text2); font-weight: 500; }
+.v .nav.on { background: var(--muted); color: var(--text); }
+.v .nav.on svg { color: var(--accent); }
+.v .col { display: grid; grid-template-rows: 60px 1fr; min-width: 0; }
+.v .top { display: flex; align-items: center; gap: 12px; padding: 0 28px; border-bottom: 1px solid var(--line); background: var(--surface); }
+.v .search { width: 340px; height: 36px; border-radius: var(--r-s); background: var(--muted); display: flex; align-items: center; gap: 8px; padding: 0 10px; color: var(--text3); }
+.v .search kbd { margin-left: auto; font: 500 11px var(--f); color: var(--text2); border: 1px solid var(--line2); border-radius: 4px; padding: 1px 5px; background: var(--surface); }
+.v .iconbtn { width: 36px; height: 36px; border-radius: var(--r-s); display: grid; place-items: center; color: var(--text2); position: relative; }
+.v .iconbtn i { position: absolute; top: 7px; right: 8px; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); border: 2px solid var(--surface); }
+.v .avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; font-size: 12px; font-weight: 600; }
+.v .main { padding: 28px 32px; overflow: hidden; display: grid; gap: 20px; align-content: start; }
+.v .ph { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+.v .ph h1 { font-size: 22px; font-weight: 600; letter-spacing: -.01em; }
+.v .acts { display: flex; gap: 8px; }
+.v .total { padding: 22px 24px; display: grid; gap: 6px; }
+.v .total .lbl { font-size: 13px; color: var(--text2); font-weight: 500; }
+.v .total .big { font-size: 40px; font-weight: 600; letter-spacing: -.02em; line-height: 1.1; }
+.v .total .big small { font-size: 22px; color: var(--text3); font-weight: 500; }
+.v .src { font-size: 13px; color: var(--text2); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.v .src .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--warn); }
+.v .grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 20px; align-items: start; }
+.v .tbl { width: 100%; border-collapse: collapse; font-size: 14px; }
+.v .tbl th { text-align: left; font-size: 12px; font-weight: 500; color: var(--text3); padding: 10px 18px; border-bottom: 1px solid var(--line); }
+.v .tbl td { padding: 12px 18px; border-bottom: 1px solid var(--line); }
+.v .tbl tr:last-child td { border-bottom: 0; }
+.v .tbl .r { text-align: right; }
+.v .asset { display: flex; align-items: center; gap: 12px; }
+.v .asset b { display: block; font-weight: 500; }
+.v .asset small { color: var(--text3); font-size: 12px; }
+.v .row { display: flex; align-items: center; gap: 12px; padding: 12px 18px; border-bottom: 1px solid var(--line); }
+.v .row:last-child { border-bottom: 0; }
+.v .row .grow { flex: 1; min-width: 0; }
+.v .row b { display: block; font-weight: 500; }
+.v .row small { color: var(--text3); font-size: 12px; }
+.v .row .amt { text-align: right; font-weight: 500; }
+.v .row .amt small { display: block; font-weight: 400; }
+/* Send */
+.v .send { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 20px; align-items: start; }
+.v .form { padding: 22px 24px; display: grid; gap: 20px; }
+.v .amount { display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 1px solid var(--line2); border-radius: var(--r-m); padding: 12px 14px; }
+.v .amount .n { font-size: 32px; font-weight: 600; letter-spacing: -.02em; }
+.v .assetbtn { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 10px 0 6px; border-radius: 999px; border: 1px solid var(--line2); font-weight: 500; }
+.v .assetbtn .tok { width: 24px; height: 24px; font-size: 9px; }
+.v .faces { display: flex; gap: 14px; }
+.v .face { display: grid; justify-items: center; gap: 5px; font-size: 12px; color: var(--text2); width: 64px; text-align: center; }
+.v .face .tok { width: 40px; height: 40px; font-size: 13px; }
+.v .face.on .tok { background: var(--accent); color: var(--on-accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.v .face.on { color: var(--text); font-weight: 500; }
+.v .summary { padding: 18px 20px; display: grid; gap: 4px; }
+.v .summary h3 { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+.v .review { width: 460px; justify-self: center; margin-top: 8px; padding: 24px; display: grid; gap: 6px; }
+.v .review .big { font-size: 34px; font-weight: 600; letter-spacing: -.02em; margin: 4px 0 8px; }
+.v .steps { display: flex; gap: 6px; } .v .steps i { flex: 1; height: 3px; border-radius: 2px; background: var(--line2); } .v .steps i.on { background: var(--accent); }
+.v .dayh { padding: 10px 18px; font-size: 12px; font-weight: 500; color: var(--text3); background: var(--bg); border-bottom: 1px solid var(--line); }
+
+/* ———— Phone ———— */
+.v.phone { width: 390px; height: 800px; border-radius: 36px; border: 10px solid #111; display: grid; grid-template-rows: auto 1fr auto; }
+.v .ptop { display: flex; align-items: center; gap: 10px; padding: 18px 20px 8px; }
+.v .ptop h1 { font-size: 20px; font-weight: 600; flex: 1; }
+.v .pmain { padding: 8px 20px 100px; display: grid; gap: 18px; align-content: start; overflow: hidden; }
+.v .quick { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.v .quick span { display: grid; justify-items: center; gap: 6px; font-size: 12px; font-weight: 500; }
+.v .quick i { width: 48px; height: 48px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; }
+.v .list { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-l); }
+.v .list .row { padding: 12px 14px; }
+.v .fab { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); width: 56px; height: 56px; border-radius: 50%; background: var(--text); color: var(--bg); display: grid; place-items: center; box-shadow: var(--shadow-pop); }
+.v .fab svg { width: 22px; height: 22px; }
+.v .scrim { position: absolute; inset: 0; background: rgb(8 10 14 / .45); }
+.v .sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--raised); border-radius: 20px 20px 0 0; padding: 10px 18px 22px; display: grid; gap: 14px; box-shadow: var(--shadow-pop); }
+.v .grab { width: 36px; height: 4px; border-radius: 2px; background: var(--line2); justify-self: center; }
+.v .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.v .tile { border: 1px solid var(--line); background: var(--surface); border-radius: var(--r-l); padding: 14px 6px 12px; display: grid; justify-items: center; gap: 8px; font-size: 13px; font-weight: 500; }
+.v .tile svg { width: 22px; height: 22px; color: var(--text2); }
+.v .tile.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.v .tile.on svg { color: var(--accent); }
+.v .pfoot { padding: 12px 20px 24px; display: grid; gap: 10px; }
+.v .huge { font-size: 52px; font-weight: 600; letter-spacing: -.03em; text-align: center; }
+.v .keypad { display: grid; grid-template-columns: repeat(3, 1fr); text-align: center; font-size: 24px; font-weight: 500; }
+.v .keypad span { padding: 13px 0; }
+@media (prefers-reduced-motion: no-preference) { .seg button { transition: color 120ms ease; } }
+</style>
+
+<div class="board">
+  <header class="head">
+    <h1>Aura visual direction</h1>
+    <p>Phase 3 of the redesign: the look, on top of the locked storyboards. Calm and exact like Mercury and Stripe. Neutral greys with one deep-blue accent, a clean sans with tabular numbers, balanced density, and soft corners. Pick one blue and one typeface; phase 4 turns the pick into the design system. All data is fictional.</p>
+  </header>
+  <div class="controls" role="group" aria-label="Mockup options">
+    <div><span class="lbl" id="l1">Desktop screen</span><div class="seg" role="group" aria-labelledby="l1" data-k="scr"><button type="button" data-v="overview" aria-pressed="true">Overview</button><button type="button" data-v="send" aria-pressed="false">Send</button><button type="button" data-v="review" aria-pressed="false">Send · review</button><button type="button" data-v="tx" aria-pressed="false">Transactions</button></div></div>
+    <div><span class="lbl" id="l2">Theme</span><div class="seg" role="group" aria-labelledby="l2" data-k="theme"><button type="button" data-v="light" aria-pressed="true">Light</button><button type="button" data-v="dark" aria-pressed="false">Dark</button></div></div>
+    <div><span class="lbl" id="l3">Blue</span><div class="seg" role="group" aria-labelledby="l3" data-k="accent"><button type="button" data-v="cobalt" aria-pressed="true">Cobalt</button><button type="button" data-v="navy" aria-pressed="false">Navy</button></div></div>
+    <div><span class="lbl" id="l4">Typeface</span><div class="seg" role="group" aria-labelledby="l4" data-k="font"><button type="button" data-v="geist" aria-pressed="true">Geist</button><button type="button" data-v="hanken" aria-pressed="false">Hanken Grotesk</button></div></div>
+  </div>
+  <p class="cap">Desktop, 1240 wide</p>
+  <div class="scroller"><div id="desk"></div></div>
+  <p class="cap">Phone, 390 wide</p>
+  <div class="phones" id="phones"></div>
+  <section class="notes">
+    <h2>What's decided here</h2>
+    <ul>
+      <li>One accent, used only for the primary action, the current place in the navigation, and focus. Everything else is greys.</li>
+      <li>Green, red, and amber mean completed, failed, and needs attention. They're never decoration. Unavailable values are amber text, never a number.</li>
+      <li>Money uses tabular figures so columns line up. Addresses use the matching mono face.</li>
+      <li>Three corner sizes (6px controls, 8px inner blocks, 10px cards), hairline borders, and shadows only for things that float: sheets, popovers, and the menu button.</li>
+      <li>The wordmark is a placeholder: "aura" set in the chosen typeface with a simple ring. The final wordmark and app icon are designed in phase 4.</li>
+    </ul>
+  </section>
+</div>
+
+<script>
+const P = {
+  overview: "M3 3h7v7H3zM14 3h7v5h-7zM14 12h7v9h-7zM3 14h7v7H3z", deposit: "M12 4v11M7 10l5 5 5-5M5 20h14", send: "M12 20V9M7 14l5-5 5 5M5 4h14",
+  swap: "M7 4v14M3.5 14.5 7 18l3.5-3.5M17 20V6M13.5 9.5 17 6l3.5 3.5", earn: "M3 17l6-6 4 4 7-7M14 8h6v6", cards: "M3 6h18v12H3zM3 10h18",
+  tx: "M4 6h16M4 12h16M4 18h10", insights: "M5 20V11M12 20V4M19 20v-7", settings: "M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2",
+  support: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM9.6 9.3a2.5 2.5 0 1 1 3.4 2.4c-.6.3-1 .8-1 1.5M12 16.5v.5", bell: "M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15zM10 20a2 2 0 0 0 4 0",
+  search: "M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4", back: "M15 5l-7 7 7 7", chev: "M9 6l6 6-6 6", grid: "M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z",
+  info: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 8v5M12 16v.5", down: "M6 9l6 6 6-6", export: "M12 3v12M7 8l5-5 5 5M5 21h14", check: "M5 12l5 5 9-10", ring: ""
+};
+const ic = (k) => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${P[k]}"/></svg>`;
+const brand = `<span class="brand"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><circle cx="15.5" cy="9" r="2.2" fill="currentColor" stroke="none" style="fill:var(--accent)"/></svg>aura</span>`;
+const NAV = [["Overview", "overview"], ["Deposit", "deposit"], ["Send", "send"], ["Swap", "swap"], ["Earn", "earn"], ["Cards", "cards"], ["Transactions", "tx"], ["Insights", "insights"], ["Settings", "settings"], ["Support", "support"]];
+const holdings = [["USDC", "USD Coin", "Cash · Base", "1,825.50 USDC", "$1,825.50"], ["EURC", "Euro Coin", "Cash · Base", "100 EURC", "$114.00"], ["ETH", "Ether", "Crypto · Base", "2 ETH", "$5,000.00"], ["BTC", "Coinbase Bitcoin", "Crypto · Base", "0.01 cbBTC", "$600.00"], ["AAPL", "Apple", "Stock · price 16:00", "2.5 AAPLc", "$853.77"], ["XAU", "Tether Gold", "Metal · Ethereum", "0.5 XAUt", null], ["AAVE", "Aave USDC", "Earn · 3.85% a year", "50 USDC", "$50.0012"]];
+const recent = [["↓", "Received", "From 0x5555…5555", "+20 USDC", "Today, 21:40", "pos"], ["▭", "Corner Cafe", "Card payment", "−$12.00", "Today, 09:12", ""], ["↑", "Sent to Sam", "Base", "−12.5 USDC", "Yesterday", ""]];
+const chips = `<div class="chips"><span class="chip on"><b>All</b></span><span class="chip">Cash <b>$1,939.50</b></span><span class="chip">Crypto <b>$5,600.00</b></span><span class="chip">Stocks <b>$853.77</b></span><span class="chip warn">Metals <b>Unavailable</b></span><span class="chip">Earn <b>$155.00</b></span></div>`;
+
+function shell(active, main) {
+  return `<div class="side">${brand}${NAV.map(([n, k]) => `<span class="nav ${n === active ? "on" : ""}">${ic(k)}${n}</span>`).join("")}</div>
+  <div class="col"><div class="top"><span class="search">${ic("search")}Search or jump to<kbd>⌘K</kbd></span><span style="flex:1"></span><span class="iconbtn">${ic("bell")}<i></i></span><span class="avatar">JC</span></div>
+  <div class="main">${main}</div></div>`;
+}
+const D = {
+  overview: () => shell("Overview", `<div class="ph"><h1>Overview</h1><div class="acts"><span class="btn">${ic("deposit")}Deposit</span><span class="btn">${ic("swap")}Swap</span><span class="btn pri">${ic("send")}Send</span></div></div>
+    <div class="card total"><span class="lbl">Total value</span><span class="big">$8,548<small>.27</small></span><span class="src">Read from the chains at 21:40 <span class="dot"></span> Tether Gold can't be valued right now, so it's left out</span></div>
+    ${chips}
+    <div class="grid"><div class="card"><table class="tbl"><thead><tr><th>Asset</th><th class="r">Amount</th><th class="r">Value</th></tr></thead><tbody>
+      ${holdings.map((h) => `<tr><td><div class="asset"><span class="tok">${h[0]}</span><div><b>${h[1]}</b><small>${h[2]}</small></div></div></td><td class="r muted">${h[3]}</td><td class="r">${h[4] ? `<b style="font-weight:500">${h[4]}</b>` : `<span class="warn">Unavailable</span>`}</td></tr>`).join("")}</tbody></table></div>
+    <div class="card"><div class="card-h"><h3>Recent</h3><span class="btn ghost">View all</span></div>${recent.map((r) => `<div class="row"><span class="tok">${r[0]}</span><div class="grow"><b>${r[1]}</b><small>${r[2]}</small></div><div class="amt ${r[5]}">${r[3]}<small class="faint">${r[4]}</small></div></div>`).join("")}</div></div>`),
+  send: () => shell("Send", `<div class="ph"><h1>Send</h1><div class="seg2"><span class="on">To a person or wallet</span><span>To a bank account</span></div></div>
+    <div class="send"><div class="card form">
+      <div class="field"><span>Amount</span><div class="amount"><span class="n">12.50</span><span class="assetbtn"><span class="tok">USDC</span>USDC ${ic("down")}</span></div><span class="muted" style="font-size:13px">1,825.50 USDC available · <b style="color:var(--accent);font-weight:500">Max</b></span></div>
+      <div class="field"><span>To</span><div class="faces"><span class="face on"><span class="tok">S</span>Sam</span><span class="face"><span class="tok">W</span>My wallet</span><span class="face"><span class="tok">T</span>Treasury</span><span class="face"><span class="tok">0x</span>0x8a41…</span></div><div class="input"><span class="mono">0x5555…5555</span><span class="muted" style="font-size:13px">Saved recipient: Sam</span></div></div>
+      <div class="field"><span>Arrives on</span><div class="input">Base ${ic("down")}</div></div></div>
+    <div class="card summary"><h3>Summary</h3><div class="kv"><span>You send</span><b>12.50 USDC</b></div><div class="kv"><span>To</span><b>Sam</b></div><div class="kv"><span>Network</span><b>Base</b></div><div class="kv"><span>Network fee</span><b class="pos">Paid by Aura</b></div><div style="margin-top:12px"><span class="btn pri full">Review</span></div></div></div>`),
+  review: () => shell("Send", `<div class="ph"><h1>Review</h1></div>
+    <div class="card review"><div class="steps"><i class="on"></i><i class="on"></i><i></i></div><span class="muted" style="margin-top:12px">You send</span><span class="big">12.50 USDC</span>
+      <div class="kv"><span>To</span><b>Sam · <span class="mono">0x5555…5555</span></b></div><div class="kv"><span>Network</span><b>Base</b></div><div class="kv"><span>Network fee</span><b class="pos">Paid by Aura</b></div><div class="kv"><span>Arrives</span><b>In seconds</b></div>
+      <div class="note" style="margin:10px 0">${ic("info")}<span>Transfers can't be reversed. Check the address before you confirm.</span></div>
+      <span class="btn pri full">Confirm and send</span><span class="btn full" style="box-shadow:none">Edit</span></div>`),
+  tx: () => shell("Transactions", `<div class="ph"><h1>Transactions</h1><span class="btn">${ic("export")}Export</span></div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span class="input ph" style="width:280px">${ic("search")}<span style="flex:1">Search transactions</span></span><div class="chips"><span class="chip on"><b>All</b></span><span class="chip">Sent</span><span class="chip">Received</span><span class="chip">Card</span><span class="chip">Swaps</span><span class="chip">Earn</span></div><span class="input" style="width:150px;margin-left:auto">All statuses ${ic("down")}</span></div>
+    <div class="card"><div class="dayh">Today</div>
+      <div class="row"><span class="tok">↑</span><div class="grow"><b>Sent to Sam</b><small>21:41 · Base · 0x5555…5555</small></div><div class="amt">−12.5 USDC<small><span class="pill">Completed</span></small></div></div>
+      <div class="row"><span class="tok">⌂</span><div class="grow"><b>Sent to bank</b><small>18:02 · Chase •••• 6789</small></div><div class="amt">−250 USDC<small><span class="pill pending">Bridge is reviewing</span></small></div></div>
+      <div class="dayh">Yesterday</div>
+      <div class="row"><span class="tok">↓</span><div class="grow"><b>Bank deposit</b><small>16:20 · From Jane Customer</small></div><div class="amt pos">+250 USDC<small><span class="pill">Completed</span></small></div></div>
+      <div class="row"><span class="tok">▭</span><div class="grow"><b>Electronics</b><small>13:05 · Card payment</small></div><div class="amt">$400.00<small><span class="pill fail">Declined</span></small></div></div>
+      <div class="row"><span class="tok">⇄</span><div class="grow"><b>Swapped USDC for Apple</b><small>11:48 · Base</small></div><div class="amt">+0.087 AAPLc<small><span class="pill">Completed</span></small></div></div></div>
+    <p class="faint" style="font-size:13px">Money sent and swaps are checked against the network. Money received comes from Alchemy's record of the network.</p>`)
+};
+
+const phoneTop = (title, back) => `<div class="ptop">${back ? `<span class="iconbtn" style="margin-left:-8px">${ic("back")}</span>` : ""}<h1>${title}</h1>${back ? "" : `<span class="iconbtn">${ic("bell")}<i></i></span>`}</div>`;
+const phoneOverview = `${phoneTop("Overview")}<div class="pmain">
+  <div style="display:grid;gap:4px"><span class="muted" style="font-size:13px;font-weight:500">Total value</span><span style="font-size:36px;font-weight:600;letter-spacing:-.02em">$8,548<span class="faint" style="font-size:22px">.27</span></span><span class="src" style="font-size:12px"><span class="dot"></span>Tether Gold left out</span></div>
+  <div class="quick"><span><i>${ic("deposit")}</i>Deposit</span><span><i>${ic("send")}</i>Send</span><span><i>${ic("swap")}</i>Swap</span><span><i>${ic("earn")}</i>Earn</span></div>
+  <div class="list">${holdings.slice(0, 5).map((h) => `<div class="row"><span class="tok">${h[0]}</span><div class="grow"><b>${h[1]}</b><small>${h[3]}</small></div><div class="amt">${h[4]}</div></div>`).join("")}</div></div>`;
+const PH = [
+  ["Overview, with the menu button", () => `${phoneOverview}<span class="fab" aria-label="Menu">${ic("grid")}</span>`],
+  ["The menu", () => `${phoneOverview}<div class="scrim"></div><div class="sheet"><span class="grab"></span><div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:16px">Menu</b><span class="muted" style="font-size:13px">jane@example.com</span></div><div class="tiles">${NAV.map(([n, k]) => `<span class="tile ${n === "Overview" ? "on" : ""}">${ic(k)}${n}</span>`).join("")}</div><span class="btn full" style="box-shadow:none">Log out</span></div>`],
+  ["Send: amount", () => `${phoneTop("Send", true)}<div class="pmain" style="padding-bottom:0"><div style="display:grid;justify-items:center;gap:10px;padding-top:24px"><span class="assetbtn"><span class="tok">USDC</span>USDC ${ic("down")}</span><span class="huge">12.50</span><span class="muted" style="font-size:13px">1,825.50 available · <b style="color:var(--accent);font-weight:500">Max</b></span></div></div><div class="pfoot"><div class="keypad">${["1","2","3","4","5","6","7","8","9",".","0","⌫"].map((k) => `<span>${k}</span>`).join("")}</div><span class="btn pri full">Continue</span></div>`],
+  ["Send: review", () => `${phoneTop("Review", true)}<div class="pmain" style="padding-bottom:0"><div class="steps"><i class="on"></i><i class="on"></i><i></i></div><div style="text-align:center;display:grid;gap:4px;padding:10px 0"><span class="muted">You send</span><span style="font-size:40px;font-weight:600;letter-spacing:-.02em">12.50 USDC</span></div><div class="list" style="padding:0 14px"><div class="kv"><span>To</span><b>Sam</b></div><div class="kv"><span>Address</span><b class="mono">0x5555…5555</b></div><div class="kv"><span>Network</span><b>Base</b></div><div class="kv"><span>Network fee</span><b class="pos">Paid by Aura</b></div></div><div class="note">${ic("info")}<span>Transfers can't be reversed.</span></div></div><div class="pfoot"><span class="btn pri full">Confirm and send</span></div>`]
+];
+
+const state = { scr: "overview", theme: "light", accent: "cobalt", font: "geist" };
+try { Object.assign(state, JSON.parse(localStorage.getItem("aura-visual") || "{}")); } catch (e) {}
+function cls() { return `v ${state.theme === "dark" ? "dark" : ""} ${state.accent === "navy" ? "navy" : ""} ${state.font === "hanken" ? "hanken" : ""}`; }
+function render() {
+  document.getElementById("desk").innerHTML = `<div class="${cls()} desk">${D[state.scr]()}</div>`;
+  document.getElementById("phones").innerHTML = PH.map(([cap, f]) => `<figure><figcaption>${cap}</figcaption><div class="${cls()} phone">${f()}</div></figure>`).join("");
+  document.querySelectorAll(".seg[data-k]").forEach((g) => g.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.v === state[g.dataset.k]))));
+  try { localStorage.setItem("aura-visual", JSON.stringify(state)); } catch (e) {}
+}
+document.querySelectorAll(".seg[data-k]").forEach((g) => g.addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; state[g.dataset.k] = b.dataset.v; render(); }));
+render();
+</script>

@@ -26,14 +26,31 @@ The owner hasn't answered these yet. Each has a proposed answer, marked as propo
 | Question | Answer |
 | --- | --- |
 | Apps in scope | Proposed: the customer app first, then the landing page and `/pay/[tag]`, then the docs site's look. Owner, 29 September: the ops console gets the new look only, with no layout redesign. |
-| Products liked, and why | Proposed, from the brief: Linear (speed, keyboard, restraint), Mercury (calm, exact tables), Stripe Dashboard (actions in drawers, clear hierarchy), Revolut and Wise (fast money actions on a phone). |
+| Products liked, and why | Owner, 29 September: Mercury and Stripe. Calm, precise, lots of white space, exact numbers, one accent colour. |
 | Three words | Owner: professional, streamlined, fast. |
 | What to keep from today | Owner: nothing visual. Keep the behavior: labeled example data, review before every money action, literal statuses, unavailable instead of stale. |
 | Mobile first? Native app? | Proposed: mobile and desktop equally, with every flow finishable one-handed on a phone. No native app planned yet; phone layouts use patterns that carry over (bottom tabs, sheets). |
-| Wireframes or high fidelity | Proposed: high fidelity in code. The directions below are already quick high-fidelity mockups. |
+| Wireframes or high fidelity | Wireframes first, then high fidelity: the locked storyboards (phase 2), then the high-fidelity look below. |
 | Where design happens | Proposed: in code. The design system reference page (`apps/web/public/design-system.html`) is the source of truth, reviewed in pull requests with screenshots. |
-| Brand assets | Proposed: a new wordmark and app icon are needed for the new look; no illustrations. Asset and provider logos come from their owners. Until then, a text wordmark. |
+| Brand assets | Owner, 29 September: nothing final. Phase 3 designs a new wordmark and app icon; no illustrations. Asset and provider logos come from their owners. |
 | Primary navigation | Owner, 29 September: ten sections, not grouped. A sidebar on desktop; on the phone, a floating menu button that opens a sheet of ten tiles. See [redesign-journeys.md](redesign-journeys.md#navigation). |
+
+## The look
+
+Answered by the owner on 29 September 2026.
+
+| Question | Answer |
+| --- | --- |
+| Closest products | Mercury and Stripe |
+| Theme | Follows the device: light and dark, designed equally |
+| Colour | Neutral greys with one accent |
+| Accent | Deep blue |
+| Type | A clean, neutral sans, with tabular figures for money |
+| Density | Balanced: comfortable spacing, tables readable at a glance |
+| Corners and surfaces | Soft and subtle: small radius (6 to 10px), hairline borders, very light shadows |
+| Brand | A new wordmark and app icon |
+
+The high-fidelity mockup is [`redesign-visual.html`](redesign-visual.html): Overview, Send, and Transactions on desktop, and Overview, the menu, and Send on the phone, built on the locked storyboards. It compares two blues and two typefaces, in light and dark. The owner picks one of each, and phase 4 turns it into the design system.
 
 ## Structure, navigation, and desktop and mobile
 
@@ -56,7 +73,7 @@ The first-time-address check step would add a screen to Send. It changes no serv
 
 ## Three early directions
 
-Parked until the journeys are locked. They were drawn before the skeleton, so their layouts will follow the journeys rather than the other way round.
+Superseded. They were drawn before the skeleton and before the owner's answers above; the look is now in [`redesign-visual.html`](redesign-visual.html). Kept for the record.
 
 
 The mockups are in [`redesign-directions.html`](redesign-directions.html): Overview and Send in each, desktop and phone, light and dark, with the same fictional example data.

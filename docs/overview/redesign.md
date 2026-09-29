@@ -20,7 +20,7 @@ It is step 2 of the four-step plan in feature readiness: make it work, **redesig
 
 1. **Inventory.** Every page, dialog, and state (loading, empty, error, disabled, signed out), on desktop and mobile, with screenshots from dev or the e2e fake. The result is the screen list below, filled in, and a short note of what's wrong today.
 2. **Journeys and wireframes.** The product skeleton, before any colour or type: every customer journey as numbered steps, the navigation, where each action lives, which buttons each screen has, and what opens what (pages, drawers, sheets, dialogs), for desktop and mobile separately. Greyscale wireframes only. The result is [redesign-journeys.md](../product/redesign-journeys.md) and the storyboards in [redesign-wireframes.html](../product/redesign-wireframes.html). The owner locks it before phase 3. Any journey that changes what a flow does is listed there as a behavior change and ships as its own pull request.
-3. **Visual direction.** Colour, type, and style, on top of the locked skeleton. The owner answers the rest of the open questions below. The result is [redesign-direction.md](../product/redesign-direction.md); the three early mockups in [redesign-directions.html](../product/redesign-directions.html) are a starting point, parked until phase 2 is locked.
+3. **Visual direction.** Colour, type, and style, on top of the locked skeleton. The owner answers the rest of the open questions below. The result is [redesign-direction.md](../product/redesign-direction.md) and the high-fidelity mockup [redesign-visual.html](../product/redesign-visual.html). The three early mockups in [redesign-directions.html](../product/redesign-directions.html) are superseded.
 4. **Design system.** Tokens (color, type, spacing, radius, elevation, motion), components, and patterns (money amounts, statuses, confirmations, lists, empty and error states), in light and dark. Desktop and mobile share the tokens but have separate components and flows (see the journeys). It replaces the current design-system doc and reference page, adds a root `DESIGN.md` that coding agents read, and ships as its own pull request before any screen.
 5. **Screens.** Area by area, in the order of the status table, built to the locked wireframes.
 6. **Landing and public pages.** The landing page, the Aura tag pay page, the waitlist, and the docs site's look.
@@ -58,7 +58,7 @@ Navigation is settled in phase 2 with the journeys; the rest is answered in phas
 | --- | --- | --- | --- |
 | 1 | Inventory | Every screen and state, with screenshots and what's wrong today | Done ([#54](https://github.com/arthurtouble/crypto-neo-bank/pull/54)) |
 | 2 | Journeys and wireframes | Every journey, navigation, placement, and flow between screens, drawers, sheets, and dialogs, desktop and mobile | Done ([#54](https://github.com/arthurtouble/crypto-neo-bank/pull/54)): locked by the owner on 29 September |
-| 3 | Visual direction | Answers to the open questions; colour, type, and style; a one-page direction | In progress |
+| 3 | Visual direction | Answers to the open questions; colour, type, and style; a one-page direction | In progress: the owner picks a blue and a typeface in `redesign-visual.html` |
 | 4 | Design system | Tokens, components, patterns; new `design-system.md`, `DESIGN.md`, and reference page | Not started |
 | 5 | App shell | Sidebar (desktop), menu button and sheet (phone), header, notifications inbox, toasts, sign-in and terms | Not started |
 | 6 | Overview | Balances, total, groups | Not started |
