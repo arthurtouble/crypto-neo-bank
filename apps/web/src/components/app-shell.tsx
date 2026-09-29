@@ -1,65 +1,100 @@
 "use client";
 
+import * as Dialog from "@radix-ui/react-dialog";
+import { usePrivy } from "@privy-io/react-auth";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X } from "lucide-react";
+import {
+  ArrowDownToLine, ArrowDownUp, ArrowUpFromLine, ChartNoAxesColumn, CircleHelp, CreditCard,
+  LayoutGrid, List, LogIn, Settings, TrendingUp, type LucideIcon
+} from "lucide-react";
 import { useEffect, useState } from "react";
-import { Brand } from "./brand";
-import { icons } from "./icons";
 import { navigation } from "@/lib/product-map";
-import { CommandMenu } from "./command-menu";
-import { ThemeToggle } from "./theme-toggle";
-import { PrivyAccountButton } from "./privy-account-button";
-import { ClientIdentity } from "./client-identity";
+import { AccountDetails, AccountMenu } from "./account-menu";
 import { AccountClosedGate } from "./account-closed";
+import { AppBrand } from "./brand";
+import { CommandMenu } from "./command-menu";
 import { NotificationBell } from "./notification-bell";
 import { SupportChatProvider } from "./support-chat";
+import { ThemeChoice } from "./theme-choice";
 
-const iconByPage: Record<string, typeof icons.dashboard> = {
-  Overview: icons.dashboard, Deposit: icons.received, Send: icons.sent,
-  Swap: icons.activity, Earn: icons.earn, Borrow: icons.money,
-  Cards: icons.card,
-  Transactions: icons.activity, Insights: icons.earn, Settings: icons.settings,
-  Support: icons.security
+/** The ten sections, in order, not grouped (redesign-journeys.md, Navigation). */
+const sections: { label: string; href: string }[] = navigation.flatMap((group) => [...group.items]);
+const iconFor: Record<string, LucideIcon> = {
+  Overview: LayoutGrid, Deposit: ArrowDownToLine, Send: ArrowUpFromLine, Swap: ArrowDownUp, Earn: TrendingUp,
+  Cards: CreditCard, Transactions: List, Insights: ChartNoAxesColumn, Settings, Support: CircleHelp
 };
 
+function isCurrent(pathname: string, href: string) {
+  return href === "/app" ? pathname === "/app" : pathname === href || pathname.startsWith(`${href}/`);
+}
+
+/**
+ * Desktop: a sidebar with the ten sections, and a top bar with search, the bell, and the account menu.
+ * Phone: a header with the wordmark and the bell, and a floating menu button that opens the sections as tiles.
+ */
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
+  const pathname = usePathname() ?? "/app";
+  return (
+    <div className="productShell appFrame">
+      <aside className="appSidebar">
+        <AppBrand />
+        <nav className="appNav" aria-label="Primary">
+          {sections.map((item) => {
+            const Icon = iconFor[item.label];
+            const current = isCurrent(pathname, item.href);
+            return <Link key={item.href} href={item.href} title={item.label} aria-current={current ? "page" : undefined}>
+              <Icon aria-hidden="true" /><span className="appNavLabel">{item.label}</span></Link>;
+          })}
+        </nav>
+      </aside>
+      <div className="appMain">
+        <header className="appTopbar">
+          <div className="appTopbarStart"><span className="appPhoneOnly"><AppBrand /></span><span className="appDesktopOnly"><CommandMenu /></span></div>
+          <div className="appTopbarEnd"><NotificationBell /><AccountMenu /></div>
+        </header>
+        <main className="appContent"><SupportChatProvider><AccountClosedGate>{children}</AccountClosedGate></SupportChatProvider></main>
+      </div>
+      <MenuSheet pathname={pathname} />
+    </div>
+  );
+}
+
+/** Phone only: the floating menu button and the sheet of ten tiles, three per row, with the account at the bottom. */
+function MenuSheet({ pathname }: { pathname: string }) {
   const [open, setOpen] = useState(false);
+  // Disabled until hydrated, so an early tap isn't lost.
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
     const frame = requestAnimationFrame(() => setMounted(true));
     return () => cancelAnimationFrame(frame);
   }, []);
-
+  const { authenticated, ready, login } = usePrivy();
   return (
-    <div className="productShell">
-      <aside className={`sidebar ${open ? "isOpen" : ""}`}>
-        <div className="sidebarTop">
-          <Brand compact />
-          <button className="mobileClose" onClick={() => setOpen(false)} aria-label="Close navigation"><X size={20} /></button>
-        </div>
-        <div className="environmentLabel"><span /> Aura</div>
-        <nav className="sideNav groupedNav" aria-label="Primary">
-          {navigation.map((group) => <div className="navGroup" key={group.group}><p>{group.group}</p>{group.items.map((item) => {
-            const Icon = iconByPage[item.label];
-            const active = pathname === item.href;
-            return <Link key={item.href} href={item.href} className={active ? "active" : ""} onClick={() => setOpen(false)}><Icon size={18} /><span>{item.label}</span></Link>;
-          })}</div>)}
-        </nav>
-        <div className="sidebarFooter">
-          <ClientIdentity />
-        </div>
-      </aside>
-      {open && <button className="navScrim" aria-label="Close menu" onClick={() => setOpen(false)} />}
-      <div className="productMain">
-        <header className="productHeader">
-          <button className="menuButton" onClick={() => setOpen(true)} aria-label="Open navigation" disabled={!mounted}><Menu size={20} /></button>
-          <CommandMenu />
-          <div className="headerRight"><span className="networkStatus"><i /> Secure Connection</span><NotificationBell /><ThemeToggle /><PrivyAccountButton /></div>
-        </header>
-        <main className="productContent"><SupportChatProvider><AccountClosedGate>{children}</AccountClosedGate></SupportChatProvider></main>
-      </div>
-    </div>
+    <Dialog.Root open={open} onOpenChange={setOpen}>
+      <Dialog.Trigger asChild>
+        <button type="button" className="appMenuButton" aria-label="Open menu" disabled={!mounted}><LayoutGrid aria-hidden="true" /></button>
+      </Dialog.Trigger>
+      <Dialog.Portal>
+        <Dialog.Overlay className="appScrim" />
+        <Dialog.Content className="appSheet">
+          <span className="appSheetHandle" aria-hidden="true" />
+          <div className="appSheetHead"><Dialog.Title>Menu</Dialog.Title><Dialog.Close className="appTextButton">Close</Dialog.Close></div>
+          <Dialog.Description className="srOnly">Go to a section of Aura.</Dialog.Description>
+          <nav className="appTiles" aria-label="Sections">
+            {sections.map((item) => {
+              const Icon = iconFor[item.label];
+              return <Dialog.Close asChild key={item.href}>
+                <Link href={item.href} aria-current={isCurrent(pathname, item.href) ? "page" : undefined}><Icon aria-hidden="true" />{item.label}</Link>
+              </Dialog.Close>;
+            })}
+          </nav>
+          {authenticated ? <AccountDetails /> : <div className="appAccount">
+            <div className="appAccountRow"><span>Theme</span><ThemeChoice /></div>
+            <button type="button" className="appButton appButtonPrimary" disabled={!ready} onClick={() => { setOpen(false); login(); }}><LogIn aria-hidden="true" />Sign in</button>
+          </div>}
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }

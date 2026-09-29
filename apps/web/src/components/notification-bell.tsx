@@ -2,17 +2,19 @@
 
 import { usePrivy } from "@privy-io/react-auth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bell } from "lucide-react";
+import { ArrowLeft, Bell } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useApi } from "@/lib/client/api";
 import type { NotificationView } from "@/lib/notifications/store";
+import { useDismiss } from "./account-menu";
 import { useToast } from "./toast";
 
 type Inbox = { notifications: NotificationView[]; unread: number };
 
 /**
- * The bell in the header: unread notices, a list of the latest, and a toast
+ * The bell in the header: unread notices, a list of the latest (a popover on
+ * desktop, a full screen on the phone), and a toast
  * for each notice that arrives while the customer is in the app. Checking also
  * picks up money received (`GET /api/notifications`).
  */
@@ -23,6 +25,10 @@ export function NotificationBell() {
   const toast = useToast();
   const [open, setOpen] = useState(false);
   const seen = useRef<Set<string> | null>(null);
+  const root = useRef<HTMLDivElement>(null);
+  const button = useRef<HTMLButtonElement>(null);
+  const close = useCallback(() => setOpen(false), []);
+  useDismiss(open, close, root, button);
   // Checked every 30 seconds, and whenever the customer comes back to the tab.
   const inbox = useQuery({ queryKey: ["notifications", user?.id], queryFn: () => api<Inbox>("/api/notifications"), enabled: Boolean(user),
     refetchInterval: 30_000, refetchOnWindowFocus: "always" });
@@ -51,17 +57,20 @@ export function NotificationBell() {
       await client.invalidateQueries({ queryKey: ["notifications", user?.id] });
     }
   }
-  return <div className="notificationBell">
-    <button className="iconButton" aria-label={unread ? `Notifications, ${unread} unread` : "Notifications"} aria-expanded={open} onClick={() => void toggle()}>
-      <Bell size={17} />{unread > 0 && <span className="notificationCount" data-testid="notification-count">{unread > 9 ? "9+" : unread}</span>}
+  return <div className="appBell" ref={root}>
+    <button ref={button} className="appIconButton" aria-label={unread ? `Notifications, ${unread} unread` : "Notifications"} aria-expanded={open} onClick={() => void toggle()}>
+      <Bell aria-hidden="true" />{unread > 0 && <span className="appBellCount" data-testid="notification-count">{unread > 9 ? "9+" : unread}</span>}
     </button>
-    {open && <section className="notificationPanel" role="dialog" aria-label="Notifications">
-      <h2>Notifications</h2>
+    {open && <section className="appPopover appInbox" role="dialog" aria-label="Notifications">
+      <div className="appInboxHead">
+        <button type="button" className="appIconButton appInboxBack" aria-label="Close notifications" onClick={() => { close(); button.current?.focus(); }}><ArrowLeft aria-hidden="true" /></button>
+        <h2>Notifications</h2>
+      </div>
       {inbox.data?.notifications.length ? <ul>{inbox.data.notifications.map((item) => <li key={item.id} className={item.read ? "" : "unread"}>
-        <Link href={item.link ?? "/app"} onClick={() => setOpen(false)}><strong>{item.title}</strong><small>{item.body}</small>
+        <Link href={item.link ?? "/app"} onClick={close}><strong>{item.title}</strong><span>{item.body}</span>
           <time>{new Date(item.createdAt).toLocaleString()}</time></Link></li>)}</ul>
-        : <p className="sourceCaption">Nothing yet. Money you receive, transactions you make, and security changes show up here.</p>}
-      <Link className="sourceCaption" href="/app/settings#notifications" onClick={() => setOpen(false)}>Notification settings</Link>
+        : <p className="appInboxEmpty">Nothing yet. Money you receive, transactions you make, and security changes show up here.</p>}
+      <Link className="appInboxSettings" href="/app/settings#notifications" onClick={close}>Notification settings</Link>
     </section>}
   </div>;
 }

@@ -1,6 +1,6 @@
 :root {
   --font-display: "Archivo Variable";
-  --font-mono: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  --legacy-font-mono: ui-monospace, "SFMono-Regular", Consolas, monospace;
   --accent: #123524;
   --accent-hover: #1b4b34;
   --accent-active: #0a2819;

@@ -2,13 +2,27 @@
 
 import { usePrivy } from "@privy-io/react-auth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { FileText } from "lucide-react";
+import * as Dialog from "@radix-ui/react-dialog";
+import { ExternalLink } from "lucide-react";
 import { useState } from "react";
 import { legalDocuments } from "@/lib/legal/documents";
+import { AppBrand } from "./brand";
 
 const docs = process.env.NEXT_PUBLIC_DOCS_URL ?? "https://aurel-docs.aurel-events.workers.dev";
 type TermsResponse = { accepted: boolean };
 class SessionExpired extends Error { constructor() { super("Your session expired."); } }
+
+/** A full screen with no app behind it: the terms, an expired session, or an account that can't load. It can't be dismissed. */
+function AccountScreen({ title, children }: { title: string; children: React.ReactNode }) {
+  const keep = (event: Event) => event.preventDefault();
+  return <Dialog.Root open>
+    <Dialog.Portal>
+      <Dialog.Content className="appScreen" onEscapeKeyDown={keep} onPointerDownOutside={keep} onInteractOutside={keep} aria-describedby={undefined}>
+        <div className="appScreenBody"><AppBrand /><Dialog.Title asChild><h1>{title}</h1></Dialog.Title>{children}</div>
+      </Dialog.Content>
+    </Dialog.Portal>
+  </Dialog.Root>;
+}
 
 /** Signed-in customers accept the current terms once per version before personal features load. */
 export function TermsGate({ children }: { children: React.ReactNode }) {
@@ -28,10 +42,10 @@ export function TermsGate({ children }: { children: React.ReactNode }) {
   const query = useQuery({ queryKey: ["terms", user?.id], queryFn: () => call(), enabled: authenticated, retry: false });
   if (!authenticated || query.data?.accepted) return children;
   if (query.isPending) return <div className="accessState" role="status"><span className="accessPulse" /><p>Loading your account…</p></div>;
-  if (query.error instanceof SessionExpired) return <section className="accessGate"><p className="eyebrow">Account</p><h1>Your session expired.</h1>
-    <button className="button primary" onClick={() => void logout().then(() => login())}>Sign in again</button></section>;
-  if (query.isError) return <section className="accessGate"><p className="eyebrow">Account</p><h1>We couldn’t load your account.</h1><p>{query.error.message}</p>
-    <button className="button primary" onClick={() => void query.refetch()}>Try again</button></section>;
+  if (query.error instanceof SessionExpired) return <AccountScreen title="Your session expired.">
+    <button className="appButton appButtonPrimary appButtonLarge" onClick={() => void logout().then(() => login())}>Sign in again</button></AccountScreen>;
+  if (query.isError) return <AccountScreen title="We couldn’t load your account."><p>{query.error.message}</p>
+    <button className="appButton appButtonPrimary appButtonLarge" onClick={() => void query.refetch()}>Try again</button></AccountScreen>;
   async function accept() {
     setSubmitting(true); setError("");
     try {
@@ -40,11 +54,17 @@ export function TermsGate({ children }: { children: React.ReactNode }) {
     } catch (caught) { setError(caught instanceof Error ? caught.message : "We couldn't confirm your acceptance."); }
     finally { setSubmitting(false); }
   }
-  return <section className="accessGate termsGate"><div className="accessGateMark"><FileText size={24} /></div><p className="eyebrow">Before you continue</p>
-    <h1>Review Aura’s terms.</h1>
+  const documents = [
+    { label: "Terms of use", href: `${docs}${legalDocuments.terms.path}` },
+    { label: "Privacy notice", href: `${docs}${legalDocuments.privacy.path}` },
+    { label: "Risk disclosure", href: `${docs}/legal/risk-disclosure/` }
+  ];
+  return <AccountScreen title="Review Aura’s terms.">
     <p>Aura helps you use your own wallet. You approve every transaction, blockchain transactions can be irreversible, and bank, card, and securities services come from separate providers under their own terms.</p>
-    <label className="termsConsent"><input type="checkbox" checked={agreed} onChange={(event) => setAgreed(event.target.checked)} />
-      <span>I agree to the <a href={`${docs}${legalDocuments.terms.path}`} target="_blank" rel="noreferrer">Terms of use</a> and have read the <a href={`${docs}${legalDocuments.privacy.path}`} target="_blank" rel="noreferrer">Privacy notice</a> and <a href={`${docs}/legal/risk-disclosure/`} target="_blank" rel="noreferrer">Risk disclosure</a>.</span></label>
-    {error ? <p className="formError" role="alert">{error}</p> : null}
-    <button className="button primary" disabled={!agreed || submitting} onClick={() => void accept()}>{submitting ? "Saving…" : "Continue"}</button></section>;
+    <ul className="appDocList">{documents.map((item) => <li key={item.label}><a href={item.href} target="_blank" rel="noreferrer">{item.label}<ExternalLink aria-hidden="true" /></a></li>)}</ul>
+    <label className="appCheck"><input type="checkbox" checked={agreed} onChange={(event) => setAgreed(event.target.checked)} />
+      <span>I agree to the Terms of use and have read the Privacy notice and Risk disclosure.</span></label>
+    {error ? <p className="appFieldError" role="alert">{error}</p> : null}
+    <button className="appButton appButtonPrimary appButtonLarge" disabled={!agreed || submitting} onClick={() => void accept()}>{submitting ? "Saving…" : "Continue"}</button>
+  </AccountScreen>;
 }

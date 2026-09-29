@@ -1,0 +1,160 @@
+/*
+ * The app shell in the redesign's system (docs/product/design-system.md): sidebar, top bar, phone header,
+ * menu button and sheet, account menu, notifications, toasts, and the full-screen account screens.
+ * Tokens only, from public/design-tokens.css. Rules are scoped under .appFrame (or to portalled
+ * classes) so they win over today's page styles without touching them.
+ */
+
+/* Frame */
+.productShell.appFrame { display: grid; grid-template-columns: var(--sidebar-width) minmax(0, 1fr); min-height: 100vh; min-height: 100dvh; background: var(--color-canvas); }
+.appFrame .appMain { min-width: 0; display: flex; flex-direction: column; }
+.appFrame .appContent { width: 100%; max-width: calc(var(--content-max) + 2 * var(--page-pad-x)); margin: 0 auto; padding: var(--page-pad-top) var(--page-pad-x) var(--space-10); }
+.appFrame svg.lucide { width: var(--icon-size); height: var(--icon-size); stroke-width: var(--icon-stroke); flex: none; }
+.appPhoneOnly, .appInboxBack { display: none; }
+.appMono { font-family: var(--font-mono); }
+
+/* Sidebar */
+.appFrame .appSidebar { position: sticky; top: 0; height: 100vh; height: 100dvh; display: flex; flex-direction: column; gap: var(--space-5); padding: var(--space-5) var(--space-3); background: var(--color-surface); border-right: 1px solid var(--color-line); font-family: var(--font-sans); overflow-y: auto; z-index: 40; }
+.appBrand { display: inline-flex; align-items: center; gap: var(--space-2); padding: 0 var(--space-2); height: var(--control-height); color: var(--color-text); font-family: var(--font-sans); font-size: var(--text-title-2-size); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-snug); text-decoration: none; }
+.appBrand svg { width: 22px; height: 22px; fill: none; stroke: var(--color-accent); stroke-width: 2.4; }
+.appBrand .appBrandDot { fill: var(--color-accent); stroke: none; }
+.appFrame .appNav { display: grid; gap: 2px; }
+.appFrame .appNav a { display: flex; align-items: center; gap: var(--space-3); height: var(--control-height); padding: 0 10px; border-radius: var(--radius-sm); color: var(--color-text-secondary); font-size: var(--text-body-size); font-weight: var(--weight-medium); text-decoration: none; transition: background var(--duration-fast) var(--ease-enter), color var(--duration-fast) var(--ease-enter); }
+.appFrame .appNav a:hover { background: var(--color-hover); color: var(--color-text); }
+.appFrame .appNav a[aria-current="page"] { background: var(--color-muted); color: var(--color-text); }
+.appFrame .appNav a[aria-current="page"] svg { color: var(--color-accent); }
+
+/* Top bar */
+.appFrame .appTopbar { position: sticky; top: 0; z-index: 30; height: var(--topbar-height); display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); padding: 0 var(--page-pad-x); background: var(--color-canvas); border-bottom: 1px solid var(--color-line); font-family: var(--font-sans); }
+.appFrame .appTopbarStart, .appFrame .appTopbarEnd { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
+.appFrame .commandSearch { display: flex; align-items: center; gap: var(--space-2); width: 320px; max-width: 100%; height: var(--control-height); padding: 0 var(--space-3); border: 1px solid var(--color-line-strong); border-radius: var(--radius-sm); background: var(--color-surface); color: var(--color-text-secondary); font: var(--weight-regular) var(--text-body-size) / 1 var(--font-sans); cursor: pointer; }
+.appFrame .commandSearch:hover { border-color: var(--color-text-tertiary); }
+.appFrame .commandSearch svg { width: 16px; height: 16px; }
+.appFrame .commandSearch kbd { margin-left: auto; display: inline-flex; align-items: center; gap: 2px; padding: 2px 6px; border: 1px solid var(--color-line); border-radius: 4px; background: var(--color-canvas); color: var(--color-text-secondary); font: var(--weight-medium) var(--text-caption-size) / 1 var(--font-sans); }
+.appFrame .commandSearch kbd svg { width: 11px; height: 11px; }
+
+/* Buttons used by the shell */
+.appButton { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); height: var(--control-height); padding: 0 var(--space-4); border: 1px solid var(--color-line-strong); border-radius: var(--radius-sm); background: var(--color-surface); color: var(--color-text); box-shadow: var(--shadow-1); font: var(--weight-medium) var(--text-body-size) / 1 var(--font-sans); white-space: nowrap; cursor: pointer; transition: background var(--duration-fast) var(--ease-enter); }
+.appButton:hover { background: var(--color-hover); }
+.appButton svg { width: 16px; height: 16px; stroke-width: var(--icon-stroke); }
+.appButtonPrimary { background: var(--color-accent); border-color: var(--color-accent); color: var(--color-on-accent); box-shadow: none; }
+.appButtonPrimary:hover { background: var(--color-accent-hover); border-color: var(--color-accent-hover); }
+.appButtonPrimary:active { background: var(--color-accent-pressed); }
+.appButton:disabled { opacity: .45; cursor: not-allowed; }
+.appButtonLarge { height: var(--control-height-lg); width: 100%; }
+.appTextButton { height: var(--control-height); padding: 0 var(--space-2); border: 0; background: none; color: var(--color-accent); font: var(--weight-medium) var(--text-body-size) / 1 var(--font-sans); cursor: pointer; }
+.appIconButton { position: relative; display: grid; place-items: center; width: var(--control-height); height: var(--control-height); padding: 0; border: 0; border-radius: var(--radius-sm); background: none; color: var(--color-text-secondary); cursor: pointer; }
+.appIconButton:hover { background: var(--color-hover); color: var(--color-text); }
+.appIconButton svg { width: var(--icon-size); height: var(--icon-size); stroke-width: var(--icon-stroke); }
+.appAvatar { width: 32px; height: 32px; display: grid; place-items: center; padding: 0; border: 0; border-radius: var(--radius-pill); background: var(--color-accent-soft); color: var(--color-accent); font: var(--weight-semibold) var(--text-caption-size) / 1 var(--font-sans); cursor: pointer; }
+.appButton:focus-visible, .appTextButton:focus-visible, .appIconButton:focus-visible, .appAvatar:focus-visible, .appMenuButton:focus-visible,
+.appFrame .appNav a:focus-visible, .appTiles a:focus-visible, .appSegmented button:focus-visible, .appFrame .commandSearch:focus-visible,
+.appInbox a:focus-visible, .appDocList a:focus-visible, .appCheck input:focus-visible, .toastRegion a:focus-visible, .toastRegion button:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+
+/* Segmented control (theme) */
+.appSegmented { display: inline-flex; gap: 2px; padding: 2px; border-radius: var(--radius-md); background: var(--color-muted); }
+.appSegmented button { height: 28px; padding: 0 var(--space-3); border: 0; border-radius: var(--radius-sm); background: none; color: var(--color-text-secondary); font: var(--weight-medium) var(--text-small-size) / 1 var(--font-sans); cursor: pointer; }
+.appSegmented button[aria-pressed="true"] { background: var(--color-surface); color: var(--color-text); box-shadow: var(--shadow-1); }
+
+/* Popovers: account menu and notifications on desktop */
+.appAccountMenu, .appBell { position: relative; }
+.appPopover { position: absolute; z-index: 60; top: calc(100% + var(--space-2)); right: 0; width: 320px; max-width: calc(100vw - 2 * var(--page-pad-x)); padding: var(--space-4); border: 1px solid var(--color-line); border-radius: var(--radius-md); background: var(--color-raised); color: var(--color-text); box-shadow: var(--shadow-2); font-family: var(--font-sans); font-size: var(--text-body-size); line-height: var(--text-body-line); }
+.appAccount { display: grid; gap: var(--space-4); font-family: var(--font-sans); }
+.appAccountWho { display: grid; gap: 2px; min-width: 0; }
+.appAccountWho strong { overflow: hidden; text-overflow: ellipsis; font-weight: var(--weight-semibold); }
+.appAccountWho span { color: var(--color-text-secondary); font-size: var(--text-small-size); }
+.appAccountRow { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); color: var(--color-text-secondary); font-size: var(--text-small-size); }
+
+.appBellCount { position: absolute; top: 3px; right: 2px; min-width: 16px; height: 16px; padding: 0 4px; display: grid; place-items: center; border: 2px solid var(--color-canvas); border-radius: var(--radius-pill); background: var(--color-accent); color: var(--color-on-accent); font: var(--weight-semibold) 10px / 1 var(--font-sans); box-sizing: content-box; }
+.appInbox { width: 360px; max-height: 70vh; overflow: auto; display: grid; gap: var(--space-2); padding: var(--space-3); }
+.appInboxHead { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-1) var(--space-2); }
+.appInbox h2 { margin: 0; font-size: var(--text-title-3-size); line-height: var(--text-title-3-line); font-weight: var(--weight-semibold); }
+.appInbox ul { margin: 0; padding: 0; list-style: none; display: grid; }
+.appInbox li a { display: grid; gap: 2px; padding: var(--space-2) var(--space-2) var(--space-2) var(--space-5); border-radius: var(--radius-sm); color: var(--color-text); text-decoration: none; position: relative; }
+.appInbox li a:hover { background: var(--color-hover); }
+.appInbox li.unread a::before { content: ""; position: absolute; left: var(--space-2); top: 15px; width: 6px; height: 6px; border-radius: 50%; background: var(--color-accent); }
+.appInbox li strong { font-weight: var(--weight-medium); }
+.appInbox li span { color: var(--color-text-secondary); font-size: var(--text-small-size); line-height: var(--text-small-line); }
+.appInbox li time { color: var(--color-text-tertiary); font-size: var(--text-caption-size); line-height: var(--text-caption-line); }
+.appInboxEmpty { margin: 0; padding: var(--space-2); color: var(--color-text-secondary); font-size: var(--text-small-size); }
+.appInboxSettings { justify-self: start; padding: var(--space-2); color: var(--color-accent); font-size: var(--text-small-size); font-weight: var(--weight-medium); text-decoration: none; }
+
+/* Phone menu: the floating button and the sheet of tiles */
+.appMenuButton { display: none; }
+.appScrim { position: fixed; inset: 0; z-index: 70; background: var(--color-scrim); }
+.appSheet { position: fixed; z-index: 71; left: 0; right: 0; bottom: 0; max-height: calc(100dvh - var(--space-8)); overflow-y: auto; display: grid; gap: var(--space-4); padding: var(--space-2) var(--page-pad-x) calc(var(--space-5) + env(safe-area-inset-bottom)); border-radius: var(--radius-sheet) var(--radius-sheet) 0 0; background: var(--color-raised); color: var(--color-text); box-shadow: var(--shadow-2); font-family: var(--font-sans); font-size: var(--text-body-size); line-height: var(--text-body-line); }
+.appSheetHandle { justify-self: center; width: 36px; height: 4px; border-radius: var(--radius-pill); background: var(--color-line-strong); }
+.appSheetHead { display: flex; align-items: center; justify-content: space-between; }
+.appSheetHead h2 { margin: 0; font-size: var(--text-title-2-size); line-height: var(--text-title-2-line); font-weight: var(--weight-semibold); }
+.appTiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.appTiles a { min-height: 76px; display: grid; justify-items: center; align-content: center; gap: var(--space-2); padding: var(--space-3) var(--space-1); border: 1px solid var(--color-line); border-radius: var(--radius-lg); background: var(--color-surface); color: var(--color-text); font-size: var(--text-small-size); font-weight: var(--weight-medium); text-align: center; text-decoration: none; }
+.appTiles a svg { width: 22px; height: 22px; stroke-width: var(--icon-stroke); color: var(--color-text-secondary); }
+.appTiles a[aria-current="page"] { border-color: var(--color-accent); box-shadow: 0 0 0 1px var(--color-accent); }
+.appTiles a[aria-current="page"] svg { color: var(--color-accent); }
+.appSheet .appAccount { padding-top: var(--space-4); border-top: 1px solid var(--color-line); }
+.appSheet .appButton { height: var(--control-height-lg); }
+
+/* Full-screen account screens: terms, expired session, account that can't load */
+.appScreen { position: fixed; inset: 0; z-index: 90; overflow-y: auto; display: grid; place-items: center; padding: var(--space-8) var(--page-pad-x); background: var(--color-canvas); color: var(--color-text); font-family: var(--font-sans); font-size: var(--text-body-size); line-height: var(--text-body-line); }
+.appScreenBody { width: min(440px, 100%); display: grid; gap: var(--space-5); }
+.appScreenBody .appBrand { justify-self: start; padding: 0; }
+.appScreenBody h1 { margin: var(--space-2) 0 0; font-size: var(--text-title-1-size); line-height: var(--text-title-1-line); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-tight); }
+.appScreenBody p { margin: 0; color: var(--color-text-secondary); }
+.appDocList { margin: 0; padding: 0; list-style: none; border: 1px solid var(--color-line); border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: var(--shadow-1); }
+.appDocList li + li { border-top: 1px solid var(--color-line); }
+.appDocList a { display: flex; align-items: center; justify-content: space-between; min-height: var(--row-height); padding: 0 var(--space-4); color: var(--color-text); font-weight: var(--weight-medium); text-decoration: none; }
+.appDocList a:hover { background: var(--color-hover); }
+.appDocList li:first-child a { border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
+.appDocList li:last-child a { border-radius: 0 0 var(--radius-lg) var(--radius-lg); }
+.appDocList svg { width: 16px; height: 16px; color: var(--color-text-secondary); stroke-width: var(--icon-stroke); }
+.appCheck { display: grid; grid-template-columns: auto 1fr; gap: var(--space-3); align-items: start; cursor: pointer; }
+.appCheck input { width: 18px; height: 18px; margin: 1px 0 0; accent-color: var(--color-accent); }
+.appFieldError { color: var(--color-negative) !important; font-size: var(--text-small-size); }
+
+/* Toasts: bottom right on desktop, top on the phone */
+.toastRegion { position: fixed; z-index: 1000; right: var(--space-5); bottom: var(--space-5); width: min(360px, calc(100vw - 2 * var(--space-4))); display: grid; gap: var(--space-2); pointer-events: none; font-family: var(--font-sans); }
+.toast { pointer-events: auto; display: grid; grid-template-columns: 20px minmax(0, 1fr) 28px; align-items: start; gap: var(--space-3); padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4); border: 1px solid var(--color-line); border-radius: var(--radius-lg); background: var(--color-raised); color: var(--color-text); box-shadow: var(--shadow-2); animation: appToastIn var(--duration-base) var(--ease-enter); }
+.toastIcon { display: grid; place-items: center; height: 20px; color: var(--color-accent); }
+.toastIcon svg { width: 16px; height: 16px; }
+.toast.success .toastIcon { color: var(--color-positive); }
+.toast.error .toastIcon { color: var(--color-negative); }
+.toastText { min-width: 0; display: grid; gap: 2px; }
+.toastText strong { font-size: var(--text-body-size); line-height: var(--text-body-line); font-weight: var(--weight-semibold); }
+.toastText small { color: var(--color-text-secondary); font-size: var(--text-small-size); line-height: var(--text-small-line); }
+.toastText a { justify-self: start; margin-top: var(--space-1); color: var(--color-accent); font-size: var(--text-small-size); font-weight: var(--weight-medium); }
+.toastClose { width: 28px; height: 28px; display: grid; place-items: center; margin: -4px 0; border: 0; border-radius: var(--radius-sm); background: none; color: var(--color-text-secondary); cursor: pointer; }
+.toastClose:hover { background: var(--color-hover); color: var(--color-text); }
+@keyframes appToastIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* Tablet: the sidebar narrows to icons, names in tooltips */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .productShell.appFrame { grid-template-columns: 72px minmax(0, 1fr); }
+  .appFrame .appSidebar { align-items: center; padding-inline: var(--space-2); }
+  .appFrame .appBrand span { display: none; }
+  .appFrame .appNav a { justify-content: center; width: 44px; padding: 0; }
+  .appFrame .appNavLabel { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+}
+
+/* Phone: no sidebar or tab bar; a header, and the floating menu button */
+@media (max-width: 767px) {
+  .productShell.appFrame { display: block; }
+  .appFrame .appSidebar, .appDesktopOnly, .appAvatar { display: none; }
+  .appPhoneOnly { display: contents; }
+  .appFrame .appTopbar { height: 56px; }
+  .appFrame .appTopbar .appBrand { padding: 0; }
+  .appFrame .appContent { padding-bottom: 100px; }
+  .appMenuButton { position: fixed; z-index: 50; left: 50%; bottom: calc(22px + env(safe-area-inset-bottom)); transform: translateX(-50%); width: var(--menu-button); height: var(--menu-button); display: grid; place-items: center; padding: 0; border: 0; border-radius: var(--radius-pill); background: var(--color-text); color: var(--color-canvas); box-shadow: var(--shadow-2); cursor: pointer; }
+  .appMenuButton svg { width: 22px; height: 22px; stroke-width: var(--icon-stroke); }
+  /* Out of the way while typing. */
+  .appFrame:has(:is(input, textarea, select):focus) .appMenuButton { display: none; }
+  .appInbox { position: fixed; z-index: 65; inset: 0; width: auto; max-width: none; max-height: none; border: 0; border-radius: 0; box-shadow: none; align-content: start; padding: var(--space-2) var(--page-pad-x) var(--space-8); }
+  .appFrame .appInboxBack { display: grid; }
+  .appFrame:has(.appInbox) .appMenuButton { display: none; }
+  .appInboxHead { height: 48px; padding: 0; margin-left: calc(-1 * var(--space-2)); }
+  .appInbox h2 { font-size: var(--text-title-2-size); }
+  .appInbox li a { min-height: var(--row-height); }
+  .toastRegion { top: calc(var(--space-3) + env(safe-area-inset-top)); bottom: auto; left: var(--space-4); right: var(--space-4); width: auto; }
+  @keyframes appToastIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+}
+
+@media (prefers-reduced-motion: reduce) { .toast { animation: none; } }

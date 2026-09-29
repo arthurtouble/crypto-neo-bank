@@ -27,7 +27,7 @@ export default function Web3RuntimeProvider({ children }: { children: React.Reac
         supportedChains: [...SUPPORTED_CHAINS],
         appearance: {
           theme: "light",
-          accentColor: "#123524",
+          accentColor: "#3d3fe0",
           landingHeader: "Welcome to Aura",
           loginMessage: "Sign in to your Aura account."
         },

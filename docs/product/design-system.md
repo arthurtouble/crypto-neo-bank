@@ -16,7 +16,12 @@ Three files hold the system, and they must agree:
 
 Change a value in `design-tokens.css` first, then here, `DESIGN.md`, and the reference page, in the same pull request.
 
-Today's screens still use `apps/web/src/app/product-system.css` and the old look. Each area moves to these tokens when it's rebuilt in phase 5; until then both exist side by side. Don't mix them on one screen.
+The root layout loads `design-tokens.css` for the whole app. Areas rebuilt in phase 5 are styled from the tokens only; the rest still use `globals.css` and `product-system.css`, whose clashing variables were renamed `--legacy-space-*` and `--legacy-font-mono` so the two can load together. Don't mix them inside one area.
+
+| Area | Where | Status |
+| --- | --- | --- |
+| App shell: sidebar, top bar, phone header, menu button and sheet, account menu, notifications, toasts, terms and account screens | `apps/web/src/app/shell.css`, classes prefixed `app` | Rebuilt |
+| Pages inside the shell | `globals.css`, `product-system.css` | Old look until their area is rebuilt |
 
 ## Principles
 

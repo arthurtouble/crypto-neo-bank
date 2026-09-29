@@ -184,7 +184,8 @@ test("signing out returns to the example Overview", async ({ page }) => {
   const customer = await newCustomer();
   await openOverview(page, customer);
   await expect(page.getByTestId("portfolio-total")).toBeVisible({ timeout: 30_000 });
-  // The header keeps Log out in reach on every width.
+  // Log out is in the account menu on desktop and in the menu sheet on the phone.
+  await page.getByRole("button", { name: page.viewportSize()!.width < 768 ? "Open menu" : "Account" }).click();
   await page.getByRole("button", { name: "Log out of Aura" }).click();
   await expect(page.getByText("Example data", { exact: true })).toBeVisible();
   await expect(page.getByTestId("portfolio-total")).toHaveCount(0);
