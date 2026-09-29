@@ -8,7 +8,7 @@ import {
   ArrowDownToLine, ArrowDownUp, ArrowUpFromLine, ChartNoAxesColumn, CircleHelp, CreditCard,
   LayoutGrid, List, LogIn, Settings, TrendingUp, type LucideIcon
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { navigation } from "@/lib/product-map";
 import { AccountDetails, AccountMenu } from "./account-menu";
 import { AccountClosedGate } from "./account-closed";
@@ -63,11 +63,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 /** Phone only: the floating menu button and the sheet of ten tiles, three per row, with the account at the bottom. */
 function MenuSheet({ pathname }: { pathname: string }) {
   const [open, setOpen] = useState(false);
+  // Disabled until hydrated, so an early tap isn't lost.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(frame);
+  }, []);
   const { authenticated, ready, login } = usePrivy();
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Trigger asChild>
-        <button type="button" className="appMenuButton" aria-label="Open menu"><LayoutGrid aria-hidden="true" /></button>
+        <button type="button" className="appMenuButton" aria-label="Open menu" disabled={!mounted}><LayoutGrid aria-hidden="true" /></button>
       </Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Overlay className="appScrim" />
