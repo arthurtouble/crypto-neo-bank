@@ -14,19 +14,20 @@ It is step 2 of the four-step plan in feature readiness: make it work, **redesig
 - **Tests keep passing.** Existing end-to-end specs cover every customer step. Update selectors when markup changes, never the behavior a test checks. Don't delete a test to get green.
 - **Copy stays as it is**, unless a layout change forces a label to move or shorten. Step 3 rewrites it.
 - **Guest pages keep their labeled example data.**
-- **The design system comes first.** [`docs/product/design-system.md`](../product/design-system.md) and the reference page `apps/web/public/design-system.html` are rewritten in phase 3, and screens are built from them. Don't make one-off styles in a screen.
+- **The design system comes first.** [`docs/product/design-system.md`](../product/design-system.md) and the reference page `apps/web/public/design-system.html` are rewritten in phase 4, and screens are built from them. Don't make one-off styles in a screen.
 
 ## Phases
 
 1. **Inventory.** Every page, dialog, and state (loading, empty, error, disabled, signed out), on desktop and mobile, with screenshots from dev or the e2e fake. The result is the screen list below, filled in, and a short note of what's wrong today.
-2. **Direction.** The product owner answers the open questions below. The result is a one-page direction: character, references, what to keep, what to drop. It is [redesign-direction.md](../product/redesign-direction.md), with three mockups to choose from in [redesign-directions.html](../product/redesign-directions.html).
-3. **Design system.** Tokens (color, type, spacing, radius, elevation, motion), components, and patterns (money amounts, statuses, confirmations, lists, empty and error states), in light and dark. Desktop and mobile share the tokens but have separate components and flows (see the direction). It replaces the current design-system doc and reference page, adds a root `DESIGN.md` that coding agents read, and ships as its own pull request before any screen.
-4. **Screens.** Area by area, in the order of the status table.
-5. **Landing and public pages.** The landing page, the Aura tag pay page, the waitlist, and the docs site's look.
+2. **Journeys and wireframes.** The product skeleton, before any colour or type: every customer journey as numbered steps, the navigation, where each action lives, which buttons each screen has, and what opens what (pages, drawers, sheets, dialogs), for desktop and mobile separately. Greyscale wireframes only. The result is [redesign-journeys.md](../product/redesign-journeys.md) and the storyboards in [redesign-wireframes.html](../product/redesign-wireframes.html). The owner locks it before phase 3. Any journey that changes what a flow does is listed there as a behavior change and ships as its own pull request.
+3. **Visual direction.** Colour, type, and style, on top of the locked skeleton. The owner answers the rest of the open questions below. The result is [redesign-direction.md](../product/redesign-direction.md); the three early mockups in [redesign-directions.html](../product/redesign-directions.html) are a starting point, parked until phase 2 is locked.
+4. **Design system.** Tokens (color, type, spacing, radius, elevation, motion), components, and patterns (money amounts, statuses, confirmations, lists, empty and error states), in light and dark. Desktop and mobile share the tokens but have separate components and flows (see the journeys). It replaces the current design-system doc and reference page, adds a root `DESIGN.md` that coding agents read, and ships as its own pull request before any screen.
+5. **Screens.** Area by area, in the order of the status table, built to the locked wireframes.
+6. **Landing and public pages.** The landing page, the Aura tag pay page, the waitlist, and the docs site's look.
 
 ## Open questions for the product owner
 
-To answer in phase 2, before any design work. On 28 September 2026 the owner set the brief: a clean break from today's design, which is only a map of the features, and an interface that is extremely professional, easy to use, streamlined, and fast. The answers, and proposed answers where the owner hasn't given one yet, are in [redesign-direction.md](../product/redesign-direction.md#answers-to-the-open-questions).
+Navigation is settled in phase 2 with the journeys; the rest is answered in phase 3, before any visual design. On 28 September 2026 the owner set the brief: a clean break from today's design, which is only a map of the features, and an interface that is extremely professional, easy to use, streamlined, and fast. The answers, and proposed answers where the owner hasn't given one yet, are in [redesign-direction.md](../product/redesign-direction.md#answers-to-the-open-questions).
 
 | Question | Answer |
 | --- | --- |
@@ -56,17 +57,18 @@ To answer in phase 2, before any design work. On 28 September 2026 the owner set
 | # | Area | Includes | Status |
 | --- | --- | --- | --- |
 | 1 | Inventory | Every screen and state, with screenshots and what's wrong today | Done ([#54](https://github.com/arthurtouble/crypto-neo-bank/pull/54)) |
-| 2 | Direction | Answers to the open questions; a one-page direction | In progress ([#54](https://github.com/arthurtouble/crypto-neo-bank/pull/54)): waiting for the owner to pick a direction |
-| 3 | Design system | Tokens, components, patterns; new `design-system.md` and reference page | Not started |
-| 4 | App shell | Navigation, header, account menu, notifications inbox, toasts, sign-in and terms | Not started |
-| 5 | Overview | Balances, total, groups | Not started |
-| 6 | Money actions | Deposit, Send, Swap, and the shared review, passkey, and tracking steps | Not started |
-| 7 | Earn | Positions and deposit and withdraw | Not started |
-| 8 | Cards and bank | Cards page, allowance, controls, card details, bank details and payouts | Not started |
-| 9 | Transactions and Insights | List, filters, receipt, detail, export, statement, Insights | Not started |
-| 10 | Settings and support | Settings sections, passkey, limits, recipients, Aura tag, support | Not started |
-| 11 | Landing and public pages | Landing, `/pay/[tag]`, waitlist, docs site look | Not started |
-| 12 | Operations console | `apps/ops` screens, if in scope | Not started |
+| 2 | Journeys and wireframes | Every journey, navigation, placement, and flow between screens, drawers, sheets, and dialogs, desktop and mobile | In progress ([#54](https://github.com/arthurtouble/crypto-neo-bank/pull/54)): waiting for the owner to lock it |
+| 3 | Visual direction | Answers to the open questions; colour, type, and style; a one-page direction | Not started (three early mockups parked) |
+| 4 | Design system | Tokens, components, patterns; new `design-system.md`, `DESIGN.md`, and reference page | Not started |
+| 5 | App shell | Navigation, header, account menu, notifications inbox, toasts, sign-in and terms | Not started |
+| 6 | Overview | Balances, total, groups | Not started |
+| 7 | Money actions | Deposit, Send, Swap, and the shared review, passkey, and tracking steps | Not started |
+| 8 | Earn | Positions and deposit and withdraw | Not started |
+| 9 | Cards and bank | Cards page, allowance, controls, card details, bank details and payouts | Not started |
+| 10 | Transactions and Insights | List, filters, receipt, detail, export, statement, Insights | Not started |
+| 11 | Settings and support | Settings sections, passkey, limits, recipients, Aura tag, support | Not started |
+| 12 | Landing and public pages | Landing, `/pay/[tag]`, waitlist, docs site look | Not started |
+| 13 | Operations console | `apps/ops` screens, if in scope | Not started |
 
 Status values: Not started, In progress, Done (with the pull request link), Cut.
 
@@ -104,7 +106,7 @@ Across the app today:
 | Settings | `/app/settings` | Guest, loading, funded, no passkey, locked, dark | Sign-in and passkey, transaction controls and lock, saved recipients, Aura tag, notifications, this device, data download, account closing. One long page of mixed sections. |
 | Support | `/app/support` | Guest, loading, dark | Chat (Intercom), help articles, report a problem. |
 | Not found | any unknown route | Default | |
-| Design system reference | `/design-system.html` | Default | Replaced in phase 3. |
+| Design system reference | `/design-system.html` | Default | Replaced in phase 4. |
 | Ops: signed out | ops `/` | Without an Access token | |
 | Ops: Customers | ops `#customers` | List, one customer, lock form | Find, list, lock, close, reopen, each with a reason. |
 | Ops: Money movement | ops `#movement` | Feed, action journey | Every customer's transactions, filters, journey, chain check. |

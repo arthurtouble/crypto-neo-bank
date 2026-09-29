@@ -1,9 +1,9 @@
 ---
 title: Redesign direction
-description: Phase 2 of the redesign. The owner's brief, the proposed structure, and three visual directions to choose from.
+description: Phase 3 of the redesign. The owner's brief, answers to the open questions, references, and three early visual directions, parked until the journeys are locked.
 ---
 
-Phase 2 of [the redesign](../overview/redesign.md), written on 28 September 2026. It becomes final when the product owner picks a direction and confirms or corrects the proposed answers below. Phase 3 then writes the new design system from it.
+Phase 3 of [the redesign](../overview/redesign.md), started on 28 September 2026. **Parked**: on 29 September the owner asked to lock the product skeleton first (journeys, navigation, placement, and flows, in [redesign-journeys.md](redesign-journeys.md)), then decide colour, type, and style. This document picks up after that. Phase 4 then writes the new design system from it.
 
 ## Brief
 
@@ -21,7 +21,7 @@ The redesign rules in [redesign.md](../overview/redesign.md) stand. Flows, API c
 
 ## Answers to the open questions
 
-The owner hasn't answered these yet. Each has a proposed answer, marked as proposed, so phase 3 isn't blocked. Correct any of them before picking a direction.
+The owner hasn't answered these yet. Each has a proposed answer, marked as proposed, so later phases aren't blocked. Correct any of them before picking a direction.
 
 | Question | Answer |
 | --- | --- |
@@ -33,41 +33,11 @@ The owner hasn't answered these yet. Each has a proposed answer, marked as propo
 | Wireframes or high fidelity | Proposed: high fidelity in code. The directions below are already quick high-fidelity mockups. |
 | Where design happens | Proposed: in code. The design system reference page (`apps/web/public/design-system.html`) is the source of truth, reviewed in pull requests with screenshots. |
 | Brand assets | Proposed: a new wordmark and app icon are needed for the new look; no illustrations. Asset and provider logos come from their owners. Until then, a text wordmark. |
-| Primary navigation | Proposed below. |
+| Primary navigation | Proposed in [redesign-journeys.md](redesign-journeys.md#navigation), to lock in phase 2. |
 
-## Proposed structure
+## Structure, navigation, and desktop and mobile
 
-Today there are ten sections in a sidebar, and each money action is its own page with its own dialog. The proposal cuts the paths, not the features.
-
-- **Home**: total value, holdings in one table with filters (Cash, Crypto, Stocks, Metals, Earn), and recent activity.
-- **Move money**: one entry, reachable from every screen and from ⌘K, with Add, Send, and Swap as tabs. Amount first, then who or what, with the review summary always visible under the form. Bank deposits and payouts sit inside Add and Send. `/app/deposit`, `/app/send`, and `/app/swap` open it on the right tab.
-- **Earn**: positions and rates. Deposit and withdraw open in the same drawer as Move money.
-- **Cards**: the card, allowance, controls, details, and card activity.
-- **Activity**: Transactions and Insights as two tabs of one section, with receipts in a drawer.
-- **Account**: Settings and Support, under the avatar menu on desktop and a tab on phones.
-
-## Desktop and mobile
-
-One theme, two experiences. The design system has shared foundations (tokens, type, icons, motion rules, statuses, money formatting) and two component sets on top of them.
-
-| | Desktop | Phone |
-| --- | --- | --- |
-| Navigation | Narrow icon rail, command bar (⌘K), avatar menu for Account | Five bottom tabs: Home, Activity, Move, Cards, Account |
-| Money actions | A drawer over the current screen; form and review side by side or stacked, all visible | Full-screen steps: amount on a keypad, then who, then review; one decision per screen |
-| Lists | Tables with column headers, sorting, and filters | Rows with the value on the right; filters in a sheet |
-| Details | Receipts and journeys in a side drawer | A pushed full screen with a back button |
-| Menus and pickers | Popovers and dropdowns | Bottom sheets |
-| Input | Keyboard shortcuts, hover states, focus rings | Large touch targets (44px or more), no hover-only actions, swipe to dismiss sheets |
-
-The same route opens the right experience for the screen width; nothing is desktop-only or phone-only in what it can do.
-
-## What "fast" means here
-
-- Every page loads into a skeleton of its real layout, never a blank page or a spinner.
-- Money actions happen in a drawer or sheet over the current screen, so the page underneath keeps its state.
-- One primary action per screen, never more than one decision per step.
-- Sections the customer opens next are prefetched; navigation doesn't wait on the server.
-- Motion under 200ms, and only to show where something came from or went.
+Moved to [redesign-journeys.md](redesign-journeys.md), phase 2: the navigation, the shared patterns (including what "fast" means), and every journey on desktop and phone.
 
 ## References from the owner's notes
 
@@ -84,7 +54,10 @@ Checked on 28 September 2026. The three X posts (codestirring, neropursue, voxyz
 
 The first-time-address check step would add a screen to Send. It changes no server rule, but it is a flow change, so it needs the owner's yes before phase 4.
 
-## Three directions
+## Three early directions
+
+Parked until the journeys are locked. They were drawn before the skeleton, so their layouts will follow the journeys rather than the other way round.
+
 
 The mockups are in [`redesign-directions.html`](redesign-directions.html): Overview and Send in each, desktop and phone, light and dark, with the same fictional example data.
 
@@ -96,5 +69,6 @@ The mockups are in [`redesign-directions.html`](redesign-directions.html): Overv
 
 ## Next
 
-1. The owner picks a direction and corrects the proposed answers.
-2. Phase 3 writes the new system from it: a root `DESIGN.md` for agents, `design-system.md` for people, and the `design-system.html` reference page. Shared tokens, then desktop and mobile components and patterns, in light and dark.
+1. The owner locks the journeys and wireframes (phase 2).
+2. Then picks a look and corrects the proposed answers (this phase).
+3. Phase 4 writes the new system from it: a root `DESIGN.md` for agents, `design-system.md` for people, and the `design-system.html` reference page. Shared tokens, then desktop and mobile components and patterns, in light and dark.
