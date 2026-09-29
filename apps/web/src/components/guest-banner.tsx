@@ -1,0 +1,7 @@
+/** Guests see every section with fictional data; this says so, with one way to sign in. */
+export function GuestBanner({ onSignIn, ready = true }: { onSignIn: () => void; ready?: boolean }) {
+  return <div className="appGuestBanner" role="note">
+    <p><strong>Example data</strong><span>Explore Aura before creating an account. Values and activity shown here are fictional.</span></p>
+    <button type="button" className="appButton appButtonPrimary" onClick={onSignIn} disabled={!ready}>Sign in to continue</button>
+  </div>;
+}

@@ -33,7 +33,7 @@ Your main balance view shows:
 | Aave USDC and WETH you've supplied | Base | Earn |
 | Morpho USDC vaults (Steakhouse Prime USDC, Gauntlet USDC Prime) | Base | Earn |
 
-Each item shows a US dollar value, and Overview adds them up into a total. Stock, gold, and euro prices pause outside market hours, so those rows say when their price was published.
+Each item shows a US dollar value, and Overview adds them up into a total. Stock, gold, and euro prices pause outside market hours, so those rows say when their price was published. Filter Overview by group (cash, crypto, stocks, metals, earn), and select an item to see its details and send, swap, or deposit more of it.
 
 Balances can update at slightly different times in Aura, in your wallet, and on a block explorer. To confirm a payment, check the transaction on the right network's block explorer.
 

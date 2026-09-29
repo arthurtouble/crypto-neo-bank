@@ -61,7 +61,7 @@ Navigation is settled in phase 2 with the journeys; the rest is answered in phas
 | 3 | Visual direction | Answers to the open questions; colour, type, and style; a one-page direction | Done ([#54](https://github.com/arthurtouble/crypto-neo-bank/pull/54)): ultramarine and Geist, picked by the owner on 29 September |
 | 4 | Design system | Tokens, components, patterns; new `design-system.md`, `DESIGN.md`, `design-tokens.css`, and reference page | Done ([#54](https://github.com/arthurtouble/crypto-neo-bank/pull/54)) |
 | 5 | App shell | Sidebar (desktop), menu button and sheet (phone), header, notifications inbox, toasts, sign-in and terms | Done ([#55](https://github.com/arthurtouble/crypto-neo-bank/pull/55)) |
-| 6 | Overview | Balances, total, groups | Not started |
+| 6 | Overview | Balances, total, groups | In progress |
 | 7 | Money actions | Deposit, Send, Swap, and the shared review, passkey, and tracking steps | Not started |
 | 8 | Earn | Positions and deposit and withdraw | Not started |
 | 9 | Cards and bank | Cards page, allowance, controls, card details, bank details and payouts | Not started |

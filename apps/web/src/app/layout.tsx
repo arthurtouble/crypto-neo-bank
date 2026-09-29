@@ -6,6 +6,7 @@ import "./product-system.css";
 // The redesign's tokens (also served at /design-tokens.css for the reference page), then the rebuilt app shell.
 import "../../public/design-tokens.css";
 import "./shell.css";
+import "./overview.css";
 
 export const metadata: Metadata = {
   title: "Aura — Your Smart Account",

@@ -1,3 +1,4 @@
+import type { ActivityEntry } from "@/lib/activity/entries";
 import type { Overview } from "@/lib/overview/read";
 
 /**
@@ -33,3 +34,13 @@ export const exampleRecipients = [
 ];
 
 export const exampleMoneyAccount = { available: false, account: null, nextAction: null };
+
+/** A few fictional transactions, for the Overview's recent list. */
+export const exampleActivity: ActivityEntry[] = [
+  { id: "example-received", origin: "incoming", type: "received", status: "completed", createdAt: "2026-01-15T11:40:00.000Z", chainId: 8453,
+    asset: "USDC", amount: "500", counterparty: "0x000000000000000000000000000000000000e0b2", source: "example" },
+  { id: "example-card", origin: "card", type: "card_payment", status: "completed", createdAt: "2026-01-15T09:12:00.000Z", chainId: 8453,
+    asset: "USDC", amount: "12.40", counterparty: "Corner Cafe", source: "example" },
+  { id: "example-sent", origin: "aura", type: "sent", status: "completed", createdAt: "2026-01-14T18:05:00.000Z", chainId: 8453,
+    asset: "USDC", amount: "250", counterparty: "0x000000000000000000000000000000000000e0b2", source: "example" }
+];
