@@ -58,8 +58,8 @@ Navigation is settled in phase 2 with the journeys; the rest is answered in phas
 | --- | --- | --- | --- |
 | 1 | Inventory | Every screen and state, with screenshots and what's wrong today | Done ([#54](https://github.com/arthurtouble/crypto-neo-bank/pull/54)) |
 | 2 | Journeys and wireframes | Every journey, navigation, placement, and flow between screens, drawers, sheets, and dialogs, desktop and mobile | Done ([#54](https://github.com/arthurtouble/crypto-neo-bank/pull/54)): locked by the owner on 29 September |
-| 3 | Visual direction | Answers to the open questions; colour, type, and style; a one-page direction | In progress: the owner picks a blue and a typeface in `redesign-visual.html` |
-| 4 | Design system | Tokens, components, patterns; new `design-system.md`, `DESIGN.md`, and reference page | Not started |
+| 3 | Visual direction | Answers to the open questions; colour, type, and style; a one-page direction | Done ([#54](https://github.com/arthurtouble/crypto-neo-bank/pull/54)): ultramarine and Geist, picked by the owner on 29 September |
+| 4 | Design system | Tokens, components, patterns; new `design-system.md`, `DESIGN.md`, `design-tokens.css`, and reference page | Done ([#54](https://github.com/arthurtouble/crypto-neo-bank/pull/54)) |
 | 5 | App shell | Sidebar (desktop), menu button and sheet (phone), header, notifications inbox, toasts, sign-in and terms | Not started |
 | 6 | Overview | Balances, total, groups | Not started |
 | 7 | Money actions | Deposit, Send, Swap, and the shared review, passkey, and tracking steps | Not started |
@@ -106,7 +106,7 @@ Across the app today:
 | Settings | `/app/settings` | Guest, loading, funded, no passkey, locked, dark | Sign-in and passkey, transaction controls and lock, saved recipients, Aura tag, notifications, this device, data download, account closing. One long page of mixed sections. |
 | Support | `/app/support` | Guest, loading, dark | Chat (Intercom), help articles, report a problem. |
 | Not found | any unknown route | Default | |
-| Design system reference | `/design-system.html` | Default | Replaced in phase 4. |
+| Design system reference | `/design-system.html` | Default | Replaced in phase 4 by the new reference page. |
 | Ops: signed out | ops `/` | Without an Access token | |
 | Ops: Customers | ops `#customers` | List, one customer, lock form | Find, list, lock, close, reopen, each with a reason. |
 | Ops: Money movement | ops `#movement` | Feed, action journey | Every customer's transactions, filters, journey, chain check. |

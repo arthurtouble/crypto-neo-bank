@@ -130,7 +130,7 @@ test("legacy documentation route points to the dedicated docs site", async ({ re
 
 test("design system is accessible and responsive", async ({ page }) => {
   await page.goto("/design-system.html");
-  await expect(page.getByRole("heading", { name: /Quietly certain/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Aura design system/ })).toBeVisible();
   const dimensions = await page.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, clientWidth: document.documentElement.clientWidth }));
   expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth + 1);
   const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();

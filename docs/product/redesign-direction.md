@@ -1,9 +1,9 @@
 ---
 title: Redesign direction
-description: Phase 3 of the redesign. The owner's brief, answers to the open questions, references, and three early visual directions, parked until the journeys are locked.
+description: Phase 3 of the redesign. The owner's brief, answers to the open questions, the chosen look (ultramarine and Geist), references, and three superseded early directions.
 ---
 
-Phase 3 of [the redesign](../overview/redesign.md), started on 28 September 2026. **Parked**: on 29 September the owner asked to lock the product skeleton first (journeys, navigation, placement, and flows, in [redesign-journeys.md](redesign-journeys.md)), then decide colour, type, and style. This document picks up after that. Phase 4 then writes the new design system from it.
+Phase 3 of [the redesign](../overview/redesign.md), started on 28 September 2026 and finished on 29 September, after the owner locked the product skeleton (journeys, navigation, placement, and flows, in [redesign-journeys.md](redesign-journeys.md)). The owner picked ultramarine and Geist; phase 4 wrote the [design system](design-system.md) from it.
 
 ## Brief
 
@@ -44,13 +44,13 @@ Answered by the owner on 29 September 2026.
 | Closest products | Mercury and Stripe |
 | Theme | Follows the device: light and dark, designed equally |
 | Colour | Neutral greys with one accent |
-| Accent | Deep blue |
-| Type | A clean, neutral sans, with tabular figures for money |
+| Accent | Deep blue: ultramarine, `#3d3fe0` (`#8e90ff` in dark) |
+| Type | A clean, neutral sans, with tabular figures for money: Geist, and Geist Mono for addresses |
 | Density | Balanced: comfortable spacing, tables readable at a glance |
 | Corners and surfaces | Soft and subtle: small radius (6 to 10px), hairline borders, very light shadows |
 | Brand | A new wordmark and app icon |
 
-The high-fidelity mockup is [`redesign-visual.html`](redesign-visual.html): Overview, Send, and Transactions on desktop, and Overview, the menu, and Send on the phone, built on the locked storyboards. It compares two blues and two typefaces, in light and dark. The owner picks one of each, and phase 4 turns it into the design system.
+The high-fidelity mockup is [`redesign-visual.html`](redesign-visual.html): Overview, Send, and Transactions on desktop, and Overview, the menu, and Send on the phone, built on the locked storyboards. It first compared two blues and two typefaces; on 29 September the owner picked ultramarine and Geist, and the mockup now shows only those, in light and dark. Phase 4 turned it into the [design system](design-system.md).
 
 ## Structure, navigation, and desktop and mobile
 
@@ -86,6 +86,7 @@ The mockups are in [`redesign-directions.html`](redesign-directions.html): Overv
 
 ## Next
 
-1. The owner locks the journeys and wireframes (phase 2).
-2. Then picks a look and corrects the proposed answers (this phase).
-3. Phase 4 writes the new system from it: a root `DESIGN.md` for agents, `design-system.md` for people, and the `design-system.html` reference page. Shared tokens, then desktop and mobile components and patterns, in light and dark.
+1. Done: the owner locked the journeys and wireframes (phase 2).
+2. Done: the owner picked the look, ultramarine and Geist (this phase). The proposed answers above stand unless corrected.
+3. Done: phase 4 wrote the system: `apps/web/public/design-tokens.css`, a root `DESIGN.md` for agents, [`design-system.md`](design-system.md) for people, and the `design-system.html` reference page.
+4. Next: phase 5 rebuilds the screens area by area, starting with the app shell.

@@ -35,7 +35,7 @@ Every row in `docs/overview/feature-readiness.md` is done or cut. Product work n
 - Go area by area in the listed order, one branch and pull request per area. Update the status table in the same pull request.
 - The redesign changes how screens look, not what they do: no changes to server logic, API contracts, D1, switches, or money rules. Raise a needed behavior change as its own pull request.
 - Skeleton before style: screens follow the locked journeys and wireframes (`docs/product/redesign-journeys.md`, phase 2), then the visual direction (phase 3).
-- Build screens only from the design system (phase 4 rewrites `docs/product/design-system.md` and `apps/web/public/design-system.html` first). No one-off styles.
+- Build screens only from the design system: tokens in `apps/web/public/design-tokens.css`, rules in `DESIGN.md` and `docs/product/design-system.md`, rendered at `apps/web/public/design-system.html`. No one-off styles, no literal colours. Screens not yet rebuilt still use `src/app/product-system.css`; don't mix the two on one screen.
 - Existing e2e specs keep passing; update selectors, never the behavior checked.
 - Don't rewrite copy or do the final refactor yet. Those are steps 3 and 4.
 - Keep docs in sync with the code in the same pull request: internal docs in `docs/` and public docs in `apps/docs`.
@@ -55,7 +55,7 @@ Every row in `docs/overview/feature-readiness.md` is done or cut. Product work n
 ## Writing and UI
 
 - Copy follows `docs/product/content-style-guide.md`: sentence case, short sentences, plain verbs, no implementation jargon ("rail", "orchestration", "intent"), no unsupported claims. `pnpm marketing:check` scans marketing claims.
-- Visuals follow `docs/product/design-system.md` (anti-slop contract: no gradient blobs, glass, filler cards; three radius tiers 5/8/12px). The reference page is `apps/web/public/design-system.html`.
+- Visuals follow `DESIGN.md` and `docs/product/design-system.md`: neutral greys, one ultramarine accent, Geist and Geist Mono, radius 6/8/10px (20px phone sheets, pills), no gradients, glass, or decorative cards. Change a token in `design-tokens.css`, both docs, and the reference page together.
 
 ## Cloudflare environments
 

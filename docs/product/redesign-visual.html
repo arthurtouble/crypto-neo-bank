@@ -1,6 +1,6 @@
 <title>Aura visual direction</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Hanken+Grotesk:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap">
 <style>
 /* Page: a review board. Switches on top; the desktop screen, then four phone screens, all built on the locked storyboards. */
 :root {
@@ -31,19 +31,16 @@ button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .notes h2 { font-size: 16px; margin: 0; }
 .notes ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; color: var(--ink2); }
 
-/* ———— Mock tokens: light, then dark; accent and type switch per variant ———— */
-.v { --bg: #f7f8fa; --surface: #ffffff; --raised: #ffffff; --muted: #f1f3f6; --text: #0f1115; --text2: #5b6270; --text3: #8a909c; --line: #e6e8ec; --line2: #d6d9df;
-  --accent: #2952d9; --accent-hover: #2146c2; --on-accent: #ffffff; --accent-soft: #eef2fe; --pos: #0f7b52; --neg: #c1372b; --warn: #9a5a00; --warn-soft: #fdf5e8;
+/* ———— Mock tokens, light then dark: the values in apps/web/public/design-tokens.css ———— */
+.v { --bg: #f7f8fa; --surface: #ffffff; --raised: #ffffff; --muted: #f1f3f6; --text: #0f1115; --text2: #5b6270; --text3: #6c7280; --line: #e6e8ec; --line2: #d6d9df;
+  --accent: #3d3fe0; --accent-hover: #3134c4; --on-accent: #ffffff; --accent-soft: #eeeefc; --pos: #0f7b52; --neg: #c1372b; --warn: #9a5a00; --warn-soft: #fdf5e8;
   --shadow: 0 1px 2px rgb(16 24 40 / .05); --shadow-pop: 0 12px 32px rgb(16 24 40 / .14);
   --r-s: 6px; --r-m: 8px; --r-l: 10px;
   --f: "Geist", system-ui, sans-serif; --mono: "Geist Mono", ui-monospace, monospace;
   background: var(--bg); color: var(--text); font: 14px/1.45 var(--f); font-variant-numeric: tabular-nums; position: relative; overflow: hidden; }
-.v.navy { --accent: #1c3a7a; --accent-hover: #162f64; --accent-soft: #edf1f8; }
-.v.hanken { --f: "Hanken Grotesk", system-ui, sans-serif; }
-.v.dark { --bg: #0b0d11; --surface: #12151b; --raised: #181c23; --muted: #1b1f27; --text: #edeff3; --text2: #a3a9b5; --text3: #707784; --line: #20242d; --line2: #2c313c;
-  --accent: #7b97ff; --accent-hover: #93aaff; --on-accent: #0b0d11; --accent-soft: #19213b; --pos: #3ecf8e; --neg: #ff7a6b; --warn: #f0ab4a; --warn-soft: #2a2114;
+.v.dark { --bg: #0b0d11; --surface: #12151b; --raised: #181c23; --muted: #1b1f27; --text: #edeff3; --text2: #a3a9b5; --text3: #7d8491; --line: #20242d; --line2: #2c313c;
+  --accent: #8e90ff; --accent-hover: #a3a5ff; --on-accent: #0b0d11; --accent-soft: #1d1e47; --pos: #3ecf8e; --neg: #ff7a6b; --warn: #f0ab4a; --warn-soft: #2a2114;
   --shadow: 0 1px 2px rgb(0 0 0 / .4); --shadow-pop: 0 16px 40px rgb(0 0 0 / .5); }
-.v.dark.navy { --accent: #6f8fdb; --accent-hover: #86a2e6; --accent-soft: #172036; }
 .v * { margin: 0; }
 .v svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; flex: none; }
 
@@ -176,13 +173,11 @@ button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 <div class="board">
   <header class="head">
     <h1>Aura visual direction</h1>
-    <p>Phase 3 of the redesign: the look, on top of the locked storyboards. Calm and exact like Mercury and Stripe. Neutral greys with one deep-blue accent, a clean sans with tabular numbers, balanced density, and soft corners. Pick one blue and one typeface; phase 4 turns the pick into the design system. All data is fictional.</p>
+    <p>Phase 3 of the redesign: the look, on top of the locked storyboards. Calm and exact like Mercury and Stripe. Neutral greys with one ultramarine accent, Geist with tabular numbers, balanced density, and soft corners, as picked by the owner on 29 September 2026. The design system (phase 4) holds the exact values. All data is fictional.</p>
   </header>
   <div class="controls" role="group" aria-label="Mockup options">
     <div><span class="lbl" id="l1">Desktop screen</span><div class="seg" role="group" aria-labelledby="l1" data-k="scr"><button type="button" data-v="overview" aria-pressed="true">Overview</button><button type="button" data-v="send" aria-pressed="false">Send</button><button type="button" data-v="review" aria-pressed="false">Send · review</button><button type="button" data-v="tx" aria-pressed="false">Transactions</button></div></div>
     <div><span class="lbl" id="l2">Theme</span><div class="seg" role="group" aria-labelledby="l2" data-k="theme"><button type="button" data-v="light" aria-pressed="true">Light</button><button type="button" data-v="dark" aria-pressed="false">Dark</button></div></div>
-    <div><span class="lbl" id="l3">Blue</span><div class="seg" role="group" aria-labelledby="l3" data-k="accent"><button type="button" data-v="cobalt" aria-pressed="true">Cobalt</button><button type="button" data-v="navy" aria-pressed="false">Navy</button></div></div>
-    <div><span class="lbl" id="l4">Typeface</span><div class="seg" role="group" aria-labelledby="l4" data-k="font"><button type="button" data-v="geist" aria-pressed="true">Geist</button><button type="button" data-v="hanken" aria-pressed="false">Hanken Grotesk</button></div></div>
   </div>
   <p class="cap">Desktop, 1240 wide</p>
   <div class="scroller"><div id="desk"></div></div>
@@ -195,7 +190,7 @@ button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
       <li>Green, red, and amber mean completed, failed, and needs attention. They're never decoration. Unavailable values are amber text, never a number.</li>
       <li>Money uses tabular figures so columns line up. Addresses use the matching mono face.</li>
       <li>Three corner sizes (6px controls, 8px inner blocks, 10px cards), hairline borders, and shadows only for things that float: sheets, popovers, and the menu button.</li>
-      <li>The wordmark is a placeholder: "aura" set in the chosen typeface with a simple ring. The final wordmark and app icon are designed in phase 4.</li>
+      <li>The wordmark is a placeholder: "aura" set in Geist with a simple ring. The final wordmark and app icon are designed later.</li>
     </ul>
   </section>
 </div>
@@ -263,9 +258,9 @@ const PH = [
   ["Send: review", () => `${phoneTop("Review", true)}<div class="pmain" style="padding-bottom:0"><div class="steps"><i class="on"></i><i class="on"></i><i></i></div><div style="text-align:center;display:grid;gap:4px;padding:10px 0"><span class="muted">You send</span><span style="font-size:40px;font-weight:600;letter-spacing:-.02em">12.50 USDC</span></div><div class="list" style="padding:0 14px"><div class="kv"><span>To</span><b>Sam</b></div><div class="kv"><span>Address</span><b class="mono">0x5555…5555</b></div><div class="kv"><span>Network</span><b>Base</b></div><div class="kv"><span>Network fee</span><b class="pos">Paid by Aura</b></div></div><div class="note">${ic("info")}<span>Transfers can't be reversed.</span></div></div><div class="pfoot"><span class="btn pri full">Confirm and send</span></div>`]
 ];
 
-const state = { scr: "overview", theme: "light", accent: "cobalt", font: "geist" };
+const state = { scr: "overview", theme: "light" };
 try { Object.assign(state, JSON.parse(localStorage.getItem("aura-visual") || "{}")); } catch (e) {}
-function cls() { return `v ${state.theme === "dark" ? "dark" : ""} ${state.accent === "navy" ? "navy" : ""} ${state.font === "hanken" ? "hanken" : ""}`; }
+function cls() { return `v ${state.theme === "dark" ? "dark" : ""}`; }
 function render() {
   document.getElementById("desk").innerHTML = `<div class="${cls()} desk">${D[state.scr]()}</div>`;
   document.getElementById("phones").innerHTML = PH.map(([cap, f]) => `<figure><figcaption>${cap}</figcaption><div class="${cls()} phone">${f()}</div></figure>`).join("");

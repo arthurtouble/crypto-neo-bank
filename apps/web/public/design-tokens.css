@@ -1,0 +1,220 @@
+/*
+ * Aura design tokens: the single source for colour, type, spacing, size,
+ * radius, elevation, motion, and layout. Documented in DESIGN.md and
+ * docs/product/design-system.md; shown at /design-system.html.
+ *
+ * Light is the default. Dark applies when the device prefers it and the
+ * customer hasn't chosen light, or when data-theme="dark" is set on <html>.
+ * Breakpoints (media queries can't read variables): phone below 768px,
+ * tablet 768 to 1023px, desktop from 1024px, wide from 1440px.
+ */
+
+@font-face {
+  font-family: "Geist";
+  src: url("/fonts/Geist-Variable.woff2") format("woff2-variations");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Geist Mono";
+  src: url("/fonts/GeistMono-Variable.woff2") format("woff2-variations");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* Colour, light */
+  --color-canvas: #f7f8fa;
+  --color-surface: #ffffff;
+  --color-raised: #ffffff;
+  --color-muted: #f1f3f6;
+  --color-hover: #ebeef2;
+  --color-text: #0f1115;
+  --color-text-secondary: #5b6270;
+  --color-text-tertiary: #6c7280;
+  --color-line: #e6e8ec;
+  --color-line-strong: #d6d9df;
+  --color-accent: #3d3fe0;
+  --color-accent-hover: #3134c4;
+  --color-accent-pressed: #292ba8;
+  --color-on-accent: #ffffff;
+  --color-accent-soft: #eeeefc;
+  --color-positive: #0f7b52;
+  --color-positive-soft: #e8f5ef;
+  --color-negative: #c1372b;
+  --color-negative-soft: #fcebe9;
+  --color-warning: #9a5a00;
+  --color-warning-soft: #fdf5e8;
+  --color-scrim: rgb(8 10 14 / 0.45);
+  --color-focus: #3d3fe0;
+
+  /* Type */
+  --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --text-display-size: 40px;
+  --text-display-line: 44px;
+  --text-title-1-size: 22px;
+  --text-title-1-line: 28px;
+  --text-title-2-size: 17px;
+  --text-title-2-line: 24px;
+  --text-title-3-size: 15px;
+  --text-title-3-line: 20px;
+  --text-body-size: 14px;
+  --text-body-line: 20px;
+  --text-small-size: 13px;
+  --text-small-line: 18px;
+  --text-caption-size: 12px;
+  --text-caption-line: 16px;
+  --text-amount-size: 32px;
+  --text-amount-line: 36px;
+  --text-amount-hero-size: 52px;
+  --text-amount-hero-line: 56px;
+  --tracking-tight: -0.02em;
+  --tracking-snug: -0.01em;
+
+  /* Spacing: a 4px grid */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 40px;
+  --space-9: 48px;
+  --space-10: 64px;
+
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-sheet: 20px;
+  --radius-pill: 999px;
+
+  /* Elevation */
+  --shadow-1: 0 1px 2px rgb(16 24 40 / 0.05);
+  --shadow-2: 0 12px 32px rgb(16 24 40 / 0.14);
+
+  /* Motion */
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --duration-exit: 160ms;
+  --ease-enter: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+
+  /* Sizes and layout, desktop */
+  --control-height: 36px;
+  --control-height-lg: 44px;
+  --input-height: 40px;
+  --row-height: 56px;
+  --icon-size: 18px;
+  --icon-stroke: 1.6;
+  --touch-min: 44px;
+  --sidebar-width: 232px;
+  --topbar-height: 60px;
+  --content-max: 1120px;
+  --side-column: 360px;
+  --page-pad-x: 32px;
+  --page-pad-top: 28px;
+  --gap-section: 20px;
+  --menu-button: 56px;
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-canvas: #0b0d11;
+    --color-surface: #12151b;
+    --color-raised: #181c23;
+    --color-muted: #1b1f27;
+    --color-hover: #222731;
+    --color-text: #edeff3;
+    --color-text-secondary: #a3a9b5;
+    --color-text-tertiary: #7d8491;
+    --color-line: #20242d;
+    --color-line-strong: #2c313c;
+    --color-accent: #8e90ff;
+    --color-accent-hover: #a3a5ff;
+    --color-accent-pressed: #7c7ef0;
+    --color-on-accent: #0b0d11;
+    --color-accent-soft: #1d1e47;
+    --color-positive: #3ecf8e;
+    --color-positive-soft: #10271d;
+    --color-negative: #ff7a6b;
+    --color-negative-soft: #2e1614;
+    --color-warning: #f0ab4a;
+    --color-warning-soft: #2a2114;
+    --color-scrim: rgb(0 0 0 / 0.55);
+    --color-focus: #8e90ff;
+    --shadow-1: 0 1px 2px rgb(0 0 0 / 0.4);
+    --shadow-2: 0 16px 40px rgb(0 0 0 / 0.5);
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --color-canvas: #0b0d11;
+  --color-surface: #12151b;
+  --color-raised: #181c23;
+  --color-muted: #1b1f27;
+  --color-hover: #222731;
+  --color-text: #edeff3;
+  --color-text-secondary: #a3a9b5;
+  --color-text-tertiary: #7d8491;
+  --color-line: #20242d;
+  --color-line-strong: #2c313c;
+  --color-accent: #8e90ff;
+  --color-accent-hover: #a3a5ff;
+  --color-accent-pressed: #7c7ef0;
+  --color-on-accent: #0b0d11;
+  --color-accent-soft: #1d1e47;
+  --color-positive: #3ecf8e;
+  --color-positive-soft: #10271d;
+  --color-negative: #ff7a6b;
+  --color-negative-soft: #2e1614;
+  --color-warning: #f0ab4a;
+  --color-warning-soft: #2a2114;
+  --color-scrim: rgb(0 0 0 / 0.55);
+  --color-focus: #8e90ff;
+  --shadow-1: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-2: 0 16px 40px rgb(0 0 0 / 0.5);
+  color-scheme: dark;
+}
+
+/* Phone: larger body text and controls, tighter page margins. */
+@media (max-width: 767px) {
+  :root {
+    --text-display-size: 36px;
+    --text-display-line: 40px;
+    --text-title-1-size: 20px;
+    --text-title-1-line: 26px;
+    --text-body-size: 15px;
+    --text-body-line: 22px;
+    --control-height: 44px;
+    --input-height: 44px;
+    --row-height: 60px;
+    --icon-size: 20px;
+    --page-pad-x: 20px;
+    --page-pad-top: 8px;
+    --gap-section: 18px;
+  }
+}
+
+@media (max-width: 359px) {
+  :root { --page-pad-x: 16px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-base: 0ms;
+    --duration-exit: 0ms;
+  }
+}
