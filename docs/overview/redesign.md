@@ -62,7 +62,7 @@ Navigation is settled in phase 2 with the journeys; the rest is answered in phas
 | 4 | Design system | Tokens, components, patterns; new `design-system.md`, `DESIGN.md`, `design-tokens.css`, and reference page | Done ([#54](https://github.com/arthurtouble/crypto-neo-bank/pull/54)) |
 | 5 | App shell | Sidebar (desktop), menu button and sheet (phone), header, notifications inbox, toasts, sign-in and terms | Done ([#55](https://github.com/arthurtouble/crypto-neo-bank/pull/55)) |
 | 6 | Overview | Balances, total, groups | Done ([#57](https://github.com/arthurtouble/crypto-neo-bank/pull/57)) |
-| 7 | Money actions | Deposit, Send, Swap, and the shared review, passkey, and tracking steps | In progress: split into three pull requests (Deposit, Send, Swap) to keep each reviewable. Deposit in progress |
+| 7 | Money actions | Deposit, Send, Swap, and the shared review, passkey, and tracking steps | In progress: split into three pull requests (Deposit, Send, Swap) to keep each reviewable. Deposit done in [#58](https://github.com/arthurtouble/crypto-neo-bank/pull/58); Send and Swap next |
 | 8 | Earn | Positions and deposit and withdraw | Not started |
 | 9 | Cards and bank | Cards page, allowance, controls, card details, bank details and payouts | Not started |
 | 10 | Transactions and Insights | List, filters, receipt, detail, export, statement, Insights | Not started |
