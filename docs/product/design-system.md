@@ -24,6 +24,7 @@ The root layout loads `design-tokens.css` for the whole app. Areas rebuilt in ph
 | Overview: total, group chips, holdings table or list, holding detail, recent transactions, guest example, empty account | `apps/web/src/app/overview.css`, classes prefixed `ov`; the shared guest banner is in `shell.css` | Rebuilt |
 | Deposit: the four ways as tabs (desktop) or rows (phone), receive, from a wallet, card, bank checklist and details | `apps/web/src/app/money.css`, classes prefixed `mx`, shared with Send and Swap | Rebuilt |
 | Send: two tabs (to a person or wallet, to a bank account), amount and asset, recipient faces, a review step, progress in place, and a live summary column | `money.css` | Rebuilt |
+| Swap: you pay and you receive with the asset picker (a dialog on desktop, a sheet on the phone), reverse, slippage, and the quote with its countdown, fees, and reference prices beside the form | `money.css`; the old swap styles are removed from `product-system.css` | Rebuilt |
 | Other pages inside the shell | `globals.css`, `product-system.css` | Old look until their area is rebuilt |
 
 ## Principles

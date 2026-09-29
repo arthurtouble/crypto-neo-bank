@@ -134,54 +134,67 @@ export function SwapWorkspace() {
   }
 
   const quoteUsed = Boolean(quote && usedQuoteId === quote.id);
-  return <section className="panel swapPanel">
-    <div className="panelHeading"><div><h2>Swap</h2><p>Exchange assets or move them to another network.</p></div></div>
-    <form className="swapForm" onSubmit={(event) => void getQuote(event)}>
-      <article className="swapAssetBlock"><div className="swapAssetLabel"><span>You pay</span><SwapAssetPicker value={fromAssetId} excludedId={toAssetId} label="You pay" held onSelect={(id) => { setFromAssetId(id); clearQuote(); }} /></div>
-        <input aria-label="Amount to swap" inputMode="decimal" value={amount} disabled={inFlight} onChange={(event) => { setAmount(event.target.value); clearQuote(); }} placeholder="0.00" />
-        <div className="swapBalance">{availableRaw !== undefined && source ? `${formatUnits(availableRaw, source.decimals)} ${source.symbol} available` : nativeBalance.isPending || tokenBalance.isPending ? "Reading balance" : "Balance unavailable"}</div>
-      </article>
-      <button className="swapReverse" type="button" disabled={inFlight} onClick={reverse} aria-label="Reverse assets"><ArrowDownUp size={17} /></button>
-      <article className="swapAssetBlock receive"><div className="swapAssetLabel"><span>You receive</span><SwapAssetPicker value={toAssetId} excludedId={fromAssetId} label="You receive" onSelect={(id) => { setToAssetId(id); clearQuote(); }} /></div>
-        <strong>{quote ? displayRawAmount(quote.toAmountRaw, quote.to.decimals) : "—"}</strong>
-        <small>{quote ? "Estimated" : "Choose an amount"}</small>
-      </article>
-      <button className="button primary full swapReviewButton" type="submit" disabled={quoting || inFlight || !address || !source || !destination}>
-        {quoting ? <><LoaderCircle className="spin" size={16} /> Getting quote</> : !address ? "Preparing your wallet" : "Get quote"}
-      </button>
-    </form>
-    <div className="swapSettings"><span>Max slippage</span><div>{[10, 50, 100].map((value) => <button type="button" key={value} disabled={inFlight} className={slippageBps === value ? "active" : ""} aria-pressed={slippageBps === value} onClick={() => { setSlippageBps(value); clearQuote(); }}>{value / 100}%</button>)}</div></div>
-    {error && <p className="formError" role="alert">{error}</p>}
-    {quote && <section className="swapQuotes" aria-label="Swap quote">
-      <div className="swapQuotesHeader"><h3>Quote</h3><span>{remaining > 0 ? `Expires in ${remaining}s` : "Expired"}</span></div>
-      <div className="swapReview">
-        <span>You pay<strong>{displayRawAmount(quote.fromAmountRaw, quote.from.decimals)} {quote.from.symbol} on {assetNetwork(quote.from.chainId)}</strong></span>
-        <span>You receive<strong>{displayRawAmount(quote.toAmountRaw, quote.to.decimals)} {quote.to.symbol} on {assetNetwork(quote.to.chainId)}</strong></span>
-        <span>Minimum received<strong>{displayRawAmount(quote.toAmountMinRaw, quote.to.decimals)} {quote.to.symbol}</strong></span>
-        <span>Network fee on {assetNetwork(quote.from.chainId)}<strong>Paid by Aura</strong></span>
-        <span>{crossChain ? "Bridge and provider fees" : "Provider fee"}<strong>{crossChain && quote.fromAmountUsd && quote.toAmountUsd
-          ? `About ${formatEstimatedFeeUsd(Math.max(0, Number(quote.fromAmountUsd) - Number(quote.toAmountUsd)))}, taken from the amount` : formatEstimatedFeeUsd(quote.providerFeeUsd)}</strong></span>
-        <span>Price impact<strong>{quote.priceImpactPercent === null ? "Unavailable" : `${quote.priceImpactPercent.toFixed(2)}%`}</strong></span>
-        <span>Provider<strong>{quote.tool}</strong></span>
-      </div>
-      {(quote.references ?? []).map((reference) => {
-        const asset = reference.assetId === quote.to.id ? quote.to : quote.from;
-        const quoted = quotedPrice(quote, reference.assetId);
-        const gap = quoted === null ? null : Math.abs(quoted - Number(reference.usd)) / Number(reference.usd) * 100;
-        return <p className="swapReviewStatus" key={reference.assetId} data-testid="swap-reference">
-          {asset.symbol} reference price ${Number(reference.usd).toLocaleString("en-US", { maximumFractionDigits: 2 })}, as of {referenceTime(reference.observedAt)}.
-          {gap !== null && gap > REFERENCE_WARNING_PERCENT ? ` This quote is about ${gap.toFixed(1)}% away from it. Markets may be closed or thin, so check the amount.` : ""}
-        </p>;
-      })}
-      {crossChain && <p className="swapReviewStatus">Arrival on {assetNetwork(quote.to.chainId)} usually takes up to 30 minutes. You can leave this screen once it&apos;s sent.</p>}
-      {swap.phase === "done" || handedOff
-        ? <button className="button primary full swapReviewAction" type="button" onClick={() => { swap.reset(); setQuote(null); setAmount(""); }}>New swap</button>
-        : swap.phase !== "idle"
-          ? <button className="button primary full swapReviewAction" type="button" disabled><LoaderCircle className="spin" size={16} /> {swap.phase === "preparing" ? "Checking" : swap.phase === "signing" ? "Confirm with your passkey" : "Swapping"}</button>
-          : remaining === 0 || quoteUsed
-            ? <button className="button secondary full swapReviewAction" type="button" disabled={quoting || swap.outcomeUnknown} onClick={() => void getQuote()}><RefreshCw size={16} /> {remaining === 0 ? "Quote expired. Refresh" : "Get a new quote"}</button>
-            : <button className="button primary full swapReviewAction" type="button" onClick={() => void confirm()}>Swap</button>}
-    </section>}
-    <TransactionProgress label="Swap" phase={swap.phase} action={swap.action} outcomeUnknown={swap.outcomeUnknown} />
-  </section>;
+  const done = swap.phase === "done" || handedOff;
+  return <div className="mxColumns">
+    <div className="mxMain">
+      <section className="mxPanel" aria-label="Swap form">
+        <form className="mxForm mxSwapForm" onSubmit={(event) => void getQuote(event)}>
+          <div className="mxSwapSide">
+            <div className="mxSwapSideHead"><span className="mxLabel">You pay</span><SwapAssetPicker value={fromAssetId} excludedId={toAssetId} label="You pay" held onSelect={(id) => { setFromAssetId(id); clearQuote(); }} /></div>
+            <input className="mxSwapAmount" aria-label="Amount to swap" inputMode="decimal" value={amount} disabled={inFlight} onChange={(event) => { setAmount(event.target.value); clearQuote(); }} placeholder="0.00" />
+            <span className="mxHint">{availableRaw !== undefined && source ? `${formatUnits(availableRaw, source.decimals)} ${source.symbol} available` : nativeBalance.isPending || tokenBalance.isPending ? "Reading balance" : "Balance unavailable"}</span>
+          </div>
+          <button className="mxSwapReverse" type="button" disabled={inFlight} onClick={reverse} aria-label="Reverse assets"><ArrowDownUp aria-hidden="true" /></button>
+          <div className="mxSwapSide mxSwapReceive">
+            <div className="mxSwapSideHead"><span className="mxLabel">You receive</span><SwapAssetPicker value={toAssetId} excludedId={fromAssetId} label="You receive" onSelect={(id) => { setToAssetId(id); clearQuote(); }} /></div>
+            <strong className="mxSwapAmount mxSwapEstimate">{quote ? displayRawAmount(quote.toAmountRaw, quote.to.decimals) : "—"}</strong>
+            <span className="mxHint">{quote ? "Estimated" : "Choose an amount"}</span>
+          </div>
+          <div className="mxSwapSettings"><span className="mxLabel" id="swap-slippage">Max slippage</span>
+            <div className="appSegmented" role="group" aria-labelledby="swap-slippage">{[10, 50, 100].map((value) => <button type="button" key={value} disabled={inFlight} aria-pressed={slippageBps === value} onClick={() => { setSlippageBps(value); clearQuote(); }}>{value / 100}%</button>)}</div></div>
+          {error && <p className="mxFieldError" role="alert">{error}</p>}
+          <button className="appButton appButtonPrimary appButtonLarge" type="submit" disabled={quoting || inFlight || !address || !source || !destination}>
+            {quoting ? <><LoaderCircle className="spin" aria-hidden="true" /> Getting quote</> : !address ? "Preparing your wallet" : "Get quote"}
+          </button>
+        </form>
+      </section>
+    </div>
+    <aside className="mxSide">
+      {quote ? <section className="mxCard mxQuote" aria-label="Swap quote">
+        <div className="mxQuoteHead"><h2>Quote</h2><span className={`mxBadge${remaining > 0 && remaining <= 10 ? " mxBadgeWarning" : ""}`}>{remaining > 0 ? `Expires in ${remaining}s` : "Expired"}</span></div>
+        <dl className="mxSummary">
+          <div><dt>You pay</dt><dd>{displayRawAmount(quote.fromAmountRaw, quote.from.decimals)} {quote.from.symbol} on {assetNetwork(quote.from.chainId)}</dd></div>
+          <div><dt>You receive</dt><dd>{displayRawAmount(quote.toAmountRaw, quote.to.decimals)} {quote.to.symbol} on {assetNetwork(quote.to.chainId)}</dd></div>
+          <div><dt>Minimum received</dt><dd>{displayRawAmount(quote.toAmountMinRaw, quote.to.decimals)} {quote.to.symbol}</dd></div>
+          <div><dt>Network fee on {assetNetwork(quote.from.chainId)}</dt><dd className="mxPositive">Paid by Aura</dd></div>
+          <div><dt>{crossChain ? "Bridge and provider fees" : "Provider fee"}</dt><dd>{crossChain && quote.fromAmountUsd && quote.toAmountUsd
+            ? `About ${formatEstimatedFeeUsd(Math.max(0, Number(quote.fromAmountUsd) - Number(quote.toAmountUsd)))}, taken from the amount` : formatEstimatedFeeUsd(quote.providerFeeUsd)}</dd></div>
+          <div><dt>Price impact</dt><dd>{quote.priceImpactPercent === null ? "Unavailable" : `${quote.priceImpactPercent.toFixed(2)}%`}</dd></div>
+          <div><dt>Provider</dt><dd>{quote.tool}</dd></div>
+        </dl>
+        {(quote.references ?? []).map((reference) => {
+          const asset = reference.assetId === quote.to.id ? quote.to : quote.from;
+          const quoted = quotedPrice(quote, reference.assetId);
+          const gap = quoted === null ? null : Math.abs(quoted - Number(reference.usd)) / Number(reference.usd) * 100;
+          const far = gap !== null && gap > REFERENCE_WARNING_PERCENT;
+          return <p className={`mxNote${far ? " mxNoteWarning" : ""}`} key={reference.assetId} data-testid="swap-reference">
+            {asset.symbol} reference price ${Number(reference.usd).toLocaleString("en-US", { maximumFractionDigits: 2 })}, as of {referenceTime(reference.observedAt)}.
+            {far ? ` This quote is about ${gap.toFixed(1)}% away from it. Markets may be closed or thin, so check the amount.` : ""}
+          </p>;
+        })}
+        {crossChain && <p className="mxNote">Arrival on {assetNetwork(quote.to.chainId)} usually takes up to 30 minutes. You can leave this screen once it&apos;s sent.</p>}
+        {done
+          ? <button className="appButton appButtonPrimary appButtonLarge" type="button" onClick={() => { swap.reset(); setQuote(null); setAmount(""); }}>New swap</button>
+          : swap.phase !== "idle"
+            ? <button className="appButton appButtonPrimary appButtonLarge" type="button" disabled><LoaderCircle className="spin" aria-hidden="true" /> {swap.phase === "preparing" ? "Checking" : swap.phase === "signing" ? "Confirm with your passkey" : "Swapping"}</button>
+            : remaining === 0 || quoteUsed
+              ? <button className="appButton appButtonLarge" type="button" disabled={quoting || swap.outcomeUnknown} onClick={() => void getQuote()}><RefreshCw aria-hidden="true" /> {remaining === 0 ? "Quote expired. Refresh" : "Get a new quote"}</button>
+              : <button className="appButton appButtonPrimary appButtonLarge" type="button" onClick={() => void confirm()}>Swap</button>}
+      </section> : <section className="mxCard mxQuoteEmpty">
+        <h2>Quote</h2>
+        <p className="mxHint">Choose what you pay and receive, and an amount. The quote shows what you get, the fees, and the price impact before you swap.</p>
+      </section>}
+      <TransactionProgress label="Swap" phase={swap.phase} action={swap.action} outcomeUnknown={swap.outcomeUnknown} />
+    </aside>
+  </div>;
 }

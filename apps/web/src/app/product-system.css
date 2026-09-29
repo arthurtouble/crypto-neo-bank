@@ -366,126 +366,15 @@
 .productShell .frameworkSteps span,
 .productShell .frameworkSteps strong { font-size: var(--type-caption); }
 
-.swapPanel { max-width: 880px; padding: 28px; }
-.swapPickerTrigger { min-height: 46px; max-width: 100%; padding: 0 13px; display: inline-flex; align-items: center; gap: 9px; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--surface); color: var(--text); font: 650 var(--type-body)/1.2 var(--font-body); cursor: pointer; transition: border-color var(--motion-fast), background var(--motion-fast), transform var(--motion-fast); }
-.swapPickerTrigger:hover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 4%, var(--surface)); }
-.swapPickerTrigger:active { transform: scale(.985); }
-.swapPickerTrigger:focus-visible, .swapPickerClose:focus-visible, .swapPickerOption:focus-visible, .swapPickerMore:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 40%, transparent); outline-offset: 2px; }
-.swapPickerNetwork { color: var(--muted); font-size: var(--type-label); font-weight: 500; }
-.swapPickerOverlay { position: fixed; z-index: 89; inset: 0; background: rgb(8 13 12 / .55); backdrop-filter: blur(6px); }
-.swapPickerDialog { position: fixed; z-index: 90; top: 50%; left: 50%; width: min(520px, calc(100vw - 32px)); max-height: min(720px, calc(100dvh - 32px)); display: flex; flex-direction: column; padding: 22px; transform: translate(-50%, -50%); border: 1px solid var(--border); border-radius: 18px; background: var(--surface-raised); box-shadow: 0 28px 90px rgb(0 0 0 / .25); color: var(--text); font-family: var(--font-body); }
-.swapPickerHeading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 17px; }
-.swapPickerHeading h2 { margin: 0; font-family: "Archivo Variable", "Satoshi", system-ui, sans-serif; font-size: 22px; font-weight: 660; letter-spacing: -.025em; }
-.swapPickerClose { width: 34px; height: 34px; display: grid; place-items: center; border: 0; border-radius: 50%; background: var(--surface-muted); color: var(--muted); cursor: pointer; }
-.swapPickerClose:hover { color: var(--text); background: color-mix(in srgb, var(--accent) 9%, var(--surface-muted)); }
-.swapPickerSearch { min-height: 48px; display: flex; align-items: center; gap: 10px; padding: 0 14px; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--surface); color: var(--muted); }
-.swapPickerSearch:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 13%, transparent); }
-.swapPickerSearch input { min-width: 0; flex: 1; border: 0; outline: 0; background: transparent; color: var(--text); font: 500 15px/1.2 var(--font-body); }
-.swapPickerResults { min-height: 180px; margin-top: 12px; overflow-y: auto; overscroll-behavior: contain; }
-.swapPickerState { min-height: 160px; display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--muted); font-size: var(--type-body); }
-.swapPickerState button { border: 0; background: none; color: var(--accent); font: inherit; font-weight: 650; cursor: pointer; }
-.swapPickerOption { width: 100%; min-height: 70px; display: flex; align-items: center; gap: 12px; padding: 10px 11px; border: 0; border-radius: 10px; background: transparent; color: var(--text); font: inherit; text-align: left; cursor: pointer; transition: background var(--motion-fast); }
-.swapPickerOption:hover, .swapPickerOption.active { background: color-mix(in srgb, var(--accent) 7%, var(--surface)); }
-.swapPickerOption:disabled { opacity: .45; cursor: not-allowed; }
-.swapPickerGlyph { width: 38px; height: 38px; flex: 0 0 auto; display: grid; place-items: center; border-radius: 50%; background: color-mix(in srgb, var(--accent) 11%, var(--surface-muted)); color: var(--accent); font-size: 16px; font-weight: 700; }
-.swapPickerIdentity { min-width: 0; flex: 1; display: grid; gap: 3px; }
-.swapPickerIdentity strong { display: flex; align-items: baseline; gap: 8px; font-size: 15px; font-weight: 670; }
-.swapPickerIdentity small { overflow: hidden; color: var(--muted); font-size: 13px; font-weight: 450; text-overflow: ellipsis; white-space: nowrap; }
-.swapPickerIdentity > span { overflow: hidden; color: var(--muted); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
-.swapPickerTrust { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); font-size: 12px; white-space: nowrap; }
-.swapPickerMore { width: 100%; min-height: 42px; margin-top: 8px; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--surface); color: var(--accent); font: 650 13px var(--font-body); cursor: pointer; }
-.swapPickerMore:hover { background: color-mix(in srgb, var(--accent) 5%, var(--surface)); }
-@media (max-width: 560px) { .swapPickerDialog { top: auto; bottom: 0; left: 0; width: 100%; max-height: calc(100dvh - 16px); padding: 20px 16px max(20px, env(safe-area-inset-bottom)); transform: none; border-radius: 18px 18px 0 0; } .swapPickerTrust { font-size: 11px; } }
-@media (prefers-reduced-motion: reduce) { .swapPickerTrigger, .swapPickerOption, .swapPickerMore { transition: none; } }
-.swapForm { margin-top: 22px; display: grid; grid-template-columns: minmax(0, 1fr) 42px minmax(0, 1fr); align-items: center; gap: 10px; }
-.swapAssetBlock { min-height: 142px; padding: 18px; display: grid; align-content: space-between; gap: 14px; border: 1px solid var(--border); border-radius: var(--radius-panel); background: var(--surface); }
-.swapAssetBlock.receive { background: var(--surface-subtle); }
-.swapAssetBlock label { display: grid; gap: 8px; color: var(--muted); font-size: var(--type-label); font-weight: 650; }
-.swapAssetLabel { display: grid; justify-items: start; gap: 8px; color: var(--muted); font-size: var(--type-body-small); font-weight: 650; }
-.swapReviewButton { grid-column: 1 / -1; margin-top: 8px; }
 
 .aurelSwap { width: min(100%, 570px); margin: 24px auto 48px; }
 .aurelSwapCard { padding: 20px; border: 1px solid var(--line, #d8ded9); border-radius: 16px; background: var(--surface, #fff); box-shadow: 0 12px 36px rgba(14, 39, 26, .045); }
-.swapAmountRow { padding: 16px 18px; border: 1px solid var(--line, #d8ded9); border-radius: 12px; background: var(--surface-subtle, #f8faf8); }
-.swapAmountRow > label, .swapAmountRow > span { display: block; margin-bottom: 10px; font-size: 14px; font-weight: 600; }
-.swapAmountRow > div { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-.swapAmountRow input, .swapAmountRow output { width: min(100%, 220px); min-width: 0; border: 0; outline: 0; background: transparent; color: inherit; font: 600 32px/1.2 var(--font-body, sans-serif); }
-.swapAmountRow input::placeholder { color: #87968a; }
-.swapAssetTrigger, .swapAssetList button { display: flex; align-items: center; gap: 10px; border: 0; background: transparent; color: inherit; cursor: pointer; text-align: left; }
-.swapAssetTrigger { padding: 7px 10px; border-radius: 9px; }
-.swapAssetTrigger:hover, .swapAssetList button:hover { background: rgba(18, 53, 36, .08); }
-.swapAssetTrigger:active, .swapAssetList button:active { transform: scale(.98); }
-.swapAssetTrigger strong, .swapAssetList strong { display: block; font-size: 16px; }
-.swapAssetTrigger small, .swapAssetList small { display: block; font-size: 12px; opacity: .68; }
-.swapAssetMark { display: grid; place-items: center; flex: 0 0 34px; height: 34px; border-radius: 50%; background: #cde6d4; color: #123524; font-size: 16px; font-weight: 700; }
-.swapReverse { display: block; position: relative; z-index: 1; width: 40px; height: 40px; margin: -5px auto; border: 3px solid var(--surface, #fff); border-radius: 12px; background: #123524; color: #fff; font-size: 21px; cursor: pointer; }
-.swapReverse:hover { background: #245d3d; }
-.swapQuoteDetails { margin: 18px 0; padding: 2px 0; border-top: 1px solid var(--line, #d8ded9); }
-.swapQuoteDetails > div { display: flex; justify-content: space-between; gap: 16px; margin-top: 12px; font-size: 14px; }
-.swapQuoteDetails span { opacity: .7; }
 .aurelSwapCard > .button { margin-top: 18px; min-height: 48px; }
-.swapError { color: #ad3131; } .swapProgress { color: #245d3d; }
-.swapFootnote { margin: 14px 6px; font-size: 13px; opacity: .65; }
-.swapTransaction { display: inline-block; margin-top: 10px; color: #245d3d; font-weight: 600; }
-.swapModalBackdrop { position: fixed; z-index: 1000; inset: 0; display: grid; place-items: center; padding: 20px; background: rgba(8, 25, 17, .52); }
-.swapAssetModal { width: min(100%, 440px); max-height: min(80vh, 620px); padding: 20px; border-radius: 16px; background: var(--surface, #fff); color: var(--text, #123524); box-shadow: 0 24px 80px rgba(0, 0, 0, .2); }
-.swapModalHeader { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-.swapModalHeader h2 { margin: 0; font-size: 20px; }
-.swapModalHeader button { border: 0; background: transparent; color: inherit; font-size: 28px; cursor: pointer; }
-.swapAssetSearch { width: 100%; padding: 12px 14px; border: 1px solid var(--line, #d8ded9); border-radius: 9px; background: transparent; color: inherit; font: inherit; }
-.swapAssetList { max-height: 400px; overflow: auto; margin-top: 12px; }
-.swapAssetList button { width: 100%; padding: 11px 8px; border-radius: 9px; }
-.swapAssetList p { padding: 16px 8px; opacity: .65; }
 @media (max-width: 540px) { .aurelSwap { margin-top: 8px; } .aurelSwapCard { padding: 14px; } .swapAmountRow { padding: 12px; } .swapAmountRow input, .swapAmountRow output { font-size: 27px; } }
-.swapReviewAction { margin-top: 14px; }
-.swapReviewStatus { margin: 14px 0 0; padding: 13px 15px; display: grid; gap: 4px; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--surface); color: var(--muted); font-size: var(--type-body-small); line-height: 1.5; }
-.swapReviewStatus strong { color: var(--text); font-size: var(--type-body); }
-.swapAssetBlock select { width: 100%; min-width: 0; border: 0; padding: 0; color: var(--text); background: transparent; font: inherit; font-size: var(--type-body-small); }
-.swapAssetBlock input { width: 100%; min-width: 0; border: 0; padding: 0; color: var(--text); background: transparent; font-family: "Archivo Variable", "Satoshi", system-ui, sans-serif; font-size: clamp(27px, 3vw, 36px); font-weight: 620; letter-spacing: -.035em; outline: none; }
-.swapAssetBlock > strong { font-family: "Archivo Variable", "Satoshi", system-ui, sans-serif; font-size: clamp(27px, 3vw, 36px); letter-spacing: -.035em; }
-.swapAssetBlock > small { color: var(--muted); font-size: var(--type-caption); }
-.swapBalance { min-height: 22px; display: flex; align-items: center; justify-content: space-between; gap: 10px; color: var(--muted); font-size: var(--type-caption); }
-.swapBalance button { padding: 3px 7px; color: var(--accent); border: 0; border-radius: 7px; background: var(--accent-soft); font: inherit; font-weight: 700; cursor: pointer; }
-.swapBalance button:hover { color: white; background: var(--accent); }
-.swapReverse { width: 42px; height: 42px; z-index: 1; display: grid; place-items: center; color: var(--text); border: 1px solid var(--border); border-radius: 50%; background: var(--surface); box-shadow: var(--shadow-control); transition: transform var(--motion-fast), color var(--motion-fast), border-color var(--motion-fast); }
-.swapReverse:hover { color: var(--accent); border-color: var(--accent); transform: rotate(180deg); }
-.swapForm > .button { grid-column: 1 / -1; min-height: 48px; margin-top: 4px; }
-.swapSettings { min-height: 44px; margin-top: 8px; display: flex; align-items: center; justify-content: flex-end; gap: 12px; color: var(--muted); font-size: var(--type-body-small); }
-.swapSettings > div { display: inline-flex; padding: 3px; gap: 2px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-subtle); }
-.swapSettings button { min-width: 48px; min-height: 28px; padding: 0 9px; color: var(--muted); border: 0; border-radius: 7px; background: transparent; font: inherit; font-weight: 650; cursor: pointer; }
-.swapSettings button:hover { color: var(--text); }
-.swapSettings button.active { color: white; background: var(--accent); }
-.swapQuotes { margin-top: 20px; padding: 18px; border: 1px solid var(--border); border-radius: var(--radius-panel); background: var(--surface-subtle); }
-.swapQuotesHeader { min-height: 32px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.swapQuotesHeader h3 { margin: 0; font-size: var(--type-row-title); }
-.swapQuotesHeader > span { color: var(--muted); font-size: var(--type-body-small); }
-.swapQuoteRow { width: 100%; min-height: 70px; padding: 12px 10px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(180px, auto); align-items: center; gap: 10px; text-align: left; color: var(--text); border: 0; border-top: 1px solid var(--border); background: transparent; transition: background var(--motion-fast); }
-.swapQuoteRow:first-of-type { margin-top: 8px; }
-.swapQuoteRow:hover, .swapQuoteRow.selected { background: color-mix(in srgb, var(--accent) 7%, transparent); }
-.swapQuoteRow > span:not(.swapQuoteCheck) { display: grid; gap: 4px; }
-.swapQuoteRow > span:last-child { text-align: right; }
-.swapQuoteRow strong { font-size: var(--type-body); }
-.swapQuoteRow small { color: var(--muted); font-size: var(--type-body-small); }
-.swapQuoteCheck { width: 20px; height: 20px; display: grid; place-items: center; color: white; border: 1px solid var(--border); border-radius: 50%; }
-.swapQuoteRow.selected .swapQuoteCheck { border-color: var(--accent); background: var(--accent); }
-.swapReview { margin: 14px 0; display: grid; grid-template-columns: repeat(2, 1fr); border: 1px solid var(--border); border-radius: var(--radius-control); overflow: hidden; background: var(--surface); }
-.swapReview span { min-height: 68px; padding: 14px; display: grid; align-content: center; gap: 5px; color: var(--muted); font-size: var(--type-body-small); border-right: 1px solid var(--border); }
-.swapReview span:nth-child(2n) { border-right: 0; }
-.swapReview span:nth-child(-n+2) { border-bottom: 1px solid var(--border); }
-.swapReview strong { color: var(--text); font-size: var(--type-body); }
 
 @media (max-width: 720px) {
   .walletHeading { flex-direction: column; align-items: stretch; }
   .walletHeading h2 { margin-bottom: 0; }
-  .swapPanel { padding: 20px; }
-  .swapForm { grid-template-columns: 1fr; }
-  .swapReverse { justify-self: center; margin: -18px 0; transform: rotate(0deg); }
-  .swapReverse:hover { transform: rotate(180deg); }
-  .swapQuoteRow { grid-template-columns: minmax(0, 1fr); }
-  .swapQuoteRow > span:last-child { grid-column: 1; text-align: left; }
-  .swapReview { grid-template-columns: 1fr; }
-  .swapReview span, .swapReview span:nth-child(2n) { min-height: 58px; border-right: 0; border-bottom: 1px solid var(--border); }
-  .swapReview span:last-child { border-bottom: 0; }
 }
 
 /* Cards and benefits */
