@@ -127,6 +127,7 @@ export function DepositPage() {
       <div className="mxMain">
         <div className="mxTabs" role="tablist" aria-label="Ways to deposit">
           {tabs.map(({ id, label, detail, icon: Icon }) => <button key={id} type="button" role="tab" id={`deposit-tab-${id}`} aria-controls={`deposit-panel-${id}`}
+            aria-labelledby={`deposit-tab-${id}-label`} aria-describedby={`deposit-tab-${id}-detail`}
             aria-selected={tab === id} tabIndex={tab === id ? 0 : -1} onClick={() => choose(id)}
             onKeyDown={(event) => {
               const index = tabs.findIndex((item) => item.id === tab);
@@ -138,11 +139,11 @@ export function DepositPage() {
               document.getElementById(`deposit-tab-${next}`)?.focus();
             }}>
             <span className="mxTabIcon"><Icon aria-hidden="true" /></span>
-            <span className="mxTabText"><strong>{label}</strong><small>{detail}</small></span>
+            <span className="mxTabText"><strong id={`deposit-tab-${id}-label`}>{label}</strong><small id={`deposit-tab-${id}-detail`}>{detail}</small></span>
             <ChevronRight className="mxTabChevron" aria-hidden="true" />
           </button>)}
         </div>
-        <div role="tabpanel" id={`deposit-panel-${tab}`} aria-labelledby={`deposit-tab-${tab}`} className="mxTabPanel">
+        <div role="tabpanel" id={`deposit-panel-${tab}`} aria-labelledby={`deposit-tab-${tab}-label`} className="mxTabPanel">
           {tab === "receive" && (needsWallet || !account ? <SettingUp /> : <ReceivePanel address={account} isExample={isExample} />)}
           {tab === "wallet" && <section className="mxPanel" aria-labelledby="deposit-wallet">
             <div className="mxPanelHead"><h2 id="deposit-wallet">From your wallet</h2>

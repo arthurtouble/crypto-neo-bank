@@ -147,14 +147,12 @@ test("the customer's own transactions show in the bell without a second toast", 
   await setFeature(page, "cross_chain", false);
   await signIn(page);
   await page.goto("/app/send");
-  const dialog = page.getByRole("dialog");
-  await page.getByRole("button", { name: "Send", exact: true }).first().click();
+  const dialog = page.getByRole("region", { name: "Send crypto" });
   await dialog.getByLabel("Amount").fill("10");
   await dialog.getByLabel("To").fill(FRIEND);
   await dialog.getByRole("button", { name: "Review" }).click();
   await dialog.getByRole("button", { name: "Confirm and send" }).click();
   await expect(toast(page, "Transfer complete")).toBeVisible({ timeout: 30_000 });
-  await dialog.getByRole("button", { name: "Close" }).click();
   await returnToTab(page);
   await expect(count(page)).toHaveText("1", { timeout: 15_000 });
   await page.locator(".toastRegion").getByRole("button", { name: "Close" }).first().click();

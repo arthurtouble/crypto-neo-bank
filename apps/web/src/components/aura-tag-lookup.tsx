@@ -19,5 +19,6 @@ export function AuraTagLookup() {
     } catch (caught) { setError(caught instanceof Error ? caught.message : "This Aura tag is unavailable."); }
     finally { setBusy(false); }
   }
-  return <form className="auraTagLookup" onSubmit={(event) => void lookup(event)}><label className="fieldLabel">Aura tag<input value={tag} onChange={(event) => setTag(event.target.value)} placeholder="@name" required /></label><button className="button secondary" disabled={busy}>{busy ? "Finding…" : "Find recipient"}</button>{error && <p role="alert">{error}</p>}</form>;
+  return <form className="mxForm" onSubmit={(event) => void lookup(event)}><label className="mxField">Aura tag<input value={tag} onChange={(event) => setTag(event.target.value)} placeholder="@name" required /></label>
+    <button className="appButton" disabled={busy}>{busy ? "Finding…" : "Find recipient"}</button>{error && <p className="mxFieldError" role="alert">{error}</p>}</form>;
 }

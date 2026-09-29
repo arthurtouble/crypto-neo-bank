@@ -1,9 +1,9 @@
 import dynamic from "next/dynamic";
 import type { CustomerSection } from "@/lib/product-map";
 import { DepositPage } from "./deposit-page";
+import { SendPage } from "./send-page";
 import { SwapWorkspace } from "./swap-workspace";
 
-const MoneyWorkspace = dynamic(() => import("./money-workspace").then((mod) => mod.MoneyWorkspace));
 const EarnWorkspace = dynamic(() => import("./earn-workspace").then((mod) => mod.EarnWorkspace));
 const CardWorkspace = dynamic(() => import("./card-workspace").then((mod) => mod.CardWorkspace));
 const ActivityWorkspace = dynamic(() => import("./activity-workspace").then((mod) => mod.ActivityWorkspace));
@@ -20,9 +20,9 @@ const titles: Record<CustomerSection, string> = {
 export function SectionPage({ section }: { section: CustomerSection }) {
   // Rebuilt in the redesign: the page draws its own title and layout.
   if (section === "deposit") return <DepositPage />;
+  if (section === "send") return <SendPage />;
   return <div>
     <section className="pageIntro compact"><div><h1>{titles[section]}</h1></div></section>
-    {section === "send" && <MoneyWorkspace mode={section} />}
     {section === "swap" && <SwapWorkspace />}
     {section === "earn" && <EarnWorkspace />}
     {section === "cards" && <CardWorkspace />}

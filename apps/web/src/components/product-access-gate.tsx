@@ -4,6 +4,7 @@ import { usePrivy } from "@privy-io/react-auth";
 import { usePathname } from "next/navigation";
 import { Dashboard } from "./dashboard";
 import { DepositPage } from "./deposit-page";
+import { SendPage } from "./send-page";
 import { ExampleProduct } from "./example-product";
 
 export function ProductAccessGate({ children }: { children: React.ReactNode }) {
@@ -14,6 +15,7 @@ export function ProductAccessGate({ children }: { children: React.ReactNode }) {
   // Rebuilt sections render their own labelled example data; the rest use the shared example page until they're rebuilt.
   if (!authenticated && section === "overview") return <Dashboard />;
   if (!authenticated && section === "deposit") return <DepositPage />;
+  if (!authenticated && section === "send") return <SendPage />;
   if (!ready) return <ExampleProduct section={section} onSignIn={login} signInReady={false} />;
   if (!authenticated) return <ExampleProduct section={section} onSignIn={login} />;
 

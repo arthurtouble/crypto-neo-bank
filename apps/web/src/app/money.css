@@ -73,6 +73,62 @@
 .appFrame .mxChecklist li.isDone { color: var(--color-text-secondary); }
 .appFrame .mxChecklist li.isDone::before { content: "✓"; border-color: var(--color-positive); background: var(--color-positive); color: var(--color-on-accent); }
 
+
+/* Send: step marker, amount, recipient faces */
+.appFrame .mxPanelHeadRow { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); }
+.appFrame .mxSteps { margin: 0; padding: 0; list-style: none; display: flex; gap: var(--space-2); counter-reset: step; }
+.appFrame .mxSteps li { display: inline-flex; align-items: center; gap: 6px; color: var(--color-text-tertiary); font-size: var(--text-small-size); font-weight: var(--weight-medium); counter-increment: step; }
+.appFrame .mxSteps li::before { content: counter(step); width: 20px; height: 20px; display: grid; place-items: center; border: 1px solid var(--color-line-strong); border-radius: 50%; font-size: var(--text-caption-size); }
+.appFrame .mxSteps li + li::after { content: none; }
+.appFrame .mxSteps li[aria-current="step"] { color: var(--color-text); }
+.appFrame .mxSteps li[aria-current="step"]::before { border-color: var(--color-accent); background: var(--color-accent); color: var(--color-on-accent); }
+.appFrame .mxAmountRow { display: grid; grid-template-columns: minmax(0, 1fr) 140px; gap: var(--space-3); align-items: end; }
+.appFrame .mxField .mxAmountInput { height: 56px; font-size: var(--text-amount-size); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-tight); }
+.appFrame .mxField select { cursor: pointer; }
+.appFrame .mxAmountRow select { height: 56px; }
+.appFrame .mxField .mxMonoInput { font-family: var(--font-mono); font-size: var(--text-small-size); }
+.appFrame .mxInlineButton { height: auto; padding: 0; vertical-align: baseline; font-size: inherit; }
+.appFrame .mxFaces { display: flex; gap: var(--space-2); overflow-x: auto; padding-bottom: 2px; scrollbar-width: thin; }
+.appFrame .mxFaces button { flex: none; width: 104px; display: grid; justify-items: center; gap: 2px; padding: var(--space-2) var(--space-1); border: 1px solid transparent; border-radius: var(--radius-md); background: none; color: var(--color-text); font: inherit; text-align: center; cursor: pointer; }
+.appFrame .mxFaces button:hover { background: var(--color-hover); }
+.appFrame .mxFaces button:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.appFrame .mxFaces button[aria-pressed="true"] { border-color: var(--color-accent); background: var(--color-accent-soft); }
+.appFrame .mxFaces strong { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--text-small-size); font-weight: var(--weight-medium); }
+.appFrame .mxFaces small { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--text-caption-size); }
+.appFrame .mxFace { width: 40px; height: 40px; margin-bottom: 4px; display: grid; place-items: center; border-radius: var(--radius-pill); background: var(--color-muted); color: var(--color-text-secondary); font-weight: var(--weight-semibold); }
+.appFrame .mxFaces button[aria-pressed="true"] .mxFace { background: var(--color-accent); color: var(--color-on-accent); }
+.appFrame .mxCheck { display: flex; align-items: center; gap: var(--space-2); cursor: pointer; }
+.appFrame .mxCheck input { width: 18px; height: 18px; margin: 0; accent-color: var(--color-accent); }
+.appFrame .mxBreak { overflow-wrap: anywhere; font-family: var(--font-mono); font-size: var(--text-small-size); }
+.appFrame .mxPositive { color: var(--color-positive); }
+.appFrame .mxActionsStack { display: grid; }
+.appFrame .mxSubForm { padding: var(--space-4); border: 1px solid var(--color-line); border-radius: var(--radius-md); }
+.appFrame .mxSubForm h3 { margin: 0; font-size: var(--text-title-3-size); font-weight: var(--weight-semibold); }
+.appFrame .mxStart { justify-self: start; }
+.appFrame .mxTabPanel { display: grid; gap: var(--space-4); }
+
+/* Progress for an action, where it started (TransactionProgress), in the rebuilt money pages */
+.appFrame .mxPage .transactionProgress { display: grid; gap: var(--space-3); margin: 0; padding: var(--space-4); border: 1px solid var(--color-line); border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-text); box-shadow: none; }
+.appFrame .mxPage .transactionProgress.complete { border-color: var(--color-positive); background: var(--color-positive-soft); }
+.appFrame .mxPage .transactionProgress.failed { border-color: var(--color-negative); background: var(--color-negative-soft); }
+.appFrame .mxPage .transactionProgressHeadline { display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: var(--space-3); align-items: start; }
+.appFrame .mxPage .transactionProgressHeadline > span { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--color-accent-soft); color: var(--color-accent); }
+.appFrame .mxPage .transactionProgress.complete .transactionProgressHeadline > span { background: var(--color-positive); color: var(--color-on-accent); }
+.appFrame .mxPage .transactionProgress.failed .transactionProgressHeadline > span { background: var(--color-negative); color: var(--color-on-accent); }
+.appFrame .mxPage .transactionProgressHeadline svg { width: 14px; height: 14px; }
+.appFrame .mxPage .transactionProgressHeadline strong { display: block; font-size: var(--text-body-size); font-weight: var(--weight-semibold); }
+.appFrame .mxPage .transactionProgressHeadline small { display: block; margin-top: 2px; color: var(--color-text-secondary); font-size: var(--text-small-size); }
+.appFrame .mxPage .transactionSteps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-2); }
+.appFrame .mxPage .transactionSteps span { display: flex; align-items: center; gap: 6px; color: var(--color-text-tertiary); font-size: var(--text-caption-size); font-weight: var(--weight-medium); }
+.appFrame .mxPage .transactionSteps span.done { color: var(--color-text); }
+.appFrame .mxPage .transactionSteps i { width: 18px; height: 18px; flex: none; display: grid; place-items: center; border: 1px solid var(--color-line-strong); border-radius: 50%; font-style: normal; font-size: 10px; background: var(--color-surface); }
+.appFrame .mxPage .transactionSteps span.done i { border-color: var(--color-positive); background: var(--color-positive); color: var(--color-on-accent); }
+.appFrame .mxPage .transactionSteps svg { width: 10px; height: 10px; }
+.appFrame .mxPage .transactionFailureHint { display: flex; align-items: center; gap: 6px; color: var(--color-negative); font-size: var(--text-small-size); }
+.appFrame .mxPage .transactionLinks { display: flex; flex-wrap: wrap; gap: var(--space-4); }
+.appFrame .mxPage .transactionLinks a { display: inline-flex; align-items: center; gap: 4px; color: var(--color-accent); font-size: var(--text-small-size); font-weight: var(--weight-medium); text-decoration: none; }
+.appFrame .mxPage .transactionLinks svg { width: 12px; height: 12px; }
+
 /* Tablet: the side column moves below */
 @media (max-width: 1023px) {
   .appFrame .mxColumns { grid-template-columns: minmax(0, 1fr); }
@@ -97,4 +153,9 @@
   .appFrame .mxFieldRow { grid-template-columns: minmax(0, 1fr); }
   .appFrame .mxField input, .appFrame .mxField select { font-size: 16px; }
   .appFrame .mxCard .appButton { justify-self: stretch; height: var(--control-height-lg); }
+  .appFrame .mxAmountRow { grid-template-columns: minmax(0, 1fr) 110px; }
+  /* The form and its review already say all this on a phone. */
+  .appFrame .mxSummaryCard { display: none; }
+  .appFrame .mxPanelHeadRow { flex-wrap: wrap; }
+  .appFrame .mxPage .transactionSteps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }

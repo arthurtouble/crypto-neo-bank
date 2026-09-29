@@ -140,8 +140,7 @@ test("money movement lists every customer's transactions, filters them, and open
   await acceptTerms(customerPage, customer);
   await setIdentity(customerPage, customer, { signedIn: true });
   await customerPage.goto(`${WEB}/app/send`);
-  await customerPage.getByRole("button", { name: "Send", exact: true }).first().click();
-  const dialog = customerPage.getByRole("dialog");
+  const dialog = customerPage.getByRole("region", { name: "Send crypto" });
   await dialog.getByLabel("Amount").fill("10");
   await dialog.getByLabel("To").fill(FRIEND);
   await dialog.getByRole("button", { name: "Review" }).click();

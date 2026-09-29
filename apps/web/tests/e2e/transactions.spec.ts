@@ -25,11 +25,11 @@ async function signIn(page: Page) {
 /** Send 10 USDC to a friend through Send, as a customer would. */
 async function send(page: Page) {
   await page.goto("/app/send");
-  await page.getByRole("button", { name: "Send", exact: true }).first().click();
-  await dialog(page).getByLabel("Amount").fill("10");
-  await dialog(page).getByLabel("To").fill(FRIEND);
-  await dialog(page).getByRole("button", { name: "Review" }).click();
-  await dialog(page).getByRole("button", { name: "Confirm and send" }).click();
+  const form = page.getByRole("region", { name: "Send crypto" });
+  await form.getByLabel("Amount").fill("10");
+  await form.getByLabel("To").fill(FRIEND);
+  await form.getByRole("button", { name: "Review" }).click();
+  await form.getByRole("button", { name: "Confirm and send" }).click();
   await expect(page.locator(".toastRegion").getByText("Transfer complete", { exact: true })).toBeVisible({ timeout: 30_000 });
 }
 

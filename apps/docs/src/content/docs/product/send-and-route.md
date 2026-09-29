@@ -11,7 +11,7 @@ Your money is held on Base. You can also choose the network it arrives on: ETH c
 
 Aura checks that sending is switched on and applies any controls you've set. It won't send to your own Aura address or to a token's contract address. Then it builds the exact transaction.
 
-Before you confirm, you review the asset, amount, recipient, network, and fee. On Base, the fee shows as **Paid by Aura**. You confirm with your passkey. These checks don't vouch for the recipient, and they don't guarantee the payment settles.
+Send has two tabs: **To a person or wallet** for crypto, and **To a bank account** for dollars to a US bank. You enter the amount, then who it's for, then review it on its own step: the asset, amount, recipient, network, and fee. On Base, the fee shows as **Paid by Aura**. You confirm with your passkey. These checks don't vouch for the recipient, and they don't guarantee the payment settles.
 
 ## Before you send
 
@@ -25,7 +25,7 @@ A payment sent to the wrong but valid address usually can't be reversed.
 
 ## Saved recipients
 
-Your saved recipients show at the top of Send, so you can pick one in a tap. When you enter an address, Aura tells you whether it's a saved recipient, one of your own wallets, or a new address. You can save a new address with a name as you send to it. You can remove saved recipients in Settings.
+Your saved recipients show above the address field in Send, so you can pick one in a tap. When you enter an address, Aura tells you whether it's a saved recipient, one of your own wallets, or a new address. You can save a new address with a name as you send to it. You can remove saved recipients in Settings.
 
 Saving an address doesn't prove who controls it. A saved name is just a label for you.
 

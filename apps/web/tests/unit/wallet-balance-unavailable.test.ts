@@ -24,18 +24,23 @@ vi.mock("wagmi", async (importOriginal) => ({
 }));
 
 import { WalletWorkspace } from "@/components/wallet-workspace";
+import { assetsFor } from "@/lib/assets/registry";
 
 describe("wallet balance authority", () => {
   it("shows unavailable when chain balance reads fail", () => {
     const html = renderToStaticMarkup(createElement(WalletWorkspace));
-    expect(html).toContain("Unavailable");
-    expect(html).not.toContain("Observed now");
+    // The selected asset's balance says so instead of showing a number.
+    expect(html).toContain("Balance unavailable");
+    expect(html).not.toMatch(/\d USDC available/);
   });
 
   it("lists exactly the registry's sendable assets on Base", () => {
     search.params = "";
     const html = renderToStaticMarkup(createElement(WalletWorkspace)).replaceAll("<!-- -->", "");
-    for (const symbol of ["ETH", "USDC", "WETH", "cbBTC"]) expect(html).toContain(`<strong>${symbol === "ETH" ? "Ether" : symbol === "USDC" ? "USD Coin" : symbol === "WETH" ? "Wrapped Ether" : "Bitcoin (Coinbase Wrapped BTC)"}</strong>`);
+    // The Asset field offers the registry's sendable assets, and nothing else.
+    const offered = [...html.matchAll(/<option(?: selected="")?>([^<]+)<\/option>/g)].map((match) => match[1]);
+    expect(offered).toEqual(assetsFor("send").map((item) => item.symbol));
+    for (const symbol of ["ETH", "USDC", "WETH", "cbBTC"]) expect(offered).toContain(symbol);
   });
 
   it("offers the customer's own linked wallet as a destination, never the Privy signer", () => {
