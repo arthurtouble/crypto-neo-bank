@@ -55,7 +55,7 @@ function feesUsd(quote: RouteQuote): string | null {
   return fees === null ? null : fees.toLocaleString(undefined, { style: "currency", currency: "USD", minimumFractionDigits: 2 });
 }
 
-/** Send crypto from the Aura account. Deposits are in DepositWorkspace. */
+/** Send crypto from the Aura account. Deposits are on the Deposit page (deposit-page.tsx). */
 export function WalletWorkspace() {
   const searchParams = useSearchParams();
   const api = useApi();

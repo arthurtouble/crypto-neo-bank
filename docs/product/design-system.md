@@ -22,6 +22,7 @@ The root layout loads `design-tokens.css` for the whole app. Areas rebuilt in ph
 | --- | --- | --- |
 | App shell: sidebar, top bar, phone header, menu button and sheet, account menu, notifications, toasts, terms and account screens | `apps/web/src/app/shell.css`, classes prefixed `app` | Rebuilt |
 | Overview: total, group chips, holdings table or list, holding detail, recent transactions, guest example, empty account | `apps/web/src/app/overview.css`, classes prefixed `ov`; the shared guest banner is in `shell.css` | Rebuilt |
+| Deposit: the four ways as tabs (desktop) or rows (phone), receive, from a wallet, card, bank checklist and details | `apps/web/src/app/money.css`, classes prefixed `mx`, shared with Send and Swap | Rebuilt |
 | Other pages inside the shell | `globals.css`, `product-system.css` | Old look until their area is rebuilt |
 
 ## Principles
@@ -274,7 +275,7 @@ On the raised surface with shadow 2, a status icon, a title, one line, and a clo
 - **Desktop sidebar.** 232px, the surface colour, a line on its right. The wordmark at the top, then the ten sections as 36px items: an 18px icon and the name. The current item has a muted fill, text colour, and an accent icon. Tablet: 72px, icons only, names in tooltips.
 - **Desktop top bar.** 60px: the page title or search (⌘K) on the left, the bell and the avatar menu on the right.
 - **Phone header.** 56px: the section title, and the bell on the right. In a step, a back button on the left and the step's title instead.
-- **Phone menu button.** A 56px circle, filled with the text colour, floating bottom centre with shadow 2. It hides during a step and when the keyboard is open.
+- **Phone menu button.** A 56px circle, filled with the text colour, floating bottom centre with shadow 2. It hides during a step. It stays put while typing: hiding it on focus moved it under the finger as the field lost focus, so taps meant for a form button opened the menu. The page leaves 100px clear at the bottom instead.
 - **Phone menu sheet.** From the bottom, `--radius-sheet` top corners, a grab handle. "Menu" and the email at the top, the ten sections as tiles three per row (a 22px icon above the name, the current tile outlined in accent), and Log out at the bottom.
 
 ### Overlays

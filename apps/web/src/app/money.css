@@ -1,0 +1,100 @@
+/*
+ * Money actions (redesign area 7): Deposit, Send, and Swap share these parts, from the design tokens only.
+ * Desktop: the form or tabs on the left, a summary column on the right. Phone: one column, big targets.
+ */
+
+.appFrame .mxPage { display: grid; gap: var(--gap-section); font-family: var(--font-sans); font-size: var(--text-body-size); line-height: var(--text-body-line); color: var(--color-text); font-variant-numeric: tabular-nums; }
+.appFrame .mxPage h1, .appFrame .mxPage h2, .appFrame .mxPage h3, .appFrame .mxPage p { margin: 0; }
+.appFrame .mxPage small { font-size: var(--text-small-size); line-height: var(--text-small-line); color: var(--color-text-secondary); }
+.appFrame .mxPage svg.lucide { width: 16px; height: 16px; }
+.appFrame .mxHead h1 { font-size: var(--text-title-1-size); line-height: var(--text-title-1-line); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-tight); }
+.appFrame .mxColumns { display: grid; grid-template-columns: minmax(0, 1fr) var(--side-column); gap: var(--gap-section); align-items: start; }
+.appFrame .mxMain, .appFrame .mxSide { display: grid; gap: var(--space-4); min-width: 0; }
+.appFrame .mxMono { font-family: var(--font-mono); font-size: var(--text-small-size); }
+
+/* Tabs: a segmented bar on desktop, rows on the phone */
+.appFrame .mxTabs { display: inline-flex; justify-self: start; gap: 2px; padding: 2px; border-radius: var(--radius-md); background: var(--color-muted); }
+.appFrame .mxTabs [role="tab"] { display: inline-flex; align-items: center; gap: var(--space-2); height: 32px; padding: 0 var(--space-3); border: 0; border-radius: var(--radius-sm); background: none; color: var(--color-text-secondary); font: var(--weight-medium) var(--text-body-size) / 1 var(--font-sans); cursor: pointer; }
+.appFrame .mxTabs [role="tab"][aria-selected="true"] { background: var(--color-surface); color: var(--color-text); box-shadow: var(--shadow-1); }
+.appFrame .mxTabs [role="tab"]:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.appFrame .mxTabIcon, .appFrame .mxTabText small, .appFrame .mxTabChevron { display: none; }
+.appFrame .mxTabText strong { font-weight: inherit; }
+
+/* Panels and cards */
+.appFrame .mxPanel, .appFrame .mxCard { display: grid; gap: var(--space-5); padding: var(--space-6); background: var(--color-surface); border: 1px solid var(--color-line); border-radius: var(--radius-lg); box-shadow: var(--shadow-1); min-width: 0; }
+.appFrame .mxCard { gap: var(--space-3); padding: var(--space-5); }
+.appFrame .mxPanelHead { display: grid; gap: var(--space-1); }
+.appFrame .mxPanelHead h2 { font-size: var(--text-title-2-size); line-height: var(--text-title-2-line); font-weight: var(--weight-semibold); }
+.appFrame .mxPanelHead p, .appFrame .mxHint { color: var(--color-text-secondary); font-size: var(--text-small-size); line-height: var(--text-small-line); }
+.appFrame .mxCard h2 { font-size: var(--text-title-3-size); line-height: var(--text-title-3-line); font-weight: var(--weight-semibold); }
+.appFrame .mxCard .appButton { justify-self: start; }
+.appFrame .mxBadge { justify-self: start; display: inline-flex; align-items: center; height: 22px; padding: 0 var(--space-2); border-radius: var(--radius-pill); background: var(--color-muted); color: var(--color-text-secondary); font-size: var(--text-caption-size); font-weight: var(--weight-medium); }
+.appFrame .mxLabel { color: var(--color-text-secondary); font-size: var(--text-small-size); font-weight: var(--weight-medium); }
+.appFrame .mxState { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-4) 0; color: var(--color-text-secondary); }
+.appFrame .mxState strong { color: var(--color-text); font-weight: var(--weight-medium); }
+.appFrame .mxActions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+
+/* Receive */
+.appFrame .mxReceive { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--space-6); align-items: center; }
+.appFrame .mxQr { padding: var(--space-3); border: 1px solid var(--color-line); border-radius: var(--radius-lg); background: var(--color-surface); color: var(--color-text); line-height: 0; }
+.appFrame .mxReceiveAddress { display: grid; gap: var(--space-2); justify-items: start; min-width: 0; }
+.appFrame .mxAddress { max-width: 100%; font-family: var(--font-mono); font-size: var(--text-body-size); line-height: var(--text-body-line); overflow-wrap: anywhere; color: var(--color-text); }
+
+/* Notes */
+.appFrame .mxNote { display: block; padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); background: var(--color-accent-soft); font-size: var(--text-small-size); line-height: var(--text-small-line); }
+.appFrame .mxNoteWarning { background: var(--color-warning-soft); }
+.appFrame .mxNoteError { background: var(--color-negative-soft); }
+
+/* Forms */
+.appFrame .mxForm { display: grid; gap: var(--space-4); }
+.appFrame .mxFieldRow { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
+.appFrame .mxFieldGroup { display: grid; gap: 6px; }
+.appFrame .mxField { display: grid; gap: 6px; color: var(--color-text-secondary); font-size: var(--text-small-size); font-weight: var(--weight-medium); }
+.appFrame .mxField input, .appFrame .mxField select { width: 100%; height: var(--input-height); padding: 0 var(--space-3); border: 1px solid var(--color-line-strong); border-radius: var(--radius-sm); background: var(--color-surface); color: var(--color-text); font: var(--weight-regular) var(--text-body-size) / 1 var(--font-sans); font-variant-numeric: tabular-nums; }
+.appFrame .mxField input:focus-visible, .appFrame .mxField select:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; border-color: var(--color-focus); }
+.appFrame .mxField input[aria-invalid="true"] { border-color: var(--color-negative); box-shadow: 0 0 0 1px var(--color-negative); }
+.appFrame .mxField input:disabled, .appFrame .mxField select:disabled { background: var(--color-muted); color: var(--color-text-secondary); }
+.appFrame .mxFieldError { color: var(--color-negative); font-size: var(--text-small-size); }
+
+/* Summary rows */
+.appFrame .mxSummary { margin: 0; display: grid; border-top: 1px solid var(--color-line); }
+.appFrame .mxSummary > div { display: flex; justify-content: space-between; align-items: center; gap: var(--space-4); min-height: 44px; padding: var(--space-2) 0; border-bottom: 1px solid var(--color-line); }
+.appFrame .mxSummary dt { color: var(--color-text-secondary); }
+.appFrame .mxSummary dd { margin: 0; text-align: right; font-weight: var(--weight-medium); overflow-wrap: anywhere; }
+.appFrame .mxCopy { display: inline-flex; align-items: center; gap: var(--space-2); }
+.appFrame .mxCopyButton { height: 28px; padding: 0 var(--space-2); font-size: var(--text-small-size); }
+
+/* Setup checklist */
+.appFrame .mxChecklist { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--space-2); counter-reset: step; }
+.appFrame .mxChecklist li { display: flex; align-items: center; gap: var(--space-3); color: var(--color-text-tertiary); counter-increment: step; }
+.appFrame .mxChecklist li::before { content: counter(step); width: 22px; height: 22px; flex: none; display: grid; place-items: center; border: 1px solid var(--color-line-strong); border-radius: 50%; font-size: var(--text-caption-size); font-weight: var(--weight-semibold); }
+.appFrame .mxChecklist li.isCurrent { color: var(--color-text); font-weight: var(--weight-medium); }
+.appFrame .mxChecklist li.isCurrent::before { border-color: var(--color-accent); color: var(--color-accent); }
+.appFrame .mxChecklist li.isDone { color: var(--color-text-secondary); }
+.appFrame .mxChecklist li.isDone::before { content: "✓"; border-color: var(--color-positive); background: var(--color-positive); color: var(--color-on-accent); }
+
+/* Tablet: the side column moves below */
+@media (max-width: 1023px) {
+  .appFrame .mxColumns { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Phone */
+@media (max-width: 767px) {
+  .appFrame .mxTabs { display: grid; justify-self: stretch; gap: 0; padding: 0; background: var(--color-surface); border: 1px solid var(--color-line); border-radius: var(--radius-lg); overflow: hidden; }
+  .appFrame .mxTabs [role="tab"] { height: auto; min-height: var(--row-height); gap: var(--space-3); padding: var(--space-2) var(--space-4); border-radius: 0; text-align: left; }
+  .appFrame .mxTabs [role="tab"] + [role="tab"] { border-top: 1px solid var(--color-line); }
+  .appFrame .mxTabs [role="tab"][aria-selected="true"] { background: var(--color-accent-soft); box-shadow: none; }
+  .appFrame .mxTabIcon { display: grid; place-items: center; width: 36px; height: 36px; flex: none; border-radius: var(--radius-md); background: var(--color-muted); color: var(--color-text-secondary); }
+  .appFrame .mxTabs [role="tab"][aria-selected="true"] .mxTabIcon { background: var(--color-surface); color: var(--color-accent); }
+  .appFrame .mxTabText { display: grid; flex: 1; min-width: 0; }
+  .appFrame .mxTabText strong { color: var(--color-text); }
+  .appFrame .mxTabText small { display: block; font-weight: var(--weight-regular); }
+  .appFrame .mxTabChevron { display: block; color: var(--color-text-tertiary); }
+  .appFrame .mxPanel { padding: var(--space-5) var(--space-4); }
+  .appFrame .mxReceive { grid-template-columns: minmax(0, 1fr); justify-items: center; text-align: center; }
+  .appFrame .mxReceiveAddress { justify-items: center; }
+  .appFrame .mxReceiveAddress .appButton { width: 100%; height: var(--control-height-lg); }
+  .appFrame .mxFieldRow { grid-template-columns: minmax(0, 1fr); }
+  .appFrame .mxField input, .appFrame .mxField select { font-size: 16px; }
+  .appFrame .mxCard .appButton { justify-self: stretch; height: var(--control-height-lg); }
+}

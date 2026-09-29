@@ -95,7 +95,7 @@ export function AddFromWallet({ account }: { account: `0x${string}` }) {
   }, [bridge, api, queryClient, toast]);
 
   if (!source || !sourceAddress) {
-    return <button type="button" className="button primary full" onClick={() => connectWallet()}><Wallet size={16} /> Connect a wallet</button>;
+    return <button type="button" className="appButton appButtonPrimary appButtonLarge" onClick={() => connectWallet()}><Wallet aria-hidden="true" /> Connect a wallet</button>;
   }
 
   const busy = phase === "quoting" || phase === "confirm" || phase === "pending" || phase === "bridging";
@@ -180,34 +180,39 @@ export function AddFromWallet({ account }: { account: `0x${string}` }) {
     : phase === "bridging" ? "Moving to Base" : phase === "review" ? "Confirm deposit" : home ? "Add from wallet" : "Review";
 
   return (
-    <form onSubmit={(event) => void submit(event)}>
-      <label className="fieldLabel">Network
-        <select value={chainId} disabled={busy} onChange={(event) => { setChainId(Number(event.target.value) as SupportedChainId); reset(); }}>
-          {DEPOSIT_NETWORKS.map((network) => <option key={network.chainId} value={network.chainId}>{network.name}</option>)}
-        </select>
-      </label>
-      <label className="fieldLabel">Asset
-        <select value={asset.symbol} disabled={busy} onChange={(event) => { setSymbol(event.target.value as DepositSymbol); reset(); }}>
-          {depositSymbols(chainId).map((item) => <option key={item} value={item}>{item}</option>)}
-        </select>
-      </label>
-      <label className="fieldLabel">Amount in {asset.symbol}
-        <input inputMode="decimal" placeholder="0.00" value={amount} disabled={busy} onChange={(event) => { setAmount(event.target.value.trim()); reset(); }} />
-      </label>
-      <p className="authorityFootnote">
-        From {shortAddress(sourceAddress)} on {networkName} · {available === undefined ? "balance unavailable" : `${amountText(available, asset.decimals)} ${asset.symbol} available`}
-      </p>
-      {quote && phase === "review" && <div className="transactionSummary">
-        <span>You get about<strong>{amountText(quote.toAmountRaw, quote.decimals)} {quote.symbol} on Base</strong></span>
-        <span>At least<strong>{amountText(quote.toAmountMinRaw, quote.decimals)} {quote.symbol}</strong></span>
-        <span>Bridge fee<strong>{usdText(quote.providerFeeUsd)}</strong></span>
-        <span>Network fee<strong>{usdText(quote.networkFeeUsd)}</strong></span>
-      </div>}
-      {error && <p className="formError" role="alert">{error}</p>}
-      <button className="button primary full" disabled={busy}>
-        {busy ? <LoaderCircle className="spin" size={16} /> : <ArrowDownToLine size={16} />}{buttonText}
+    <form className="mxForm" onSubmit={(event) => void submit(event)}>
+      <div className="mxFieldRow">
+        <label className="mxField">Network
+          <select value={chainId} disabled={busy} onChange={(event) => { setChainId(Number(event.target.value) as SupportedChainId); reset(); }}>
+            {DEPOSIT_NETWORKS.map((network) => <option key={network.chainId} value={network.chainId}>{network.name}</option>)}
+          </select>
+        </label>
+        <label className="mxField">Asset
+          <select value={asset.symbol} disabled={busy} onChange={(event) => { setSymbol(event.target.value as DepositSymbol); reset(); }}>
+            {depositSymbols(chainId).map((item) => <option key={item} value={item}>{item}</option>)}
+          </select>
+        </label>
+      </div>
+      <div className="mxFieldGroup">
+        <label className="mxField">Amount in {asset.symbol}
+          <input inputMode="decimal" placeholder="0.00" value={amount} disabled={busy} aria-invalid={error ? true : undefined}
+            aria-describedby="wallet-available" onChange={(event) => { setAmount(event.target.value.trim()); reset(); }} />
+        </label>
+        <span className="mxHint" id="wallet-available">
+          From {shortAddress(sourceAddress)} on {networkName} · {available === undefined ? "balance unavailable" : `${amountText(available, asset.decimals)} ${asset.symbol} available`}
+        </span>
+      </div>
+      {quote && phase === "review" && <dl className="mxSummary" aria-label="Deposit summary">
+        <div><dt>You get about</dt><dd>{amountText(quote.toAmountRaw, quote.decimals)} {quote.symbol} on Base</dd></div>
+        <div><dt>At least</dt><dd>{amountText(quote.toAmountMinRaw, quote.decimals)} {quote.symbol}</dd></div>
+        <div><dt>Bridge fee</dt><dd>{usdText(quote.providerFeeUsd)}</dd></div>
+        <div><dt>Network fee</dt><dd>{usdText(quote.networkFeeUsd)}</dd></div>
+      </dl>}
+      {error && <p className="mxFieldError" role="alert">{error}</p>}
+      <button className="appButton appButtonPrimary appButtonLarge" disabled={busy}>
+        {busy ? <LoaderCircle className="spin" aria-hidden="true" /> : <ArrowDownToLine aria-hidden="true" />}{buttonText}
       </button>
-      <p className="authorityFootnote">
+      <p className="mxHint">
         {home ? "Your wallet pays a small Base network fee in ETH."
           : `It arrives as ${asset.symbol} on Base. The bridge fee comes out of the amount, and your wallet pays the ${networkName} network fee.`}
       </p>

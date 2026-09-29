@@ -151,8 +151,6 @@
   .appFrame .appContent { padding-bottom: 100px; }
   .appMenuButton { position: fixed; z-index: 50; left: 50%; bottom: calc(22px + env(safe-area-inset-bottom)); transform: translateX(-50%); width: var(--menu-button); height: var(--menu-button); display: grid; place-items: center; padding: 0; border: 0; border-radius: var(--radius-pill); background: var(--color-text); color: var(--color-canvas); box-shadow: var(--shadow-2); cursor: pointer; }
   .appMenuButton svg { width: 22px; height: 22px; stroke-width: var(--icon-stroke); }
-  /* Out of the way while typing. */
-  .appFrame:has(:is(input, textarea, select):focus) .appMenuButton { display: none; }
   .appInbox { position: fixed; z-index: 65; inset: 0; width: auto; max-width: none; max-height: none; border: 0; border-radius: 0; box-shadow: none; align-content: start; padding: var(--space-2) var(--page-pad-x) var(--space-8); }
   .appFrame .appInboxBack { display: grid; }
   .appFrame:has(.appInbox) .appMenuButton { display: none; }

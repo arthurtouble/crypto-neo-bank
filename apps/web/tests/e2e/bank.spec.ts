@@ -44,7 +44,7 @@ test("a customer verifies with Bridge, gets US bank details, and a bank deposit 
   const customer = await signIn(page);
   // Bridge's hosted verification page.
   await context.route("https://bridge.aura-e2e.test/**", (route) => route.fulfill({ contentType: "text/html", body: "<h1>Verify your identity with Bridge</h1>" }));
-  await page.goto("/app/deposit");
+  await page.goto("/app/deposit#bank");
   await depositPanel(page).getByLabel("Full legal name").fill("Jane Customer");
   await expect(depositPanel(page).getByLabel("Email")).toHaveValue(customer.email);
   // Bridge hosts identity verification in a new tab.
@@ -77,7 +77,7 @@ test("verification Bridge rejects says so and offers no account", async ({ page 
   const customer = await signIn(page);
   await asCustomer(page, customer, "POST", "/api/money/onboarding", { fullName: "Jane Customer", email: customer.email });
   await edge("/__bridge/kyc", { email: customer.email, status: "rejected" });
-  await page.goto("/app/deposit");
+  await page.goto("/app/deposit#bank");
   await expect(depositPanel(page).getByText("Bridge couldn't verify your identity. Contact Support.")).toBeVisible({ timeout: 30_000 });
   await page.goto("/app/send");
   await expect(sendPanel(page).getByText(/Set up your bank account on/)).toBeVisible({ timeout: 30_000 });
@@ -165,7 +165,7 @@ test("the server refuses a payout while the account is locked, before Bridge cre
 test("while bank accounts are switched off, Deposit and Send say they're coming soon", async ({ page }) => {
   await setFeature(page, "fiat_accounts", false);
   await signIn(page);
-  await page.goto("/app/deposit");
+  await page.goto("/app/deposit#bank");
   await expect(depositPanel(page).getByText("Coming soon", { exact: true })).toBeVisible({ timeout: 30_000 });
   const customer = await newCustomer();
   const response = await page.request.post("/api/money/onboarding", { headers: { Authorization: `Bearer ${customer.token}` }, data: { fullName: "Jane Customer", email: customer.email } });

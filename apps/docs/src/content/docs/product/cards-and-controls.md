@@ -11,7 +11,7 @@ The Aura card is a virtual Visa card. It spends the USDC in your Aura account on
 
 ## Getting a card
 
-1. **Verify your identity.** Bridge verifies you once, on the Deposit page, for both your bank account and your card.
+1. **Verify your identity.** Bridge verifies you once, under **Deposit > Bank**, for both your bank account and your card.
 2. **Apply with Bridge.** On the Cards page, select **Apply with Bridge**. Bridge checks you're eligible on its own page. Select **Check status** to see its decision, or what it still needs from you.
 3. **Create your card.** Once you're approved, select **Create my card**. You need a passkey on your account, and your account can't be locked. Bridge's approval lasts 24 hours. If it runs out before you create the card, Bridge asks you to confirm your details again.
 
