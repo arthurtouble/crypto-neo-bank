@@ -14,9 +14,9 @@ Scoring: `0` unavailable, `1` material gap, `2` workable with limitations, `3` s
 | KYC, KYB, sanctions and EDD workflow | 9 | Pending | Pending | Decision owner, retries, manual review, SOF/SOW triggers |
 | Fiat accounts and safeguarding model | 9 | Pending | Pending | Legal account holder, bank, insurance language, insolvency treatment |
 | Stablecoin conversion and supported networks | 8 | Pending | Pending | Assets, chains, liquidity source, spread, settlement and reversals |
-| ACH/wire/local rails coverage | 7 | Pending | Pending | Limits, cutoffs, returns, recalls and beneficiary validation |
+| ACH/wire/local rails coverage | 6 | Pending | Pending | Limits, cutoffs, returns, recalls and beneficiary validation |
 | Card program | 8 | Pending | Pending | Issuer, regions, wallet support, funding, auth, clearing and disputes |
-| API, sandbox and deterministic fixtures | 5 | Pending | Pending | Coverage parity, test identities, failure and review test cases |
+| API, sandbox and deterministic fixtures | 4 | Pending | Pending | Coverage parity, test identities, failure and review test cases |
 | Signed events and idempotency | 6 | Pending | Pending | Signing/rotation, replay window, retry policy and event ordering |
 | Reconciliation and reporting | 7 | Pending | Pending | Intraday/daily exports, canonical IDs and correction process |
 | Fraud and transaction monitoring | 5 | Pending | Pending | Rule owner, alerts, freezes, escalation and Aurel obligations |
@@ -24,7 +24,7 @@ Scoring: `0` unavailable, `1` material gap, `2` workable with limitations, `3` s
 | Data residency, subprocessors and deletion | 3 | Pending | Pending | DPA, regions, retention, portability and incident notice |
 | Security and availability commitments | 3 | Pending | Pending | SOC reports, pen test, SLA, RTO/RPO and status channel |
 | Support and incident escalation | 3 | Pending | Pending | Named contacts and severity response times |
-| Commercial model | 6 | Pending | Pending | Every setup, minimum, unit, reserve and termination fee |
+| Commercial model | 5 | Pending | Pending | Every setup, minimum, unit, reserve and termination fee |
 
 ## Mandatory gates
 
