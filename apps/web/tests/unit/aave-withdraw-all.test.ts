@@ -7,8 +7,8 @@ import { verifyAction, type VerifiableAction } from "@/lib/actions/verify";
 import { AAVE_BASE_V3_MARKET } from "@/lib/defi/aave";
 import { bundler, entryLog, handleOpsV07, kernelBatch } from "../support/bundles";
 
-const wallet = "0x1111111111111111111111111111111111111111";
-const usdc = "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
+const wallet = "0x1111111111111111111111111111111111111111" as `0x${string}`;
+const usdc = "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913" as `0x${string}`;
 const aToken = "0x4e65fe4dba92790696d040ac24aa414708f5c0ab";
 const pool = AAVE_BASE_V3_MARKET.toLowerCase();
 const hash = `0x${"a".repeat(64)}`;
@@ -23,7 +23,7 @@ const chain = (balance: bigint) => ({
 const input = (direction: "deposit" | "withdraw", amount: string) =>
   earnInputSchema.parse({ kind: "earn", protocol: "aave", direction, asset: "USDC", amount });
 
-function withdrawLog(to: string, amount: bigint): Log {
+function withdrawLog(to: `0x${string}`, amount: bigint): Log {
   const topics = encodeEventTopics({ abi: [withdrawEvent], eventName: "Withdraw", args: { reserve: usdc, user: wallet, to } }) as `0x${string}`[];
   return { address: pool, topics, data: encodeAbiParameters([{ type: "uint256" }], [amount]) } as Log;
 }
