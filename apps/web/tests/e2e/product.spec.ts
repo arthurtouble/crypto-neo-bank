@@ -1,20 +1,23 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
-import { readFileSync } from "node:fs";
 
-test("financial modals stay fixed to a long mobile viewport", async ({ page }) => {
+test("dialogs stay fixed to a long mobile viewport", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  const productStyles = readFileSync("src/app/globals.css", "utf8");
-  await page.setContent(`<meta name="viewport" content="width=device-width, initial-scale=1"><style>${productStyles}</style><main class="productContent"><div style="height: 6000px"><div class="modalBackdrop"><section class="financialModal" role="dialog"><h2>Review</h2></section></div></div></main>`);
-  await page.waitForTimeout(500);
-  const geometry = await page.locator(".modalBackdrop").evaluate((backdrop) => {
-    const dialog = backdrop.querySelector("[role=dialog]")!;
-    const backdropRect = backdrop.getBoundingClientRect();
-    const dialogRect = dialog.getBoundingClientRect();
-    return { backdropTop: backdropRect.top, backdropHeight: backdropRect.height, dialogTop: dialogRect.top, dialogBottom: dialogRect.bottom };
+  await page.goto("/app");
+  // A long page, scrolled well down, then a real portalled dialog opened on top of it.
+  await page.evaluate(() => { document.body.style.minHeight = "6000px"; window.scrollTo(0, 4000); });
+  await expect(async () => {
+    await page.keyboard.press("Control+KeyK");
+    await expect(page.getByRole("dialog")).toBeVisible({ timeout: 2_000 });
+  }).toPass({ timeout: 20_000 });
+  await page.waitForTimeout(400);
+  const geometry = await page.evaluate(() => {
+    const overlay = document.querySelector(".mxDialogOverlay")!.getBoundingClientRect();
+    const dialog = document.querySelector("[role=dialog]")!.getBoundingClientRect();
+    return { overlayTop: overlay.top, overlayHeight: overlay.height, dialogTop: dialog.top, dialogBottom: dialog.bottom };
   });
-  expect(geometry.backdropTop).toBe(0);
-  expect(geometry.backdropHeight).toBe(844);
+  expect(geometry.overlayTop).toBe(0);
+  expect(geometry.overlayHeight).toBe(844);
   expect(geometry.dialogTop).toBeGreaterThanOrEqual(0);
   expect(geometry.dialogBottom).toBeLessThanOrEqual(844);
 });
