@@ -3,7 +3,7 @@ title: Regulated provider requirements matrix
 description: Comparative functional, compliance, operational, and commercial provider requirements.
 ---
 
-Use this matrix for Bridge, Stripe Issuing (cards, through Bridge's card program) and any replacement. Rain was dropped. Scores remain blank until supported by a contract, current product documentation or a written provider response. A polished demo is not evidence of program approval.
+For Bridge, Stripe Issuing (cards, through Bridge's card program), and any replacement. Rain was dropped. Scores stay blank until backed by a contract, current product documentation, or a written provider response; a polished demo is not evidence of program approval.
 
 Scoring: `0` unavailable, `1` material gap, `2` workable with limitations, `3` strong fit. Weight is out of 100.
 
@@ -28,17 +28,17 @@ Scoring: `0` unavailable, `1` material gap, `2` workable with limitations, `3` s
 
 ## Mandatory gates
 
-A provider is not selectable unless it confirms the use case, customer relationship, launch countries, asset/network scope, compliance allocation, safeguarding model, event/reconciliation design, incident channel and full pricing in writing. Contract language must survive comparison with the API documentation.
+A provider can't be selected until it confirms in writing the use case, customer relationship, launch countries, asset/network scope, compliance allocation, safeguarding model, event/reconciliation design, incident channel, and full pricing. Contract language must hold up against the API documentation.
 
 ## Decision method
 
-1. Aurel sends the same diligence pack and volume scenarios to each provider.
+1. Aurel sends each provider the same diligence pack and volume scenarios.
 2. Product and engineering validate sandbox parity and failure handling.
-3. Counsel reviews entity, customer contract, licensing reliance, countries, disclosures and data roles.
-4. Operations runs onboarding, transfer, return, freeze, dispute and reconciliation tabletop tests.
-5. Finance models unit economics using contracted prices, not sales estimates.
+3. Counsel reviews entity, customer contract, licensing reliance, countries, disclosures, and data roles.
+4. Operations runs onboarding, transfer, return, freeze, dispute, and reconciliation tabletop tests.
+5. Finance models unit economics on contracted prices, not sales estimates.
 6. The accountable founder records the decision and rejected trade-offs here.
 
-## Current recommendation
+## Recommendation
 
-Run a two-provider diligence process and select one primary provider for launch. Do not integrate both production programs simultaneously: dual integration increases reconciliation, compliance and support surface before product-market evidence exists. Keep the existing adapter boundary so a second provider can be introduced for geographic or capability redundancy later.
+Run a two-provider diligence process and pick one primary provider for launch. Don't integrate both production programs at once: that adds reconciliation, compliance, and support surface before there's product-market evidence. Keep the adapter boundary so a second provider can be added later for geographic or capability redundancy.
