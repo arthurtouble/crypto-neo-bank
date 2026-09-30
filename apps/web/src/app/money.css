@@ -129,6 +129,60 @@
 .appFrame .mxPage .transactionLinks a { display: inline-flex; align-items: center; gap: 4px; color: var(--color-accent); font-size: var(--text-small-size); font-weight: var(--weight-medium); text-decoration: none; }
 .appFrame .mxPage .transactionLinks svg { width: 12px; height: 12px; }
 
+
+/* Swap: you pay, reverse, you receive, slippage; the quote beside it */
+.appFrame .mxSwapForm { gap: var(--space-3); }
+.appFrame .mxSwapSide { display: grid; gap: var(--space-2); padding: var(--space-4); border: 1px solid var(--color-line-strong); border-radius: var(--radius-md); background: var(--color-surface); }
+.appFrame .mxSwapReceive { background: var(--color-muted); border-color: var(--color-line); }
+.appFrame .mxSwapSideHead { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.appFrame .mxSwapAmount { width: 100%; min-width: 0; height: 44px; padding: 0; border: 0; background: none; color: var(--color-text); font: var(--weight-semibold) var(--text-amount-size) / var(--text-amount-line) var(--font-sans); letter-spacing: var(--tracking-tight); font-variant-numeric: tabular-nums; outline: none; }
+.appFrame .mxSwapSide:focus-within { border-color: var(--color-focus); box-shadow: 0 0 0 1px var(--color-focus); }
+.appFrame .mxSwapReceive:focus-within { border-color: var(--color-line); box-shadow: none; }
+.appFrame .mxSwapEstimate { display: block; overflow: hidden; text-overflow: ellipsis; }
+.appFrame .mxSwapReverse { justify-self: center; width: 36px; height: 36px; margin: calc(-1 * var(--space-5)) 0; position: relative; z-index: 1; display: grid; place-items: center; border: 1px solid var(--color-line-strong); border-radius: var(--radius-pill); background: var(--color-surface); color: var(--color-text-secondary); box-shadow: var(--shadow-1); cursor: pointer; }
+.appFrame .mxSwapReverse:hover { color: var(--color-text); background: var(--color-hover); }
+.appFrame .mxSwapReverse:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.appFrame .mxSwapSettings { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.appFrame .mxQuoteHead { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.appFrame .mxBadgeWarning { background: var(--color-warning-soft); color: var(--color-warning); }
+.appFrame .mxQuote .appButton, .appFrame .mxQuoteEmpty .appButton { justify-self: stretch; }
+.appFrame .mxQuote dd { max-width: 60%; }
+
+/* The asset picker: a trigger in the form, then a dialog (a sheet on the phone) */
+.mxPickerTrigger { display: inline-flex; align-items: center; gap: var(--space-2); height: 32px; padding: 0 var(--space-3); border: 1px solid var(--color-line-strong); border-radius: var(--radius-pill); background: var(--color-surface); color: var(--color-text); font: var(--weight-semibold) var(--text-small-size) / 1 var(--font-sans); cursor: pointer; }
+.mxPickerTrigger:hover { background: var(--color-hover); }
+.mxPickerTrigger:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.mxPickerNetwork { color: var(--color-text-secondary); font-weight: var(--weight-medium); }
+.mxPickerOverlay { position: fixed; inset: 0; z-index: 89; background: var(--color-scrim); }
+.mxPicker { position: fixed; z-index: 90; top: 50%; left: 50%; width: min(480px, calc(100vw - 2 * var(--space-4))); max-height: min(640px, calc(100dvh - 2 * var(--space-4))); transform: translate(-50%, -50%); display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-5); border: 1px solid var(--color-line); border-radius: var(--radius-lg); background: var(--color-raised); color: var(--color-text); box-shadow: var(--shadow-2); font-family: var(--font-sans); font-size: var(--text-body-size); line-height: var(--text-body-line); font-variant-numeric: tabular-nums; }
+.mxPickerHead { display: flex; align-items: center; justify-content: space-between; }
+.mxPickerHead h2 { margin: 0; font-size: var(--text-title-2-size); line-height: var(--text-title-2-line); font-weight: var(--weight-semibold); }
+.mxPickerSearch { display: flex; align-items: center; gap: var(--space-2); height: var(--input-height); padding: 0 var(--space-3); border: 1px solid var(--color-line-strong); border-radius: var(--radius-sm); background: var(--color-surface); color: var(--color-text-secondary); }
+.mxPickerSearch:focus-within { border-color: var(--color-focus); box-shadow: 0 0 0 1px var(--color-focus); }
+.mxPickerSearch svg { width: 16px; height: 16px; flex: none; }
+.mxPickerSearch input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; color: var(--color-text); font: inherit; }
+.mxPickerResults { flex: 1; min-height: 200px; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; gap: 2px; }
+.mxPickerState { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-2); color: var(--color-text-secondary); font-size: var(--text-small-size); }
+.mxPickerState svg { width: 16px; height: 16px; }
+.mxPickerState button { border: 0; background: none; color: var(--color-accent); font: inherit; font-weight: var(--weight-medium); cursor: pointer; }
+.mxPickerOption { width: 100%; min-height: var(--row-height); display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2); border: 0; border-radius: var(--radius-sm); background: none; color: var(--color-text); font: inherit; text-align: left; cursor: pointer; }
+.mxPickerOption:hover, .mxPickerOption.isActive { background: var(--color-hover); }
+.mxPickerOption:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; }
+.mxPickerOption:disabled { opacity: .45; cursor: not-allowed; }
+.mxPickerGlyph { width: 32px; height: 32px; flex: none; display: grid; place-items: center; border-radius: var(--radius-pill); background: var(--color-muted); color: var(--color-text-secondary); font-size: var(--text-small-size); font-weight: var(--weight-semibold); }
+.mxPickerIdentity { flex: 1; min-width: 0; display: grid; }
+.mxPickerIdentity strong { display: flex; align-items: baseline; gap: var(--space-2); min-width: 0; font-weight: var(--weight-semibold); }
+.mxPickerIdentity strong small { min-width: 0; }
+.mxPickerIdentity small { overflow: hidden; color: var(--color-text-secondary); font-size: var(--text-small-size); font-weight: var(--weight-regular); text-overflow: ellipsis; white-space: nowrap; }
+.mxPickerIdentity > span { overflow: hidden; color: var(--color-text-tertiary); font-size: var(--text-caption-size); text-overflow: ellipsis; white-space: nowrap; }
+.mxPickerTrust { display: inline-flex; align-items: center; gap: 4px; color: var(--color-text-secondary); font-size: var(--text-caption-size); white-space: nowrap; }
+.mxPickerTrust svg { width: 12px; height: 12px; color: var(--color-positive); }
+.mxPickerMore { margin-top: var(--space-2); }
+@media (max-width: 767px) {
+  .mxPicker { top: auto; bottom: 0; left: 0; width: 100%; max-height: calc(100dvh - var(--space-8)); transform: none; border-radius: var(--radius-sheet) var(--radius-sheet) 0 0; padding-bottom: calc(var(--space-5) + env(safe-area-inset-bottom)); }
+  .mxPickerSearch input { font-size: 16px; }
+}
+
 /* Tablet: the side column moves below */
 @media (max-width: 1023px) {
   .appFrame .mxColumns { grid-template-columns: minmax(0, 1fr); }

@@ -65,27 +65,27 @@ export function SwapAssetPicker({ value, onSelect, excludedId, label, held = fal
   }
 
   return <Dialog.Root open={open} onOpenChange={(next) => { setOpen(next); setActive(0); }}>
-    <Dialog.Trigger asChild><button className="swapPickerTrigger" type="button" aria-label={`${label}: ${selected.data ? assetCaption(selected.data) : "Choose asset"}`}>
-      {selected.data ? <><span className="swapPickerSymbol">{selected.data.symbol}</span><span className="swapPickerNetwork">{assetNetwork(selected.data.chainId)}</span></> : <span>Choose asset</span>}
+    <Dialog.Trigger asChild><button className="mxPickerTrigger" type="button" aria-label={`${label}: ${selected.data ? assetCaption(selected.data) : "Choose asset"}`}>
+      {selected.data ? <><span className="mxPickerSymbol">{selected.data.symbol}</span><span className="mxPickerNetwork">{assetNetwork(selected.data.chainId)}</span></> : <span>Choose asset</span>}
     </button></Dialog.Trigger>
-    <Dialog.Portal><Dialog.Overlay className="swapPickerOverlay" /><Dialog.Content className="swapPickerDialog" aria-describedby={undefined}>
-      <div className="swapPickerHeading"><Dialog.Title>Choose an asset</Dialog.Title><Dialog.Close className="swapPickerClose" aria-label="Close"><X size={18} /></Dialog.Close></div>
+    <Dialog.Portal><Dialog.Overlay className="mxPickerOverlay" /><Dialog.Content className="mxPicker" aria-describedby={undefined}>
+      <div className="mxPickerHead"><Dialog.Title>Choose an asset</Dialog.Title><Dialog.Close className="appIconButton mxPickerClose" aria-label="Close"><X aria-hidden="true" /></Dialog.Close></div>
       <>
-        <label className="swapPickerSearch"><Search size={18} /><span className="srOnly">Search assets or contract address</span><input autoFocus value={search} onChange={(event) => { setSearch(event.target.value); setActive(0); }} placeholder="Search name or contract" onKeyDown={(event) => {
+        <label className="mxPickerSearch"><Search aria-hidden="true" /><span className="srOnly">Search assets or contract address</span><input autoFocus value={search} onChange={(event) => { setSearch(event.target.value); setActive(0); }} placeholder="Search name or contract" onKeyDown={(event) => {
           if (event.key === "ArrowDown") { event.preventDefault(); setActive((index) => Math.min(index + 1, assets.length - 1)); }
           if (event.key === "ArrowUp") { event.preventDefault(); setActive((index) => Math.max(index - 1, 0)); }
           if (event.key === "Enter" && assets[active]) { event.preventDefault(); choose(assets[active]); }
         }} /></label>
-        <div className="swapPickerResults" aria-live="polite">
-          {!debounced && !pages.isPending && !pages.isError && <div className="swapPickerState">{held ? "In your account" : "Supported assets"}</div>}
-          {pages.isPending ? <div className="swapPickerState"><LoaderCircle className="spin" size={17} /> Loading assets</div>
-            : pages.isError ? <div className="swapPickerState">Assets are unavailable. <button type="button" onClick={() => void pages.refetch()}>Try Again</button></div>
-              : assets.length === 0 ? <div className="swapPickerState">No matching assets</div>
-                : assets.map((asset, index) => <button type="button" key={asset.id} className={`swapPickerOption ${index === active ? "active" : ""}`} disabled={asset.id === excludedId || asset.eligibility !== "eligible"} onMouseEnter={() => setActive(index)} onClick={() => choose(asset)}>
-                  <span className="swapPickerGlyph">{asset.symbol.slice(0, 1).toUpperCase()}</span><span className="swapPickerIdentity"><strong>{asset.symbol}<small>{asset.name}</small></strong><span>{assetNetwork(asset.chainId)} · {contractHint(asset)}</span></span>
-                  {asset.eligibility === "eligible" ? <span className="swapPickerTrust"><Check size={14} /> Reviewed</span> : <span className="swapPickerTrust">Paused</span>}
+        <div className="mxPickerResults" aria-live="polite">
+          {!debounced && !pages.isPending && !pages.isError && <div className="mxPickerState">{held ? "In your account" : "Supported assets"}</div>}
+          {pages.isPending ? <div className="mxPickerState"><LoaderCircle className="spin" aria-hidden="true" /> Loading assets</div>
+            : pages.isError ? <div className="mxPickerState">Assets are unavailable. <button type="button" onClick={() => void pages.refetch()}>Try Again</button></div>
+              : assets.length === 0 ? <div className="mxPickerState">No matching assets</div>
+                : assets.map((asset, index) => <button type="button" key={asset.id} className={`swapPickerOption mxPickerOption${index === active ? " isActive" : ""}`} disabled={asset.id === excludedId || asset.eligibility !== "eligible"} onMouseEnter={() => setActive(index)} onClick={() => choose(asset)}>
+                  <span className="mxPickerGlyph" aria-hidden="true">{asset.symbol.slice(0, 1).toUpperCase()}</span><span className="mxPickerIdentity"><strong>{asset.symbol}<small>{asset.name}</small></strong><span>{assetNetwork(asset.chainId)} · {contractHint(asset)}</span></span>
+                  {asset.eligibility === "eligible" ? <span className="mxPickerTrust"><Check aria-hidden="true" /> Reviewed</span> : <span className="mxPickerTrust">Paused</span>}
                 </button>)}
-          {pages.hasNextPage && <button type="button" className="swapPickerMore" disabled={pages.isFetchingNextPage} onClick={() => void pages.fetchNextPage()}>{pages.isFetchingNextPage ? "Loading" : "Load more"}</button>}
+          {pages.hasNextPage && <button type="button" className="appButton mxPickerMore" disabled={pages.isFetchingNextPage} onClick={() => void pages.fetchNextPage()}>{pages.isFetchingNextPage ? "Loading" : "Load more"}</button>}
         </div>
       </>
     </Dialog.Content></Dialog.Portal>

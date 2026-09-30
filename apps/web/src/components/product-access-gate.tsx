@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Dashboard } from "./dashboard";
 import { DepositPage } from "./deposit-page";
 import { SendPage } from "./send-page";
+import { SwapPage } from "./swap-page";
 import { ExampleProduct } from "./example-product";
 
 export function ProductAccessGate({ children }: { children: React.ReactNode }) {
@@ -16,6 +17,7 @@ export function ProductAccessGate({ children }: { children: React.ReactNode }) {
   if (!authenticated && section === "overview") return <Dashboard />;
   if (!authenticated && section === "deposit") return <DepositPage />;
   if (!authenticated && section === "send") return <SendPage />;
+  if (!authenticated && section === "swap") return <SwapPage />;
   if (!ready) return <ExampleProduct section={section} onSignIn={login} signInReady={false} />;
   if (!authenticated) return <ExampleProduct section={section} onSignIn={login} />;
 
