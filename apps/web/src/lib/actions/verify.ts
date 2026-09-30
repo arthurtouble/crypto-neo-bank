@@ -80,6 +80,14 @@ export function effectPresent(effect: Exclude<Effect, { type: "delivery" }>, wal
           ? sameAddress(String(event.args.onBehalfOf), wallet) && event.args.referralCode === 0
           : sameAddress(String(event.args.to), wallet);
       });
+    case "aave_withdraw_all":
+      // The pool's own Withdraw event for the reserve, from and to the account, returning at least the balance read before signing.
+      return logs.some((log) => {
+        if (!sameAddress(log.address, AAVE_BASE_V3_MARKET)) return false;
+        const event = decode([aaveEvents.aave_withdraw], log);
+        return Boolean(event && sameAddress(String(event.args.reserve), effect.asset) && sameAddress(String(event.args.user), wallet)
+          && sameAddress(String(event.args.to), wallet) && (event.args.amount as bigint) >= BigInt(effect.minimumRaw));
+      });
     case "morpho_deposit": {
       // The vault's own Deposit event, from and for the account, for exactly the amount, backed by the USDC leaving the account.
       const assets = BigInt(effect.assetsRaw);

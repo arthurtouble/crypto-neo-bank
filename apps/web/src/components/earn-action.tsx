@@ -12,7 +12,7 @@ const labels: Record<Direction, string> = { deposit: "Deposit", withdraw: "Withd
 
 /**
  * Deposit to or withdraw from one Earn option. A deposit approves and deposits
- * in one confirmation. From a Morpho vault, "Withdraw all" redeems every share.
+ * in one confirmation. "Withdraw all" takes out everything, interest included: the whole Aave balance, or every vault share.
  */
 export function EarnAction({ option, symbol, hasPosition }: { option: EarnOption; symbol: string; hasPosition: boolean }) {
   const [direction, setDirection] = useState<Direction>("deposit");
@@ -44,7 +44,7 @@ export function EarnAction({ option, symbol, hasPosition }: { option: EarnOption
       <button className="appButton appButtonPrimary" type="submit" disabled={locked || !earn.wallet.address || !amount.trim()}>
         {earn.phase === "preparing" ? "Checking" : earn.phase === "signing" ? "Confirm with your passkey" : earn.outcomeUnknown ? "Check Transactions first" : labels[direction]}
       </button>
-      {option.protocol === "morpho" && direction === "withdraw" && hasPosition &&
+      {direction === "withdraw" && hasPosition &&
         <button className="appButton" type="button" disabled={locked || !earn.wallet.address} onClick={() => void submit(true)}>Withdraw all</button>}
     </div>
     <TransactionProgress label={labels[direction]} phase={earn.phase} action={earn.action} outcomeUnknown={earn.outcomeUnknown} />

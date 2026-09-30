@@ -18,6 +18,8 @@ export const effectSchema = z.discriminatedUnion("type", [
   z.strictObject({ type: z.literal("erc20_transfer"), token: address, to: address, amountRaw: rawAmount }),
   z.strictObject({ type: z.literal("aave_supply"), asset: address, amountRaw: rawAmount }),
   z.strictObject({ type: z.literal("aave_withdraw"), asset: address, amountRaw: rawAmount }),
+  // Withdraw all: at least the balance read before signing, since interest keeps adding to it.
+  z.strictObject({ type: z.literal("aave_withdraw_all"), asset: address, minimumRaw: rawAmount }),
   // Morpho ERC-4626 vaults: an exact deposit, an exact withdrawal, or a redemption of every share.
   z.strictObject({ type: z.literal("morpho_deposit"), vault: address, assetsRaw: rawAmount }),
   z.strictObject({ type: z.literal("morpho_withdraw"), vault: address, assetsRaw: rawAmount }),

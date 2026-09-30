@@ -67,7 +67,7 @@ test("Earn shows Aave and both Morpho vaults with their rates, liquidity, and de
   await expect(page.getByText("Sky")).toHaveCount(0);
 });
 
-test("USDC goes into Aave and comes back out, checked against Aave's own events", async ({ page }) => {
+test("USDC goes into Aave and comes back out, in part or all of it, checked against Aave's own events", async ({ page }) => {
   const customer = await openEarn(page);
   await act(page, "Aave USDC", "Deposit", "10");
   await expect(toast(page, "Deposit complete")).toBeVisible({ timeout: 30_000 });
@@ -82,6 +82,13 @@ test("USDC goes into Aave and comes back out, checked against Aave's own events"
   await expect(toast(page, "Withdraw complete")).toBeVisible({ timeout: 30_000 });
   expect(await held(page, customer, `aave:8453:${ASSETS.usdc}`)).toBe("6000000");
   expect(await held(page, customer, `8453:${ASSETS.usdc}`)).toBe("44000000");
+
+  // Withdraw all takes out everything that's left, so nothing stays behind in Aave.
+  await page.locator(".toastRegion").getByRole("button").first().click().catch(() => undefined);
+  await form(page, "Aave USDC").getByRole("button", { name: "Withdraw all" }).click();
+  await expect(toast(page, "Withdraw complete")).toBeVisible({ timeout: 30_000 });
+  expect(await held(page, customer, `aave:8453:${ASSETS.usdc}`)).toBe("0");
+  expect(await held(page, customer, `8453:${ASSETS.usdc}`)).toBe("50000000");
 });
 
 test("USDC goes into a Morpho vault, and Withdraw all redeems every share", async ({ page }) => {
