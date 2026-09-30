@@ -1285,57 +1285,11 @@ body {
 }
 
 
-/* Public Aura tag page */
-.payPage { min-height: 100vh; background: var(--canvas); color: var(--text); }
-.payHeader { max-width: 1080px; margin: auto; padding: 27px 24px; border-bottom: 1px solid var(--hairline); }
-.payMain { max-width: 1080px; margin: auto; padding: 68px 24px 90px; }
-.payMain h1 { margin: 0; font-size: clamp(36px, 5vw, 58px); letter-spacing: -.05em; }
-.payTag { margin: 8px 0 36px; color: var(--text-secondary); font-size: 18px; }
-.payMethods { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 16px; align-items: stretch; }
-.payMethod { padding: 25px; border-radius: 17px; }
-.payMethod > div:first-child { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.payMethod h2 { margin: 0; font-size: 21px; }
-.payMethod p { color: var(--text-secondary); font-size: 13px; line-height: 1.5; }
-.payMethod .receiveQr { margin: 24px 0 15px; }
-.payMethod .addressBlock { display: block; overflow-wrap: anywhere; margin-bottom: 16px; }
-.payUnavailable { max-width: 600px; padding: 28px; }
-.payFooter { max-width: 1080px; margin: auto; padding: 22px 24px 40px; border-top: 1px solid var(--hairline); color: var(--text-secondary); font-size: 12px; }
-@media (max-width: 800px) { .payMethods { grid-template-columns: 1fr; } .payMain { padding-top: 45px; } }
 .auraTagForm, .auraTagLookup { display: grid; gap: 15px; }
 .auraTagForm .button, .auraTagLookup .button { justify-self: start; }
 .moneySimple { display: grid; gap: 18px; }
 .moneySimple h2 { margin: 12px 0 0; font-size: 22px; }
-
-/* Aura landing */
-.auraLanding { min-height: 100vh; overflow: clip; background: var(--canvas); color: var(--text); }
-.auraLanding a:focus-visible, .auraLanding summary:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
-.auraLandingHeader { max-width: 1440px; height: 78px; margin: auto; padding: 0 40px; display: flex; align-items: center; gap: 32px; border-bottom: 1px solid var(--hairline); }
-.auraLandingHeader nav { display: flex; gap: 28px; margin-left: auto; color: var(--text-secondary); font-size: 13px; }
-.auraLandingHeader nav a:hover { color: var(--text); }
-.auraLandingHeaderActions { display: flex; align-items: center; gap: 16px; }
-.auraHero { max-width: 1440px; min-height: 660px; margin: auto; padding: 78px 40px 95px; display: grid; grid-template-columns: .88fr 1.12fr; align-items: center; gap: clamp(35px, 5vw, 90px); }
-.auraHeroCopy h1 { margin: 0; max-width: 600px; font-size: clamp(56px, 5.6vw, 88px); font-weight: 700; line-height: .99; letter-spacing: -.066em; }
-.auraHeroCopy > p { max-width: 555px; margin: 28px 0 32px; font-size: clamp(17px, 1.55vw, 21px); line-height: 1.5; color: var(--text-secondary); }
-.auraHeroCopy > small { display: block; max-width: 440px; margin-top: 18px; color: var(--text-tertiary); font-size: 12px; line-height: 1.5; }
-.auraHeroCopy sup, .auraSecurityFacts sup { margin-left: 3px; font-size: 10px; }.auraHeroCopy sup a, .auraSecurityFacts sup a { text-decoration: underline; }
-.auraHeroImage { overflow: hidden; border: 1px solid var(--hairline-strong); border-radius: 24px; background: var(--surface); box-shadow: 0 30px 80px rgba(18,53,36,.1); }
-.auraHeroImage img { display: block; width: 100%; height: auto; }
-.auraFeatures { max-width: 1280px; margin: auto; padding: 88px 40px 110px; scroll-margin-top: 30px; }
-.auraSectionIntro { max-width: 600px; margin-bottom: 40px; }.auraSectionIntro h2, .auraFaq h2, .auraClosing h2 { margin: 0; font-size: clamp(38px, 4vw, 58px); line-height: 1.08; letter-spacing: -.052em; }.auraSectionIntro p { margin: 16px 0 0; color: var(--text-secondary); font-size: 16px; }
-.auraFeatureGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
-.auraFeature { overflow: hidden; display: flex; flex-direction: column; min-height: 440px; border: 1px solid var(--hairline-strong); border-radius: 22px; background: var(--surface); }
-.auraFeatureCopy { padding: 30px 32px 20px; }.auraFeatureCopy h3 { margin: 0; font-size: clamp(25px, 2.3vw, 32px); letter-spacing: -.043em; line-height: 1.15; }.auraFeatureCopy p { min-height: 2.8em; margin: 11px 0 18px; color: var(--text-secondary); font-size: 14px; line-height: 1.45; }.auraFeatureCopy a { display: inline-flex; align-items: center; gap: 7px; color: var(--accent); font-size: 13px; font-weight: 650; }
-.auraFeatureMedia { margin: auto 20px 20px; overflow: hidden; border: 1px solid var(--hairline); border-radius: 14px; background: var(--surface-muted); }.auraFeatureMedia img { display: block; width: 100%; height: auto; }
-.auraSecurityFacts { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 25px 22px; }.auraSecurityFacts span { padding: 6px 9px; border-radius: 20px; background: var(--accent-soft); color: var(--accent); font-size: 11px; }
-.auraFaq { max-width: 1280px; margin: auto; padding: 80px 40px 110px; display: grid; grid-template-columns: .7fr 1.3fr; gap: 60px; scroll-margin-top: 30px; }.auraFaq > div { border-top: 1px solid var(--hairline-strong); }.auraFaq details { border-bottom: 1px solid var(--hairline-strong); }.auraFaq summary { min-height: 70px; display: flex; align-items: center; justify-content: space-between; gap: 15px; cursor: pointer; list-style: none; font-weight: 630; }.auraFaq summary::-webkit-details-marker { display: none; }.auraFaq details[open] summary svg { transform: rotate(180deg); }.auraFaq details p { margin: 0 30px 23px 0; color: var(--text-secondary); font-size: 14px; line-height: 1.55; }
-.auraClosing { padding: 90px 20px 100px; text-align: center; background: var(--accent-soft); }.auraClosing .button { margin-top: 28px; }
-.auraFooter { padding: 66px max(40px, calc((100vw - 1200px)/2)) 27px; background: #0d1d15; color: #fff; }.auraFooter .brand { color: #fff; }.auraFooterTop { display: grid; grid-template-columns: 1.5fr repeat(3, 1fr); gap: 45px; }.auraFooterTop > div { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }.auraFooterTop h2 { margin: 0 0 8px; color: #c8d9cd; font-size: 12px; }.auraFooterTop a:not(.brand) { font-size: 12px; }.auraFooter a:hover { text-decoration: underline; }.auraFootnotes { display: grid; gap: 5px; margin: 65px 0 0; padding-left: 17px; color: #c8d9cd; font-size: 11px; line-height: 1.5; }.auraFootnotes a { text-decoration: underline; }.auraFooterBottom { display: flex; align-items: center; justify-content: space-between; margin-top: 28px; padding-top: 18px; border-top: 1px solid #314638; color: #c8d9cd; font-size: 11px; }.auraMobileCta { display: none; }
-@media (max-width: 900px) { .auraLandingHeader { padding-inline: 24px; }.auraHero { padding-inline: 24px; gap: 25px; }.auraFeatures, .auraFaq { padding-inline: 24px; }.auraFooter { padding-inline: 24px; } }
-@media (max-width: 720px) { .auraLanding { padding-bottom: calc(80px + env(safe-area-inset-bottom)); }.auraLandingHeader { height: 68px; padding-inline: 20px; }.auraLandingHeader nav { display: none; }.auraLandingHeaderActions .button { display: none; }.auraLandingHeaderActions { margin-left: auto; }.auraHero { min-height: 0; padding: 66px 20px 60px; grid-template-columns: 1fr; gap: 42px; }.auraHeroCopy h1 { font-size: clamp(48px, 12vw, 68px); }.auraHeroCopy > p { font-size: 17px; }.auraFeatures { padding: 70px 20px 80px; }.auraFeatureGrid, .auraFaq { grid-template-columns: 1fr; }.auraFeature { min-height: 0; }.auraFeatureCopy { padding: 27px 25px 16px; }.auraFeatureMedia { margin-inline: 15px; }.auraFaq { padding: 60px 20px 80px; gap: 30px; }.auraFooter { padding: 55px 20px 30px; }.auraFooterTop { grid-template-columns: repeat(2, 1fr); gap: 32px; }.auraFooterTop > .brand { grid-column: 1 / -1; }.auraMobileCta { position: fixed; z-index: 20; left: 16px; right: 16px; bottom: calc(12px + env(safe-area-inset-bottom)); display: flex; justify-content: center; min-height: 52px; box-shadow: 0 8px 28px rgba(0,0,0,.2); } }
-@media (max-width: 370px) { .auraFooterTop { grid-template-columns: 1fr 1fr; }.auraFeatureCopy h3 { font-size: 24px; } }
 .supportMessages { display: grid; gap: 8px; margin: 18px 0; }.supportMessages p { margin: 0; padding: 12px; border: 1px solid var(--hairline); border-radius: 10px; font-size: 13px; line-height: 1.5; }.supportMessages strong { margin-right: 8px; }.supportPrompts, .supportDocs { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0; }.supportDocs a { padding: 10px; color: var(--accent); text-decoration: underline; }
-.auraLandingMobileNav { display: none; }
-@media (max-width: 720px) { .auraLandingMobileNav { display: block; position: relative; margin-left: auto; }.auraLandingMobileNav summary { display: flex; align-items: center; gap: 5px; min-height: 40px; padding: 0 10px; border: 1px solid var(--hairline-strong); border-radius: 9px; cursor: pointer; list-style: none; font-size: 13px; }.auraLandingMobileNav summary::-webkit-details-marker { display: none; }.auraLandingMobileNav[open] summary svg { transform: rotate(180deg); }.auraLandingMobileNav nav { position: absolute; z-index: 30; top: calc(100% + 8px); right: 0; display: grid; min-width: 170px; margin: 0; padding: 7px; border: 1px solid var(--hairline-strong); border-radius: 11px; background: var(--surface); box-shadow: 0 15px 30px rgba(0,0,0,.12); }.auraLandingMobileNav nav a { padding: 9px 10px; font-size: 13px; }.auraLandingHeaderActions { margin-left: 0; }.auraFeatureMedia img { width: 120%; max-width: none; margin-left: -20%; } }
 
 /* Dev build label: which commit this deploy runs. Absent in production builds. */
 .buildTag {

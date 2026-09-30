@@ -8,6 +8,7 @@ export default defineConfig({
       title: "Aura",
       description: "Clear guidance for using Aura and understanding its safeguards.",
       favicon: "/favicon.svg",
+      logo: { light: "./src/assets/aura-mark-light.svg", dark: "./src/assets/aura-mark-dark.svg" },
       customCss: ["./src/styles/aurel.css"],
       pagefind: true,
       lastUpdated: true,
@@ -51,8 +52,8 @@ export default defineConfig({
         { label: "Legal", items: [{ autogenerate: { directory: "legal" } }] }
       ],
       head: [
-        { tag: "meta", attrs: { name: "theme-color", content: "#123524" } },
-        { tag: "link", attrs: { rel: "preload", href: "/fonts/Satoshi-Variable.woff2", as: "font", type: "font/woff2", crossorigin: "anonymous" } }
+        { tag: "meta", attrs: { name: "theme-color", content: "#f7f8fa" } },
+        { tag: "link", attrs: { rel: "preload", href: "/fonts/Geist-Variable.woff2", as: "font", type: "font/woff2", crossorigin: "anonymous" } }
       ]
     })
   ]

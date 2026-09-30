@@ -1,0 +1,126 @@
+/*
+ * Public pages (redesign area 12): the landing page (classes prefixed ld) and an Aura tag's payment page (py), from the
+ * design tokens only. The landing shows the app's own screens with fictional example data; no gradients, glass, or
+ * decorative cards.
+ */
+
+.ldPage, .pyPage { min-height: 100vh; background: var(--color-canvas); color: var(--color-text); font-family: var(--font-sans); font-size: var(--text-body-size); line-height: var(--text-body-line); }
+.ldPage h1, .ldPage h2, .ldPage h3, .ldPage p, .pyPage h1, .pyPage h2, .pyPage p { margin: 0; }
+.ldPage sup a { color: var(--color-accent); text-decoration: none; }
+.ldPage .themeToggle { width: 36px; height: 36px; display: grid; place-items: center; padding: 0; border: 1px solid var(--color-line-strong); border-radius: var(--radius-sm); background: var(--color-surface); color: var(--color-text-secondary); cursor: pointer; }
+.ldPage .themeToggle:hover { background: var(--color-hover); color: var(--color-text); }
+.ldPage .themeToggle:focus-visible, .ldPage a:focus-visible, .ldPage summary:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.ldPage .themeToggle svg { width: 16px; height: 16px; }
+.ldPage .appButtonLarge { justify-self: start; }
+
+/* Header: the wordmark, links, and one primary action */
+.ldHeader { position: sticky; top: 0; z-index: 20; background: var(--color-canvas); border-bottom: 1px solid var(--color-line); }
+.ldHeaderInner { max-width: var(--content-max); margin: 0 auto; height: var(--topbar-height); padding: 0 var(--page-pad-x); display: flex; align-items: center; gap: var(--space-6); }
+.ldNav { display: flex; gap: var(--space-5); margin-right: auto; }
+.ldNav a, .ldMobileNav a { color: var(--color-text-secondary); font-weight: var(--weight-medium); text-decoration: none; }
+.ldNav a:hover, .ldMobileNav a:hover { color: var(--color-text); }
+.ldHeaderActions { display: flex; align-items: center; gap: var(--space-2); }
+.ldMobileNav { display: none; position: relative; margin-left: auto; }
+.ldMobileNav summary { display: inline-flex; align-items: center; gap: var(--space-1); height: 36px; padding: 0 var(--space-3); border: 1px solid var(--color-line-strong); border-radius: var(--radius-sm); background: var(--color-surface); font-weight: var(--weight-medium); cursor: pointer; list-style: none; }
+.ldMobileNav summary::-webkit-details-marker { display: none; }
+.ldMobileNav summary svg { width: 16px; height: 16px; }
+.ldMobileNav nav { position: absolute; right: 0; top: calc(100% + var(--space-2)); min-width: 200px; display: grid; padding: var(--space-2); border: 1px solid var(--color-line); border-radius: var(--radius-md); background: var(--color-raised); box-shadow: var(--shadow-2); }
+.ldMobileNav nav a { padding: var(--space-3); border-radius: var(--radius-sm); }
+
+/* Sections share one width */
+.ldHero, .ldFeatures, .ldFaq, .ldClosing, .ldFooter { max-width: var(--content-max); margin: 0 auto; padding-inline: var(--page-pad-x); }
+.ldHero { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: var(--space-10); align-items: center; padding-block: var(--space-10); }
+.ldHeroCopy { display: grid; gap: var(--space-5); }
+.ldHeroCopy h1 { font-size: var(--text-display-size); line-height: var(--text-display-line); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-tight); text-wrap: balance; }
+.ldHeroCopy p { max-width: 40ch; color: var(--color-text-secondary); font-size: var(--text-title-3-size); line-height: 1.5; }
+.ldHeroCopy small { color: var(--color-text-tertiary); font-size: var(--text-small-size); }
+.ldScreen { overflow: hidden; border: 1px solid var(--color-line); border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: var(--shadow-1); line-height: 0; }
+.ldScreen img { display: block; width: 100%; height: auto; }
+
+/* Features: the copy beside the app's own screen, alternating sides */
+.ldFeatures { display: grid; gap: var(--space-10); padding-block: var(--space-10); border-top: 1px solid var(--color-line); scroll-margin-top: var(--topbar-height); }
+.ldSectionIntro { display: grid; gap: var(--space-2); max-width: 48ch; }
+.ldSectionIntro h2, .ldFaq h2, .ldClosing h2 { font-size: var(--text-title-1-size); line-height: var(--text-title-1-line); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-tight); }
+.ldSectionIntro p { color: var(--color-text-secondary); }
+.ldFeature { display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 7fr); gap: var(--space-9); align-items: center; scroll-margin-top: calc(var(--topbar-height) + var(--space-5)); }
+.ldFeature:nth-of-type(even) { grid-template-columns: minmax(0, 7fr) minmax(0, 4fr); }
+.ldFeature:nth-of-type(even) .ldFeatureCopy { order: 2; }
+.ldFeatureCopy { display: grid; gap: var(--space-3); justify-items: start; }
+.ldFeatureCopy h3 { font-size: var(--text-title-2-size); line-height: var(--text-title-2-line); font-weight: var(--weight-semibold); }
+.ldFeatureCopy p { color: var(--color-text-secondary); }
+.ldPage .appBrand { color: var(--color-text); text-decoration: none; }
+.ldExplore { padding: 0; }
+.ldFacts { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.ldFacts li { display: inline-flex; align-items: center; height: 28px; padding: 0 var(--space-3); border: 1px solid var(--color-line); border-radius: var(--radius-pill); background: var(--color-surface); font-size: var(--text-small-size); font-weight: var(--weight-medium); }
+
+/* Questions */
+.ldFaq { display: grid; gap: var(--space-5); padding-block: var(--space-10); border-top: 1px solid var(--color-line); scroll-margin-top: var(--topbar-height); }
+.ldFaqList { display: grid; border-top: 1px solid var(--color-line); max-width: 760px; }
+.ldFaqList details { border-bottom: 1px solid var(--color-line); }
+.ldFaqList summary { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); min-height: var(--row-height); padding: var(--space-3) 0; font-weight: var(--weight-medium); cursor: pointer; list-style: none; }
+.ldFaqList summary::-webkit-details-marker { display: none; }
+.ldFaqList summary svg { width: 18px; height: 18px; flex: none; color: var(--color-text-secondary); transition: transform var(--duration-fast) var(--ease-enter); }
+.ldFaqList details[open] summary svg { transform: rotate(180deg); }
+.ldFaqList details p { max-width: 64ch; padding-bottom: var(--space-4); color: var(--color-text-secondary); }
+
+.ldClosing { display: grid; justify-items: start; gap: var(--space-5); padding-block: var(--space-10); border-top: 1px solid var(--color-line); }
+
+/* Footer */
+.ldFooter { display: grid; gap: var(--space-6); padding-block: var(--space-8) var(--space-10); border-top: 1px solid var(--color-line); color: var(--color-text-secondary); font-size: var(--text-small-size); }
+.ldFooterTop { display: grid; grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1fr)); gap: var(--space-6); align-items: start; }
+.ldFooterTop .appBrand { padding: 0; justify-self: start; }
+.ldFooterTop > div { display: grid; gap: var(--space-2); }
+.ldFooterTop h2 { color: var(--color-text); font-size: var(--text-small-size); font-weight: var(--weight-semibold); }
+.ldFooterTop a { color: inherit; text-decoration: none; }
+.ldFooterTop a:hover { color: var(--color-text); }
+.ldFootnotes { margin: 0; padding-left: var(--space-5); display: grid; gap: var(--space-1); font-size: var(--text-caption-size); line-height: var(--text-caption-line); }
+.ldFootnotes a { color: var(--color-accent); text-decoration: underline; text-underline-offset: 2px; }
+.ldFooterBottom { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding-top: var(--space-4); border-top: 1px solid var(--color-line); }
+.ldMobileCta { display: none; }
+
+/* Tablet */
+@media (max-width: 1023px) {
+  .ldHero { grid-template-columns: minmax(0, 1fr); gap: var(--space-8); padding-block: var(--space-8); }
+  .ldFeature { grid-template-columns: minmax(0, 1fr); gap: var(--space-5); }
+  .ldFeature:nth-of-type(even) { grid-template-columns: minmax(0, 1fr); }
+  .ldFeature:nth-of-type(even) .ldFeatureCopy { order: 0; }
+  .ldFooterTop { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .ldFooterTop .appBrand { grid-column: 1 / -1; }
+}
+
+/* Phone: a menu, one column, and the main action pinned to the bottom */
+@media (max-width: 767px) {
+  .ldNav, .ldHeaderActions .appButton { display: none; }
+  .ldMobileNav { display: block; }
+  .ldHeaderInner { height: 56px; gap: var(--space-3); }
+  .ldHero, .ldFeatures, .ldFaq, .ldClosing { padding-block: var(--space-8); }
+  .ldFeatures { gap: var(--space-8); }
+  .ldFooterTop { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ldFooter { padding-bottom: 104px; }
+  .ldMobileCta { display: inline-flex; position: fixed; z-index: 30; left: var(--page-pad-x); right: var(--page-pad-x); bottom: calc(var(--space-4) + env(safe-area-inset-bottom)); box-shadow: var(--shadow-2); }
+  .ldHero .appButtonLarge, .ldClosing .appButtonLarge { justify-self: stretch; }
+}
+
+/* An Aura tag's payment page: one narrow column */
+.pyHeader { max-width: 520px; margin: 0 auto; padding: var(--space-5) var(--page-pad-x); }
+.pyHeader .appBrand { padding: 0; }
+.pyMain { max-width: 520px; margin: 0 auto; padding: var(--space-4) var(--page-pad-x) var(--space-8); display: grid; gap: var(--space-4); }
+.pyWho { display: grid; gap: var(--space-1); padding-bottom: var(--space-3); }
+.pyWho span, .pyWho p { color: var(--color-text-secondary); }
+.pyWho h1, .pyUnavailable h1 { font-size: var(--text-title-1-size); line-height: var(--text-title-1-line); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-tight); overflow-wrap: anywhere; }
+.pyCard { display: grid; gap: var(--space-4); padding: var(--space-5); border: 1px solid var(--color-line); border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: var(--shadow-1); }
+.pyCard > p { color: var(--color-text-secondary); font-size: var(--text-small-size); line-height: var(--text-small-line); }
+.pyCardHead { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.pyCardHead h2 { font-size: var(--text-title-3-size); line-height: var(--text-title-3-line); font-weight: var(--weight-semibold); }
+.pyStatus { display: inline-flex; align-items: center; gap: 6px; color: var(--color-text-secondary); font-size: var(--text-caption-size); font-weight: var(--weight-medium); }
+.pyStatus::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--color-text-tertiary); }
+.pyStatusOn::before { background: var(--color-positive); }
+.pyQr { justify-self: center; padding: var(--space-3); border: 1px solid var(--color-line); border-radius: var(--radius-lg); color: var(--color-text); line-height: 0; }
+.pyAddress { padding: var(--space-3); border-radius: var(--radius-md); background: var(--color-muted); font-family: var(--font-mono); font-size: var(--text-small-size); line-height: var(--text-small-line); overflow-wrap: anywhere; text-align: center; }
+.pyCard .appButton { justify-self: stretch; }
+.pyDetails { margin: 0; display: grid; border-top: 1px solid var(--color-line); }
+.pyDetails div { display: flex; justify-content: space-between; gap: var(--space-4); padding: var(--space-2) 0; border-bottom: 1px solid var(--color-line); }
+.pyDetails dt { color: var(--color-text-secondary); }
+.pyDetails dd { margin: 0; text-align: right; font-weight: var(--weight-medium); overflow-wrap: anywhere; }
+.pyMono { font-family: var(--font-mono); font-size: var(--text-small-size); }
+.pyFooter { max-width: 520px; margin: 0 auto; padding: 0 var(--page-pad-x) var(--space-8); color: var(--color-text-tertiary); font-size: var(--text-caption-size); line-height: var(--text-caption-line); }
