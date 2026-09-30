@@ -1,8 +1,11 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { ChevronDown } from "lucide-react";
 import { AppBrand } from "@/components/brand";
 import { ThemeToggle } from "@/components/theme-toggle";
+
+export const metadata: Metadata = { alternates: { canonical: "/" } };
 
 const docs = process.env.NEXT_PUBLIC_DOCS_URL ?? "https://aurel-docs.aurel-events.workers.dev";
 const features = [

@@ -7,7 +7,7 @@ import { GET as getPublicTag } from "@/app/api/aura-tags/[tag]/route";
 
 type PaymentData = { tag: string; displayName: string; crypto: { network: string; address: string }; bank: { available: false } | { available: true; instructions: { bankName: string; bankAddress?: string; beneficiaryName: string; beneficiaryAddress?: string; accountNumber: string; routingNumber: string; rails: Array<"ach" | "wire" | "fednow"> } } };
 
-export const metadata: Metadata = { title: "Pay with Aura", description: "View available payment methods for an Aura tag." };
+export const metadata: Metadata = { title: { absolute: "Pay with Aura" }, description: "The ways to pay this Aura tag.", robots: { index: false } };
 
 const Status = ({ available }: { available: boolean }) => <span className={`pyStatus${available ? " pyStatusOn" : ""}`}>{available ? "Available" : "Unavailable"}</span>;
 

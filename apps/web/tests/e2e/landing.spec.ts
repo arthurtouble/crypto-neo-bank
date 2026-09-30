@@ -68,3 +68,16 @@ test("a sanctioned place gets the unavailable page for the app and the API, but 
   await expect(page.getByRole("heading", { name: "Aura isn't available where you are" })).toBeVisible();
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
+
+test("search engines may index the landing page, not the app or payment pages", async ({ page, request }) => {
+  // The e2e server runs the production configuration; dev (--env dev) asks to be kept out entirely (tests/unit/seo.test.ts).
+  const robots = await (await request.get("/robots.txt")).text();
+  for (const rule of ["Allow: /", "Disallow: /app", "Disallow: /api/", "Disallow: /pay/"]) expect(robots).toContain(rule);
+  await page.goto("/");
+  await expect(page).toHaveTitle("Aura");
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /^index/);
+  await expect(page.locator('meta[property="og:image"]')).toHaveAttribute("content", /\/images\/aura-overview\.png$/);
+  await page.goto("/pay/nobody");
+  await expect(page).toHaveTitle("Pay with Aura");
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
+});
