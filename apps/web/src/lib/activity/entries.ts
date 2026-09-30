@@ -83,7 +83,7 @@ export function actionEntry(action: ActionLike): ActivityEntry {
       destinationTransactionHash: action.destinationTransactionHash ?? undefined };
   }
   const symbol = typeof summary.symbol === "string" ? summary.symbol : undefined;
-  // "Withdraw all" records what the shares were worth when it was prepared.
+  // "Withdraw all" records what the position was worth when it was prepared.
   const amount = summary.amount === "all" ? raw(summary.amountRaw, summary.decimals) : typeof summary.amount === "string" ? summary.amount : undefined;
   if (action.kind === "earn") {
     const place = typeof summary.vaultName === "string" ? summary.vaultName : summary.protocol === "aave" ? "Aave" : undefined;

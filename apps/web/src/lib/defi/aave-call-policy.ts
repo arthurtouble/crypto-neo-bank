@@ -19,8 +19,12 @@ const transactionSchema = z.strictObject({
 
 export type AaveCallAction = "supply" | "withdraw" | "approve";
 
-/** Build the narrow call Aura can review; no provider-supplied calldata enters signing. */
-export function buildAaveBaseCall(input: { action: AaveCallAction; wallet: string; asset: string; amountRaw: bigint }) {
+/**
+ * Build the narrow call Aura can review; no provider-supplied calldata enters signing. `max` (withdraw only) asks the
+ * pool for the whole balance at execution, which keeps growing with interest; `amountRaw` is then the balance read
+ * before signing, the least the withdrawal must return.
+ */
+export function buildAaveBaseCall(input: { action: AaveCallAction; wallet: string; asset: string; amountRaw: bigint; max?: boolean }) {
   if (!isAddress(input.wallet) || !isAddress(input.asset) || input.amountRaw <= 0n || input.amountRaw >= maxUint256)
     throw new Error("Invalid Aave call identity or amount.");
   const wallet = getAddress(input.wallet);
@@ -32,7 +36,7 @@ export function buildAaveBaseCall(input: { action: AaveCallAction; wallet: strin
     ? encodeFunctionData({ abi: approvalAbi, functionName: "approve", args: [pool, input.amountRaw] })
     : input.action === "supply"
       ? encodeFunctionData({ abi: poolAbi, functionName: "supply", args: [asset, input.amountRaw, wallet, 0] })
-      : encodeFunctionData({ abi: poolAbi, functionName: "withdraw", args: [asset, input.amountRaw, wallet] });
+      : encodeFunctionData({ abi: poolAbi, functionName: "withdraw", args: [asset, input.max ? maxUint256 : input.amountRaw, wallet] });
   const transaction = { chainId: 8453 as const, from: wallet, to: input.action === "approve" ? asset : pool, data, value: "0" as const };
   validateAaveCall({ ...input, transaction });
   return transaction;

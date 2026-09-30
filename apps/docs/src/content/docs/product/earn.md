@@ -31,7 +31,7 @@ None of these is a bank deposit, insured, or guaranteed.
 You confirm each deposit or withdrawal once, with your passkey; any token approval happens in the same step. Check the option, asset, and amount in the review first.
 
 - You need enough USDC or WETH in your account to deposit, and enough in the position to withdraw.
-- **Withdraw all** empties a Morpho vault position completely.
+- **Withdraw all** empties an Aave or Morpho position completely, including interest earned up to that moment.
 - Aura pays the network fee. Earn moves money between your own positions, so it doesn't count toward your daily limit.
 - Aura marks a deposit or withdrawal complete only after it sees the protocol's own record of it on the blockchain.
 

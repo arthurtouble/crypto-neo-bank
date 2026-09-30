@@ -8,7 +8,7 @@
 
 import { createServer } from "node:http";
 import { createPrivateKey, generateKeyPairSync, randomBytes, randomUUID, sign } from "node:crypto";
-import { decodeFunctionData, encodeAbiParameters, encodeEventTopics, encodeFunctionData, encodeFunctionResult, parseAbi, parseAbiItem } from "viem";
+import { decodeFunctionData, encodeAbiParameters, encodeEventTopics, encodeFunctionData, encodeFunctionResult, maxUint256, parseAbi, parseAbiItem } from "viem";
 
 /** The Privy user who may use the operations API in tests (feature switches). */
 /** The operator Cloudflare Access lets into the operations app in tests, and the ops app's Access audience. */
@@ -221,7 +221,9 @@ export function startFakeEdge({ port }) {
         moves.push({ token: asset, to: AAVE_POOL, amount }, { mint: true, token: aTokenFor(asset), to: onBehalfOf.toLowerCase(), amount, from: ZERO },
           { log: eventLog(AAVE_POOL, aaveSupplyEvent, { reserve: asset, onBehalfOf, referralCode: 0 }, [["address", from], ["uint256", amount]]) });
       } else if (to === AAVE_POOL && functionName === "withdraw") {
-        const [asset, amount, receiver] = args;
+        // The largest amount asks Aave for the whole balance, as the real pool does.
+        const [asset, requested, receiver] = args;
+        const amount = requested === maxUint256 ? balance(chainId, aTokenFor(asset), from) : requested;
         moves.push({ burn: true, token: aTokenFor(asset), amount }, { mint: true, token: asset, to: receiver.toLowerCase(), amount, from: AAVE_POOL },
           { log: eventLog(AAVE_POOL, aaveWithdrawEvent, { reserve: asset, user: from, to: receiver }, [["uint256", amount]]) });
       } else if (VAULT_SET.has(to) && functionName === "deposit") {
