@@ -1,22 +1,21 @@
 /*
- * Public pages (redesign area 12): the landing page (classes prefixed ld) and an Aura tag's payment page (py), from the
- * design tokens only. The landing shows the app's own screens with fictional example data; no gradients, glass, or
- * decorative cards.
+ * Public pages: the landing page (classes prefixed ld) and an Aura tag's payment page (py), from the design tokens
+ * only. The landing is one centred column: a short hero, the app's own screen with fictional example data, a feature
+ * grid, security, questions, and one closing action. No gradients, glass, or decorative cards.
  */
 
 .ldPage, .pyPage { min-height: 100vh; background: var(--color-canvas); color: var(--color-text); font-family: var(--font-sans); font-size: var(--text-body-size); line-height: var(--text-body-line); }
 .ldPage h1, .ldPage h2, .ldPage h3, .ldPage p, .pyPage h1, .pyPage h2, .pyPage p { margin: 0; }
-.ldPage sup a { color: var(--color-accent); text-decoration: none; }
 .ldPage .themeToggle { width: 36px; height: 36px; display: grid; place-items: center; padding: 0; border: 1px solid var(--color-line-strong); border-radius: var(--radius-sm); background: var(--color-surface); color: var(--color-text-secondary); cursor: pointer; }
 .ldPage .themeToggle:hover { background: var(--color-hover); color: var(--color-text); }
 .ldPage .themeToggle:focus-visible, .ldPage a:focus-visible, .ldPage summary:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
 .ldPage .themeToggle svg { width: 16px; height: 16px; }
-.ldPage .appButtonLarge { justify-self: start; }
+.ldPage .appBrand { color: var(--color-text); text-decoration: none; }
 
 /* Header: the wordmark, links, and one primary action */
 .ldHeader { position: sticky; top: 0; z-index: 20; background: var(--color-canvas); border-bottom: 1px solid var(--color-line); }
-.ldHeaderInner { max-width: var(--content-max); margin: 0 auto; height: var(--topbar-height); padding: 0 var(--page-pad-x); display: flex; align-items: center; gap: var(--space-6); }
-.ldNav { display: flex; gap: var(--space-5); margin-right: auto; }
+.ldHeaderInner { max-width: var(--content-max); margin: 0 auto; height: var(--topbar-height); padding: 0 var(--page-pad-x); display: flex; align-items: center; gap: var(--space-7); }
+.ldNav { display: flex; gap: var(--space-6); margin-right: auto; }
 .ldNav a, .ldMobileNav a { color: var(--color-text-secondary); font-weight: var(--weight-medium); text-decoration: none; }
 .ldNav a:hover, .ldMobileNav a:hover { color: var(--color-text); }
 .ldHeaderActions { display: flex; align-items: center; gap: var(--space-2); }
@@ -27,64 +26,75 @@
 .ldMobileNav nav { position: absolute; right: 0; top: calc(100% + var(--space-2)); min-width: 200px; display: grid; padding: var(--space-2); border: 1px solid var(--color-line); border-radius: var(--radius-md); background: var(--color-raised); box-shadow: var(--shadow-2); }
 .ldMobileNav nav a { padding: var(--space-3); border-radius: var(--radius-sm); }
 
-/* Sections share one width */
-.ldHero, .ldFeatures, .ldFaq, .ldClosing, .ldFooter { max-width: var(--content-max); margin: 0 auto; padding-inline: var(--page-pad-x); }
-.ldHero { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: var(--space-10); align-items: center; padding-block: var(--space-10); }
-.ldHeroCopy { display: grid; gap: var(--space-5); }
-.ldHeroCopy h1 { font-size: var(--text-display-size); line-height: var(--text-display-line); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-tight); text-wrap: balance; }
-.ldHeroCopy p { max-width: 40ch; color: var(--color-text-secondary); font-size: var(--text-title-3-size); line-height: 1.5; }
-.ldHeroCopy small { color: var(--color-text-tertiary); font-size: var(--text-small-size); }
-.ldScreen { overflow: hidden; border: 1px solid var(--color-line); border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: var(--shadow-1); line-height: 0; }
+/* Hero: centred, one line of support, two actions */
+.ldHero { max-width: 760px; margin: 0 auto; padding: calc(var(--space-10) * 1.5) var(--page-pad-x) var(--space-10); display: grid; justify-items: center; gap: var(--space-6); text-align: center; }
+.ldHero h1 { font-size: var(--text-headline-size); line-height: var(--text-headline-line); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-tight); text-wrap: balance; }
+.ldHero p { max-width: 56ch; color: var(--color-text-secondary); font-size: var(--text-title-2-size); line-height: 1.55; text-wrap: pretty; }
+.ldHero small { color: var(--color-text-tertiary); font-size: var(--text-small-size); }
+.ldActions { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-3); }
+.ldPage .appButtonLarge { width: auto; padding: 0 var(--space-6); }
+
+/* The app's own screen, full width under the hero */
+.ldShowcase { max-width: var(--content-max); margin: 0 auto; padding: 0 var(--page-pad-x); }
+.ldScreen { overflow: hidden; border: 1px solid var(--color-line); border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: var(--shadow-2); line-height: 0; }
 .ldScreen img { display: block; width: 100%; height: auto; }
 
-/* Features: the copy beside the app's own screen, alternating sides */
-.ldFeatures { display: grid; gap: var(--space-10); padding-block: var(--space-10); border-top: 1px solid var(--color-line); scroll-margin-top: var(--topbar-height); }
-.ldSectionIntro { display: grid; gap: var(--space-2); max-width: 48ch; }
-.ldSectionIntro h2, .ldFaq h2, .ldClosing h2 { font-size: var(--text-title-1-size); line-height: var(--text-title-1-line); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-tight); }
-.ldSectionIntro p { color: var(--color-text-secondary); }
-.ldFeature { display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 7fr); gap: var(--space-9); align-items: center; scroll-margin-top: calc(var(--topbar-height) + var(--space-5)); }
-.ldFeature:nth-of-type(even) { grid-template-columns: minmax(0, 7fr) minmax(0, 4fr); }
-.ldFeature:nth-of-type(even) .ldFeatureCopy { order: 2; }
-.ldFeatureCopy { display: grid; gap: var(--space-3); justify-items: start; }
-.ldFeatureCopy h3 { font-size: var(--text-title-2-size); line-height: var(--text-title-2-line); font-weight: var(--weight-semibold); }
-.ldFeatureCopy p { color: var(--color-text-secondary); }
-.ldPage .appBrand { color: var(--color-text); text-decoration: none; }
-.ldExplore { padding: 0; }
-.ldNote { color: var(--color-text-tertiary); font-size: var(--text-small-size); }
-.ldFacts { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: var(--space-2); }
-.ldFacts li { display: inline-flex; align-items: center; height: 28px; padding: 0 var(--space-3); border: 1px solid var(--color-line); border-radius: var(--radius-pill); background: var(--color-surface); font-size: var(--text-small-size); font-weight: var(--weight-medium); }
+/* Sections share one width and rhythm */
+/* The content width, without side padding, so divider lines line up with the content */
+.ldSection, .ldFooter { width: min(calc(var(--content-max) - 2 * var(--page-pad-x)), calc(100% - 2 * var(--page-pad-x))); margin: 0 auto; }
+.ldSection { display: grid; gap: var(--space-8); padding-block: calc(var(--space-10) * 1.5); scroll-margin-top: var(--topbar-height); }
+.ldSection + .ldSection { border-top: 1px solid var(--color-line); }
+.ldSection h2 { font-size: var(--text-display-size); line-height: var(--text-display-line); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-tight); text-wrap: balance; }
+.ldIntro { display: grid; gap: var(--space-3); max-width: 52ch; align-content: start; }
+.ldIntro > p { color: var(--color-text-secondary); font-size: var(--text-title-2-size); line-height: 1.55; }
+
+/* Features: a quiet grid, divided by lines, no cards */
+.ldGrid { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--color-line); border-left: 1px solid var(--color-line); }
+.ldGrid li { display: grid; gap: var(--space-2); align-content: start; padding: var(--space-7) var(--space-6); border-right: 1px solid var(--color-line); border-bottom: 1px solid var(--color-line); }
+.ldIcon { display: grid; place-items: center; width: 36px; height: 36px; margin-bottom: var(--space-2); border-radius: var(--radius-md); background: var(--color-accent-soft); color: var(--color-accent); }
+.ldIcon svg { width: 18px; height: 18px; }
+.ldGrid h3 { display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-title-2-size); line-height: var(--text-title-2-line); font-weight: var(--weight-semibold); }
+.ldGrid p { color: var(--color-text-secondary); }
+.ldSoon { padding: 2px var(--space-2); border-radius: var(--radius-pill); background: var(--color-muted); color: var(--color-text-secondary); font-size: var(--text-caption-size); line-height: var(--text-caption-line); font-weight: var(--weight-medium); }
+
+/* Security: copy beside the settings screen */
+.ldSplit { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); align-items: center; gap: var(--space-10); }
+.ldChecks { margin: var(--space-2) 0 0; padding: 0; list-style: none; display: grid; gap: var(--space-3); }
+.ldChecks li { display: flex; align-items: flex-start; gap: var(--space-3); font-weight: var(--weight-medium); }
+.ldChecks svg { flex: none; width: 18px; height: 18px; margin-top: 1px; color: var(--color-positive); }
+.ldMore { justify-self: start; padding: 0; }
 
 /* Questions */
-.ldFaq { display: grid; gap: var(--space-5); padding-block: var(--space-10); border-top: 1px solid var(--color-line); scroll-margin-top: var(--topbar-height); }
-.ldFaqList { display: grid; border-top: 1px solid var(--color-line); max-width: 760px; }
+.ldFaq { grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); align-items: start; }
+.ldFaqList { display: grid; border-top: 1px solid var(--color-line); }
 .ldFaqList details { border-bottom: 1px solid var(--color-line); }
-.ldFaqList summary { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); min-height: var(--row-height); padding: var(--space-3) 0; font-weight: var(--weight-medium); cursor: pointer; list-style: none; }
+.ldFaqList summary { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); min-height: var(--row-height); padding: var(--space-4) 0; font-size: var(--text-title-3-size); font-weight: var(--weight-medium); cursor: pointer; list-style: none; }
 .ldFaqList summary::-webkit-details-marker { display: none; }
 .ldFaqList summary svg { width: 18px; height: 18px; flex: none; color: var(--color-text-secondary); transition: transform var(--duration-fast) var(--ease-enter); }
 .ldFaqList details[open] summary svg { transform: rotate(180deg); }
-.ldFaqList details p { max-width: 64ch; padding-bottom: var(--space-4); color: var(--color-text-secondary); }
+.ldFaqList details p { max-width: 64ch; padding-bottom: var(--space-5); color: var(--color-text-secondary); }
 
-.ldClosing { display: grid; justify-items: start; gap: var(--space-5); padding-block: var(--space-10); border-top: 1px solid var(--color-line); }
+.ldClosing { justify-items: center; gap: var(--space-4); text-align: center; }
+.ldClosing p { color: var(--color-text-secondary); font-size: var(--text-title-2-size); }
+.ldClosing .appButton { margin-top: var(--space-2); }
 
 /* Footer */
-.ldFooter { display: grid; gap: var(--space-6); padding-block: var(--space-8) var(--space-10); border-top: 1px solid var(--color-line); color: var(--color-text-secondary); font-size: var(--text-small-size); }
+.ldFooter { display: grid; gap: var(--space-6); padding-block: var(--space-9) var(--space-10); border-top: 1px solid var(--color-line); color: var(--color-text-secondary); font-size: var(--text-small-size); }
 .ldFooterTop { display: grid; grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1fr)); gap: var(--space-6); align-items: start; }
 .ldFooterTop .appBrand { padding: 0; justify-self: start; }
 .ldFooterTop > div { display: grid; gap: var(--space-2); }
 .ldFooterTop h2 { color: var(--color-text); font-size: var(--text-small-size); font-weight: var(--weight-semibold); }
 .ldFooterTop a { color: inherit; text-decoration: none; }
 .ldFooterTop a:hover { color: var(--color-text); }
-.ldFootnotes { margin: 0; padding-left: var(--space-5); display: grid; gap: var(--space-1); font-size: var(--text-caption-size); line-height: var(--text-caption-line); }
-.ldFootnotes a { color: var(--color-accent); text-decoration: underline; text-underline-offset: 2px; }
+.ldDisclosure { max-width: 80ch; color: var(--color-text-tertiary); font-size: var(--text-caption-size); line-height: var(--text-caption-line); }
+.ldDisclosure a { color: var(--color-accent); text-decoration: underline; text-underline-offset: 2px; }
 .ldFooterBottom { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding-top: var(--space-4); border-top: 1px solid var(--color-line); }
 .ldMobileCta { display: none; }
 
 /* Tablet */
 @media (max-width: 1023px) {
-  .ldHero { grid-template-columns: minmax(0, 1fr); gap: var(--space-8); padding-block: var(--space-8); }
-  .ldFeature { grid-template-columns: minmax(0, 1fr); gap: var(--space-5); }
-  .ldFeature:nth-of-type(even) { grid-template-columns: minmax(0, 1fr); }
-  .ldFeature:nth-of-type(even) .ldFeatureCopy { order: 0; }
+  .ldGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ldSplit, .ldFaq { grid-template-columns: minmax(0, 1fr); gap: var(--space-8); }
   .ldFooterTop { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .ldFooterTop .appBrand { grid-column: 1 / -1; }
 }
@@ -94,12 +104,17 @@
   .ldNav, .ldHeaderActions .appButton { display: none; }
   .ldMobileNav { display: block; }
   .ldHeaderInner { height: 56px; gap: var(--space-3); }
-  .ldHero, .ldFeatures, .ldFaq, .ldClosing { padding-block: var(--space-8); }
-  .ldFeatures { gap: var(--space-8); }
+  .ldHero { padding-block: var(--space-10) var(--space-8); gap: var(--space-5); }
+  .ldHero p, .ldIntro > p, .ldClosing p { font-size: var(--text-body-size); }
+  .ldActions { width: 100%; flex-direction: column; }
+  .ldActions .appButton, .ldPage .ldClosing .appButton { width: 100%; }
+  .ldSection { padding-block: var(--space-10); gap: var(--space-6); }
+  .ldSection h2 { font-size: var(--text-title-1-size); line-height: var(--text-title-1-line); }
+  .ldGrid { grid-template-columns: minmax(0, 1fr); }
+  .ldGrid li { padding: var(--space-5) var(--space-4); }
   .ldFooterTop { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ldFooter { padding-bottom: 104px; }
   .ldMobileCta { display: inline-flex; position: fixed; z-index: 30; left: var(--page-pad-x); right: var(--page-pad-x); bottom: calc(var(--space-4) + env(safe-area-inset-bottom)); box-shadow: var(--shadow-2); }
-  .ldHero .appButtonLarge, .ldClosing .appButtonLarge { justify-self: stretch; }
 }
 
 /* An Aura tag's payment page: one narrow column */

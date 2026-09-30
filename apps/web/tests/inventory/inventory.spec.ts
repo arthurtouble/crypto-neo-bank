@@ -73,7 +73,7 @@ test.beforeAll(async ({ request }) => {
 
 test("public pages", async ({ page }, info) => {
   await page.goto("/");
-  await settle(page, "One app for the money you hold yourself");
+  await settle(page, "Money you control, in one simple app");
   await shot(page, info, "00-landing");
   if (page.viewportSize()!.width < 800) {
     await page.getByText("Menu", { exact: true }).click();
@@ -102,7 +102,7 @@ test("public pages", async ({ page }, info) => {
 test("landing and guest overview in dark", async ({ page }, info) => {
   await dark(page);
   await page.goto("/");
-  await settle(page, "One app for the money you hold yourself");
+  await settle(page, "Money you control, in one simple app");
   await shot(page, info, "00-landing--dark");
   await page.goto("/app");
   await settle(page, "Overview");

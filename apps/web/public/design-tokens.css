@@ -57,6 +57,8 @@
   --weight-regular: 400;
   --weight-medium: 500;
   --weight-semibold: 600;
+  --text-headline-size: 56px;
+  --text-headline-line: 60px;
   --text-display-size: 40px;
   --text-display-line: 44px;
   --text-title-1-size: 22px;
@@ -191,6 +193,8 @@
 /* Phone: larger body text and controls, tighter page margins. */
 @media (max-width: 767px) {
   :root {
+    --text-headline-size: 40px;
+    --text-headline-line: 44px;
     --text-display-size: 36px;
     --text-display-line: 40px;
     --text-title-1-size: 20px;

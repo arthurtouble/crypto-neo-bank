@@ -94,6 +94,7 @@ Money in is shown with a plus sign and the positive colour. Money out has a minu
 
 | Style | Desktop (size / line) | Phone | Weight | Use |
 | --- | --- | --- | --- | --- |
+| Headline | 56 / 60 | 40 / 44 | 600 | The landing page's main heading, nowhere else |
 | Display | 40 / 44 | 36 / 40 | 600 | The Overview total |
 | Amount hero | 52 / 56 | 52 / 56 | 600 | Amount entry on the phone keypad |
 | Amount | 32 / 36 | 32 / 36 | 600 | Amount fields, review totals |
