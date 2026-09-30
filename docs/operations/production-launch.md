@@ -13,7 +13,7 @@ Every gate in [launch readiness](../overview/launch-readiness.md) is met and rec
 
 ## 2. Domain
 
-Choose the custom domain and add it to Cloudflare. Then set `APP_ORIGIN` to it in the production `vars`, and use it in every step below that asks for an origin.
+Choose the custom domain and add it to Cloudflare. Then set `APP_ORIGIN` to it in the production `vars`, and use it in every step below that asks for an origin. `APP_ORIGIN` also gives the landing page its canonical address, preview image URLs, and the sitemap. Only production is indexed; `robots.txt` asks search engines to keep out of the app, the API, and payment pages (`apps/web/src/lib/site/seo.ts`). Set the docs' address with `AURA_DOCS_SITE` when building them for a custom domain.
 
 ## 3. Privy
 

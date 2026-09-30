@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { indexable, siteOrigin } from "@/lib/site/seo";
 import "@fontsource-variable/archivo";
 import "./globals.css";
 import "./identity.css";
@@ -13,9 +14,18 @@ import "./records.css";
 import "./settings.css";
 import "./public.css";
 
+const description = "One app for the money you hold yourself. See every balance, then send, swap, or earn. What you can use depends on where you live.";
+const origin = siteOrigin();
+
 export const metadata: Metadata = {
-  title: "Aura",
-  description: "One app for the money you hold yourself. See every balance, then send, swap, or earn. What you can use depends on where you live."
+  ...(origin ? { metadataBase: new URL(origin) } : {}),
+  title: { default: "Aura", template: "%s · Aura" },
+  description,
+  applicationName: "Aura",
+  robots: indexable() ? { index: true, follow: true } : { index: false, follow: false },
+  openGraph: { type: "website", siteName: "Aura", title: "Aura", description,
+    images: [{ url: "/images/aura-overview.png", width: 960, height: 600, alt: "Aura's Overview with example balances" }] },
+  twitter: { card: "summary_large_image", title: "Aura", description, images: ["/images/aura-overview.png"] }
 };
 
 // Set only by the dev deploy, so dev shows which commit it runs and production shows nothing.
