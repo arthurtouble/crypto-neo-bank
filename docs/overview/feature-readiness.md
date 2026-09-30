@@ -9,8 +9,8 @@ Agreed on 26 September 2026; every feature below was done or cut by 28 September
 
 1. **Make the product work.** Feature by feature, in the order below, one branch and pull request each, each finished before the next. Keep the current UI; no visual design.
 2. **Redesign.** Wireframes, the new design system, the new experience, and the landing page, on top of working flows.
-3. **Words.** Rewrite product copy and docs to sound human, per the content style guide.
-4. **Launch hardening.** Legal text, geoblocking and account gating, production setup (a separate Privy production app, error logging, alerts), SEO, a final refactor and DRY pass, and production deployment.
+3. **Words.** Rewrite product copy and docs to sound human, per the content style guide. Done 30 September 2026 ([#75](https://github.com/arthurtouble/crypto-neo-bank/pull/75), [#76](https://github.com/arthurtouble/crypto-neo-bank/pull/76), trimmed in [#82](https://github.com/arthurtouble/crypto-neo-bank/pull/82)–[#84](https://github.com/arthurtouble/crypto-neo-bank/pull/84)).
+4. **Launch hardening.** Legal text, geoblocking and account gating, production setup (a separate Privy production app, error logging, alerts), SEO, a final refactor and DRY pass, and production deployment. Done 30 September 2026 except the deployment, which waits for the owner ([production launch](../operations/production-launch.md)): legal text in #76, sanctioned places blocked in [#77](https://github.com/arthurtouble/crypto-neo-bank/pull/77), logging and alerts in [#78](https://github.com/arthurtouble/crypto-neo-bank/pull/78), production prepared in [#79](https://github.com/arthurtouble/crypto-neo-bank/pull/79), SEO in [#80](https://github.com/arthurtouble/crypto-neo-bank/pull/80), and the refactor in the pull request that adds this line. Account gating is the server-side controls in [launch controls](../operations/launch-controls.md).
 
 Geoblocking, account gating, and production setup were first planned for step 1. On 28 September 2026 the product owner moved them to step 4 so the redesign could start.
 

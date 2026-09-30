@@ -2,7 +2,7 @@
 
 import { usePrivy } from "@privy-io/react-auth";
 import { useQuery } from "@tanstack/react-query";
-import { exampleMoneyAccount, exampleOverview, exampleRecipients, exampleSecurityPolicy } from "@/lib/example/data";
+import { exampleOverview } from "@/lib/example/data";
 import type { Overview } from "@/lib/overview/read";
 import { useApi } from "./api";
 import type { ActionView } from "./use-action";
@@ -26,7 +26,4 @@ function useScreenQuery<T>(key: string, path: string, example: T | null, options
 export const useOverview = () => useScreenQuery<Overview>("overview", "/api/overview", exampleOverview, { refetchInterval: 30_000 });
 export const useActionDetail = (id: string) => useScreenQuery<{ action: ActionView; events: Array<{ type: string; evidence: Record<string, unknown>; occurredAt: string }> }>(
   `action:${id}`, `/api/actions/${encodeURIComponent(id)}`, null);
-export const useSecurityPolicy = () => useScreenQuery<{ policy: typeof exampleSecurityPolicy }>("security-policy", "/api/security/policy", { policy: exampleSecurityPolicy });
-export const useRecipients = () => useScreenQuery<{ recipients: typeof exampleRecipients }>("recipients", "/api/recipients", { recipients: exampleRecipients });
-export const useMoneyAccount = () => useScreenQuery<Record<string, unknown>>("money-account", "/api/money/account", exampleMoneyAccount);
 

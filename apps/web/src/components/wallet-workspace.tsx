@@ -14,6 +14,7 @@ import { displayRawAmount } from "@/lib/swap/review-model";
 import { useAction } from "@/lib/client/use-action";
 import { MovePreviousAccount } from "./move-previous-account";
 import type { RouteQuote } from "./swap-workspace";
+import { shortAddress } from "@/lib/client/address";
 import { useToast } from "./toast";
 import { TransactionProgress } from "./transaction-progress";
 
@@ -30,10 +31,6 @@ function addressChunks(address: string) {
 }
 
 type Recipient = { id: string; kind: "wallet" | "bank"; name: string; destination: string; detail: string; verified: boolean; recent?: boolean; availableAt?: string };
-
-function shortAddress(address: string) {
-  return `${address.slice(0, 6)}…${address.slice(-4)}`;
-}
 
 function amountText(value: bigint | undefined, decimals: number) {
   if (value === undefined) return "—";

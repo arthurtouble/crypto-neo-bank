@@ -2,8 +2,9 @@
  * Aurel product design-system contract.
  *
  * This file is loaded after legacy and identity styles so semantic type roles
- * remain authoritative. Keep page-specific layout in globals.css; keep the
- * readable product scale, control states, and shared rhythm here.
+ * remain authoritative. It is pre-redesign and trimmed to what the app still
+ * renders (and what tests/unit/design-system.test.ts checks); new styles go in
+ * the area stylesheets, built from design-tokens.css.
  */
 
 :root {
@@ -13,10 +14,8 @@
   --type-body: 14px;
   --type-row-title: 14px;
   --type-control: 13px;
-  --type-panel-title: 21px;
   --leading-caption: 1.45;
   --leading-body: 1.55;
-  --row-compact: 64px;
   --row-standard: 76px;
 }
 
@@ -26,115 +25,15 @@
   line-height: var(--leading-body);
 }
 
-.productShell .pageIntro h1 {
-  font-family: "Archivo Variable", "Satoshi", system-ui, sans-serif;
-  font-size: clamp(34px, 3vw, 42px);
-  font-weight: 620;
-  line-height: 1.08;
-  letter-spacing: -.04em;
-}
-
-.productShell .eyebrow,
-.productShell .sourceCaption,
 .productShell small {
   font-size: var(--type-caption);
   line-height: var(--leading-caption);
 }
-
-.productShell .eyebrow {
-  font-family: var(--font-body);
-  font-weight: 650;
-  letter-spacing: .055em;
-}
-
-.productShell .panelHeading h2 { font-size: var(--type-panel-title); }
-.productShell .panelHeading h3 { font-size: 17px; }
-.productShell .panelHeading > a { font-size: var(--type-label); }
 .productShell .button { font-size: var(--type-control); }
-.productShell .statusBadge {
-  min-height: 24px;
-  padding-inline: 8px;
-  font-size: var(--type-caption);
-  font-weight: 620;
-}
 
-.productShell .fieldLabel,
-.productShell .amountField label,
-.productShell .exchangeAmount {
-  font-size: var(--type-label);
-}
-
-.productShell .fieldLabel input,
-.productShell .fieldLabel select,
-.productShell .requestTextarea {
-  min-height: 44px;
-  font-size: var(--type-body);
-}
-
-.productShell .formError,
-.productShell .formSuccess,
-.productShell .formWarning,
-.productShell .securityMessage,
-.productShell .dialogNotice,
-.productShell .notice {
-  font-size: var(--type-label) !important;
-  line-height: var(--leading-body);
-}
-
-/* Overview and portfolio data */
-.productShell .balanceLabel,
-.productShell .heroDelta,
-.productShell .metric > span,
-.productShell .metric small,
-.productShell .allocationRing span,
-.productShell .allocationList span,
-.productShell .allocationList small,
-.productShell .incomeStrip,
-.productShell .riskItem div > span,
-.productShell .riskItem small,
-.productShell .riskItem > strong,
-.productShell .progressPanel p,
-.productShell .progressPanel a,
-.productShell .progressPanel .panelHeading > span {
-  font-size: var(--type-label);
-}
-
-.productShell .heroAmount small { font-size: var(--type-caption); }
-.productShell .metric strong { font-size: 18px; }
-
-.button.small { min-height: 34px; padding: 0 12px; font-size: var(--type-caption); }
-.button.quiet { border-color: transparent; background: transparent; color: var(--accent); }
-.routeDirection { width: fit-content; margin: 18px 0 20px; }
-.routeDestination, .routeRecipient { min-width: 0; }
 .srOnly { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 
 /* Transfers: options, capabilities, and account details */
-.productShell .moneyHero { padding: 30px 32px; }
-.productShell .moneyHero h2 { font-size: 24px; }
-.productShell .moneyHero p { font-size: var(--type-body-small); }
-.productShell .moneyCurrency {
-  width: 44px;
-  height: 44px;
-  font-size: var(--type-caption);
-  font-weight: 650;
-}
-
-.productShell .transferPanel,
-.productShell .railsPanel { padding: 28px; }
-.productShell .transferChoices > button {
-  min-height: var(--row-standard);
-  grid-template-columns: 38px minmax(0, 1fr) auto;
-  gap: 14px;
-  transition: color 140ms ease, background-color 140ms ease;
-}
-.productShell .transferChoices > button:hover {
-  background: color-mix(in srgb, var(--accent) 5%, transparent);
-}
-.productShell .transferChoices > button > span {
-  width: 34px;
-  height: 34px;
-  border-radius: var(--radius-control);
-}
 .productShell .transferChoices strong {
   font-size: var(--type-row-title);
   font-weight: 620;
@@ -143,73 +42,13 @@
   margin-top: 4px;
   font-size: var(--type-label);
 }
-.productShell .transferChoices em {
-  font-size: var(--type-label);
-  font-weight: 650;
-}
-
-.productShell .railRows > div {
-  min-height: var(--row-compact);
-  grid-template-columns: 28px minmax(130px, 1fr) minmax(120px, 1fr) auto;
-  gap: 14px;
-}
-.productShell .railRows > div > span { width: 26px; height: 26px; }
 .productShell .railRows strong {
   font-size: var(--type-body-small);
   font-weight: 620;
 }
-.productShell .railRows small,
-.productShell .railRows b {
+.productShell .railRows small {
   font-size: var(--type-caption);
   line-height: var(--leading-caption);
-}
-.productShell .bankDetails > span,
-.productShell .bankDetails strong,
-.productShell .setupPrompt p,
-.productShell .technicalDetails {
-  font-size: var(--type-label);
-}
-
-.dailyMoneyGrid { margin-top: 16px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-.dailyMoneyPanel { min-width: 0; padding: 28px; }
-.dailyMoneyPanel .panelHeading { margin-bottom: 12px; }
-.compactState { min-height: 92px; display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--muted); font-size: var(--type-body-small); }
-.emptyState.compact { min-height: 142px; }
-.recipientList, .scheduleList { display: grid; }
-.recipientRow { width: 100%; min-height: 72px; display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; align-items: center; gap: 12px; border-top: 1px solid var(--border); color: var(--text); }
-.recipientIdentity { min-width: 0; }
-.recipientAvatar { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font-size: var(--type-label); font-weight: 700; }
-.recipientList strong, .recipientList small, .scheduleList strong, .scheduleList small { display: block; }
-.recipientList strong, .scheduleList strong { font-size: var(--type-row-title); }
-.recipientList small, .scheduleList small { margin-top: 3px; color: var(--muted); font-size: var(--type-caption); }
-.recipientActions { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
-.recipientList em { display: inline-flex; align-items: center; gap: 4px; margin-right: 3px; font-size: var(--type-caption); font-style: normal; font-weight: 650; }
-.recipientList em.verified { color: var(--success); }
-.recipientList em.cooling { color: var(--muted); }
-.recipientActions button { min-height: 32px; padding: 0 9px; display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--border); border-radius: var(--radius-control); background: transparent; color: var(--text); font: inherit; font-size: var(--type-caption); font-weight: 650; cursor: pointer; }
-.recipientActions button:hover { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
-.scheduleList > div { min-height: 66px; display: grid; grid-template-columns: minmax(0, 1fr) auto 68px; align-items: center; gap: 12px; border-top: 1px solid var(--border); }
-.scheduleList b { font-size: var(--type-body-small); }
-.scheduleList button { width: 30px; height: 30px; display: grid; place-items: center; border: 0; border-radius: 50%; background: transparent; color: var(--muted); cursor: pointer; }
-.scheduleList button:hover { background: var(--surface-subtle); color: var(--text); }
-.scheduleActions { display: flex; gap: 4px; }
-.scheduleList button:focus-visible, .scheduleDueRow button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.scheduleDuePanel { margin-top: 20px; padding: 24px 28px; }
-.scheduleDuePanel .panelHeading p, .scheduleDueEmpty { margin: 5px 0 0; color: var(--muted); font-size: var(--type-body-small); }
-.scheduleDueList { display: grid; }
-.scheduleDueRow { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 18px; padding: 14px 0; border-top: 1px solid var(--border); }
-.scheduleDueRow strong, .scheduleDueRow small { display: block; }
-.scheduleDueRow small { margin-top: 3px; color: var(--muted); font-size: var(--type-caption); }
-.scheduleDueRow b { white-space: nowrap; font-size: var(--type-body-small); }
-@media (max-width: 600px) { .scheduleDueRow { grid-template-columns: minmax(0, 1fr) auto; } .scheduleDueRow button { grid-column: 1 / -1; justify-self: start; } .scheduleDuePanel { padding: 22px 18px; } }
-.billsPanel { margin-top: 16px; padding: 22px 28px; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
-.billsPanel > div { display: flex; align-items: center; gap: 13px; }
-.billsPanel strong, .billsPanel small { display: block; }
-.billsPanel strong { font-size: var(--type-row-title); }
-.billsPanel small { margin-top: 3px; color: var(--muted); font-size: var(--type-label); }
-.formSplit { display: grid; grid-template-columns: 1fr 120px; gap: 12px; }
-
-@media (max-width: 640px) {
 }
 
 /* Transaction lifecycle */
@@ -235,225 +74,37 @@
 .transactionLinks a { display: inline-flex; align-items: center; gap: 5px; color: var(--accent); font-size: var(--type-label); font-weight: 650; text-decoration: none; }
 .transactionLinks a:hover { text-decoration: underline; }
 
-.billsWorkspace { margin-top: 16px; padding: 28px; }
-.billRows { margin-top: 14px; display: grid; }
-.billRows > div { min-height: 68px; display: grid; grid-template-columns: 34px minmax(0, 1fr) minmax(100px, auto) 34px; align-items: center; gap: 12px; border-top: 1px solid var(--border); }
-.billIcon { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 50%; background: var(--accent-soft); color: var(--accent); }
-.billRows strong, .billRows small { display: block; }
-.billRows strong { font-size: var(--type-row-title); }
-.billRows small { margin-top: 3px; color: var(--muted); font-size: var(--type-caption); text-transform: capitalize; }
-.billRows b { font-size: var(--type-body-small); text-align: right; }
-.billRows em { font-size: var(--type-caption); font-style: normal; text-transform: capitalize; }
-.billRows button { width: 30px; height: 30px; display: grid; place-items: center; border: 0; border-radius: 50%; background: transparent; color: var(--muted); cursor: pointer; }
-.billRows button:hover { background: var(--surface-subtle); color: var(--text); }
-
-.defiPositions { margin-top: 16px; padding: 28px; }
-.defiMetrics { margin-top: 18px; display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--border); border-radius: var(--radius-panel); overflow: hidden; }
-.defiMetrics > span { min-height: 108px; padding: 20px; display: grid; grid-template-columns: 20px 1fr; align-content: center; column-gap: 8px; border-right: 1px solid var(--border); }
-.defiMetrics > span:last-child { border-right: 0; }
-.defiMetrics svg { grid-row: 1 / 3; color: var(--accent); }
-.defiMetrics small { color: var(--muted); font-size: var(--type-caption); }
-.defiMetrics strong { margin-top: 5px; font-size: 18px; }
-.defiPositionFooter { min-height: 54px; display: flex; align-items: center; justify-content: space-between; gap: 16px; color: var(--muted); font-size: var(--type-label); border-bottom: 1px solid var(--border); }
-.defiPositionFooter a { color: var(--accent); font-weight: 650; text-decoration: none; }
-.defiPositionFooter a:hover { text-decoration: underline; }
-.defiRewards { margin-top: 18px; padding: 18px; border: 1px solid var(--border); border-radius: var(--radius-panel); background: var(--surface-subtle); }
-.defiRewardsHeading { min-height: 34px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-.defiRewardsHeading > span { display: inline-flex; align-items: center; gap: 8px; }
-.defiRewardsHeading svg { color: var(--accent); }
-.defiRewardsHeading strong { font-size: var(--type-row-title); }
-.defiRewardRows { margin: 10px 0 14px; border-top: 1px solid var(--border); }
-.defiRewardRows > div { min-height: 58px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid var(--border); }
-.defiRewardRows span { display: grid; gap: 3px; }
-.defiRewardRows span:last-child { text-align: right; }
-.defiRewardRows strong { font-size: var(--type-body-small); }
-.defiRewardRows small { color: var(--muted); font-size: var(--type-caption); }
-.emptyActions { display: flex; gap: 8px; margin-top: 8px; }
-
 /* Assets, exchange, earn, borrow, and markets */
-.productShell .tableHead {
-  font-family: var(--font-body);
-  font-size: var(--type-caption);
-  font-weight: 650;
-  letter-spacing: .02em;
-  text-transform: none;
-}
 .productShell .tableRow {
   min-height: var(--row-standard);
   font-size: var(--type-body-small);
 }
 .productShell .tableRow strong { font-size: var(--type-row-title); }
 .productShell .tableRow small { font-size: var(--type-caption); }
-.productShell .connectionPanel > p:not(.eyebrow) { font-size: var(--type-body-small); }
-.productShell .walletConnection { min-height: var(--row-compact); }
-.productShell .walletConnection strong { font-size: var(--type-body-small); }
-.productShell .walletConnection small { font-size: var(--type-caption); }
-.productShell .strategyCard > p:not(.eyebrow) { font-size: var(--type-body-small); }
-.aavePreviewForm { display: grid; gap: 14px; padding-top: 18px; border-top: 1px solid var(--border); }
-.aavePreviewFields { display: flex; flex-wrap: wrap; gap: 10px; }
-.aavePreviewFields label { flex: 1 1 130px; min-width: 0; display: grid; gap: 6px; color: var(--muted); font-size: var(--type-caption); }
-.aavePreviewFields select, .aavePreviewFields input { width: 100%; min-height: 42px; padding: 0 11px; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--surface); color: var(--text); font: inherit; font-size: var(--type-label); }
-.aavePreviewButtons { display: flex; flex-wrap: wrap; gap: 8px; }
-.aavePreviewResult { display: grid; gap: 5px; padding: 14px; border-radius: var(--radius-control); background: var(--surface-subtle); font-size: var(--type-label); }
-.aavePreviewResult small { color: var(--muted); font-size: var(--type-caption); }
-.productShell .strategyMetrics span,
-.productShell .exposureList span { font-size: var(--type-caption); }
-.productShell .strategyMetrics strong { font-size: var(--type-body-small); }
-.productShell .routeQuote span,
-.productShell .routeQuote small,
-.productShell .borrowHealth span,
-.productShell .borrowHealth small,
-.productShell .rateRow small,
-.productShell .riskFineprint,
-.productShell .authorityFootnote { font-size: var(--type-caption); }
-.productShell .routeQuote strong,
-.productShell .rateRow strong { font-size: var(--type-body-small); }
-.productShell .marketCard > p { font-size: var(--type-body-small); }
-.productShell .marketGates strong { font-size: var(--type-label); }
-.productShell .marketGates small,
-.productShell .frameworkSteps span,
-.productShell .frameworkSteps strong { font-size: var(--type-caption); }
-
-
-.aurelSwap { width: min(100%, 570px); margin: 24px auto 48px; }
-.aurelSwapCard { padding: 20px; border: 1px solid var(--line, #d8ded9); border-radius: 16px; background: var(--surface, #fff); box-shadow: 0 12px 36px rgba(14, 39, 26, .045); }
-.aurelSwapCard > .button { margin-top: 18px; min-height: 48px; }
-@media (max-width: 540px) { .aurelSwap { margin-top: 8px; } .aurelSwapCard { padding: 14px; } .swapAmountRow { padding: 12px; } .swapAmountRow input, .swapAmountRow output { font-size: 27px; } }
-
-@media (max-width: 720px) {
-  .walletHeading { flex-direction: column; align-items: stretch; }
-  .walletHeading h2 { margin-bottom: 0; }
-}
 
 /* Cards and benefits */
-.productShell .membershipTop,
-.productShell .membershipBottom,
-.productShell .membershipCard small,
-.productShell .membershipCard strong { font-size: var(--type-caption); }
-.productShell .demoCardLarge .membershipBottom small { font-size: var(--type-caption); }
 .productShell .cardControlRow { min-height: var(--row-standard); }
 .productShell .cardControlRow strong { font-size: var(--type-row-title); }
 .productShell .cardControlRow small { font-size: var(--type-label); }
 .productShell .benefitCard p { font-size: var(--type-body-small); }
-.productShell .benefitCard button,
-.productShell .membershipKicker,
-.productShell .membershipSummary p,
-.productShell .membershipScore small,
-.productShell .nextTier span,
-.productShell .nextTier small { font-size: var(--type-label); }
-
-/* Insights and issuer-backed card controls */
-
-.goalGrid { margin-top: 18px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
-.goalCard { min-height: 230px; padding: 20px; display: grid; grid-template-columns: 38px minmax(0, 1fr); align-content: start; gap: 14px; border: 1px solid var(--border); border-radius: var(--radius-panel); background: var(--surface); }
-.goalIcon { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 50%; background: var(--accent-soft); color: var(--accent); }
-.goalCard > div { min-width: 0; }
-.goalCard > div strong, .goalCard > div small { display: flex; align-items: center; gap: 5px; }
-.goalCard > div strong { font-size: var(--type-row-title); }
-.goalCard > div small { margin-top: 4px; color: var(--muted); font-size: var(--type-caption); }
-.goalCard > b, .goalCard > p, .goalCard > button { grid-column: 1 / -1; }
-.goalCard > b { margin-top: 12px; font-family: "Archivo Variable", "Satoshi", system-ui, sans-serif; font-size: 24px; letter-spacing: -.025em; }
-.goalCard > p { margin: -7px 0 4px; color: var(--muted); font-size: var(--type-label); }
-.goalCard > button { justify-self: start; }
-.optionalLabel { color: var(--muted); font-weight: 500; }
-.financialModal form { display: grid; gap: 15px; }
-
-.cardAuthority { grid-column: 1 / -1; margin: -6px 2px 0; }
 
 /* Security, settings, status, and setup */
-.productShell .securityChecklist > div,
-.productShell .settingRow { min-height: var(--row-standard); }
 .productShell .securityChecklist strong,
-.productShell .settingRow strong,
-.productShell .securityPrinciple strong,
-.productShell .componentStatusRow strong { font-size: var(--type-row-title); }
-.productShell .securityChecklist small,
-.productShell .settingRow small,
-.productShell .securityPrinciple small,
-.productShell .componentStatusRow small { font-size: var(--type-label); }
-.productShell .securityChecklist button,
-.productShell .securityState,
-.productShell .settingRow button,
-.productShell .settingRow a,
-.productShell .settingsToggle,
-.productShell .settingRow select { font-size: var(--type-label); }
-.productShell .addressList strong { font-size: var(--type-body-small); }
-.productShell .addressList small,
-.productShell .addressList > div > span,
-.productShell .emptyAddress { font-size: var(--type-caption); }
-.productShell .activationHeader p:not(.eyebrow) { font-size: var(--type-body-small); }
-.productShell .activationTasks strong { font-size: var(--type-body-small); }
-.productShell .activationTasks small,
-.productShell .activationTasks a b,
-.productShell .activationAcknowledge { font-size: var(--type-caption); }
-.productShell .supportRows > div,
-.productShell .supportRows strong { font-size: var(--type-body-small); }
-.productShell .supportRows .supportHead,
-.productShell .supportRows small { font-size: var(--type-caption); }
+.productShell .settingRow strong { font-size: var(--type-row-title); }
 
 /* Operator and sandbox surfaces use the same readable floor. */
-.productShell .scenarioStrip strong,
-.productShell .scenarioStrip small,
-.productShell .sandboxSummary span,
-.productShell .sandboxSummary small,
-.productShell .journeyList strong,
-.productShell .journeyList small,
-.productShell .journeyList b,
-.productShell .requiredActions,
-.productShell .requiredActions strong,
-.productShell .commandPanel > p,
-.productShell .commandGrid strong,
-.productShell .commandGrid small,
-.productShell .receiptPanel .panelHeading > span,
-.productShell .receiptList strong,
-.productShell .receiptList small,
-.productShell .receiptState,
-.productShell .opsMetrics span,
-.productShell .opsMetrics small,
-.productShell .opsIssueList strong,
-.productShell .opsIssueList small,
-.productShell .opsIssueList b,
-.productShell .opsActions button { font-size: var(--type-caption); }
 .productShell .emptyState span { font-size: var(--type-label); }
 
 /* Portalled dialogs and command menu sit outside .productShell. */
-.financialModal .fieldLabel,
-.dialogContent .fieldLabel { font-size: var(--type-label); }
+.financialModal .fieldLabel { font-size: var(--type-label); }
 .financialModal .fieldLabel input,
-.financialModal .fieldLabel select,
-.dialogContent .fieldLabel input,
-.dialogContent .fieldLabel select { font-size: var(--type-body); }
-.financialModal > p,
-.financialModal form > p:not(.eyebrow),
-.financialModal .setupPrompt p,
-.financialModal .bankDetails > span,
-.financialModal .bankDetails strong,
-.financialModal .technicalDetails,
-.dialogContent .transferMeta span,
-.dialogContent .transferMeta strong,
-.dialogContent .fundingDetails dt,
-.dialogContent .fundingDetails dd,
-.dialogContent .fundingDetails > small,
-.dialogContent .addressBlock,
-.dialogContent .modalRisk,
-.dialogContent .transactionSummary span,
-.dialogContent .transactionSummary strong,
-.dialogContent .consentCheck strong,
-.dialogContent .consentCheck small,
-.dialogContent .authorityFootnote {
+.financialModal .fieldLabel select { font-size: var(--type-body); }
+.dialogContent .transactionSummary strong {
   font-size: var(--type-label);
   line-height: var(--leading-body);
 }
-.commandResults > p,
-.commandResults small,
-.commandFooter { font-size: var(--type-caption); }
-.commandResults strong { font-size: var(--type-body-small); }
 
 @media (max-width: 720px) {
-  .productShell .productHeader {
-    padding-inline: 16px;
-    gap: 10px;
-  }
   .productShell .commandSearch {
     width: 36px;
     min-width: 36px;
@@ -461,50 +112,7 @@
     justify-content: center;
   }
   .productShell .commandSearch kbd { display: none; }
-  .productShell .headerRight {
-    min-width: 0;
-    margin-left: auto;
-    gap: 8px;
-  }
-  .productShell .privyAccountButton {
-    width: 36px;
-    min-width: 36px;
-    min-height: 36px;
-    padding: 0;
-    justify-content: center;
-  }
-  .productShell .privyAccountButton span { display: none; }
-  .productShell .productContent { padding-inline: 18px; }
-  .productShell .moneyHero { padding: 24px; }
-  .productShell .transferPanel,
-  .productShell .railsPanel { padding: 22px; }
-  .productShell .railRows > div {
-    min-height: var(--row-standard);
-    grid-template-columns: 28px minmax(0, 1fr) auto;
-  }
   .productShell .railRows small { display: block; grid-column: 2; }
-  .productShell .railRows b { grid-column: 3; grid-row: 1 / span 2; text-align: right; }
-  .dailyMoneyGrid { grid-template-columns: 1fr; }
-  .recipientRow { grid-template-columns: 34px minmax(0, 1fr); padding: 12px 0; }
-  .recipientActions { grid-column: 2; justify-content: flex-start; flex-wrap: wrap; }
-  .billsPanel { align-items: flex-start; padding: 20px 18px; }
-  .billsPanel small { max-width: 210px; }
-  .formSplit { grid-template-columns: 1fr; gap: 0; }
-  .billsWorkspace, .defiPositions { padding: 22px 18px; }
-  .paydayPanel { padding: 22px 18px; }
-  .paydayGrid { grid-template-columns: 1fr; }
-  .defiMetrics { grid-template-columns: 1fr; }
-  .defiMetrics > span { min-height: 76px; border-right: 0; border-bottom: 1px solid var(--border); }
-  .defiMetrics > span:last-child { border-bottom: 0; }
-  .defiPositionFooter { align-items: flex-start; flex-direction: column; padding: 14px 0; gap: 6px; }
-  .goalGrid { grid-template-columns: 1fr; }
-}
-
-@media (max-width: 520px) {
-  .billRows > div { grid-template-columns: 34px minmax(0, 1fr) auto; }
-  .billRows button, .billRows em { grid-column: 3; grid-row: 1 / span 2; }
-  .billRows b { grid-column: 2; text-align: left; color: var(--muted); font-size: var(--type-caption); }
-  .incomePlanFields { grid-template-columns: 1fr; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -512,25 +120,3 @@
   .productShell *::before,
   .productShell *::after { transition-duration: .01ms !important; }
 }
-
-/* Overview: one total, then cash, crypto, and earn. */
-.portfolioTotal { display: grid; gap: 6px; margin-bottom: 16px; padding: 20px; }
-.portfolioTotal .eyebrow { margin: 0; }
-.portfolioTotal > strong { font-family: var(--font-technical); font-size: clamp(28px, 4vw, 40px); font-weight: 500; }
-.portfolioTotal small { color: var(--muted); font-size: var(--type-caption); }
-.dashboardPage > section.panel.widePanel + section.panel.widePanel { margin-top: 16px; }
-.dashboardPage .panelHeading { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
-/* Send: saved recipients, own wallets, and recent addresses as one-tap choices. */
-.productShell .recipientChoices { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px; }
-.productShell .recipientChoices button { min-width: 0; padding: 8px 10px; display: grid; gap: 2px; text-align: left; border: 1px solid var(--hairline-strong); border-radius: var(--radius-control); background: var(--surface); color: var(--text); font: inherit; cursor: pointer; }
-.productShell .recipientChoices button[aria-pressed="true"] { border-color: var(--accent); }
-.productShell .recipientChoices strong { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
-.productShell .recipientChoices small { color: var(--text-tertiary); font-family: var(--font-technical); font-size: 9px; }
-.productShell .checkRow { display: flex; gap: 8px; align-items: center; font-size: 11px; }
-.productShell .checkRow input { accent-color: var(--accent); }
-/* A transaction's journey: one row per step, only the current one in progress. */
-
-
-/* Card */
-
-/* Insights: money in and out over time. Series colors are validated for color-vision deficiency on both surfaces. */
