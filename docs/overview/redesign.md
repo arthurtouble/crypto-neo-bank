@@ -68,7 +68,7 @@ Navigation is settled in phase 2 with the journeys; the rest is answered in phas
 | 10 | Transactions and Insights | List, filters, receipt, detail, export, statement, Insights | Done ([#65](https://github.com/arthurtouble/crypto-neo-bank/pull/65)) |
 | 11 | Settings and support | Settings sections, passkey, limits, recipients, Aura tag, support | Done ([#66](https://github.com/arthurtouble/crypto-neo-bank/pull/66)) |
 | 12 | Landing and public pages | Landing, `/pay/[tag]`, waitlist, docs site look | Done ([#67](https://github.com/arthurtouble/crypto-neo-bank/pull/67)); `/waitlist` only redirects to `/app`, so it has no look of its own. The pay page's B5 and B6 follow as their own pull requests |
-| 13 | Operations console | `apps/ops`: the new look only, no layout redesign (decided 29 September) | Not started |
+| 13 | Operations console | `apps/ops`: the new look only, no layout redesign (decided 29 September) | Done ([#68](https://github.com/arthurtouble/crypto-neo-bank/pull/68)) |
 
 Status values: Not started, In progress, Done (with the pull request link), Cut.
 
