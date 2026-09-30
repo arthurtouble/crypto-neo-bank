@@ -39,16 +39,16 @@ Before we turn any of these on, we'll tell you the amount or how it's calculated
 
 We don't want to rely on hidden spreads, quietly skimming yield, printing tokens, or dressing up referral payments as independent advice.
 
-Fees based on how much you hold can push a company to grow balances even when that isn't right for you. If we ever use them, we'll explain why clearly.
+Fees based on how much you hold can push a company to grow balances even when that isn't right for you. If we ever use them, we'll explain why.
 
 ## No Aura token
 
-Aura has no token of its own. An asset or partner should be in Aura because it's useful, understandable, liquid enough, reliable, and suitable for you. Not because it creates demand for something we own.
+Aura has no token of its own. An asset or partner should be in Aura because it's useful, understandable, liquid enough, reliable, and suitable for you. It shouldn't be there to create demand for something we own.
 
 ## Rewards cost someone money
 
-Aura doesn't offer cashback, points, or other rewards. Perks aren't free. Someone pays for them. Before we offer any, each needs a funded partner, a cost, usage limits, eligibility rules, the countries it covers, fraud rules, an expiry rule, and someone responsible for support.
+Aura doesn't offer cashback, points, or other rewards. Perks aren't free: someone pays for them. Before we offer any, each one needs a funded partner, a cost, usage limits, eligibility rules, the countries it covers, fraud rules, an expiry rule, and someone responsible for support.
 
 ## When fees change
 
-If a fee changes, we'll show you the amount or method, when it starts, which service it affects, and your alternatives, before it applies. Costs for a specific transaction always appear in its quote or review.
+Before a fee change applies, we'll show you the amount or method, when it starts, which service it affects, and your alternatives. Costs for a specific transaction always appear in its quote or review.

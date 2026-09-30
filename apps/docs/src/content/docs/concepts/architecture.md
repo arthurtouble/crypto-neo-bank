@@ -3,7 +3,7 @@ title: Architecture
 description: How the app, your wallet, blockchains, protocols, and partners fit together.
 ---
 
-Aura is a thin layer. It prepares money movements, checks them, and explains what happened. It doesn't try to be the ledger, the custodian, the bank, and the exchange all at once.
+Aura is a thin layer. It prepares money movements, checks them, and explains what happened. It doesn't try to be the ledger, the custodian, the bank, and the exchange at once.
 
 ## How a money movement works
 
@@ -14,7 +14,7 @@ Every send, swap, move between networks, Earn deposit or withdrawal, and crypto 
 3. **You confirm.** You review the transaction in Aura and confirm it with your passkey.
 4. **Privy submits it.** Aura sends the signed request to Privy, which submits it and pays the network fee.
 5. **The network settles it.** The blockchain accepts or rejects the operation.
-6. **Aura checks the result.** Aura reads the blockchain itself. It marks the movement complete once the operation is in a block, matches what was prepared, and shows the expected transfer or deposit, then keeps checking until the network makes it final. A move between networks also has to arrive.
+6. **Aura checks the result.** Aura reads the blockchain itself. It marks the movement complete once the operation is in a block, matches what was prepared, and shows the expected transfer or deposit. Then it keeps checking until the network makes it final. A move between networks also has to arrive.
 
 Each step is separate. A quote isn't a transfer. A review isn't a confirmation. A submitted transaction isn't necessarily final.
 
@@ -32,7 +32,7 @@ Aura's server checks your Privy sign-in on every request. It never trusts an ide
 
 ### Your controls
 
-If you turn them on, Aura applies your account lock, daily limit, saved-recipients-only mode, and the wait before new recipients. Making one stricter applies at once; loosening one needs your passkey.
+If you turn them on, Aura applies your account lock, daily limit, saved-recipients-only mode, and the wait before new recipients. Making one stricter applies at once. Loosening one needs your passkey.
 
 These checks can stop a movement inside Aura. They can't stop someone who uses an exported key or another app.
 
@@ -45,11 +45,13 @@ Base is the home network. Aura reads balances, positions, and transaction receip
 
 ### Aura's own records
 
-Aura keeps records such as your settings, the transactions it prepared and the checks it ran, and your notifications. Support chats are kept by Intercom. They make the app fast and let us explain what happened. They are never the final word on your balance.
+Aura keeps records such as your settings, the transactions it prepared and the checks it ran, and your notifications. These records make the app fast and let us explain what happened. They are never the final word on your balance.
+
+Intercom keeps support chats.
 
 ### Background checks
 
-Aura runs scheduled checks that spot stuck movements and problems processing partner updates. Logs help us investigate.
+Aura runs scheduled checks to spot stuck movements and problems processing partner updates. We use logs to investigate.
 
 ## Why Cloudflare
 

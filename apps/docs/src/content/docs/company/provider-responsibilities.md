@@ -5,7 +5,7 @@ sidebar:
   order: 2
 ---
 
-Aura brings several independent companies and systems together. Each one has its own job.
+Aura brings together several independent companies and systems. Each has its own job.
 
 | Who | What they do | What they don't replace |
 | --- | --- | --- |
@@ -24,7 +24,7 @@ A partner running customer checks doesn't make it responsible for everything Aur
 
 Aura is responsible for the experience it builds. That includes describing features accurately, showing transactions and fees clearly, deciding who can use what, the controls inside Aura, talking to you, routing complaints, overseeing partners, and keeping the records that explain our own decisions.
 
-Connecting to a bank partner doesn't make Aura a bank. And a partner doing identity checks doesn't free Aura from its own privacy, security, consumer-protection, marketing, sanctions, or contract duties.
+Connecting to a bank partner doesn't make Aura a bank. A partner doing identity checks doesn't free Aura from its own privacy, security, consumer-protection, marketing, sanctions, or contract duties.
 
 ## Privy
 
@@ -48,7 +48,7 @@ Aura checks each route against what you asked for and tracks it until delivery. 
 
 Bridge (for bank transfers and card approval) and Stripe (which issues cards with Bridge) may contract with you directly for their regulated services. They may handle identity checks, sanctions screening, source-of-funds checks, opening accounts or issuing cards, holding funds, monitoring transactions, disputes, and regulatory records.
 
-These partners also check Aura before they work with us. They can ask for security documents, compliance procedures, approved countries, forecasts, marketing review, complaint handling, ownership checks, financial information, and named contacts. You signing up with a partner doesn't mean the partner has approved Aura.
+These partners also check Aura before they work with us. They can ask for security documents, compliance procedures, approved countries, forecasts, marketing review, complaint handling, ownership checks, financial information, and named contacts. If you sign up with a partner, that doesn't mean the partner has approved Aura.
 
 ## You
 
