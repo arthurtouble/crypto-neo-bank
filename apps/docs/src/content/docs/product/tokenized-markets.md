@@ -36,17 +36,19 @@ A Coinbase tokenized stock is a token on Base that tracks a US company's shares.
 
 ## What Tether Gold is
 
-One XAUt is backed by one troy ounce of physical gold held for Tether. It's issued on Ethereum, not Base, so your Aura account holds it on Ethereum, at the same address as on Base. Buying it moves your money from Base to Ethereum through LI.FI, and the route's fees come out of the amount. Aura pays the Ethereum network fee when you send or sell it.
+One XAUt is backed by one troy ounce of physical gold held for Tether.
+
+It's issued on Ethereum, not Base. Your Aura account holds it on Ethereum, at the same address as on Base. Buying it moves your money from Base to Ethereum through LI.FI, and the route's fees come out of the amount. Aura pays the Ethereum network fee when you send or sell it.
 
 ## Prices
 
 Aura values stocks and gold with Chainlink price feeds.
 
-- **Stock prices** follow US market hours. At night, at weekends, and on holidays, the feed holds the last price. For a stock, it's the token's total-return value: the share price with the token's multiplier applied.
+- **Stock prices** follow US market hours. At night, at weekends, and on holidays, the feed holds the last price. For a stock, the price is the token's total-return value: the share price with the token's multiplier applied.
 - **Gold** uses Chainlink's gold price. Tether Gold usually trades close to it.
-- The Overview shows when each price was published, for example "Price as of Fri 4:00 PM".
+- Overview shows when each price was published, for example "Price as of Fri 4:00 PM".
 - If a price is more than four days old, Aura shows the value as unavailable rather than an old number.
 
 ## Risks
 
-A token's price can move quickly, and markets for these tokens can be thinner than for the shares or gold themselves. The issuer, the network, and the route you trade through each add their own risk. See the [risk disclosure](/legal/risk-disclosure/).
+A token's price can move quickly. Markets for these tokens can be thinner than for the shares or gold themselves. The issuer, the network, and the route you trade through each add their own risk. See the [risk disclosure](/legal/risk-disclosure/).

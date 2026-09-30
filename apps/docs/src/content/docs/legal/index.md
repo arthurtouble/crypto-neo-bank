@@ -5,11 +5,11 @@ sidebar:
   order: 1
 ---
 
-:::caution[Pre-launch drafts]
-These documents are drafts for counsel review. The operating entity, registered address, governing law, regulators, and contact details must be completed before public launch.
+:::note[Before public launch]
+Some details are not filled in yet: the operating entity, registered address, governing law, regulators, and contact details. We will complete them before public launch.
 :::
 
-Aura asks you to accept the current terms of use and acknowledge the privacy notice the first time you sign in. We ask again whenever a version changes.
+The first time you sign in, Aura asks you to accept the current terms of use and to acknowledge the privacy notice. We ask again whenever a version changes.
 
 | Document | Current version |
 | --- | --- |
@@ -21,4 +21,4 @@ Aura asks you to accept the current terms of use and acknowledge the privacy not
 | [Electronic communications](/legal/electronic-communications/) | 2026-09-25 |
 | [Complaints policy](/legal/complaints/) | 2026-09-25 |
 
-Aura also shows the relevant warning at the moment it matters, such as before you sign a transaction. A link in a footer doesn't replace that.
+Aura also shows the relevant warning when it matters, for example before you sign a transaction. A link in a footer doesn't replace that warning.

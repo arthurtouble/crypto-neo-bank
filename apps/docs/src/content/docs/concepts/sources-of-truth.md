@@ -26,7 +26,7 @@ That lowers the risk of Aura losing track of your money. It doesn't mean Aura ke
 
 Balances, protocol positions, and confirmed transactions can always be read again from the blockchain. Aura may keep a copy to load pages faster.
 
-Rebuilding still takes effort. It can be slow, sources can disagree or be down, and past context can be harder to recover than current balances.
+Rebuilding still takes effort. It can be slow. Sources can disagree or be down. Past context can be harder to recover than current balances.
 
 ## What can't be thrown away
 
@@ -38,7 +38,7 @@ So we protect them with access controls, backups, restore tests, and clear rules
 
 When Aura compares its records with the source, the source always wins.
 
-For a blockchain transaction, Aura checks the network, the transaction hash, the receipt, the block, and the expected result. For a partner update, it compares the partner's history with what you see. Differences go to our operations team. They are never silently overwritten.
+For a blockchain transaction, Aura checks the network, the transaction hash, the receipt, the block, and the expected result. For a partner update, it compares the partner's history with what you see. Differences go to our operations team. We never overwrite them silently.
 
 ## If something goes wrong
 

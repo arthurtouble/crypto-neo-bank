@@ -1,19 +1,23 @@
 ---
 title: Cross-chain routes
-description: How moves between networks are quoted, signed, and tracked.
+description: How moves between networks are quoted, confirmed, and tracked.
 ---
 
-You can use Swap to move an asset from one network to another, or choose another network in Send to pay someone there. This is how you withdraw to a network other than Base. To add money from another network, use **Deposit > From your wallet**. Aura moves it to the same asset on Base, using a route LI.FI finds. Bridge fees come out of the amount. Your wallet pays the fee on the network you send from, while Aura pays it for moves from your Aura account.
+You can use Swap to move an asset from one network to another, or choose another network in Send to pay someone there. This is how you withdraw to a network other than Base.
+
+To add money from another network, use **Deposit > From your wallet**. Aura moves it to the same asset on Base, using a route LI.FI finds.
+
+Bridge fees come out of the amount. When you add money from your wallet, your wallet pays the network fee on the network you send from. For moves from your Aura account, Aura pays it.
 
 ## Getting a quote
 
-LI.FI finds the route. It chooses among third-party bridges and exchanges, and estimates what you'll receive, the fees, and the timing. A quote lasts 45 seconds. It isn't a transfer.
+LI.FI finds the route. It chooses among third-party bridges and exchanges. It estimates what you'll receive, the fees, and the timing. A quote lasts 45 seconds. It isn't a transfer.
 
-Before you confirm, Aura checks the assets, networks, amount, recipient, and price impact, and applies any controls you've set. Any token approval and the move itself are confirmed together, as one step.
+Before you confirm, Aura checks the assets, networks, amount, recipient, and price impact. It also applies any controls you've set. You confirm any token approval and the move itself together, as one step.
 
 ## While it's moving
 
-When the first network confirms, the move has started. That doesn't mean it has arrived. Aura shows it as **On its way** until LI.FI reports delivery and Aura sees at least the minimum amount arrive in your wallet on the other network.
+When the first network confirms, the move has started. That doesn't mean it has arrived. Aura shows it as **On its way** until two things happen: LI.FI reports delivery, and Aura sees at least the minimum amount arrive in your wallet on the other network.
 
 ## If it seems stuck
 
@@ -22,4 +26,4 @@ When the first network confirms, the move has started. That doesn't mean it has 
 3. Don't repeat the move yet. Repeating it can send your funds twice.
 4. If it's still unresolved, chat with support in Aura and include the transaction hash.
 
-Never share a private key or recovery phrase, including with Aura support.
+Never share a private key or recovery phrase with anyone, including Aura support.

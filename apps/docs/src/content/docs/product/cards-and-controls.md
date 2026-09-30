@@ -11,7 +11,7 @@ The Aura card is a virtual Visa card. It spends the USDC in your Aura account on
 
 ## Getting a card
 
-Until you have a card, the Cards page shows what's left as a checklist: the steps you've done, the current one with its button, and the ones still to come. The last step is setting your spending allowance.
+Until you have a card, the Cards page shows the steps as a checklist. You see the steps you've done, the current one with its button, and the ones still to come. The last step is setting your spending allowance.
 
 1. **Verify your identity.** Bridge verifies you once, under **Deposit > Bank**, for both your bank account and your card.
 2. **Apply with Bridge.** On the Cards page, select **Apply with Bridge**. Bridge checks you're eligible on its own page. Select **Check status** to see its decision, or what it still needs from you.
@@ -19,9 +19,9 @@ Until you have a card, the Cards page shows what's left as a checklist: the step
 
 Your card starts with a daily limit of 500 USD. You can raise it to 10,000 USD a day.
 
-## How payments are paid
+## How card payments work
 
-Nothing is moved onto the card in advance. Instead, you set a **spending allowance**: the most the card can take from your USDC. You confirm it with your passkey, like any other action. It shows in Transactions as **Card allowance set**, and it doesn't count toward your daily sending limit.
+Nothing is moved onto the card in advance. Instead, you set a **spending allowance**: the most the card can take from your USDC. You confirm it with your passkey, like any other action. It shows in Transactions as **Card allowance set**. It doesn't count toward your daily sending limit.
 
 When you buy something, Bridge takes exactly the purchase amount from your USDC at that moment. A purchase is declined if:
 
@@ -33,13 +33,13 @@ The Cards page shows your allowance and your USDC balance, read from Base. If Ba
 
 ## Controls
 
-Once you have a card, the Cards page shows it with **Show card details**, then **Card controls** and your **Spending allowance** beside it, and your card activity below. On a phone they're in one column, in that order.
+Once you have a card, the Cards page shows it with **Show card details**. Beside it are **Card controls** and your **Spending allowance**. Your card activity is below. On a phone, they're in one column, in that order.
 
 - **Freeze card** stops all payments straight away. Unfreezing needs your passkey. You can't unfreeze while your account is locked.
 - **Daily limit.** Lowering it applies at once. Raising it needs your passkey.
 - **Locking your account** in Settings also tries to freeze your card.
 
-We notify you, in the app and by email or browser if you turned those on, when a card is created, unfrozen, or its limit is raised.
+We notify you when a card is created, unfrozen, or its limit is raised. We notify you in the app, and by email or browser if you turned those on.
 
 ## Card details
 
@@ -55,7 +55,7 @@ The Cards page lists your card payments: pending holds, declines, paid, refunds,
 
 ## Disputes
 
-You can dispute a settled payment on your card within 110 days of it: select **Dispute** next to it in card activity. Choose a reason:
+You can dispute a settled card payment within 110 days of it. Select **Dispute** next to it in card activity, then choose a reason:
 
 - I didn't make this payment;
 - I didn't get what I paid for;

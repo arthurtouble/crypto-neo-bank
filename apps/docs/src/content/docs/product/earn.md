@@ -18,7 +18,7 @@ Aura doesn't hold your deposit. The position stays in your own account. The prot
 
 A vault takes your USDC and lends it across several Morpho lending markets. The curator chooses those markets and how much goes to each. You get vault shares, which Aura shows as their value in USDC.
 
-Neither vault charges a fee. Aura reviewed each vault before listing it. Before every deposit or withdrawal, Aura checks that the vault still takes USDC and that no one has limited who can use it. If either has changed, Aura pauses the vault until it's reviewed again.
+Neither vault charges a fee. We reviewed each vault before listing it. Before every deposit or withdrawal, Aura checks two things: that the vault still takes USDC, and that no one has limited who can use it. If either has changed, Aura pauses the vault until it's reviewed again.
 
 ## How returns work
 
@@ -32,7 +32,7 @@ You confirm each deposit or withdrawal once, with your passkey. Any token approv
 
 To take everything out of a Morpho vault, choose **Withdraw all**. That leaves nothing behind in the vault.
 
-You need enough USDC or WETH in your account to deposit, and enough in the position to withdraw. Aura pays the network fee. Earn moves money between your own positions, so it doesn't count toward your daily limit.
+To deposit, you need enough USDC or WETH in your account. To withdraw, you need enough in the position. Aura pays the network fee. Earn moves money between your own positions, so it doesn't count toward your daily limit.
 
 Aura marks a deposit or withdrawal complete only after it sees the protocol's own record of it on the blockchain.
 
@@ -40,6 +40,10 @@ Aura marks a deposit or withdrawal complete only after it sees the protocol's ow
 
 Withdrawing depends on the lending markets having enough available. If a market can't release your amount, the withdrawal fails and nothing moves. Try a smaller amount, or try again later.
 
-Your Earn positions show in the Earn group on Overview, under **Your positions** at the top of Earn, and on each market or vault. Open a market or vault to deposit or withdraw. Aura reads each position from the blockchain, then shows it growing live, to 8 decimals, at the position's current yearly rate: Aave's rate for Aave, and Morpho's net rate (after any fee) for a vault. Rates change, so the live number is an estimate between reads; each new read from the blockchain replaces it. If Aura can't read a position, it shows it as unavailable, never as zero. If it can't read the rate, the position shows as read, without growing.
+Your Earn positions show in three places: the Earn group on Overview, **Your positions** at the top of Earn, and each market or vault. Open a market or vault to deposit or withdraw.
+
+Aura reads each position from the blockchain. It then shows the position growing live, to 8 decimals, at its current yearly rate. For Aave, that's Aave's rate. For a vault, it's Morpho's net rate, after any fee. Rates change, so the live number is an estimate between reads. Each new read from the blockchain replaces it.
+
+If Aura can't read a position, it shows it as unavailable, never as zero. If it can't read the rate, the position shows the amount Aura read, without growing.
 
 Smart contracts, price feeds, curators, governance, stablecoins, liquidity, and networks can fail or change. See the [risk disclosure](/legal/risk-disclosure/).
