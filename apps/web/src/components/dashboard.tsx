@@ -6,19 +6,20 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowDownToLine, ArrowDownUp, ArrowLeft, ArrowUpFromLine, Building2, CreditCard, QrCode, TrendingUp, Wallet, X } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
-import { formatUnits } from "viem";
 import { entryAmount, entryLabel, statusLabel, type ActivityEntry } from "@/lib/activity/entries";
 import type { History } from "@/lib/activity/history";
 import { registeredAsset } from "@/lib/assets/registry";
 import { ApiError, useApi } from "@/lib/client/api";
 import { useOverview } from "@/lib/client/queries";
 import { exampleActivity } from "@/lib/example/data";
+import { formatCents, formatShortDateTime, formatTime, formatToken, formatWeekdayTime, fromRaw } from "@/lib/format";
 import type { Holding, HoldingGroup, Overview } from "@/lib/overview/read";
 import { GuestBanner } from "./guest-banner";
 import { LiveAmount, positionUsd } from "./live-amount";
 import { MovePreviousAccount } from "./move-previous-account";
+import { Sheet } from "./sheet";
+import { entryTone, StatusDot } from "./status-dot";
 
-const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
 const groups: Array<{ key: HoldingGroup; title: string }> = [
   { key: "cash", title: "Cash" },
   { key: "crypto", title: "Crypto" },
@@ -29,38 +30,33 @@ const groups: Array<{ key: HoldingGroup; title: string }> = [
 const sources: Record<string, string> = { base: "Base", ethereum: "Ethereum", "aave:base": "Aave on Base", "morpho:base": "Morpho on Base", example: "Example" };
 
 function usdText(cents: number | null) {
-  return cents === null ? "Unavailable" : usd.format(cents / 100);
+  return cents === null ? "Unavailable" : formatCents(cents);
 }
 
 function amountText(holding: Holding) {
   if (holding.amountRaw === null) return "Unavailable";
-  const value = Number(formatUnits(BigInt(holding.amountRaw), holding.decimals));
-  return `${value.toLocaleString("en-US", { maximumFractionDigits: value !== 0 && value < 1 ? 6 : 4 })} ${holding.symbol}`;
+  return formatToken(fromRaw(holding.amountRaw, holding.decimals), holding.symbol);
 }
 
-function timeText(iso: string) {
-  return new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-}
+const timeText = formatTime;
 
 /** Stock, gold, and euro prices pause outside market hours; say when the one used was published. */
-function priceTime(iso: string) {
-  return new Date(iso).toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit" });
-}
+const priceTime = formatWeekdayTime;
 
 /** A dollar amount with the cents set smaller, for the total. */
 function Dollars({ cents }: { cents: number }) {
-  const [whole, fraction] = usd.format(cents / 100).split(".");
+  const [whole, fraction] = formatCents(cents).split(".");
   return <>{whole}<span className="ovCents">.{fraction}</span></>;
 }
 
 function Token({ symbol }: { symbol: string }) {
-  return <span className="ovToken" aria-hidden="true">{symbol.slice(0, 4)}</span>;
+  return <span className="appIconDisc ovToken" aria-hidden="true">{symbol.slice(0, 4)}</span>;
 }
 
 function HoldingValue({ holding }: { holding: Holding }) {
   const live = holding.group === "earn" ? positionUsd(holding) : null;
   return <span className="ovValue sensitiveAmount">
-    <strong className={holding.status === "unavailable" || holding.usdCents === null ? "ovUnavailable" : undefined}>
+    <strong className={holding.status === "unavailable" || holding.usdCents === null ? "appUnavailable" : undefined}>
       {holding.status === "unavailable" ? "Unavailable" : live !== null ? <LiveAmount usd={live} apyPct={holding.apyPct} observedAt={holding.observedAt} /> : usdText(holding.usdCents)}</strong>
     {holding.group === "earn" && holding.apyPct !== undefined && holding.usdCents ? <small>Earning {holding.apyPct.toFixed(2)}% a year</small> : null}
     {holding.priceObservedAt && holding.usdCents !== null && <small>Price as of {priceTime(holding.priceObservedAt)}</small>}
@@ -91,10 +87,7 @@ function HoldingDetail({ holding, isExample, onSignIn, onClose }: { holding: Hol
     ["Where", sources[holding.source] ?? holding.source],
     ["Read at", timeText(holding.observedAt)]
   ];
-  return <Dialog.Root open onOpenChange={(open) => { if (!open) onClose(); }}>
-    <Dialog.Portal>
-      <Dialog.Overlay className="ovScrim" />
-      <Dialog.Content className="ovPanel" aria-describedby={undefined}>
+  return <Sheet variant="panel" onOpenChange={(open) => { if (!open) onClose(); }}>
         <div className="ovPanelHead">
           <Dialog.Close className="appIconButton ovPanelBack" aria-label="Back"><ArrowLeft aria-hidden="true" /></Dialog.Close>
           <Token symbol={holding.symbol} />
@@ -106,9 +99,7 @@ function HoldingDetail({ holding, isExample, onSignIn, onClose }: { holding: Hol
         {actions.length > 0 && <div className="ovPanelActions">{actions.map((action) => isExample
           ? <button key={action.label} type="button" className={`appButton appButtonLarge${action.primary ? " appButtonPrimary" : ""}`} onClick={onSignIn}>{action.label}</button>
           : <Link key={action.label} href={action.href} className={`appButton appButtonLarge${action.primary ? " appButtonPrimary" : ""}`}>{action.label}</Link>)}</div>}
-      </Dialog.Content>
-    </Dialog.Portal>
-  </Dialog.Root>;
+  </Sheet>;
 }
 
 const depositWays = [
@@ -135,8 +126,8 @@ function Holdings({ overview, isExample, onSignIn }: { overview: Overview; isExa
       {present.map((group) => {
         const total = overview.totals[group.key];
         return <button type="button" className="ovChip" key={group.key} aria-pressed={filter === group.key} onClick={() => setFilter(group.key)}>
-          {group.title} <strong className={`sensitiveAmount${total.partial && total.usdCents === 0 ? " ovUnavailable" : ""}`} data-testid={isExample ? undefined : `total-${group.key}`}>
-            {usd.format(total.usdCents / 100)}{total.partial ? " + unavailable" : ""}</strong></button>;
+          {group.title} <strong className={`sensitiveAmount${total.partial && total.usdCents === 0 ? " appUnavailable" : ""}`} data-testid={isExample ? undefined : `total-${group.key}`}>
+            {formatCents(total.usdCents)}{total.partial ? " + unavailable" : ""}</strong></button>;
       })}
     </div>
     <div className="ovCard ovTable">
@@ -170,10 +161,10 @@ function RecentRow({ entry, isExample }: { entry: ActivityEntry; isExample: bool
   const Icon = incoming ? ArrowDownToLine : entry.type === "swap" || entry.type === "bridge" ? ArrowDownUp : entry.type.startsWith("earn") ? TrendingUp : ArrowUpFromLine;
   const amount = entryAmount(entry);
   const body = <>
-    <span className="ovRecentIcon"><Icon aria-hidden="true" /></span>
-    <span className="ovRecentWhat"><strong>{entryLabel(entry.type)}</strong><small>{new Date(entry.createdAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</small></span>
+    <span className="appIconDisc"><Icon aria-hidden="true" /></span>
+    <span className="ovRecentWhat"><strong>{entryLabel(entry.type)}</strong><small>{formatShortDateTime(entry.createdAt)}</small></span>
     <span className="ovRecentAmount"><strong className={`sensitiveAmount${incoming && entry.status === "completed" ? " ovIn" : ""}`}>{amount ? `${incoming ? "+" : ""}${amount}` : "—"}</strong>
-      <small className={`ovStatus ovStatus-${entry.status}`}>{statusLabel(entry.status)}</small></span>
+      <StatusDot tone={entryTone(entry.status)} label={statusLabel(entry.status)} /></span>
   </>;
   return <li>{isExample ? <div className="ovRecentRow">{body}</div> : <Link className="ovRecentRow" href={`/app/transactions?open=${encodeURIComponent(entry.id)}`}>{body}</Link>}</li>;
 }

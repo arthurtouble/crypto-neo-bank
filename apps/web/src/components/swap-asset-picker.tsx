@@ -8,6 +8,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { AssetId, CatalogAsset } from "@/lib/swap/assets";
 import { parseAssetId } from "@/lib/swap/assets";
 import { assetCaption, assetNetwork, contractHint } from "@/lib/swap/picker-model";
+import { Sheet } from "./sheet";
 
 type CatalogPage = { assets: CatalogAsset[]; nextCursor: string | null };
 /** `held` lists only assets the account can hold, for the side that pays. */
@@ -64,11 +65,9 @@ export function SwapAssetPicker({ value, onSelect, excludedId, label, held = fal
     setOpen(false);
   }
 
-  return <Dialog.Root open={open} onOpenChange={(next) => { setOpen(next); setActive(0); }}>
-    <Dialog.Trigger asChild><button className="mxPickerTrigger" type="button" aria-label={`${label}: ${selected.data ? assetCaption(selected.data) : "Choose asset"}`}>
+  return <Sheet variant="picker" open={open} onOpenChange={(next) => { setOpen(next); setActive(0); }} trigger={<button className="mxPickerTrigger" type="button" aria-label={`${label}: ${selected.data ? assetCaption(selected.data) : "Choose asset"}`}>
       {selected.data ? <><span className="mxPickerSymbol">{selected.data.symbol}</span><span className="mxPickerNetwork">{assetNetwork(selected.data.chainId)}</span></> : <span>Choose asset</span>}
-    </button></Dialog.Trigger>
-    <Dialog.Portal><Dialog.Overlay className="mxPickerOverlay" /><Dialog.Content className="mxPicker" aria-describedby={undefined}>
+    </button>}>
       <div className="mxPickerHead"><Dialog.Title>Choose an asset</Dialog.Title><Dialog.Close className="appIconButton mxPickerClose" aria-label="Close"><X aria-hidden="true" /></Dialog.Close></div>
       <>
         <label className="mxPickerSearch"><Search aria-hidden="true" /><span className="srOnly">Search assets or contract address</span><input autoFocus autoComplete="off" autoCapitalize="none" spellCheck={false} value={search} onChange={(event) => { setSearch(event.target.value); setActive(0); }} placeholder="Search name or contract" onKeyDown={(event) => {
@@ -82,12 +81,11 @@ export function SwapAssetPicker({ value, onSelect, excludedId, label, held = fal
             : pages.isError ? <div className="mxPickerState">Assets are unavailable. <button type="button" onClick={() => void pages.refetch()}>Try again</button></div>
               : assets.length === 0 ? <div className="mxPickerState">No matching assets</div>
                 : assets.map((asset, index) => <button type="button" key={asset.id} className={`swapPickerOption mxPickerOption${index === active ? " isActive" : ""}`} disabled={asset.id === excludedId || asset.eligibility !== "eligible"} onMouseEnter={() => setActive(index)} onClick={() => choose(asset)}>
-                  <span className="mxPickerGlyph" aria-hidden="true">{asset.symbol.slice(0, 1).toUpperCase()}</span><span className="mxPickerIdentity"><strong>{asset.symbol}<small>{asset.name}</small></strong><span>{assetNetwork(asset.chainId)} · {contractHint(asset)}</span></span>
+                  <span className="appIconDisc mxPickerGlyph" aria-hidden="true">{asset.symbol.slice(0, 1).toUpperCase()}</span><span className="mxPickerIdentity"><strong>{asset.symbol}<small>{asset.name}</small></strong><span>{assetNetwork(asset.chainId)} · {contractHint(asset)}</span></span>
                   {asset.eligibility === "eligible" ? <span className="mxPickerTrust"><Check aria-hidden="true" /> Reviewed</span> : <span className="mxPickerTrust">Paused</span>}
                 </button>)}
           {pages.hasNextPage && <button type="button" className="appButton mxPickerMore" disabled={pages.isFetchingNextPage} onClick={() => void pages.fetchNextPage()}>{pages.isFetchingNextPage ? "Loading" : "Load more"}</button>}
         </div>
       </>
-    </Dialog.Content></Dialog.Portal>
-  </Dialog.Root>;
+  </Sheet>;
 }

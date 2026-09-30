@@ -4,6 +4,7 @@ import { Check, LoaderCircle, X } from "lucide-react";
 import { networkName } from "@/lib/assets/registry";
 import { failureText } from "@/lib/client/action-copy";
 import type { ActionView } from "@/lib/client/use-action";
+import { formatDateTime } from "@/lib/format";
 
 export type ActionEvent = { type: string; evidence: Record<string, unknown>; occurredAt: string };
 type Step = { key: string; label: string; done: boolean; at?: string };
@@ -45,7 +46,7 @@ export function ActionJourney({ action, events }: { action: ActionView; events: 
         <i>{state === "done" ? <Check size={11} /> : state === "failed" ? <X size={11} /> : state === "current" ? <LoaderCircle className="spin" size={11} /> : null}</i>
         <span><strong>{step.label}</strong>
           <small>{state === "failed" ? (action.status === "expired" ? "Not confirmed in time." : failureText(action.failureReason))
-            : step.at ? new Date(step.at).toLocaleString() : state === "current" ? "In progress" : ""}</small></span>
+            : step.at ? formatDateTime(step.at) : state === "current" ? "In progress" : ""}</small></span>
       </li>;
     })}
   </ol>;

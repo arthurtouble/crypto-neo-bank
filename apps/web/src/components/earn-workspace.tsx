@@ -2,15 +2,16 @@
 
 import { usePrivy } from "@privy-io/react-auth";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronDown, LoaderCircle, ShieldCheck } from "lucide-react";
+import { ChevronDown, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { useAuraWallet } from "@/lib/client/use-aura-wallet";
 import { useOverview } from "@/lib/client/queries";
 import type { AaveBaseReserve } from "@/lib/defi/aave";
-import { formatToken, fromRaw } from "@/lib/format";
+import { formatCents, formatToken, fromRaw } from "@/lib/format";
 import { EarnAction, type EarnOption } from "./earn-action";
-import { GuestBanner } from "./guest-banner";
+import { MoneyPage } from "./money-page";
 import { LiveAmount, positionUsd } from "./live-amount";
+import { LoadingState, Notice, Unavailable } from "./states";
 
 type AaveResponse = { reserves: AaveBaseReserve[]; observedAt: string };
 type VaultsResponse = { vaults: Array<{ id: string; address: string; name: string; curator: string; assetSymbol: string;
@@ -20,8 +21,6 @@ const millions = (usd: number) => `$${(usd / 1_000_000).toFixed(1)}m`;
 
 type Card = { key: string; option: EarnOption; symbol: string; title: string; by: string; about: string;
   apy: string | null; liquidity: string | null; deposits: string | null; positionId: string };
-
-const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
 
 /**
  * Earn on Base (journey J8): your positions first, growing live, then every way to earn. Supply USDC or WETH to Aave,
@@ -82,17 +81,15 @@ export function EarnWorkspace() {
   const positionsUnavailable = !overview.data && Boolean(overview.error);
   const toggle = (key: string) => setOpen((current) => current.includes(key) ? current.filter((item) => item !== key) : [...current, key]);
 
-  return <div className="mxPage erPage">
-    {(isExample || !ready) && <GuestBanner onSignIn={login} ready={ready} />}
-    <header className="mxHead"><h1>Earn</h1></header>
+  return <MoneyPage title="Earn" guest={isExample || !ready} onSignIn={login} ready={ready} className="erPage">
     <p className="mxNote erNote"><ShieldCheck aria-hidden="true" /><span><strong>Your account holds every position.</strong> Rates change, withdrawals depend on each market&apos;s liquidity, and your deposit isn&apos;t guaranteed.</span></p>
 
     <section className="mxCard erPositions" aria-labelledby="earn-positions">
       <div className="erSectionHead"><h2 id="earn-positions">Your positions</h2>
-        {earnTotal && positions.length > 0 && <strong className="sensitiveAmount">{usd.format(earnTotal.usdCents / 100)}{earnTotal.partial ? " + unavailable" : ""}</strong>}</div>
-      {overview.isPending ? <div className="mxState" role="status"><LoaderCircle className="spin" aria-hidden="true" />Reading your positions</div>
-        : positionsUnavailable ? <p className="mxNote mxNoteWarning" role="alert" data-testid="earn-positions-unavailable"><span className="erUnavailable">Unavailable.</span> We couldn&apos;t read your positions just now.{" "}
-          <button type="button" className="appTextButton mxInlineButton" onClick={() => overview.refetch()}>Try again</button></p>
+        {earnTotal && positions.length > 0 && <strong className="sensitiveAmount">{formatCents(earnTotal.usdCents)}{earnTotal.partial ? " + unavailable" : ""}</strong>}</div>
+      {overview.isPending ? <LoadingState label="Reading your positions" />
+        : positionsUnavailable ? <Notice tone="warning" role="alert" data-testid="earn-positions-unavailable" onRetry={() => overview.refetch()}>
+          <Unavailable>Unavailable.</Unavailable> We couldn&apos;t read your positions just now.</Notice>
         : positions.length === 0 ? <p className="mxHint">No positions yet. Choose where to earn below, then deposit.</p>
           : <ul className="erList">{positions.map(({ card, held }) => <li key={card.key}>
             <span className="erName"><strong>{card.title}</strong><small>{card.by}</small></span>
@@ -104,20 +101,20 @@ export function EarnWorkspace() {
 
     <section className="erOptions" aria-labelledby="earn-options">
       <h2 id="earn-options" className="erSectionTitle">Markets and vaults</h2>
-      {(aave.isPending || vaults.isPending) && <div className="mxState" role="status"><LoaderCircle className="spin" aria-hidden="true" /><div><strong>Reading rates</strong> Loading Aave and Morpho on Base.</div></div>}
+      {(aave.isPending || vaults.isPending) && <LoadingState><div><strong>Reading rates</strong> Loading Aave and Morpho on Base.</div></LoadingState>}
       {cards.map((card) => {
         const held = position(card.positionId);
         const expanded = open.includes(card.key);
         return <article className="mxCard erOption" key={card.key} aria-label={card.title}>
           <div className="erOptionTop">
             <span className="erName"><strong>{card.title}</strong><small>{card.by}</small></span>
-            <span className="erRate"><strong data-testid={`apy-${card.key}`} className={card.apy ? undefined : "erUnavailable"}>{card.apy ?? "Unavailable"}</strong><small>Rate (APY)</small></span>
+            <span className="erRate"><strong data-testid={`apy-${card.key}`} className={card.apy ? undefined : "appUnavailable"}>{card.apy ?? "Unavailable"}</strong><small>Rate (APY)</small></span>
           </div>
           <p className="mxHint">{card.about}</p>
           <dl className="mxSummary erFacts">
-            <div><dt>Can be withdrawn now</dt><dd className={card.liquidity ? undefined : "erUnavailable"}>{card.liquidity ?? "Unavailable"}</dd></div>
-            <div><dt>Total deposits</dt><dd className={card.deposits ? undefined : "erUnavailable"}>{card.deposits ?? "Unavailable"}</dd></div>
-            <div><dt>Your position</dt><dd className={`sensitiveAmount${held?.status === "unavailable" || (!held && positionsUnavailable) ? " erUnavailable" : ""}`} data-testid={`position-${card.key}`}>
+            <div><dt>Can be withdrawn now</dt><dd className={card.liquidity ? undefined : "appUnavailable"}>{card.liquidity ?? "Unavailable"}</dd></div>
+            <div><dt>Total deposits</dt><dd className={card.deposits ? undefined : "appUnavailable"}>{card.deposits ?? "Unavailable"}</dd></div>
+            <div><dt>Your position</dt><dd className={`sensitiveAmount${held?.status === "unavailable" || (!held && positionsUnavailable) ? " appUnavailable" : ""}`} data-testid={`position-${card.key}`}>
               {held?.status === "unavailable" || (!held && positionsUnavailable) ? "Unavailable"
                 : held?.amountRaw && held.amountRaw !== "0" && positionUsd(held) !== null
                   ? <span className="erHeld"><LiveAmount usd={positionUsd(held)!} apyPct={held.apyPct} observedAt={held.observedAt} />
@@ -135,7 +132,7 @@ export function EarnWorkspace() {
         </article>;
       })}
     </section>
-    {(aave.error || vaults.error) && <p className="mxNote mxNoteWarning" role="status">{[aave.error?.message, vaults.error?.message].filter(Boolean).join(" ")}</p>}
+    {(aave.error || vaults.error) && <Notice tone="warning" role="status">{[aave.error?.message, vaults.error?.message].filter(Boolean).join(" ")}</Notice>}
     <p className="mxHint">Rates are current, not a forecast. Aave rates come from Aave, Morpho rates from Morpho, and your positions from the chain.</p>
-  </div>;
+  </MoneyPage>;
 }

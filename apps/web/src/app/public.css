@@ -135,9 +135,6 @@ html[data-theme="dark"] .themeToggle .moonIcon { display: block; }
 .pyCard > p { color: var(--color-text-secondary); font-size: var(--text-small-size); line-height: var(--text-small-line); }
 .pyCardHead { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
 .pyCardHead h2 { font-size: var(--text-title-3-size); line-height: var(--text-title-3-line); font-weight: var(--weight-semibold); }
-.pyStatus { display: inline-flex; align-items: center; gap: 6px; color: var(--color-text-secondary); font-size: var(--text-caption-size); font-weight: var(--weight-medium); }
-.pyStatus::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--color-text-tertiary); }
-.pyStatusOn::before { background: var(--color-positive); }
 .pyQr { justify-self: center; padding: var(--space-3); border: 1px solid var(--color-line); border-radius: var(--radius-lg); color: var(--color-text); line-height: 0; }
 .pyAddress { padding: var(--space-3); border-radius: var(--radius-md); background: var(--color-muted); font-family: var(--font-mono); font-size: var(--text-small-size); line-height: var(--text-small-line); overflow-wrap: anywhere; text-align: center; }
 .pyCard .appButton { justify-self: stretch; }

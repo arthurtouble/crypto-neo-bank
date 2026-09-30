@@ -13,14 +13,18 @@ import { useAction, type ActionView } from "@/lib/client/use-action";
 import { useAuraWallet } from "@/lib/client/use-aura-wallet";
 import { withPasskey } from "@/lib/client/with-passkey";
 import { exampleCard } from "@/lib/example/data";
-import { GuestBanner } from "./guest-banner";
+import { formatDateTime, formatUsd } from "@/lib/format";
+import { MoneyPage } from "./money-page";
 import { useToast } from "./toast";
 import { TransactionProgress } from "./transaction-progress";
+import { LoadingState, Notice } from "./states";
+import { StatusDot, type StatusTone } from "./status-dot";
+import { Sheet } from "./sheet";
 
 type Card = Extract<CardState, { state: "card" }>;
 /** Set for guests: every action opens sign-in instead. */
 type SignIn = (() => void) | undefined;
-const money = (value: string | number) => `$${Number(value).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const money = (value: string | number) => formatUsd(value);
 const disputeReasons = [["fraudulent", "I didn't make this payment"], ["not_received", "I didn't get what I paid for"], ["duplicate", "I was charged twice"],
   ["canceled", "I canceled it"], ["other", "Something else"]] as const;
 
@@ -82,10 +86,7 @@ function CardDetails({ data, onClose }: { data: Card; onClose: () => void }) {
 
   function close() { for (const element of mounted.current) element.destroy(); mounted.current = []; onClose(); }
 
-  return <Dialog.Root open onOpenChange={(open) => { if (!open) close(); }}>
-    <Dialog.Portal>
-      <Dialog.Overlay className="mxDialogOverlay" />
-      <Dialog.Content className="mxDialog" aria-describedby="card-details-note">
+  return <Sheet onOpenChange={(open) => { if (!open) close(); }} describedBy="card-details-note">
         <div className="mxDialogHead"><Dialog.Title>Card details</Dialog.Title></div>
         <p id="card-details-note" className="mxDialogNote">Stripe shows these in a secure frame. Aura never sees or stores your card number.</p>
         <dl className="cdSecure" data-testid="card-secure-details">
@@ -98,9 +99,7 @@ function CardDetails({ data, onClose }: { data: Card; onClose: () => void }) {
             {state === "loading" ? <LoaderCircle className="spin" aria-hidden="true" /> : <Eye aria-hidden="true" />} Confirm with your passkey</button>}
           <Dialog.Close className="appButton">Close</Dialog.Close>
         </div>
-      </Dialog.Content>
-    </Dialog.Portal>
-  </Dialog.Root>;
+  </Sheet>;
 }
 
 /** Apple Pay and Google Pay, through Stripe's Add to Wallet button (a Stripe preview that only works with live cards). */
@@ -154,10 +153,10 @@ function Allowance({ data, onSignIn }: { data: Card; onSignIn: SignIn }) {
   return <section className="mxCard" aria-labelledby="allowance-heading"><h2 id="allowance-heading">Spending allowance</h2>
     <p className="mxHint">Your card spends your USDC on Base. Nothing moves until you buy something: then Bridge takes exactly the purchase from your account, up to this allowance.</p>
     <dl className="mxSummary" data-testid="card-allowance">
-      <div><dt>Card can spend</dt><dd className={allowance.status === "available" ? undefined : "cdUnavailable"}>{allowance.status === "available" ? money(allowance.allowanceUsd) : "Unavailable"}</dd></div>
-      <div><dt>Your USDC</dt><dd className={allowance.status === "available" ? undefined : "cdUnavailable"}>{allowance.status === "available" ? money(allowance.balanceUsd) : "Unavailable"}</dd></div>
+      <div><dt>Card can spend</dt><dd className={allowance.status === "available" ? undefined : "appUnavailable"}>{allowance.status === "available" ? money(allowance.allowanceUsd) : "Unavailable"}</dd></div>
+      <div><dt>Your USDC</dt><dd className={allowance.status === "available" ? undefined : "appUnavailable"}>{allowance.status === "available" ? money(allowance.balanceUsd) : "Unavailable"}</dd></div>
     </dl>
-    {allowance.status === "available" && Number(allowance.allowanceUsd) === 0 && <p className="mxNote mxNoteWarning" role="status">Set an allowance to start using your card.</p>}
+    {allowance.status === "available" && Number(allowance.allowanceUsd) === 0 && <Notice tone="warning" role="status">Set an allowance to start using your card.</Notice>}
     {phase === "done" ? <>
       <TransactionProgress label="Card allowance" phase={phase} action={action} outcomeUnknown={outcomeUnknown} />
       <button type="button" className="appButton" onClick={() => { reset(); setAmount(""); }}>Change it again</button>
@@ -196,23 +195,23 @@ function Dispute({ item, onDone }: { item: CardActivity; onDone: () => void }) {
   </form>;
 }
 
-const statusOf = (item: CardActivity) => item.status === "declined" ? { label: "Declined", tone: "negative" } : item.status === "reversed" ? { label: "Reversed", tone: "neutral" }
+const statusOf = (item: CardActivity): { label: string; tone: StatusTone } => item.status === "declined" ? { label: "Declined", tone: "negative" } : item.status === "reversed" ? { label: "Reversed", tone: "neutral" }
   : item.status === "pending" ? { label: "Pending", tone: "warning" } : item.kind === "refund" ? { label: "Refunded", tone: "positive" } : { label: "Paid", tone: "positive" };
 
 function Activity({ data, onSignIn }: { data: Card; onSignIn: SignIn }) {
   const client = useQueryClient();
   const [disputing, setDisputing] = useState<string | null>(null);
   return <section className="mxCard cdActivity" aria-labelledby="card-activity-heading"><h2 id="card-activity-heading">Card activity</h2>
-    {data.activityStatus === "unavailable" && <p className="mxNote mxNoteWarning" role="status">Card activity couldn&apos;t be loaded from Stripe. Try again.</p>}
+    {data.activityStatus === "unavailable" && <Notice tone="warning" role="status">Card activity couldn&apos;t be loaded from Stripe. Try again.</Notice>}
     {data.activity.length === 0 && data.activityStatus === "available" && <p className="mxHint">No card payments yet.</p>}
     {data.activity.length > 0 && <ul className="cdRows">{data.activity.map((item) => {
       const status = statusOf(item);
       return <li key={item.id} className="cardActivityRow cdRow" data-testid={`card-activity-${item.id}`}>
-        <span className="cdRowIcon" aria-hidden="true"><CreditCard /></span>
+        <span className="appIconDisc" aria-hidden="true"><CreditCard /></span>
         <div className="cdRowText"><strong>{item.merchant ?? "Card payment"}</strong>
-          <small>{new Date(item.createdAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}{item.dispute ? ` · Dispute ${item.dispute.status}` : ""}</small></div>
+          <small>{formatDateTime(item.createdAt)}{item.dispute ? ` · Dispute ${item.dispute.status}` : ""}</small></div>
         <div className="cdRowAmount"><strong>{item.kind === "refund" ? "+" : ""}{money(item.amountUsd)}</strong>
-          <span className={`cdStatus cdStatus-${status.tone}`}>{status.label}</span>
+          <StatusDot tone={status.tone} label={status.label} size="small" />
           {item.disputable && disputing !== item.id && <button type="button" className="appTextButton cdRowAction" onClick={() => onSignIn ? onSignIn() : setDisputing(item.id)}>Dispute</button>}</div>
         {disputing === item.id && <Dispute item={item} onDone={() => { setDisputing(null); void client.invalidateQueries({ queryKey: ["card"] }); }} />}
       </li>;
@@ -267,7 +266,7 @@ function IssuedCard({ data, onSignIn }: { data: Card; onSignIn: SignIn }) {
     <div className="cdHero">
       <CardFace card={card} />
       <div className="cdHeroInfo">
-        <span className={`cdStatus cdStatus-${active ? "positive" : "warning"}`}>{active ? "Active" : card.status === "frozen" ? "Frozen" : "Canceled"}</span>
+        <StatusDot tone={active ? "positive" : "warning"} label={active ? "Active" : card.status === "frozen" ? "Frozen" : "Canceled"} size="small" />
         <p className="mxHint">Issued by Stripe with Bridge. Daily limit {card.dailyLimitUsd === null ? "not set" : money(card.dailyLimitUsd)}.</p>
         <button type="button" className="appButton mxStart" onClick={() => onSignIn ? onSignIn() : setDetails(true)}><Eye aria-hidden="true" /> Show card details</button>
       </div>
@@ -340,13 +339,11 @@ export function CardWorkspace() {
   const loading = !ready;
   const query = useQuery({ queryKey: ["card", user?.id], queryFn: () => api<CardState>("/api/cards"), enabled: authenticated && Boolean(user) });
 
-  return <div className="mxPage cdPage">
-    {(isExample || loading) && <GuestBanner onSignIn={login} ready={ready} />}
-    <header className="mxHead"><h1>Cards</h1></header>
+  return <MoneyPage title="Cards" guest={isExample || loading} onSignIn={login} ready={ready} className="cdPage">
     {isExample ? <IssuedCard data={exampleCard} onSignIn={login} />
-      : loading || query.isPending ? <div className="mxState" role="status"><LoaderCircle className="spin" aria-hidden="true" /><strong>Loading your card</strong></div>
-        : query.isError ? <p className="mxNote mxNoteError" role="alert">Your card couldn&apos;t be loaded. <button type="button" className="appTextButton mxInlineButton" onClick={() => void query.refetch()}>Try again</button></p>
+      : loading || query.isPending ? <LoadingState><strong>Loading your card</strong></LoadingState>
+        : query.isError ? <Notice tone="error" role="alert" onRetry={() => void query.refetch()}>Your card couldn&apos;t be loaded.</Notice>
           : query.data.state === "card" ? <IssuedCard data={query.data} onSignIn={undefined} />
             : <Setup data={query.data} refetch={() => void query.refetch()} checking={query.isFetching} />}
-  </div>;
+  </MoneyPage>;
 }

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { QRCodeSVG } from "qrcode.react";
 import { AppBrand } from "@/components/brand";
 import { PaymentActions } from "@/components/payment-actions";
+import { StatusDot } from "@/components/status-dot";
 import { bankRailNames } from "@/lib/format/bank";
 import { GET as getPublicTag } from "@/app/api/aura-tags/[tag]/route";
 
@@ -10,7 +11,7 @@ type PaymentData = { tag: string; displayName: string; crypto: { network: string
 
 export const metadata: Metadata = { title: { absolute: "Pay with Aura" }, description: "The ways to pay this Aura tag.", robots: { index: false } };
 
-const Status = ({ available }: { available: boolean }) => <span className={`pyStatus${available ? " pyStatusOn" : ""}`}>{available ? "Available" : "Unavailable"}</span>;
+const Status = ({ available }: { available: boolean }) => <StatusDot tone={available ? "positive" : "neutral"} label={available ? "Available" : "Unavailable"} />;
 
 /** An Aura tag's public payment page (journey J19): who you're paying, and the ways that are open. */
 export default async function AuraTagPage({ params }: { params: Promise<{ tag: string }> }) {

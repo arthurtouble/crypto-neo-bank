@@ -1,13 +1,13 @@
 "use client";
 
 import { usePrivy } from "@privy-io/react-auth";
-import { LoaderCircle } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { useApi } from "@/lib/client/api";
 import { bankStage, useBankAccount } from "@/lib/client/use-bank-account";
 import { bankRailNames as railNames } from "@/lib/format/bank";
 import { CopyButton } from "./copy-button";
 import { useToast } from "./toast";
+import { LoadingState, Notice } from "./states";
 
 function CopyValue({ label, value }: { label: string; value: string }) {
   return <div><dt>{label}</dt><dd className="mxCopy"><span className="mxMono">{value}</span>
@@ -60,8 +60,8 @@ export function BankDepositPanel() {
   return <section className="mxPanel" aria-labelledby="deposit-bank">
     <div className="mxPanelHead"><h2 id="deposit-bank">Deposit from a bank</h2>
       {stage === "unavailable" ? <span className="mxBadge">Coming soon</span> : <span className="mxHint">Bank transfer · Bridge</span>}</div>
-    {account.isPending && <div className="mxState" role="status"><LoaderCircle className="spin" aria-hidden="true" />Loading your bank details…</div>}
-    {account.isError && <p className="mxNote mxNoteError" role="alert">Bank details are unavailable right now. <button type="button" className="appTextButton" onClick={() => void account.refetch()}>Try again</button></p>}
+    {account.isPending && <LoadingState label="Loading your bank details…" />}
+    {account.isError && <Notice tone="error" role="alert" onRetry={() => void account.refetch()}>Bank details are unavailable right now.</Notice>}
     {stage === "unavailable" && <p className="mxHint">Coming soon. You&apos;ll get US bank details and deposits will arrive as USDC in your Aura account.</p>}
     {stage && stage !== "unavailable" && stage !== "rejected" && stage !== "active" && <ol className="mxChecklist" aria-label="Bank setup">
       {steps.map((step) => <li key={step.label} className={step.done ? "isDone" : step.current ? "isCurrent" : undefined}>{step.label}</li>)}
@@ -78,7 +78,7 @@ export function BankDepositPanel() {
       <p className="mxHint">Bridge is reviewing your details. This can take a few minutes.</p>
       <div className="mxActions"><button type="button" className="appButton" disabled={account.isFetching} onClick={() => void account.refetch()}>{account.isFetching ? "Checking…" : "Check status"}</button></div>
     </>}
-    {stage === "rejected" && <p className="mxNote mxNoteError">Bridge couldn&apos;t verify your identity. Contact support.</p>}
+    {stage === "rejected" && <Notice tone="error">Bridge couldn&apos;t verify your identity. Contact support.</Notice>}
     {stage === "active" && instructions && <>
       <p className="mxHint">Send USD from your bank to these details. Deposits arrive as USDC in your Aura account.</p>
       <dl className="mxSummary">

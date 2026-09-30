@@ -40,6 +40,14 @@ export const formatDateTime = (value: string | number | Date) =>
 export const formatShortDateTime = (value: string | number | Date) =>
   new Date(value).toLocaleString(LOCALE, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 
+/** A time of day: "8:12 PM". */
+export const formatTime = (value: string | number | Date) =>
+  new Date(value).toLocaleTimeString(LOCALE, { hour: "numeric", minute: "2-digit" });
+
+/** A weekday and time, for prices that pause outside market hours: "Wed 8:12 PM". */
+export const formatWeekdayTime = (value: string | number | Date) =>
+  new Date(value).toLocaleString(LOCALE, { weekday: "short", hour: "numeric", minute: "2-digit" });
+
 /** An address shortened to its first six and last four characters: "0x5555…5555". */
 export function shortAddress(address: string | null | undefined) {
   if (!address) return "";

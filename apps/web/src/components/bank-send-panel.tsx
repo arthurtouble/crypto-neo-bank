@@ -2,14 +2,16 @@
 
 import { usePrivy } from "@privy-io/react-auth";
 import { useQuery } from "@tanstack/react-query";
-import { LoaderCircle, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { useApi } from "@/lib/client/api";
 import { useAction, type ActionView } from "@/lib/client/use-action";
 import { bankStage, useBankAccount } from "@/lib/client/use-bank-account";
+import { formatUsd } from "@/lib/format";
 import { useToast } from "./toast";
 import { TransactionProgress } from "./transaction-progress";
+import { LoadingState, Notice } from "./states";
 
 type Recipient = { id: string; kind: "wallet" | "bank"; name: string; detail: string; verified: boolean };
 
@@ -74,7 +76,7 @@ function AddBankAccountForm({ onSaved, onCancel }: { onSaved: (name: string) => 
   </form>;
 }
 
-const usd = (value: string) => `$${Number(value).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const usd = (value: string) => formatUsd(value);
 
 function PayoutForm({ banks }: { banks: Recipient[] }) {
   const api = useApi();
@@ -152,8 +154,8 @@ function ActiveBankSend() {
   const banks = recipients.data ?? [];
   const ready = banks.filter((item) => item.verified);
 
-  if (recipients.isPending) return <div className="mxState" role="status"><LoaderCircle className="spin" aria-hidden="true" />Loading your bank accounts…</div>;
-  if (recipients.isError) return <p className="mxNote mxNoteError" role="alert">Your bank accounts are unavailable right now. <button type="button" className="appTextButton" onClick={() => void recipients.refetch()}>Try again</button></p>;
+  if (recipients.isPending) return <LoadingState label="Loading your bank accounts…" />;
+  if (recipients.isError) return <Notice tone="error" role="alert" onRetry={() => void recipients.refetch()}>Your bank accounts are unavailable right now.</Notice>;
 
   return <>
     {banks.length > 0 && <dl className="mxSummary" aria-label="Saved bank accounts">
@@ -174,8 +176,8 @@ export function BankSendPanel() {
   return <section className="mxPanel" aria-labelledby="send-bank">
     <div className="mxPanelHead"><h2 id="send-bank">Send to a bank</h2>
       {stage === "unavailable" ? <span className="mxBadge">Coming soon</span> : <span className="mxHint">Bank transfer · Bridge</span>}</div>
-    {account.isPending && <div className="mxState" role="status"><LoaderCircle className="spin" aria-hidden="true" />Loading…</div>}
-    {account.isError && <p className="mxNote mxNoteError" role="alert">Bank transfers are unavailable right now. <button type="button" className="appTextButton" onClick={() => void account.refetch()}>Try again</button></p>}
+    {account.isPending && <LoadingState label="Loading…" />}
+    {account.isError && <Notice tone="error" role="alert" onRetry={() => void account.refetch()}>Bank transfers are unavailable right now.</Notice>}
     {stage === "unavailable" && <p className="mxHint">Coming soon. You&apos;ll be able to send dollars from your Aura account to a US bank account.</p>}
     {stage && stage !== "unavailable" && stage !== "active" && <p className="mxHint">Set up your bank account on <Link className="appTextButton mxInlineButton" href="/app/deposit#bank">Deposit</Link> first.</p>}
     {stage === "active" && <ActiveBankSend />}

@@ -5,6 +5,7 @@ import { useAuraWallet } from "@/lib/client/use-aura-wallet";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useToast } from "./toast";
+import { Notice } from "./states";
 
 type Tag = { tag: string; address: string; displayName: string; publicEnabled: boolean; publicBankEnabled: boolean };
 
@@ -69,6 +70,6 @@ export function AuraTagControls() {
         {current?.publicEnabled && <Link className="appButton" href={`/pay/${current.tag}`}>View your payment page</Link>}
       </div>
     </form>
-    {message && <p className="mxNote mxNoteWarning" role="status">{message}</p>}
+    {message && <Notice tone="warning" role="status">{message}</Notice>}
   </section>;
 }

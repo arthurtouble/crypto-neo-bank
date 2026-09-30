@@ -1,9 +1,10 @@
 "use client";
 
 import { usePrivy } from "@privy-io/react-auth";
-import { ArrowLeft, AtSign, Bell, ChevronRight, FileText, LoaderCircle, ShieldCheck, Smartphone, Users } from "lucide-react";
+import { ArrowLeft, AtSign, Bell, ChevronRight, FileText, ShieldCheck, Smartphone, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { exampleRecipients } from "@/lib/example/data";
+import { shortAddress } from "@/lib/format";
 import { AuraTagControls } from "./aura-tag-controls";
 import { DataRightsPanel } from "./data-rights-panel";
 import { GuestBanner } from "./guest-banner";
@@ -12,6 +13,7 @@ import { SecurityCenter } from "./security-center";
 import { SavedRecipients, TransactionControls } from "./security-policy-controls";
 import { SettingRow, Toggle } from "./setting-row";
 import { ThemeChoice } from "./theme-choice";
+import { LoadingState } from "./states";
 
 const areas = [
   { id: "security", label: "Security", detail: "Passkey, email, lock, and limits", icon: ShieldCheck },
@@ -100,12 +102,12 @@ export function SettingsWorkspace() {
   }, []);
   // Desktop always shows an area; the phone shows the list until one is chosen.
   const area = selected ?? "security";
-  const who = isExample ? "Example account" : user?.email?.address ?? (user?.wallet?.address ? `${user.wallet.address.slice(0, 6)}…${user.wallet.address.slice(-4)}` : null);
+  const who = isExample ? "Example account" : user?.email?.address ?? (user?.wallet?.address ? shortAddress(user.wallet.address) : null);
 
   return <div className="mxPage stPage" data-view={selected ? "area" : "index"}>
     {(isExample || !ready) && <GuestBanner onSignIn={login} ready={ready} />}
     <header className="stHead"><h1>Settings</h1>{who && <p className="mxHint">Signed in as {who}</p>}</header>
-    {!ready ? <div className="mxState" role="status"><LoaderCircle className="spin" aria-hidden="true" /> Loading your settings</div>
+    {!ready ? <LoadingState label="Loading your settings" />
       : <div className="stLayout">
         <nav className="stNav" aria-label="Settings sections">
           {areas.map(({ id, label, detail, icon: Icon }) => <a key={id} href={`#${id}`} aria-current={area === id ? "page" : undefined} onClick={() => setSelected(id)}>

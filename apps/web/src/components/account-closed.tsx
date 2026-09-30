@@ -5,9 +5,7 @@ import { Download, LoaderCircle, UserX } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-
-/** Fired by `useApi` when the server says the account is closed. */
-export const ACCOUNT_CLOSED_EVENT = "aura:account-closed";
+import { ACCOUNT_CLOSED_EVENT } from "@/lib/client/api";
 
 /**
  * Once the server says the account is closed, every page but Support shows

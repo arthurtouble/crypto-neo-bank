@@ -105,6 +105,7 @@ Money in is shown with a plus sign and the positive colour. Money out has a minu
 | Small | 13 / 18 | 13 / 18 | 400, 500 | Secondary lines in rows, help text |
 | Caption | 12 / 16 | 12 / 16 | 500 | Table headers, timestamps |
 | Mono | 13 / 18 | 13 / 18 | 400 | Addresses, hashes, references |
+| Input (phone) | — | 16 / — | 400 | Text inside inputs on the phone (`--text-input-phone`), so the browser doesn't zoom |
 
 Money formatting: currency sign or asset code always shown; two decimals for fiat, up to six significant decimals for crypto, trailing zeros dropped; thousands separated. Addresses are shortened to the first six and last four characters (`0x5555…5555`) except on the address check step, where they're shown in full, in groups of four.
 
@@ -208,6 +209,8 @@ Phone and desktop are different layouts, not one layout squeezed. Components bel
 
 Each component is one per device where the devices differ. The reference page renders them all; class names there are prefixed `ds-` so they can't clash with the current screens.
 
+In the app, the shared parts are React components in `apps/web/src/components`, so each is built once: `StatusDot` (a status), `LoadingState`, `LoadingScreen` (the whole screen, before the app can draw), `Notice` (with an optional Try again), and `Unavailable` (`states.tsx`), `CopyButton`, `MoneyPage` and `SignedOutPanel` (a money section's page and its guest panel), and `Sheet` (every dismissible dialog: the dialog that is a bottom sheet on the phone, the side panel for a holding or a receipt, and the asset picker). Their styles are in `shell.css` (`appStatus`, `appState`, `appUnavailable`, `appIconDisc` for the 32px round icons) and `money.css` (`mxNote`, `mxDialog`). Money, amounts, dates, and addresses are written by `apps/web/src/lib/format`, in one locale, and the operations console uses the same formatters.
+
 ### Buttons
 
 | Variant | Look | Use |
@@ -227,7 +230,7 @@ Each component is one per device where the devices differ. The reference page re
 - Label above, always visible, never a placeholder in its place. Help text below in small secondary text.
 - Error: a red border and 1px ring, and the message below in red, linked with `aria-describedby`. Validate on blur and on submit, not while typing.
 - Addresses and references in Geist Mono.
-- Phone: 44px high, 16px text so the browser doesn't zoom.
+- Phone: 44px high, 16px text (`--text-input-phone`) so the browser doesn't zoom.
 
 ### Amount entry
 

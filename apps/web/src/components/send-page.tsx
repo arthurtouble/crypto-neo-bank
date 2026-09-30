@@ -1,13 +1,14 @@
 "use client";
 
 import { usePrivy } from "@privy-io/react-auth";
-import { Building2, ChevronRight, LoaderCircle, Wallet } from "lucide-react";
+import { Building2, ChevronRight, Wallet } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AuraTagLookup } from "./aura-tag-lookup";
 import { BankSendPanel } from "./bank-send-panel";
-import { GuestBanner } from "./guest-banner";
+import { MoneyPage, SignedOutPanel } from "./money-page";
 import { WalletWorkspace } from "./wallet-workspace";
+import { LoadingState } from "./states";
 
 const tabs = [
   { id: "crypto", label: "To a person or wallet", detail: "Crypto to an address or an Aura tag", icon: Wallet },
@@ -43,9 +44,7 @@ export function SendPage() {
     window.history.replaceState(null, "", `${window.location.search}#${next}`);
   }
 
-  return <div className="mxPage">
-    {(isExample || loading) && <GuestBanner onSignIn={login} ready={ready} />}
-    <header className="mxHead"><h1>Send</h1></header>
+  return <MoneyPage title="Send" guest={isExample || loading} onSignIn={login} ready={ready}>
     <div className="mxTabs" role="tablist" aria-label="Where to send">
       {tabs.map(({ id, label, detail, icon: Icon }) => <button key={id} type="button" role="tab" id={`send-tab-${id}`} aria-controls={`send-panel-${id}`}
             aria-labelledby={`send-tab-${id}-label`} aria-describedby={`send-tab-${id}-detail`}
@@ -63,22 +62,16 @@ export function SendPage() {
       </button>)}
     </div>
     <div role="tabpanel" id={`send-panel-${tab}`} aria-labelledby={`send-tab-${tab}-label`} className="mxTabPanel">
-      {loading ? <div className="mxState" role="status"><LoaderCircle className="spin" aria-hidden="true" /><strong>Setting up your account</strong></div>
+      {loading ? <LoadingState><strong>Setting up your account</strong></LoadingState>
         : tab === "crypto" ? (isExample ? <div className="mxColumns">
-          <div className="mxMain"><section className="mxPanel" aria-labelledby="send-crypto-title">
-            <div className="mxPanelHead"><h2 id="send-crypto-title">Send crypto</h2>
-              <p>Send USDC, ETH, and other supported assets from your Aura account to an address or an Aura tag. You review every transfer before you confirm it with your passkey.</p></div>
-            <button type="button" className="appButton appButtonPrimary appButtonLarge" onClick={login}>Sign in to send</button>
-          </section></div>
+          <div className="mxMain"><SignedOutPanel title="Send crypto" action="Sign in to send" onSignIn={login}>
+            Send USDC, ETH, and other supported assets from your Aura account to an address or an Aura tag. You review every transfer before you confirm it with your passkey.</SignedOutPanel></div>
           <aside className="mxSide"><TagCard isExample onSignIn={login} /></aside>
         </div>
           // Remount on a new ?sendTo= link so the form starts from it.
           : <WalletWorkspace key={searchParams.toString()}><TagCard isExample={false} onSignIn={login} /></WalletWorkspace>)
-          : isExample ? <section className="mxPanel" aria-labelledby="send-bank">
-            <div className="mxPanelHead"><h2 id="send-bank">Send to a bank</h2>
-              <p>Send dollars from your Aura account to a US bank account, once Bridge has verified you.</p></div>
-            <button type="button" className="appButton appButtonPrimary appButtonLarge" onClick={login}>Sign in to send</button>
-          </section> : <BankSendPanel />}
+          : isExample ? <SignedOutPanel title="Send to a bank" action="Sign in to send" onSignIn={login}>
+            Send dollars from your Aura account to a US bank account, once Bridge has verified you.</SignedOutPanel> : <BankSendPanel />}
     </div>
-  </div>;
+  </MoneyPage>;
 }

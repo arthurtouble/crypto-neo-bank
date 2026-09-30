@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowDownToLine, ArrowDownUp, ArrowUpFromLine, Building2, ChevronRight, Command, LockKeyhole, Search, X, type LucideIcon } from "lucide-react";
 import { navigation } from "@/lib/product-map";
+import { Sheet } from "./sheet";
 
 type Entry = { label: string; note: string; href: string; icon?: LucideIcon; keywords?: string };
 
@@ -59,13 +60,8 @@ export function CommandMenu() {
   }
 
   return (
-    <Dialog.Root open={open} onOpenChange={close}>
-      <Dialog.Trigger asChild>
-        <button className="commandSearch" type="button" aria-label="Open search and commands"><Search size={16} /><span>Search Aura</span><kbd><Command size={11} /> K</kbd></button>
-      </Dialog.Trigger>
-      <Dialog.Portal>
-        <Dialog.Overlay className="mxDialogOverlay" />
-        <Dialog.Content className="mxDialog cmDialog" aria-describedby="command-help">
+    <Sheet open={open} onOpenChange={close} className="cmDialog" describedBy="command-help"
+      trigger={<button className="commandSearch" type="button" aria-label="Open search and commands"><Search size={16} /><span>Search Aura</span><kbd><Command size={11} /> K</kbd></button>}>
           <Dialog.Title className="srOnly">Search Aura</Dialog.Title>
           <p id="command-help" className="srOnly">Find an action or a page. Use the arrow keys to choose, and Enter to open it.</p>
           <div className="cmInput"><Search aria-hidden="true" />
@@ -93,8 +89,6 @@ export function CommandMenu() {
             {!flat.length && <p className="cmEmpty">Nothing matches. Try a page name, or words like send, add, or lock.</p>}
           </div>
           <div className="cmFooter" aria-hidden="true"><span>↑↓ Choose</span><span>↵ Open</span><span>Esc Close</span></div>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+    </Sheet>
   );
 }

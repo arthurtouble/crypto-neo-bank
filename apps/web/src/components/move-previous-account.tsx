@@ -14,6 +14,7 @@ const baseToken = (symbol: string) => assetsFor("hold", HOME_CHAIN.id).find((ite
 const USDC = baseToken("USDC");
 const WETH = baseToken("WETH");
 import { useApi } from "@/lib/client/api";
+import { formatToken } from "@/lib/format";
 import { useToast } from "./toast";
 
 type Previous = { previous: `0x${string}` | null; account: `0x${string}` };
@@ -73,7 +74,7 @@ export function MovePreviousAccount() {
       <div>
         <h2>Move funds to your new account</h2>
         <p>Aura now uses a new account address. Your previous account still holds {holdings.map((item) =>
-          `${Number(formatUnits(item.raw, item.decimals)).toLocaleString(undefined, { maximumFractionDigits: 6 })} ${item.symbol}`).join(", ")}.</p>
+          formatToken(Number(formatUnits(item.raw, item.decimals)), item.symbol, { maxDecimals: 6 })).join(", ")}.</p>
       </div>
       <button type="button" className="appButton appButtonPrimary" disabled={phase === "confirm"} onClick={() => void move()}>
         {phase === "confirm" ? <LoaderCircle className="spin" aria-hidden="true" /> : <ArrowRight aria-hidden="true" />}{phase === "confirm" ? "Confirm the move" : "Move everything"}
