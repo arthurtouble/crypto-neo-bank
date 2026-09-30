@@ -120,7 +120,7 @@ These change what a flow does, not just how it looks. The owner approved all six
 
 | # | Change | Where | Status |
 | --- | --- | --- | --- |
-| B1 | A review step before the passkey for bank payouts | J6.4 | Approved |
+| B1 | A review step before the passkey for bank payouts | J6.4 | Done ([#69](https://github.com/arthurtouble/crypto-neo-bank/pull/69)) |
 | B2 | A check step for a first-time address in Send: the address in chunks, the network, and a test-send hint. Saved recipients and own wallets skip it. | J5.4 | Approved |
 | B3 | Receive lists every asset that shows up when received on Base, from the registry. Today the copy names only USDC, ETH, and cbBTC. | J4.1 | Approved |
 | B4 | ⌘K search includes actions (Send, Deposit, Swap, lock account), not only pages | J0.1 | Approved |

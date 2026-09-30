@@ -30,7 +30,7 @@ You'll also be able to use these details for your paycheck. When the money arriv
 
 ## Sending to a bank
 
-You'll save a US bank account once, then choose it, the amount, and bank transfer (ACH) or wire. You confirm a USDC transfer to an address Bridge gives for that payout, with your passkey, under your account lock and daily limit. Bridge then sends the dollars to your bank.
+You'll save a US bank account once, then choose it, the amount, and bank transfer (ACH) or wire. You then review the payout: the amount, the USDC it takes, the bank, and the speed. Select **Edit** to change it, or **Confirm and send** to go ahead. You confirm a USDC transfer to an address Bridge gives for that payout, with your passkey, under your account lock and daily limit. Bridge then sends the dollars to your bank.
 
 In Transactions, the payout shows as **Sent to bank** and stays pending until Bridge reports that your bank has it: waiting for your USDC, received by Bridge, sent to your bank, then arrived. A bank transfer usually takes 1 to 3 business days. If your bank returns it, the payout shows as failed with what Bridge is doing about it, and we tell you. A bank or Bridge can still hold, return, or reject a transfer after you submit it. Delivery times are estimates.
 

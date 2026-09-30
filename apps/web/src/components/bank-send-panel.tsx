@@ -74,18 +74,26 @@ function AddBankAccountForm({ onSaved, onCancel }: { onSaved: (name: string) => 
   </form>;
 }
 
+const usd = (value: string) => `$${Number(value).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
 function PayoutForm({ banks }: { banks: Recipient[] }) {
   const api = useApi();
   const { runPrepared, phase, action, outcomeUnknown, busy, reset } = useAction({ label: "Bank transfer" });
   const [bankId, setBankId] = useState(banks[0]?.id ?? "");
   const [amount, setAmount] = useState("");
   const [wire, setWire] = useState(false);
+  // Journey J6, change B1: the customer reviews the payout before the passkey, as with every other money action.
+  const [reviewing, setReviewing] = useState(false);
   const bank = banks.find((item) => item.id === bankId) ?? banks[0];
   const amountValid = amountPattern.test(amount) && Number(amount) > 0;
   const tracking = phase === "tracking";
 
-  async function submit(event: FormEvent) {
+  function review(event: FormEvent) {
     event.preventDefault();
+    if (bank && amountValid) setReviewing(true);
+  }
+
+  async function confirm() {
     if (!bank || !amountValid) return;
     const json = { bankAccountId: bank.id, amountUsd: amount, rail: wire ? "wire" : "ach" };
     await runPrepared(async () => (await api<{ action: ActionView }>("/api/money/payouts", { method: "POST", json })).action);
@@ -93,28 +101,41 @@ function PayoutForm({ banks }: { banks: Recipient[] }) {
 
   if (phase === "done") return <>
     <TransactionProgress label="Bank transfer" phase={phase} action={action} outcomeUnknown={outcomeUnknown} />
-    <button type="button" className="appButton appButtonLarge" onClick={() => { reset(); setAmount(""); }}>Send another</button>
+    <button type="button" className="appButton appButtonLarge" onClick={() => { reset(); setAmount(""); setReviewing(false); }}>Send another</button>
   </>;
 
-  return <form className="mxForm" onSubmit={(event) => void submit(event)} aria-label="Send to a bank">
+  if (reviewing && bank) return <section className="mxForm" aria-label="Review bank transfer">
+    <dl className="mxSummary" data-testid="bank-review">
+      <div><dt>Send</dt><dd>{usd(amount)}</dd></div>
+      <div><dt>From your USDC</dt><dd>{amount} USDC</dd></div>
+      <div><dt>To</dt><dd>{bankLabel(bank)}</dd></div>
+      <div><dt>Speed</dt><dd>{wire ? "Wire" : "Bank transfer"}</dd></div>
+      {!wire && <div><dt>Arrives</dt><dd>Usually 1 to 3 business days</dd></div>}
+    </dl>
+    <p className="mxHint">You sign a USDC transfer to Bridge. Bridge sends the dollars to your bank after it receives the USDC. Delivery times are estimates, and a bank or Bridge can still hold or return a transfer.</p>
+    <TransactionProgress label="Bank transfer" phase={phase} action={action} outcomeUnknown={outcomeUnknown} />
+    <div className="mxActions mxActionsStack">
+      <button type="button" className="appButton appButtonPrimary appButtonLarge" disabled={busy || tracking} onClick={() => void confirm()}>
+        {phase === "preparing" ? "Checking…" : phase === "signing" ? "Confirm with your passkey" : "Confirm and send"}</button>
+      <button type="button" className="appButton appButtonLarge" disabled={busy || tracking} onClick={() => setReviewing(false)}>Edit</button>
+    </div>
+  </section>;
+
+  return <form className="mxForm" onSubmit={review} aria-label="Send to a bank">
     <label className="mxField">To
-      <select value={bank?.id ?? ""} onChange={(event) => setBankId(event.target.value)} disabled={busy || tracking}>
+      <select value={bank?.id ?? ""} onChange={(event) => setBankId(event.target.value)}>
         {banks.map((item) => <option value={item.id} key={item.id}>{bankLabel(item)}</option>)}
       </select>
     </label>
-    <label className="mxField">Amount in USD<input value={amount} onChange={(event) => setAmount(event.target.value.replace(/[^\d.]/g, ""))} inputMode="decimal" placeholder="25.00" disabled={busy || tracking} required /></label>
+    <label className="mxField">Amount in USD<input value={amount} onChange={(event) => setAmount(event.target.value.replace(/[^\d.]/g, ""))} inputMode="decimal" placeholder="25.00" required /></label>
     {amount && !amountValid && <p className="mxFieldError" role="alert">Enter an amount like 25 or 25.50.</p>}
     <div className="mxField">Speed
       <div className="appSegmented" role="radiogroup" aria-label="Transfer type">
-        <button type="button" role="radio" aria-checked={!wire} disabled={busy || tracking} onClick={() => setWire(false)}>Bank transfer</button>
-        <button type="button" role="radio" aria-checked={wire} disabled={busy || tracking} onClick={() => setWire(true)}>Wire</button>
+        <button type="button" role="radio" aria-checked={!wire} onClick={() => setWire(false)}>Bank transfer</button>
+        <button type="button" role="radio" aria-checked={wire} onClick={() => setWire(true)}>Wire</button>
       </div>
     </div>
-    <p className="mxHint">You sign a USDC transfer to Bridge. Bridge sends the dollars to your bank after it receives the USDC.</p>
-    <TransactionProgress label="Bank transfer" phase={phase} action={action} outcomeUnknown={outcomeUnknown} />
-    <button className="appButton appButtonPrimary appButtonLarge" disabled={busy || tracking || !bank || !amountValid}>
-      {phase === "preparing" ? "Checking…" : phase === "signing" ? "Confirm with your passkey" : "Review and send"}
-    </button>
+    <button className="appButton appButtonPrimary appButtonLarge" disabled={!bank || !amountValid}>Review</button>
   </form>;
 }
 
