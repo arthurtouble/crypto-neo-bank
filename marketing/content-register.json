@@ -4,8 +4,10 @@
     "file": "apps/web/src/app/page.tsx",
     "owner": "product",
     "audience": "Public Aura visitors; personal features remain country- and provider-limited",
-    "countries": ["GLOBAL"],
-    "disclosure": "Screens use fictional example values. Banking, cards, investing, and rewards depend on provider connections and eligibility; see linked availability footnotes.",
+    "countries": [
+      "GLOBAL"
+    ],
+    "disclosure": "Screens use fictional example values. Availability depends on where you live; bank transfers and cards depend on approved partners. Stated in the footer disclosure with a link to availability.",
     "claimIds": [],
     "reviewStatus": "pending",
     "reviewAt": "2026-09-24T00:00:00.000Z"

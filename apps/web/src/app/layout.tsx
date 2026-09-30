@@ -13,7 +13,7 @@ import "./records.css";
 import "./settings.css";
 import "./public.css";
 
-const description = "One app for the money you hold yourself. See every balance, then send, swap, or earn. What you can use depends on where you live.";
+const description = "Money you control, in one simple app. Hold stablecoins, crypto, tokenized stocks, and gold, then send, swap, and earn. What you can use depends on where you live.";
 const origin = siteOrigin();
 
 export const metadata: Metadata = {

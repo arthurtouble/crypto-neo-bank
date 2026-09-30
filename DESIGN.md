@@ -47,6 +47,12 @@ colors-dark:
   warning: "#f0ab4a"
   warning-soft: "#2a2114"
 typography:
+  headline:
+    fontFamily: Geist
+    fontSize: 56px
+    fontWeight: 600
+    lineHeight: 60px
+    letterSpacing: -0.02em
   display:
     fontFamily: Geist
     fontSize: 40px
@@ -209,7 +215,7 @@ Neutral cool greys and one accent. Use the semantic names, never a literal colou
 
 ## Typography
 
-Geist for everything, Geist Mono for addresses, hashes, and references, both self-hosted in `apps/web/public/fonts`. Weights 400, 500, and 600 only. Tabular figures on every number. Sentence case, no all caps. On phones, body is 15/22, display 36/40, title-1 20/26. Money always shows its currency or asset; unread values say Unavailable.
+Geist for everything, Geist Mono for addresses, hashes, and references, both self-hosted in `apps/web/public/fonts`. Weights 400, 500, and 600 only. Tabular figures on every number. Sentence case, no all caps. On phones, body is 15/22, headline 40/44, display 36/40, title-1 20/26. Headline is only for the landing page's main heading. Money always shows its currency or asset; unread values say Unavailable.
 
 ## Layout
 

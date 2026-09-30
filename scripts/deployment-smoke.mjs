@@ -25,7 +25,7 @@ async function request(path, init) {
 
 const home = await request("/");
 assert(home.ok, `home responds (${home.status})`);
-assert((await home.text()).includes("One app for the money you hold yourself"), "home serves the Aura landing page");
+assert((await home.text()).includes("Money you control, in one simple app"), "home serves the Aura landing page");
 assert(home.headers.get("x-content-type-options") === "nosniff", "X-Content-Type-Options is nosniff");
 assert(home.headers.get("content-security-policy")?.includes("frame-ancestors 'none'"), "CSP denies framing");
 

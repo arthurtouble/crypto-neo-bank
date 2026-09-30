@@ -3,17 +3,20 @@ import { expect, test } from "@playwright/test";
 
 test("landing introduces Aura and its provider boundaries", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "One app for the money you hold yourself" })).toBeVisible();
-  await expect(page.getByText("See every balance, then send, swap, or earn.", { exact: false })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Money you control, in one simple app" })).toBeVisible();
+  await expect(page.getByText("Send, swap, and earn from one wallet", { exact: false })).toBeVisible();
   await expect(page.getByRole("link", { name: "Get started" })).toHaveCount(4);
   await expect(page.locator('a[href="/apply"], a[href="/tour"]')).toHaveCount(0);
-  for (const title of ["Everything you hold, in one place", "Send", "Swap", "Earn", "Spend with a card", "Security"]) {
-    await expect(page.getByRole("heading", { name: title, exact: true })).toHaveCount(1);
+  for (const title of ["Every balance", "Send", "Swap", "Earn", "Aura tag", "Card"]) {
+    await expect(page.locator("#features h3").filter({ hasText: new RegExp(`^${title}`) })).toHaveCount(1);
   }
-  await expect(page.locator("#faq details")).toHaveCount(5);
+  await expect(page.locator("#features h3").filter({ hasText: "Card" })).toContainText("Coming soon");
+  await expect(page.getByRole("heading", { name: "Only you can move your money" })).toBeVisible();
+  await expect(page.locator("#faq details")).toHaveCount(4);
   await page.locator("#faq summary").filter({ hasText: "Can I use bank transfers and cards?" }).click();
   await expect(page.getByText("Both need our banking and card partners", { exact: false })).toBeVisible();
-  await expect(page.locator("#footnotes li")).toHaveCount(3);
+  await expect(page.locator(".ldDisclosure")).toContainText("Screens show example data, not real accounts.");
+  await expect(page.locator(".ldDisclosure")).toContainText("Bank transfers and cards need approved partners.");
   await expect(page.getByText(`© ${new Date().getFullYear()} Aura`)).toBeVisible();
 });
 
@@ -23,7 +26,7 @@ test("mobile navigation keeps product, FAQ, and docs reachable", async ({ page }
   await page.getByText("Menu", { exact: true }).click();
   const navigation = page.getByRole("navigation", { name: "Mobile navigation" });
   await expect(navigation.getByRole("link", { name: "Features" })).toBeVisible();
-  await expect(navigation.getByRole("link", { name: "FAQs" })).toBeVisible();
+  await expect(navigation.getByRole("link", { name: "Questions" })).toBeVisible();
   await expect(navigation.getByRole("link", { name: "Docs" })).toBeVisible();
 });
 
