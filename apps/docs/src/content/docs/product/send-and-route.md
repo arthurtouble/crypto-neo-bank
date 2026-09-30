@@ -25,7 +25,7 @@ A payment sent to the wrong but valid address usually can't be reversed.
 
 ## Saved recipients
 
-Your saved recipients show above the address field in Send, so you can pick one in a tap. When you enter an address, Aura tells you whether it's a saved recipient, one of your own wallets, or a new address. You can save a new address with a name as you send to it. You can remove saved recipients in Settings.
+Your saved recipients show above the address field in Send, so you can pick one in a tap. When you enter an address, Aura tells you whether it's a saved recipient, one of your own wallets, or a new address. The first time you send to an address from your account, Aura shows it in full, in groups of four, with the network, before the review, so you can check it against the address you were given. Select **It's correct** to go on, or **Edit** to change it. For a large amount, send a small test first. Saved recipients, addresses you've sent to before, your own wallets, and addresses from an Aura tag skip this check. You can save a new address with a name as you send to it. You can remove saved recipients in Settings.
 
 Saving an address doesn't prove who controls it. A saved name is just a label for you.
 

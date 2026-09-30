@@ -5,7 +5,7 @@ import { usePrivy } from "@privy-io/react-auth";
 import { LoaderCircle, Send } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { erc20Abi, formatUnits, isAddress, parseUnits } from "viem";
+import { erc20Abi, formatUnits, getAddress, isAddress, parseUnits } from "viem";
 import { useBalance, useReadContracts } from "wagmi";
 import { HOME_CHAIN, SUPPORTED_CHAINS } from "@/config/chains";
 import { assetsFor, networkName, sendDestinations } from "@/lib/assets/registry";
@@ -21,6 +21,14 @@ import { TransactionProgress } from "./transaction-progress";
 const SENDABLE = assetsFor("send");
 const TOKENS = SENDABLE.filter((item) => item.address !== null);
 type AssetSymbol = string;
+/** An address in groups of four, five groups a line, checksummed so its letters read as they were given. */
+function addressChunks(address: string) {
+  const hex = getAddress(address).slice(2);
+  const groups = hex.match(/.{4}/g) ?? [];
+  groups[0] = `0x${groups[0]}`;
+  return [groups.slice(0, 5).join(" "), groups.slice(5).join(" ")];
+}
+
 type Recipient = { id: string; kind: "wallet" | "bank"; name: string; destination: string; detail: string; verified: boolean; recent?: boolean; availableAt?: string };
 
 function shortAddress(address: string) {
@@ -75,6 +83,9 @@ export function WalletWorkspace({ children }: { children?: React.ReactNode }) {
   const [formError, setFormError] = useState<string | null>(null);
   // Nothing is prepared until the customer has seen exactly what will be sent, and to whom.
   const [reviewing, setReviewing] = useState(false);
+  // Change B2: an address never used from this account is checked first, in chunks, before the review.
+  const [checking, setChecking] = useState(false);
+  const [checkedAddress, setCheckedAddress] = useState<string | null>(null);
   const [slowSetup, setSlowSetup] = useState(false);
   const { user } = usePrivy();
   const toast = useToast();
@@ -128,6 +139,10 @@ export function WalletWorkspace({ children }: { children?: React.ReactNode }) {
   // Only a new address can be saved from here; saved ones are managed in Settings.
   const canSave = validRecipient && !saved && !ownWallet && !tagged;
   const waitingUntil = saved && !saved.verified && saved.availableAt ? new Date(saved.availableAt) : null;
+  // Saved and recent recipients have been used from this account; own wallets are the customer's; a tag's address comes
+  // from Aura and is checked again before signing. Anything else is a first-time address. If the list can't be read, it counts as new.
+  const usedBefore = recipients.data?.recipients.some((item) => item.kind === "wallet" && item.destination.toLowerCase() === recipient.toLowerCase()) ?? false;
+  const firstTime = validRecipient && !usedBefore && !ownWallet && !tagged;
 
   function chooseAsset(symbol: AssetSymbol) {
     setAsset(symbol);
@@ -160,9 +175,20 @@ export function WalletWorkspace({ children }: { children?: React.ReactNode }) {
     if ((amount.split(".")[1]?.length ?? 0) > selected.decimals) return setFormError(`Use at most ${selected.decimals} decimal places.`);
     if (selected.value !== undefined && raw > selected.value) return setFormError(`That's more ${asset} than you have.`);
     if (canSave && saveRecipient && !nickname.trim()) return setFormError("Give this recipient a name.");
+    if (firstTime && checkedAddress !== recipient.toLowerCase()) return setChecking(true);
+    await toReview();
+  }
+
+  async function toReview() {
     setQuote(null);
     if (crossChain && !await getQuote()) return;
     setReviewing(true);
+  }
+
+  async function addressCorrect() {
+    setCheckedAddress(recipient.toLowerCase());
+    setChecking(false);
+    await toReview();
   }
 
   async function saveNewRecipient(): Promise<boolean> {
@@ -223,9 +249,19 @@ export function WalletWorkspace({ children }: { children?: React.ReactNode }) {
         <div className="mxMain">
           <section className="mxPanel" aria-labelledby="send-crypto-title">
             <div className="mxPanelHead mxPanelHeadRow"><h2 id="send-crypto-title">Send crypto</h2>
-              <ol className="mxSteps" aria-label="Send steps"><li aria-current={!reviewing ? "step" : undefined}>Details</li><li aria-current={reviewing ? "step" : undefined}>Review</li></ol></div>
+              <ol className="mxSteps" aria-label="Send steps"><li aria-current={!reviewing && !checking ? "step" : undefined}>Details</li>
+                {firstTime && <li aria-current={checking ? "step" : undefined}>Check</li>}<li aria-current={reviewing ? "step" : undefined}>Review</li></ol></div>
             <form className="mxForm" onSubmit={(event) => void review(event)}>
-              {!reviewing ? <>
+              {checking && !reviewing ? <section className="mxForm" aria-labelledby="address-check-title">
+                <h3 id="address-check-title" className="mxCheckTitle">You haven&apos;t sent to this address before</h3>
+                <p className="mxAddressChunks" data-testid="address-chunks">{addressChunks(recipient).map((line) => <span key={line}>{line}</span>)}</p>
+                <dl className="mxSummary"><div><dt>Network</dt><dd>{destination.name}</dd></div><div><dt>You send</dt><dd>{amount} {asset}</dd></div></dl>
+                <p className="mxHint">Check it against the address you were given. For a large amount, send a small test first.</p>
+                <div className="mxActions mxActionsStack">
+                  <button type="button" className="appButton appButtonPrimary appButtonLarge" disabled={quoting} onClick={() => void addressCorrect()}>{quoting ? <LoaderCircle className="spin" aria-hidden="true" /> : null}{quoting ? "Getting a quote" : "It's correct"}</button>
+                  <button type="button" className="appButton appButtonLarge" disabled={quoting} onClick={() => setChecking(false)}>Edit</button>
+                </div>
+              </section> : !reviewing ? <>
                 <div className="mxAmountRow">
                   <label className="mxField mxAmountField">Amount<input className="mxAmountInput" inputMode="decimal" placeholder="0.00" value={amount} disabled={inFlight} onChange={(event) => setAmount(event.target.value.trim())} /></label>
                   <label className="mxField">Asset<select value={asset} disabled={inFlight} onChange={(event) => chooseAsset(event.target.value as AssetSymbol)}>{SENDABLE.map((item) => <option key={item.id}>{item.symbol}</option>)}</select></label>
@@ -268,10 +304,10 @@ export function WalletWorkspace({ children }: { children?: React.ReactNode }) {
                 {formError && <p className="mxFieldError" role="alert">{formError}</p>}
                 <TransactionProgress label="Transfer" phase={transfer.phase} action={transfer.action} outcomeUnknown={transfer.outcomeUnknown} />
                 {done
-                  ? <button type="button" className="appButton appButtonPrimary appButtonLarge" onClick={() => { transfer.reset(); setAmount(""); setQuote(null); setReviewing(false); }}><Send aria-hidden="true" /> New transfer</button>
+                  ? <button type="button" className="appButton appButtonPrimary appButtonLarge" onClick={() => { transfer.reset(); setAmount(""); setQuote(null); setReviewing(false); setChecking(false); }}><Send aria-hidden="true" /> New transfer</button>
                   : <div className="mxActions mxActionsStack">
                     <button type="button" className="appButton appButtonPrimary appButtonLarge" disabled={inFlight || quoting} onClick={() => void confirmSend()}>{sending ? <LoaderCircle className="spin" aria-hidden="true" /> : <Send aria-hidden="true" />}{transfer.outcomeUnknown ? "Check Transactions first" : transfer.phase === "tracking" ? "Sending" : transfer.phase === "preparing" ? "Checking" : sending ? "Confirm with your passkey" : "Confirm and send"}</button>
-                    {!inFlight && <button type="button" className="appButton appButtonLarge" onClick={() => setReviewing(false)}>Edit</button>}
+                    {!inFlight && <button type="button" className="appButton appButtonLarge" onClick={() => { setReviewing(false); setChecking(false); }}>Edit</button>}
                   </div>}
               </>}
             </form>
