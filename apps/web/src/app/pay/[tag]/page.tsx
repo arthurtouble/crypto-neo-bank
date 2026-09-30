@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { QRCodeSVG } from "qrcode.react";
 import { AppBrand } from "@/components/brand";
 import { PaymentActions } from "@/components/payment-actions";
@@ -25,6 +26,12 @@ export default async function AuraTagPage({ params }: { params: Promise<{ tag: s
         <div className="pyQr"><QRCodeSVG value={data.crypto.address} size={168} bgColor="transparent" fgColor="currentColor" role="img" aria-label={`QR code of ${data.displayName}'s address`} /></div>
         <code className="pyAddress">{data.crypto.address}</code>
         <PaymentActions address={data.crypto.address} />
+      </section>
+      {/* Change B5: someone with Aura pays in the app, with this tag filled in (signing in first if needed). */}
+      <section className="pyCard pyWithAura" aria-labelledby="pay-with-aura">
+        <div className="pyCardHead"><h2 id="pay-with-aura">Have Aura?</h2></div>
+        <p>Send in the app with @{data.tag} filled in. Aura checks the tag&apos;s address again before you confirm.</p>
+        <Link className="appButton appButtonLarge" href={`/app/send?sendTo=${encodeURIComponent(data.crypto.address)}&tag=${encodeURIComponent(data.tag)}`}>Send with Aura</Link>
       </section>
       {/* Change B6: only the ways that work. Bank details show when this person shared them; card payment isn't offered until it exists. */}
       {data.bank.available && <section className="pyCard" aria-labelledby="pay-bank">
