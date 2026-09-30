@@ -79,7 +79,7 @@ test("search engines may index the landing page, not the app or payment pages", 
   await page.goto("/");
   await expect(page).toHaveTitle("Aura");
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /^index/);
-  await expect(page.locator('meta[property="og:image"]')).toHaveAttribute("content", /\/images\/aura-overview\.png$/);
+  await expect(page.locator('meta[property="og:image"]')).toHaveAttribute("content", /\/images\/aura-og\.png$/);
   await page.goto("/pay/nobody");
   await expect(page).toHaveTitle("Pay with Aura");
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);

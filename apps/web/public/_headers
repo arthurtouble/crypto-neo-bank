@@ -1,0 +1,6 @@
+# Cloudflare static assets: cache headers for files in public/. Hashed build files under /_next/static are
+# already immutable. These names aren't hashed, so browsers keep them for a day and revalidate in the background.
+/images/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+/fonts/*
+  Cache-Control: public, max-age=604800, stale-while-revalidate=2592000

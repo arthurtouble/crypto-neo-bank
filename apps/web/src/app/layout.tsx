@@ -23,8 +23,8 @@ export const metadata: Metadata = {
   applicationName: "Aura",
   robots: indexable() ? { index: true, follow: true } : { index: false, follow: false },
   openGraph: { type: "website", siteName: "Aura", title: "Aura", description,
-    images: [{ url: "/images/aura-overview.png", width: 960, height: 600, alt: "Aura's Overview with example balances" }] },
-  twitter: { card: "summary_large_image", title: "Aura", description, images: ["/images/aura-overview.png"] }
+    images: [{ url: "/images/aura-og.png", width: 1200, height: 630, alt: "Aura's Overview with example balances" }] },
+  twitter: { card: "summary_large_image", title: "Aura", description, images: ["/images/aura-og.png"] }
 };
 
 // Set only by the dev deploy, so dev shows which commit it runs and production shows nothing.
@@ -34,7 +34,7 @@ const buildTime = process.env.NEXT_PUBLIC_BUILD_TIME;
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <head><script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('aurel-theme');var d=t==='dark'||(!t&&matchMedia('(prefers-color-scheme:dark)').matches)?'dark':'light';document.documentElement.dataset.theme=d;document.documentElement.style.colorScheme=d;document.documentElement.dataset.balancePrivacy=localStorage.getItem('aurel-balance-privacy')==='hidden'?'hidden':'visible'}catch(e){}})()` }} /></head>
+      <head><link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossOrigin="anonymous" /><script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('aurel-theme');var d=t==='dark'||(!t&&matchMedia('(prefers-color-scheme:dark)').matches)?'dark':'light';document.documentElement.dataset.theme=d;document.documentElement.style.colorScheme=d;document.documentElement.dataset.balancePrivacy=localStorage.getItem('aurel-balance-privacy')==='hidden'?'hidden':'visible'}catch(e){}})()` }} /></head>
       <body>
         {children}
         {buildSha && <div className="buildTag" title={`Deployed from commit ${buildSha}${buildTime ? ` at ${buildTime}` : ""}`}>dev · {buildSha}{buildTime ? ` · ${buildTime}` : ""}</div>}
