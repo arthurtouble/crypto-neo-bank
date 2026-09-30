@@ -1,19 +1,17 @@
 ---
-title: Provider responsibilities
+title: Who does what
 description: Who does what in Aura, from Privy and LI.FI to the blockchains, protocols, and future partners.
-sidebar:
-  order: 2
 ---
 
 | Who | What they do | What they don't replace |
 | --- | --- | --- |
-| Aura | The app, checks before you confirm, records, support, and choosing and overseeing partners | Your own judgment, or a partner's regulated duties |
+| Aura | The app, checks before you confirm, records, and choosing and overseeing partners | Your own judgment, or a partner's regulated duties |
 | Privy | Sign-in and your wallet | Aura's duties for its product, security, and disclosures |
 | Base, Ethereum, and other networks | Running and recording transactions | Aura's support or legal review |
 | Aave, Morpho, and the vault curators (Steakhouse Financial, Gauntlet) | Running Earn positions under their own rules | Aura's explanation of the risks |
 | LI.FI | Finding routes through third-party bridges and exchanges | Aura's own checks, including confirming delivery |
-| Kraken | Market prices Aura uses to value actions against your daily limit | Aura's decision on what to allow |
-| Cloudflare | Hosting, security, and bot checks | Aura's responsibility for your data |
+| Kraken and Chainlink | Market prices Aura uses for your balances and your daily limit | Aura's decision on what to allow |
+| Cloudflare | Hosting and security | Aura's responsibility for your data |
 | Future partners (Bridge, Stripe) | Their own accounts, cards, identity checks, and regulated records | Aura's marketing, access controls, security, complaints handling, and oversight |
 
 Exact duties will be set in contracts before any regulated feature launches.

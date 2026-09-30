@@ -15,9 +15,9 @@ description: Roles, severities, response procedures, communications, and recover
 1. Name an incident lead and evidence recorder.
 2. Stop the smallest affected path with its server-side feature switch; use the global account or provider control only when scope is uncertain.
 3. Preserve Worker version, trace IDs, transaction hashes, event IDs, queue state and timestamps.
-4. Confirm the authoritative state from the chain or provider. Never infer settlement from Aurel state.
+4. Confirm the authoritative state from the chain or provider. Never infer settlement from Aura state.
 5. For Critical or High incidents, notify the accountable founder and backup, and the provider's emergency channel when its system is involved.
-6. Publish an investigating notice when customers need to change behavior. Never promise a reversal or an unknown recovery time.
+6. Send an investigating notice when customers need to change behavior, from the [customer communication templates](customer-communication-templates.md). Never promise a reversal or an unknown recovery time.
 
 ## Investigation and recovery
 

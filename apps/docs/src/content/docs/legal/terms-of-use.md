@@ -1,6 +1,6 @@
 ---
 title: Terms of use
-description: The terms for using the Aura website, app, and software.
+description: The terms for using the Aura website and app to hold, send, swap, and earn with crypto assets, stablecoins, tokenized stocks, and gold.
 sidebar:
   order: 2
 ---

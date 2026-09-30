@@ -185,4 +185,4 @@ We will show you a new version before it applies. We'll ask you to confirm it th
 
 **Before launch, we will add the privacy email, postal address, and data protection contact here.**
 
-Until then, use the support form in the app. Choose "Account" and say your request is about privacy.
+Until then, chat with us from **Support** in the app and say your request is about privacy.

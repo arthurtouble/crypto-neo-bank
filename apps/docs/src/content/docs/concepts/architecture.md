@@ -1,6 +1,6 @@
 ---
-title: Architecture
-description: How the app, your wallet, blockchains, protocols, and partners fit together.
+title: How Aura works
+description: How the Aura app, your wallet, blockchains like Base, protocols like Aave and Morpho, and partners fit together when you move money.
 ---
 
 Aura prepares money movements, checks them, and explains what happened. It isn't the ledger, custodian, bank, or exchange.
@@ -14,7 +14,7 @@ Every send, swap, move between networks, Earn deposit or withdrawal, and crypto 
 3. **You confirm.** You review it and confirm with your passkey.
 4. **Privy submits it.** Privy submits the signed request and pays the network fee.
 5. **The network settles it.** The blockchain accepts or rejects it.
-6. **Aura checks the result.** Aura reads the blockchain itself. It marks the movement complete once the operation is in a block, matches what was prepared, and shows the expected transfer or deposit. It keeps checking until the network makes it final. A move between networks also has to arrive.
+6. **Aura checks the result.** Aura reads the blockchain itself before it marks anything complete, and keeps checking until the network makes it final. See [after you submit](/safety/security-model/#after-you-submit).
 
 A quote isn't a transfer. A review isn't a confirmation. A submitted transaction isn't necessarily final.
 
@@ -22,7 +22,7 @@ A quote isn't a transfer. A review isn't a confirmation. A submitted transaction
 
 - **The app.** Where you see balances, move money, set controls, and get support.
 - **Sign-in and your wallet.** Privy runs sign-in and makes a wallet for you, which is your account. It has the same address on every network. Aura's server checks your Privy sign-in on every request and never trusts an identity your browser claims.
-- **Your controls.** If you turn them on, Aura applies your account lock, daily limit, saved-recipients-only mode, and the wait before new recipients. Making one stricter applies at once. Loosening one needs your passkey. These checks work only inside Aura. They can't stop someone who uses an exported key or another app.
+- **Your controls.** If you turn them on, Aura applies your [account controls](/safety/account-controls/) to everything it prepares. They can't stop someone who uses an exported key or another app.
 - **Blockchains and protocols.** Base is the home network. Aura reads balances, positions, and receipts directly from networks and protocol contracts. Earn uses Aave and two Morpho USDC vaults, all on Base. Swaps and moves between networks use routes found by LI.FI, which chooses among third-party bridges and exchanges.
 - **Aura's own records.** Your settings, the transactions Aura prepared and the checks it ran, and your notifications. They make the app fast and explain what happened. They are never the final word on your balance. Intercom keeps support chats.
 - **Background checks.** Scheduled checks spot stuck movements and problems processing partner updates. We use logs to investigate.

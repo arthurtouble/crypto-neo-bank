@@ -22,7 +22,7 @@ Cloudflare Access is the only operator sign-in, in front of the operations app W
 3. Copy the application's AUD tag and the team domain (`https://<team>.cloudflareaccess.com`) into the web app's `CF_ACCESS_AUD` and `CF_ACCESS_TEAM_DOMAIN` variables (not secrets) for that environment, and deploy the web Worker.
 4. Sign in to the operations app and check it shows your email. Check that a request to the web app's `/api/ops/*` without a token, or with a made-up one, is refused (the deployment smoke does this).
 
-The web app doesn't rely on the edge alone. Every `/api/ops/*` route verifies the `Cf-Access-Jwt-Assertion` token itself (`requireOperator` in `apps/web/src/lib/auth/access.ts`): signature against the team's published keys, issuer, audience, expiry, and a person's email. A request to `/api/ops/*` on the web app's own hostname is refused unless it carries a valid token for the operations application. While either variable is empty, every operator request is refused.
+The web app doesn't rely on the edge alone: every `/api/ops/*` route verifies the Access token itself, including requests to the web app's own hostname ([how](../architecture/architecture.md#operations-app)). While either variable is empty, every operator request is refused.
 
 ## WAF rules
 

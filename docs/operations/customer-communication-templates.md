@@ -21,7 +21,7 @@ We identified [plain-language cause]. We have disabled [affected action] while [
 
 **Title:** [Feature] has been restored and is being monitored
 
-New [actions] are available again. We are still reviewing activity between [times]. If you see [specific symptom], do not repeat the action; contact support with the public transaction or route reference. Never send a recovery phrase or private key.
+New [actions] are available again. We are still reviewing activity between [times]. If you see [specific symptom], do not repeat the action; chat with us in the app and include the public transaction or route reference. Never send a recovery phrase or private key.
 
 ## Resolved
 

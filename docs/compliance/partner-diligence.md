@@ -1,11 +1,11 @@
 ---
-title: Aurel partner diligence brief
+title: Partner diligence brief
 description: Internal provider diligence package, questions, evidence, and approval gates.
 ---
 
 ## Summary
 
-Aurel is a customer-controlled financial interface for stablecoins, public-chain protocols and, after approval, regulated fiat and card services. Base is the home network; Privy provides authentication and wallets. Customers, not Aurel, confirm wallet transactions. Public chains, protocols, and regulated providers are authoritative for balances and settlement; Aurel runs no shadow bank ledger.
+Aura is a customer-controlled financial interface for stablecoins, public-chain protocols and, after approval, regulated fiat and card services. Base is the home network; Privy provides authentication and wallets. Customers, not Aura, confirm wallet transactions. Public chains, protocols, and regulated providers are authoritative for balances and settlement; Aura runs no shadow bank ledger.
 
 Aura is open to anyone who signs in. Each provider feature launches behind its own switch, USDC first, within the limits in [launch controls](../operations/launch-controls.md). Bank accounts, fiat conversion, and cards stay disabled until contracts, jurisdiction approval, end-to-end reconciliation, and customer disclosures are complete.
 
@@ -14,23 +14,23 @@ Aura is open to anyone who signs in. Each provider feature launches behind its o
 - Intended customer: digitally sophisticated, internationally mobile professionals, founders, and investors who already hold stablecoins.
 - Initial proposition: one interface for self-controlled wallets, USDC movement, curated DeFi, security policy, and support.
 - No house token, deposit promise, guaranteed yield, or balance-sheet lending.
-- Proposed initial limits: USD 25,000 of Aurel-prepared movement per rolling 24 hours; USD 1,000 new-destination threshold with a 24-hour cooling period.
+- Limits: no Aura-wide cap today. Customers can set a daily limit, saved-recipients-only mode, and a 4-hour wait for new recipients ([launch controls](../operations/launch-controls.md)); partner-specific limits are agreed per program.
 - Geography: a provider feature is offered only in countries the provider and launch counsel accept in writing. Aura itself is available to anyone who can use it lawfully.
 
 ## System boundary
 
 1. Privy verifies the session and presents wallet confirmation.
-2. Aurel validates the instruction, disclosures, allowlists, limits, and cooling rules.
-3. The customer signs; Aurel can't sign on its own.
+2. Aura validates the instruction, disclosures, allowlists, limits, and cooling rules.
+3. The customer signs; Aura can't sign on its own.
 4. The chain, protocol, or provider executes and stays authoritative.
-5. Aurel keeps policy, consent, event, and support evidence and a rebuildable financial projection.
+5. Aura keeps policy, consent, event, and support evidence and a rebuildable financial projection.
 
 Cloudflare Workers hosts the app and APIs. D1 stores non-authoritative projections and operational evidence. Queues separate provider-event intake from processing; failed events go to a dead-letter queue and open critical operations issues. Scheduled reconciliation scans stale transactions, expired reviews, and failed or stuck events every five minutes.
 
 ## Controls implemented
 
 - Server-side Privy token verification and subject-scoped records.
-- Customer signing; no Aurel-held customer private keys.
+- Customer signing; no Aura-held customer private keys.
 - Supported chain/asset allowlists and transaction-plan validation.
 - Exact server-built calls, with any ERC-20 approval batched into the same operation, and outcomes verified from chain evidence.
 - Account lock, saved-recipients-only mode, new-recipient cooling, optional daily limit.
@@ -50,7 +50,7 @@ Cloudflare Workers hosts the app and APIs. D1 stores non-authoritative projectio
 
 ## Forecast inputs requested from partner
 
-Quote setup fees, monthly minimum, per-customer KYC, enhanced due diligence, account, transfer, conversion, card, authorization, dispute, chargeback, FX, stablecoin, and reserve requirements. Aurel won't model undisclosed economics as zero. Volumes come as low/base/high scenarios once allowed countries and pricing basis are known.
+Quote setup fees, monthly minimum, per-customer KYC, enhanced due diligence, account, transfer, conversion, card, authorization, dispute, chargeback, FX, stablecoin, and reserve requirements. Aura won't model undisclosed economics as zero. Volumes come as low/base/high scenarios once allowed countries and pricing basis are known.
 
 ## Evidence package
 
@@ -68,4 +68,4 @@ Quote setup fees, monthly minimum, per-customer KYC, enhanced due diligence, acc
 
 ## Open approval items
 
-Legal entity, launch countries, customer terms, privacy notice, data retention, provider allocation, safeguarding language, complaints ownership, and marketing claims need written approval before regulated features are enabled. This brief is an integration and diligence artifact, not legal advice or a claim that Aurel is licensed.
+Legal entity, launch countries, customer terms, privacy notice, data retention, provider allocation, safeguarding language, complaints ownership, and marketing claims need written approval before regulated features are enabled. This brief is an integration and diligence artifact, not legal advice or a claim that Aura is licensed.

@@ -11,10 +11,10 @@ description: Required scope and evidence for independent security assessment.
 - LI.FI quotes: server-held storage, Diamond pinning, price-impact and slippage bounds, batched ERC-20 approvals.
 - Account lock, daily limit, saved-recipients-only mode, recipient cooling, valuation, and feature switches on every action.
 - Operator authorization: the operations Worker's forwarding over the service binding (headers passed, paths refused); Cloudflare Access token verification in the web app (signature, key rotation, issuer, audience, expiry, service tokens refused); operator audit records, the operator lock, and feature switches.
-- Webhooks: per-provider verification (Bridge RSA, Privy Svix, Stripe HMAC-SHA256), customer resolution through `provider_customer_links` (Stripe card events through `card_account_projections`), replay prevention, queue retries, dead-letter processing, reconciliation.
+- Webhooks: per-provider verification ([provider projections](../architecture/provider-projections.md)), customer resolution through `provider_customer_links` (Stripe card events through `card_account_projections`), replay prevention, queue retries, dead-letter processing, reconciliation.
 - D1 migrations, evidence integrity, backup/export/restore, log minimization, incident procedures.
 - Cards: passkey step-up for card details, unfreezing, and raising the limit; the Stripe ephemeral key and nonce binding; the card allowance `approve` (spender pinned to `BRIDGE_CARDS_SPENDER`, verified from the `Approval` log); card ownership checks on controls and disputes.
-- CSP (including the Stripe script and frame sources), security headers, Turnstile verification, abuse controls, API error behavior.
+- CSP (including the Stripe script and frame sources), security headers, rate limits, API error behavior.
 
 ## Required tests
 

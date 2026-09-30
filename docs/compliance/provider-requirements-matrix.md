@@ -9,7 +9,7 @@ Scoring: `0` unavailable, `1` material gap, `2` workable with limitations, `3` s
 
 | Requirement | Weight | Bridge evidence / score | Stripe Issuing evidence / score | Required written answer |
 |---|---:|---|---|---|
-| Aurel use case and customer ownership accepted | 10 | Pending | Pending | Who contracts with the end customer for each service? |
+| Aura use case and customer ownership accepted | 10 | Pending | Pending | Who contracts with the end customer for each service? |
 | Approved countries and excluded persons | 10 | Pending | Pending | Country-by-country individual and entity matrix |
 | KYC, KYB, sanctions and EDD workflow | 9 | Pending | Pending | Decision owner, retries, manual review, SOF/SOW triggers |
 | Fiat accounts and safeguarding model | 9 | Pending | Pending | Legal account holder, bank, insurance language, insolvency treatment |
@@ -19,7 +19,7 @@ Scoring: `0` unavailable, `1` material gap, `2` workable with limitations, `3` s
 | API, sandbox and deterministic fixtures | 4 | Pending | Pending | Coverage parity, test identities, failure and review test cases |
 | Signed events and idempotency | 6 | Pending | Pending | Signing/rotation, replay window, retry policy and event ordering |
 | Reconciliation and reporting | 7 | Pending | Pending | Intraday/daily exports, canonical IDs and correction process |
-| Fraud and transaction monitoring | 5 | Pending | Pending | Rule owner, alerts, freezes, escalation and Aurel obligations |
+| Fraud and transaction monitoring | 5 | Pending | Pending | Rule owner, alerts, freezes, escalation and Aura obligations |
 | Complaints, disputes and chargebacks | 4 | Pending | Pending | Customer contact, evidence exchange, deadlines and loss allocation |
 | Data residency, subprocessors and deletion | 3 | Pending | Pending | DPA, regions, retention, portability and incident notice |
 | Security and availability commitments | 3 | Pending | Pending | SOC reports, pen test, SLA, RTO/RPO and status channel |
@@ -32,7 +32,7 @@ A provider can't be selected until it confirms in writing the use case, customer
 
 ## Decision method
 
-1. Aurel sends each provider the same diligence pack and volume scenarios.
+1. Aura sends each provider the same diligence pack and volume scenarios.
 2. Product and engineering validate sandbox parity and failure handling.
 3. Counsel reviews entity, customer contract, licensing reliance, countries, disclosures, and data roles.
 4. Operations runs onboarding, transfer, return, freeze, dispute, and reconciliation tabletop tests.

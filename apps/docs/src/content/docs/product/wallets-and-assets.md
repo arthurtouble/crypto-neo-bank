@@ -1,8 +1,6 @@
 ---
-title: Wallets and assets
-description: Your Aura account, where your balances come from, and how to keep access.
-sidebar:
-  order: 1
+title: Your account and balances
+description: Your Aura account is a wallet on Base and other networks. Where your balances come from, how totals are valued, and how to keep access.
 ---
 
 ## Your account is your wallet
@@ -17,19 +15,7 @@ You review each transaction Aura prepares, then confirm with your passkey or can
 
 The blockchain is the final record of what you hold. Aura may keep a copy or format it for the screen, but its own records never override the blockchain.
 
-Your main balance view shows:
-
-| Asset | Network | Group |
-| --- | --- | --- |
-| ETH | Base | Crypto |
-| USDC | Base | Cash |
-| EURC | Base | Cash |
-| WETH | Base | Crypto |
-| cbBTC | Base | Crypto |
-| Ten Coinbase tokenized stocks | Base | Stocks |
-| Tether Gold (XAUt) | Ethereum | Metals |
-| Aave USDC and WETH you've supplied | Base | Earn |
-| Morpho USDC vaults (Steakhouse Prime USDC, Gauntlet USDC Prime) | Base | Earn |
+Overview groups your balances into Cash, Crypto, Stocks, Metals, and Earn. The assets in each are listed in [networks and assets](/product/networks-and-assets/#supported-assets).
 
 Each item shows a US dollar value, and Overview adds them into a total. Stock, gold, and euro prices pause outside market hours, so those rows say when their price was published. Filter Overview by group, or select an item to see details and to send, swap, or deposit more.
 
@@ -49,25 +35,9 @@ Aura leaves what you've earned, cost basis, and tax value blank until it has com
 
 ## Keeping access
 
-You get back in by signing in with any method linked to your account: your email, or the wallet you signed up with. Privy handles key export. Aura support will never ask for a seed phrase, private key, recovery secret, or one-time code.
-
-Before you keep a large amount in your account:
-
-1. add a second way to sign in, such as an email, in Settings → Security;
-2. secure the email or wallet you sign in with, and the device that holds your passkey;
-3. understand what exporting your key means;
-4. sign in with each method once, while your balance is small;
-5. keep your public address separate from anything you use to recover access.
+You get back in by signing in with any method linked to your account. Before you keep a large amount in Aura, add a second way to sign in and read [lost access and recovery](/help/lost-access/). Aura support will never ask for a seed phrase, private key, recovery secret, or one-time code.
 
 Exporting your key makes your wallet more portable and puts more responsibility on you. If you use the key elsewhere, Aura's account lock, daily limit, and recipient settings don't apply.
-
-## Adding money
-
-Aura can't recover assets sent on the wrong network or in the wrong token. Send a small first deposit and check it on BaseScan before sending more. See [networks and assets](/product/networks-and-assets/).
-
-:::note[Public activity]
-Hiding balances in Aura only hides them on your screen. Your balance and transactions are still public on the blockchain.
-:::
 
 ## Not a bank deposit
 

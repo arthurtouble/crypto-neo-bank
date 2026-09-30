@@ -1,11 +1,9 @@
 ---
 title: Send money
 description: Send assets to an address, a saved recipient, an Aura tag, or your own wallet, on Base or another network, and what each status means.
-sidebar:
-  order: 2
 ---
 
-You can send ETH, USDC, EURC, WETH, cbBTC, the Coinbase tokenized stocks, and Tether Gold to any address, a saved recipient, a public Aura tag, or one of your own linked wallets.
+You can send any [supported asset](/product/networks-and-assets/#supported-assets) to any address, a saved recipient, a public Aura tag, or one of your own linked wallets.
 
 Your money is held on Base. You can choose the network it arrives on:
 
@@ -42,28 +40,17 @@ If the quote runs out before you confirm, Aura gets a new one and shows it to yo
 
 Delivery usually takes up to 30 minutes, because many bridges wait for Base to finalize the block. Once the payment leaves Base, Send shows it as sent and you can close it. Follow the rest in Transactions.
 
-The payment is complete only when LI.FI reports delivery and Aura finds the transfer to the recipient on that network. If the bridge refunds it, the money comes back to your account on Base. See [cross-chain routes](/product/cross-chain-routing/).
+The payment is complete only when LI.FI reports delivery and Aura finds the transfer to the recipient on that network. If the bridge refunds it, the money comes back to your account on Base. See [moves between networks](/product/cross-chain-routing/).
 
 ## Sending to a bank
 
 Bank payouts are coming soon.
 
-## What the status means
+## After you confirm
 
-- **Submitted** means you confirmed and a transaction hash exists.
-- **Complete** means the transaction is in a block, Aura matched it to what you reviewed, and Aura found the expected transfer. Base makes it final about 20 minutes later. The receipt in Transactions shows when.
+Send shows the steps as you go: **Submitted** once a transaction hash exists, then **Complete** once it's in a block and matches what you reviewed. A send to another network shows as **sent** once it leaves Base. In Transactions, it's **Pending**, **Completed**, **Failed**, or **Not confirmed**; see [transactions and their status](/product/transaction-lifecycle/#what-each-status-means).
 
-Timing can change before you confirm.
-
-## Your controls
-
-In **Settings → Security** you can:
-
-- set a daily limit. It counts every send, including sends to your own linked wallets and to other networks;
-- send only to saved recipients. When this is on, a newly saved recipient can't receive for 4 hours;
-- lock your account.
-
-All of these are off until you turn them on. Changes apply right away. They only cover sends Aura prepares, not a key you export and use elsewhere.
+Your [account controls](/safety/account-controls/) apply to every send: a daily limit, saved recipients only, and the emergency lock. They're off until you turn them on.
 
 ## If a payment looks stuck
 

@@ -73,10 +73,7 @@ The first-time-address check step would add a screen to Send. It changes no serv
 
 ## Three early directions
 
-Superseded. They were drawn before the skeleton and before the owner's answers above; the look is now in [`redesign-visual.html`](redesign-visual.html). Kept for the record.
-
-
-The mockups are in [`redesign-directions.html`](redesign-directions.html): Overview and Send in each, desktop and phone, light and dark, with the same fictional example data.
+Superseded. They were drawn before the skeleton and before the owner's answers above; the look is now in [`redesign-visual.html`](redesign-visual.html). Kept for the record; the mockup page was deleted on 30 September 2026 and is only in the repository history.
 
 1. **A · Console.** Light and exact. White and cool grey, one blue for actions, an icon rail, one holdings table, and every money action in a drawer. Closest to Linear and Stripe.
 2. **B · Instrument.** Dark first and dense. A top bar with every section, tables with column headers, source and time on every figure. Closest to Linear's dark theme and pro trading tools, without the charts.
@@ -89,4 +86,4 @@ The mockups are in [`redesign-directions.html`](redesign-directions.html): Overv
 1. Done: the owner locked the journeys and wireframes (phase 2).
 2. Done: the owner picked the look, ultramarine and Geist (this phase). The proposed answers above stand unless corrected.
 3. Done: phase 4 wrote the system: `apps/web/public/design-tokens.css`, a root `DESIGN.md` for agents, [`design-system.md`](design-system.md) for people, and the `design-system.html` reference page.
-4. Next: phase 5 rebuilds the screens area by area, starting with the app shell.
+4. Done: phase 5 rebuilt the screens area by area, by 30 September 2026 ([redesign](../overview/redesign.md)).

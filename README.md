@@ -1,37 +1,42 @@
 # Aura
 
-Aura is the customer-facing financial app in this repository. The existing infrastructure package names, deployment IDs, and historical records retain `aurel` where renaming them would change operational or legal meaning. No legal entity name has been changed.
+Aura is a crypto-and-fiat money app on Cloudflare Workers. Infrastructure, package names (`@aurel/*`), Worker names, and historical records keep the older `aurel` name on purpose; no legal entity name has changed.
 
 ## Product
 
-Visitors can browse every section with fictional, labeled example data. Anyone can sign in. Personal data needs a verified session, and financial actions are gated by server-side feature switches, account locks, per-account daily limits, and transaction policy. The customer navigation is Overview, Deposit, Send, Swap, Earn, Cards, Rewards, Transactions, Insights, Settings, and Support.
+The customer navigation is Overview, Deposit, Send, Swap, Earn, Cards, Transactions, Insights, Settings, and Support. Visitors can browse every section with fictional, labeled example data. Anyone can sign in with email or a wallet through Privy, except from sanctioned places, and accepts the current terms and privacy notice on first sign-in.
 
-Wallet and protocol balances come from public chains and providers. Fiat, card, and securities records come from connected providers. D1 stores projections, policies, audit evidence, consent, cases, and recovery records; it is not the authority for balances or settlement.
+Each customer's account is a Privy embedded wallet, the same address on every EVM network, with gas paid by Privy. Money moves only with a passkey or authenticator app, and every action is checked on the server against feature switches, asset pauses, the account lock, the optional daily limit, and recipient rules. Chains and protocols decide balances and settlement; D1 holds replaceable projections, settings, consent, and audit evidence.
 
-The development app gives each customer a Privy embedded wallet, the same address on every EVM network, with gas paid by Privy. It supports email or wallet sign-in; Overview balances in US dollars; deposits by address and QR code on Base, from a connected wallet on Base, Ethereum, Arbitrum, Optimism, or Polygon through LI.FI, or by card; sends on Base of ETH, USDC, WETH, and cbBTC, with a passkey required; swaps and cross-chain moves through LI.FI; and Earn on Base: Aave supply and withdraw of USDC and WETH, and deposits into and withdrawals from two Morpho USDC vaults (Steakhouse Prime USDC and Gauntlet USDC Prime). Only assets in the registry can be used, and operators can pause any of them. Chain and protocol records decide the result. The public Aura tag page can show an opted-in member's verified wallet address. Bridge bank transfers, cards, securities execution, and rewards need provider programs that are not connected. See [current availability](./apps/docs/src/content/docs/getting-started/status.md).
+- **Deposit:** receive on Base, add from a connected wallet on Base, Ethereum, Arbitrum, Optimism, or Polygon through LI.FI, or buy USDC by card.
+- **Send, Swap, Earn:** send or swap any asset in the registry, on Base or another network through LI.FI; Earn with Aave (USDC, WETH) and two Morpho USDC vaults on Base.
+- **Assets:** only those in `apps/web/src/lib/assets/registry.ts`: ETH, USDC, EURC, WETH, cbBTC, ten Coinbase tokenized stocks on Base, and Tether Gold on Ethereum. Operators can pause any of them. See [supported assets](./docs/architecture/assets.md).
+- **Not live:** Bridge bank transfers and Bridge + Stripe cards are built behind switches and wait for partner approval.
 
-## Local development
+What each feature does and what's missing: [build status](./docs/overview/build-status.md). Customer view: [product status](./apps/docs/src/content/docs/getting-started/status.md).
+
+## Layout
+
+- `apps/web`: the customer app (vinext, Next.js App Router on Vite, deployed as a Worker). API handlers use the wrapper in `apps/web/src/lib/http/route.ts`; `tests/unit/api-route-inventory.test.ts` fails otherwise.
+- `apps/events`: the queue consumer that applies signed provider events to D1 projections, using `packages/provider-projections`.
+- `apps/ops`: the operations app, its own Worker behind Cloudflare Access.
+- `apps/docs`: the public docs site (Astro Starlight).
+- `infra/d1/migrations`: the D1 schema, `0001_baseline.sql` then numbered migrations (`0002_…`, `0003_…`), append-only.
+- [`docs/`](./docs/README.md): internal docs (architecture, runbooks, security, compliance).
+
+## Commands
 
 ```bash
 pnpm install
-pnpm dev
-pnpm typecheck
+pnpm dev                 # web app
+pnpm ops:dev             # operations app, calling the web dev server
 pnpm lint
+pnpm typecheck:all       # every package, as CI runs it
 pnpm test:unit
-pnpm test:e2e
+pnpm test:e2e            # builds, then Playwright desktop and mobile
 pnpm build
+pnpm marketing:check     # registered marketing claims
+pnpm production:check    # what the production Worker config still lacks
 ```
 
-For an already deployed environment, set `AURA_SMOKE_URL` to its exact origin and run `pnpm test:deployment`. Set `AURA_SMOKE_DOCS_URL` when its docs origin differs from the current production docs origin. The command has no default app target.
-
-The web app is in `apps/web`, public documentation is in `apps/docs`, and internal documentation (architecture, runbooks, security, compliance) is in [`docs/`](./docs/README.md). Cloudflare bindings are configured in `apps/web/wrangler.jsonc`; The D1 schema is `infra/d1/migrations/0001_baseline.sql`. Local development uses isolated Miniflare state. This branch is deployed only to the isolated [Aura development Worker](./docs/operations/aura-development-worker.md). The original Worker and D1 are separate.
-
-## Integration and release boundary
-
-The [architecture guide](./docs/architecture/architecture.md) explains source-of-truth rules. The [partner integration guide](./docs/architecture/partner-integration.md) and [operations runbook](./docs/operations/operations-runbook.md) cover provider activation, secrets, migrations, reconciliation, and recovery. Apply reviewed migrations and run release checks before any deployment. Never put provider credentials in `wrangler.jsonc`.
-
-Retired features (waitlist and growth tools, goals, bills, schedules, price alerts, borrowing, the demo sandbox, regulated market orders, portfolio tax lots, and the support assistant) have no routes or tables. The [codebase audit](./docs/overview/codebase-audit-2026-09-25.md) records the current refactor plan.
-
-Customers accept the current terms of use and privacy notice on first sign-in (`/api/terms`). Settings offers notification choices, product-update consent, and data export and deletion; `apps/web/src/lib/privacy/subject-data.ts` classifies every customer-data table. Provider events for cards, memberships and benefits, and wallet rules are applied by the events Worker using `packages/provider-projections`; see [provider projections](./docs/architecture/provider-projections.md).
-
-API handlers use the shared wrapper in `apps/web/src/lib/http/route.ts`, which assigns a trace ID, maps known errors to safe responses, logs unexpected failures, and defaults responses to `no-store`. `tests/unit/api-route-inventory.test.ts` fails if a new handler bypasses it without being listed as a public or special-contract route.
+`main` deploys only to the isolated [development Worker](./docs/operations/aura-development-worker.md). Production steps are in [production launch](./docs/operations/production-launch.md). Never put secrets in `wrangler.jsonc`; use `wrangler secret put`.

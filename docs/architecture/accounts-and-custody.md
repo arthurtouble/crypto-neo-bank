@@ -22,7 +22,7 @@ If Privy's response is lost, the client retries the same signed request once; Pr
 
 - **Key.** Privy splits each private key into two shares: one decryptable only inside a sealed AWS Nitro enclave Privy operates, the other released only when the customer authenticates. The key is rebuilt in enclave memory to sign, only after the login and wallet rules pass.
 - **Who can move funds.** Neither Aura nor Privy staff can extract a key without the customer's login. Whoever holds a valid Privy session can sign as the customer: account access is wallet access.
-- **MFA.** Aura's server never stores customer Privy tokens or signing keys. Money leaves only once the customer has a passkey or authenticator app enrolled in Privy (`requireMoneyMfa`); an email or SMS code alone isn't enough. The server checks this before it prepares, relays, or pays out, and the app opens Privy's setup screen when it's missing. After enrollment, Privy asks for that factor before the key signs.
+- **MFA.** Aura's server never stores customer Privy tokens or signing keys. Money leaves only once the customer has a passkey or authenticator app enrolled in Privy ([passkey requirement](../operations/launch-controls.md#controls)). After enrollment, Privy asks for that factor before the key signs.
 - **Trust.** Custody depends on Privy's enclave, login system, and continued operation. Describe the product as self-custodial with keys secured by Privy, not as a hardware-wallet equivalent.
 
 ## Leaving Privy
