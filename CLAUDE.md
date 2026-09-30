@@ -29,16 +29,13 @@ pnpm production:check   # what the production Worker config still lacks (exits 1
 A single unit test: `pnpm --filter @aurel/web exec vitest run tests/unit/<file>.test.ts`.
 CI (`.github/workflows/ci.yml`) runs lint, `typecheck:all`, `test:unit`, build, and `test:recovery` in one job, and e2e as two parallel jobs (desktop and mobile Chromium; the tests share one fake chain, so each project runs one test at a time). Run the first three before pushing.
 
-## Current plan: redesign
+## Current plan: launch
 
-Every row in `docs/overview/feature-readiness.md` is done or cut. Product work now follows `docs/overview/redesign.md`:
+Steps 1 to 3 of `docs/overview/feature-readiness.md` are done, and so is step 4 except the production deployment itself. What's left is on the owner: partner approvals, the production Privy app and variables (`pnpm production:check`), and the go-ahead for each step in `docs/operations/production-launch.md`.
 
-- Go area by area in the listed order, one branch and pull request per area. Update the status table in the same pull request.
-- The redesign changes how screens look, not what they do: no changes to server logic, API contracts, D1, switches, or money rules. Raise a needed behavior change as its own pull request.
-- Skeleton before style: screens follow the locked journeys and wireframes (`docs/product/redesign-journeys.md`, phase 2), then the visual direction (phase 3).
-- Build screens only from the design system: tokens in `apps/web/public/design-tokens.css`, rules in `DESIGN.md` and `docs/product/design-system.md`, rendered at `apps/web/public/design-system.html`. No one-off styles, no literal colours. Every area is rebuilt, with its styles in an area stylesheet in `src/app` (`shell.css`, `overview.css`, `money.css`, …). The pre-redesign `globals.css`, `identity.css`, and `product-system.css` are trimmed to what the app still renders; don't add to them.
+- Build screens only from the design system: tokens in `apps/web/public/design-tokens.css`, rules in `DESIGN.md` and `docs/product/design-system.md`, rendered at `apps/web/public/design-system.html`. No one-off styles, no literal colours. Each area's styles live in an area stylesheet in `src/app` (`shell.css`, `overview.css`, `money.css`, …). The pre-redesign `globals.css`, `identity.css`, and `product-system.css` are trimmed to what the app still renders; don't add to them.
+- A behavior change (server logic, API contracts, D1, switches, money rules) is its own pull request.
 - Existing e2e specs keep passing; update selectors, never the behavior checked.
-- Don't rewrite copy or do the final refactor yet. Those are steps 3 and 4.
 - Keep docs in sync with the code in the same pull request: internal docs in `docs/` and public docs in `apps/docs`.
 
 ## Non-negotiable rules
@@ -70,4 +67,4 @@ Every row in `docs/overview/feature-readiness.md` is done or cut. Product work n
 
 `.claude/hooks/session-start.sh` runs at session start: `pnpm install`, the `sqlite3` CLI (migration unit tests shell out to it), and an alias so this repo's Playwright can launch the image's preinstalled headless Chromium. Don't run `playwright install`; downloads are blocked.
 
-In the container, the first e2e test to open `/app/sandbox` can time out while the dev server cold-compiles that route; the rerun passes and CI retries twice. Re-run before treating it as a regression.
+In the container, the first e2e test to open an `/app` route can time out while the dev server cold-compiles it; the rerun passes and CI retries twice. Re-run before treating it as a regression.
