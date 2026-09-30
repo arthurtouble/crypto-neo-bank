@@ -144,6 +144,8 @@ test("money movement lists every customer's transactions, filters them, and open
   await dialog.getByLabel("Amount").fill("10");
   await dialog.getByLabel("To").fill(FRIEND);
   await dialog.getByRole("button", { name: "Review" }).click();
+  // A first-time address is checked before the review (B2).
+  await dialog.getByRole("button", { name: "It's correct" }).click();
   await dialog.getByRole("button", { name: "Confirm and send" }).click();
   await expect(customerPage.locator(".toastRegion").getByText("Transfer complete", { exact: true })).toBeVisible({ timeout: 30_000 });
   await customerContext.close();

@@ -33,6 +33,8 @@ async function send(page: Page) {
   await form.getByLabel("Amount").fill("10");
   await form.getByLabel("To").fill(FRIEND);
   await form.getByRole("button", { name: "Review" }).click();
+  // A first-time address is checked before the review (B2).
+  await form.getByRole("button", { name: "It's correct" }).click();
   await form.getByRole("button", { name: "Confirm and send" }).click();
   await expect(page.locator(".toastRegion").getByText("Transfer complete", { exact: true })).toBeVisible({ timeout: 30_000 });
 }

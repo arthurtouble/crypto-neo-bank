@@ -108,6 +108,9 @@
 .appFrame .mxSubForm h3 { margin: 0; font-size: var(--text-title-3-size); font-weight: var(--weight-semibold); }
 .appFrame .mxStart { justify-self: start; }
 .appFrame .mxTabPanel { display: grid; gap: var(--space-4); }
+/* Send's first-time address check (B2): the address in full, in groups of four, to compare against what was given */
+.appFrame .mxCheckTitle { margin: 0; font-size: var(--text-title-3-size); line-height: var(--text-title-3-line); font-weight: var(--weight-semibold); }
+.appFrame .mxAddressChunks { display: grid; gap: var(--space-1); margin: 0; padding: var(--space-4); border-radius: var(--radius-md); background: var(--color-muted); font-family: var(--font-mono); font-size: var(--text-body-size); line-height: var(--text-body-line); }
 
 /* Progress for an action, where it started (TransactionProgress), in the rebuilt money pages */
 .appFrame .mxPage .transactionProgress { display: grid; gap: var(--space-3); margin: 0; padding: var(--space-4); border: 1px solid var(--color-line); border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-text); box-shadow: none; }
