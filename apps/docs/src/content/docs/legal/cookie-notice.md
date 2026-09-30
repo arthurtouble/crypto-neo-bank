@@ -25,7 +25,7 @@ You need these for the service you asked for, so Aura has no setting to turn the
 
 When you're signed in, Aura records a short list of product events on its own servers. Examples are "transaction prepared" and "support opened". We use them to improve reliability.
 
-These events use no cookies and no third-party analytics service. Deleting your data in Settings erases them.
+These events use no cookies and no third-party analytics service. They're included when you download your data in Settings.
 
 ## Changes to this notice
 

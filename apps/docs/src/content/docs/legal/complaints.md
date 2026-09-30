@@ -9,7 +9,7 @@ sidebar:
 
 ## How to complain
 
-Use the support form in the app and say you want to make a complaint. Tell us:
+Chat with us from **Support** in the app and say you want to make a complaint. Tell us:
 
 - what happened;
 - the outcome you want;
@@ -35,4 +35,4 @@ We will:
 
 ## Urgent issues
 
-Mark your case urgent if you think your funds are at risk or your account is compromised. We'll look at it sooner, but that doesn't guarantee that funds can be recovered or a transaction reversed.
+Tell us in the chat if you think your funds are at risk or your account is compromised, and turn on the emergency lock in Settings. We'll look at it sooner, but that doesn't guarantee that funds can be recovered or a transaction reversed.

@@ -1,5 +1,5 @@
 ---
-title: Threat model
+title: What could go wrong
 description: The main ways you or Aura could lose money, access, or reliable records, and what we do about each.
 ---
 
@@ -49,7 +49,7 @@ This limits what any one of us can do, but doesn't replace access reviews, loggi
 
 ## Aura loses its records
 
-Losing our database wouldn't change what you own, because blockchains and partners hold your money. It could still erase your settings, case history, or transaction context. We protect against this with backups, restore tests, records we only add to and never edit, and checks against the source.
+Losing our database wouldn't change what you own, because blockchains and partners hold your money. It could still erase your settings or transaction context. We protect against this with backups, restore tests, records we only add to and never edit, and checks against the source.
 
 ## A service we depend on goes down
 

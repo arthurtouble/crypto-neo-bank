@@ -1,8 +1,6 @@
 ---
 title: Earn
 description: Earn a variable return on Base with Aave and two Morpho USDC vaults.
-sidebar:
-  order: 3
 ---
 
 Earn has four options, all on Base:

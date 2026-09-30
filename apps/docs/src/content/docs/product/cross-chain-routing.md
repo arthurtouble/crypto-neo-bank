@@ -1,21 +1,21 @@
 ---
-title: Cross-chain routes
-description: How moves between networks are quoted, confirmed, and tracked.
+title: Moves between networks
+description: How Aura moves assets like USDC and ETH between Base, Ethereum, Arbitrum, Optimism, and Polygon, and how each move is quoted, confirmed, and tracked.
 ---
 
-To withdraw to a network other than Base, use Swap to move an asset to that network, or choose another network in Send. To add money from another network, use **Deposit > From your wallet**; Aura moves it to the same asset on Base, using a route LI.FI finds.
+To withdraw to a network other than Base, use Swap to move an asset to that network, or choose another network in Send. To add money from another network, use **Deposit > From a wallet**; Aura moves it to the same asset on Base, using a route LI.FI finds.
 
 Bridge fees come out of the amount. For moves from your Aura account, Aura pays the network fee. When you add money from your wallet, your wallet pays it on the network you send from.
 
 ## Getting a quote
 
-LI.FI finds the route, choosing among third-party bridges and exchanges, and estimates what you'll receive, the fees, and the timing. A quote lasts 45 seconds. It isn't a transfer.
+LI.FI finds the way, choosing among third-party bridges and exchanges, and estimates what you'll receive, the fees, and the timing. A quote lasts 45 seconds. It isn't a transfer.
 
 Before you confirm, Aura checks the assets, networks, amount, recipient, and price impact, and applies your controls. You confirm any token approval and the move itself as one step.
 
 ## While it's moving
 
-When the first network confirms, the move has started, not arrived. Aura shows it as **On its way** until LI.FI reports delivery and Aura sees at least the minimum amount arrive in your wallet on the other network.
+When the first network confirms, the move has started, not arrived. Transactions shows it as **Pending** until LI.FI reports delivery and Aura sees at least the minimum amount arrive in your wallet on the other network.
 
 ## If it seems stuck
 

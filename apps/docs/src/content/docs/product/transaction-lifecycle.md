@@ -7,7 +7,7 @@ Transactions lists the money you send, swap, move, and put in Earn with Aura, yo
 
 You can search, pick a type (**All**, **Sent**, **Received**, **Card**, **Swaps**, **Earn**, or **Other**), or filter by status. If a source of your history can't be read, a note above the list names it, and the rest still shows.
 
-For the steps from asking to settling, see [how a money movement works](/concepts/architecture/). You can cancel any time before you confirm.
+For the steps from asking to settling, see [how Aura works](/concepts/architecture/). You can cancel any time before you confirm.
 
 ## What each status means
 
@@ -18,7 +18,7 @@ For the steps from asking to settling, see [how a money movement works](/concept
 | **Failed** | The network rejected it, the route failed, or the result didn't match what you reviewed. The receipt shows the reason. |
 | **Not confirmed** | You didn't confirm it in time, so nothing was sent. Check your activity before you try again. This isn't the same as failed. |
 
-A transaction hash only proves something was submitted. Like mainstream wallets, Aura shows a transaction on Base as completed once it's in a block and matches what Aura prepared, usually within seconds. Base makes it **final** about 20 minutes later, once it's settled on Ethereum. Until then, a block could very rarely be rewritten, so Aura keeps checking. The receipt and exports show when it's final.
+A transaction on Base is usually completed within seconds and **final** about 20 minutes later, once it's settled on Ethereum. Until then, a block could very rarely be rewritten, so Aura keeps checking. The receipt and exports show when it's final. What Aura checks: [after you submit](/safety/security-model/#after-you-submit).
 
 ## Receipts
 
@@ -81,7 +81,7 @@ Pick a period: **7D**, **30D**, **90D**, or **1Y**. **Money in and out** charts 
 
 ## Moves between networks
 
-Aura marks a move completed only after LI.FI reports delivery and Aura sees at least the minimum amount arrive. The receipt tells you if less arrives, a refund is reported, or delivery fails. See [cross-chain routes](/product/cross-chain-routing/).
+Aura marks a move completed only after LI.FI reports delivery and Aura sees at least the minimum amount arrive. The receipt tells you if less arrives, a refund is reported, or delivery fails. See [moves between networks](/product/cross-chain-routing/).
 
 Our operations team is alerted if a transaction is still waiting for the network after 15 minutes, or still pending after 2 hours. That starts an investigation. It doesn't mean the transaction failed.
 

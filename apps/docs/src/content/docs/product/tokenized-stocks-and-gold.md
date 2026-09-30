@@ -1,8 +1,6 @@
 ---
 title: Tokenized stocks and gold
 description: The tokenized stocks and gold Aura supports, what a token gives you, and how prices work.
-sidebar:
-  order: 5
 ---
 
 Aura supports ten tokenized stocks issued by Coinbase on Base, and Tether Gold. You can hold them, send them, and buy or sell them through Swap. They show in Overview under **Stocks** and **Metals**.

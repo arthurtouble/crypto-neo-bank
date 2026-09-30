@@ -11,7 +11,7 @@ Appearing here doesn't approve a row. Before enabling the related feature, recor
 | Customer contracting entity | Open | Terms party aligned with actual service and provider agreements |
 | Initial countries | Open | Provider country matrix plus local product/marketing review |
 | Excluded countries/persons | Sanctioned places blocked at the edge (30 September 2026, owner). Other exclusions open | Counsel review of the list; provider screening for persons. See [blocked places](#blocked-places) |
-| Aurel role for self-controlled wallet/DeFi interface | Open | Counsel characterization and activity-by-activity licensing analysis |
+| Aura role for self-controlled wallet/DeFi interface | Open | Counsel characterization and activity-by-activity licensing analysis |
 | KYC/fiat/card allocation | Open | Signed provider agreement and the [responsibility matrix](compliance-responsibility-matrix.md) |
 | Tokenized assets | Disabled | Issuer, venue, distribution, transfer restriction, and country review |
 | Membership/rewards | Cut | None now. Card cashback, if it returns as its own feature, needs vendor contracts, tax/consumer terms, and funding |

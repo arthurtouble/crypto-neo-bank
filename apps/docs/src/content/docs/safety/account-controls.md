@@ -1,8 +1,6 @@
 ---
 title: Account controls
 description: The optional lock, daily limit, and recipient settings you can turn on, and what they cover.
-sidebar:
-  order: 2
 ---
 
 The controls are in **Settings → Security**. Making one stricter takes effect right away. Loosening one, such as unlocking or raising your limit, needs your passkey, so someone who gets into your session can't undo them. We keep a record of every change.

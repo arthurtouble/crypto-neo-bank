@@ -3,7 +3,16 @@ title: Partner integration and activation
 description: Technical and operational activation steps for identity, provider, and event integrations.
 ---
 
-Implementation checklist for moving each provider from sandbox or fakes to an approved production program.
+Implementation checklist for moving each provider from sandbox or fakes to an approved production program. Product UI stays provider-neutral; adapters, operations, and contracts name the provider. Every adapter supports fresh reads, signed webhooks, idempotent commands, and reconciliation against its source, and fails closed when credentials, mappings, or customer approval are missing.
+
+| Capability | Provider | Status |
+| --- | --- | --- |
+| Sign-in and wallet | Privy | Integrated; production app and monitoring pending |
+| USD accounts, bank deposits and payouts | Bridge (Noah is the alternate, subject to country and product scope) | Built against a fake; waiting for approval |
+| Cards | Bridge card program, issued through Stripe Issuing (Rain dropped) | Built against fakes; waiting for approval |
+| Swaps and moves between networks | LI.FI | Integrated |
+| Tokenized stocks and gold | Coinbase tokenized stocks on Base and Tether Gold, bought through LI.FI in Swap | Integrated; eligibility decision in [assets](assets.md#tokenized-stocks-and-metals) |
+| Card payments on Aura tag pages | An acquiring or payment-link provider | Not chosen |
 
 ## Privy activation
 
@@ -21,9 +30,9 @@ Implementation checklist for moving each provider from sandbox or fakes to an ap
 
 1. Set `NEXT_PUBLIC_PRIVY_APP_ID` locally and in the Cloudflare environment.
 2. Keep identity and wallet access behind their adapter interfaces.
-3. Map Privy user and wallet IDs to opaque Aurel references. Store no key material.
+3. Map Privy user and wallet IDs to opaque Aura references. Store no key material.
 4. The customer signs every money movement in their own wallet; Aura never signs.
-5. Map Privy webhook events (`/api/webhooks/privy`, Svix-verified) into the normalized provider-event envelope.
+5. Map Privy webhook events (`/api/webhooks/privy`) into the normalized provider-event envelope.
 6. Add sandbox contract tests for wallet creation, recovery, export, policy denial, and failed signing.
 7. Complete a recovery exercise before accepting material deposits.
 
@@ -43,13 +52,20 @@ Implementation checklist for moving each provider from sandbox or fakes to an ap
 ### Implementation sequence
 
 1. Activate the compliance, fiat, and card adapters one at a time.
-2. Keep Bridge customer and resource IDs as opaque references.
-3. Leave identity documents and sensitive verification evidence with Bridge.
-4. Require an explicit provider approval state before revealing bank or card details.
-5. Verify Bridge events at `/api/webhooks/bridge` (RSA signature, public key in `BRIDGE_WEBHOOK_PUBLIC_KEY`) and normalize them before the Queue.
+2. Create or link a Bridge customer only after Aura has the minimum onboarding data and the customer's terms acceptance. Store the Bridge customer ID against the Privy subject (`provider_customer_links`); never infer identity from an email alone. Keep Bridge IDs as opaque references.
+3. Leave identity documents and sensitive verification evidence with Bridge. From missing requirements and requests for information, show the customer only their next action.
+4. Enable banking and card actions only once that capability is approved, not because a customer object exists. Require an explicit approval state before revealing bank or card details.
+5. Verify and normalize Bridge events before the Queue ([provider projections](provider-projections.md)).
 6. Refresh the affected Bridge object after every event; a webhook payload is never the final balance.
 7. Test duplicates, reordered and delayed events, provider downtime, and rejected transfers.
 8. Reconcile transfers and card states daily before production launch.
+
+### Accounts and transfers
+
+- **Account details.** Bridge's [virtual-account API](https://apidocs.bridge.xyz/api-reference/virtual-accounts/list-virtual-accounts-by-customer) is the source of account status and instructions. Show only complete, activated USD instructions, masked outside the authenticated detail view. Incoming-payment webhooks update the projection; scheduled reconciliation re-reads Bridge.
+- **Payouts.** Validate the customer's capability and the saved bank, show amount, fee, timing, and funding source, check the customer's controls, submit with an idempotency key, store the Bridge transfer ID, then update from webhooks and reconcile until terminal. Never mark a transfer complete from the first API response. Handle returns, refunds, review holds, and requests for information.
+- **Liquidation addresses** may accept configured assets and convert them to USD. They are not a universal deposit address: show the exact asset and network Bridge returns, and reject other pairs.
+- Bridge's older [card-provisioning API is deprecated](https://apidocs.bridge.xyz/api-reference/cards/provision-a-card-account); cards use the `cards` endorsement and Stripe Issuing (below).
 
 ### Bridge sandbox notes
 
@@ -94,7 +110,7 @@ pnpm test
 pnpm deploy:dry-run
 ```
 
-Secrets, with `wrangler secret put`: `BRIDGE_API_KEY`, `BRIDGE_WEBHOOK_PUBLIC_KEY` (the PEM from Bridge's webhook endpoint), `PRIVY_WEBHOOK_SECRET` (`whsec_…`), and for cards `STRIPE_SECRET_KEY` (`sk_…`) and `STRIPE_WEBHOOK_SECRET` (`whsec_…`). Cards also need two plain variables: `STRIPE_PUBLISHABLE_KEY` (`pk_…`) and `BRIDGE_CARDS_SPENDER` (Bridge's card contract on Base). A provider without its webhook secret returns 503 `provider_not_connected`. See [provider projections](provider-projections.md).
+Secrets, with `wrangler secret put`: `BRIDGE_API_KEY`, `BRIDGE_WEBHOOK_PUBLIC_KEY`, `PRIVY_WEBHOOK_SECRET`, and for cards `STRIPE_SECRET_KEY` (`sk_…`) and `STRIPE_WEBHOOK_SECRET`. Cards also need two plain variables: `STRIPE_PUBLISHABLE_KEY` (`pk_…`) and `BRIDGE_CARDS_SPENDER` (Bridge's card contract on Base). Webhook formats and the 503 `provider_not_connected` answer are in [provider projections](provider-projections.md). Each program also needs its approved countries, timeouts, retry ceiling, and support owner recorded.
 
 Production and sandbox use different provider programs, secrets, queues, and D1 databases. Never put secret values in a Wrangler file or shell history.
 
@@ -104,7 +120,12 @@ Production and sandbox use different provider programs, secrets, queues, and D1 
 - Jurisdiction and product-language review complete.
 - Wallet recovery and key-control claims verified.
 - Webhook signature, replay, retry, and dead-letter tests passed.
-- Provider/chain reconciliation passes from an empty Aurel database.
+- Provider/chain reconciliation passes from an empty Aura database.
 - Incident ownership and 24/7 provider escalation paths documented.
 - Limits, disclosures, fees, and failure messages match approved program behavior.
 - No UI state shows a provider action as settled before authoritative confirmation.
+- Signed contract, pricing schedule, countries, prohibited uses, and termination and export terms.
+- Sandbox happy path and failure fixtures; authentication, secret rotation, webhook signature, replay, and idempotency tests.
+- Support runbooks for pending, rejected, returned, disputed, expired, and provider-outage states.
+- Legal review of product copy, fees, privacy, complaints, and disclosures.
+- A production canary customer and a tested feature switch for each capability.

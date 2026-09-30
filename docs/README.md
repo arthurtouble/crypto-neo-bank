@@ -6,31 +6,29 @@ Keep these files in the repository. Don't publish them to a public host, and nev
 
 ## Start here
 
-- [Build status](overview/build-status.md): what is live, what depends on providers, and what was retired.
-- [Redesign](overview/redesign.md): the current plan (step 2), with phases and status.
-- [Feature readiness](overview/feature-readiness.md): step 1, the feature-by-feature plan (done).
-- [Launch readiness](overview/launch-readiness.md): release gates.
-- [Codebase audit, 25 September 2026](overview/codebase-audit-2026-09-25.md): findings, target architecture, and the refactor plan.
-- [Operations runbook](operations/operations-runbook.md): provider activation, secrets, migrations, reconciliation, the operations app (`apps/ops`), and recovery.
+- [Production launch](operations/production-launch.md): the current plan. The ordered steps to production, the owner's go-ahead for each, and `pnpm production:check`.
+- [Build status](overview/build-status.md): what is built, what depends on providers, and what was retired.
+- [Launch readiness](overview/launch-readiness.md): the release gates and their evidence.
+- [Operations runbook](operations/operations-runbook.md): daily controls, incidents, recovery, the operations app (`apps/ops`), and closing accounts.
 - [Monitoring and alerts](operations/monitoring.md): Worker logs, finding a failure, and the Cloudflare alerts to set up.
-- [Production launch](operations/production-launch.md): the ordered steps to production, and `pnpm production:check`.
-- [Architecture](architecture/architecture.md): systems of record, and why D1 never owns money.
-- [Supported assets](architecture/assets.md): the asset registry, adding an asset, and pausing one.
+- [Development Worker](operations/aura-development-worker.md): deploying dev, migrations, configuration, and the funded transactions run so far.
+- [Architecture](architecture/architecture.md): systems of record, Cloudflare bindings, and why D1 never owns money.
 - [Money actions](architecture/money-actions.md): how every money movement is prepared, signed, verified, and recorded.
-- [Accounts and custody](architecture/accounts-and-custody.md): the Privy embedded wallet, relaying, custody, and leaving Privy.
-- [Screen data](architecture/frontend-data.md): the API each screen reads, and guest example data.
-- [Provider projections](architecture/provider-projections.md): the event contract for bank, cards, and wallet policies.
+- [Supported assets](architecture/assets.md): the asset registry, adding an asset, and pausing one.
+- [Launch controls](operations/launch-controls.md): feature switches, customer controls, the passkey requirement, and stop conditions.
+
+Done and closed: [feature readiness](overview/feature-readiness.md) (step 1, with the definition of done) and the [redesign](overview/redesign.md) (step 2). The [codebase audit of 25 September 2026](overview/codebase-audit-2026-09-25.md) is a point-in-time record.
 
 ## Sections
 
 | Folder | Contents |
 | --- | --- |
-| `overview/` | Build status, redesign, feature readiness, launch readiness, codebase audit |
-| `architecture/` | Architecture, money actions, provider projections, fund flow and provider data, partner integration, provider activation, dependency risks |
-| `operations/` | Runbook, monitoring, launch controls, incident response, acceptance tests, data retention, edge security, production launch |
+| `overview/` | Build status, launch readiness, feature readiness, redesign rules, codebase audit |
+| `architecture/` | Architecture, money actions, accounts and custody, assets, screen data, provider projections, fund flow and provider data, partner integration, dependency risks |
+| `operations/` | Production launch, runbook, monitoring, development Worker, launch controls, incident response, customer communication templates, acceptance tests, data retention, edge security |
 | `security/` | Threat model, security review, external review scope |
 | `compliance/` | Responsibility matrix, legal and jurisdiction decisions, partner diligence, provider requirements |
-| `product/` | Content style guide, design system (with the root `DESIGN.md` and `apps/web/public/design-tokens.css`), redesign journeys, wireframes, direction and visual mockup, daily money flows, volume and economics inputs |
+| `product/` | Content style guide, design system (with the root `DESIGN.md` and `apps/web/public/design-tokens.css`), redesign journeys, wireframes, direction and visual mockup, volume and economics inputs |
 | `archive/` | Dated plans, specs, and release logs |
 
 Files named with a date are point-in-time evidence: leave them as they are, and update the undated docs when behavior changes.

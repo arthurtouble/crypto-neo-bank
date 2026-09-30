@@ -1,13 +1,11 @@
 ---
 title: Report a security issue
-description: What to send, what never to send, and how we handle reports.
-sidebar:
-  order: 3
+description: How to report a security problem with your Aura account or a vulnerability in Aura, what to include, and what never to send.
 ---
 
-Worried about your own account? Use the support form in the app, and mark the case urgent if your funds may be at risk.
+Worried about your own account? Turn on the emergency lock in **Settings → Security** first. Then open **Support → Report a problem** in the app, choose **Someone else may be using my account**, and tell us in the chat.
 
-To report a vulnerability in Aura, email **security@aurel.finance** once that address is active. Until then, don't send sensitive details to an address you can't verify.
+To report a vulnerability in Aura, sign in and chat with us from **Support**. Say it's a security report. We don't have a dedicated security email address yet.
 
 ## Please include
 

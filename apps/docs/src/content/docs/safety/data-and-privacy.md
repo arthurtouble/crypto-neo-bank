@@ -15,7 +15,7 @@ Your money lives on the blockchain, not with us, so we keep as little financial 
 | Your security settings | Your choices | Keep them so they last between sessions, with a record of changes |
 | Money movements | Aura, plus blockchain evidence | Keep the transaction we prepared, its status, hashes, and checks |
 | Identity verification, once live | Our partner | We don't keep your documents. We use only the status we need |
-| Support and complaints | Aura | Keep enough to investigate and reply |
+| Support chats and complaints | Intercom, for Aura | Keep enough to investigate and reply |
 | Consent and documents you accepted | Aura | Record which version you saw or accepted, and when |
 | Notification choices | Your choices | Keep them until you change them |
 | Notices sent to you | Aura | Keep each notice and whether it was delivered. Keep where to send browser notifications until you turn them off |
@@ -35,10 +35,7 @@ When bank transfers or cards go live, our partners may collect identity, sanctio
 
 ## How long we keep things
 
-Security and complaint records may need to be kept longer than analytics. Every table in Aura that holds your data is labeled as erasable or kept, with a reason, and an automated test fails if a new table is missing one.
-
-- **Erasable:** preferences, analytics, your public Aura tag, and history we can rebuild from partners and the blockchain.
-- **Kept as evidence:** money movements, security settings, consent, and support chats (held in Intercom).
+Every table in Aura that holds your data is listed with whether it's in your data download and why we keep it. An automated test fails if a new table is missing. We don't delete your records on request: money movements, security settings, and consent are evidence we need. When an account closes, we unpublish its Aura tag and keep the records the law and account safety require.
 
 Retention periods for each country, and a process for legal holds, will be set before launch.
 

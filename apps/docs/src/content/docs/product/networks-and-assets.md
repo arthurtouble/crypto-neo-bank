@@ -1,6 +1,6 @@
 ---
 title: Networks and assets
-description: The networks and assets Aura supports, and how to avoid sending to the wrong place.
+description: The networks (Base, Ethereum, Arbitrum, Optimism, Polygon) and assets (ETH, USDC, EURC, cbBTC, tokenized stocks, gold) Aura supports, and how to avoid sending to the wrong place.
 ---
 
 Aura always shows the network when you receive, send, swap, or earn. The same address can hold different balances on different networks. Your address and QR code in Deposit are for Base only.
@@ -21,20 +21,24 @@ Aura always shows the network when you receive, send, swap, or earn. The same ad
 
 "Supported" means Aura knows the exact network, asset, and action. It doesn't mean a route, data service, market, or protocol will always be available.
 
-## Identifying assets
+## Supported assets
 
-Unrelated tokens can share a name and symbol, so Aura identifies each asset by its network and contract address together. Deposit, Send, and Swap only offer assets on Aura's reviewed list, and Aura's servers refuse anything else.
+Your balances show in these Overview groups:
 
-On Base, your main balance view shows:
+| Asset | Network | Group |
+| --- | --- | --- |
+| ETH | Base | Crypto |
+| USDC, at Circle's official contract | Base | Cash |
+| EURC, Circle's euro stablecoin | Base | Cash |
+| WETH, at Base's standard contract | Base | Crypto |
+| cbBTC, Coinbase's wrapped bitcoin | Base | Crypto |
+| Ten tokenized stocks issued by Coinbase ([list](/product/tokenized-stocks-and-gold/)) | Base | Stocks |
+| Tether Gold (XAUt), only issued on Ethereum | Ethereum | Metals |
+| Aave USDC and WETH you've supplied, and Morpho USDC vault shares | Base | Earn |
 
-- ETH;
-- USDC, at Circle's official Base contract;
-- EURC, Circle's euro stablecoin;
-- WETH, at Base's standard contract;
-- cbBTC, Coinbase's wrapped bitcoin;
-- ten tokenized stocks issued by Coinbase. See [tokenized stocks and gold](/product/tokenized-markets/).
+You can send and swap every asset in the table except Earn positions. From a connected wallet, you can add ETH, USDC, or EURC on Base, or ETH or USDC from another network (only USDC from Polygon).
 
-It also shows Tether Gold (XAUt), which is only issued on Ethereum, so your account holds it there.
+Unrelated tokens can share a name and symbol, so Aura identifies each asset by its network and contract address together. Deposit, Send, and Swap only offer these assets, and Aura's servers refuse anything else.
 
 A token can arrive at your address without showing in Aura. It hasn't disappeared; Aura just doesn't recognize or price it. Check unknown tokens on a block explorer, and don't interact with tokens you didn't expect.
 

@@ -7,7 +7,7 @@ Phase 2 of [the redesign](../overview/redesign.md), written on 29 September 2026
 
 The owner's brief: settle the story, the journeys, and the wireframes for every customer action first. That means positions, buttons, how screens, drawers, sheets, and dialogs lead into each other. Colour, type, and style come after. Desktop and mobile share a theme but each gets its own navigation, components, and flow.
 
-The journeys are drawn from what the app does today (the [inventory](../overview/redesign.md#screen-inventory) and the e2e specs). Where a journey would change what a flow does, it's listed under [Behavior changes](#behavior-changes) and needs the owner's yes and its own pull request.
+The journeys are drawn from what the app does today (the screen inventory from [#54](https://github.com/arthurtouble/crypto-neo-bank/pull/54) and the e2e specs). Where a journey would change what a flow does, it's listed under [Behavior changes](#behavior-changes) and needs the owner's yes and its own pull request.
 
 ## What people come to do
 

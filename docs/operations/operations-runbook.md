@@ -5,7 +5,7 @@ description: Routine operations, reconciliation, recovery, escalation, and evide
 
 ## Operating premise
 
-Losing D1 doesn't lose customer funds: Privy, contracted providers, and public chains are financially authoritative. D1 also holds Aurel's security decisions, customer instructions, consent evidence, cases, and audit history. These aren't a balance ledger, but they aren't disposable: retain and back them up per the approved policy.
+Losing D1 doesn't lose customer funds: Privy, contracted providers, and public chains are financially authoritative. D1 also holds Aura's security decisions, customer instructions, consent evidence, and audit history. These aren't a balance ledger, but they aren't disposable: retain and back them up per the approved policy.
 
 ## Daily controls
 
@@ -20,7 +20,7 @@ Losing D1 doesn't lose customer funds: Privy, contracted providers, and public c
 
 1. Confirm signature rejection or schema failure from Worker logs by `traceId`.
 2. Never disable signature or timestamp verification to restore traffic.
-3. Confirm the provider’s active key or secret and signing format through an authenticated support channel. Bridge signs with RSA (`BRIDGE_WEBHOOK_PUBLIC_KEY`), Privy with Svix (`PRIVY_WEBHOOK_SECRET`), Stripe with HMAC-SHA256 in `Stripe-Signature` (`STRIPE_WEBHOOK_SECRET`).
+3. Confirm the provider’s active key or secret and signing format through an authenticated support channel. Each scheme and its secret is in [provider projections](../architecture/provider-projections.md#flow).
 4. Rotate the Worker secret if exposure is suspected.
 5. Replay provider events by their stable event IDs. Duplicates are safe: `webhook_receipts.event_id` is unique.
 6. Rebuild affected projections from provider APIs or chains.
@@ -81,7 +81,7 @@ For the first launch, follow [production launch](production-launch.md) first.
 
 ## Command ambiguity
 
-If Aurel times out after sending a command:
+If Aura times out after sending a command:
 
 1. Don't submit a second command with a new idempotency key.
 2. Query the provider with the original key or provider object reference.
@@ -107,7 +107,7 @@ Lock an account when someone else seems to be using it, for example after a repo
 
 ## Customer data and closing accounts
 
-Customers download their own data in Settings → Data and privacy (`GET /api/privacy/export`): every exportable table in `lib/privacy/subject-data.ts`, each with the reason it's kept. No operator needed.
+Customers download their own data in Settings → Your data (`GET /api/privacy/export`): every exportable table in `lib/privacy/subject-data.ts`, each with the reason it's kept. No operator needed.
 
 Aura doesn't delete a customer's records on request. To close an account:
 

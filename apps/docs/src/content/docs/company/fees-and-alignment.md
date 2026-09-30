@@ -1,8 +1,6 @@
 ---
-title: Fees and alignment
-description: What you pay today, how Aura might earn money later, and why there's no Aura token.
-sidebar:
-  order: 1
+title: Fees
+description: What you pay to use Aura today, including network and bridge fees, how Aura might earn money later, and why there's no Aura token.
 ---
 
 Aura doesn't charge a fee today. Aura can add a fee to swaps through LI.FI; it's set to zero. If that changes, the fee will appear in the quote before you confirm.
@@ -35,11 +33,11 @@ We'll avoid hidden spreads, quietly skimming yield, printing tokens, and dressin
 
 ## No Aura token
 
-Aura has no token of its own. An asset or partner should be in Aura because it's useful, understandable, liquid enough, reliable, and suitable for you, not to create demand for something we own.
+Aura has no token of its own, so no asset's price depends on you staying in the app. An asset or partner should be in Aura because it's useful, understandable, liquid enough, reliable, and suitable for you, not to create demand for something we own.
 
-## Rewards cost someone money
+## No rewards
 
-Aura doesn't offer cashback, points, or other rewards. Someone always pays for perks. Before we offer any, each one needs a funded partner, a cost, usage limits, eligibility rules, the countries it covers, fraud rules, an expiry rule, and someone responsible for support.
+Aura doesn't offer cashback, points, or other rewards. Someone always pays for perks, so each one would first need a funded partner, limits, eligibility and country rules, and someone responsible for support.
 
 ## When fees change
 

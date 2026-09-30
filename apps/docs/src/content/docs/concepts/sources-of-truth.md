@@ -1,9 +1,9 @@
 ---
 title: Sources of truth
-description: Which system has the final word on balances, identity, controls, and transaction records.
+description: "Which system has the final word on your balances, identity, controls, and transaction records: the blockchain, Privy, partners, or Aura."
 ---
 
-Aura isn't the record of your balance. Ownership and settlement live on public blockchains, in protocol contracts, and, later, with approved partners. Aura's own records still need protecting: your security settings, consent records, support cases, and transaction evidence.
+Aura isn't the record of your balance. Ownership and settlement live on public blockchains, in protocol contracts, and, later, with approved partners. Aura's own records still need protecting: your security settings, consent records, and transaction evidence.
 
 ## Who has the final word
 

@@ -1,6 +1,6 @@
 ---
 title: Acceptable use policy
-description: Activities that are not permitted through Aura.
+description: What you can't do with Aura, such as breaking sanctions, laundering money, fraud, or attacking the service, and what we may do if you do.
 sidebar:
   order: 5
 ---

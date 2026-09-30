@@ -1,5 +1,5 @@
 ---
-title: Aurel content standard
+title: Aura content standard
 description: Writing and claims standard for product, support, docs, and marketing.
 ---
 
@@ -11,16 +11,16 @@ Applies to the product, docs, support messages, and legal summaries.
 2. Use familiar verbs: send, receive, review, sign, save, pause.
 3. One idea per sentence. Keep most interface sentences under 18 words.
 4. Name the real system when it matters: Privy, Base, Aave, or the customer’s wallet.
-5. Keep implementation language out of customer copy. Avoid “control plane,” “intent,” “orchestration,” “provider-gated,” “posture,” and “rail.”
+5. Keep implementation language out of customer copy. Avoid “control plane,” “intent,” “orchestration,” “provider-gated,” “posture,” “rail,” “route” as a noun, and “cross-chain” (say “move between networks”).
 6. Don't narrate the interface. Labels say what an action does.
 7. State limits beside the decision they affect, not in a generic disclaimer.
 8. Use sentence case. No slogans, stacked adjectives, or claims we can't prove.
-9. Say “you” for the customer and “we” for Aurel. Use “customer” only in operational or legal text.
+9. Say “you” for the customer and “we” for Aura. Use “customer” only in operational or legal text.
 10. Keep precise terms when precision protects the reader, and explain them once in plain language.
 
 ## Rewrite prompt
 
-> Rewrite this for Aurel, a calm financial product. Preserve every factual limit and warning. Lead with what the reader needs. Use plain English, active voice, sentence case, and short sentences. Remove filler, hype, repeated ideas, implementation jargon, and instructions that the interface should make obvious. Prefer concrete nouns and familiar verbs. Do not add claims, reassurance, urgency, or friendliness that the source does not support. Keep legal meaning intact. Return only the revised copy.
+> Rewrite this for Aura, a calm financial product. Preserve every factual limit and warning. Lead with what the reader needs. Use plain English, active voice, sentence case, and short sentences. Remove filler, hype, repeated ideas, implementation jargon, and instructions that the interface should make obvious. Prefer concrete nouns and familiar verbs. Do not add claims, reassurance, urgency, or friendliness that the source does not support. Keep legal meaning intact. Return only the revised copy.
 
 ## Review checklist
 

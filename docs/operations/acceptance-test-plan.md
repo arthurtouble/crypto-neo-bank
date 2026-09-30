@@ -31,7 +31,7 @@ description: Acceptance evidence required before expanding supported mainnet wor
 10. Earn: Aave supply, withdraw an amount, and withdraw all, of USDC and WETH on Base; deposit, withdraw an amount, and withdraw all in each Morpho vault (Steakhouse Prime USDC, Gauntlet USDC Prime) on Base.
 11. Controls: turn on account lock, a daily limit, and saved-recipients-only; confirm preparation is blocked. Pause an asset in the operations app and confirm actions in it are refused. Lock an account from the operations app; confirm sending stops, the customer is told, and only their passkey unlocks it.
 12. Failure: reject a wallet prompt, let a quote expire, and let an action expire unsubmitted; verify clear recovery. Confirm Privy paid the gas for each action.
-13. Support: submit normal and urgent cases without exposing secrets; verify operator triage.
+13. Support: open the in-app chat (Intercom), ask Fin about a recent transaction, reach the team, and use both report-a-problem paths without exposing secrets; ask to close the account and confirm the operator sees the verified Aura user ID.
 14. Cards (once Bridge's card program and Stripe are connected): apply with Bridge, create the card, set a small allowance and confirm it on BaseScan, make a small purchase and confirm Bridge took exactly that amount, trigger a decline over the allowance, freeze and unfreeze (passkey), lower and raise the daily limit (passkey to raise), show card details (passkey), lock the account and confirm the card is frozen in Stripe, and dispute a settled purchase.
 
 ## 100-movement matrix
@@ -43,7 +43,7 @@ Record for each: tester alias, build version, UTC time, source and destination c
 ## Exit criteria
 
 - At least 100 movements; at least 98% supported-flow completion.
-- Every failure classified as customer action, Aurel defect, provider/protocol issue, chain condition or expected policy block.
+- Every failure classified as customer action, Aura defect, provider/protocol issue, chain condition or expected policy block.
 - All destination-delay exercises completed and recoverable.
 - No unexplained transaction, unresolved critical/high defect or misleading state label.
 - Independent security review completed before public launch.

@@ -1,6 +1,6 @@
 ---
 title: Swap
-description: How Aura quotes, checks, and completes swaps.
+description: "Swap between crypto, stablecoins, tokenized stocks, and gold on Base or across networks: quotes, fees, slippage, and when a swap is complete."
 ---
 
 Swap exchanges one supported asset for another, on the same network or between networks: crypto, the euro stablecoin, tokenized stocks, and Tether Gold.
@@ -25,6 +25,6 @@ If the swap needs a token approval, the approval and the swap are sent together,
 Aura checks the blockchain itself. A swap is complete when the transaction matches what you reviewed and at least the minimum amount arrived.
 
 - **On Base**, that's once it's in a block and Aura finds what you received, usually within seconds. Base makes it final about 20 minutes later.
-- **To another network**, it shows as sent once it leaves your account; you can close it and follow the rest in Transactions. The first network confirming isn't enough: Aura shows it as **On its way** until the asset arrives, usually within 30 minutes. Selling Tether Gold works the same way, from Ethereum to Base.
+- **To another network**, it shows as sent once it leaves your account; you can close it and follow the rest in Transactions. The first network confirming isn't enough: Transactions shows it as **Pending** until the asset arrives, usually within 30 minutes. Selling Tether Gold works the same way, from Ethereum to Base.
 
 Prices, fees, and liquidity can change. Your wallet and the blockchain have the final word on your balance. [See what's available now](/getting-started/status/).

@@ -1,6 +1,6 @@
 ---
 title: Product principles
-description: What Aura is for, and the choices that shape it.
+description: "What Aura is for: a money app for stablecoins, crypto, tokenized stocks, and gold in your own wallet, and the choices that shape it."
 ---
 
 Aura is a money app built around stablecoins and your own wallet. You can send, earn, and swap between crypto, tokenized stocks, and gold. Once partners are approved, Aura will add bank transfers and cards.
@@ -13,9 +13,7 @@ Similar-looking balances can behave very differently. A balance may sit in your 
 
 ## No house token
 
-Aura has no token of its own, so no asset's price depends on you staying in the app. An asset or partner earns its place by being useful, well understood, liquid, and reliable.
-
-Aura may later earn from subscriptions, card fees, disclosed partner revenue, or service fees. We'll show you those. They shouldn't decide what we put in front of you.
+Aura has no token of its own, and how we may earn money later is disclosed first. See [fees](/company/fees-and-alignment/).
 
 ## Your wallet, your approval
 
@@ -25,14 +23,7 @@ That doesn't make loss impossible. You could still sign a harmful transaction, l
 
 ## Safety you can see
 
-Safety is part of the main screens, not buried in settings:
-
-- a clear review of each transaction before you confirm;
-- saved recipients, with an optional saved-only mode and a wait before new ones;
-- an optional daily limit and account lock;
-- honest labels for what's live, in preview, or unavailable;
-- a record of every transaction and the checks Aura ran;
-- plain explanations of what each partner and protocol does.
+Safety is part of the main screens, not buried in settings: a clear review before you confirm, optional [account controls](/safety/account-controls/), honest labels for what's live or unavailable, a record of every transaction and the checks Aura ran, and plain explanations of what each partner and protocol does.
 
 ## Useful from the first deposit
 
