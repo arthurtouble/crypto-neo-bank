@@ -3,7 +3,7 @@ title: Data and privacy
 description: What Aura stores, what stays with partners or on the blockchain, and why.
 ---
 
-Your money lives on the blockchain, not with us, so we keep as little financial data as we can. Running a safe service still means keeping some records. This page explains which ones and why. For the formal version, see the [privacy notice](/legal/privacy-notice/).
+Your money lives on the blockchain, not with us, so we keep as little financial data as we can, plus the records a safe service needs. The [privacy notice](/legal/privacy-notice/) is the formal version: data categories, purposes, recipients, retention, international transfers, and your rights.
 
 ## What we keep
 
@@ -27,19 +27,15 @@ Your money lives on the blockchain, not with us, so we keep as little financial 
 
 Anyone can see blockchain addresses and transactions. Hiding your balance in Aura only hides it on your screen. It doesn't make your activity private.
 
-Your identity, addresses, transaction patterns, device, and support history can reveal more together than any one of them alone. So we limit who can see and collect this data, even when some of it is already public.
+Your identity, addresses, transaction patterns, device, and support history reveal more together than any one alone. So we limit who can see and collect this data, even when some of it is public.
 
 ## Identity documents
 
-When bank transfers or cards go live, our partners may collect identity, sanctions, source-of-funds, and other onboarding information. We plan for the partner to keep the original documents. Aura would store only the references or status it needs.
-
-The final contracts will set exactly who holds what. Whatever they say, we'll tell you clearly who receives your data and why.
+When bank transfers or cards go live, our partners may collect identity, sanctions, source-of-funds, and other onboarding information. We plan for the partner to keep the original documents, and for Aura to store only the references or status it needs. The final contracts will set exactly who holds what, and we'll tell you who receives your data and why.
 
 ## How long we keep things
 
-Different records need different retention periods. Security and complaint records may need to be kept longer than analytics. We don't keep data forever just because storage is cheap.
-
-Every table in Aura that holds your data is labeled as erasable or kept, with a reason. An automated test fails if a new table is missing a label.
+Security and complaint records may need to be kept longer than analytics. Every table in Aura that holds your data is labeled as erasable or kept, with a reason, and an automated test fails if a new table is missing one.
 
 - **Erasable:** preferences, analytics, your public Aura tag, and history we can rebuild from partners and the blockchain.
 - **Kept as evidence:** money movements, security settings, consent, and support chats (held in Intercom).
@@ -50,15 +46,10 @@ Retention periods for each country, and a process for legal holds, will be set b
 
 Logs help us keep Aura reliable and investigate incidents. They should never contain secrets, signing material, identity documents, or transaction details we don't need.
 
-Analytics answer narrow questions, like whether people finish setup or hit an error. We accept only a fixed list of events, and we limit how often they can be sent. Analytics never decide balances or settlement.
+Analytics answer narrow questions, like whether people finish setup or hit an error. The event list is fixed and rate-limited. Analytics never decide balances or settlement.
 
 ## Your choices
 
-In **Settings** you can:
+In **Settings → Your data** you can download everything Aura holds about your account, straight away. Turn product-update emails on or off in **Settings → Notifications → Product news**. To close your account, see [account controls](/safety/account-controls/#closing-your-account). For your other rights, see the [privacy notice](/legal/privacy-notice/).
 
-- download everything Aura holds about your account, straight away (Your data); and
-- turn product-update emails on or off (Notifications → Product news).
-
-To close your account, contact support once it holds no funds. We keep your transaction, security, and consent records.
-
-The [privacy notice](/legal/privacy-notice/) covers data categories, purposes, recipients, retention, international transfers, and your rights. Our entity details, governing law, and privacy contacts will be finalized before launch.
+Our entity details, governing law, and privacy contacts will be finalized before launch.
