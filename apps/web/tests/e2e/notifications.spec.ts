@@ -136,6 +136,7 @@ test("browser notifications can be turned on and off, and security notices are p
     .toEqual(["Your account is locked"]);
   expect((await outbox()).pushes[0]).toMatchObject({ link: "/app/settings", body: expect.stringContaining("Nothing can be sent until you unlock it") });
 
+  await area(page, "Notifications");
   await push.click();
   await expect(push).toHaveText("Off", { timeout: 20_000 });
 });
