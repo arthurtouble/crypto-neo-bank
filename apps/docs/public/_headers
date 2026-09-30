@@ -1,0 +1,9 @@
+# Cloudflare static assets: cache headers for the docs Worker. Astro's build files under /_astro have content hashes,
+# so browsers keep them for a year. Fonts and images aren't hashed: a week and a day, revalidated in the background.
+# The dev build adds an X-Robots-Tag rule at the end (astro.config.mjs).
+/_astro/*
+  Cache-Control: public, max-age=31536000, immutable
+/fonts/*
+  Cache-Control: public, max-age=604800, stale-while-revalidate=2592000
+/images/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800

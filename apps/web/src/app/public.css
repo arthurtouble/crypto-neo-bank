@@ -83,7 +83,7 @@
 .ldFooterTop { display: grid; grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1fr)); gap: var(--space-6); align-items: start; }
 .ldFooterTop .appBrand { padding: 0; justify-self: start; }
 .ldFooterTop > div { display: grid; gap: var(--space-2); }
-.ldFooterTop h2 { color: var(--color-text); font-size: var(--text-small-size); font-weight: var(--weight-semibold); }
+.ldFooterLabel { color: var(--color-text); font-size: var(--text-small-size); font-weight: var(--weight-semibold); }
 .ldFooterTop a { color: inherit; text-decoration: none; }
 .ldFooterTop a:hover { color: var(--color-text); }
 .ldDisclosure { max-width: 80ch; color: var(--color-text-tertiary); font-size: var(--text-caption-size); line-height: var(--text-caption-line); }

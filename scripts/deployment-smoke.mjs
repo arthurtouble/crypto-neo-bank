@@ -24,17 +24,42 @@ async function request(path, init) {
 }
 
 const home = await request("/");
+const homeHtml = await home.text();
 assert(home.ok, `home responds (${home.status})`);
-assert((await home.text()).includes("Money you control, in one simple app"), "home serves the Aura landing page");
+assert(homeHtml.includes("Money you control, in one simple app"), "home serves the Aura landing page");
 assert(home.headers.get("x-content-type-options") === "nosniff", "X-Content-Type-Options is nosniff");
 assert(home.headers.get("content-security-policy")?.includes("frame-ancestors 'none'"), "CSP denies framing");
+const structured = homeHtml.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)?.[1];
+let structuredTypes = [];
+try { structuredTypes = JSON.parse(structured ?? "")["@graph"].map((node) => node["@type"]); } catch { /* reported below */ }
+assert(["Organization", "WebSite", "WebApplication", "FAQPage"].every((type) => structuredTypes.includes(type)), "home carries structured data that parses");
 
 const robots = await request("/robots.txt");
-assert(robots.ok && (await robots.text()).includes("Disallow: /"), "robots.txt is served and keeps crawlers out of private paths");
+const robotsText = await robots.text();
+assert(robots.ok && robotsText.includes("Disallow: /"), "robots.txt is served and keeps crawlers out of private paths");
+// Anything but production disallows the whole site, and then every response also carries X-Robots-Tag (worker/index.ts).
+const noindex = /^Disallow: \/$/m.test(robotsText);
+assert(noindex ? home.headers.get("x-robots-tag") === "noindex, nofollow" : !home.headers.get("x-robots-tag"),
+  `X-Robots-Tag matches robots.txt (${noindex ? "not indexed" : "indexed"})`);
+
+const llms = await request("/llms.txt");
+assert(llms.ok && (await llms.text()).startsWith("# Aura\n"), `llms.txt is served (${llms.status})`);
+const manifest = await request("/manifest.webmanifest");
+const manifestBody = await manifest.json().catch(() => ({}));
+assert(manifest.ok && manifestBody.start_url === "/app" && manifestBody.icons?.some((icon) => icon.purpose === "maskable"), `the web app manifest is served (${manifest.status})`);
+
+const docsLlms = await fetch(`${docsUrl}/llms.txt`, { signal: AbortSignal.timeout(15_000) });
+assert(docsLlms.ok && (await docsLlms.text()).startsWith("# Aura documentation"), `the docs serve llms.txt (${docsLlms.status})`);
+const docsRobots = await (await fetch(`${docsUrl}/robots.txt`, { signal: AbortSignal.timeout(15_000) })).text();
+const docsHome = await fetch(`${docsUrl}/`, { signal: AbortSignal.timeout(15_000) });
+const docsNoindex = /^Disallow: \/$/m.test(docsRobots);
+assert(docsNoindex ? docsHome.headers.get("x-robots-tag") === "noindex, nofollow" : !docsHome.headers.get("x-robots-tag"),
+  `the docs' X-Robots-Tag matches their robots.txt (${docsNoindex ? "not indexed" : "indexed"})`);
 
 const docs = await request("/docs");
-assert([301, 302, 307, 308].includes(docs.status), `documentation redirects to dedicated site (${docs.status})`);
-assert(docs.headers.get("location") === docsUrl, "documentation redirects to the selected docs origin");
+assert([301, 308].includes(docs.status), `documentation redirects permanently to dedicated site (${docs.status})`);
+// A redirect to an origin may come back with the root path's slash.
+assert([docsUrl, `${docsUrl}/`].includes(docs.headers.get("location") ?? ""), "documentation redirects to the selected docs origin");
 
 const health = await request("/api/health");
 const healthBody = await health.json().catch(() => ({}));

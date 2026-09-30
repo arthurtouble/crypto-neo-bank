@@ -1,5 +1,7 @@
-import { redirect } from "next/navigation";
+import { permanentRedirect } from "next/navigation";
+import { docsOrigin } from "@/lib/site/seo";
 
+/** /docs moved to the public docs site for good. */
 export default function DocumentationRedirect() {
-  redirect(process.env.NEXT_PUBLIC_DOCS_URL ?? "https://aurel-docs.aurel-events.workers.dev");
+  permanentRedirect(docsOrigin());
 }
