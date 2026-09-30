@@ -2,40 +2,39 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
-const appDir = fileURLToPath(new URL("../../src/app/", import.meta.url));
-const layout = readFileSync(`${appDir}/layout.tsx`, "utf8");
-const system = readFileSync(`${appDir}/product-system.css`, "utf8");
+// The design system's contract (DESIGN.md, docs/product/design-system.md): tokens in public/design-tokens.css, screens
+// built from them in the area stylesheets, and the two docs agreeing with the tokens.
+const web = fileURLToPath(new URL("../../", import.meta.url));
+const read = (path: string) => readFileSync(`${web}${path}`, "utf8");
+const layout = read("src/app/layout.tsx");
+const tokens = read("public/design-tokens.css");
+const design = readFileSync(`${web}../../DESIGN.md`, "utf8");
+const legacy = ["globals.css", "identity.css", "product-system.css"];
+const areas = ["shell.css", "overview.css", "money.css", "cards.css", "records.css", "settings.css", "public.css"];
+const position = (file: string) => layout.indexOf(`/${file}"`);
 
-describe("product design-system contract", () => {
-  it("loads the authoritative product layer after legacy styles", () => {
-    expect(layout.indexOf('import "./product-system.css"')).toBeGreaterThan(layout.indexOf('import "./identity.css"'));
+describe("design system", () => {
+  it("loads the tokens after the pre-redesign layers, and every area stylesheet after the tokens", () => {
+    const tokensAt = position("design-tokens.css");
+    expect(tokensAt).toBeGreaterThan(0);
+    for (const file of legacy) expect(position(file), file).toBeLessThan(tokensAt);
+    for (const file of areas) expect(position(file), file).toBeGreaterThan(tokensAt);
   });
 
-  it("keeps readable semantic type roles", () => {
-    expect(system).toContain("--type-caption: 11px");
-    expect(system).toContain("--type-label: 12px");
-    expect(system).toContain("--type-body-small: 13px");
-    expect(system).toContain("--type-body: 14px");
-    expect(system).toContain("--type-row-title: 14px");
+  it("keeps literal colours out of the area stylesheets: they use tokens only", () => {
+    for (const file of areas) {
+      const css = read(`src/app/${file}`).replace(/\/\*[\s\S]*?\*\//g, "");
+      expect(css.match(/#[0-9a-f]{3,8}\b|\b(?:rgba?|hsla?)\(/gi), file).toBeNull();
+    }
   });
 
-  it("applies the shared scale to transfer options and capability rows", () => {
-    expect(system).toContain(".productShell .transferChoices strong");
-    expect(system).toContain(".productShell .transferChoices small");
-    expect(system).toContain(".productShell .railRows strong");
-    expect(system).toContain(".productShell .railRows small");
-    expect(system).toContain("min-height: var(--row-standard)");
-  });
-
-  it("covers customer surfaces and portalled financial dialogs", () => {
-    for (const selector of [
-      ".productShell .tableRow",
-      ".productShell .cardControlRow",
-      ".productShell .benefitCard p",
-      ".productShell .securityChecklist strong",
-      ".productShell .settingRow strong",
-      ".financialModal .fieldLabel",
-      ".dialogContent .transactionSummary strong",
-    ]) expect(system).toContain(selector);
+  it("documents the same type scale in DESIGN.md as the tokens define", () => {
+    for (const role of ["headline", "display", "amount-hero", "amount", "title-1", "title-2", "title-3", "body", "small", "caption"]) {
+      const documented = design.match(new RegExp(`\\n  ${role}:\\n(?:    .*\\n)*?    fontSize: (\\d+px)\\n(?:    .*\\n)*?    lineHeight: (\\d+px)`));
+      const size = tokens.match(new RegExp(`--text-${role}-size: (\\d+px);`));
+      const line = tokens.match(new RegExp(`--text-${role}-line: (\\d+px);`));
+      expect(documented, `DESIGN.md ${role}`).not.toBeNull();
+      expect([documented?.[1], documented?.[2]], role).toEqual([size?.[1], line?.[1]]);
+    }
   });
 });
