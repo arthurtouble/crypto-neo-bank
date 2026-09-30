@@ -13,7 +13,7 @@
     "release:upload": "vinext build && wrangler versions upload --tag candidate",
     "release:list": "wrangler versions list",
     "release:rollback": "wrangler rollback",
-    "cf-types": "wrangler types --env-interface CloudflareEnv",
+    "cf-types": "wrangler types --env-interface CloudflareEnv --strict-vars=false",
     "test": "pnpm test:unit && pnpm test:e2e",
     "test:unit": "vitest run",
     "test:live:readonly": "AUREL_LIVE_READONLY=1 vitest run",

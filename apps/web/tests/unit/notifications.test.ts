@@ -74,6 +74,15 @@ describe("recording notices", () => {
     expect(notice).toMatchObject({ kind: "failed", dedupeKey: "action:a1:failed", link: "/app/transactions?open=a1" });
     expect(notice.title).toMatch(/didn't go through$/);
   });
+
+  it("says Earn money went to the protocol, or came back from it, with vault names whole", () => {
+    const earn = (direction: "deposit" | "withdraw", extra: Record<string, unknown> = {}) => actionNotice({ id: "e1", kind: "earn", chainId: 8453,
+      summary: { protocol: "aave", direction, symbol: "USDC", decimals: 6, amount: "1", amountRaw: "1000000", ...extra } } as never, "completed");
+    expect(earn("deposit")).toMatchObject({ title: "Added to Earn 1 USDC", body: "To Aave, on Base." });
+    expect(earn("withdraw")).toMatchObject({ title: "1 USDC is back in your account", body: "It came out of Aave and is in your account on Base." });
+    expect(earn("withdraw", { protocol: "morpho", vaultName: "Steakhouse Prime USDC" }).body).toBe("It came out of Steakhouse Prime USDC and is in your account on Base.");
+    expect(earn("deposit", { protocol: "morpho", vaultName: "Steakhouse Prime USDC" }).body).toBe("To Steakhouse Prime USDC, on Base.");
+  });
 });
 
 describe("security notices", () => {

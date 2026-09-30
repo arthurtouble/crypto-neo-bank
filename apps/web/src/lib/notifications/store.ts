@@ -14,7 +14,8 @@ export type NotificationKind = "received" | "completed" | "failed" | "security";
 export type Notice = { kind: NotificationKind; dedupeKey: string; title: string; body: string; link?: string };
 export type NotificationView = { id: string; kind: NotificationKind; title: string; body: string; link: string | null; createdAt: string; read: boolean };
 
-const short = (value: string) => value.length > 14 ? `${value.slice(0, 6)}…${value.slice(-4)}` : value;
+// Shorten addresses only; names like a vault's stay whole.
+const short = (value: string) => /^0x[0-9a-fA-F]{40}$/.test(value) ? `${value.slice(0, 6)}…${value.slice(-4)}` : value;
 
 /** Record a notice once. Returns true if it is new. */
 export async function notify(db: D1Database, subject: string, notice: Notice, now = new Date()): Promise<boolean> {
@@ -49,6 +50,11 @@ export function actionNotice(action: StoredAction, outcome: "completed" | "faile
   if (outcome === "failed") return { kind: "failed", dedupeKey: `action:${action.id}:failed`, title: `${label}${amount ? ` ${amount}` : ""} didn't go through`,
     body: failureText(action.failureReason), link };
   const where = entry.destinationChainId ? `${networkName(entry.chainId)} to ${networkName(entry.destinationChainId)}` : networkName(entry.chainId);
+  // Money coming back from Earn goes from Aave or the vault to the account. Plain words: mail filters reject short
+  // "Withdrawn … USDC" notices as look-alike scams.
+  if (entry.type === "earn_withdraw") return { kind: "completed", dedupeKey: `action:${action.id}:completed`,
+    title: `${amount ?? "Your money"} is back in your account`,
+    body: `It came out of ${entry.counterparty ? short(entry.counterparty) : "Earn"} and is in your account on ${where}.`, link };
   return { kind: "completed", dedupeKey: `action:${action.id}:completed`, title: `${label}${amount ? ` ${amount}` : ""}`,
     body: `${entry.counterparty ? `To ${short(entry.counterparty)}, on` : "On"} ${where}.`, link };
 }

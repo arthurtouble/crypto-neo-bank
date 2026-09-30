@@ -9,7 +9,9 @@
     ],
     "disclosure": "Screens use fictional example values. Availability depends on where you live; bank transfers and cards depend on approved partners. Stated in the footer disclosure with a link to availability.",
     "claimIds": [],
-    "reviewStatus": "pending",
-    "reviewAt": "2026-09-24T00:00:00.000Z"
+    "reviewStatus": "approved",
+    "reviewAt": "2026-12-31T00:00:00.000Z",
+    "approvedBy": "product owner",
+    "approvedAt": "2026-09-30T00:00:00.000Z"
   }
 ]
