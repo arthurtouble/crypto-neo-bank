@@ -11,7 +11,7 @@ Last reviewed: 24 September 2026. Describes the source branch, not the deployed 
 
 - Bank transfers, cards, and card payments still need provider programs. Rewards and Invest were cut; stocks and gold are bought in Swap.
 - Onchain actions (send, swap, cross-chain, Aave, Morpho) share one [money actions](../architecture/money-actions.md) pipeline. The account is a Privy embedded wallet, upgraded in place with EIP-7702, and Privy pays gas ([accounts and custody](../architecture/accounts-and-custody.md)).
-- Funded actions run on dev so far: a deposit from Ethereum to Base, a send on Base, a send from Base to Ethereum, a USDC to AAPLc swap, a deposit into and full withdrawal from a Morpho vault, a 1 USDC Aave deposit and 0.5 USDC withdrawal, a 1 USDC send from Base to Arbitrum, and 1 USDC received from outside Aura, listed in Transactions.
+- Funded actions run on dev so far: a deposit from Ethereum to Base, a send on Base, a send from Base to Ethereum, a USDC to AAPLc swap, a deposit into and full withdrawal from a Morpho vault, a 1 USDC Aave deposit, a 0.5 USDC withdrawal, and Withdraw all of the rest, a 1 USDC send from Base to Arbitrum, and 1 USDC received from outside Aura, listed in Transactions.
 - A displayed provider capability is not a live feature.
 - Not yet evidenced: the production hostname, provider programs, secrets, staffed operations, independent security review, and real-customer rehearsals.
 
