@@ -13,7 +13,7 @@ To report a vulnerability in Aura, email **security@aurel.finance** once that ad
 
 - the page or feature affected;
 - the steps to reproduce the issue;
-- what impact you saw;
+- the impact you saw;
 - transaction hashes or public wallet addresses, if relevant; and
 - a safe way to contact you.
 
