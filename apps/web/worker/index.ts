@@ -24,12 +24,28 @@ const scheduled: ExportedHandlerScheduledHandler<Cloudflare.Env> = async (contro
 };
 
 /**
+ * Serve a request with vinext. API handlers log their own failures with a trace ID (lib/http/route.ts). A page that
+ * answers 5xx, or anything that throws, is logged here as `request.failed`, with the path but not the query.
+ */
+async function serve(request: Request, env: Cloudflare.Env, ctx: ExecutionContext) {
+  const path = new URL(request.url).pathname;
+  const failed = (fields: Record<string, unknown>) =>
+    console.error(JSON.stringify({ level: "error", event: "request.failed", method: request.method, path, ...fields }));
+  try {
+    // vinext types its env as the assets binding alone; the Worker passes the whole env through, as `{ ...app }` would.
+    const response = await app.fetch(request, env as Parameters<typeof app.fetch>[1], ctx);
+    if (response.status >= 500 && !path.startsWith("/api/")) failed({ status: response.status });
+    return response;
+  } catch (error) {
+    failed({ message: error instanceof Error ? error.message : "unknown" });
+    throw error;
+  }
+}
+
+/**
  * Refuse the app, the API, and payment pages to requests from a sanctioned place (lib/legal/places.ts), with 451.
  * Pages get the "not available where you are" page; the API gets a JSON error. Everything else goes to vinext.
  */
-// vinext types its env as the assets binding alone; the Worker passes the whole env through, as `{ ...app }` would.
-const serve = (request: Request, env: Cloudflare.Env, ctx: ExecutionContext) => app.fetch(request, env as Parameters<typeof app.fetch>[1], ctx);
-
 const fetch: ExportedHandlerFetchHandler<Cloudflare.Env> = async (request, env, ctx) => {
   const url = new URL(request.url);
   const { country, region } = requestPlace(request);

@@ -61,7 +61,7 @@ Schema upload enables detection; it does not enable blocking by itself.
 
 ## Logs and alerts
 
-Workers Logs and traces are enabled. Before launch, configure OpenTelemetry export or Workers Trace Events Logpush to the approved destination with redaction and retention controls. Alert on:
+Workers Logs and traces are enabled; [monitoring and alerts](monitoring.md) lists the log events and the Cloudflare alerts to set up. Before launch, configure OpenTelemetry export or Workers Trace Events Logpush to the approved destination with redaction and retention controls. Alert on:
 
 - authentication and authorization failure spikes;
 - transaction preparation or receipt-check errors;

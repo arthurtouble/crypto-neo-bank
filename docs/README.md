@@ -12,6 +12,7 @@ These files contain operational and security-sensitive context. Keep them in the
 - [Launch readiness](overview/launch-readiness.md): release gates.
 - [Codebase audit, 25 September 2026](overview/codebase-audit-2026-09-25.md): findings, target architecture, and the refactor plan.
 - [Operations runbook](operations/operations-runbook.md): provider activation, secrets, migrations, reconciliation, the operations app (`apps/ops`), and recovery.
+- [Monitoring and alerts](operations/monitoring.md): what the Workers log, how to find a failure, and the Cloudflare alerts to set up.
 - [Architecture](architecture/architecture.md): systems of record and the rule that D1 never owns money.
 - [Supported assets](architecture/assets.md): the asset registry, how to add an asset, and how to pause one.
 - [Money actions](architecture/money-actions.md): how every customer money movement is prepared, signed, verified, and recorded.
@@ -25,7 +26,7 @@ These files contain operational and security-sensitive context. Keep them in the
 | --- | --- |
 | `overview/` | Build status and launch readiness |
 | `architecture/` | Architecture, money actions, provider projections, fund flow and provider data, partner integration, provider activation, dependency risks |
-| `operations/` | Runbook, launch controls, incident response, acceptance tests, data retention, edge security, release plans, feature readiness records |
+| `operations/` | Runbook, monitoring and alerts, launch controls, incident response, acceptance tests, data retention, edge security, release plans, feature readiness records |
 | `security/` | Threat model, security review, external review scope |
 | `compliance/` | Responsibility matrix, legal and jurisdiction decisions, partner diligence, provider requirements |
 | `product/` | Content style guide, design system (with the root `DESIGN.md` and `apps/web/public/design-tokens.css`), redesign journeys and wireframes, redesign direction and its visual mockup, daily money flows, volume and economics inputs |
