@@ -33,7 +33,7 @@ If you do any of these things, we may:
 
 Where the law allows, we will act in proportion to the problem.
 
-Aura never holds your funds. So these steps apply to your use of Aura. They don't freeze your wallet.
+Aura never holds your funds, so these steps apply to your use of Aura. They don't freeze your wallet.
 
 ## Security research
 

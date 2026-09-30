@@ -35,6 +35,4 @@ We will:
 
 ## Urgent issues
 
-Mark your case urgent if you think your funds are at risk or your account is compromised. We'll look at it sooner.
-
-Marking a case urgent doesn't guarantee that funds can be recovered or a transaction reversed.
+Mark your case urgent if you think your funds are at risk or your account is compromised. We'll look at it sooner, but that doesn't guarantee that funds can be recovered or a transaction reversed.

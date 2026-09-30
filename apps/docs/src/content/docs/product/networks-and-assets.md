@@ -3,11 +3,11 @@ title: Networks and assets
 description: The networks and assets Aura supports, and how to avoid sending to the wrong place.
 ---
 
-Aura always shows the network when you receive, send, swap, or earn.
+Aura always shows the network when you receive, send, swap, or earn. The same address can hold different balances on different networks. Your address and QR code in Deposit are for Base only.
 
-The same address can hold different balances on different networks. Your address and QR code in Deposit are for Base only. Check the network in Deposit before anyone sends you money.
-
-To add money from another network, use **Deposit > From a wallet**. Aura moves it to the same asset on Base. To send to someone on another network, choose the network in **Send**. To move assets between networks from your Aura account, use Swap.
+- To add money from another network, use **Deposit > From a wallet**. Aura moves it to the same asset on Base.
+- To send to someone on another network, choose the network in **Send**.
+- To move assets between networks from your Aura account, use Swap.
 
 ## Supported networks
 
@@ -23,9 +23,7 @@ To add money from another network, use **Deposit > From a wallet**. Aura moves i
 
 ## Identifying assets
 
-A token's symbol isn't a safe way to identify it. Unrelated tokens can share a name and symbol. Aura identifies each asset by its network and contract address together.
-
-Aura supports a reviewed list of assets. Deposit, Send, and Swap only offer assets on that list, and Aura's servers refuse anything else.
+Unrelated tokens can share a name and symbol, so Aura identifies each asset by its network and contract address together. Deposit, Send, and Swap only offer assets on Aura's reviewed list, and Aura's servers refuse anything else.
 
 On Base, your main balance view shows:
 
@@ -36,19 +34,17 @@ On Base, your main balance view shows:
 - cbBTC, Coinbase's wrapped bitcoin;
 - ten tokenized stocks issued by Coinbase. See [tokenized stocks and gold](/product/tokenized-markets/).
 
-It also shows Tether Gold (XAUt). Tether Gold is only issued on Ethereum, so your account holds it there.
+It also shows Tether Gold (XAUt), which is only issued on Ethereum, so your account holds it there.
 
-A token can arrive at your address without showing in Aura. It hasn't disappeared. Aura just doesn't recognize or price it yet. Check unknown tokens on a block explorer, and don't interact with tokens you didn't expect.
+A token can arrive at your address without showing in Aura. It hasn't disappeared; Aura just doesn't recognize or price it. Check unknown tokens on a block explorer, and don't interact with tokens you didn't expect.
 
 ## USDC comes in different versions
 
-USDC exists in different forms on different networks. Aura supports native USDC on each supported network. A bridged token labeled "USDC" can behave differently, and may be harder to sell or redeem.
-
-Always check the network and contract, not just the symbol.
+Aura supports native USDC on each supported network. A bridged token labeled "USDC" can behave differently, and may be harder to sell or redeem. Check the network and contract, not just the symbol.
 
 ## Network fees
 
-Aura pays the network fee for actions your Aura account signs. When you add money from your own wallet, that wallet pays its network's fee. For anything you do outside Aura, you'll also need the network's fee asset.
+Aura pays the network fee for actions your Aura account signs. When you add money from your own wallet, that wallet pays its network's fee. For anything you do outside Aura, you'll need the network's fee asset.
 
 Fees can change between preparing and sending a transaction. Signing doesn't guarantee a transaction goes through. A dropped or replaced transaction may need looking into.
 
@@ -65,6 +61,6 @@ Sending an unsupported token, or using the wrong network, can make recovery hard
 
 ## Adding support for an asset
 
-Adding an asset is more than adding an icon. Before we add one, we review its contract, issuer or protocol, liquidity, price source, and how it transfers.
+Before we add an asset, we review its contract, issuer or protocol, liquidity, price source, and how it transfers.
 
-We can also pause an asset at any time, for example if a stablecoin loses its peg. A paused asset stays in your balance. Until it's resumed, you can't send, swap, or buy it, or deposit it from another network.
+We can pause an asset at any time, for example if a stablecoin loses its peg. A paused asset stays in your balance. Until it's resumed, you can't send, swap, or buy it, or deposit it from another network.

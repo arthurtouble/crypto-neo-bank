@@ -66,18 +66,14 @@ We keep your chats with Aura's assistant and team, and the complaint details you
 
 ### Partner information
 
-Once a partner is live, we store the references and statuses it reports. Examples of partners are Bridge (bank transfers and card approval) and Stripe (cards, issued with Bridge).
-
-Examples of what we store:
+Once a partner is live, we store the references and statuses it reports. Partners include Bridge (bank transfers and card approval) and Stripe (cards, issued with Bridge). For example:
 
 - which card is yours, its status, and its last four digits;
 - your card payments (amount, merchant, status, and time), as Stripe reports them;
 - bank-transfer instructions; and
 - rules your wallet provider enforces.
 
-Identity documents, screening results, and full card numbers stay with those partners.
-
-Your card number, expiry date, and security code appear only in Stripe's own frame. Aura never sees or stores them.
+Identity documents, screening results, and full card numbers stay with those partners. Your card number, expiry date, and security code appear only in Stripe's own frame. Aura never sees or stores them.
 
 ### Technical data
 
@@ -106,7 +102,7 @@ The legal basis for each purpose still needs to be confirmed for each country.
 | Improve the product and its reliability | Product events, diagnostics | Legitimate interests |
 | Send product-update emails | Email and consent record | Consent, which you can withdraw at any time |
 
-We don't sell personal data. We don't use it for third-party advertising.
+We don't sell personal data or use it for third-party advertising.
 
 We don't make decisions about you that have legal effects solely by automated means.
 

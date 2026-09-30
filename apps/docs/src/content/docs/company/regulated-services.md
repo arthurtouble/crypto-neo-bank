@@ -3,13 +3,14 @@ title: Regulated services
 description: How bank transfers, cards, and other regulated services would be added to Aura.
 ---
 
-Aura doesn't offer bank accounts, bank transfers, cards, insurance, or securities today. You may see some of these in the app, but that doesn't mean they're live.
+Aura doesn't offer bank accounts, bank transfers, cards, insurance, or securities today. Seeing some of these in the app doesn't mean they're live.
 
-Bank transfers are built with Bridge and are waiting for Bridge's approval. Cards are built with Bridge and Stripe, and are waiting for Bridge to approve the card program.
+- Bank transfers are built with Bridge and waiting for Bridge's approval.
+- Cards are built with Bridge and Stripe, and waiting for Bridge to approve the card program.
 
 ## Partners do the regulated work
 
-We plan to use regulated partners for the work they're licensed and contracted to do. Depending on the service and country, a partner may handle:
+Depending on the service and country, a licensed partner may handle:
 
 - checking who you are;
 - sanctions and politically exposed person screening;
@@ -24,18 +25,15 @@ You may need to accept the partner's own terms, and you may have a direct relati
 
 ## What stays with Aura
 
-Using a partner doesn't remove Aura's own duties. Aura is still responsible for its marketing, the sign-up flow, how data moves, who can access what, accurate screens, choosing partners, support, incident response, and anything it does itself.
+Aura stays responsible for its marketing, the sign-up flow, how data moves, who can access what, accurate screens, choosing partners, support, incident response, and anything it does itself.
 
-If Aura starts giving recommendations, making decisions for customers, running an exchange, or holding assets, its regulatory position could change. The legal analysis has to follow what Aura actually does, not what we call it.
+If Aura starts giving recommendations, making decisions for customers, running an exchange, or holding assets, its regulatory position could change. The legal analysis follows what Aura actually does, not what we call it.
 
 ## Partners check Aura too
 
-A partner decides whether to work with Aura, not only with each customer. A test account usually means we can try the technology, not that we're approved for real customers.
+A partner decides whether to work with Aura, not only with each customer. A test account usually means we can try the technology, not that we're approved for real customers. A partner may look at:
 
-A partner may look at:
-
-- how Aura is incorporated and who owns it;
-- who runs it and who is accountable;
+- how Aura is incorporated, who owns it, who runs it, and who is accountable;
 - how the product works and the customer agreements;
 - target countries and restricted businesses;
 - expected customer numbers, balances, and transaction volumes;
@@ -46,7 +44,7 @@ A partner may look at:
 - marketing and disclosures;
 - subcontractors, wallet providers, and the blockchain services we use.
 
-A small team isn't ruled out automatically. But partners may require cover for key roles, separation of critical duties, clear escalation, and named people responsible for compliance, security, operations, and customers. Contractors and specialist firms can do some of this work, but accountability can't be handed to an AI system.
+A small team isn't ruled out, but partners may require cover for key roles, separation of critical duties, clear escalation, and named people responsible for compliance, security, operations, and customers. Contractors and specialist firms can do some of this work, but accountability can't be handed to an AI system.
 
 ## Checks on you
 
@@ -58,7 +56,7 @@ Aura should only ask for information when we or the partner have a clear need. W
 
 Each service is checked country by country. You might be able to use your wallet but not a card, or swap stablecoins but not open a local bank account.
 
-We keep a record of which service is available where, based on residence, citizenship where relevant, partner coverage, sanctions, and marketing rules. If that information is missing or out of date, the service stays unavailable.
+We record which service is available where, based on residence, citizenship where relevant, partner coverage, sanctions, and marketing rules. If that information is missing or out of date, the service stays unavailable.
 
 ## Before anything goes live
 

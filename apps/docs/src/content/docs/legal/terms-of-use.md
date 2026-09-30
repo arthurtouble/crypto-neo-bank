@@ -110,11 +110,9 @@ These are independent of us:
 - token issuers; and
 - any partner we add later.
 
-Their own terms and privacy notices apply.
+Their own terms and privacy notices apply. We don't control their availability, contracts, governance, security, pricing, or decisions.
 
-We don't control their availability, contracts, governance, security, pricing, or decisions.
-
-When Aura shows a quote, route, asset, or protocol, we are not endorsing it. We are not saying it suits you.
+When Aura shows a quote, route, asset, or protocol, we are not endorsing it or saying it suits you.
 
 ## 9. Transactions
 
