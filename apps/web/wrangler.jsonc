@@ -41,6 +41,10 @@
   "env": {
     "dev": {
       "name": "aura-dev",
+      // Names only: the values are set with `wrangler secret put --env dev`, never here. A deploy fails if one is missing.
+      "secrets": {
+        "required": ["PRIVY_APP_SECRET", "RESEND_API_KEY", "RESEND_WEBHOOK_SECRET", "VAPID_PRIVATE_KEY", "LIFI_API_KEY", "INTERCOM_IDENTITY_SECRET", "FIN_CONNECTOR_TOKEN"]
+      },
       "vars": {
         "PRODUCT_ENVIRONMENT": "development",
         "PRODUCT_MODE": "mainnet-preview",
