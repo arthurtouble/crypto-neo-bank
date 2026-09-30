@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { AuthenticationError, AuthorizationError, FeatureUnavailableError, HttpError, RateLimitError,
   WalletOwnershipError } from "@/lib/http/errors";
-import { errorResponse, route } from "@/lib/http/route";
+import { errorResponse, readJsonBody, route } from "@/lib/http/route";
 
 const request = (body?: string) => new Request("https://aura.test/api/example", { method: body === undefined ? "GET" : "POST", body });
 const failing = (error: unknown, options: Partial<Parameters<typeof route>[1]> = {}) =>
@@ -57,13 +57,22 @@ describe("API route wrapper", () => {
   it("maps validation failures and malformed JSON to 400 with the route's code", async () => {
     const schema = z.object({ amount: z.string() });
     const handler = route("example.input", { invalid: "invalid_example", unavailable: "example_unavailable" },
-      async (incoming) => Response.json(schema.parse(await incoming.json())));
+      async (incoming) => Response.json(schema.parse(await readJsonBody(incoming))));
     const zod = await handler(request(JSON.stringify({ amount: 1 })));
     expect(zod.status).toBe(400);
     expect(await zod.json()).toMatchObject({ error: "invalid_example", issues: [expect.objectContaining({ path: ["amount"] })] });
     const malformed = await handler(request("{not json"));
     expect(malformed.status).toBe(400);
     expect(await malformed.json()).toMatchObject({ error: "invalid_example" });
+  });
+
+  it("treats JSON that fails to parse anywhere else, such as a provider's answer, as an unexpected failure", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const handler = route("example.provider", { invalid: "invalid_example", unavailable: "example_unavailable" },
+      async () => Response.json(JSON.parse("<html>Bad gateway</html>")));
+    const response = await handler(request());
+    expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({ error: "example_unavailable" });
   });
 
   it("logs unexpected failures with the trace ID and never leaks their message", async () => {

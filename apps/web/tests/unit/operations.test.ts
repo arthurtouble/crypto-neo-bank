@@ -81,6 +81,16 @@ describe("operator sign-in through Cloudflare Access", () => {
     expect(fetched).toBe(2);
   });
 
+  it("fetches the keys for unknown key IDs at most once a minute, so forged tokens can't force a fetch per request", async () => {
+    vi.useFakeTimers({ now, toFake: ["Date"] });
+    await verifyAccessToken(await token(), now);
+    for (const kid of ["key-2", "key-3", "key-4"]) await expect(verifyAccessToken(await token({}, { kid }), now)).rejects.toMatchObject({ status: 401 });
+    expect(fetched).toBe(2);
+    vi.setSystemTime(now + 61_000);
+    await expect(verifyAccessToken(await token({}, { kid: "key-5" }), now)).rejects.toMatchObject({ status: 401 });
+    expect(fetched).toBe(3);
+  });
+
   it("refuses everyone when it isn't configured, or the team domain isn't https", async () => {
     vi.stubEnv("CF_ACCESS_AUD", "");
     await expect(verifyAccessToken(await token(), now)).rejects.toMatchObject({ status: 403 });

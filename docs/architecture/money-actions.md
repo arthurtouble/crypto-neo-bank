@@ -74,7 +74,8 @@ sequenceDiagram
 
 - When the customer reads the action.
 - When Transactions opens: up to 3 open actions not checked in the last 30 seconds.
-- Every 2 minutes by the web Worker's cron (`apps/web/worker/index.ts`, `lib/actions/recheck.ts`): up to 20 submitted or settling actions not checked in the last minute, least recently checked first, one at a time. It also expires prepared actions past their signing window, checks up to 20 watched accounts for money received, and delivers up to 50 pending notices.
+- Every 2 minutes by the web Worker's cron (`apps/web/worker/index.ts`, `lib/actions/recheck.ts`): up to 20 submitted or settling actions not checked in the last minute, least recently checked first, one at a time. It also expires prepared actions past their signing window, checks up to 20 watched accounts for money received, and delivers up to 50 pending notices. Each of these runs on its own, so one failing doesn't stop the others.
+- A check only writes over the status it read (`applyVerification`), so a slower check that started earlier can't move an action backwards or record an event twice.
 
 When a check moves an action to complete (a same-network action in a block and matching, or a cross-network move delivered) or failed, the customer gets one notice (`lib/notifications/store.ts` `actionNotice`), keyed by action and outcome so it never repeats.
 
@@ -128,13 +129,14 @@ Customer settings, off by default, stored in `security_profiles`. Tightening app
 The challenge is bound to the exact change and current policy version, expires in 5 minutes, and is single-use. Loosening also needs a passkey or authenticator app on the account (`requireMoneyMfa`).
 
 - **Account lock** blocks every action at preparation and again at authorize and submit, so an action prepared before the lock can't be sent.
+- **Switches and pauses** are checked at preparation and again at submit: turning off an action's switch or pausing its asset stops an action already prepared from being relayed (`feature_unavailable`, `asset_paused`).
 - **Daily limit** (`daily_limit_cents`, null = none) caps the rolling 24-hour USD value of outgoing actions (transfers and routes). Earn (between the customer's own positions) and the card allowance (moves nothing) don't count. With a limit set, an action that can't be valued is blocked.
 - **Saved recipients only** (`enforce_address_book`) blocks transfers to unsaved addresses.
 - **New recipient cooling** (`new_address_delay_seconds`, default 4 hours) delays a newly saved address before it counts as saved. Applies only with saved recipients only on; a change doesn't move entries already saved.
 
 These are enforced by the server on actions it prepares. They don't stop a customer who exports their key and signs elsewhere. Onchain or Privy-policy enforcement is a later feature ("Wealth protection"); the settings UI must say which kind applies.
 
-Bank limits come from Bridge once connected and appear beside these. A bank payout is an ordinary USDC transfer action to the address Bridge names (`lib/actions/payout.ts`), so the lock, daily limit, and passkey apply; its bank-side progress comes from Bridge (`lib/money/bank-activity.ts`) and never changes the action's chain status.
+Bank limits come from Bridge once connected and appear beside these. A bank payout is an ordinary USDC transfer action to the address Bridge names (`lib/actions/payout.ts`), so the lock, daily limit, and passkey apply. They're checked, with the `fiat_accounts` switch and the USDC pause, before Bridge is asked for the payout, and the same payout is claimed once per signing window (`command_idempotency`), so a retry returns the first action rather than creating a second Bridge payout; its bank-side progress comes from Bridge (`lib/money/bank-activity.ts`) and never changes the action's chain status.
 
 ## Valuation
 
@@ -144,7 +146,7 @@ Bank limits come from Bridge once connected and appear beside these. A bank payo
 
 - `actions`: one row per action. Calls, effects, and review summary are immutable after insert. Status moves forward only: `prepared` → `submitted` → `settling` → `confirmed`, or `failed` / `expired`.
 - `action_events`: append-only evidence (submission, status changes, delivery). A route to another network also gets two milestones, each recorded once: `source_final` when the source transaction is final, and `delivered` when the payout is seen on the destination network. The Transactions journey (`action-journey.tsx`) is built from these.
-- `route_quotes`: server-held LI.FI quotes, deleted after expiry unless used by an action.
+- `route_quotes`: server-held LI.FI quotes, deleted after expiry unless used by an action. A quote makes one action: if two requests race to use it, the second gets `409 quote_used`.
 
 ## API
 

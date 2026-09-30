@@ -4,7 +4,7 @@ import { requireVerifiedSubject } from "@/lib/auth/server";
 import { requireActionWallet } from "@/lib/auth/wallet";
 import { requireUnlocked } from "@/lib/actions/controls";
 import { cardsProvider, cardView, MAX_DAILY_LIMIT_USD, readCardState, refreshCardProjection, storedCardId } from "@/lib/cards/service";
-import { errorResponse, route } from "@/lib/http/route";
+import { errorResponse, route, readJsonBody } from "@/lib/http/route";
 import { announce } from "@/lib/notifications/deliver";
 import { securityNotice } from "@/lib/notifications/store";
 import { getCard, updateCard } from "@/lib/providers/stripe/issuing";
@@ -26,7 +26,7 @@ const schema = z.strictObject({
 export const PATCH = route("cards.controls", { unavailable: "card_unavailable", invalid: "invalid_card_change" }, async (request, context) => {
   const subject = await requireVerifiedSubject(request);
   await enforceRateLimit(env.PROJECTION_DB, { namespace: "card_controls", subject: subject.subjectReference, limit: 30, windowSeconds: 600 });
-  const { confirmation, ...change } = schema.parse(await request.json());
+  const { confirmation, ...change } = schema.parse(await readJsonBody(request));
   const provider = await cardsProvider(env.PROJECTION_DB);
   const cardId = provider && await storedCardId(env.PROJECTION_DB, subject.subjectReference);
   if (!provider || !cardId) return errorResponse(404, "card_not_found", context, { message: "You don't have a card." });

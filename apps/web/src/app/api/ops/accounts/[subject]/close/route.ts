@@ -2,7 +2,7 @@ import { env } from "cloudflare:workers";
 import { z } from "zod";
 import { checkClosure, closeAccount } from "@/lib/account/closure";
 import { requireOperator } from "@/lib/auth/access";
-import { errorResponse, route } from "@/lib/http/route";
+import { errorResponse, route, readJsonBody } from "@/lib/http/route";
 
 const schema = z.strictObject({ reason: z.string().trim().min(4).max(200) });
 
@@ -11,7 +11,7 @@ export const POST = route("ops.accounts.close", { unavailable: "account_close_un
   async (request, context, { params }: { params: Promise<{ subject: string }> }) => {
     const operator = await requireOperator(request);
     const subject = decodeURIComponent((await params).subject);
-    const { reason } = schema.parse(await request.json());
+    const { reason } = schema.parse(await readJsonBody(request));
     const check = await checkClosure(env.PROJECTION_DB, subject);
     if (check.closedAt) return errorResponse(409, "already_closed", context, { message: "This account is already closed." });
     if (!check.eligible) return errorResponse(409, "account_not_empty", context, { message: `The account can't be closed yet: ${check.blockers.join("; ")}.` });

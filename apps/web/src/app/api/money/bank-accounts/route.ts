@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
 import { requireVerifiedSubject } from "@/lib/auth/server";
-import { errorResponse, route } from "@/lib/http/route";
+import { errorResponse, route, readJsonBody } from "@/lib/http/route";
 import { activeBridgeCustomer, addBankAccount, bankAccountInputSchema, bridgeClient } from "@/lib/providers/bridge";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 
@@ -10,7 +10,7 @@ export const POST = route("money.bank_accounts.post", { invalid: "invalid_bank_a
   await enforceRateLimit(env.PROJECTION_DB, { namespace: "bank_account_create", subject: subject.subjectReference, limit: 5, windowSeconds: 3600 });
   const bridge = await bridgeClient(env.PROJECTION_DB);
   if (!bridge) return errorResponse(503, "feature_unavailable", context, { message: "Bank payouts aren't available yet." });
-  const input = bankAccountInputSchema.parse(await request.json());
+  const input = bankAccountInputSchema.parse(await readJsonBody(request));
   const customerId = await activeBridgeCustomer(env.PROJECTION_DB, subject.subjectReference);
   if (!customerId) return errorResponse(409, "verification_required", context, { message: "Finish bank account setup first." });
   const account = await addBankAccount(bridge, customerId, input, crypto.randomUUID());

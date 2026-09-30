@@ -107,8 +107,22 @@ export async function listTransactionPage(stripe: StripeClient, cardId: string, 
 
 export const listTransactions = async (stripe: StripeClient, cardId: string, limit = 30) => (await listTransactionPage(stripe, cardId, { limit })).data;
 
-export async function listDisputes(stripe: StripeClient, limit = 100) {
-  return (await stripe.request("/v1/issuing/disputes", list(disputeSchema), { query: { limit: String(limit) } })).data;
+/**
+ * Disputes opened since `since` (all when absent), newest first, up to
+ * `maxPages` pages of 100. A dispute is opened after its transaction, so
+ * `since` can be the start of the transactions' window.
+ */
+export async function listDisputes(stripe: StripeClient, { since, maxPages = 5 }: { since?: Date; maxPages?: number } = {}) {
+  const disputes: IssuingDispute[] = [];
+  let after: string | undefined;
+  for (let page = 0; page < maxPages; page++) {
+    const result = await stripe.request("/v1/issuing/disputes", list(disputeSchema), { query: { limit: "100",
+      ...(since ? { "created[gte]": String(Math.floor(since.getTime() / 1000)) } : {}), ...(after ? { starting_after: after } : {}) } });
+    disputes.push(...result.data);
+    after = result.data.at(-1)?.id;
+    if (result.has_more !== true || !after) break;
+  }
+  return disputes;
 }
 
 /**

@@ -53,12 +53,13 @@ export type NewAction = {
 /**
  * Insert a prepared action only if the account is unlocked and, when a daily
  * limit is set, the action still fits. The check and insert are one statement,
- * so parallel requests cannot both pass a limit.
+ * so parallel requests cannot both pass a limit. Returns "quote_used" when
+ * another action already took the route quote.
  */
-export async function insertAction(db: D1Database, action: NewAction, now: Date): Promise<string | null> {
+export async function insertAction(db: D1Database, action: NewAction, now: Date): Promise<string | "quote_used" | null> {
   const id = crypto.randomUUID();
   const created = now.toISOString();
-  const result = await db.prepare(`INSERT INTO actions (action_id, subject_reference, wallet_address, kind, chain_id,
+  const insert = db.prepare(`INSERT INTO actions (action_id, subject_reference, wallet_address, kind, chain_id,
       summary_json, calls_json, calls_fingerprint, effects_json, counts_toward_limit, usd_cents, valuation_source,
       route_quote_id, destination_chain_id, status, created_at, expires_at, updated_at)
     SELECT ?5, ?1, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, 'prepared', ?3, ?18, ?3
@@ -72,8 +73,14 @@ export async function insertAction(db: D1Database, action: NewAction, now: Date)
       action.wallet.toLowerCase(), action.kind, action.chainId, JSON.stringify(action.summary), JSON.stringify(action.calls),
       action.callsFingerprint, JSON.stringify(action.effects), action.countsTowardLimit ? 1 : 0, action.usdCents,
       action.valuationSource, action.routeQuoteId, action.destinationChainId,
-      new Date(now.getTime() + ACTION_TTL_MS).toISOString())
-    .run();
+      new Date(now.getTime() + ACTION_TTL_MS).toISOString());
+  let result: D1Result;
+  try { result = await insert.run(); }
+  catch (error) {
+    // Two requests raced to turn one quote into an action; the other one has it.
+    if (action.routeQuoteId && /UNIQUE/i.test(String(error)) && /route_quote_id/i.test(String(error))) return "quote_used";
+    throw error;
+  }
   return result.meta.changes === 1 ? id : null;
 }
 

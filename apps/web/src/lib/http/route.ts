@@ -3,7 +3,7 @@ import { HttpError } from "./errors";
 
 type RouteContext = { traceId: string };
 type Options = {
-  /** Error code for malformed input (Zod failures and unparseable JSON). */
+  /** Error code for malformed input (Zod failures and request bodies `readJsonBody` couldn't parse). */
   invalid?: string;
   /** Error code for unexpected failures; the cause is logged with the trace ID. */
   unavailable: string;
@@ -19,6 +19,20 @@ const noStore = "no-store";
 /** A JSON error response with the trace ID and a no-store default. */
 export function errorResponse(status: number, code: string, context: RouteContext, extra: Record<string, unknown> = {}, headers: Record<string, string> = {}) {
   return Response.json({ error: code, ...extra, traceId: context.traceId }, { status, headers: { "Cache-Control": noStore, ...headers } });
+}
+
+/** A request body that isn't JSON: the caller's mistake, answered 400 with the route's `invalid` code. */
+class InvalidJsonBodyError extends HttpError {
+  constructor() { super(400, "invalid", "The request body isn't valid JSON."); this.name = "InvalidJsonBodyError"; }
+}
+
+/**
+ * The request body as JSON. Handlers read bodies with this, so only the
+ * caller's malformed JSON is a 400; a provider answering with something that
+ * isn't JSON stays an unexpected failure.
+ */
+export async function readJsonBody(request: Request): Promise<unknown> {
+  try { return await request.json(); } catch { throw new InvalidJsonBodyError(); }
 }
 
 /**
@@ -43,9 +57,9 @@ export function route<Args extends unknown[]>(name: string, options: Options, ha
 }
 
 function toResponse(name: string, options: Options, error: unknown, context: RouteContext): Response {
+  if (error instanceof InvalidJsonBodyError) return errorResponse(400, options.invalid ?? "invalid_request", context);
   if (error instanceof HttpError) return errorResponse(error.status, error.code, context, { message: error.message }, error.headers);
   if (error instanceof z.ZodError) return errorResponse(400, options.invalid ?? "invalid_request", context, { issues: error.issues });
-  if (error instanceof SyntaxError) return errorResponse(400, options.invalid ?? "invalid_request", context);
   console.error(JSON.stringify({ level: "error", event: `${name}.failed`, traceId: context.traceId, message: error instanceof Error ? error.message : "unknown" }));
   return errorResponse(options.unavailableStatus ?? 503, options.unavailable, context, options.unavailableMessage ? { message: options.unavailableMessage } : {});
 }

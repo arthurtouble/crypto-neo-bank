@@ -13,8 +13,11 @@ import { localEdgeUrl } from "@/lib/testing/local-edge";
 export type Operator = { email: string; subject: string };
 
 const KEY_CACHE_MS = 10 * 60_000;
+/** An unknown key ID refetches the keys at most this often, so forged tokens can't make every request fetch them. */
+const REFRESH_INTERVAL_MS = 60_000;
 const CLOCK_SKEW_S = 60;
 let cached: { url: string; keys: Map<string, CryptoKey>; at: number } | null = null;
+let lastRefresh: { url: string; at: number } | null = null;
 
 /** The team domain, e.g. https://aura.cloudflareaccess.com. Only local end-to-end tests may use http, on localhost. */
 function teamDomain(): string | null {
@@ -41,6 +44,13 @@ async function signingKeys(team: string, refresh = false): Promise<Map<string, C
   return imported;
 }
 
+function refreshAllowed(team: string): boolean {
+  const url = `${team}/cdn-cgi/access/certs`;
+  if (lastRefresh?.url === url && Date.now() - lastRefresh.at < REFRESH_INTERVAL_MS) return false;
+  lastRefresh = { url, at: Date.now() };
+  return true;
+}
+
 /** Check a Cloudflare Access token for the operations app and return who it is. Throws on anything wrong. */
 export async function verifyAccessToken(token: string, nowMs = Date.now()): Promise<Operator> {
   const team = teamDomain();
@@ -51,8 +61,8 @@ export async function verifyAccessToken(token: string, nowMs = Date.now()): Prom
   let header: Record<string, unknown>, claims: Record<string, unknown>;
   try { header = json(parts[0]); claims = json(parts[1]); } catch { throw new AuthenticationError("Sign in to operations through Cloudflare Access."); }
   if (header.alg !== "RS256" || typeof header.kid !== "string") throw new AuthenticationError("Sign in to operations through Cloudflare Access.");
-  // Access rotates its keys; an unknown key ID means fetching them again once.
-  const key = (await signingKeys(team)).get(header.kid) ?? (await signingKeys(team, true)).get(header.kid);
+  // Access rotates its keys; an unknown key ID means fetching them again, at most once a minute.
+  const key = (await signingKeys(team)).get(header.kid) ?? (refreshAllowed(team) ? (await signingKeys(team, true)).get(header.kid) : undefined);
   const signed = key && await crypto.subtle.verify("RSASSA-PKCS1-v1_5", key, base64UrlToBytes(parts[2]) as BufferSource, new TextEncoder().encode(`${parts[0]}.${parts[1]}`));
   if (!signed) throw new AuthenticationError("Sign in to operations through Cloudflare Access.");
   const now = Math.floor(nowMs / 1000);
@@ -75,4 +85,4 @@ export async function requireOperator(request: Request): Promise<Operator> {
 }
 
 /** For tests: forget the cached keys. */
-export function resetAccessKeys() { cached = null; }
+export function resetAccessKeys() { cached = null; lastRefresh = null; }

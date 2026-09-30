@@ -3,11 +3,12 @@ import { z } from "zod";
 import { relaySendCalls } from "@/lib/actions/privy-relay";
 import { actionRequest } from "@/lib/actions/relay-request";
 import { requireUnlocked } from "@/lib/actions/controls";
+import { requireAllowed, storedActionGates } from "@/lib/actions/prepare";
 import { expireIfStale, getAction, recordRelay, recordSubmission } from "@/lib/actions/store";
 import { privyClient } from "@/lib/auth/privy";
 import { requireVerifiedSubject } from "@/lib/auth/server";
 import { requireMoneyAccount } from "@/lib/auth/wallet";
-import { errorResponse, route } from "@/lib/http/route";
+import { errorResponse, route, readJsonBody } from "@/lib/http/route";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { actionView } from "../../view";
 
@@ -23,7 +24,7 @@ export const POST = route("actions.submit", { invalid: "invalid_submission", una
   async (request, context, { params }: { params: Promise<{ id: string }> }) => {
     const subject = await requireVerifiedSubject(request);
     await enforceRateLimit(env.PROJECTION_DB, { namespace: "action_submit", subject: subject.subjectReference, limit: 30, windowSeconds: 60 });
-    const input = schema.parse(await request.json());
+    const input = schema.parse(await readJsonBody(request));
     const found = await getAction(env.PROJECTION_DB, subject.subjectReference, (await params).id);
     if (!found) return errorResponse(404, "action_not_found", context);
     const now = new Date();
@@ -33,6 +34,9 @@ export const POST = route("actions.submit", { invalid: "invalid_submission", una
       // A lock also stops actions prepared before it.
       await requireUnlocked(env.PROJECTION_DB, subject.subjectReference, now);
       const action = await expireIfStale(env.PROJECTION_DB, found, now);
+      // A switch turned off or an asset paused after the action was prepared stops it too.
+      const gates = storedActionGates(action);
+      await requireAllowed(env.PROJECTION_DB, gates.features, gates.assetId);
       const signable = actionRequest(action, account);
       if (!signable) return errorResponse(409, "not_submittable", context, { message: "This action can't be sent any more. Start again." });
       let reference: string;

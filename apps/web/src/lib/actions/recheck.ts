@@ -1,5 +1,6 @@
 import { checkAction, type CheckDependencies } from "./check";
 import { expireStalePrepared, listDueActions } from "./store";
+import { verifyAction } from "./verify";
 
 /** How long an open action waits between background checks. */
 const RECHECK_INTERVAL_MS = 60_000;
@@ -20,10 +21,10 @@ export async function recheckOpenActions(db: D1Database, now: Date, dependencies
   let failedChecks = 0;
   // One at a time, so a burst of open actions doesn't hit public RPC limits.
   for (const action of due) {
-    const verify = dependencies.verify;
-    const updated = await checkAction(db, action, now, { ...dependencies, verify: verify && (async (input) => {
+    const verify = dependencies.verify ?? verifyAction;
+    const updated = await checkAction(db, action, now, { ...dependencies, verify: async (input) => {
       try { return await verify(input); } catch (error) { failedChecks += 1; throw error; }
-    }) });
+    } });
     if (updated.status !== action.status) advanced += 1;
   }
   return { checked: due.length, advanced, failedChecks, expired };

@@ -76,6 +76,18 @@ describe("sending an action through Privy", () => {
     expect(state.rpc).not.toHaveBeenCalled();
   });
 
+  it("a switch turned off or an asset paused after preparing stops the send", async () => {
+    const id = await prepared();
+    sqlite.exec("UPDATE feature_flags SET enabled = 0 WHERE flag_key = 'direct_transfers'");
+    expect(await (await submit(new Request("https://aura.test", json({ signature })), params(id))).json()).toMatchObject({ error: "feature_unavailable" });
+    sqlite.exec("UPDATE feature_flags SET enabled = 1");
+    sqlite.exec(`INSERT INTO asset_pauses (asset_id, reason, paused_at, paused_by) VALUES ('8453:${usdc}', 'Issuer incident', 't', 'ops')`);
+    expect(await (await submit(new Request("https://aura.test", json({ signature })), params(id))).json()).toMatchObject({ error: "asset_paused" });
+    expect(state.rpc).not.toHaveBeenCalled();
+    sqlite.exec("DELETE FROM asset_pauses");
+    expect((await submit(new Request("https://aura.test", json({ signature })), params(id))).status).toBe(202);
+  });
+
   it("tells a rejected request apart from one whose outcome is unknown", async () => {
     const id = await prepared();
     state.rpc = vi.fn(async () => { throw Object.assign(new Error("bad signature"), { status: 401 }); });

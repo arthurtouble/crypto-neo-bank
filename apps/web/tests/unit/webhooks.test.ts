@@ -184,6 +184,24 @@ describe("POST /api/webhooks/:provider", () => {
     expect(state.sent[0]).toMatchObject({ event: { provider: "stripe", type: "card.authorization.created", subjectReference: "alice" } });
   });
 
+  it("never tells the customer or records $0.00 when Stripe leaves out the amount or the authorization", async () => {
+    vi.stubEnv("STRIPE_WEBHOOK_SECRET", "whsec_test");
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    sqlite.exec(`INSERT INTO card_account_projections (card_reference, subject_reference, provider, provider_customer_reference, status, observed_at)
+      VALUES ('ic_1', 'alice', 'stripe', 'ich_1', 'active', 't')`);
+    const send = async (id: string, object: Record<string, unknown>) => {
+      const body = JSON.stringify({ id, type: "issuing_authorization.created", created: Math.floor(now / 1000), data: { object: { card: { id: "ic_1" }, ...object } } });
+      return (await POST(new Request("https://aura.test/api/webhooks/stripe", { method: "POST", body, headers: { "stripe-signature": await stripeSignature(body) } }),
+        { params: Promise.resolve({ provider: "stripe" }) })).status;
+    };
+    expect(await send("evt_no_amount", { id: "iauth_1", approved: true, merchant_data: { name: "Coffee" } })).toBe(202);
+    expect(await send("evt_no_id", { amount: 1250, approved: true, merchant_data: { name: "Coffee" } })).toBe(202);
+    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM notifications").get()).toEqual({ n: 0 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM card_observations").get()).toEqual({ n: 0 });
+    expect(warn.mock.calls.map(([line]) => JSON.parse(String(line)).reason)).toEqual(expect.arrayContaining(["amount_missing", "authorization_missing"]));
+    warn.mockRestore();
+  });
+
   it("keeps each card purchase for the operations feed, and lets the settled transaction replace its hold", async () => {
     vi.stubEnv("STRIPE_WEBHOOK_SECRET", "whsec_test");
     sqlite.exec(`INSERT INTO card_account_projections (card_reference, subject_reference, provider, provider_customer_reference, status, observed_at)

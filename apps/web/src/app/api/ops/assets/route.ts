@@ -2,7 +2,7 @@ import { env } from "cloudflare:workers";
 import { z } from "zod";
 import { requireOperator } from "@/lib/auth/access";
 import { ASSETS, registeredAsset } from "@/lib/assets/registry";
-import { route } from "@/lib/http/route";
+import { route, readJsonBody } from "@/lib/http/route";
 
 const updateSchema = z.strictObject({
   assetId: z.string().max(80),
@@ -27,7 +27,7 @@ export const GET = route("ops.assets.get", options, async (request: Request, { t
 /** Pause or resume one registered asset. Adding assets is a reviewed code change, never an API call. */
 export const PATCH = route("ops.assets.patch", options, async (request: Request, { traceId }) => {
   const operator = await requireOperator(request);
-  const input = updateSchema.parse(await request.json());
+  const input = updateSchema.parse(await readJsonBody(request));
   const asset = registeredAsset(input.assetId);
   if (!asset) return Response.json({ error: "unknown_asset", message: "Only assets in the registry can be paused.", traceId }, { status: 404 });
   const now = new Date().toISOString();

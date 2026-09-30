@@ -117,15 +117,21 @@ function cardActivity(authorizations: IssuingAuthorization[], transactions: Issu
   return [...holds, ...posted].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
 }
 
-/** One card's spending, read from Stripe. `partial` means Stripe had more than one page for the window. */
-async function readOneCard(stripe: StripeClient, cardId: string, window: ListWindow, now: Date) {
-  const [authorizations, transactions, disputes] = await Promise.all([listAuthorizationPage(stripe, cardId, window), listTransactionPage(stripe, cardId, window), listDisputes(stripe)]);
-  return { items: cardActivity(authorizations.data, transactions.data, disputes, now), partial: authorizations.hasMore || transactions.hasMore };
+/**
+ * One card's spending, read from Stripe, with the disputes on its own
+ * transactions. `disputes` is read once per call for every card.
+ * `partial` means Stripe had more than one page for the window.
+ */
+async function readOneCard(stripe: StripeClient, cardId: string, window: ListWindow, now: Date, disputes: Promise<IssuingDispute[]>) {
+  const [authorizations, transactions, allDisputes] = await Promise.all([listAuthorizationPage(stripe, cardId, window), listTransactionPage(stripe, cardId, window), disputes]);
+  const own = new Set(transactions.data.map((transaction) => transaction.id));
+  return { items: cardActivity(authorizations.data, transactions.data, allDisputes.filter((dispute) => own.has(dispute.transaction)), now),
+    partial: authorizations.hasMore || transactions.hasMore };
 }
 
 /** The card's recent spending, for the card screen. */
 export async function readCardActivity(stripe: StripeClient, cardId: string, now = new Date()): Promise<CardActivity[]> {
-  return (await readOneCard(stripe, cardId, {}, now)).items;
+  return (await readOneCard(stripe, cardId, {}, now, listDisputes(stripe))).items;
 }
 
 export type CardHistory = { status: "available" | "unavailable"; partial: boolean; items: CardActivity[] };
@@ -142,7 +148,9 @@ export async function readCardHistory(db: D1Database, subject: string, window: L
   const provider = await cardsProvider(db);
   if (!provider) return { status: "unavailable", partial: false, items: [] };
   try {
-    const cards = await Promise.all(results.map((row) => readOneCard(provider.stripe, row.card_reference, { limit: 100, ...window }, now)));
+    const disputes = listDisputes(provider.stripe, { since: window.since });
+    disputes.catch(() => undefined);
+    const cards = await Promise.all(results.map((row) => readOneCard(provider.stripe, row.card_reference, { limit: 100, ...window }, now, disputes)));
     const { recordCardActivity } = await import("./observations");
     await recordCardActivity(db, subject, cards.flatMap((card, index) => card.items.map((item) => ({ ...item, cardId: results[index].card_reference,
       disputeStatus: item.dispute?.status ?? null }))), now);

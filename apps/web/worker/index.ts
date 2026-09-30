@@ -14,14 +14,18 @@ const log = (event: string, scheduledTime: number) => [
 /**
  * Every 2 minutes: advance open money actions from chain evidence, so they
  * settle even when nobody is looking at them; check watched accounts for
- * money received; then deliver pending notices by email and push.
+ * money received; and deliver pending notices by email and push. Each job
+ * runs and logs on its own, so one failing never stops another.
  */
 const scheduled: ExportedHandlerScheduledHandler<Cloudflare.Env> = async (controller, env, ctx) => {
   const now = new Date(controller.scheduledTime);
   ctx.waitUntil(recheckOpenActions(env.PROJECTION_DB, now).then(...log("actions.recheck", controller.scheduledTime)));
   ctx.waitUntil(refreshBankPayouts(env.PROJECTION_DB, { now, limit: 20 }).then(...log("bank.payouts.refresh", controller.scheduledTime)));
-  ctx.waitUntil((async () => ({ notified: (await scanIncoming(env.PROJECTION_DB, { now, limit: 20 })).length,
-    delivered: await deliverPending(env.PROJECTION_DB, { limit: 50 }) }))().then(...log("notifications.run", controller.scheduledTime)));
+  // Each on its own, so a failing scan never holds back delivery (or the reverse). A notice the scan records now goes out next run.
+  ctx.waitUntil(scanIncoming(env.PROJECTION_DB, { now, limit: 20 }).then((notices) => ({ notified: notices.length }))
+    .then(...log("notifications.scan", controller.scheduledTime)));
+  ctx.waitUntil(deliverPending(env.PROJECTION_DB, { limit: 50 }).then((delivered) => ({ delivered }))
+    .then(...log("notifications.deliver", controller.scheduledTime)));
 };
 
 /**

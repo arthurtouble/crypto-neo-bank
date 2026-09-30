@@ -43,7 +43,7 @@ With `fiat_accounts` on and an active Bridge customer, `lib/money/bank-activity.
 
 ### Card activity
 
-`readCardHistory` (`lib/cards/service.ts`) reads every card the customer has had from Stripe: authorizations, transactions, and disputes, 100 per card, or a statement's window with `created[gte]`/`created[lt]`.
+`readCardHistory` (`lib/cards/service.ts`) reads every card the customer has had from Stripe: authorizations and transactions, 100 per card, or a statement's window with `created[gte]`/`created[lt]`. Disputes are read once per call for all the cards (from the window's start), and each shows only on its own card's transaction.
 
 - Each becomes a `card_payment` or `card_refund` entry (`origin: "card"`, source Stripe, amount in USD, merchant as counterparty). A pending hold is pending, a settled payment or refund is completed, and a decline or released hold is failed with no value.
 - The entry links the Base transaction in which Bridge took the USDC when Stripe reports it (`crypto_transactions[].crypto_transaction_confirmed.transaction_hash`), and carries the dispute status.

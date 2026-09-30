@@ -2,7 +2,7 @@ import { env } from "cloudflare:workers";
 import { z } from "zod";
 import { requireOperator } from "@/lib/auth/access";
 import { featureKeys } from "@/lib/features/flags";
-import { route } from "@/lib/http/route";
+import { route, readJsonBody } from "@/lib/http/route";
 
 const updateSchema = z.strictObject({ key: z.enum(featureKeys), enabled: z.boolean() });
 
@@ -16,7 +16,7 @@ export const GET = route("ops.features.get", options, async (request: Request, {
 
 export const PATCH = route("ops.features.patch", options, async (request: Request, { traceId }) => {
   const operator = await requireOperator(request);
-  const input = updateSchema.parse(await request.json());
+  const input = updateSchema.parse(await readJsonBody(request));
   const now = new Date().toISOString();
   await env.PROJECTION_DB.batch([
     env.PROJECTION_DB.prepare(`INSERT INTO feature_flags (flag_key, enabled, configuration_json, updated_at, updated_by) VALUES (?, ?, '{}', ?, ?)

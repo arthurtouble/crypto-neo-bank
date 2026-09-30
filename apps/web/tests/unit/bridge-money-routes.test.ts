@@ -118,6 +118,38 @@ describe("bank payouts", () => {
       source: { payment_rail: "base", currency: "usdc", from_address: wallet }, destination: { payment_rail: "ach", external_account_id: "ea_1" } });
   });
 
+  it("refuses a paused asset or a switched-off feature before Bridge creates anything", async () => {
+    const bankAccountId = await savedBankId();
+    sqlite.exec("INSERT INTO asset_pauses (asset_id, reason, paused_at, paused_by) VALUES ('8453:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913', 'Issuer incident', 't', 'ops')");
+    const paused = await payout(new Request("https://aura.test", json({ bankAccountId, amountUsd: "25.00" })));
+    expect([paused.status, (await paused.json() as { error: string }).error]).toEqual([503, "asset_paused"]);
+    expect(calls.some((call) => call.url === "/transfers")).toBe(false);
+  });
+
+  it("answers a retry of the same payout with the first action, never a second Bridge payout", async () => {
+    const bankAccountId = await savedBankId();
+    const first = await payout(new Request("https://aura.test", json({ bankAccountId, amountUsd: "25.00" })));
+    const again = await payout(new Request("https://aura.test", json({ bankAccountId, amountUsd: "25" })));
+    expect([first.status, again.status]).toEqual([201, 200]);
+    const [a, b] = await Promise.all([first.json(), again.json()]) as Array<{ action: { id: string } }>;
+    expect(b.action.id).toBe(a.action.id);
+    expect(calls.filter((call) => call.url === "/transfers")).toHaveLength(1);
+    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM actions").get()).toEqual({ n: 1 });
+    // A different amount is a different payout.
+    payoutAmount = "26.0";
+    expect((await payout(new Request("https://aura.test", json({ bankAccountId, amountUsd: "26.00" })))).status).toBe(201);
+  });
+
+  it("lets the customer try again once Bridge refuses a payout", async () => {
+    const bankAccountId = await savedBankId();
+    const original = globalThis.fetch;
+    vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => new URL(url).pathname.endsWith("/transfers")
+      ? Response.json({ message: "bad request" }, { status: 400 }) : original(url, init)));
+    expect((await payout(new Request("https://aura.test", json({ bankAccountId, amountUsd: "25.00" })))).status).not.toBe(201);
+    vi.stubGlobal("fetch", original);
+    expect((await payout(new Request("https://aura.test", json({ bankAccountId, amountUsd: "25.00" })))).status).toBe(201);
+  });
+
   it("applies the customer's daily limit and refuses a payout whose amount Bridge changed", async () => {
     const bankAccountId = await savedBankId();
     sqlite.exec("UPDATE security_profiles SET daily_limit_cents = 1000");

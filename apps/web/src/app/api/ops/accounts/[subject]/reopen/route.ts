@@ -2,7 +2,7 @@ import { env } from "cloudflare:workers";
 import { z } from "zod";
 import { checkClosure, reopenAccount } from "@/lib/account/closure";
 import { requireOperator } from "@/lib/auth/access";
-import { errorResponse, route } from "@/lib/http/route";
+import { errorResponse, route, readJsonBody } from "@/lib/http/route";
 
 const schema = z.strictObject({ reason: z.string().trim().min(4).max(200) });
 
@@ -11,7 +11,7 @@ export const POST = route("ops.accounts.reopen", { unavailable: "account_reopen_
   async (request, context, { params }: { params: Promise<{ subject: string }> }) => {
     const operator = await requireOperator(request);
     const subject = decodeURIComponent((await params).subject);
-    const { reason } = schema.parse(await request.json());
+    const { reason } = schema.parse(await readJsonBody(request));
     if (!await reopenAccount(env.PROJECTION_DB, subject, operator.email, reason)) return errorResponse(409, "not_closed", context, { message: "This account isn't closed." });
     return Response.json({ account: await checkClosure(env.PROJECTION_DB, subject), traceId: context.traceId });
   });

@@ -174,16 +174,21 @@ export async function expireIfStale(db: D1Database, action: StoredAction, now: D
   return { ...action, status: "expired" };
 }
 
-/** Persist a verification outcome. Pending results only record that a check ran. */
+/**
+ * Persist a verification outcome. Pending results only record that a check ran. If another check already moved the
+ * action on from the status this one read, nothing is written and the action is returned as read.
+ */
 export async function applyVerification(db: D1Database, action: StoredAction, result: Verification, now: Date): Promise<StoredAction> {
   const at = now.toISOString();
   const next: StoredAction["status"] = result.status === "pending" ? action.status : result.status;
   const destinationHash = "destinationHash" in result && result.destinationHash ? result.destinationHash.toLowerCase() : action.destinationTransactionHash;
   const failure = result.status === "failed" ? result.reason : null;
   const settledAt = result.status === "confirmed" || result.status === "failed" ? at : null;
-  await db.prepare(`UPDATE actions SET status = ?, destination_transaction_hash = COALESCE(destination_transaction_hash, ?),
+  // Only from the status this check read: a slower check that started earlier can't move the action backwards or record twice.
+  const updated = await db.prepare(`UPDATE actions SET status = ?, destination_transaction_hash = COALESCE(destination_transaction_hash, ?),
       failure_reason = COALESCE(?, failure_reason), settled_at = COALESCE(settled_at, ?), checked_at = ?, updated_at = ?
-    WHERE action_id = ?`).bind(next, destinationHash, failure, settledAt, at, at, action.id).run();
+    WHERE action_id = ? AND status = ?`).bind(next, destinationHash, failure, settledAt, at, at, action.id, action.status).run();
+  if ((updated.meta.changes ?? 0) === 0) return action;
   // A route to another network has two milestones before it's complete: final on the source network, then delivered.
   if (action.destinationChainId && (result.status === "confirmed" || (result.status === "settling" && result.reason !== "finality")))
     await appendMilestone(db, action.id, "source_final", now);
