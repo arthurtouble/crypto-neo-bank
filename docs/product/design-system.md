@@ -27,6 +27,7 @@ The root layout loads `design-tokens.css` for the whole app. Areas rebuilt in ph
 | Swap: you pay and you receive with the asset picker (a dialog on desktop, a sheet on the phone), reverse, slippage, and the quote with its countdown, fees, and reference prices beside the form | `money.css`; the old swap styles are removed from `product-system.css` | Rebuilt |
 | Earn: your positions growing live, then markets and vaults, each opening to deposit or withdraw | `money.css`, classes prefixed `er` | Rebuilt |
 | Cards: the setup checklist beside a "Not issued" card, then the card (filled with the text colour; muted when frozen), details in a dialog (a sheet on the phone), controls, the allowance, and card activity | `apps/web/src/app/cards.css`, classes prefixed `cd`, on the `mx` parts in `money.css` (including the shared `mxDialog`) | Rebuilt |
+| Transactions and Insights: search, type chips, and a status filter over the list; the receipt in the Overview's side panel (a pushed screen on the phone) with the action's steps; Export in a dialog (a sheet on the phone); full history; Insights' four numbers, the money in and out chart with its table, categories, and top card merchants. Money in is green, money out neutral | `apps/web/src/app/records.css`, classes prefixed `tx` and `in`, on the `mx` parts, the Overview's chips and side panel, and the shared `mxDialog` | Rebuilt |
 | Other pages inside the shell | `globals.css`, `product-system.css` | Old look until their area is rebuilt |
 
 ## Principles

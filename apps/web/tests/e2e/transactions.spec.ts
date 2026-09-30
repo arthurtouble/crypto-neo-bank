@@ -12,6 +12,10 @@ const SPAM = "0x9999999999999999999999999999999999999999";
 const dialog = (page: Page) => page.getByRole("dialog");
 const rows = (page: Page) => page.locator(".activityRow");
 const month = () => new Date().toISOString().slice(0, 7);
+/** The type chips above the list. */
+const category = (page: Page, name: string) => page.getByRole("group", { name: "Category" }).getByRole("button", { name, exact: true }).click();
+/** The receipt closes with Close on desktop and Back on the phone, where it's a pushed screen. */
+const closeReceipt = (page: Page) => dialog(page).getByRole("button", { name: /^(Close|Back)$/ }).click();
 
 /** A signed-in customer with a passkey and 50 USDC on Base. */
 async function signIn(page: Page) {
@@ -71,14 +75,14 @@ test("money sent and money received both show, with who, where, and a link to th
   await expect(dialog(page)).toContainText("Alchemy, Base");
   await expect(dialog(page).getByTestId("incoming-finality")).toHaveText("Final on Base.");
   await expect(dialog(page).getByRole("link", { name: /View on the network/ })).toHaveAttribute("href", /^https:\/\/basescan\.org\/tx\/0x[0-9a-f]{64}$/);
-  await dialog(page).getByRole("button", { name: "Close" }).click();
+  await closeReceipt(page);
 
-  await page.getByLabel("Category").selectOption("Received");
+  await category(page, "Received");
   await expect(rows(page)).toHaveCount(1);
-  await page.getByLabel("Category").selectOption("Sent");
+  await category(page, "Sent");
   await expect(rows(page)).toHaveCount(1);
   await expect(rows(page)).toContainText("Sent");
-  await page.getByLabel("Category").selectOption("All");
+  await category(page, "All");
   await page.getByPlaceholder("Search activity").fill("nothing like this");
   await expect(page.getByText("No matching activity")).toBeVisible();
 
@@ -100,7 +104,7 @@ test("a deposit is completed once in a block, and final when Base finalizes it",
   await expect(rows(page)).toContainText("Completed");
   await rows(page).click();
   await expect(dialog(page).getByTestId("incoming-finality")).toHaveText("Received. Base makes it final in about 20 minutes.");
-  await dialog(page).getByRole("button", { name: "Close" }).click();
+  await closeReceipt(page);
 
   await edge("/__state", { finalizeAll: true });
   await page.reload();

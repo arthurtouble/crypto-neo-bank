@@ -61,3 +61,27 @@ export const exampleCard: Extract<CardState, { state: "card" }> = {
   ],
   activityStatus: "available", publishableKey: null, walletsEnabled: false, observedAt: at
 };
+
+/** When the example insights are "read": they're built from exampleInsightActivity as of this date. */
+export const exampleInsightsNow = new Date(at);
+
+/** A fictional year of completed activity, valued in dollars, for the guest Insights page. */
+export const exampleInsightActivity: ActivityEntry[] = ([
+  ["received", "2026-01-15T11:40:00.000Z", "500", 500, "0x000000000000000000000000000000000000e0b2"],
+  ["card_payment", "2026-01-15T09:12:00.000Z", "12.40", 12.4, "Corner Cafe"],
+  ["sent", "2026-01-14T18:05:00.000Z", "250", 250, "0x000000000000000000000000000000000000e0b2"],
+  ["card_payment", "2026-01-12T16:40:00.000Z", "30", 30, "Bookshop"],
+  ["earn_deposit", "2026-01-09T10:00:00.000Z", "155", 155, "Aave"],
+  ["card_payment", "2026-01-06T08:30:00.000Z", "7.60", 7.6, "Corner Cafe"],
+  ["received", "2026-01-02T12:00:00.000Z", "1200", 1200, "0x000000000000000000000000000000000000e0b2"],
+  ["swap", "2025-12-28T15:20:00.000Z", "100", 100, undefined],
+  ["card_payment", "2025-12-20T19:10:00.000Z", "64", 64, "Grocer"],
+  ["sent", "2025-12-12T09:00:00.000Z", "180", 180, "0x000000000000000000000000000000000000e0b2"],
+  ["received", "2025-11-30T12:00:00.000Z", "900", 900, "0x000000000000000000000000000000000000e0b2"],
+  ["card_payment", "2025-10-18T13:45:00.000Z", "42", 42, "Bookshop"],
+  ["received", "2025-09-01T12:00:00.000Z", "650", 650, "0x000000000000000000000000000000000000e0b2"],
+  ["sent", "2025-06-10T12:00:00.000Z", "320", 320, "0x000000000000000000000000000000000000e0b2"]
+] as const).map(([type, createdAt, amount, estimatedUsd, counterparty], index) => ({
+  id: `example-insight-${index}`, origin: type === "card_payment" ? "card" : type === "received" ? "incoming" : "aura", type, status: "completed",
+  createdAt, chainId: 8453, asset: "USDC", amount, estimatedUsd, counterparty, source: "example"
+}));

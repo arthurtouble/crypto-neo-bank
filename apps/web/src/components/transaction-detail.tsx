@@ -1,6 +1,6 @@
 "use client";
 
-import { ExternalLink, LoaderCircle } from "lucide-react";
+import { ArrowLeft, ExternalLink, LoaderCircle } from "lucide-react";
 import Link from "next/link";
 import { actionEntry, entryAmount, entryLabel, statusLabel } from "@/lib/activity/entries";
 import { networkName } from "@/lib/assets/registry";
@@ -11,33 +11,38 @@ import { ActionJourney } from "./action-journey";
 const bankStateText: Record<string, string> = { awaiting_funds: "Waiting for your USDC", funds_received: "Bridge received your USDC",
   payment_submitted: "Sent to your bank", payment_processed: "Delivered to your bank", returned: "Returned by the bank", refunded: "Refunded" };
 
-/** One action and its history. Status comes from the chain; bank updates come from Bridge. */
+const Back = () => <Link className="appTextButton txBack" href="/app/transactions"><ArrowLeft aria-hidden="true" /> Back to transactions</Link>;
+
+/** One action and its history (the receipt's "Full history"). Status comes from the chain; bank updates come from Bridge. */
 export function TransactionDetail({ id }: { id: string }) {
   const query = useActionDetail(id);
-  if (query.isPending) return <section className="panel"><LoaderCircle className="spin" size={18} /> Loading</section>;
-  if (query.error || !query.data) return <section className="panel"><p role="alert">This transaction couldn&apos;t be loaded.</p><Link href="/app/transactions">Back to transactions</Link></section>;
+  if (query.isPending) return <div className="mxPage txPage"><Back /><div className="txState" role="status"><LoaderCircle className="spin" aria-hidden="true" /> Loading</div></div>;
+  if (query.error || !query.data) return <div className="mxPage txPage"><Back /><p className="mxNote mxNoteError" role="alert">This transaction couldn&apos;t be loaded.</p></div>;
   const { action, events } = query.data;
   // The same description, amount, and status as the Transactions list.
   const entry = actionEntry(action);
   const bankUpdates = events.filter((event) => event.type === "bank_payout");
   const links = [{ name: "View on the network", url: explorerTx(action.chainId, action.transactionHash) },
     { name: "View delivery", url: explorerTx(action.destinationChainId, action.destinationTransactionHash) }].filter((link) => link.url);
-  return <div>
-    <section className="pageIntro compact"><div><h1>{entryLabel(entry.type)}{entryAmount(entry) ? ` ${entryAmount(entry)}` : ""}</h1>
-      <p>{action.status === "prepared" ? "Waiting for you to confirm" : statusLabel(entry.status)}</p></div></section>
-    <section className="panel">
-      <div className="receiptDetails">
-        <span>Network<strong>{networkName(entry.chainId)}{entry.destinationChainId ? ` to ${networkName(entry.destinationChainId)}` : ""}</strong></span>
-        {entry.counterparty && <span>To<strong>{entry.counterparty}</strong></span>}
-        {action.usdCents !== null && <span>Value<strong>${(action.usdCents / 100).toFixed(2)}</strong></span>}
-        <span>Reference<strong>{action.id}</strong></span>
-      </div>
-      <ActionJourney action={action} events={events} />
-      {bankUpdates.length > 0 && <div className="receiptTimeline"><h2>Bank updates</h2>{bankUpdates.map((event, index) => <div key={`${event.type}-${index}`}><i />
-        <span><strong>{bankStateText[String(event.evidence.state)] ?? "Bank update"}</strong>
-          <small>{new Date(event.occurredAt).toLocaleString()}</small></span></div>)}</div>}
-      {links.map((link) => <a className="button secondary" key={link.name} href={link.url!} target="_blank" rel="noreferrer">{link.name} <ExternalLink size={14} /></a>)}
-      <p><Link href="/app/transactions">Back to transactions</Link></p>
+  return <div className="mxPage txPage txDetail">
+    <Back />
+    <header className="txDetailHead"><h1>{entryLabel(entry.type)}{entryAmount(entry) ? ` ${entryAmount(entry)}` : ""}</h1>
+      <span className={`txStatus txStatus-${entry.status}`}>{action.status === "prepared" ? "Waiting for you to confirm" : statusLabel(entry.status)}</span></header>
+    <section className="mxCard" aria-labelledby="detail-facts"><h2 id="detail-facts">Details</h2>
+      <dl className="mxSummary">
+        <div><dt>Network</dt><dd>{networkName(entry.chainId)}{entry.destinationChainId ? ` to ${networkName(entry.destinationChainId)}` : ""}</dd></div>
+        {entry.counterparty && <div><dt>To</dt><dd className="txBreak">{entry.counterparty}</dd></div>}
+        {action.usdCents !== null && <div><dt>Value</dt><dd>${(action.usdCents / 100).toFixed(2)}</dd></div>}
+        <div><dt>Reference</dt><dd className="txBreak">{action.id}</dd></div>
+      </dl>
     </section>
+    <section className="mxCard" aria-labelledby="detail-progress"><h2 id="detail-progress">Progress</h2>
+      <ActionJourney action={action} events={events} />
+      {links.length > 0 && <div className="mxActions">{links.map((link) => <a className="appButton" key={link.name} href={link.url!} target="_blank" rel="noreferrer">{link.name} <ExternalLink aria-hidden="true" /></a>)}</div>}
+    </section>
+    {bankUpdates.length > 0 && <section className="mxCard" aria-labelledby="detail-bank"><h2 id="detail-bank">Bank updates</h2>
+      <ol className="actionJourney">{bankUpdates.map((event, index) => <li key={`${event.type}-${index}`} className="done"><i />
+        <span><strong>{bankStateText[String(event.evidence.state)] ?? "Bank update"}</strong><small>{new Date(event.occurredAt).toLocaleString()}</small></span></li>)}</ol>
+    </section>}
   </div>;
 }
