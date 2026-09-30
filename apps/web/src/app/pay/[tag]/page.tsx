@@ -26,25 +26,20 @@ export default async function AuraTagPage({ params }: { params: Promise<{ tag: s
         <code className="pyAddress">{data.crypto.address}</code>
         <PaymentActions address={data.crypto.address} />
       </section>
-      <section className="pyCard" aria-labelledby="pay-bank">
-        <div className="pyCardHead"><h2 id="pay-bank">Bank transfer</h2><Status available={data.bank.available} /></div>
-        {data.bank.available ? <>
-          <p>Send USD using the Bridge instructions below. Confirm the beneficiary before paying.</p>
-          <dl className="pyDetails">
-            <div><dt>Bank</dt><dd>{data.bank.instructions.bankName}</dd></div>
-            {data.bank.instructions.bankAddress && <div><dt>Bank address</dt><dd>{data.bank.instructions.bankAddress}</dd></div>}
-            <div><dt>Beneficiary</dt><dd>{data.bank.instructions.beneficiaryName}</dd></div>
-            {data.bank.instructions.beneficiaryAddress && <div><dt>Beneficiary address</dt><dd>{data.bank.instructions.beneficiaryAddress}</dd></div>}
-            <div><dt>Account number</dt><dd className="pyMono">{data.bank.instructions.accountNumber}</dd></div>
-            <div><dt>Routing number</dt><dd className="pyMono">{data.bank.instructions.routingNumber}</dd></div>
-            <div><dt>Accepted rails</dt><dd>{data.bank.instructions.rails.map((rail) => rail === "ach" ? "ACH push" : rail === "wire" ? "Wire" : "FedNow").join(", ")}</dd></div>
-          </dl>
-        </> : <p>Bank details appear only when this recipient has an active Bridge account and has chosen to share them.</p>}
-      </section>
-      <section className="pyCard" aria-labelledby="pay-card">
-        <div className="pyCardHead"><h2 id="pay-card">Card payment</h2><Status available={false} /></div>
-        <p>Card payments require a connected acquiring and payment-link provider. No card checkout is active.</p>
-      </section>
+      {/* Change B6: only the ways that work. Bank details show when this person shared them; card payment isn't offered until it exists. */}
+      {data.bank.available && <section className="pyCard" aria-labelledby="pay-bank">
+        <div className="pyCardHead"><h2 id="pay-bank">Bank transfer</h2><Status available /></div>
+        <p>Send USD using the Bridge instructions below. Confirm the beneficiary before paying.</p>
+        <dl className="pyDetails">
+          <div><dt>Bank</dt><dd>{data.bank.instructions.bankName}</dd></div>
+          {data.bank.instructions.bankAddress && <div><dt>Bank address</dt><dd>{data.bank.instructions.bankAddress}</dd></div>}
+          <div><dt>Beneficiary</dt><dd>{data.bank.instructions.beneficiaryName}</dd></div>
+          {data.bank.instructions.beneficiaryAddress && <div><dt>Beneficiary address</dt><dd>{data.bank.instructions.beneficiaryAddress}</dd></div>}
+          <div><dt>Account number</dt><dd className="pyMono">{data.bank.instructions.accountNumber}</dd></div>
+          <div><dt>Routing number</dt><dd className="pyMono">{data.bank.instructions.routingNumber}</dd></div>
+          <div><dt>Accepted rails</dt><dd>{data.bank.instructions.rails.map((rail) => rail === "ach" ? "ACH push" : rail === "wire" ? "Wire" : "FedNow").join(", ")}</dd></div>
+        </dl>
+      </section>}
     </> : <section className="pyCard pyUnavailable"><h1>Payment page unavailable</h1><p>This Aura tag is not available for public payments.</p></section>}</main>
     <footer className="pyFooter">Aura is a wallet interface. Crypto transfers may be irreversible. Confirm the recipient before sending.</footer>
   </div>;

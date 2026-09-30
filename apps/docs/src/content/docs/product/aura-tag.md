@@ -11,7 +11,7 @@ Anyone can open your page, with or without an Aura account. They can copy your B
 
 The page shows an address only while that address is still verified on your account. Anyone paying you should check that they're sending on Base, and that you can use the asset. A payment on another network, or in a token Aura doesn't support, may not show in Aura.
 
-The page also lists bank transfer and card payment. Neither is available yet, and the page says so. Bank transfer needs an approved bank partner. Card payment needs a card payment partner.
+The page shows only the ways that work. Crypto on Base is always there. Your bank details show only if your Bridge bank account is active and you've chosen to show them. Card payment isn't offered.
 
 ## Changing your tag
 

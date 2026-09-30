@@ -175,7 +175,7 @@ export function DepositPage() {
         </section>
         <section className="mxCard" aria-labelledby="deposit-tag">
           <h2 id="deposit-tag">Get paid with your tag</h2>
-          <p className="mxHint">Share a public payment page with crypto, bank, and card options. Each method shows its current availability.</p>
+          <p className="mxHint">Share a public payment page where people can pay you in crypto, and by bank transfer if you choose to show your bank details.</p>
           {isExample ? <button type="button" className="appButton" onClick={login}>Sign in to manage your tag</button>
             : <Link className="appButton" href="/app/settings#tag">Manage your tag</Link>}
         </section>
