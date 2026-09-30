@@ -1,5 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { decodeFunctionData, erc20Abi } from "viem";
 import { LIFI_DIAMOND, quoteRoute, validateRoute, type RouteQuoteRequest } from "@/lib/actions/lifi";
 import { prepareAction } from "@/lib/actions/prepare";
@@ -85,10 +85,10 @@ describe("validating a LI.FI quote", () => {
   });
 
   it("asks LI.FI for the smart wallet as sender and passes the integrator fee", async () => {
-    process.env.LIFI_INTEGRATOR_FEE = "0.0025";
+    vi.stubEnv("LIFI_INTEGRATOR_FEE", "0.0025");
     let url = "";
     await quoteRoute(request, { now: () => now, fetcher: (async (input: string) => { url = input; return Response.json(lifiQuote()); }) as unknown as typeof fetch });
-    delete process.env.LIFI_INTEGRATOR_FEE;
+    vi.unstubAllEnvs();
     const query = new URL(url).searchParams;
     expect([query.get("fromAddress"), query.get("toAddress"), query.get("fromAmount"), query.get("fee")]).toEqual([wallet, wallet, "10000000", "0.0025"]);
   });
