@@ -25,9 +25,12 @@ async function request(path, init) {
 
 const home = await request("/");
 assert(home.ok, `home responds (${home.status})`);
-assert((await home.text()).includes("Your Smart Account"), "home serves the Aura landing page");
+assert((await home.text()).includes("One app for the money you hold yourself"), "home serves the Aura landing page");
 assert(home.headers.get("x-content-type-options") === "nosniff", "X-Content-Type-Options is nosniff");
 assert(home.headers.get("content-security-policy")?.includes("frame-ancestors 'none'"), "CSP denies framing");
+
+const robots = await request("/robots.txt");
+assert(robots.ok && (await robots.text()).includes("Disallow: /"), "robots.txt is served and keeps crawlers out of private paths");
 
 const docs = await request("/docs");
 assert([301, 302, 307, 308].includes(docs.status), `documentation redirects to dedicated site (${docs.status})`);
