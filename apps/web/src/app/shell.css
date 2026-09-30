@@ -5,12 +5,36 @@
  * classes) so they win over today's page styles without touching them.
  */
 
+/* Base: the page canvas, text, selection, and the one focus ring, from the tokens */
+html { scroll-behavior: smooth; background: var(--color-canvas); }
+body { margin: 0; background: var(--color-canvas); color: var(--color-text); font-family: var(--font-sans); font-size: var(--text-body-size); line-height: var(--text-body-line); -webkit-font-smoothing: antialiased; }
+::selection { background: var(--color-accent-soft); color: var(--color-text); }
+:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.productShell small { font-size: var(--text-caption-size); line-height: var(--text-caption-line); }
+.srOnly { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.spin { animation: appSpin .8s linear infinite; }
+@keyframes appSpin { to { transform: rotate(360deg); } }
+/* Balances blur when the customer hides them (account menu) */
+.sensitiveAmount { transition: filter var(--duration-fast) var(--ease-enter), opacity var(--duration-fast) var(--ease-enter); }
+html[data-balance-privacy="hidden"] .sensitiveAmount { filter: blur(7px); opacity: .55; user-select: none; }
+/* Dev build label: which commit this deploy runs. Absent in production builds. */
+.buildTag { position: fixed; left: var(--space-2); bottom: var(--space-2); z-index: 1000; padding: 2px 6px; border: 1px solid var(--color-line); border-radius: var(--radius-sm); background: var(--color-raised); color: var(--color-text-secondary); font: var(--weight-regular) var(--text-caption-size) / var(--text-caption-line) var(--font-mono); pointer-events: none; opacity: .85; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+
+/* Loading the account: one quiet line while the wallet and terms load */
+.appLoading { min-height: 58vh; display: flex; align-items: center; justify-content: center; gap: var(--space-3); padding: var(--space-8) var(--page-pad-x); color: var(--color-text-secondary); font-family: var(--font-sans); font-size: var(--text-body-size); line-height: var(--text-body-line); }
+.appLoading p { margin: 0; }
+.appLoading svg { width: 16px; height: 16px; flex: none; }
+
 /* Frame */
 .productShell.appFrame { display: grid; grid-template-columns: var(--sidebar-width) minmax(0, 1fr); min-height: 100vh; min-height: 100dvh; background: var(--color-canvas); }
 .appFrame .appMain { min-width: 0; display: flex; flex-direction: column; }
 .appFrame .appContent { width: 100%; max-width: calc(var(--content-max) + 2 * var(--page-pad-x)); margin: 0 auto; padding: var(--page-pad-top) var(--page-pad-x) var(--space-10); }
 .appFrame svg.lucide { width: var(--icon-size); height: var(--icon-size); stroke-width: var(--icon-stroke); flex: none; }
-.appPhoneOnly, .appInboxBack { display: none; }
+.appPhoneOnly, .appFrame .appInboxBack { display: none; }
 .appMono { font-family: var(--font-mono); }
 
 /* Sidebar */
@@ -47,9 +71,6 @@
 .appIconButton:hover { background: var(--color-hover); color: var(--color-text); }
 .appIconButton svg { width: var(--icon-size); height: var(--icon-size); stroke-width: var(--icon-stroke); }
 .appAvatar { width: 32px; height: 32px; display: grid; place-items: center; padding: 0; border: 0; border-radius: var(--radius-pill); background: var(--color-accent-soft); color: var(--color-accent); font: var(--weight-semibold) var(--text-caption-size) / 1 var(--font-sans); cursor: pointer; }
-.appButton:focus-visible, .appTextButton:focus-visible, .appIconButton:focus-visible, .appAvatar:focus-visible, .appMenuButton:focus-visible,
-.appFrame .appNav a:focus-visible, .appTiles a:focus-visible, .appSegmented button:focus-visible, .appFrame .commandSearch:focus-visible,
-.appInbox a:focus-visible, .appDocList a:focus-visible, .appCheck input:focus-visible, .toastRegion a:focus-visible, .toastRegion button:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
 
 /* Guest banner, shared by rebuilt sections */
 .appGuestBanner { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4); border: 1px solid var(--color-line); border-radius: var(--radius-md); background: var(--color-accent-soft); font-family: var(--font-sans); }
@@ -57,11 +78,18 @@
 .appGuestBanner strong { color: var(--color-text); font-weight: var(--weight-semibold); }
 @media (max-width: 767px) { .appGuestBanner { flex-direction: column; align-items: stretch; } .appGuestBanner .appButton { height: var(--control-height-lg); } }
 
+/* Blocked: a centred block saying why, and the next step (a closed account) */
+.appIconDisc { width: 32px; height: 32px; flex: none; display: grid; place-items: center; border-radius: var(--radius-pill); background: var(--color-muted); color: var(--color-text-secondary); }
+.appIconDisc svg, .appFrame .appIconDisc svg.lucide { width: 16px; height: 16px; }
+.appFrame .mxCard.appBlocked { justify-items: center; gap: var(--space-3); padding: var(--space-9) var(--space-5); text-align: center; }
+.appFrame .appBlocked h1 { font-size: var(--text-title-2-size); line-height: var(--text-title-2-line); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-snug); }
+.appFrame .appBlocked p { max-width: 44ch; color: var(--color-text-secondary); }
+.appFrame .appBlocked .mxActions { justify-content: center; margin-top: var(--space-2); }
+
 /* Segmented control (theme) */
 /* A setting that saves as soon as it changes: an On/Off button, or a checkbox drawn as a switch */
 .appFrame .appToggle { flex: none; min-width: 52px; height: 28px; padding: 0 var(--space-3); border: 1px solid var(--color-line-strong); border-radius: var(--radius-pill); background: var(--color-muted); color: var(--color-text-secondary); font: var(--weight-medium) var(--text-small-size) / 1 var(--font-sans); cursor: pointer; transition: background var(--duration-fast) var(--ease-enter); }
 .appFrame .appToggle[aria-pressed="true"] { border-color: var(--color-accent); background: var(--color-accent); color: var(--color-on-accent); }
-.appFrame .appToggle:focus-visible, .appFrame .appSwitch:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
 .appFrame .appToggle:disabled, .appFrame .appSwitch:disabled { opacity: .5; cursor: not-allowed; }
 .appFrame .appSwitch { appearance: none; flex: none; position: relative; width: 40px; height: 24px; margin: 0; border: 1px solid var(--color-line-strong); border-radius: var(--radius-pill); background: var(--color-muted); cursor: pointer; transition: background var(--duration-fast) var(--ease-enter); }
 .appFrame .appSwitch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: var(--color-surface); box-shadow: var(--shadow-1); transition: transform var(--duration-fast) var(--ease-enter); }
@@ -94,6 +122,8 @@
 .appInbox li span { color: var(--color-text-secondary); font-size: var(--text-small-size); line-height: var(--text-small-line); }
 .appInbox li time { color: var(--color-text-tertiary); font-size: var(--text-caption-size); line-height: var(--text-caption-line); }
 .appInboxEmpty { margin: 0; padding: var(--space-2); color: var(--color-text-secondary); font-size: var(--text-small-size); }
+.appInboxError { border-radius: var(--radius-md); background: var(--color-warning-soft); color: var(--color-text); }
+.appInlineButton { height: auto; padding: 0; font-size: inherit; vertical-align: baseline; }
 .appInboxSettings { justify-self: start; padding: var(--space-2); color: var(--color-accent); font-size: var(--text-small-size); font-weight: var(--weight-medium); text-decoration: none; }
 
 /* Phone menu: the floating button and the sheet of tiles */
@@ -159,7 +189,8 @@
   .appPhoneOnly { display: contents; }
   .appFrame .appTopbar { height: 56px; }
   .appFrame .appTopbar .appBrand { padding: 0; }
-  .appFrame .appContent { padding-bottom: 100px; }
+  /* 100px clear of the floating menu button, plus the safe area it sits above */
+  .appFrame .appContent { padding-bottom: calc(100px + env(safe-area-inset-bottom)); }
   .appMenuButton { position: fixed; z-index: 50; left: 50%; bottom: calc(22px + env(safe-area-inset-bottom)); transform: translateX(-50%); width: var(--menu-button); height: var(--menu-button); display: grid; place-items: center; padding: 0; border: 0; border-radius: var(--radius-pill); background: var(--color-text); color: var(--color-canvas); box-shadow: var(--shadow-2); cursor: pointer; }
   .appMenuButton svg { width: 22px; height: 22px; stroke-width: var(--icon-stroke); }
   .appInbox { position: fixed; z-index: 65; inset: 0; width: auto; max-width: none; max-height: none; border: 0; border-radius: 0; box-shadow: none; align-content: start; padding: var(--space-2) var(--page-pad-x) var(--space-8); }
@@ -192,3 +223,11 @@
 .cmEmpty { margin: 0; padding: var(--space-4) var(--space-2); color: var(--color-text-secondary); font-size: var(--text-small-size); }
 .cmFooter { display: flex; gap: var(--space-4); padding: var(--space-2) var(--space-2) 0; border-top: 1px solid var(--color-line); color: var(--color-text-tertiary); font-size: var(--text-caption-size); }
 @media (max-width: 767px) { .cmFooter { display: none; } .cmInput input { font-size: 16px; } }
+
+/* Touch targets: at least 44 × 44px on the phone and other touch screens; desktop keeps its density */
+@media (max-width: 767px), (pointer: coarse) {
+  .appSegmented button { min-height: var(--touch-min); }
+  .appAvatar { width: var(--touch-min); height: var(--touch-min); }
+  .toast { grid-template-columns: 20px minmax(0, 1fr) var(--touch-min); }
+  .toastClose { width: var(--touch-min); height: var(--touch-min); margin: calc(-1 * var(--space-3)) calc(-1 * var(--space-2)) calc(-1 * var(--space-3)) 0; }
+}

@@ -1,27 +1,17 @@
 "use client";
 
 import { usePrivy } from "@privy-io/react-auth";
-import { Check, Copy, LoaderCircle } from "lucide-react";
+import { LoaderCircle } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { useApi } from "@/lib/client/api";
 import { bankStage, useBankAccount } from "@/lib/client/use-bank-account";
+import { bankRailNames as railNames } from "@/lib/format/bank";
+import { CopyButton } from "./copy-button";
 import { useToast } from "./toast";
 
-const railNames = { ach: "Bank transfer", wire: "Wire", fednow: "Instant transfer" } as const;
-
 function CopyValue({ label, value }: { label: string; value: string }) {
-  const [copied, setCopied] = useState(false);
-  async function copy() {
-    try {
-      await navigator.clipboard.writeText(value);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1600);
-    } catch { /* Clipboard access can be refused; the number stays visible to copy by hand. */ }
-  }
   return <div><dt>{label}</dt><dd className="mxCopy"><span className="mxMono">{value}</span>
-    <button type="button" className="appButton mxCopyButton" onClick={() => void copy()} aria-label={`Copy ${label.toLowerCase()}`}>
-      {copied ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}{copied ? "Copied" : "Copy"}
-    </button></dd></div>;
+    <CopyButton value={value} ariaLabel={`Copy ${label.toLowerCase()}`} className="appButton mxCopyButton" /></dd></div>;
 }
 
 function VerificationForm({ onStarted }: { onStarted: () => void }) {
@@ -51,7 +41,7 @@ function VerificationForm({ onStarted }: { onStarted: () => void }) {
     <p className="mxHint">Bridge, our banking partner, verifies your identity before it opens a USD account for you.</p>
     <label className="mxField">Full legal name<input value={fullName} onChange={(event) => setFullName(event.target.value)} autoComplete="name" required minLength={2} maxLength={120} /></label>
     <label className="mxField">Email<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" required maxLength={254} /></label>
-    <button className="appButton appButtonPrimary appButtonLarge" disabled={busy || fullName.trim().length < 2 || !email}>{busy ? "Starting…" : "Verify with Bridge"}</button>
+    <button type="submit" className="appButton appButtonPrimary appButtonLarge" disabled={busy || fullName.trim().length < 2 || !email}>{busy ? "Starting…" : "Verify with Bridge"}</button>
   </form>;
 }
 

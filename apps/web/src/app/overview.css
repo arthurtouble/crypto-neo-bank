@@ -33,7 +33,6 @@
 .appFrame .ovChip:hover { background: var(--color-hover); }
 .appFrame .ovChip[aria-pressed="true"] { background: var(--color-text); border-color: var(--color-text); color: var(--color-canvas); }
 .appFrame .ovChip[aria-pressed="true"] strong { color: var(--color-canvas); }
-.appFrame .ovChip:focus-visible, .appFrame .ovRow:focus-visible, .appFrame .ovRecentRow:focus-visible, .appFrame .ovQuick a:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
 
 /* Columns */
 .appFrame .ovColumns { display: grid; grid-template-columns: minmax(0, 1fr) var(--side-column); gap: var(--gap-section); align-items: start; }
@@ -136,6 +135,8 @@
   .appFrame .ovQuick a { display: grid; justify-items: center; gap: 6px; color: var(--color-text); font-size: var(--text-small-size); font-weight: var(--weight-medium); text-decoration: none; }
   .appFrame .ovQuick a > span { width: 48px; height: 48px; display: grid; place-items: center; border-radius: var(--radius-pill); background: var(--color-accent-soft); color: var(--color-accent); }
   .appFrame .ovQuick svg.lucide { width: 20px; height: 20px; }
+  /* Seven figures still fit a 320px phone */
+  .appFrame .ovTotalValue { font-size: min(var(--text-display-size), 10vw); overflow-wrap: anywhere; }
   .appFrame .ovChips { flex-wrap: nowrap; overflow-x: auto; margin: 0 calc(-1 * var(--page-pad-x)); padding: 0 var(--page-pad-x); scrollbar-width: none; }
   .appFrame .ovRow { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "asset value" "amount value"; row-gap: 0; padding-inline: var(--space-4); }
   .appFrame .ovAsset { grid-area: asset; }
@@ -151,4 +152,9 @@
   .ovPanelBack { display: grid !important; margin-left: calc(-1 * var(--space-2)); }
   .ovPanelClose { display: none !important; }
   .ovPanelActions { position: sticky; bottom: 0; padding-bottom: env(safe-area-inset-bottom); background: var(--color-raised); }
+}
+
+/* Touch targets: filter chips are at least 44px high on the phone and other touch screens */
+@media (max-width: 767px), (pointer: coarse) {
+  .appFrame .ovChip { height: var(--touch-min); }
 }

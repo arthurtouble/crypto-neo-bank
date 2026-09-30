@@ -16,7 +16,6 @@
 .appFrame .mxTabs { display: inline-flex; justify-self: start; gap: 2px; padding: 2px; border-radius: var(--radius-md); background: var(--color-muted); }
 .appFrame .mxTabs [role="tab"] { display: inline-flex; align-items: center; gap: var(--space-2); height: 32px; padding: 0 var(--space-3); border: 0; border-radius: var(--radius-sm); background: none; color: var(--color-text-secondary); font: var(--weight-medium) var(--text-body-size) / 1 var(--font-sans); cursor: pointer; }
 .appFrame .mxTabs [role="tab"][aria-selected="true"] { background: var(--color-surface); color: var(--color-text); box-shadow: var(--shadow-1); }
-.appFrame .mxTabs [role="tab"]:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
 .appFrame .mxTabIcon, .appFrame .mxTabText small, .appFrame .mxTabChevron { display: none; }
 .appFrame .mxTabText strong { font-weight: inherit; }
 
@@ -99,7 +98,6 @@
 .appFrame .mxFaces { display: flex; gap: var(--space-2); overflow-x: auto; padding-bottom: 2px; scrollbar-width: thin; }
 .appFrame .mxFaces button { flex: none; width: 104px; display: grid; justify-items: center; gap: 2px; padding: var(--space-2) var(--space-1); border: 1px solid transparent; border-radius: var(--radius-md); background: none; color: var(--color-text); font: inherit; text-align: center; cursor: pointer; }
 .appFrame .mxFaces button:hover { background: var(--color-hover); }
-.appFrame .mxFaces button:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
 .appFrame .mxFaces button[aria-pressed="true"] { border-color: var(--color-accent); background: var(--color-accent-soft); }
 .appFrame .mxFaces strong { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--text-small-size); font-weight: var(--weight-medium); }
 .appFrame .mxFaces small { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--text-caption-size); }
@@ -152,7 +150,6 @@
 .appFrame .mxSwapEstimate { display: block; overflow: hidden; text-overflow: ellipsis; }
 .appFrame .mxSwapReverse { justify-self: center; width: 36px; height: 36px; margin: calc(-1 * var(--space-5)) 0; position: relative; z-index: 1; display: grid; place-items: center; border: 1px solid var(--color-line-strong); border-radius: var(--radius-pill); background: var(--color-surface); color: var(--color-text-secondary); box-shadow: var(--shadow-1); cursor: pointer; }
 .appFrame .mxSwapReverse:hover { color: var(--color-text); background: var(--color-hover); }
-.appFrame .mxSwapReverse:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
 .appFrame .mxSwapSettings { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
 .appFrame .mxQuoteHead { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
 .appFrame .mxBadgeWarning { background: var(--color-warning-soft); color: var(--color-warning); }
@@ -162,7 +159,6 @@
 /* The asset picker: a trigger in the form, then a dialog (a sheet on the phone) */
 .mxPickerTrigger { display: inline-flex; align-items: center; gap: var(--space-2); height: 32px; padding: 0 var(--space-3); border: 1px solid var(--color-line-strong); border-radius: var(--radius-pill); background: var(--color-surface); color: var(--color-text); font: var(--weight-semibold) var(--text-small-size) / 1 var(--font-sans); cursor: pointer; }
 .mxPickerTrigger:hover { background: var(--color-hover); }
-.mxPickerTrigger:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
 .mxPickerNetwork { color: var(--color-text-secondary); font-weight: var(--weight-medium); }
 .mxPickerOverlay, .mxDialogOverlay { position: fixed; inset: 0; z-index: 89; background: var(--color-scrim); }
 .mxPicker, .mxDialog { position: fixed; z-index: 90; top: 50%; left: 50%; width: min(480px, calc(100vw - 2 * var(--space-4))); max-height: min(640px, calc(100dvh - 2 * var(--space-4))); transform: translate(-50%, -50%); display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-5); border: 1px solid var(--color-line); border-radius: var(--radius-lg); background: var(--color-raised); color: var(--color-text); box-shadow: var(--shadow-2); font-family: var(--font-sans); font-size: var(--text-body-size); line-height: var(--text-body-line); font-variant-numeric: tabular-nums; }
@@ -215,6 +211,8 @@
 .appFrame .erName strong { font-weight: var(--weight-semibold); }
 .appFrame .erValue, .appFrame .erRate { display: grid; justify-items: end; text-align: right; }
 .appFrame .erValue strong { font-weight: var(--weight-medium); }
+.appFrame .erHeld { display: grid; justify-items: end; }
+.appFrame .erHeld small { font-weight: var(--weight-regular); }
 .appFrame .erRate strong { font-size: var(--text-title-2-size); line-height: var(--text-title-2-line); font-weight: var(--weight-semibold); color: var(--color-positive); }
 .appFrame .erRate strong.erUnavailable, .appFrame .erUnavailable { color: var(--color-warning); }
 .appFrame .erOptions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); align-items: start; }
@@ -256,4 +254,14 @@
   .appFrame .mxSummaryCard { display: none; }
   .appFrame .mxPanelHeadRow { flex-wrap: wrap; }
   .appFrame .mxPage .transactionSteps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* Touch targets: at least 44 × 44px on the phone and other touch screens; desktop keeps its density */
+@media (max-width: 767px), (pointer: coarse) {
+  .appFrame .mxCopyButton, .mxPickerTrigger { min-height: var(--touch-min); }
+}
+/* Tablets are touch screens too: Deposit's tabs get the full target there */
+@media (max-width: 1023px) {
+  .appFrame .mxTabs [role="tab"] { min-height: var(--touch-min); }
+  .appFrame .mxSwapReverse { width: var(--touch-min); height: var(--touch-min); }
 }

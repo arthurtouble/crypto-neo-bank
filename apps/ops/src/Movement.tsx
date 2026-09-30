@@ -25,7 +25,7 @@ function Journey({ id, onClose }: { id: string; onClose: () => void }) {
   const source = data && txLink(data.action.chainId, data.action.transactionHash);
   const delivery = data && txLink(data.action.destinationChainId, data.action.destinationTransactionHash);
   return <aside className="drawer" role="dialog" aria-modal="false" aria-labelledby="journey-heading">
-    <header><h2 id="journey-heading">Action journey</h2><button className="button quiet" onClick={onClose}>Close</button></header>
+    <header><h2 id="journey-heading">Action journey</h2><button type="button" className="button quiet" onClick={onClose}>Close</button></header>
     {detail.isError && <div className="notice error" role="alert">{detail.error.message}</div>}
     {data && <>
       <dl className="facts">
@@ -43,7 +43,7 @@ function Journey({ id, onClose }: { id: string; onClose: () => void }) {
       <div className="actions">
         {source && <a className="button" href={source} target="_blank" rel="noreferrer">Transaction</a>}
         {delivery && <a className="button" href={delivery} target="_blank" rel="noreferrer">Delivery</a>}
-        {(data.action.status === "submitted" || data.action.status === "settling") && <button className="button primary" disabled={check.isPending} onClick={() => check.mutate()}>
+        {(data.action.status === "submitted" || data.action.status === "settling") && <button type="button" className="button primary" disabled={check.isPending} onClick={() => check.mutate()}>
           {check.isPending ? "Checking…" : "Check the chain now"}</button>}
       </div>
       {check.isError && <div className="notice error" role="alert">{check.error.message}</div>}
@@ -76,7 +76,7 @@ function CustomerHistory({ subject, onOpen }: { subject: string; onOpen: (id: st
       <tbody>{data.entries.map((entry) => <tr key={`${entry.origin}:${entry.id}`} className={entry.origin === "aura" ? "clickable" : undefined} data-testid="ops-history-entry"
         onClick={entry.origin === "aura" ? () => onOpen(entry.id) : undefined}>
         <td>{when(entry.createdAt)}</td>
-        <td>{entry.origin === "aura" ? <button className="link" onClick={(event) => { event.stopPropagation(); onOpen(entry.id); }}>{entry.label}</button> : entry.label}</td>
+        <td>{entry.origin === "aura" ? <button type="button" className="link" onClick={(event) => { event.stopPropagation(); onOpen(entry.id); }}>{entry.label}</button> : entry.label}</td>
         <td>{entry.amountText ?? "—"}</td>
         <td><span className={`badge ${entry.status === "failed" ? "bad" : entry.status === "completed" ? "good" : "warn"}`}>{entry.statusText}</span></td>
         <td>{entry.counterparty ? <code>{short(entry.counterparty)}</code> : "—"}</td><td>{entry.source}</td></tr>)}</tbody>
@@ -99,7 +99,7 @@ export function Movement({ subject, onClearSubject }: { subject: string | null; 
   const rows = list.data?.pages.flatMap((page) => page.rows) ?? [];
   if (subject) return <section className="panel" aria-labelledby="movement-heading">
     <h1 id="movement-heading">Money movement</h1>
-    <div className="filters"><span className="chip">Customer <code>{short(subject)}</code><button className="button quiet" onClick={onClearSubject}>Show everyone</button></span></div>
+    <div className="filters"><span className="chip">Customer <code>{short(subject)}</code><button type="button" className="button quiet" onClick={onClearSubject}>Show everyone</button></span></div>
     <CustomerHistory subject={subject} onOpen={setOpen} />
     {open && <Journey id={open} onClose={() => setOpen(null)} />}
   </section>;
@@ -113,7 +113,7 @@ export function Movement({ subject, onClearSubject }: { subject: string | null; 
       <label>Kind<select value={kind} onChange={(event) => setKind(event.target.value)}>
         <option value="">All</option><option value="transfer">Send, bank, card</option><option value="route">Swap or move</option><option value="earn">Earn</option><option value="received">Received from outside Aura</option><option value="card">Card payments</option></select></label>
       <label className="check"><input type="checkbox" checked={stuck} onChange={(event) => setStuck(event.target.checked)} />Stuck only</label>
-      {subject && <span className="chip">Customer <code>{short(subject)}</code><button className="button quiet" onClick={onClearSubject}>Show everyone</button></span>}
+      {subject && <span className="chip">Customer <code>{short(subject)}</code><button type="button" className="button quiet" onClick={onClearSubject}>Show everyone</button></span>}
     </div>
     {list.isError && <div className="notice error" role="alert">{list.error.message}</div>}
     <div className="tableWrap"><table>
@@ -122,7 +122,7 @@ export function Movement({ subject, onClearSubject }: { subject: string | null; 
         const link = row.origin === "incoming" ? txLink(row.chainId, row.transactionHash) : null;
         return <tr key={`${row.origin}:${row.id}`} className={row.origin === "aura" ? "clickable" : undefined} onClick={row.origin === "aura" ? () => setOpen(row.id) : undefined} data-testid="ops-action">
           <td>{when(row.createdAt)}</td>
-          <td>{row.origin === "aura" ? <button className="link" onClick={(event) => { event.stopPropagation(); setOpen(row.id); }}>{row.label}</button>
+          <td>{row.origin === "aura" ? <button type="button" className="link" onClick={(event) => { event.stopPropagation(); setOpen(row.id); }}>{row.label}</button>
             : link ? <a className="link" href={link} target="_blank" rel="noreferrer">{row.label}</a> : row.label}</td>
           <td>{row.amountText ?? "—"}</td>
           <td><span className={`badge ${row.status === "failed" ? "bad" : row.statusText === "Completed" ? "good" : "warn"}`}>{row.statusText}</span></td>
@@ -130,7 +130,7 @@ export function Movement({ subject, onClearSubject }: { subject: string | null; 
       })}</tbody>
     </table></div>
     {list.isSuccess && !rows.length && <p className="muted">Nothing matches.</p>}
-    {list.hasNextPage && <button className="button" disabled={list.isFetchingNextPage} onClick={() => void list.fetchNextPage()}>{list.isFetchingNextPage ? "Loading…" : "Load more"}</button>}
+    {list.hasNextPage && <button type="button" className="button" disabled={list.isFetchingNextPage} onClick={() => void list.fetchNextPage()}>{list.isFetchingNextPage ? "Loading…" : "Load more"}</button>}
     {open && <Journey id={open} onClose={() => setOpen(null)} />}
   </section>;
 }

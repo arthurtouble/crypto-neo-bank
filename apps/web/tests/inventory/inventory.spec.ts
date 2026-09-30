@@ -125,7 +125,7 @@ test("sign-in, terms, and session", async ({ page }, info) => {
   await page.goto("/app");
   await settle(page, "Overview");
   await page.getByRole("button", { name: "Sign in to continue" }).click();
-  await settle(page, "Review Aura’s terms.");
+  await settle(page, "Review Aura’s terms");
   await shot(page, info, "06-terms-gate");
   await page.getByRole("checkbox").check();
   await shot(page, info, "06-terms-gate--checked");
@@ -137,7 +137,7 @@ test("sign-in, terms, and session", async ({ page }, info) => {
   const expired = await context.newPage();
   await setIdentity(expired, { ...other, token: token! }, { signedIn: true });
   await expired.goto("/app");
-  await expect(expired.getByText("Your session expired.").first()).toBeVisible({ timeout: 30_000 });
+  await expect(expired.getByText("Your session expired").first()).toBeVisible({ timeout: 30_000 });
   await shot(expired, info, "06-session-expired");
   await expired.close();
 });

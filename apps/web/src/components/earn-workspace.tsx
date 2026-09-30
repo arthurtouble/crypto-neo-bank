@@ -7,6 +7,7 @@ import { useState } from "react";
 import { useAuraWallet } from "@/lib/client/use-aura-wallet";
 import { useOverview } from "@/lib/client/queries";
 import type { AaveBaseReserve } from "@/lib/defi/aave";
+import { formatToken, fromRaw } from "@/lib/format";
 import { EarnAction, type EarnOption } from "./earn-action";
 import { GuestBanner } from "./guest-banner";
 import { LiveAmount, positionUsd } from "./live-amount";
@@ -77,6 +78,8 @@ export function EarnWorkspace() {
     return held && held.amountRaw !== "0" ? [{ card, held }] : [];
   });
   const earnTotal = overview.data?.totals.earn;
+  // A failed read of the positions is unavailable, never "no positions" or zero.
+  const positionsUnavailable = !overview.data && Boolean(overview.error);
   const toggle = (key: string) => setOpen((current) => current.includes(key) ? current.filter((item) => item !== key) : [...current, key]);
 
   return <div className="mxPage erPage">
@@ -88,11 +91,13 @@ export function EarnWorkspace() {
       <div className="erSectionHead"><h2 id="earn-positions">Your positions</h2>
         {earnTotal && positions.length > 0 && <strong className="sensitiveAmount">{usd.format(earnTotal.usdCents / 100)}{earnTotal.partial ? " + unavailable" : ""}</strong>}</div>
       {overview.isPending ? <div className="mxState" role="status"><LoaderCircle className="spin" aria-hidden="true" />Reading your positions</div>
+        : positionsUnavailable ? <p className="mxNote mxNoteWarning" role="alert" data-testid="earn-positions-unavailable"><span className="erUnavailable">Unavailable.</span> We couldn&apos;t read your positions just now.{" "}
+          <button type="button" className="appTextButton mxInlineButton" onClick={() => overview.refetch()}>Try again</button></p>
         : positions.length === 0 ? <p className="mxHint">No positions yet. Choose where to earn below, then deposit.</p>
           : <ul className="erList">{positions.map(({ card, held }) => <li key={card.key}>
             <span className="erName"><strong>{card.title}</strong><small>{card.by}</small></span>
             <span className="erValue sensitiveAmount"><strong>{held.status === "unavailable" ? "Unavailable" : positionUsd(held) !== null
-              ? <LiveAmount usd={positionUsd(held)!} apyPct={held.apyPct} observedAt={held.observedAt} /> : `${Number(held.amountRaw) / 10 ** held.decimals} ${held.symbol}`}</strong>
+              ? <LiveAmount usd={positionUsd(held)!} apyPct={held.apyPct} observedAt={held.observedAt} /> : formatToken(fromRaw(held.amountRaw ?? "0", held.decimals), held.symbol, { maxDecimals: 6 })}</strong>
               <small>{card.apy ? `Earning ${card.apy} a year` : "Rate unavailable"}</small></span>
           </li>)}</ul>}
     </section>
@@ -112,10 +117,12 @@ export function EarnWorkspace() {
           <dl className="mxSummary erFacts">
             <div><dt>Can be withdrawn now</dt><dd className={card.liquidity ? undefined : "erUnavailable"}>{card.liquidity ?? "Unavailable"}</dd></div>
             <div><dt>Total deposits</dt><dd className={card.deposits ? undefined : "erUnavailable"}>{card.deposits ?? "Unavailable"}</dd></div>
-            <div><dt>Your position</dt><dd className="sensitiveAmount" data-testid={`position-${card.key}`}>{held?.status === "unavailable" ? "Unavailable"
-              : held?.amountRaw && held.amountRaw !== "0" && positionUsd(held) !== null
-                ? <><LiveAmount usd={positionUsd(held)!} apyPct={held.apyPct} observedAt={held.observedAt} /> ({Number(held.amountRaw) / 10 ** held.decimals} {held.symbol} when read)</>
-                : held?.amountRaw && held.amountRaw !== "0" ? `${Number(held.amountRaw) / 10 ** held.decimals} ${held.symbol}` : `0 ${card.symbol}`}</dd></div>
+            <div><dt>Your position</dt><dd className={`sensitiveAmount${held?.status === "unavailable" || (!held && positionsUnavailable) ? " erUnavailable" : ""}`} data-testid={`position-${card.key}`}>
+              {held?.status === "unavailable" || (!held && positionsUnavailable) ? "Unavailable"
+                : held?.amountRaw && held.amountRaw !== "0" && positionUsd(held) !== null
+                  ? <span className="erHeld"><LiveAmount usd={positionUsd(held)!} apyPct={held.apyPct} observedAt={held.observedAt} />
+                    <small>{formatToken(fromRaw(held.amountRaw, held.decimals), held.symbol, { maxDecimals: 6 })}</small></span>
+                  : held?.amountRaw && held.amountRaw !== "0" ? formatToken(fromRaw(held.amountRaw, held.decimals), held.symbol, { maxDecimals: 6 }) : `0 ${card.symbol}`}</dd></div>
           </dl>
           {isExample ? <button type="button" className="appButton erToggle" onClick={login}>Sign in to deposit</button>
             : <>

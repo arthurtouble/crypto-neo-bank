@@ -1,13 +1,8 @@
 "use client";
 
-import { Check, Copy } from "lucide-react";
-import { useState } from "react";
+import { CopyButton } from "./copy-button";
 
+/** The Aura tag payment page's main action: copy the address to pay. */
 export function PaymentActions({ address }: { address: string }) {
-  const [copied, setCopied] = useState(false);
-  return <button className="appButton appButtonPrimary appButtonLarge" type="button" onClick={async () => {
-    await navigator.clipboard.writeText(address);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1600);
-  }}>{copied ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}{copied ? "Copied" : "Copy address"}</button>;
+  return <CopyButton value={address} label="Copy address" className="appButton appButtonPrimary appButtonLarge" />;
 }

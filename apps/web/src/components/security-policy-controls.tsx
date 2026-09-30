@@ -83,12 +83,12 @@ export function TransactionControls() {
     <SettingRow label title="Emergency lock" detail="Stop all sends, swaps, and Earn moves. Unlocking needs your passkey.">
       <input type="checkbox" className="appSwitch" checked={current.accountLocked} disabled={update.isPending} onChange={(event) => update.mutate({ accountLocked: event.target.checked })} /></SettingRow>
     <SettingRow label title="Daily transfer limit" detail="In USD. Leave empty for no limit.">
-      <input type="number" className="stNumber" min="1" step="1" placeholder="No limit" disabled={update.isPending} value={dailyDraft ?? (current.dailyLimitUsd === null ? "" : String(current.dailyLimitUsd))}
+      <input type="number" inputMode="numeric" autoComplete="off" className="stNumber" min="1" step="1" placeholder="No limit" disabled={update.isPending} value={dailyDraft ?? (current.dailyLimitUsd === null ? "" : String(current.dailyLimitUsd))}
         onChange={(event) => setDailyDraft(event.target.value)} onBlur={() => saveDailyLimit(current.dailyLimitUsd)} /></SettingRow>
     <SettingRow label title="Saved recipients only" detail="Only send to saved recipients, after their wait.">
       <input type="checkbox" className="appSwitch" checked={current.enforceAddressBook} disabled={update.isPending} onChange={(event) => update.mutate({ enforceAddressBook: event.target.checked })} /></SettingRow>
     {current.enforceAddressBook && <SettingRow label title="Wait before new recipients" detail="Hours before a new saved recipient can receive.">
-      <input type="number" className="stNumber" min="0" max="168" step="1" disabled={update.isPending} value={delayDraft ?? String(current.newAddressDelayHours)}
+      <input type="number" inputMode="numeric" autoComplete="off" className="stNumber" min="0" max="168" step="1" disabled={update.isPending} value={delayDraft ?? String(current.newAddressDelayHours)}
         onChange={(event) => setDelayDraft(event.target.value)} onBlur={() => saveDelay(current.newAddressDelayHours)} /></SettingRow>}
     <p className="mxHint">Making a control stricter applies right away. Loosening one needs your passkey.</p>
   </section>;
@@ -137,9 +137,9 @@ export function SavedRecipients() {
     <form onSubmit={(event) => void addAddress(event)} className="mxForm stAddForm" aria-label="Add a recipient">
       <div className="mxFieldRow">
         <label className="mxField">Label<input value={label} onChange={(event) => setLabel(event.target.value)} placeholder="Treasury wallet" /></label>
-        <label className="mxField">EVM address<input className="mxMonoInput" value={address} onChange={(event) => setAddress(event.target.value.trim())} placeholder="0x…" spellCheck={false} /></label>
+        <label className="mxField">EVM address<input className="mxMonoInput" value={address} onChange={(event) => setAddress(event.target.value.trim())} placeholder="0x…" autoComplete="off" autoCapitalize="none" spellCheck={false} /></label>
       </div>
-      <button className="appButton mxStart" disabled={!address || !label}><Plus aria-hidden="true" /> Save</button>
+      <button type="submit" className="appButton mxStart" disabled={!address || !label}><Plus aria-hidden="true" /> Save</button>
     </form>
   </section>;
 }

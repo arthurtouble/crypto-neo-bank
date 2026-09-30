@@ -162,10 +162,10 @@ function Allowance({ data, onSignIn }: { data: Card; onSignIn: SignIn }) {
       <TransactionProgress label="Card allowance" phase={phase} action={action} outcomeUnknown={outcomeUnknown} />
       <button type="button" className="appButton" onClick={() => { reset(); setAmount(""); }}>Change it again</button>
     </> : <form className="mxForm" onSubmit={(event) => void submit(event)} aria-label="Set spending allowance">
-      <label className="mxField">New allowance in USD<input value={amount} inputMode="decimal" placeholder="500" disabled={busy}
+      <label className="mxField">New allowance in USD<input value={amount} inputMode="decimal" autoComplete="off" placeholder="500" disabled={busy}
         onChange={(event) => setAmount(event.target.value.replace(/[^\d.]/g, ""))} /></label>
       <TransactionProgress label="Card allowance" phase={phase} action={action} outcomeUnknown={outcomeUnknown} />
-      <button className="appButton appButtonPrimary" disabled={busy || (!onSignIn && !valid)}>{onSignIn ? "Sign in to set an allowance" : phase === "signing" ? "Confirm with your passkey" : "Set allowance"}</button>
+      <button type="submit" className="appButton appButtonPrimary" disabled={busy || (!onSignIn && !valid)}>{onSignIn ? "Sign in to set an allowance" : phase === "signing" ? "Confirm with your passkey" : "Set allowance"}</button>
     </form>}
   </section>;
 }
@@ -192,7 +192,7 @@ function Dispute({ item, onDone }: { item: CardActivity; onDone: () => void }) {
     <label className="mxField">Tell us more<textarea value={explanation} minLength={10} maxLength={1000} required onChange={(event) => setExplanation(event.target.value)}
       placeholder="When it happened, and whether you contacted the merchant." /></label>
     <p className="mxHint">You can send a dispute once, so include everything. If you think someone else has your card, freeze it first.</p>
-    <button className="appButton appButtonPrimary mxStart" disabled={busy || explanation.trim().length < 10}>{busy ? "Sending…" : "Send dispute"}</button>
+    <button type="submit" className="appButton appButtonPrimary mxStart" disabled={busy || explanation.trim().length < 10}>{busy ? "Sending…" : "Send dispute"}</button>
   </form>;
 }
 
@@ -250,8 +250,8 @@ function CardControls({ data, onSignIn }: { data: Card; onSignIn: SignIn }) {
     <form className="cdSetting cdLimit" onSubmit={(event) => { event.preventDefault(); const value = Number(limitValue); if (value >= 1) void change({ dailyLimitUsd: value }, "Daily limit updated"); }}>
       <div className="cdSettingText"><strong>Daily limit</strong><small>The most the card can spend in a day, in USD. Raising it needs your passkey.</small></div>
       <div className="cdLimitField">
-        <label className="mxField"><span className="srOnly">Daily limit in USD</span><input inputMode="numeric" value={limitValue} disabled={busy} onChange={(event) => setLimit(event.target.value.replace(/\D/g, ""))} /></label>
-        <button className="appButton" disabled={busy || (!onSignIn && (limit === null || Number(limitValue) < 1))}>Save</button>
+        <label className="mxField"><span className="srOnly">Daily limit in USD</span><input inputMode="numeric" autoComplete="off" value={limitValue} disabled={busy} onChange={(event) => setLimit(event.target.value.replace(/\D/g, ""))} /></label>
+        <button type="submit" className="appButton" disabled={busy || (!onSignIn && (limit === null || Number(limitValue) < 1))}>Save</button>
       </div>
     </form>
     {data.walletsEnabled && <PhoneWallets data={data} />}

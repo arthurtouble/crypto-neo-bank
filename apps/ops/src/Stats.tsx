@@ -19,7 +19,7 @@ export function Stats() {
   const top = data?.funnel[0]?.customers || 1;
   return <section className="panel" aria-labelledby="stats-heading">
     <div className="headingRow"><h1 id="stats-heading">Stats</h1>
-      <div className="segmented" role="group" aria-label="Period">{[7, 30, 90].map((value) => <button key={value} aria-pressed={days === value} onClick={() => setDays(value)}>{value} days</button>)}</div></div>
+      <div className="segmented" role="group" aria-label="Period">{[7, 30, 90].map((value) => <button type="button" key={value} aria-pressed={days === value} onClick={() => setDays(value)}>{value} days</button>)}</div></div>
     {stats.isError && <div className="notice error" role="alert">{stats.error.message}</div>}
     {data && <>
       <div className="tiles">

@@ -141,7 +141,7 @@ export function SwapWorkspace() {
         <form className="mxForm mxSwapForm" onSubmit={(event) => void getQuote(event)}>
           <div className="mxSwapSide">
             <div className="mxSwapSideHead"><span className="mxLabel">You pay</span><SwapAssetPicker value={fromAssetId} excludedId={toAssetId} label="You pay" held onSelect={(id) => { setFromAssetId(id); clearQuote(); }} /></div>
-            <input className="mxSwapAmount" aria-label="Amount to swap" inputMode="decimal" value={amount} disabled={inFlight} onChange={(event) => { setAmount(event.target.value); clearQuote(); }} placeholder="0.00" />
+            <input className="mxSwapAmount" aria-label="Amount to swap" inputMode="decimal" autoComplete="off" value={amount} disabled={inFlight} onChange={(event) => { setAmount(event.target.value); clearQuote(); }} placeholder="0.00" />
             <span className="mxHint">{availableRaw !== undefined && source ? `${formatUnits(availableRaw, source.decimals)} ${source.symbol} available` : nativeBalance.isPending || tokenBalance.isPending ? "Reading balance" : "Balance unavailable"}</span>
           </div>
           <button className="mxSwapReverse" type="button" disabled={inFlight} onClick={reverse} aria-label="Reverse assets"><ArrowDownUp aria-hidden="true" /></button>
