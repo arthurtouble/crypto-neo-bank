@@ -104,7 +104,18 @@ test("a customer saves a bank account and sends to it; Transactions follows Brid
   const payout = sendPanel(page).getByRole("form", { name: "Send to a bank" });
   await expect(payout.getByLabel("To")).toContainText("Chase •••• 6789");
   await payout.getByLabel("Amount in USD").fill("25");
-  await payout.getByRole("button", { name: "Review and send" }).click();
+  // A review comes before the passkey (B1): nothing is prepared or sent until the customer confirms.
+  await payout.getByRole("button", { name: "Review" }).click();
+  const review = sendPanel(page).getByRole("region", { name: "Review bank transfer" });
+  await expect(review.getByTestId("bank-review")).toContainText("$25.00");
+  await expect(review.getByTestId("bank-review")).toContainText("Chase •••• 6789");
+  await expect(review.getByTestId("bank-review")).toContainText("Usually 1 to 3 business days");
+  expect((await edge("/__sent")).sent).toHaveLength(0);
+  // Edit keeps what was entered.
+  await review.getByRole("button", { name: "Edit" }).click();
+  await expect(payout.getByLabel("Amount in USD")).toHaveValue("25");
+  await payout.getByRole("button", { name: "Review" }).click();
+  await review.getByRole("button", { name: "Confirm and send" }).click();
   await expect(toast(page, "Bank transfer sent")).toBeVisible({ timeout: 30_000 });
   // Exactly the payout amount went to the address Bridge named.
   const { sent } = await edge("/__sent");
@@ -139,7 +150,8 @@ test("a payout the bank returns shows as failed with what Bridge is doing about 
   await page.goto("/app/send#bank");
   const payout = sendPanel(page).getByRole("form", { name: "Send to a bank" });
   await payout.getByLabel("Amount in USD").fill("10");
-  await payout.getByRole("button", { name: "Review and send" }).click();
+  await payout.getByRole("button", { name: "Review" }).click();
+  await sendPanel(page).getByRole("region", { name: "Review bank transfer" }).getByRole("button", { name: "Confirm and send" }).click();
   await expect(toast(page, "Bank transfer sent")).toBeVisible({ timeout: 30_000 });
   await edge("/__bridge/transfer", { state: "returned" });
   await page.goto("/app/transactions");
