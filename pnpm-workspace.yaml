@@ -6,6 +6,7 @@ confirmModulesPurge: false
 
 overrides:
   ws: 8.21.0
+  'undici@>=7.0.0 <7.29.1': 7.29.1
 
 allowBuilds:
   "@reown/appkit": false
