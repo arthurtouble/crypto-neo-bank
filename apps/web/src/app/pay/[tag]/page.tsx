@@ -3,6 +3,7 @@ import Link from "next/link";
 import { QRCodeSVG } from "qrcode.react";
 import { AppBrand } from "@/components/brand";
 import { PaymentActions } from "@/components/payment-actions";
+import { bankRailNames } from "@/lib/format/bank";
 import { GET as getPublicTag } from "@/app/api/aura-tags/[tag]/route";
 
 type PaymentData = { tag: string; displayName: string; crypto: { network: string; address: string }; bank: { available: false } | { available: true; instructions: { bankName: string; bankAddress?: string; beneficiaryName: string; beneficiaryAddress?: string; accountNumber: string; routingNumber: string; rails: Array<"ach" | "wire" | "fednow"> } } };
@@ -44,7 +45,7 @@ export default async function AuraTagPage({ params }: { params: Promise<{ tag: s
           {data.bank.instructions.beneficiaryAddress && <div><dt>Beneficiary address</dt><dd>{data.bank.instructions.beneficiaryAddress}</dd></div>}
           <div><dt>Account number</dt><dd className="pyMono">{data.bank.instructions.accountNumber}</dd></div>
           <div><dt>Routing number</dt><dd className="pyMono">{data.bank.instructions.routingNumber}</dd></div>
-          <div><dt>Accepts</dt><dd>{data.bank.instructions.rails.map((rail) => rail === "ach" ? "ACH push" : rail === "wire" ? "Wire" : "FedNow").join(", ")}</dd></div>
+          <div><dt>Accepts</dt><dd>{data.bank.instructions.rails.map((rail) => bankRailNames[rail]).join(", ")}</dd></div>
         </dl>
       </section>}
     </> : <section className="pyCard pyUnavailable"><h1>Payment page unavailable</h1><p>This Aura tag is not available for public payments.</p></section>}</main>

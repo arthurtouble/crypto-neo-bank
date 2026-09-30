@@ -44,7 +44,7 @@ test("a new customer signs in, accepts the terms, and sees their balances", asyn
   await expect(page.getByText("Example data", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Sign in to continue" }).click();
 
-  await expect(page.getByRole("heading", { name: "Review Aura’s terms." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Review Aura’s terms" })).toBeVisible();
   const accept = page.getByRole("button", { name: "Continue" });
   await expect(accept).toBeDisabled();
   await page.getByRole("checkbox").check();
@@ -119,7 +119,7 @@ test("a returning customer goes straight to the Overview", async ({ page }) => {
   await setBalances(customer.wallet, { 8453: { [ASSETS.usdc]: "5000000" } });
   await openOverview(page, customer);
   await expect(page.getByTestId("portfolio-total")).toHaveText("$5.00", { timeout: 30_000 });
-  await expect(page.getByRole("heading", { name: "Review Aura’s terms." })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Review Aura’s terms" })).toHaveCount(0);
 });
 
 test("an empty account says so and points to Deposit", async ({ page }) => {
@@ -176,7 +176,7 @@ test("an expired session asks the customer to sign in again", async ({ page }) =
   const { token } = await edge("/__session", { userId: valid.userId, expiresIn: -60 });
   await setIdentity(page, { ...valid, token: token! }, { signedIn: true });
   await page.goto("/app");
-  await expect(page.getByText("Your session expired.")).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole("heading", { name: "Your session expired" })).toBeVisible({ timeout: 30_000 });
   await expect(page.getByRole("button", { name: "Sign in again" })).toBeVisible();
 });
 

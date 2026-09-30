@@ -74,7 +74,7 @@ test("USDC goes into Aave and comes back out, in part or all of it, checked agai
   const [supply] = await relayed();
   expect(supply.calls!.map((call) => call.to.toLowerCase())).toEqual([ASSETS.usdc, AAVE_POOL]);
   expect(await held(page, customer, `aave:8453:${ASSETS.usdc}`)).toBe("10000000");
-  await expect(page.getByTestId("position-aave-USDC")).toContainText("(10 USDC when read)", { timeout: 20_000 });
+  await expect(page.getByTestId("position-aave-USDC")).toContainText("10 USDC", { timeout: 20_000 });
   await expect(page.getByTestId("position-aave-USDC").locator(".liveAmount")).toHaveText(/^\$10\.\d{8}$/);
 
   await page.locator(".toastRegion").getByRole("button").first().click().catch(() => undefined);
@@ -97,7 +97,7 @@ test("USDC goes into a Morpho vault, and Withdraw all redeems every share", asyn
   await expect(toast(page, "Deposit complete")).toBeVisible({ timeout: 30_000 });
   const [deposit] = await relayed();
   expect(deposit.calls!.map((call) => call.to.toLowerCase())).toEqual([ASSETS.usdc, VAULTS.steakhouse]);
-  await expect(page.getByTestId("position-steakhouse-prime-usdc")).toContainText(/\(19\.99\d* USDC when read\)/, { timeout: 20_000 });
+  await expect(page.getByTestId("position-steakhouse-prime-usdc")).toContainText(/19\.99\d* USDC/, { timeout: 20_000 });
 
   await page.locator(".toastRegion").getByRole("button").first().click().catch(() => undefined);
   await form(page, "Steakhouse Prime USDC").getByLabel("Action").selectOption("withdraw");
@@ -110,7 +110,7 @@ test("USDC goes into a Morpho vault, and Withdraw all redeems every share", asyn
 test("an exact amount can be withdrawn from a Morpho vault", async ({ page }) => {
   // 100 Gauntlet shares, worth 105 USDC.
   const customer = await openEarn(page, { [VAULTS.gauntlet]: "100000000000000000000" });
-  await expect(page.getByTestId("position-gauntlet-usdc-prime")).toContainText("(105 USDC when read)", { timeout: 20_000 });
+  await expect(page.getByTestId("position-gauntlet-usdc-prime")).toContainText("105 USDC", { timeout: 20_000 });
   await act(page, "Gauntlet USDC Prime", "Withdraw", "30");
   await expect(toast(page, "Withdraw complete")).toBeVisible({ timeout: 30_000 });
   expect(await held(page, customer, `8453:${ASSETS.usdc}`)).toBe("30000000");

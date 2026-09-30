@@ -3,7 +3,7 @@
 import { usePrivy } from "@privy-io/react-auth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Dialog from "@radix-ui/react-dialog";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, LoaderCircle } from "lucide-react";
 import { useState } from "react";
 import { legalDocuments } from "@/lib/legal/documents";
 import { AppBrand } from "./brand";
@@ -41,11 +41,11 @@ export function TermsGate({ children }: { children: React.ReactNode }) {
   };
   const query = useQuery({ queryKey: ["terms", user?.id], queryFn: () => call(), enabled: authenticated, retry: false });
   if (!authenticated || query.data?.accepted) return children;
-  if (query.isPending) return <div className="accessState" role="status"><span className="accessPulse" /><p>Loading your account…</p></div>;
-  if (query.error instanceof SessionExpired) return <AccountScreen title="Your session expired.">
-    <button className="appButton appButtonPrimary appButtonLarge" onClick={() => void logout().then(() => login())}>Sign in again</button></AccountScreen>;
-  if (query.isError) return <AccountScreen title="We couldn’t load your account."><p>{query.error.message}</p>
-    <button className="appButton appButtonPrimary appButtonLarge" onClick={() => void query.refetch()}>Try again</button></AccountScreen>;
+  if (query.isPending) return <div className="appLoading" role="status"><LoaderCircle className="spin" aria-hidden="true" /><p>Loading your account</p></div>;
+  if (query.error instanceof SessionExpired) return <AccountScreen title="Your session expired">
+    <button type="button" className="appButton appButtonPrimary appButtonLarge" onClick={() => void logout().then(() => login())}>Sign in again</button></AccountScreen>;
+  if (query.isError) return <AccountScreen title="We couldn’t load your account"><p>Check your connection, then try again. If it keeps happening, contact support.</p>
+    <button type="button" className="appButton appButtonPrimary appButtonLarge" onClick={() => void query.refetch()}>Try again</button></AccountScreen>;
   async function accept() {
     setSubmitting(true); setError("");
     try {
@@ -59,12 +59,12 @@ export function TermsGate({ children }: { children: React.ReactNode }) {
     { label: "Privacy notice", href: `${docs}${legalDocuments.privacy.path}` },
     { label: "Risk disclosure", href: `${docs}/legal/risk-disclosure/` }
   ];
-  return <AccountScreen title="Review Aura’s terms.">
+  return <AccountScreen title="Review Aura’s terms">
     <p>Aura helps you use your own wallet. You approve every transaction, blockchain transactions can be irreversible, and bank, card, and securities services come from separate providers under their own terms.</p>
     <ul className="appDocList">{documents.map((item) => <li key={item.label}><a href={item.href} target="_blank" rel="noreferrer">{item.label}<ExternalLink aria-hidden="true" /></a></li>)}</ul>
     <label className="appCheck"><input type="checkbox" checked={agreed} onChange={(event) => setAgreed(event.target.checked)} />
       <span>I agree to the Terms of use and have read the Privacy notice and Risk disclosure.</span></label>
     {error ? <p className="appFieldError" role="alert">{error}</p> : null}
-    <button className="appButton appButtonPrimary appButtonLarge" disabled={!agreed || submitting} onClick={() => void accept()}>{submitting ? "Saving…" : "Continue"}</button>
+    <button type="button" className="appButton appButtonPrimary appButtonLarge" disabled={!agreed || submitting} onClick={() => void accept()}>{submitting ? "Saving…" : "Continue"}</button>
   </AccountScreen>;
 }

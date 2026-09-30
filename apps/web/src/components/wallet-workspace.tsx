@@ -260,7 +260,7 @@ export function WalletWorkspace({ children }: { children?: React.ReactNode }) {
                 </div>
               </section> : !reviewing ? <>
                 <div className="mxAmountRow">
-                  <label className="mxField mxAmountField">Amount<input className="mxAmountInput" inputMode="decimal" placeholder="0.00" value={amount} disabled={inFlight} onChange={(event) => setAmount(event.target.value.trim())} /></label>
+                  <label className="mxField mxAmountField">Amount<input className="mxAmountInput" inputMode="decimal" autoComplete="off" placeholder="0.00" value={amount} disabled={inFlight} onChange={(event) => setAmount(event.target.value.trim())} /></label>
                   <label className="mxField">Asset<select value={asset} disabled={inFlight} onChange={(event) => chooseAsset(event.target.value as AssetSymbol)}>{SENDABLE.map((item) => <option key={item.id}>{item.symbol}</option>)}</select></label>
                 </div>
                 <p className="mxHint">{selected.value === undefined ? "Balance unavailable" : `${amountText(selected.value, selected.decimals)} ${asset} available`}
@@ -276,14 +276,14 @@ export function WalletWorkspace({ children }: { children?: React.ReactNode }) {
                     <span className="mxFace" aria-hidden="true">R</span><strong>Recent</strong><small>{item.detail}</small></button>)}
                 </div>}
                 <div className="mxFieldGroup">
-                  <label className="mxField">To<input className="mxMonoInput" autoComplete="off" spellCheck={false} placeholder="0x…" value={recipient} disabled={inFlight} onChange={(event) => { setRecipient(event.target.value.trim()); setSaveRecipient(false); }} /></label>
+                  <label className="mxField">To<input className="mxMonoInput" autoComplete="off" autoCapitalize="none" spellCheck={false} placeholder="0x…" value={recipient} disabled={inFlight} onChange={(event) => { setRecipient(event.target.value.trim()); setSaveRecipient(false); }} /></label>
                   {validRecipient && <p className="mxHint" data-testid="recipient-status">
                     {tagged ? `Aura tag @${requestedTag}` : ownWallet ? "Your wallet" : saved ? `Saved recipient: ${saved.name}${waitingUntil ? `. In its waiting period until ${waitingUntil.toLocaleString()}.` : ""}` : "New address. Check it carefully."}</p>}
                 </div>
                 {canSave && <label className="mxCheck"><input type="checkbox" checked={saveRecipient} disabled={inFlight} onChange={(event) => setSaveRecipient(event.target.checked)} /> Save as a recipient</label>}
                 {canSave && saveRecipient && <label className="mxField">Name<input autoComplete="off" maxLength={48} placeholder="For example, Sam" value={nickname} disabled={inFlight} onChange={(event) => setNickname(event.target.value)} /></label>}
                 {formError && <p className="mxFieldError" role="alert">{formError}</p>}
-                <button className="appButton appButtonPrimary appButtonLarge" disabled={inFlight || quoting}>{quoting ? <LoaderCircle className="spin" aria-hidden="true" /> : <Send aria-hidden="true" />} {quoting ? "Getting a quote" : "Review"}</button>
+                <button type="submit" className="appButton appButtonPrimary appButtonLarge" disabled={inFlight || quoting}>{quoting ? <LoaderCircle className="spin" aria-hidden="true" /> : <Send aria-hidden="true" />} {quoting ? "Getting a quote" : "Review"}</button>
               </> : <>
                 <dl className="mxSummary" data-testid="send-review">
                   <div><dt>Send</dt><dd>{amount} {asset}</dd></div>

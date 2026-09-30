@@ -8,8 +8,9 @@
 .ldPage h1, .ldPage h2, .ldPage h3, .ldPage p, .pyPage h1, .pyPage h2, .pyPage p { margin: 0; }
 .ldPage .themeToggle { width: 36px; height: 36px; display: grid; place-items: center; padding: 0; border: 1px solid var(--color-line-strong); border-radius: var(--radius-sm); background: var(--color-surface); color: var(--color-text-secondary); cursor: pointer; }
 .ldPage .themeToggle:hover { background: var(--color-hover); color: var(--color-text); }
-.ldPage .themeToggle:focus-visible, .ldPage a:focus-visible, .ldPage summary:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
 .ldPage .themeToggle svg { width: 16px; height: 16px; }
+.themeToggle .moonIcon, html[data-theme="dark"] .themeToggle .sunIcon { display: none; }
+html[data-theme="dark"] .themeToggle .moonIcon { display: block; }
 .ldPage .appBrand { color: var(--color-text); text-decoration: none; }
 
 /* Header: the wordmark, links, and one primary action */
@@ -90,6 +91,8 @@
 .ldDisclosure a { color: var(--color-accent); text-decoration: underline; text-underline-offset: 2px; }
 .ldFooterBottom { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding-top: var(--space-4); border-top: 1px solid var(--color-line); }
 .ldMobileCta { display: none; }
+/* Shown on the phone once the hero's own action scrolls away (LandingMobileCta), so it never covers the hero */
+.ldMobileCta[data-shown="false"]:not(:focus-visible) { transform: translateY(calc(100% + var(--space-4) + env(safe-area-inset-bottom))); opacity: 0; pointer-events: none; }
 
 /* Tablet */
 @media (max-width: 1023px) {
@@ -114,7 +117,11 @@
   .ldGrid li { padding: var(--space-5) var(--space-4); }
   .ldFooterTop { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ldFooter { padding-bottom: 104px; }
-  .ldMobileCta { display: inline-flex; position: fixed; z-index: 30; left: var(--page-pad-x); right: var(--page-pad-x); bottom: calc(var(--space-4) + env(safe-area-inset-bottom)); box-shadow: var(--shadow-2); }
+  .ldMobileCta { display: inline-flex; position: fixed; z-index: 30; left: var(--page-pad-x); right: var(--page-pad-x); bottom: calc(var(--space-4) + env(safe-area-inset-bottom)); box-shadow: var(--shadow-2); transition: transform var(--duration-base) var(--ease-enter), opacity var(--duration-base) var(--ease-enter); }
+  .ldPage .themeToggle, .ldMobileNav summary { width: auto; min-width: var(--touch-min); height: var(--touch-min); }
+  .ldMobileNav nav a { min-height: var(--touch-min); display: flex; align-items: center; }
+  .ldFooterTop > div { gap: 0; }
+  .ldFooterTop a { display: flex; align-items: center; min-height: var(--touch-min); }
 }
 
 /* An Aura tag's payment page: one narrow column */

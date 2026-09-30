@@ -68,7 +68,7 @@ function AddBankAccountForm({ onSaved, onCancel }: { onSaved: (name: string) => 
     <label className="mxField">State<input value={form.state} onChange={set("state")} autoComplete="address-level1" placeholder="NY" required minLength={2} maxLength={2} /></label>
     <label className="mxField">ZIP code<input value={form.postalCode} onChange={set("postalCode")} autoComplete="postal-code" inputMode="numeric" required maxLength={10} /></label>
     <div className="mxActions">
-      <button className="appButton appButtonPrimary" disabled={busy || !valid}>{busy ? "Saving…" : "Save bank account"}</button>
+      <button type="submit" className="appButton appButtonPrimary" disabled={busy || !valid}>{busy ? "Saving…" : "Save bank account"}</button>
       <button type="button" className="appButton" disabled={busy} onClick={onCancel}>Cancel</button>
     </div>
   </form>;
@@ -127,7 +127,7 @@ function PayoutForm({ banks }: { banks: Recipient[] }) {
         {banks.map((item) => <option value={item.id} key={item.id}>{bankLabel(item)}</option>)}
       </select>
     </label>
-    <label className="mxField">Amount in USD<input value={amount} onChange={(event) => setAmount(event.target.value.replace(/[^\d.]/g, ""))} inputMode="decimal" placeholder="25.00" required /></label>
+    <label className="mxField">Amount in USD<input value={amount} onChange={(event) => setAmount(event.target.value.replace(/[^\d.]/g, ""))} inputMode="decimal" autoComplete="off" placeholder="25.00" required /></label>
     {amount && !amountValid && <p className="mxFieldError" role="alert">Enter an amount like 25 or 25.50.</p>}
     <div className="mxField">Speed
       <div className="appSegmented" role="radiogroup" aria-label="Transfer type">
@@ -135,7 +135,7 @@ function PayoutForm({ banks }: { banks: Recipient[] }) {
         <button type="button" role="radio" aria-checked={wire} onClick={() => setWire(true)}>Wire</button>
       </div>
     </div>
-    <button className="appButton appButtonPrimary appButtonLarge" disabled={!bank || !amountValid}>Review</button>
+    <button type="submit" className="appButton appButtonPrimary appButtonLarge" disabled={!bank || !amountValid}>Review</button>
   </form>;
 }
 

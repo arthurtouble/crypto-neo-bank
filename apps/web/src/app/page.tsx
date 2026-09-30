@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeftRight, AtSign, Check, ChevronDown, CreditCard, Send, Sprout, Wallet } from "lucide-react";
 import { AppBrand } from "@/components/brand";
+import { LandingMobileCta } from "@/components/landing-mobile-cta";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { jsonLd, landingDescription, landingStructuredData, landingTitle, shareImage } from "@/lib/site/seo";
 
@@ -100,6 +101,6 @@ export default function MarketingPage() {
       <p className="ldDisclosure">Screens show example data, not real accounts. What you can use depends on where you live. Bank transfers and cards need approved partners. <a href={`${docs}/getting-started/status/`}>See what&apos;s available now</a>.</p>
       <div className="ldFooterBottom">© {new Date().getFullYear()} Aura <ThemeToggle /></div>
     </footer>
-    <Link className="ldMobileCta appButton appButtonPrimary appButtonLarge" href="/app">Get started</Link>
+    <LandingMobileCta />
   </div>;
 }

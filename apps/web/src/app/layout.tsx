@@ -1,8 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { indexable, landingDescription, shareImage, siteOrigin, themeColors } from "@/lib/site/seo";
 import "./globals.css";
-import "./identity.css";
-import "./product-system.css";
 // The redesign's tokens (also served at /design-tokens.css for the reference page), then the rebuilt app shell.
 import "../../public/design-tokens.css";
 import "./shell.css";

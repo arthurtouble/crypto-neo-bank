@@ -24,7 +24,7 @@ function Switches() {
     {toggle.isError && <div className="notice error" role="alert">{toggle.error.message}</div>}
     <ul className="rows">{flags.data?.flags.map((flag) => <li key={flag.flag_key}>
       <div><strong>{flagText[flag.flag_key] ?? flag.flag_key}</strong><span className="muted"><code>{flag.flag_key}</code>, changed {when(flag.updated_at)} by {flag.updated_by}</span></div>
-      <button className={`toggle ${flag.enabled ? "on" : ""}`} role="switch" aria-checked={Boolean(flag.enabled)} aria-label={flagText[flag.flag_key] ?? flag.flag_key}
+      <button type="button" className={`toggle ${flag.enabled ? "on" : ""}`} role="switch" aria-checked={Boolean(flag.enabled)} aria-label={flagText[flag.flag_key] ?? flag.flag_key}
         disabled={toggle.isPending} onClick={() => toggle.mutate(flag)}>{flag.enabled ? "On" : "Off"}</button></li>)}</ul>
   </section>;
 }
@@ -43,12 +43,12 @@ function Pauses() {
     <ul className="rows">{assets.data?.assets.map((asset) => <li key={asset.id} data-testid="ops-asset">
       <div><strong>{asset.symbol} <span className="muted">on {networks[asset.chainId] ?? asset.chainId}</span></strong>
         <span className="muted">{asset.paused ? `Paused ${when(asset.paused.at)} by ${asset.paused.by}: ${asset.paused.reason}` : asset.name}</span></div>
-      {asset.paused ? <button className="button" disabled={change.isPending} onClick={() => change.mutate({ assetId: asset.id, paused: false })}>Resume</button>
+      {asset.paused ? <button type="button" className="button" disabled={change.isPending} onClick={() => change.mutate({ assetId: asset.id, paused: false })}>Resume</button>
         : pausing === asset.id ? <form className="reason" aria-label={`Pause ${asset.symbol}`} onSubmit={(event) => { event.preventDefault(); change.mutate({ assetId: asset.id, paused: true, reason: reason.trim() }); }}>
           <label>Reason<input value={reason} onChange={(event) => setReason(event.target.value)} autoFocus /></label>
-          <button className="button primary" disabled={change.isPending || !reason.trim()}>Pause</button>
+          <button type="submit" className="button primary" disabled={change.isPending || !reason.trim()}>Pause</button>
           <button type="button" className="button quiet" onClick={() => setPausing(null)}>Cancel</button></form>
-          : <button className="button" onClick={() => { setPausing(asset.id); setReason(""); }}>Pause</button>}
+          : <button type="button" className="button" onClick={() => { setPausing(asset.id); setReason(""); }}>Pause</button>}
     </li>)}</ul>
   </section>;
 }
@@ -63,15 +63,15 @@ function Issues() {
   const data = summary.data;
   return <section className="panel" aria-labelledby="issues-heading">
     <div className="headingRow"><h2 id="issues-heading">Issues</h2>
-      <button className="button" disabled={reconcile.isPending} onClick={() => reconcile.mutate()}>{reconcile.isPending ? "Checking…" : "Look for stuck actions and failed events"}</button></div>
+      <button type="button" className="button" disabled={reconcile.isPending} onClick={() => reconcile.mutate()}>{reconcile.isPending ? "Checking…" : "Look for stuck actions and failed events"}</button></div>
     {reconcile.data && <div className="notice" role="status">Checked {reconcile.data.checked}; {reconcile.data.openedCandidates} found.</div>}
     {(summary.isError || update.isError || reconcile.isError) && <div className="notice error" role="alert">{(summary.error ?? update.error ?? reconcile.error)!.message}</div>}
     <ul className="rows">{data?.issues.map((issue) => <li key={issue.issue_id} data-testid="ops-issue">
       <div><strong><span className={`badge ${issue.severity === "critical" || issue.severity === "high" ? "bad" : "warn"}`}>{issue.severity}</span> {issue.summary}</strong>
         <span className="muted">{issue.issue_type.replaceAll("_", " ")} from {issue.source_name}, opened {when(issue.opened_at)}, {issue.status}</span></div>
       <div className="actions">
-        {issue.status === "open" && <button className="button" disabled={update.isPending} onClick={() => update.mutate({ id: issue.issue_id, status: "acknowledged" })}>Acknowledge</button>}
-        <button className="button" disabled={update.isPending} onClick={() => update.mutate({ id: issue.issue_id, status: "resolved" })}>Resolve</button></div>
+        {issue.status === "open" && <button type="button" className="button" disabled={update.isPending} onClick={() => update.mutate({ id: issue.issue_id, status: "acknowledged" })}>Acknowledge</button>}
+        <button type="button" className="button" disabled={update.isPending} onClick={() => update.mutate({ id: issue.issue_id, status: "resolved" })}>Resolve</button></div>
     </li>)}</ul>
     {data && !data.issues.length && <p className="muted">No open issues.</p>}
     {data && <p className="muted">Provider events: {data.webhooks.map((row) => `${row.count} ${row.status}`).join(", ") || "none yet"}.

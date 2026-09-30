@@ -6,6 +6,7 @@ import { ArrowLeft, Bell } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useApi } from "@/lib/client/api";
+import { formatDateTime, formatShortDateTime } from "@/lib/format";
 import type { NotificationView } from "@/lib/notifications/store";
 import { useDismiss } from "./account-menu";
 import { useToast } from "./toast";
@@ -58,7 +59,7 @@ export function NotificationBell() {
     }
   }
   return <div className="appBell" ref={root}>
-    <button ref={button} className="appIconButton" aria-label={unread ? `Notifications, ${unread} unread` : "Notifications"} aria-expanded={open} onClick={() => void toggle()}>
+    <button ref={button} type="button" className="appIconButton" aria-label={unread ? `Notifications, ${unread} unread` : "Notifications"} aria-expanded={open} onClick={() => void toggle()}>
       <Bell aria-hidden="true" />{unread > 0 && <span className="appBellCount" data-testid="notification-count">{unread > 9 ? "9+" : unread}</span>}
     </button>
     {open && <section className="appPopover appInbox" role="dialog" aria-label="Notifications">
@@ -68,8 +69,11 @@ export function NotificationBell() {
       </div>
       {inbox.data?.notifications.length ? <ul>{inbox.data.notifications.map((item) => <li key={item.id} className={item.read ? "" : "unread"}>
         <Link href={item.link ?? "/app"} onClick={close}><strong>{item.title}</strong><span>{item.body}</span>
-          <time>{new Date(item.createdAt).toLocaleString()}</time></Link></li>)}</ul>
-        : <p className="appInboxEmpty">Nothing yet. Money you receive, transactions you make, and security changes show up here.</p>}
+          <time dateTime={item.createdAt} title={formatDateTime(item.createdAt)}>{formatShortDateTime(item.createdAt)}</time></Link></li>)}</ul>
+        : inbox.isError ? <p className="appInboxEmpty appInboxError" role="alert" data-testid="notifications-unavailable">Notifications are unavailable right now.{" "}
+          <button type="button" className="appTextButton appInlineButton" onClick={() => void inbox.refetch()}>Try again</button></p>
+          : inbox.isPending ? <p className="appInboxEmpty" role="status">Loading notifications</p>
+            : <p className="appInboxEmpty">Nothing yet. Money you receive, transactions you make, and security changes show up here.</p>}
       <Link className="appInboxSettings" href="/app/settings#notifications" onClick={close}>Notification settings</Link>
     </section>}
   </div>;

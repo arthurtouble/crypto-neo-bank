@@ -16,7 +16,7 @@ Three files hold the system, and they must agree:
 
 Change a value in `design-tokens.css` first, then here, `DESIGN.md`, and the reference page, in the same pull request.
 
-The root layout loads `design-tokens.css` for the whole app, and every area is styled from the tokens in its own stylesheet (the table below). The root layout also loads the shell and public-page stylesheets; the app-only areas (overview, money, cards, records, settings) load from `src/app/app/layout.tsx`, after them, so the landing and payment pages don't download them. The pre-redesign `globals.css`, `identity.css`, and `product-system.css` still load first, trimmed in the step 4 refactor to what the app still renders: base resets, the legacy variables those rules read (the clashing one is renamed `--legacy-font-mono`), and a few legacy classes components still carry (`button`, `panel`, `emptyState`, `activityRow`, the theme toggle, transaction progress, `srOnly`, `buildTag`). Don't add to them; new styles go in the area stylesheets.
+The root layout loads `design-tokens.css` for the whole app, and every area is styled from the tokens in its own stylesheet (the table below). The root layout also loads the shell and public-page stylesheets; the app-only areas (overview, money, cards, records, settings) load from `src/app/app/layout.tsx`, after them, so the landing and payment pages don't download them. The pre-redesign `identity.css` and `product-system.css` are gone. `globals.css` still loads first with only the resets (box sizing, links, and form controls inheriting the font); the page canvas, text, selection, the one focus ring (2px `--color-focus`), and the few shared utilities (`srOnly`, `spin`, `sensitiveAmount`, `buildTag`) are in `shell.css`. Don't add to `globals.css`; new styles go in the area stylesheets.
 
 | Area | Where | Status |
 | --- | --- | --- |
@@ -24,7 +24,7 @@ The root layout loads `design-tokens.css` for the whole app, and every area is s
 | Overview: total, group chips, holdings table or list, holding detail, recent transactions, guest example, empty account | `apps/web/src/app/overview.css`, classes prefixed `ov`; the shared guest banner is in `shell.css` | Rebuilt |
 | Deposit: the four ways as tabs (desktop) or rows (phone), receive, from a wallet, card, bank checklist and details | `apps/web/src/app/money.css`, classes prefixed `mx`, shared with Send and Swap | Rebuilt |
 | Send: two tabs (to a person or wallet, to a bank account), amount and asset, recipient faces, a review step, progress in place, and a live summary column | `money.css` | Rebuilt |
-| Swap: you pay and you receive with the asset picker (a dialog on desktop, a sheet on the phone), reverse, slippage, and the quote with its countdown, fees, and reference prices beside the form | `money.css`; the old swap styles are removed from `product-system.css` | Rebuilt |
+| Swap: you pay and you receive with the asset picker (a dialog on desktop, a sheet on the phone), reverse, slippage, and the quote with its countdown, fees, and reference prices beside the form | `money.css` | Rebuilt |
 | Earn: your positions growing live, then markets and vaults, each opening to deposit or withdraw | `money.css`, classes prefixed `er` | Rebuilt |
 | Cards: the setup checklist beside a "Not issued" card, then the card (filled with the text colour; muted when frozen), details in a dialog (a sheet on the phone), controls, the allowance, and card activity | `apps/web/src/app/cards.css`, classes prefixed `cd`, on the `mx` parts in `money.css` (including the shared `mxDialog`) | Rebuilt |
 | Transactions and Insights: search, type chips, and a status filter over the list; the receipt in the Overview's side panel (a pushed screen on the phone) with the action's steps; Export in a dialog (a sheet on the phone); full history; Insights' four numbers, the money in and out chart with its table, categories, and top card merchants. Money in is green, money out neutral | `apps/web/src/app/records.css`, classes prefixed `tx` and `in`, on the `mx` parts, the Overview's chips and side panel, and the shared `mxDialog` | Rebuilt |
@@ -134,7 +134,7 @@ A 4px grid. Every gap, padding, and margin comes from the scale.
 | Between sections (`--gap-section`) | 20px | 18px |
 | Content width | Up to 1120px, centred from 1440px | Full width |
 | Columns | Main column, plus a 340 to 360px side column (the live summary, recent transactions) | One column |
-| Bottom clearance | 64px | 100px, so the menu button never covers content |
+| Bottom clearance | 64px | 100px plus the safe area, so the menu button never covers content |
 
 ## Sizes
 
@@ -337,7 +337,7 @@ Notice emails (`apps/web/src/lib/notifications/email.ts`) follow the same system
 - WCAG 2.2 AA. Text contrast 4.5:1, large text and UI parts 3:1, in both themes.
 - A visible focus ring on everything focusable: 2px `--color-focus`, 2px offset.
 - Every action works with a keyboard. Desktop has ⌘K search (B4): actions first (send, send to a bank, add money, swap, lock the account), then pages, chosen with the arrow keys and opened with Enter. An action opens where it happens; nothing moves money or changes a control from the search.
-- 44 × 44px minimum targets on the phone.
+- 44 × 44px minimum targets on the phone and other touch screens (`--touch-min`): chips, segmented controls, copy buttons, the toast close button, and the landing page's links. Desktop with a mouse keeps its density.
 - Status is never colour alone: a word goes with it.
 - Respect `prefers-reduced-motion` and `prefers-color-scheme`. The theme choice (`aurel-theme` in local storage, `data-theme` on `<html>`) overrides the device.
 - `axe` finds no serious or critical issues on the reference page (`tests/e2e/product.spec.ts`), and each rebuilt screen keeps its e2e checks.

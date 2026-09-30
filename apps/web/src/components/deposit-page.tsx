@@ -1,7 +1,7 @@
 "use client";
 
 import { useFundWallet, usePrivy } from "@privy-io/react-auth";
-import { Building2, Check, ChevronRight, Copy, CreditCard, LoaderCircle, QrCode, Wallet } from "lucide-react";
+import { Building2, ChevronRight, CreditCard, LoaderCircle, QrCode, Wallet } from "lucide-react";
 import Link from "next/link";
 import { QRCodeSVG } from "qrcode.react";
 import { useEffect, useState } from "react";
@@ -10,6 +10,7 @@ import { assetsFor } from "@/lib/assets/registry";
 import { useAuraWallet } from "@/lib/client/use-aura-wallet";
 import { AddFromWallet } from "./add-from-wallet";
 import { BankDepositPanel } from "./bank-deposit-panel";
+import { CopyButton } from "./copy-button";
 import { GuestBanner } from "./guest-banner";
 import { shortAddress } from "@/lib/client/address";
 import { useToast } from "./toast";
@@ -41,17 +42,6 @@ function SettingUp() {
 }
 
 function ReceivePanel({ address, isExample }: { address: string; isExample: boolean }) {
-  const toast = useToast();
-  const [copied, setCopied] = useState(false);
-  async function copyAddress() {
-    try {
-      await navigator.clipboard.writeText(address);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1400);
-    } catch {
-      toast.error("Couldn't copy", "Select the address and copy it instead.");
-    }
-  }
   return <section className="mxPanel" aria-labelledby="deposit-receive">
     <div className="mxPanelHead"><h2 id="deposit-receive">Receive on Base</h2>
       <p>Send any asset listed below on Base to your Aura account, from any wallet or exchange.</p></div>
@@ -60,7 +50,7 @@ function ReceivePanel({ address, isExample }: { address: string; isExample: bool
       <div className="mxReceiveAddress">
         <span className="mxLabel">{isExample ? "Example address" : "Your account address on Base"}</span>
         <code className="mxAddress" data-testid={isExample ? undefined : "account-address"}>{address}</code>
-        <button type="button" className="appButton" onClick={() => void copyAddress()}>{copied ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}{copied ? "Copied" : "Copy address"}</button>
+        <CopyButton value={address} label="Copy address" />
       </div>
     </div>
     <ul className="mxAssetList" aria-label="Assets you can receive on Base">

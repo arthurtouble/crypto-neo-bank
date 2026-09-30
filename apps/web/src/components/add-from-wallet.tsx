@@ -192,7 +192,7 @@ export function AddFromWallet({ account }: { account: `0x${string}` }) {
       </div>
       <div className="mxFieldGroup">
         <label className="mxField">Amount in {asset.symbol}
-          <input inputMode="decimal" placeholder="0.00" value={amount} disabled={busy} aria-invalid={error ? true : undefined}
+          <input inputMode="decimal" autoComplete="off" placeholder="0.00" value={amount} disabled={busy} aria-invalid={error ? true : undefined}
             aria-describedby="wallet-available" onChange={(event) => { setAmount(event.target.value.trim()); reset(); }} />
         </label>
         <span className="mxHint" id="wallet-available">
@@ -206,7 +206,7 @@ export function AddFromWallet({ account }: { account: `0x${string}` }) {
         <div><dt>Network fee</dt><dd>{usdText(quote.networkFeeUsd)}</dd></div>
       </dl>}
       {error && <p className="mxFieldError" role="alert">{error}</p>}
-      <button className="appButton appButtonPrimary appButtonLarge" disabled={busy}>
+      <button type="submit" className="appButton appButtonPrimary appButtonLarge" disabled={busy}>
         {busy ? <LoaderCircle className="spin" aria-hidden="true" /> : <ArrowDownToLine aria-hidden="true" />}{buttonText}
       </button>
       <p className="mxHint">

@@ -25,10 +25,10 @@ type Lookup = { account: Account; profile: Profile };
 function ReasonAction({ label, disabled, onSubmit, pending }: { label: string; disabled?: boolean; pending: boolean; onSubmit: (reason: string) => void }) {
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
-  if (!open) return <button className="button" disabled={disabled} onClick={() => setOpen(true)}>{label}</button>;
+  if (!open) return <button type="button" className="button" disabled={disabled} onClick={() => setOpen(true)}>{label}</button>;
   return <form className="reason" onSubmit={(event) => { event.preventDefault(); onSubmit(reason.trim()); }} aria-label={label}>
     <label>Reason<input value={reason} onChange={(event) => setReason(event.target.value)} placeholder="Intercom conversation, or what the customer asked" autoFocus /></label>
-    <button className="button primary" disabled={pending || reason.trim().length < 4}>{pending ? "Working…" : `Confirm: ${label.toLowerCase()}`}</button>
+    <button type="submit" className="button primary" disabled={pending || reason.trim().length < 4}>{pending ? "Working…" : `Confirm: ${label.toLowerCase()}`}</button>
     <button type="button" className="button quiet" onClick={() => setOpen(false)}>Cancel</button>
   </form>;
 }
@@ -52,12 +52,12 @@ function AllCustomers({ onOpen }: { onOpen: (subject: string) => void }) {
         <th scope="col">Transactions</th><th scope="col">Last activity</th></tr></thead>
       <tbody>{rows.map((row) => <tr key={row.subjectReference} className="clickable" onClick={() => onOpen(row.subjectReference)} data-testid="ops-customer-row">
         <td>{when(row.createdAt)}</td>
-        <td><button className="link" onClick={(event) => { event.stopPropagation(); onOpen(row.subjectReference); }}>{row.auraTag ? `@${row.auraTag}` : short(row.subjectReference)}</button></td>
+        <td><button type="button" className="link" onClick={(event) => { event.stopPropagation(); onOpen(row.subjectReference); }}>{row.auraTag ? `@${row.auraTag}` : short(row.subjectReference)}</button></td>
         <td>{row.closedAt ? <span className="badge bad">Closed</span> : row.accountLocked ? <span className="badge warn">Locked</span> : <span className="badge good">Open</span>}</td>
         <td>{row.bankStatus ?? "—"}</td><td>{row.cardStatus ?? "—"}</td><td>{row.actions}</td><td>{when(row.lastActivityAt)}</td></tr>)}</tbody>
     </table></div>
     {list.isSuccess && !rows.length && <p className="muted">No customers yet.</p>}
-    {list.hasNextPage && <button className="button" disabled={list.isFetchingNextPage} onClick={() => void list.fetchNextPage()}>{list.isFetchingNextPage ? "Loading…" : "Load more"}</button>}
+    {list.hasNextPage && <button type="button" className="button" disabled={list.isFetchingNextPage} onClick={() => void list.fetchNextPage()}>{list.isFetchingNextPage ? "Loading…" : "Load more"}</button>}
   </section>;
 }
 
@@ -65,7 +65,7 @@ export function Customers({ onMovement }: { onMovement: (subject: string) => voi
   const client = useQueryClient();
   const [input, setInput] = useState("");
   const [query, setQuery] = useState("");
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<"" | "copied" | "failed">("");
   const lookup = useQuery({ queryKey: ["customer", query], queryFn: () => api<Lookup>(`accounts?q=${encodeURIComponent(query)}`), enabled: query.length > 0 });
   const act = useMutation({
     mutationFn: ({ action, reason }: { action: "lock" | "close" | "reopen"; reason: string }) =>
@@ -82,7 +82,7 @@ export function Customers({ onMovement }: { onMovement: (subject: string) => voi
     <h1 id="customers-heading">Customers</h1>
     <form className="search" onSubmit={find}>
       <label>Customer<input value={input} onChange={(event) => setInput(event.target.value)} placeholder="Privy user ID, email, wallet address, or Aura tag" /></label>
-      <button className="button primary" disabled={input.trim().length < 3}>Find</button>
+      <button type="submit" className="button primary" disabled={input.trim().length < 3}>Find</button>
       {query && <button type="button" className="button quiet" onClick={showAll}>All customers</button>}
     </form>
     {!query && <AllCustomers onOpen={open} />}
@@ -104,8 +104,11 @@ export function Customers({ onMovement }: { onMovement: (subject: string) => voi
         <div><dt>Daily limit</dt><dd>{profile.controls.dailyLimitUsd === null ? "None" : `$${profile.controls.dailyLimitUsd}`}{profile.controls.enforceAddressBook ? ", saved recipients only" : ""}</dd></div>
         <div><dt>Transactions</dt><dd>{profile.actions.total} ({profile.actions.completed} completed, {profile.actions.failed} failed, {profile.actions.open} open)</dd></div>
         <div><dt>Intercom user ID</dt><dd><code>{profile.intercomUserId}</code>
-          <button className="icon" aria-label="Copy Intercom user ID" onClick={() => { void navigator.clipboard?.writeText(profile.intercomUserId); setCopied(true); }}><Copy size={14} /></button>
-          {copied && <span className="muted"> Copied</span>}</dd></div>
+          <button type="button" className="icon" aria-label="Copy Intercom user ID" onClick={() => {
+            if (!navigator.clipboard) { setCopied("failed"); return; }
+            navigator.clipboard.writeText(profile.intercomUserId).then(() => setCopied("copied"), () => setCopied("failed"));
+          }}><Copy size={14} /></button>
+          <span className="muted" role="status">{copied === "copied" ? " Copied" : copied === "failed" ? " Couldn't copy. Select the ID and copy it instead." : ""}</span></dd></div>
         {data.account.closedAt && <div><dt>Closed</dt><dd>{when(data.account.closedAt)}: {data.account.closedReason}</dd></div>}
       </dl>
       <h3>Notices {profile.notices.emailFailed > 0 && <span className="badge bad">{profile.notices.emailFailed} email{profile.notices.emailFailed === 1 ? "" : "s"} failed</span>}</h3>
@@ -120,7 +123,7 @@ export function Customers({ onMovement }: { onMovement: (subject: string) => voi
         <span>{holding.label}</span><span>{holding.status !== "observed" ? "Unavailable" : holding.amountRaw === "0" ? "Empty" : `Holds ${holding.symbol}`}</span></li>)}</ul>
       {!data.account.closedAt && !data.account.eligible && <p className="muted">Can&apos;t close yet: {data.account.blockers.join("; ")}.</p>}
       <div className="actions">
-        <button className="button" onClick={() => onMovement(profile.subjectReference)}>Money movement</button>
+        <button type="button" className="button" onClick={() => onMovement(profile.subjectReference)}>Money movement</button>
         {!profile.controls.accountLocked && !data.account.closedAt && <ReasonAction key="lock" label="Lock account" pending={act.isPending} onSubmit={(reason) => act.mutate({ action: "lock", reason })} />}
         {data.account.closedAt
           ? <ReasonAction key="reopen" label="Reopen account" pending={act.isPending} onSubmit={(reason) => act.mutate({ action: "reopen", reason })} />

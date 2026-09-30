@@ -71,7 +71,7 @@ export function SwapAssetPicker({ value, onSelect, excludedId, label, held = fal
     <Dialog.Portal><Dialog.Overlay className="mxPickerOverlay" /><Dialog.Content className="mxPicker" aria-describedby={undefined}>
       <div className="mxPickerHead"><Dialog.Title>Choose an asset</Dialog.Title><Dialog.Close className="appIconButton mxPickerClose" aria-label="Close"><X aria-hidden="true" /></Dialog.Close></div>
       <>
-        <label className="mxPickerSearch"><Search aria-hidden="true" /><span className="srOnly">Search assets or contract address</span><input autoFocus value={search} onChange={(event) => { setSearch(event.target.value); setActive(0); }} placeholder="Search name or contract" onKeyDown={(event) => {
+        <label className="mxPickerSearch"><Search aria-hidden="true" /><span className="srOnly">Search assets or contract address</span><input autoFocus autoComplete="off" autoCapitalize="none" spellCheck={false} value={search} onChange={(event) => { setSearch(event.target.value); setActive(0); }} placeholder="Search name or contract" onKeyDown={(event) => {
           if (event.key === "ArrowDown") { event.preventDefault(); setActive((index) => Math.min(index + 1, assets.length - 1)); }
           if (event.key === "ArrowUp") { event.preventDefault(); setActive((index) => Math.max(index - 1, 0)); }
           if (event.key === "Enter" && assets[active]) { event.preventDefault(); choose(assets[active]); }
