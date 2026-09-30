@@ -117,6 +117,12 @@ test("an Aura tag can be saved and published", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Crypto" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Card payment" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Bank transfer" })).toHaveCount(0);
+  // Someone with Aura pays in the app, with the tag filled in (B5).
+  await page.getByRole("link", { name: "Send with Aura" }).click();
+  await expect(page).toHaveURL(new RegExp(`/app/send\\?sendTo=${customer.wallet}&tag=${tag}$`, "i"));
+  await expect(page.getByRole("region", { name: "Send crypto" }).getByLabel("To")).toHaveValue(new RegExp(`^${customer.wallet}$`, "i"), { timeout: 30_000 });
+  // The summary beside the form names the tag (it's hidden on the phone, where the review does).
+  if (page.viewportSize()!.width >= 768) await expect(page.getByRole("region", { name: "Summary" })).toContainText(`@${tag}`);
 });
 
 test("the customer's data downloads straight away, and nothing offers to delete it", async ({ page }) => {
