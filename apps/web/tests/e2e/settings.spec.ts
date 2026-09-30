@@ -11,13 +11,15 @@ const toast = (page: Page, title: string) => page.locator(".toastRegion").getByT
 const lock = (page: Page) => page.getByRole("checkbox", { name: /Emergency lock/ });
 const limit = (page: Page) => page.getByRole("spinbutton", { name: /Daily transfer limit/ });
 
-async function openSettings(page: Page, options: { mfa?: string[]; usdc?: string } = {}) {
+/** Settings shows one area at a time, named in the URL's hash. */
+async function openSettings(page: Page, options: { mfa?: string[]; usdc?: string; area?: string; heading?: string } = {}) {
   const customer = await newCustomer({ mfa: options.mfa ?? ["passkey"] });
   await setBalances(customer.wallet, { 8453: { [ASSETS.usdc]: options.usdc ?? "0" } });
   await acceptTerms(page, customer);
   await setIdentity(page, customer, { signedIn: true });
-  await page.goto("/app/settings");
-  await expect(lock(page)).toBeVisible({ timeout: 30_000 });
+  await page.goto(`/app/settings#${options.area ?? "security"}`);
+  if (options.area) await expect(page.getByRole("heading", { name: options.heading })).toBeVisible({ timeout: 30_000 });
+  else await expect(lock(page)).toBeVisible({ timeout: 30_000 });
   return customer;
 }
 
@@ -84,12 +86,12 @@ test("an authenticator app counts as the passkey", async ({ page }) => {
 });
 
 test("saved recipients can be added, wait their turn, and be removed", async ({ page }) => {
-  await openSettings(page);
+  await openSettings(page, { area: "recipients", heading: "Saved recipients" });
   await page.getByLabel("Label").fill("Treasury");
   await page.getByLabel("EVM address").fill("0x5555555555555555555555555555555555555555");
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(toast(page, "Recipient saved")).toBeVisible({ timeout: 20_000 });
-  const entry = page.locator(".addressList > div").filter({ hasText: "Treasury" });
+  const entry = page.getByRole("list", { name: "Saved recipients" }).getByRole("listitem").filter({ hasText: "Treasury" });
   await expect(entry).toContainText("Waiting");
   await entry.getByRole("button", { name: "Remove Treasury" }).click();
   await expect(toast(page, "Recipient removed")).toBeVisible({ timeout: 20_000 });
@@ -97,7 +99,7 @@ test("saved recipients can be added, wait their turn, and be removed", async ({ 
 });
 
 test("an Aura tag can be saved and published", async ({ page }) => {
-  const customer = await openSettings(page);
+  const customer = await openSettings(page, { area: "tag", heading: "Aura tag and payment page" });
   const tag = `t${customer.userId.slice(-10)}`;
   // The form fills itself from the saved tag once that loads; type after that.
   await expect(async () => {
@@ -114,7 +116,7 @@ test("an Aura tag can be saved and published", async ({ page }) => {
 });
 
 test("the customer's data downloads straight away, and nothing offers to delete it", async ({ page }) => {
-  const customer = await openSettings(page);
+  const customer = await openSettings(page, { area: "data", heading: "Your data and account" });
   await expect(page.getByText("Delete my data")).toHaveCount(0);
   // Only what the customer can use: no placeholders, no recovery review (Privy's wallets recover through the sign-in methods), no feedback box.
   for (const gone of ["Sessions", "Passcode", "Wallet provider rules", "Recovery", "You stay in control", "Tell us what got in the way", "Statements"]) await expect(page.getByText(gone, { exact: true })).toHaveCount(0);

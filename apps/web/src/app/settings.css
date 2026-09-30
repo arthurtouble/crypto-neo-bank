@@ -1,0 +1,80 @@
+/*
+ * Settings and Support (redesign area 11, journeys J15 to J17), from the design tokens only, on the money parts in
+ * money.css. Classes prefixed st. Settings shows one area at a time: a side list on desktop; on the phone, a row per
+ * area, each opening its own screen (data-view says which).
+ */
+
+.appFrame .stHead { display: grid; gap: var(--space-1); }
+.appFrame .stHead h1 { margin: 0; font-size: var(--text-title-1-size); line-height: var(--text-title-1-line); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-tight); }
+.appFrame .stLayout { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: var(--gap-section); align-items: start; }
+.appFrame .stArea { display: grid; gap: var(--space-4); min-width: 0; max-width: 760px; }
+.appFrame .stBack { display: none; justify-self: start; gap: var(--space-1); padding: 0; }
+.appFrame .stBack svg { width: 16px; height: 16px; }
+
+/* The side list of areas */
+.appFrame .stNav { position: sticky; top: calc(var(--topbar-height) + var(--space-4)); display: grid; gap: 2px; }
+.appFrame .stNav a { display: flex; align-items: center; gap: var(--space-3); min-height: 40px; padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); color: var(--color-text-secondary); text-decoration: none; }
+.appFrame .stNav a:hover { background: var(--color-hover); color: var(--color-text); }
+.appFrame .stNav a:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.appFrame .stNav a[aria-current="page"] { background: var(--color-muted); color: var(--color-text); }
+.appFrame .stNavIcon { display: grid; place-items: center; flex: none; }
+.appFrame .stNavIcon svg { width: 18px; height: 18px; }
+.appFrame .stNav a[aria-current="page"] .stNavIcon { color: var(--color-accent); }
+.appFrame .stNavText { display: grid; min-width: 0; }
+.appFrame .stNavText strong { font-weight: var(--weight-medium); }
+.appFrame .stNavText small, .appFrame .stNavChevron { display: none; }
+
+/* A card of settings: one row each */
+.appFrame .stCard { gap: 0; }
+.appFrame .stCard > h2, .appFrame .stCardHead { margin-bottom: var(--space-2); }
+.appFrame .stCard > .mxHint { margin-bottom: var(--space-3); }
+.appFrame .stCard > .mxHint:last-child { margin: var(--space-3) 0 0; }
+.appFrame .stCard > .appButton, .appFrame .stCard > .mxForm { margin-top: var(--space-4); }
+.appFrame .stCardHead { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.appFrame .stRows { margin: 0; padding: 0; list-style: none; display: grid; }
+.appFrame .stRow { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); min-height: var(--row-height); padding: var(--space-3) 0; border-top: 1px solid var(--color-line); color: var(--color-text); }
+.appFrame label.stRow { cursor: pointer; }
+.appFrame .stRowText { display: grid; gap: 2px; min-width: 0; }
+.appFrame .stRowText strong { font-weight: var(--weight-medium); }
+.appFrame .stRowText small { color: var(--color-text-secondary); font-size: var(--text-small-size); line-height: var(--text-small-line); overflow-wrap: anywhere; }
+.appFrame .stRowControl { flex: none; display: flex; align-items: center; gap: var(--space-2); }
+.appFrame .stRowControl .mxActions { justify-content: flex-end; }
+.appFrame .stState { color: var(--color-positive); font-size: var(--text-small-size); font-weight: var(--weight-medium); }
+.appFrame .stNumber { width: 120px; height: var(--input-height); padding: 0 var(--space-3); border: 1px solid var(--color-line-strong); border-radius: var(--radius-sm); background: var(--color-surface); color: var(--color-text); font: var(--weight-regular) var(--text-body-size) / 1 var(--font-sans); font-variant-numeric: tabular-nums; text-align: right; }
+.appFrame .stNumber:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; border-color: var(--color-focus); }
+.appFrame .stNumber:disabled { background: var(--color-muted); color: var(--color-text-secondary); }
+
+/* Saved recipients */
+.appFrame .stList { margin: 0; padding: 0; list-style: none; display: grid; }
+.appFrame .stListRow { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto auto; gap: var(--space-3); align-items: center; min-height: var(--row-height); padding: var(--space-2) 0; border-top: 1px solid var(--color-line); }
+.appFrame .stFace { width: 32px; height: 32px; display: grid; place-items: center; border-radius: var(--radius-pill); background: var(--color-muted); color: var(--color-text-secondary); font-size: var(--text-small-size); font-weight: var(--weight-semibold); }
+.appFrame .stListRow .appIconButton svg { width: 16px; height: 16px; }
+.appFrame .stEmpty { padding: var(--space-4) 0; border-top: 1px solid var(--color-line); color: var(--color-text-secondary); font-size: var(--text-small-size); }
+.appFrame .stAddForm { padding-top: var(--space-4); border-top: 1px solid var(--color-line); }
+
+/* Tablet: a narrower list */
+@media (max-width: 1023px) {
+  .appFrame .stLayout { grid-template-columns: 200px minmax(0, 1fr); }
+}
+
+/* Phone: the list of areas, or one area with a way back */
+@media (max-width: 767px) {
+  .appFrame .stLayout { grid-template-columns: minmax(0, 1fr); }
+  .appFrame .stPage[data-view="index"] .stArea, .appFrame .stPage[data-view="area"] .stNav { display: none; }
+  .appFrame .stPage[data-view="area"] .stBack { display: inline-flex; }
+  .appFrame .stNav { position: static; gap: 0; overflow: hidden; border: 1px solid var(--color-line); border-radius: var(--radius-lg); background: var(--color-surface); }
+  .appFrame .stNav a { min-height: var(--row-height); padding: var(--space-2) var(--space-4); border-radius: 0; color: var(--color-text); }
+  .appFrame .stNav a + a { border-top: 1px solid var(--color-line); }
+  .appFrame .stNav a[aria-current="page"] { background: none; }
+  .appFrame .stNavIcon { width: 36px; height: 36px; border-radius: var(--radius-md); background: var(--color-muted); color: var(--color-text-secondary); }
+  .appFrame .stNav a[aria-current="page"] .stNavIcon { color: var(--color-text-secondary); }
+  .appFrame .stNavText { flex: 1; }
+  .appFrame .stNavText small { display: block; color: var(--color-text-secondary); font-size: var(--text-small-size); }
+  .appFrame .stNavChevron { display: block; width: 16px; height: 16px; color: var(--color-text-tertiary); }
+  .appFrame .stRow { flex-wrap: wrap; }
+  .appFrame .stRow .stRowText { flex: 1 1 200px; }
+  .appFrame .stNumber { font-size: 16px; }
+  .appFrame .stCard .appButton { height: var(--control-height-lg); }
+  .appFrame .stListRow { grid-template-columns: 32px minmax(0, 1fr) auto; }
+  .appFrame .stListRow .txStatus { display: none; }
+}

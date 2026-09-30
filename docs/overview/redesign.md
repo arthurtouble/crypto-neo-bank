@@ -66,7 +66,7 @@ Navigation is settled in phase 2 with the journeys; the rest is answered in phas
 | 8 | Earn | Positions and deposit and withdraw | Done ([#62](https://github.com/arthurtouble/crypto-neo-bank/pull/62)) |
 | 9 | Cards and bank | Cards page, allowance, controls, card details, bank details and payouts | Done ([#63](https://github.com/arthurtouble/crypto-neo-bank/pull/63)); bank details and payouts were rebuilt with Deposit and Send ([#58](https://github.com/arthurtouble/crypto-neo-bank/pull/58), [#60](https://github.com/arthurtouble/crypto-neo-bank/pull/60)) |
 | 10 | Transactions and Insights | List, filters, receipt, detail, export, statement, Insights | Done ([#65](https://github.com/arthurtouble/crypto-neo-bank/pull/65)) |
-| 11 | Settings and support | Settings sections, passkey, limits, recipients, Aura tag, support | Not started |
+| 11 | Settings and support | Settings sections, passkey, limits, recipients, Aura tag, support | Done ([#66](https://github.com/arthurtouble/crypto-neo-bank/pull/66)) |
 | 12 | Landing and public pages | Landing, `/pay/[tag]`, waitlist, docs site look | Not started |
 | 13 | Operations console | `apps/ops`: the new look only, no layout redesign (decided 29 September) | Not started |
 

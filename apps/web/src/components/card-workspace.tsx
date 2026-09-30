@@ -244,7 +244,7 @@ function CardControls({ data, onSignIn }: { data: Card; onSignIn: SignIn }) {
   return <section className="mxCard" aria-labelledby="card-controls-heading"><h2 id="card-controls-heading">Card controls</h2>
     <div className="cdSetting">
       <div className="cdSettingText"><strong>{frozen ? "Card is frozen" : "Freeze card"}</strong><small>{frozen ? "Nothing can be paid with it. Unfreezing needs your passkey." : "Stop all payments straight away. You can unfreeze it later."}</small></div>
-      <button type="button" className="cdToggle" aria-pressed={frozen} aria-label="Freeze card" disabled={busy}
+      <button type="button" className="appToggle" aria-pressed={frozen} aria-label="Freeze card" disabled={busy}
         onClick={() => void change({ frozen: !frozen }, frozen ? "Card unfrozen" : "Card frozen")}>{frozen ? "On" : "Off"}</button>
     </div>
     <form className="cdSetting cdLimit" onSubmit={(event) => { event.preventDefault(); const value = Number(limitValue); if (value >= 1) void change({ dailyLimitUsd: value }, "Daily limit updated"); }}>

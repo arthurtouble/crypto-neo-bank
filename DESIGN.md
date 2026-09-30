@@ -233,6 +233,7 @@ Soft and subtle: 6px for buttons and inputs, 8px for notes, segmented controls, 
 - **Inputs:** label above, help or error below; errors get a red border and message tied with `aria-describedby`.
 - **Amount entry:** desktop, a 32px amount field with the asset pill inside; phone, its own screen with a 52px amount and a keypad.
 - **Segmented control** switches a view in place; **filter chips** filter a list and may carry totals.
+- **Toggles and switches** save a setting as soon as it changes: an On/Off pill, accent when on, or a 40 × 24 switch inside a labelled row.
 - **Cards** group related things with a line border and 10px radius; never nested, never decorative.
 - **Rows:** icon or logo, title and secondary line, amount and status on the right. Tables on desktop become lists on the phone.
 - **Statuses:** a dot and a literal word.

@@ -2,8 +2,9 @@
 
 import { useExportWallet, useLinkAccount, useMfa, useMfaEnrollment, usePrivy, useWallets } from "@privy-io/react-auth";
 import { useUpdateEmail } from "@privy-io/react-auth/ui";
-import { Download, Fingerprint, LoaderCircle, Mail } from "lucide-react";
+import { LoaderCircle } from "lucide-react";
 import { useMemo, useState } from "react";
+import { SettingRow } from "./setting-row";
 import { useToast } from "./toast";
 
 /**
@@ -38,15 +39,13 @@ export function SecurityCenter() {
     finally { setExporting(false); }
   }
 
-  return <section className="panel settingsPanel" aria-labelledby="sign-in-heading"><h2 id="sign-in-heading">Sign-in and security</h2>
-    <div className="settingRow" id="email"><span className="settingIcon"><Mail size={17} /></span>
-      <div><strong>Email</strong><small>{email ? `${email}. Used to sign in and for email notices.` : "Add an email to get notices by email and to sign in without your wallet."}</small></div>
-      <button onClick={() => email ? updateEmail() : linkEmail()}>{email ? "Change" : "Add email"}</button></div>
-    <div className="settingRow"><span className="settingIcon"><Fingerprint size={17} /></span>
-      <div><strong>Passkey</strong><small>{passkeyReady ? "Added. Needed to move money and to loosen your controls." : "Add one to move money."}</small></div>
-      {passkeyReady ? <span className="settingState">Added</span> : <button onClick={() => showMfaEnrollmentModal()}>Add passkey</button>}</div>
-    <div className="settingRow"><span className="settingIcon"><Download size={17} /></span>
-      <div><strong>Wallet key</strong><small>Export your account&apos;s key to use it in another wallet. Anyone with the key can move your money.</small></div>
-      <button disabled={!wallet || exporting} onClick={() => void exportKey()}>{exporting ? <LoaderCircle className="spin" size={14} /> : "Export"}</button></div>
+  // The passkey leads (journey J15): every money action needs it.
+  return <section className="mxCard stCard" aria-labelledby="sign-in-heading"><h2 id="sign-in-heading">Sign-in and security</h2>
+    <SettingRow title="Passkey" detail={passkeyReady ? "Added. Needed to move money and to loosen your controls." : "Add one to move money."}>
+      {passkeyReady ? <span className="stState">Added</span> : <button type="button" className="appButton appButtonPrimary" onClick={() => showMfaEnrollmentModal()}>Add passkey</button>}</SettingRow>
+    <SettingRow id="email" title="Email" detail={email ? `${email}. Used to sign in and for email notices.` : "Add an email to get notices by email and to sign in without your wallet."}>
+      <button type="button" className="appButton" onClick={() => email ? updateEmail() : linkEmail()}>{email ? "Change" : "Add email"}</button></SettingRow>
+    <SettingRow title="Wallet key" detail="Export your account's key to use it in another wallet. Anyone with the key can move your money.">
+      <button type="button" className="appButton" disabled={!wallet || exporting} onClick={() => void exportKey()}>{exporting ? <LoaderCircle className="spin" aria-hidden="true" /> : "Export"}</button></SettingRow>
   </section>;
 }

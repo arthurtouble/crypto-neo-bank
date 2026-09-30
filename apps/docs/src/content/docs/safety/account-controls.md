@@ -7,6 +7,8 @@ sidebar:
 
 Aura gives you a few optional controls. When you make one stricter, it applies right away. To loosen one, such as unlocking your account or raising your limit, you confirm with your passkey first, so someone who got into your session can't undo them. Aura keeps a record of every change.
 
+You'll find them in **Settings → Security**. Settings has one area at a time: Security, Saved recipients, Aura tag, Notifications, This device, and Your data. On a computer they're listed down the side; on a phone, tap an area to open it.
+
 ## Your controls
 
 | Control | Starts as | What it does |
@@ -18,11 +20,11 @@ Aura gives you a few optional controls. When you make one stricter, it applies r
 
 ## Passkey
 
-Money only leaves your account after you add a passkey or an authenticator app. Add one in **Settings**, under **Sign-in and security**. If you haven't, Aura asks you to add one the first time you move money. You confirm each money action with it, and each change that loosens a control. Unlike the controls above, it isn't optional for moving money. An authenticator app counts the same.
+Money only leaves your account after you add a passkey or an authenticator app. Add one in **Settings → Security**. If you haven't, Aura asks you to add one the first time you move money. You confirm each money action with it, and each change that loosens a control. Unlike the controls above, it isn't optional for moving money. An authenticator app counts the same.
 
 ## Emergency lock
 
-Turn on the lock if something looks wrong: an unexpected prompt, a recipient you don't recognize, or signs someone else has access. Then secure your sign-in methods too. If you think someone else has access, lock your account here in Settings first, then tell us from **Support → Report a problem**.
+Turn on the lock if something looks wrong: an unexpected prompt, a recipient you don't recognize, or signs someone else has access. Then secure your sign-in methods too. If you think someone else has access, lock your account in **Settings → Security** first, then tell us from **Support → Report a problem**.
 
 The lock stops Aura preparing or sending any money movement, including one you started but haven't confirmed yet. It doesn't freeze your wallet, reverse a transaction already sent, or stop activity in another app. Unlocking needs your passkey.
 
@@ -50,7 +52,7 @@ Aura can also switch a feature off for everyone, for example sends, swaps, or Ea
 
 ## Closing your account
 
-Move your money out first, then contact support from **Settings**. We close an account once it holds nothing and nothing is in progress. A closed account can't move money, and its Aura tag is taken down. You can still download your data and contact support. Aura keeps your transaction, security, and consent records, as the law and account safety require.
+Move your money out first, then contact support from **Settings → Your data**. We close an account once it holds nothing and nothing is in progress. A closed account can't move money, and its Aura tag is taken down. You can still download your data and contact support. Aura keeps your transaction, security, and consent records, as the law and account safety require.
 
 ## What controls can't do
 
