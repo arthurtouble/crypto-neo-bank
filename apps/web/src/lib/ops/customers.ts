@@ -21,7 +21,10 @@ export type CustomerProfile = {
   actions: { total: number; completed: number; failed: number; open: number; lastAt: string | null };
   /** Intercom identifies the customer by this user ID (the Messenger JWT's `user_id`). */
   intercomUserId: string;
+  /** The latest notices and how each was delivered, so support can see an email that bounced or failed. */
+  notices: { recent: NoticeDelivery[]; emailFailed: number };
 };
+export type NoticeDelivery = { id: string; kind: string; title: string; createdAt: string; email: string; push: string };
 
 /** Find a customer by Privy user ID, email, wallet address, or Aura tag. */
 export async function findCustomer(db: D1Database, query: string): Promise<string | null> {
@@ -77,7 +80,7 @@ export function readCustomerCursor(cursor: string | null): { createdAt: string; 
 }
 
 export async function customerProfile(db: D1Database, subject: string): Promise<CustomerProfile> {
-  const [profile, controls, tag, bank, card, actions] = await Promise.all([
+  const [profile, controls, tag, bank, card, actions, notices, failed] = await Promise.all([
     db.prepare("SELECT created_at, closed_at, closed_reason FROM subject_profiles WHERE subject_reference = ?").bind(subject)
       .first<{ created_at: string; closed_at: string | null; closed_reason: string | null }>(),
     db.prepare("SELECT account_locked, daily_limit_cents, enforce_address_book, updated_at FROM security_profiles WHERE subject_reference = ?").bind(subject)
@@ -89,7 +92,10 @@ export async function customerProfile(db: D1Database, subject: string): Promise<
       .first<{ status: string; last_four: string | null; observed_at: string }>(),
     db.prepare(`SELECT COUNT(*) AS total, SUM(status = 'confirmed' OR status = 'settling') AS completed, SUM(status = 'failed') AS failed,
       SUM(status = 'submitted') AS open, MAX(created_at) AS last_at FROM actions WHERE subject_reference = ? AND status != 'prepared'`).bind(subject)
-      .first<{ total: number; completed: number | null; failed: number | null; open: number | null; last_at: string | null }>()
+      .first<{ total: number; completed: number | null; failed: number | null; open: number | null; last_at: string | null }>(),
+    db.prepare("SELECT notification_id, kind, title, created_at, email_status, push_status FROM notifications WHERE subject_reference = ? ORDER BY created_at DESC LIMIT 10")
+      .bind(subject).all<{ notification_id: string; kind: string; title: string; created_at: string; email_status: string; push_status: string }>(),
+    db.prepare("SELECT COUNT(*) AS n FROM notifications WHERE subject_reference = ? AND email_status = 'failed'").bind(subject).first<{ n: number }>()
   ]);
   return {
     subjectReference: subject, createdAt: profile?.created_at ?? null, closedAt: profile?.closed_at ?? null, closedReason: profile?.closed_reason ?? null,
@@ -99,7 +105,9 @@ export async function customerProfile(db: D1Database, subject: string): Promise<
     bank: bank ? { status: bank.status, kycStatus: bank.kyc_status, observedAt: bank.observed_at } : null,
     card: card ? { status: card.status, lastFour: card.last_four, observedAt: card.observed_at } : null,
     actions: { total: actions?.total ?? 0, completed: actions?.completed ?? 0, failed: actions?.failed ?? 0, open: actions?.open ?? 0, lastAt: actions?.last_at ?? null },
-    intercomUserId: subject
+    intercomUserId: subject,
+    notices: { emailFailed: failed?.n ?? 0, recent: notices.results.map((row) => ({ id: row.notification_id, kind: row.kind, title: row.title, createdAt: row.created_at,
+      email: row.email_status, push: row.push_status })) }
   };
 }
 

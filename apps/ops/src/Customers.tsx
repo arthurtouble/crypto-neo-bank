@@ -9,7 +9,16 @@ type Account = { subjectReference: string; wallet: string; closedAt: string | nu
 type Profile = { subjectReference: string; createdAt: string | null; closedAt: string | null;
   controls: { accountLocked: boolean; dailyLimitUsd: number | null; enforceAddressBook: boolean; updatedAt: string | null };
   auraTag: string | null; bank: { status: string; kycStatus: string | null } | null; card: { status: string; lastFour: string | null } | null;
-  actions: { total: number; completed: number; failed: number; open: number; lastAt: string | null }; intercomUserId: string };
+  actions: { total: number; completed: number; failed: number; open: number; lastAt: string | null }; intercomUserId: string;
+  notices: { recent: Notice[]; emailFailed: number } };
+type Notice = { id: string; kind: string; title: string; createdAt: string; email: string; push: string };
+
+const deliveryWords: Record<string, string> = { sent: "Sent", failed: "Failed", skipped: "Not sent", pending: "Sending" };
+/** How one channel went: failed stands out, since that's what support needs to see. */
+function Delivery({ status }: { status: string }) {
+  const word = deliveryWords[status] ?? status;
+  return status === "failed" ? <span className="badge bad">{word}</span> : <span className={status === "sent" ? undefined : "muted"}>{word}</span>;
+}
 type Lookup = { account: Account; profile: Profile };
 
 /** One operator action on an account, with the reason every one of them needs. */
@@ -99,6 +108,13 @@ export function Customers({ onMovement }: { onMovement: (subject: string) => voi
           {copied && <span className="muted"> Copied</span>}</dd></div>
         {data.account.closedAt && <div><dt>Closed</dt><dd>{when(data.account.closedAt)}: {data.account.closedReason}</dd></div>}
       </dl>
+      <h3>Notices {profile.notices.emailFailed > 0 && <span className="badge bad">{profile.notices.emailFailed} email{profile.notices.emailFailed === 1 ? "" : "s"} failed</span>}</h3>
+      {profile.notices.recent.length ? <div className="tableWrap"><table data-testid="ops-notices">
+        <thead><tr><th scope="col">When</th><th scope="col">Notice</th><th scope="col">Email</th><th scope="col">Push</th></tr></thead>
+        <tbody>{profile.notices.recent.map((notice) => <tr key={notice.id}><td>{when(notice.createdAt)}</td><td>{notice.title}</td>
+          <td><Delivery status={notice.email} /></td><td><Delivery status={notice.push} /></td></tr>)}</tbody>
+      </table></div> : <p className="muted">No notices yet.</p>}
+      {profile.notices.emailFailed > 0 && <p className="muted">A failed email was refused or bounced by the customer&apos;s mail server. The notice is still in their app.</p>}
       <h3>Holdings <span className="muted">read from the chain {when(data.account.observedAt)}</span></h3>
       <ul className="holdings">{data.account.holdings.map((holding) => <li key={holding.label}>
         <span>{holding.label}</span><span>{holding.status !== "observed" ? "Unavailable" : holding.amountRaw === "0" ? "Empty" : `Holds ${holding.symbol}`}</span></li>)}</ul>

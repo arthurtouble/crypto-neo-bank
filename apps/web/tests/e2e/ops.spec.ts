@@ -86,6 +86,11 @@ test("an operator finds a customer, locks the account, and closes it only once i
   await expect(customerCard(page).getByRole("button", { name: "Lock account" })).toHaveCount(0);
   expect(await asCustomer(customerPage, customer, "GET", "/api/security/policy")).toMatchObject({ policy: { accountLocked: true } });
   await expect.poll(async () => (await edge("/__outbox")).emails?.some((email) => email.to.includes(customer.email) && email.subject.includes("locked")), { timeout: 30_000 }).toBe(true);
+  // The notice shows on the customer, with how its email went.
+  await expect.poll(async () => {
+    await customers(page).getByRole("button", { name: "Find" }).click();
+    return customerCard(page).getByTestId("ops-notices").locator("tr").filter({ hasText: "Your account is locked" }).textContent({ timeout: 5_000 }).catch(() => "");
+  }, { timeout: 30_000 }).toContain("Sent");
 
   // Emptied, it can be closed, with a reason.
   await setBalances(customer.wallet, { 8453: { [ASSETS.usdc]: "0" } });

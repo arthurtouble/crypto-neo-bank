@@ -109,7 +109,13 @@ describe("customers", () => {
     expect(await findCustomer(state.db!, "@alice")).toBe("did:privy:alice");
     expect(await findCustomer(state.db!, "nobody_here")).toBeNull();
     expect(await customerProfile(state.db!, "did:privy:alice")).toMatchObject({ auraTag: "alice", bank: { status: "active", kycStatus: "approved" }, card: null,
-      controls: { accountLocked: false }, actions: { total: 0 }, intercomUserId: "did:privy:alice" });
+      controls: { accountLocked: false }, actions: { total: 0 }, intercomUserId: "did:privy:alice", notices: { recent: [], emailFailed: 0 } });
+    sqlite.exec(`INSERT INTO notifications (notification_id, subject_reference, kind, dedupe_key, title, body, created_at, email_status, push_status) VALUES
+      ('n1', 'did:privy:alice', 'completed', 'k1', 'Added to Earn 1 USDC', 'To Aave, on Base.', '2026-09-30T10:00:00.000Z', 'sent', 'skipped'),
+      ('n2', 'did:privy:alice', 'completed', 'k2', '1 USDC is back in your account', 'b', '2026-09-30T11:00:00.000Z', 'failed', 'skipped');`);
+    expect((await customerProfile(state.db!, "did:privy:alice")).notices).toEqual({ emailFailed: 1, recent: [
+      { id: "n2", kind: "completed", title: "1 USDC is back in your account", createdAt: "2026-09-30T11:00:00.000Z", email: "failed", push: "skipped" },
+      { id: "n1", kind: "completed", title: "Added to Earn 1 USDC", createdAt: "2026-09-30T10:00:00.000Z", email: "sent", push: "skipped" }] });
     expect((await findAccount(await asOperator("/api/ops/accounts?q=ab"))).status).toBe(400);
   });
 
