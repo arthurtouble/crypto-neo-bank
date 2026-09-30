@@ -45,7 +45,9 @@ Aurel can lose its D1 data without losing customer funds because Privy, contract
 
 ## Production release
 
-1. Run `pnpm lint`, `pnpm typecheck:all`, `pnpm test:unit`, `pnpm test:e2e`, and `pnpm deploy:dry-run`.
+For the first launch, follow [production launch](production-launch.md) first.
+
+1. Run `pnpm production:check`, then `pnpm lint`, `pnpm typecheck:all`, `pnpm test:unit`, `pnpm test:e2e`, and `pnpm deploy:dry-run`.
 2. Apply pending D1 migrations before code that requires the new schema.
    The operations app needs, per environment: its Worker deployed (`aurel-ops`, or `aura-dev-ops` with `pnpm ops:deploy:dev`), Cloudflare Access turned on in front of it, and the web app's `CF_ACCESS_TEAM_DOMAIN` and `CF_ACCESS_AUD` variables set (see [edge security activation](edge-security-activation.md#cloudflare-access)). Until then every operator request is refused.
    Notifications need, per environment: a Resend domain verified for `EMAIL_FROM` and the `RESEND_API_KEY` secret (a send-only key), `APP_ORIGIN`, and a VAPID key pair made for that environment (`VAPID_PUBLIC_KEY` as a variable, `VAPID_PRIVATE_KEY` as a secret). Without them, email or push is skipped and the in-app notices still work.
