@@ -55,6 +55,8 @@ function InOutChart({ data }: { data: Insights }) {
       {series.length < 2 && <p className="mxHint">{data.incomingComplete ? "Money out" : "Money in"} can&apos;t all be read right now, so only {series[0].name.toLowerCase()} is shown.</p>}
       <div className="inPlot" onMouseLeave={() => setActive(null)}>
         <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`${series.map((item) => item.name).join(" and ")} by ${data.over.unit}`} preserveAspectRatio="none">
+          {/* The highlight goes under the bars, so it never hides them. */}
+          {active !== null && <rect className="inActive" x={left + active * slot} y={top} width={slot} height={plot} />}
           <line className="inBaseline" x1={0} x2={width} y1={top + plot} y2={top + plot} />
           {buckets.map((bucket, index) => {
             const x = left + index * slot + (slot - series.length * (barWidth + 2)) / 2;
@@ -67,7 +69,6 @@ function InOutChart({ data }: { data: Insights }) {
               })}
             </g>;
           })}
-          {active !== null && <rect className="inActive" x={left + active * slot} y={top} width={slot} height={plot} />}
         </svg>
         {/* Labels sit outside the SVG, which stretches to the card's width, so the text isn't distorted. */}
         <div className="inTicks" aria-hidden="true">{buckets.map((bucket, index) => index % labelEvery === 0

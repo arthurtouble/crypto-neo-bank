@@ -47,6 +47,7 @@
 .appFrame .txEmpty span { color: var(--color-text-secondary); font-size: var(--text-small-size); }
 
 /* The receipt, in the side panel */
+.ovPanel .ovFacts dd { min-width: 0; }
 .ovPanel .txReceiptAmount { display: grid; gap: var(--space-1); }
 .ovPanel .txReceiptAmount strong { font-size: var(--text-amount-size); line-height: var(--text-amount-line); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-tight); overflow-wrap: anywhere; }
 .ovPanel .ovPanelActions svg { width: 16px; height: 16px; }
