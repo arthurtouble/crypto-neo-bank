@@ -41,4 +41,4 @@ Interface controls can't eliminate customer device compromise, malicious wallet 
 
 ## Release verdict
 
-Suitable for continued invite-only engineering and acceptance testing with small designated funds. Not approved for broad public launch or regulated fiat/card activation until every high launch gate is closed and the accountable owner records evidence in [launch readiness](../overview/launch-readiness.md).
+Suitable for continued engineering and acceptance testing on dev, with small designated funds. Not approved for broad public launch or regulated fiat/card activation until every high launch gate is closed and the accountable owner records evidence in [launch readiness](../overview/launch-readiness.md).
