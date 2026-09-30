@@ -5,6 +5,8 @@ description: Who can use Aura, and what decides whether you can move money.
 
 Anyone can browse Aura with example data, and anyone can sign in.
 
+The exception is places under sanctions. Aura isn't available in Cuba, Iran, North Korea, or Syria, or in the Crimea, Donetsk, or Luhansk regions of Ukraine. From there, the app and payment pages say so, and you can still read this site and our [terms](/legal/terms-of-use/).
+
 Before Aura prepares anything that moves money, it checks that:
 
 - the feature is switched on;
