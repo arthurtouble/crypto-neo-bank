@@ -29,3 +29,24 @@ export function timingSafeEqual(a: Uint8Array, b: Uint8Array): boolean {
   for (let index = 0; index < a.length; index++) difference |= a[index] ^ b[index];
   return difference === 0;
 }
+
+const SVIX_TOLERANCE_MS = 5 * 60_000;
+
+/**
+ * A Svix-signed webhook (Privy and Resend deliver through Svix): HMAC-SHA256 over `<id>.<timestamp>.<body>` with the
+ * base64 part of the `whsec_` secret, within five minutes. `svix-signature` may list several `v1,<sig>` values.
+ */
+export async function verifySvix({ headers, rawBody, secret, nowMs }: { headers: Headers; rawBody: string; secret: string; nowMs: number }) {
+  const id = headers.get("svix-id");
+  const timestamp = headers.get("svix-timestamp");
+  const signatures = headers.get("svix-signature");
+  if (!id || !timestamp || !signatures || !/^\d+$/.test(timestamp) || Math.abs(nowMs - Number(timestamp) * 1000) > SVIX_TOLERANCE_MS) return false;
+  try {
+    const key = await crypto.subtle.importKey("raw", base64ToBytes(secret.replace(/^whsec_/, "")) as BufferSource, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+    const expected = new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`${id}.${timestamp}.${rawBody}`)));
+    return signatures.split(" ").some((entry) => {
+      const [version, value] = entry.split(",", 2);
+      try { return version === "v1" && Boolean(value) && timingSafeEqual(base64ToBytes(value), expected); } catch { return false; }
+    });
+  } catch { return false; }
+}

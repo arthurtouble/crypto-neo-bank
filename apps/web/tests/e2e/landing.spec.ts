@@ -84,3 +84,9 @@ test("search engines may index the landing page, not the app or payment pages", 
   await expect(page).toHaveTitle("Pay with Aura");
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
 });
+
+test("Resend's delivery reports reach their own signed route, which refuses unsigned posts", async ({ request }) => {
+  const response = await request.post("/api/webhooks/resend", { data: { type: "email.bounced", data: {} } });
+  expect([401, 503]).toContain(response.status());
+  expect((await response.json()).error).not.toBe("unknown_provider");
+});
