@@ -57,3 +57,14 @@ test("privacy, terms, and account operations fail closed", async ({ request }) =
 test("the pre-launch application and tour routes are gone", async ({ request }) => {
   for (const path of ["/apply", "/tour"]) expect((await request.get(path)).status()).toBe(404);
 });
+
+test("a sanctioned place gets the unavailable page for the app and the API, but can read the landing page", async ({ page, request }) => {
+  const from = { "CF-IPCountry": "IR" };
+  expect((await request.get("/api/overview", { headers: from })).status()).toBe(451);
+  expect((await request.get("/", { headers: from })).status()).toBe(200);
+  await page.setExtraHTTPHeaders(from);
+  const response = await page.goto("/app/send");
+  expect(response?.status()).toBe(451);
+  await expect(page.getByRole("heading", { name: "Aura isn't available where you are" })).toBeVisible();
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
