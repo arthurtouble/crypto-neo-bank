@@ -7,9 +7,9 @@ sidebar:
 
 ## Your account is your wallet
 
-Privy makes a wallet for you when you first sign in. That wallet is your Aura account, and it has the same address on every network. You control it through your Privy sign-in. Aura never holds your funds or a key that can move them.
+Privy makes a wallet for you when you first sign in. That wallet is your Aura account. It has the same address on every network. You control it through your Privy sign-in. Aura never holds your funds or a key that can move them.
 
-Privy, an independent company, handles sign-in, the key that signs for your wallet, recovery, and export. Aura only receives your public wallet address and your verified sign-in.
+Privy is an independent company. It handles sign-in, the key that signs for your wallet, recovery, and export. Aura only receives your public wallet address and your verified sign-in.
 
 When you make a transaction, Aura prepares it and checks it first. You review it in Aura, then confirm with your passkey or cancel. Features that aren't live never ask you to confirm.
 
@@ -33,7 +33,9 @@ Your main balance view shows:
 | Aave USDC and WETH you've supplied | Base | Earn |
 | Morpho USDC vaults (Steakhouse Prime USDC, Gauntlet USDC Prime) | Base | Earn |
 
-Each item shows a US dollar value, and Overview adds them up into a total. Stock, gold, and euro prices pause outside market hours, so those rows say when their price was published. Filter Overview by group (cash, crypto, stocks, metals, earn), and select an item to see its details and send, swap, or deposit more of it.
+Each item shows a US dollar value, and Overview adds them up into a total. Stock, gold, and euro prices pause outside market hours, so those rows say when their price was published.
+
+You can filter Overview by group: cash, crypto, stocks, metals, or earn. Select an item to see its details, and to send, swap, or deposit more of it.
 
 Balances can update at slightly different times in Aura, in your wallet, and on a block explorer. To confirm a payment, check the transaction on the right network's block explorer.
 
@@ -45,7 +47,7 @@ Aura leaves out assets it doesn't recognize rather than guessing their value. A 
 
 ## Earn positions
 
-Aura reads the USDC and WETH you've supplied directly from Aave on Base. It reads your Morpho vault shares from Base and shows what they're worth in USDC. Between reads, a position grows live at its current yearly rate, as an estimate; the next read replaces it. If a read fails, Aura shows the position as unavailable rather than an old value.
+Aura reads the USDC and WETH you've supplied directly from Aave on Base. It reads your Morpho vault shares from Base and shows what they're worth in USDC. Between reads, a position grows live at its current yearly rate, as an estimate. The next read replaces it. If a read fails, Aura shows the position as unavailable rather than an old value.
 
 A position doesn't tell you what you've earned, your cost basis, or a tax value. Aura leaves those blank until it has complete history to back them up.
 
@@ -75,4 +77,4 @@ Hiding balances in Aura only hides them on your screen. Your balance and transac
 
 ## Not a bank deposit
 
-Assets in your wallet and Earn positions aren't bank deposits, even though Aura looks like a banking app. Unless a specific regulated product says otherwise in its own terms, don't expect deposit insurance, chargebacks, or bank-style reversals.
+Aura looks like a banking app, but assets in your wallet and Earn positions aren't bank deposits. Unless a specific regulated product says otherwise in its own terms, don't expect deposit insurance, chargebacks, or bank-style reversals.
