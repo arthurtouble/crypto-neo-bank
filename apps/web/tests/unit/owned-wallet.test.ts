@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { WalletOwnershipError, findLegacySmartWallet, requireActionAccount, requireActionWallet, requireLinkedEvmWallet } from "@/lib/auth/wallet";
+import { MfaRequiredError, WalletOwnershipError, findLegacySmartWallet, requireActionAccount, requireActionWallet, requireLinkedEvmWallet, requireMoneyAccount } from "@/lib/auth/wallet";
 
 const subject = "did:privy:owner";
 const owned = "0x1111111111111111111111111111111111111111";
@@ -46,6 +46,16 @@ describe("the Aura account", () => {
     await expect(requireActionAccount(subject, async () => ({ id: subject, linked_accounts: [external, smart] }))).rejects.toBeInstanceOf(WalletOwnershipError);
     await expect(requireActionAccount(subject, async () => ({ id: subject, linked_accounts: [{ ...embedded, id: null }] }))).rejects.toBeInstanceOf(WalletOwnershipError);
     await expect(requireActionAccount(subject, async () => ({ id: "did:privy:other", linked_accounts: [embedded] }))).rejects.toBeInstanceOf(WalletOwnershipError);
+  });
+
+  it("checks the passkey and picks the account from one Privy read, with the same errors in the same order", async () => {
+    let reads = 0;
+    const user = (value: object) => async () => { reads += 1; return { id: subject, linked_accounts: [embedded], ...value }; };
+    await expect(requireMoneyAccount(subject, user({ mfa_methods: [{ type: "passkey" }] }))).resolves.toEqual({ address: owned, walletId: "wallet-1" });
+    expect(reads).toBe(1);
+    await expect(requireMoneyAccount(subject, user({ mfa_methods: [{ type: "sms" }] }))).rejects.toBeInstanceOf(MfaRequiredError);
+    await expect(requireMoneyAccount(subject, user({ mfa_methods: [{ type: "totp" }], linked_accounts: [smart] }))).rejects.toBeInstanceOf(WalletOwnershipError);
+    await expect(requireMoneyAccount(subject, user({ id: "did:privy:other", mfa_methods: [] }))).rejects.toBeInstanceOf(WalletOwnershipError);
   });
 
   it("finds the smart wallet an earlier version used, only for the migration", async () => {

@@ -1,5 +1,5 @@
 import { encodeFunctionData, erc20Abi, parseUnits } from "viem";
-import { BASE_USDC } from "@/lib/cards/service";
+import { BASE_CHAIN_ID, BASE_USDC } from "@/lib/assets/registry";
 import type { BuiltAction } from "./types";
 
 /**
@@ -11,12 +11,12 @@ import type { BuiltAction } from "./types";
 export function buildCardAllowance(spender: `0x${string}`, amountUsd: string): BuiltAction {
   const amountRaw = parseUnits(amountUsd, 6);
   return {
-    kind: "transfer", chainId: 8453,
+    kind: "transfer", chainId: BASE_CHAIN_ID,
     calls: [{ to: BASE_USDC, value: "0", data: encodeFunctionData({ abi: erc20Abi, functionName: "approve", args: [spender, amountRaw] }) }],
     effects: [{ type: "erc20_approval", token: BASE_USDC, spender, amountRaw: amountRaw.toString() }],
-    summary: { assetId: `8453:${BASE_USDC}`, symbol: "USDC", decimals: 6, amount: amountUsd, amountRaw: amountRaw.toString(), cardAllowance: { spender } },
+    summary: { assetId: `${BASE_CHAIN_ID}:${BASE_USDC}`, symbol: "USDC", decimals: 6, amount: amountUsd, amountRaw: amountRaw.toString(), cardAllowance: { spender } },
     // Nothing leaves the account now; each purchase is limited by the card's own daily limit.
     countsTowardLimit: false,
-    valuation: { assetId: `8453:${BASE_USDC}`, amountRaw: amountRaw.toString(), decimals: 6 }
+    valuation: { assetId: `${BASE_CHAIN_ID}:${BASE_USDC}`, amountRaw: amountRaw.toString(), decimals: 6 }
   };
 }

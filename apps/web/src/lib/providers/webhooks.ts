@@ -1,3 +1,5 @@
+import { base64ToBytes, hmacSha256 } from "@/lib/platform/encoding";
+
 /** A provider event after signature checks, in the shape the events Worker applies. */
 export type NormalizedEvent = {
   id: string;
@@ -18,11 +20,6 @@ export type WebhookProvider = {
   normalize: (payload: unknown, headers: Headers) => NormalizedEvent | null;
 };
 
-export function base64ToBytes(value: string): Uint8Array {
-  const binary = atob(value);
-  return Uint8Array.from(binary, (char) => char.charCodeAt(0));
-}
-
 export function timingSafeEqual(a: Uint8Array, b: Uint8Array): boolean {
   if (a.length !== b.length) return false;
   let difference = 0;
@@ -42,8 +39,7 @@ export async function verifySvix({ headers, rawBody, secret, nowMs }: { headers:
   const signatures = headers.get("svix-signature");
   if (!id || !timestamp || !signatures || !/^\d+$/.test(timestamp) || Math.abs(nowMs - Number(timestamp) * 1000) > SVIX_TOLERANCE_MS) return false;
   try {
-    const key = await crypto.subtle.importKey("raw", base64ToBytes(secret.replace(/^whsec_/, "")) as BufferSource, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
-    const expected = new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`${id}.${timestamp}.${rawBody}`)));
+    const expected = await hmacSha256(base64ToBytes(secret.replace(/^whsec_/, "")), `${id}.${timestamp}.${rawBody}`);
     return signatures.split(" ").some((entry) => {
       const [version, value] = entry.split(",", 2);
       try { return version === "v1" && Boolean(value) && timingSafeEqual(base64ToBytes(value), expected); } catch { return false; }

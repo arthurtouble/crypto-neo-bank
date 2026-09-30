@@ -1,6 +1,7 @@
 import { env } from "cloudflare:workers";
 import { z } from "zod";
 import { requireVerifiedSubject } from "@/lib/auth/server";
+import { shortAddress } from "@/lib/money/format";
 import { ensureSubjectProfile } from "@/lib/profile/ensure";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { saveWalletAddress } from "@/lib/security/wallet-address-book";
@@ -26,9 +27,9 @@ export const GET = route("recipients.get", { unavailable: "recipients_unavailabl
   const now = Date.now();
   const savedAddresses = new Set((wallets.results as unknown as WalletRow[]).map((row) => row.address.toLowerCase()));
   const recipients = [
-    ...(wallets.results as unknown as WalletRow[]).map((row) => ({ id: row.entry_id, kind: "wallet" as const, name: row.label, destination: row.address, detail: `${row.address.slice(0, 6)}…${row.address.slice(-4)}`, verified: new Date(row.available_at).getTime() <= now, availableAt: row.available_at, lastUsedAt: row.last_used_at })),
+    ...(wallets.results as unknown as WalletRow[]).map((row) => ({ id: row.entry_id, kind: "wallet" as const, name: row.label, destination: row.address, detail: shortAddress(row.address), verified: new Date(row.available_at).getTime() <= now, availableAt: row.available_at, lastUsedAt: row.last_used_at })),
     ...(banks.results as unknown as BankRow[]).map((row) => ({ id: row.beneficiary_id, kind: "bank" as const, name: row.display_name, destination: row.beneficiary_id, detail: [row.rail?.toUpperCase(), row.account_hint].filter(Boolean).join(" · "), verified: row.verification_status === "verified", lastUsedAt: row.last_used_at })),
-    ...(recent.results as unknown as RecentRow[]).filter((row) => /^0x[a-f0-9]{40}$/.test(row.address) && !savedAddresses.has(row.address)).map((row) => ({ id: `recent:${row.address}`, kind: "wallet" as const, name: "Recent address", destination: row.address, detail: `${row.address.slice(0, 6)}…${row.address.slice(-4)}`, verified: false, recent: true, lastUsedAt: row.used_at }))
+    ...(recent.results as unknown as RecentRow[]).filter((row) => /^0x[a-f0-9]{40}$/.test(row.address) && !savedAddresses.has(row.address)).map((row) => ({ id: `recent:${row.address}`, kind: "wallet" as const, name: "Recent address", destination: row.address, detail: shortAddress(row.address), verified: false, recent: true, lastUsedAt: row.used_at }))
   ];
   return Response.json({ recipients, observedAt: new Date().toISOString(), authority: "Security address book and provider beneficiary projections", traceId }, { headers: { "Cache-Control": "no-store" } });
 });

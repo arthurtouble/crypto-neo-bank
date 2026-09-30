@@ -1,5 +1,6 @@
 import { chainlinkUsd } from "@/lib/assets/prices";
 import { registeredAsset } from "@/lib/assets/registry";
+import { readBoundedJson } from "@/lib/http/bounded";
 import { localEdgeUrl } from "@/lib/testing/local-edge";
 
 /** USD value of an action's source amount, used only for customer limits and display. */
@@ -10,7 +11,7 @@ const MAX_RESPONSE_BYTES = 256_000;
 
 /** Kraken pair and the result keys Kraken may use for it. */
 const KRAKEN = { eth: { pair: "ETHUSD", keys: ["XETHZUSD", "ETHUSD"] }, btc: { pair: "XBTUSD", keys: ["XXBTZUSD", "XBTUSD"] } } as const;
-export type KrakenAsset = keyof typeof KRAKEN;
+type KrakenAsset = keyof typeof KRAKEN;
 
 function centsOf(rawUnits: bigint, decimals: number, price: { numerator: bigint; scale: bigint }): number | null {
   const denominator = 10n ** BigInt(decimals) * price.scale;
@@ -31,11 +32,11 @@ export async function krakenUsd(asset: KrakenAsset, now: Date, fetcher: typeof f
   try {
     const response = await fetcher(`${localEdgeUrl("KRAKEN_API_URL") ?? "https://api.kraken.com"}/0/public/OHLC?pair=${pair}&interval=1&since=${Math.floor(now.getTime() / 1000) - 180}`,
       { signal: AbortSignal.timeout(4_000), headers: { Accept: "application/json" } });
-    const length = Number(response.headers.get("content-length") ?? 0);
-    if (!response.ok || length > MAX_RESPONSE_BYTES) return null;
-    const text = await response.text();
-    if (text.length > MAX_RESPONSE_BYTES) return null;
-    const payload = JSON.parse(text) as { error?: unknown[]; result?: Record<string, unknown> };
+    if (!response.ok) {
+      await response.body?.cancel().catch(() => undefined);
+      return null;
+    }
+    const payload = await readBoundedJson(response, MAX_RESPONSE_BYTES) as { error?: unknown[]; result?: Record<string, unknown> };
     const candles = keys.map((key) => payload.result?.[key]).find(Array.isArray);
     if (payload.error?.length || !Array.isArray(candles) || !candles.length) return null;
     const latest = candles[candles.length - 1] as unknown[];

@@ -12,7 +12,7 @@ import { readOverview, type Overview } from "@/lib/overview/read";
  * unpublished, and every customer route but support and the data export
  * refuses it (`requireVerifiedSubject`). An operator can reopen it.
  */
-export type ClosureCheck = {
+type ClosureCheck = {
   subjectReference: string;
   wallet: string;
   closedAt: string | null;

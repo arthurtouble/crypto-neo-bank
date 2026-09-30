@@ -1,7 +1,7 @@
-import { createPublicClient, fallback, formatUnits, http, parseAbi, type PublicClient } from "viem";
+import { formatUnits, parseAbi, type PublicClient } from "viem";
 import { base } from "viem/chains";
-import { rpcEndpoints } from "@/lib/actions/chain";
 import type { PriceSource } from "@/lib/assets/registry";
+import { publicClient } from "@/lib/chain/rpc";
 
 type ChainlinkSource = Extract<PriceSource, { kind: "chainlink" }>;
 export type FeedPrice = { usd: string; observedAt: string };
@@ -9,7 +9,7 @@ export type FeedPrice = { usd: string; observedAt: string };
 const aggregatorAbi = parseAbi(["function latestRoundData() view returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound)"]);
 
 export function baseClient(): PublicClient {
-  return createPublicClient({ chain: base, transport: fallback(rpcEndpoints(base.id).map((url) => http(url, { timeout: 8_000, retryCount: 0 }))) }) as PublicClient;
+  return publicClient(base);
 }
 
 /**

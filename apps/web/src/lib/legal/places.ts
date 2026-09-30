@@ -7,7 +7,7 @@
  */
 
 /** ISO 3166-1 alpha-2 country codes. */
-export const blockedCountries: Record<string, string> = {
+const blockedCountries: Record<string, string> = {
   CU: "Cuba",
   IR: "Iran",
   KP: "North Korea",
@@ -15,7 +15,7 @@ export const blockedCountries: Record<string, string> = {
 };
 
 /** Regions within a country, as Cloudflare reports them: the country code, then the ISO 3166-2 subdivision code. */
-export const blockedRegions: Record<string, string> = {
+const blockedRegions: Record<string, string> = {
   "UA-43": "Crimea",
   "UA-40": "Sevastopol",
   "UA-14": "Donetsk",

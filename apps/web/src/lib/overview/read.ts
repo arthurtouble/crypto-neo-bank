@@ -1,11 +1,11 @@
-import { createPublicClient, erc20Abi, fallback, getAddress, http, parseAbi, type PublicClient } from "viem";
+import { erc20Abi, getAddress, parseAbi, type PublicClient } from "viem";
 import { base, mainnet } from "viem/chains";
 import { krakenUsd } from "@/lib/actions/valuation";
 import { chainlinkUsd, type FeedPrice } from "@/lib/assets/prices";
-import { rpcEndpoints } from "@/lib/actions/chain";
 import { AAVE_BASE_ASSETS, AAVE_BASE_V3_MARKET } from "@/lib/defi/aave";
 import { MORPHO_VAULTS, morphoVaultRates, vaultAbi, type VaultRates } from "@/lib/defi/morpho";
-import { assetsFor, type PriceSource } from "@/lib/assets/registry";
+import { assetsFor, BASE_CHAIN_ID, type PriceSource } from "@/lib/assets/registry";
+import { publicClient } from "@/lib/chain/rpc";
 
 /** Cash is stablecoins, then crypto, tokenized stocks, and metals in the account; earn is Aave and Morpho deposits. */
 export type HoldingGroup = "cash" | "crypto" | "stocks" | "metals" | "earn";
@@ -53,20 +53,16 @@ const poolAbi = parseAbi([
   "function getReserveData(address asset) view returns (ReserveDataLegacy)"
 ]);
 
-function client(chain: typeof base | typeof mainnet): PublicClient {
-  return createPublicClient({ chain, transport: fallback(rpcEndpoints(chain.id).map((url) => http(url, { timeout: 8_000, retryCount: 0 }))) }) as PublicClient;
-}
-
-export function defaultClients(): Clients {
+function defaultClients(): Clients {
   const now = new Date();
-  const baseClient = client(base);
+  const baseClient = publicClient(base);
   const prices = new Map<string, Promise<FeedPrice | null>>();
   const fetchPrice = async (source: Priced): Promise<FeedPrice | null> => {
     if (source.kind === "chainlink") return chainlinkUsd(source, now, baseClient);
     const usd = await krakenUsd(source.market, now);
     return usd === null ? null : { usd, observedAt: now.toISOString() };
   };
-  return { base: baseClient, ethereum: client(mainnet),
+  return { base: baseClient, ethereum: publicClient(mainnet),
     price: (source) => {
       const key = source.kind === "chainlink" ? source.feed : source.market;
       if (!prices.has(key)) prices.set(key, fetchPrice(source));
@@ -109,7 +105,7 @@ export async function readOverview(wallet: string, clients: Clients = defaultCli
   // Read Morpho's rates at most once, and only if the account has a vault position.
   let rates: Promise<VaultRates> | null = null;
   const vaultRates = () => (rates ??= (clients.vaultRates ?? (() => morphoVaultRates()))());
-  const networks = { 8453: { client: clients.base, source: "base" }, 1: { client: clients.ethereum, source: "ethereum" } } as const;
+  const networks = { [BASE_CHAIN_ID]: { client: clients.base, source: "base" }, 1: { client: clients.ethereum, source: "ethereum" } } as const;
   const tasks: Array<Promise<Holding | null>> = [
     // Every registered asset the account can hold, on Base and (for assets only issued there) Ethereum. USDC always shows, even at zero.
     ...assetsFor("hold").map((asset) => {
@@ -122,7 +118,7 @@ export async function readOverview(wallet: string, clients: Clients = defaultCli
     ...Object.entries(AAVE_BASE_ASSETS).map(async ([symbol, asset]) => {
       // The reserve gives both the aToken to read and the rate the position earns at.
       let apyPct: number | undefined;
-      const holding = await read(`aave:8453:${asset.toLowerCase()}`, "earn", `Aave ${symbol}`, symbol, symbol === "USDC" ? 6 : 18, "aave:base", async () => {
+      const holding = await read(`aave:${BASE_CHAIN_ID}:${asset.toLowerCase()}`, "earn", `Aave ${symbol}`, symbol, symbol === "USDC" ? 6 : 18, "aave:base", async () => {
         const reserve = await clients.base.readContract({ address: AAVE_BASE_V3_MARKET, abi: poolAbi, functionName: "getReserveData", args: [asset] });
         apyPct = aaveSupplyApyPct(reserve.currentLiquidityRate);
         return clients.base.readContract({ address: reserve.aTokenAddress, abi: erc20Abi, functionName: "balanceOf", args: [owner] });
@@ -131,7 +127,7 @@ export async function readOverview(wallet: string, clients: Clients = defaultCli
     }),
     // Morpho vault shares, valued at what they redeem for in USDC, with each vault's net rate from Morpho when it can be read.
     ...MORPHO_VAULTS.map(async (vault) => {
-      const holding = await read(`morpho:8453:${vault.address}`, "earn", vault.name, vault.assetSymbol, vault.assetDecimals, "morpho:base", async () => {
+      const holding = await read(`morpho:${BASE_CHAIN_ID}:${vault.address}`, "earn", vault.name, vault.assetSymbol, vault.assetDecimals, "morpho:base", async () => {
         const shares = await clients.base.readContract({ address: vault.address, abi: vaultAbi, functionName: "balanceOf", args: [owner] });
         return shares === 0n ? 0n : clients.base.readContract({ address: vault.address, abi: vaultAbi, functionName: "convertToAssets", args: [shares] });
       }, par);

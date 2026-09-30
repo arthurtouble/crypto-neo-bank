@@ -9,7 +9,7 @@ import { ensureSubjectProfile } from "@/lib/profile/ensure";
  * partners they're set up with, and how active they are. Everything here is
  * a projection or a record; balances come from the chain (the closure check).
  */
-export type CustomerProfile = {
+type CustomerProfile = {
   subjectReference: string;
   createdAt: string | null;
   closedAt: string | null;
@@ -24,7 +24,7 @@ export type CustomerProfile = {
   /** The latest notices and how each was delivered, so support can see an email that bounced or failed. */
   notices: { recent: NoticeDelivery[]; emailFailed: number };
 };
-export type NoticeDelivery = { id: string; kind: string; title: string; createdAt: string; email: string; push: string };
+type NoticeDelivery = { id: string; kind: string; title: string; createdAt: string; email: string; push: string };
 
 /** Find a customer by Privy user ID, email, wallet address, or Aura tag. */
 export async function findCustomer(db: D1Database, query: string): Promise<string | null> {
@@ -37,7 +37,7 @@ export async function findCustomer(db: D1Database, query: string): Promise<strin
   return findSubject(value);
 }
 
-export type CustomerRow = { subjectReference: string; createdAt: string; closedAt: string | null; accountLocked: boolean; auraTag: string | null;
+type CustomerRow = { subjectReference: string; createdAt: string; closedAt: string | null; accountLocked: boolean; auraTag: string | null;
   bankStatus: string | null; cardStatus: string | null; actions: number; lastActivityAt: string | null };
 
 /**

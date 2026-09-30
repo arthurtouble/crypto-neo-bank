@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { observeTransaction, RPC_BY_CHAIN, rpcEndpoints } from "@/lib/actions/chain";
+import { observeTransaction } from "@/lib/actions/chain";
+import { RPC_BY_CHAIN, rpcEndpoints } from "@/lib/chain/rpc";
 
 const hash = `0x${"ab".repeat(32)}`;
 const blockHash = `0x${"cd".repeat(32)}`;

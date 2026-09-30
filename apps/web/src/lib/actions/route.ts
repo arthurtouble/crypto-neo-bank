@@ -5,7 +5,7 @@ import type { ValidatedRoute } from "./lifi";
 import type { CatalogAsset } from "@/lib/swap/assets";
 
 export const routeInputSchema = z.strictObject({ kind: z.literal("route"), quoteId: z.uuid() });
-export type RouteInput = z.infer<typeof routeInputSchema>;
+type RouteInput = z.infer<typeof routeInputSchema>;
 
 type QuoteRow = { quote_id: string; wallet_address: string; from_asset_id: string; to_asset_id: string; from_chain_id: number;
   to_chain_id: number; from_amount_raw: string; to_amount_raw: string; to_amount_min_raw: string; tool: string;

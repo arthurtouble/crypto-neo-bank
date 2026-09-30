@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
 import { requireOperator } from "@/lib/auth/access";
-import { STUCK_SETTLING_MS as STALE_SETTLING_MS, STUCK_SUBMITTED_MS as STALE_SUBMITTED_MS } from "@/lib/actions/store";
+import { STUCK_SETTLING_MS as STALE_SETTLING_MS, STUCK_SUBMITTED_MS as STALE_SUBMITTED_MS } from "@aurel/provider-projections";
 import { route } from "@/lib/http/route";
 
 function openIssue(db: D1Database, type: string, severity: string, source: string, reference: string, subject: string | null, summary: string, now: string) {

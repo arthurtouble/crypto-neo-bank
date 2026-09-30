@@ -13,7 +13,7 @@
  */
 
 /** How an asset is grouped in the Overview. */
-export type AssetCategory = "cash" | "crypto" | "stock" | "metal";
+type AssetCategory = "cash" | "crypto" | "stock" | "metal";
 
 /**
  * What an asset may be used for.
@@ -51,7 +51,12 @@ export type RegisteredAsset = {
   note?: string;
 };
 
-const BASE = 8453;
+/** Base, where the account holds funds. */
+export const BASE_CHAIN_ID = 8453 as const;
+/** Circle's USDC on Base, lowercased. */
+export const BASE_USDC = "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913" as const;
+
+const BASE = BASE_CHAIN_ID;
 const ETHEREUM = 1;
 const ARBITRUM = 42161;
 const OPTIMISM = 10;
@@ -121,7 +126,7 @@ function asset(chainId: number, address: `0x${string}` | null, details: Omit<Reg
 export const ASSETS: readonly RegisteredAsset[] = [
   // Base: where the Aura account holds funds.
   asset(BASE, null, { symbol: "ETH", name: "Ether", decimals: 18, category: "crypto", price: ether, uses: ["hold", "deposit", "send", "swap"] }),
-  asset(BASE, "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", { symbol: "USDC", name: "USD Coin", decimals: 6, category: "cash", price: usd, uses: ["hold", "deposit", "send", "swap"] }),
+  asset(BASE, BASE_USDC, { symbol: "USDC", name: "USD Coin", decimals: 6, category: "cash", price: usd, uses: ["hold", "deposit", "send", "swap"] }),
   asset(BASE, "0x4200000000000000000000000000000000000006", { symbol: "WETH", name: "Wrapped Ether", decimals: 18, category: "crypto", price: ether, uses: ["hold", "send", "swap"] }),
   asset(BASE, "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf", { symbol: "cbBTC", name: "Bitcoin (Coinbase Wrapped BTC)", decimals: 8, category: "crypto", price: bitcoin,
     uses: ["hold", "send", "swap"], note: "Bitcoin held by Coinbase, 1:1" }),

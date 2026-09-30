@@ -1,4 +1,5 @@
 import { getAddress } from "viem";
+import { shortAddress } from "@/lib/money/format";
 
 /** Save a recipient. It only counts as saved once the customer's waiting period has passed. */
 export async function saveWalletAddress(database: D1Database, subjectReference: string, rawAddress: string, label: string, now = new Date()) {
@@ -26,7 +27,7 @@ export async function saveWalletAddress(database: D1Database, subjectReference: 
   if (row.created_at === timestamp) {
     const [{ securityNotice }, { announce }] = await Promise.all([import("@/lib/notifications/store"), import("@/lib/notifications/deliver")]);
     const wait = row.available_at > timestamp ? ` It can receive from ${new Date(row.available_at).toUTCString()}.` : "";
-    await announce(database, subjectReference, securityNotice("recipient_saved", `${row.label} (${row.address.slice(0, 6)}…${row.address.slice(-4)}) was saved as a recipient.${wait}`, row.entry_id), now);
+    await announce(database, subjectReference, securityNotice("recipient_saved", `${row.label} (${shortAddress(row.address)}) was saved as a recipient.${wait}`, row.entry_id), now);
   }
   return row;
 }

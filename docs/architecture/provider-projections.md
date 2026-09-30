@@ -41,6 +41,7 @@ Payload schemas are strict (`cardAccountEventSchema`, `walletPolicyEventSchema`)
 - `push_subscriptions`: each browser's Web Push endpoint and keys (`PUT`/`DELETE /api/notifications/push`). Removed when the push service answers 404 or 410.
 - `incoming_watches`: which accounts to check for money received, since when, and when last checked (`lib/notifications/incoming.ts`). Only transfers after `watched_since` notify; watching stops 30 days after the customer was last active.
 - `command_idempotency`: `claimProviderCommand` and `settleProviderCommand` stop a retried request from sending the same provider command twice. Bank account commands use it. Card commands (create, controls, disputes) instead send Stripe an `Idempotency-Key` built from the request ID.
+- The package also holds the stuck-action thresholds (`STUCK_SUBMITTED_MS`, `STUCK_SETTLING_MS`), so the operations views and the events Worker's reconciliation agree on when an action is stuck.
 
 ## Bridge commands
 

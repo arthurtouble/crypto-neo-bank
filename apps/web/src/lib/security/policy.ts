@@ -1,4 +1,4 @@
-export type PolicyState = { accountLocked: boolean; enforceAddressBook: boolean; dailyLimitCents: number | null; newAddressDelaySeconds: number };
+type PolicyState = { accountLocked: boolean; enforceAddressBook: boolean; dailyLimitCents: number | null; newAddressDelaySeconds: number };
 
 /**
  * What in a change makes the account easier to move money out of, in words.

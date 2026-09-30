@@ -40,7 +40,7 @@ export const subjectDataInventory = {
   operational_issues: { export: false, reason: "Internal reconciliation exception" }
 } satisfies Record<string, Handling>;
 
-export type SubjectTable = keyof typeof subjectDataInventory;
+type SubjectTable = keyof typeof subjectDataInventory;
 const tables = Object.keys(subjectDataInventory) as SubjectTable[];
 const rowLimit = 5_000;
 

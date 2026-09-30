@@ -1,9 +1,10 @@
 import { z } from "zod";
+import { formatCents } from "@/lib/money/format";
+import { hmacSha256Hex } from "@/lib/platform/encoding";
 import { timingSafeEqual, type NormalizedEvent, type WebhookProvider } from "../webhooks";
+import { cardProjectionStatus } from "./issuing";
 
 const TOLERANCE_MS = 5 * 60_000;
-
-const hex = (bytes: Uint8Array) => [...bytes].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 
 /**
  * Stripe signs `<timestamp>.<raw body>` with HMAC-SHA256 and the endpoint's
@@ -16,8 +17,7 @@ async function verify({ headers, rawBody, secret, nowMs }: { headers: Headers; r
   const timestamp = parts.find(([key]) => key === "t")?.[1];
   const signatures = parts.filter(([key]) => key === "v1").map(([, value]) => value);
   if (!timestamp || !/^\d+$/.test(timestamp) || !signatures.length || Math.abs(nowMs - Number(timestamp) * 1000) > TOLERANCE_MS) return false;
-  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
-  const expected = new TextEncoder().encode(hex(new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`${timestamp}.${rawBody}`)))));
+  const expected = new TextEncoder().encode(await hmacSha256Hex(secret, `${timestamp}.${rawBody}`));
   return signatures.some((signature) => timingSafeEqual(new TextEncoder().encode(signature), expected));
 }
 
@@ -45,9 +45,9 @@ function normalize(payload: unknown): NormalizedEvent | null {
     const limits = (object.spending_controls as { spending_limits?: Array<{ amount: number; interval: string }> } | undefined)?.spending_limits ?? [];
     const daily = limits.find((limit) => limit.interval === "daily");
     return { ...base, type: "card.account.updated", subject: { kind: "provider_card", value: cardId },
-      data: { cardReference: cardId, customerReference: id(object.cardholder) ?? "unknown", status: status === "inactive" ? "frozen" : status === "canceled" ? "closed" : "active",
+      data: { cardReference: cardId, customerReference: id(object.cardholder) ?? "unknown", status: cardProjectionStatus(status),
         formFactor: text(object.type) === "physical" ? "physical" : "virtual", network: "visa", ...(last4 ? { lastFour: last4 } : {}),
-        ...(daily ? { dailyLimit: (daily.amount / 100).toFixed(2) } : {}), currency: "USD" } };
+        ...(daily ? { dailyLimit: formatCents(daily.amount) } : {}), currency: "USD" } };
   }
   if (event.type === "issuing_authorization.created") {
     const cardId = id(object.card);

@@ -3,6 +3,7 @@ import { personalSignRequest, relayPersonalSign, type AuthorizationRequest, type
 import { privyClient } from "@/lib/auth/privy";
 import type { ActionAccount } from "@/lib/auth/wallet";
 import { HttpError } from "@/lib/http/errors";
+import { sha256Hex } from "@/lib/platform/encoding";
 
 /**
  * A fresh passkey check for a sensitive change, verified on the server.
@@ -14,15 +15,12 @@ import { HttpError } from "@/lib/http/errors";
  * used moments ago for exactly this change. A session token alone can't.
  */
 export type StepUpPurpose = "security_policy" | "card_controls" | "card_details";
-export type StepUpChallenge = { challengeId: string; request: AuthorizationRequest<PersonalSignBody> };
+type StepUpChallenge = { challengeId: string; request: AuthorizationRequest<PersonalSignBody> };
 export type Confirmation = { challengeId: string; signature: string };
 
 const TTL_MS = 5 * 60_000;
 
-async function hash(payload: unknown) {
-  const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify(payload)));
-  return [...new Uint8Array(bytes)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
-}
+const hash = (payload: unknown) => sha256Hex(JSON.stringify(payload));
 
 const requestFor = (account: ActionAccount, challengeId: string, message: string, expiresAt: Date) =>
   personalSignRequest({ appId: PRIVY_APP_ID, walletId: account.walletId, message, idempotencyKey: `aura-step-up-${challengeId}`, expiresAt });

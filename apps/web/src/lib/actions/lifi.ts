@@ -1,5 +1,6 @@
 import { encodeFunctionData, erc20Abi, getAddress, isAddress, isHex, parseUnits } from "viem";
 import { z } from "zod";
+import { readBoundedJson } from "@/lib/http/bounded";
 import type { CatalogAsset } from "@/lib/swap/assets";
 import type { Call, Effect } from "./types";
 import { localEdgeUrl } from "@/lib/testing/local-edge";
@@ -61,7 +62,7 @@ function usdTotal(costs: Array<{ amountUSD?: string }> | undefined): number | nu
 }
 
 /** A quote that loses more than this to price impact is refused. */
-export const MAX_PRICE_IMPACT_PERCENT = 3;
+const MAX_PRICE_IMPACT_PERCENT = 3;
 
 function priceImpact(fromUsd?: string, toUsd?: string): number | null {
   const from = Number(fromUsd); const to = Number(toUsd);
@@ -122,12 +123,6 @@ export function validateRoute(response: unknown, request: RouteQuoteRequest, now
   };
 }
 
-async function readBoundedJson(response: Response): Promise<unknown> {
-  const text = await response.text();
-  if (text.length > MAX_RESPONSE_BYTES) throw new RouteQuoteError("provider_unavailable", "We can't get a price right now. Try again in a few minutes.");
-  return JSON.parse(text) as unknown;
-}
-
 /** Ask LI.FI for the best route. The integrator fee, if configured, is Aura's revenue. */
 export async function quoteRoute(request: RouteQuoteRequest, dependencies: { fetcher?: typeof fetch; now?: () => number } = {}): Promise<ValidatedRoute> {
   if (request.from.id === request.to.id) throw new RouteQuoteError("invalid_request", "Choose two different assets.");
@@ -160,7 +155,7 @@ export async function quoteRoute(request: RouteQuoteRequest, dependencies: { fet
     throw new RouteQuoteError("no_route", "We can't find a way to do this for that amount right now.");
   }
   let body: unknown;
-  try { body = await readBoundedJson(response); }
+  try { body = await readBoundedJson(response, MAX_RESPONSE_BYTES); }
   catch { throw new RouteQuoteError("provider_unavailable", "We can't get a price right now. Try again in a few minutes."); }
   const route = validateRoute(body, request, (dependencies.now ?? Date.now)());
   if (!route) {

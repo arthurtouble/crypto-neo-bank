@@ -2,7 +2,7 @@ import { env } from "cloudflare:workers";
 import { AccountClosedError, AuthenticationError } from "@/lib/http/errors";
 import { privyClient } from "./privy";
 
-export type VerifiedSubject = {
+type VerifiedSubject = {
   subjectReference: string;
   sessionReference: string;
   expiresAt: number;

@@ -11,7 +11,7 @@ export const transferInputSchema = z.strictObject({
   amount: z.string().regex(/^\d+(\.\d+)?$/).max(40),
   to: z.string().refine(isAddress, "Invalid recipient.").refine((value) => !/^0x0{40}$/i.test(value), "Invalid recipient.")
 });
-export type TransferInput = z.infer<typeof transferInputSchema>;
+type TransferInput = z.infer<typeof transferInputSchema>;
 
 /** A request Aura can't turn into an action, with a message the customer can act on. */
 export class ActionInputError extends HttpError {

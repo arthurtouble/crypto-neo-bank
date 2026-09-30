@@ -12,7 +12,7 @@ export const bankAccountInputSchema = z.strictObject({
     state: z.string().trim().length(2), postalCode: z.string().trim().min(3).max(10), country: z.literal("USA")
   })
 });
-export type BankAccountInput = z.infer<typeof bankAccountInputSchema>;
+type BankAccountInput = z.infer<typeof bankAccountInputSchema>;
 
 const externalAccountSchema = z.object({
   id: z.string(),
@@ -23,7 +23,7 @@ const externalAccountSchema = z.object({
   active: z.boolean().optional()
 }).passthrough();
 
-export type BankAccount = { id: string; lastFour: string; displayName: string };
+type BankAccount = { id: string; lastFour: string; displayName: string };
 
 /** Save a US bank account with Bridge. Aura keeps only Bridge's ID, the last four digits, and a display name. */
 export async function addBankAccount(bridge: BridgeClient, customerId: string, input: BankAccountInput, requestId: string): Promise<BankAccount> {

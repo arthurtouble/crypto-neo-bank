@@ -12,7 +12,7 @@ import type { Call } from "./types";
 export const PRIVY_API_URL = "https://api.privy.io";
 const privyApiUrl = () => localEdgeUrl("PRIVY_API_URL") ?? PRIVY_API_URL;
 
-export type SendCallsBody = {
+type SendCallsBody = {
   method: "wallet_sendCalls";
   caip2: `eip155:${number}`;
   sponsor: true;
@@ -67,24 +67,22 @@ export function personalSignRequest(input: { appId: string; walletId: string; me
  * passkey unlocks, so a successful answer proves a fresh passkey check.
  */
 export async function relayPersonalSign(privy: PrivyClient, walletId: string, request: AuthorizationRequest<PersonalSignBody>, signature: string): Promise<string> {
-  const response = await privy.wallets().rpc(walletId, {
-    ...request.body,
-    idempotency_key: request.headers["privy-idempotency-key"],
-    request_expiry: Number(request.headers["privy-request-expiry"]),
-    authorization_context: { signatures: [signature] }
-  });
-  return (response.data as { signature: string }).signature;
+  return ((await relaySigned(privy, walletId, request, signature)).data as { signature: string }).signature;
 }
 
 /** Relay a signed request. The SDK rebuilds the same payload, so the customer's signature must match it exactly. */
 export async function relaySendCalls(privy: PrivyClient, walletId: string, request: AuthorizationRequest, signature: string): Promise<string> {
-  const response = await privy.wallets().rpc(walletId, {
+  return ((await relaySigned(privy, walletId, request, signature)).data as { transaction_id: string }).transaction_id;
+}
+
+/** Send a signed request to Privy with the idempotency key, expiry, and signature it was signed with. */
+function relaySigned(privy: PrivyClient, walletId: string, request: AuthorizationRequest<SendCallsBody | PersonalSignBody>, signature: string) {
+  return privy.wallets().rpc(walletId, {
     ...request.body,
     idempotency_key: request.headers["privy-idempotency-key"],
     request_expiry: Number(request.headers["privy-request-expiry"]),
     authorization_context: { signatures: [signature] }
-  });
-  return response.data.transaction_id;
+  } as Parameters<ReturnType<PrivyClient["wallets"]>["rpc"]>[1]);
 }
 
 export type RelayedTransaction =

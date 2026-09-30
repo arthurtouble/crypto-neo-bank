@@ -1,13 +1,14 @@
 import { env } from "cloudflare:workers";
 import type { ProviderEventMessage } from "@aurel/provider-projections";
-import { sha256Hex } from "@/lib/platform/events";
+import { sha256Hex } from "@/lib/platform/encoding";
 import { webhookProviders } from "@/lib/providers/registry";
 import type { NormalizedEvent } from "@/lib/providers/webhooks";
 import { announce } from "@/lib/notifications/deliver";
 import { cardSpendNotice } from "@/lib/notifications/store";
 import { recordCardActivity } from "@/lib/cards/observations";
+import { formatCents } from "@/lib/money/format";
 
-const usd = (cents: unknown) => typeof cents === "number" ? (Math.abs(cents) / 100).toFixed(2) : "0.00";
+const usd = (cents: unknown) => formatCents(typeof cents === "number" ? Math.abs(cents) : 0);
 const text = (value: unknown) => typeof value === "string" ? value : null;
 
 /** Keep a card purchase or settlement Stripe reported, for the operations app's money movement. */

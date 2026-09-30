@@ -12,7 +12,7 @@ export class StripeError extends Error {
  * (`crypto_wallet`) came to Stripe Issuing with Bridge in 2026; confirm the
  * version with Bridge before going live.
  */
-export const STRIPE_API_VERSION = "2026-03-25.preview";
+const STRIPE_API_VERSION = "2026-03-25.preview";
 
 type FormValue = string | number | boolean | null | undefined | FormValue[] | { [key: string]: FormValue };
 

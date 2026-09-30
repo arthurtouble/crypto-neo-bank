@@ -1,9 +1,9 @@
 import { requireNotPaused } from "@/lib/assets/pauses";
 import { requireFeature, type FeatureKey } from "@/lib/features/flags";
-import { checkControls, type Block } from "./controls";
+import { checkControls, insertAction, loadControls, type Block } from "./controls";
 import { buildEarn, earnInputSchema } from "./earn";
 import { buildRoute, markQuoteUsed, routeInputSchema } from "./route";
-import { getAction, insertAction, loadControls, type StoredAction } from "./store";
+import { getAction, type StoredAction } from "./store";
 import { buildTransfer, transferInputSchema } from "./transfer";
 import { callsFingerprint, type BuiltAction } from "./types";
 import { valueAsset } from "./valuation";
@@ -12,18 +12,26 @@ import { z } from "zod";
 export const actionInputSchema = z.discriminatedUnion("kind", [transferInputSchema, earnInputSchema, routeInputSchema]);
 export type ActionInput = z.infer<typeof actionInputSchema>;
 
+/** The switches a swap or cross-network move needs. A route that pays someone else is a send, so the send switch applies too. */
+export function routeFeatures(route: { crossChain: boolean; external: boolean }): FeatureKey[] {
+  return [route.crossChain ? "cross_chain" : "swaps", ...(route.external ? ["direct_transfers" as const] : [])];
+}
+
 function featureFor(action: BuiltAction): FeatureKey | FeatureKey[] {
   if (action.kind === "transfer") return "direct_transfers";
   if (action.kind === "earn") return "defi_actions";
-  const route = action.destinationChainId ? "cross_chain" : "swaps";
-  // A route that pays someone else is a send, so the send switch applies too.
-  return action.recipient ? [route, "direct_transfers"] : route;
+  return routeFeatures({ crossChain: Boolean(action.destinationChainId), external: Boolean(action.recipient) });
 }
 
 function build(db: D1Database, input: ActionInput, subject: string, wallet: string, now: Date): Promise<BuiltAction> {
   if (input.kind === "transfer") return buildTransfer(db, input, wallet);
   if (input.kind === "earn") return buildEarn(input, wallet);
   return buildRoute(db, input, subject, wallet, now);
+}
+
+/** Wait for every check, then throw the first failure in list order, so parallel reads keep a stable answer. */
+async function inOrder(checks: Array<Promise<unknown>>): Promise<void> {
+  for (const result of await Promise.allSettled(checks)) if (result.status === "rejected") throw result.reason;
 }
 
 export type Prepared = { ok: true; action: StoredAction } | { ok: false; block: Block };
@@ -41,10 +49,9 @@ export async function precheckAction(db: D1Database, subject: string, built: Bui
 /** Check, value, and store an action built elsewhere, such as a bank payout's funding transfer. */
 export async function prepareBuiltAction(db: D1Database, subject: string, wallet: string, built: BuiltAction,
   feature: (action: BuiltAction) => FeatureKey | FeatureKey[], now = new Date()): Promise<Prepared> {
-  for (const key of [feature(built)].flat()) await requireFeature(db, key);
-  await requireNotPaused(db, built.valuation.assetId);
-  const valuation = await valueAsset(built.valuation, { now });
-  const controls = await loadControls(db, subject, built.recipient ?? null, now);
+  // The switches and the pause are read together; the first one that refuses, in this order, is the answer.
+  await inOrder([...[feature(built)].flat().map((key) => requireFeature(db, key)), requireNotPaused(db, built.valuation.assetId)]);
+  const [valuation, controls] = await Promise.all([valueAsset(built.valuation, { now }), loadControls(db, subject, built.recipient ?? null, now)]);
   const block = checkControls(built, valuation, controls);
   if (block) return { ok: false, block };
   const id = await insertAction(db, {

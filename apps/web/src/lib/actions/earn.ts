@@ -1,6 +1,7 @@
 import { erc20Abi, getAddress, parseAbi, type PublicClient } from "viem";
 import { z } from "zod";
 import { baseClient } from "@/lib/assets/prices";
+import { BASE_CHAIN_ID } from "@/lib/assets/registry";
 import { AAVE_BASE_ASSETS, AAVE_BASE_V3_MARKET } from "@/lib/defi/aave";
 import { buildAaveBaseCall } from "@/lib/defi/aave-call-policy";
 import { MORPHO_VAULTS, morphoDepositCalls, morphoVault, morphoWithdrawCall, vaultAbi } from "@/lib/defi/morpho";
@@ -15,7 +16,7 @@ export const earnInputSchema = z.discriminatedUnion("protocol", [
   z.strictObject({ kind: z.literal("earn"), protocol: z.literal("morpho"), direction: z.enum(["deposit", "withdraw"]),
     vault: z.enum(MORPHO_VAULTS.map((vault) => vault.id) as [string, ...string[]]), amount: z.union([amount, z.literal("all")]) })
 ]);
-export type EarnInput = z.infer<typeof earnInputSchema>;
+type EarnInput = z.infer<typeof earnInputSchema>;
 
 const toCall = (call: { to: string; value: string; data: string }): Call =>
   ({ to: call.to.toLowerCase() as `0x${string}`, value: call.value, data: call.data.toLowerCase() as `0x${string}` });
@@ -39,11 +40,11 @@ async function buildAave(input: Extract<EarnInput, { protocol: "aave" }>, wallet
     const balance = await client.readContract({ address: reserve.aTokenAddress, abi: erc20Abi, functionName: "balanceOf", args: [owner] });
     if (balance === 0n) throw new ActionInputError("insufficient_balance", `You have no ${input.asset} in Aave.`);
     return {
-      kind: "earn", chainId: 8453, calls: [toCall(buildAaveBaseCall({ action: "withdraw", wallet: owner, asset, amountRaw: balance, max: true }))],
+      kind: "earn", chainId: BASE_CHAIN_ID, calls: [toCall(buildAaveBaseCall({ action: "withdraw", wallet: owner, asset, amountRaw: balance, max: true }))],
       effects: [{ type: "aave_withdraw_all", asset: asset.toLowerCase() as `0x${string}`, minimumRaw: balance.toString() }],
       summary: { protocol: "aave", direction: "withdraw", symbol: input.asset, decimals, amount: "all", amountRaw: balance.toString() },
       countsTowardLimit: false,
-      valuation: { assetId: `8453:${asset.toLowerCase()}`, amountRaw: balance.toString(), decimals }
+      valuation: { assetId: `${BASE_CHAIN_ID}:${asset.toLowerCase()}`, amountRaw: balance.toString(), decimals }
     };
   }
   const amountRaw = rawAmount(input.amount, decimals);
@@ -52,11 +53,11 @@ async function buildAave(input: Extract<EarnInput, { protocol: "aave" }>, wallet
     ? [toCall(buildAaveBaseCall({ action: "approve", ...identity })), toCall(buildAaveBaseCall({ action: "supply", ...identity }))]
     : [toCall(buildAaveBaseCall({ action: "withdraw", ...identity }))];
   return {
-    kind: "earn", chainId: 8453, calls,
+    kind: "earn", chainId: BASE_CHAIN_ID, calls,
     effects: [{ type: input.direction === "deposit" ? "aave_supply" : "aave_withdraw", asset: asset.toLowerCase() as `0x${string}`, amountRaw: amountRaw.toString() }],
     summary: { protocol: "aave", direction: input.direction, symbol: input.asset, decimals, amount: input.amount, amountRaw: amountRaw.toString() },
     countsTowardLimit: false,
-    valuation: { assetId: `8453:${asset.toLowerCase()}`, amountRaw: amountRaw.toString(), decimals }
+    valuation: { assetId: `${BASE_CHAIN_ID}:${asset.toLowerCase()}`, amountRaw: amountRaw.toString(), decimals }
   };
 }
 
@@ -76,28 +77,28 @@ async function buildMorpho(input: Extract<EarnInput, { protocol: "morpho" }>, wa
     throw new ActionInputError("contract_changed", `${vault.name} changed. It's paused in Aura until it's reviewed again.`);
   const shares = await client.readContract({ address: vault.address, abi: vaultAbi, functionName: "balanceOf", args: [owner] });
   const summary = { protocol: "morpho", vault: vault.id, vaultName: vault.name, direction: input.direction, symbol: vault.assetSymbol, decimals: vault.assetDecimals };
-  const valuation = (raw: bigint) => ({ assetId: `8453:${vault.asset}`, amountRaw: raw.toString(), decimals: vault.assetDecimals });
+  const valuation = (raw: bigint) => ({ assetId: `${BASE_CHAIN_ID}:${vault.asset}`, amountRaw: raw.toString(), decimals: vault.assetDecimals });
 
   if (input.direction === "deposit") {
     if (input.amount === "all") throw new ActionInputError("invalid_amount", "Enter an amount to deposit.");
     const assets = rawAmount(input.amount, vault.assetDecimals);
     const balance = await client.readContract({ address: vault.asset, abi: erc20Abi, functionName: "balanceOf", args: [owner] });
     if (balance < assets) throw new ActionInputError("insufficient_balance", "You don't have enough USDC.");
-    return { kind: "earn", chainId: 8453, calls: morphoDepositCalls(vault, owner, assets),
+    return { kind: "earn", chainId: BASE_CHAIN_ID, calls: morphoDepositCalls(vault, owner, assets),
       effects: [{ type: "morpho_deposit", vault: vault.address, assetsRaw: assets.toString() }],
       summary: { ...summary, amount: input.amount, amountRaw: assets.toString() }, countsTowardLimit: false, valuation: valuation(assets) };
   }
   if (shares === 0n) throw new ActionInputError("insufficient_balance", `You have nothing in ${vault.name}.`);
   if (input.amount === "all") {
     const assets = await client.readContract({ address: vault.address, abi: vaultAbi, functionName: "convertToAssets", args: [shares] });
-    return { kind: "earn", chainId: 8453, calls: [morphoWithdrawCall(vault, owner, { shares })],
+    return { kind: "earn", chainId: BASE_CHAIN_ID, calls: [morphoWithdrawCall(vault, owner, { shares })],
       effects: [{ type: "morpho_redeem", vault: vault.address, sharesRaw: shares.toString() }],
       summary: { ...summary, amount: "all", amountRaw: assets.toString(), sharesRaw: shares.toString() }, countsTowardLimit: false, valuation: valuation(assets) };
   }
   const assets = rawAmount(input.amount, vault.assetDecimals);
   const needed = await client.readContract({ address: vault.address, abi: vaultAbi, functionName: "previewWithdraw", args: [assets] });
   if (needed > shares) throw new ActionInputError("insufficient_balance", `You don't have that much in ${vault.name}.`);
-  return { kind: "earn", chainId: 8453, calls: [morphoWithdrawCall(vault, owner, { assets })],
+  return { kind: "earn", chainId: BASE_CHAIN_ID, calls: [morphoWithdrawCall(vault, owner, { assets })],
     effects: [{ type: "morpho_withdraw", vault: vault.address, assetsRaw: assets.toString() }],
     summary: { ...summary, amount: input.amount, amountRaw: assets.toString() }, countsTowardLimit: false, valuation: valuation(assets) };
 }

@@ -1,9 +1,9 @@
 import { z } from "zod";
-
+import { BASE_CHAIN_ID } from "@/lib/assets/registry";
 import { localEdgeUrl } from "@/lib/testing/local-edge";
+import { AAVE_BASE_V3_MARKET } from "./aave-contracts";
 
 const AAVE_MCP_URL = "https://mcp.aave.com/";
-import { AAVE_BASE_V3_MARKET } from "./aave-contracts";
 
 export { AAVE_BASE_ASSETS, AAVE_BASE_PROTOCOL, AAVE_BASE_V3_MARKET } from "./aave-contracts";
 
@@ -12,7 +12,7 @@ const mcpEnvelopeSchema = z.object({
   error: z.object({ message: z.string() }).optional()
 });
 
-export async function callAaveTool<T>(name: string, args: Record<string, unknown>): Promise<T> {
+async function callAaveTool<T>(name: string, args: Record<string, unknown>): Promise<T> {
   const response = await fetch(localEdgeUrl("AAVE_API_URL") ?? AAVE_MCP_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json", "User-Agent": "Aura/1.0" },
@@ -43,7 +43,7 @@ export type AaveBaseReserve = {
 export async function getAaveBaseMarkets(user?: string) {
   const result = await callAaveTool<{ data: { v3: { markets: Array<{ market: string; chainId: number; name: string; reserves: AaveBaseReserve[] }> } } }>("get_markets", {
     version: "v3",
-    chainId: 8453,
+    chainId: BASE_CHAIN_ID,
     symbols: ["USDC", "WETH"],
     ...(user ? { user } : {})
   });
@@ -52,13 +52,13 @@ export async function getAaveBaseMarkets(user?: string) {
   return { ...market, observedAt: new Date().toISOString(), authority: "Aave Protocol API and Base contracts" as const };
 }
 
-export type AaveBaseActivityItem = {
+type AaveBaseActivityItem = {
   id: string;
   type: "earn_supply" | "earn_withdraw" | "borrow" | "repay" | "liquidation" | "collateral_enabled" | "collateral_disabled" | "defi_activity";
   status: "confirmed";
   transactionHash: string;
   createdAt: string;
-  chainId: 8453;
+  chainId: typeof BASE_CHAIN_ID;
   asset?: string;
   amount?: string;
   estimatedUsd?: number;
@@ -110,7 +110,7 @@ export function normalizeAaveBaseActivity(value: unknown): AaveBaseActivity {
       status: "confirmed",
       transactionHash,
       createdAt,
-      chainId: 8453,
+      chainId: BASE_CHAIN_ID,
       asset: typeof reserve?.symbol === "string" ? reserve.symbol : undefined,
       amount,
       estimatedUsd: estimatedUsd !== undefined && Number.isFinite(estimatedUsd) ? estimatedUsd : undefined
@@ -126,7 +126,7 @@ export function normalizeAaveBaseActivity(value: unknown): AaveBaseActivity {
 }
 
 export async function getAaveBaseActivity(user: string) {
-  const result = await callAaveTool<unknown>("get_user_activity", { user, version: "v3", chainId: 8453 });
+  const result = await callAaveTool<unknown>("get_user_activity", { user, version: "v3", chainId: BASE_CHAIN_ID });
   return normalizeAaveBaseActivity(result);
 }
 

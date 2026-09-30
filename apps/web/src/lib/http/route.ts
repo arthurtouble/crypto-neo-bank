@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { HttpError } from "./errors";
 
-export type RouteContext = { traceId: string };
+type RouteContext = { traceId: string };
 type Options = {
   /** Error code for malformed input (Zod failures and unparseable JSON). */
   invalid?: string;
