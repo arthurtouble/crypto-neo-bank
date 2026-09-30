@@ -1,9 +1,10 @@
 "use client";
 
 import { usePrivy } from "@privy-io/react-auth";
-import { BookOpen, Download, LoaderCircle, UserX } from "lucide-react";
+import { LoaderCircle } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { SettingRow } from "./setting-row";
 import { useToast } from "./toast";
 
 /** The customer's data and account: download everything, read the documents, or ask to close the account. */
@@ -24,10 +25,11 @@ export function DataRightsPanel() {
     } catch (error) { toast.error("Export failed", error instanceof Error ? error.message : undefined); }
     finally { setWorking(false); }
   }
-  return <section className="panel settingsPanel dataRightsPanel" aria-labelledby="account-heading"><h2 id="account-heading">Your data and account</h2>
-    <div className="settingRow"><span className="settingIcon"><Download size={17} /></span><div><strong>Download my data</strong><small>A copy of everything Aura holds about you, as a file.</small></div>
-      <button disabled={working} onClick={() => void exportData()}>{working ? <LoaderCircle className="spin" size={15} /> : "Download"}</button></div>
-    <div className="settingRow"><span className="settingIcon"><BookOpen size={17} /></span><div><strong>Terms and privacy</strong><small>The documents you accepted, and how Aura uses your data.</small></div><Link href="/docs">Open</Link></div>
-    <div className="settingRow"><span className="settingIcon"><UserX size={17} /></span><div><strong>Close your account</strong><small>Move your money out first, then contact support. We close accounts with no funds left.</small></div><Link href="/app/support?topic=close-account">Contact support</Link></div>
+  return <section className="mxCard stCard" aria-labelledby="account-heading"><h2 id="account-heading">Your data and account</h2>
+    <SettingRow title="Download my data" detail="A copy of everything Aura holds about you, as a file.">
+      <button type="button" className="appButton" disabled={working} onClick={() => void exportData()}>{working ? <LoaderCircle className="spin" aria-hidden="true" /> : "Download"}</button></SettingRow>
+    <SettingRow title="Terms and privacy" detail="The documents you accepted, and how Aura uses your data."><Link className="appButton" href="/docs">Open</Link></SettingRow>
+    <SettingRow title="Close your account" detail="Move your money out first, then contact support. We close accounts with no funds left.">
+      <Link className="appButton" href="/app/support?topic=close-account">Contact support</Link></SettingRow>
   </section>;
 }

@@ -2,10 +2,10 @@
 
 import { usePrivy } from "@privy-io/react-auth";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BellRing, LoaderCircle, Mail, Megaphone } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useApi } from "@/lib/client/api";
 import { marketingNoticeVersion } from "@/lib/legal/documents";
+import { SettingRow, Toggle } from "./setting-row";
 import { useToast } from "./toast";
 
 type PreferencesResponse = { preferences: { notifications: { transactionEmail: boolean } } };
@@ -105,27 +105,22 @@ export function NotificationPreferences() {
   const transactionEmail = preferences.data?.preferences.notifications.transactionEmail;
   const marketing = consent.data?.consent.marketing;
   const toggle = (label: string, on: boolean | undefined, busy: boolean, change: () => void) => on === undefined
-    ? <span>—</span>
-    : <button className={`settingsToggle ${on ? "active" : ""}`} aria-pressed={on} aria-label={label} disabled={busy} onClick={change}>{busy ? <LoaderCircle className="spin" size={15} /> : on ? "On" : "Off"}</button>;
+    ? <span className="stState">—</span> : <Toggle label={label} on={on} busy={busy} onChange={change} />;
 
-  return <section className="panel settingsPanel" id="notifications" aria-labelledby="notifications-heading"><h2 id="notifications-heading">Notifications</h2>
-    <p className="sourceCaption">Everything shows in the app. Security notices, like a lock or a new recipient, are always sent.</p>
-    <div className="settingRow"><span className="settingIcon"><Mail size={17} /></span>
-      <div><strong>Transaction emails</strong><small>{email ? `Money you receive, and when a send, swap, or Earn move completes or fails. Sent to ${email}.` : "Add an email above to get notices by email."}</small></div>
+  return <section className="mxCard stCard" id="notifications" aria-labelledby="notifications-heading"><h2 id="notifications-heading">Notifications</h2>
+    <p className="mxHint">Everything shows in the app. Security notices, like a lock or a new recipient, are always sent.</p>
+    <SettingRow title="Transaction emails" detail={email ? `Money you receive, and when a send, swap, or Earn move completes or fails. Sent to ${email}.` : "Add an email in Security to get notices by email."}>
       {email ? toggle("Transaction emails", transactionEmail, saveEmail.isPending, () => saveEmail.mutate(!transactionEmail))
-        : <a href="#email">Add email</a>}</div>
-    <div className="settingRow"><span className="settingIcon"><BellRing size={17} /></span>
-      <div><strong>Browser notifications</strong><small>{push.state ? pushNotes[push.state] : "Checking this browser…"}</small></div>
+        : <a className="appButton" href="#email">Add email</a>}</SettingRow>
+    <SettingRow title="Browser notifications" detail={push.state ? pushNotes[push.state] : "Checking this browser…"}>
       {push.state === "on" || push.state === "off"
-        ? <button className={`settingsToggle ${push.state === "on" ? "active" : ""}`} aria-pressed={push.state === "on"} aria-label="Browser notifications" disabled={push.busy}
-          onClick={() => void (push.state === "on" ? push.turnOff() : push.turnOn()).catch((error: unknown) => {
+        ? <Toggle label="Browser notifications" on={push.state === "on"} busy={push.busy}
+          onChange={() => void (push.state === "on" ? push.turnOff() : push.turnOn()).catch((error: unknown) => {
             console.warn("Browser notifications", error);
             toast.error("Notifications not turned on", pushFailure(error));
-          })}>
-          {push.busy ? <LoaderCircle className="spin" size={15} /> : push.state === "on" ? "On" : "Off"}</button>
-        : <span>—</span>}</div>
-    {email && <div className="settingRow"><span className="settingIcon"><Megaphone size={17} /></span>
-      <div><strong>Product news</strong><small>Occasional emails about what&apos;s new in Aura. Off unless you turn it on.</small></div>
-      {toggle("Product news", marketing, saveMarketing.isPending || !consent.data, () => saveMarketing.mutate(!marketing))}</div>}
+          })} />
+        : null}</SettingRow>
+    {email && <SettingRow title="Product news" detail="Occasional emails about what's new in Aura. Off unless you turn it on.">
+      {toggle("Product news", marketing, saveMarketing.isPending || !consent.data, () => saveMarketing.mutate(!marketing))}</SettingRow>}
   </section>;
 }

@@ -28,7 +28,8 @@ The root layout loads `design-tokens.css` for the whole app. Areas rebuilt in ph
 | Earn: your positions growing live, then markets and vaults, each opening to deposit or withdraw | `money.css`, classes prefixed `er` | Rebuilt |
 | Cards: the setup checklist beside a "Not issued" card, then the card (filled with the text colour; muted when frozen), details in a dialog (a sheet on the phone), controls, the allowance, and card activity | `apps/web/src/app/cards.css`, classes prefixed `cd`, on the `mx` parts in `money.css` (including the shared `mxDialog`) | Rebuilt |
 | Transactions and Insights: search, type chips, and a status filter over the list; the receipt in the Overview's side panel (a pushed screen on the phone) with the action's steps; Export in a dialog (a sheet on the phone); full history; Insights' four numbers, the money in and out chart with its table, categories, and top card merchants. Money in is green, money out neutral | `apps/web/src/app/records.css`, classes prefixed `tx` and `in`, on the `mx` parts, the Overview's chips and side panel, and the shared `mxDialog` | Rebuilt |
-| Other pages inside the shell | `globals.css`, `product-system.css` | Old look until their area is rebuilt |
+| Settings and Support: Settings one area at a time (Security, Saved recipients, Aura tag, Notifications, This device, Your data), a side list on desktop and a row per area on the phone; setting rows with On/Off toggles and switches; Support's help and report-a-problem rows. Every section now shows its own labelled example data to guests; the shared example page is gone | `apps/web/src/app/settings.css`, classes prefixed `st`; the toggle and switch are `appToggle` and `appSwitch` in `shell.css` | Rebuilt |
+| Landing and public pages | `globals.css`, `product-system.css` | Old look until area 12 |
 
 ## Principles
 
@@ -234,6 +235,10 @@ Each component is one per device where the devices differ. The reference page re
 ### Segmented control
 
 Two to four options that switch a view in place: Send's "To a person or wallet" and "To a bank account", Deposit's four ways on desktop, Insights periods. A muted track, the selected option on the surface with a hairline shadow.
+
+### Toggles and switches
+
+A setting that saves as soon as it changes. An On/Off pill button (`appToggle`, `aria-pressed`), filled with the accent when on, for settings read aloud as a button; or a checkbox drawn as a 40 × 24 switch (`appSwitch`) inside a row that labels it. Tightening applies at once; loosening asks for the passkey first, so the control only moves once that succeeds.
 
 ### Filter chips
 

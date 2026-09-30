@@ -55,7 +55,7 @@ You get back into your account by signing in with any method linked to it: your 
 
 Before you keep a large amount in your account:
 
-1. add a second way to sign in, such as an email, in Settings → Sign-in and security;
+1. add a second way to sign in, such as an email, in Settings → Security;
 2. secure the email or wallet you sign in with, and the device that holds your passkey;
 3. understand what exporting your key means;
 4. sign in with each method once, while your balance is small;

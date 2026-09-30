@@ -55,15 +55,20 @@ export function AuraTagControls() {
     } catch (error) { toast.error("Tag not saved", error instanceof Error ? error.message : undefined); }
     finally { setBusy(false); }
   }
-  return <section className="panel settingsPanel" id="tag"><h2>Aura tag</h2><p>Choose a public name for receiving crypto. You control whether its payment page is visible.</p>
-    <form onSubmit={(event) => void save(event)} className="auraTagForm">
-      <label className="fieldLabel">Tag<input value={tag} onChange={(event) => setTag(event.target.value)} placeholder="yourname" required minLength={3} maxLength={25} /></label>
-      <label className="fieldLabel">Public display name<input value={displayName} onChange={(event) => setDisplayName(event.target.value)} required maxLength={48} /></label>
-      <label className="supportUrgent"><input type="checkbox" checked={enabled} onChange={(event) => setEnabled(event.target.checked)} /> Show my payment page publicly</label>
-      <label className="supportUrgent"><input type="checkbox" checked={bankEnabled} disabled={!enabled} onChange={(event) => setBankEnabled(event.target.checked)} /> Show my Bridge bank details on the public page when available</label>
-      <button className="button primary" disabled={busy || !address}>{busy ? "Saving…" : "Save Aura tag"}</button>
+  return <section className="mxCard stCard" id="tag" aria-labelledby="tag-heading"><h2 id="tag-heading">Aura tag and payment page</h2>
+    <p className="mxHint">Choose a public name for receiving crypto. You control whether its payment page is visible.</p>
+    <form onSubmit={(event) => void save(event)} className="mxForm">
+      <div className="mxFieldRow">
+        <label className="mxField">Tag<input value={tag} onChange={(event) => setTag(event.target.value)} placeholder="yourname" required minLength={3} maxLength={25} /></label>
+        <label className="mxField">Public display name<input value={displayName} onChange={(event) => setDisplayName(event.target.value)} required maxLength={48} /></label>
+      </div>
+      <label className="mxCheck"><input type="checkbox" checked={enabled} onChange={(event) => setEnabled(event.target.checked)} /> Show my payment page publicly</label>
+      <label className="mxCheck"><input type="checkbox" checked={bankEnabled} disabled={!enabled} onChange={(event) => setBankEnabled(event.target.checked)} /> Show my Bridge bank details on the public page when available</label>
+      <div className="mxActions">
+        <button className="appButton appButtonPrimary" disabled={busy || !address}>{busy ? "Saving…" : "Save Aura tag"}</button>
+        {current?.publicEnabled && <Link className="appButton" href={`/pay/${current.tag}`}>View your payment page</Link>}
+      </div>
     </form>
-    {current?.publicEnabled && <Link className="textLink" href={`/pay/${current.tag}`}>View your payment page</Link>}
-    {message && <p role="status">{message}</p>}
+    {message && <p className="mxNote mxNoteWarning" role="status">{message}</p>}
   </section>;
 }

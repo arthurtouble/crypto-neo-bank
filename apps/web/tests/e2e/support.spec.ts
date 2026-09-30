@@ -53,7 +53,7 @@ test("chat opens as the signed-in customer, identified by a token Aura signs", a
 test("someone else using the account: Support points to the lock in Settings, and opens a chat to report it", async ({ page }) => {
   const customer = await openSupport(page);
   await expectIdentified(page, customer);
-  const row = page.locator(".settingRow").filter({ hasText: "Someone else may be using my account" });
+  const row = page.getByRole("listitem").filter({ hasText: "Someone else may be using my account" });
   // Locking and unlocking live in Settings; Support doesn't change the account's controls.
   await expect(row.getByRole("link", { name: "Lock in Settings" })).toHaveAttribute("href", "/app/settings#emergency-lock");
   await row.getByRole("button", { name: "Tell us" }).click();
@@ -69,12 +69,12 @@ test("money sent to a scam: Aura says it can't be reversed, and opens a chat to 
   const customer = await openSupport(page);
   await expectIdentified(page, customer);
   await expect(page.getByText(/Blockchain transfers can't be reversed by Aura or anyone else\./)).toBeVisible();
-  await page.locator(".settingRow").filter({ hasText: "I sent money to a scam" }).getByRole("button", { name: "Tell us" }).click();
+  await page.getByRole("listitem").filter({ hasText: "I sent money to a scam" }).getByRole("button", { name: "Tell us" }).click();
   await expect.poll(async () => (await calls(page)).find((call) => call[0] === "showNewMessage")?.[1]).toMatch(/^I sent money to a scam or the wrong address\./);
 });
 
 test("closing an account starts from Settings and opens a chat asking for it", async ({ page }) => {
-  const customer = await openSupport(page, "/app/settings");
+  const customer = await openSupport(page, "/app/settings#data");
   await page.getByRole("link", { name: "Contact support" }).click();
   await expect(page).toHaveURL(/\/app\/support\?topic=close-account$/);
   await expectIdentified(page, customer);

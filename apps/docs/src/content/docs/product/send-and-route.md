@@ -50,7 +50,7 @@ Timing can change before you confirm.
 
 ## Your controls
 
-In Settings you can:
+In **Settings → Security** you can:
 
 - set a daily limit. It counts every send, including sends to your own linked wallets and to other networks;
 - send only to saved recipients. When this is on, a newly saved recipient can't receive for 4 hours;
