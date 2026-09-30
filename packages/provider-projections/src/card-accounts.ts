@@ -16,15 +16,7 @@ export const cardAccountEventSchema = z.object({
   monthlyLimit: decimal.optional(),
   currency: z.string().regex(/^[A-Z]{3}$/).default("USD")
 }).strict();
-export type CardAccountEvent = z.infer<typeof cardAccountEventSchema>;
-
-export type CardAccountProjection = CardAccountEvent & ProjectionSource;
-
-type CardRow = {
-  card_reference: string; provider: string; provider_customer_reference: string; status: CardAccountEvent["status"];
-  form_factor: CardAccountEvent["formFactor"] | null; network: CardAccountEvent["network"] | null; last_four: string | null;
-  daily_limit: string | null; monthly_limit: string | null; currency: string; observed_at: string;
-};
+type CardAccountEvent = z.infer<typeof cardAccountEventSchema>;
 
 /** Upsert one card; an event older than the stored observation never overwrites it. */
 export async function applyCardAccount(db: ProjectionDatabase, subjectReference: string, data: unknown, source: ProjectionSource): Promise<ApplyResult> {
@@ -48,19 +40,4 @@ export async function applyCardAccount(db: ProjectionDatabase, subjectReference:
       card.formFactor ?? null, card.network ?? null, card.lastFour ?? null, card.dailyLimit ?? null,
       card.monthlyLimit ?? null, card.currency, source.observedAt).run();
   return { status: result.meta.changes ? "applied" : "stale", projection: "card_account_projections" };
-}
-
-/** The customer's most recently observed card that is not closed, or null. */
-export async function readCurrentCardAccount(db: ProjectionDatabase, subjectReference: string): Promise<CardAccountProjection | null> {
-  const row = await db.prepare(`SELECT card_reference, provider, provider_customer_reference, status, form_factor, network,
-      last_four, daily_limit, monthly_limit, currency, observed_at
-    FROM card_account_projections WHERE subject_reference = ? AND status != 'closed'
-    ORDER BY observed_at DESC LIMIT 1`).bind(subjectReference).first<CardRow>();
-  if (!row) return null;
-  return {
-    cardReference: row.card_reference, customerReference: row.provider_customer_reference, status: row.status,
-    formFactor: row.form_factor ?? undefined, network: row.network ?? undefined, lastFour: row.last_four ?? undefined,
-    dailyLimit: row.daily_limit ?? undefined, monthlyLimit: row.monthly_limit ?? undefined, currency: row.currency,
-    provider: row.provider, observedAt: row.observed_at
-  };
 }

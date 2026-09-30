@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { base64ToBytes, type WebhookProvider } from "../webhooks";
+import { base64ToBytes } from "@/lib/platform/encoding";
+import type { WebhookProvider } from "../webhooks";
 
 const TOLERANCE_MS = 10 * 60_000;
 

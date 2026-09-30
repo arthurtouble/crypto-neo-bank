@@ -2,11 +2,12 @@ import { env } from "cloudflare:workers";
 import { isAddress } from "viem";
 import { z } from "zod";
 import { quoteRoute, RouteQuoteError } from "@/lib/actions/lifi";
+import { routeFeatures } from "@/lib/actions/prepare";
 import { saveRouteQuote } from "@/lib/actions/route";
 import { refuseTokenContract } from "@/lib/actions/transfer";
 import { requireVerifiedSubject } from "@/lib/auth/server";
 import { requireActionWallet } from "@/lib/auth/wallet";
-import { featureEnabled, type FeatureKey } from "@/lib/features/flags";
+import { featureEnabled } from "@/lib/features/flags";
 import { errorResponse, route } from "@/lib/http/route";
 import { ensureSubjectProfile } from "@/lib/profile/ensure";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
@@ -55,14 +56,13 @@ async (request, { traceId }) => {
   const recipient = (input.recipient ?? wallet).toLowerCase();
   const external = recipient !== wallet.toLowerCase();
   // Paying someone else is a send: the send switch applies as well.
-  const features: FeatureKey[] = [crossChain ? "cross_chain" : "swaps", ...(external ? ["direct_transfers" as const] : [])];
-  for (const key of features)
+  for (const key of routeFeatures({ crossChain, external }))
     if (!await featureEnabled(env.PROJECTION_DB, key)) return Response.json({ error: "feature_unavailable", traceId }, { status: 503 });
   if (external) refuseTokenContract(recipient);
   const now = new Date();
-  const quoted = await quoteRoute({ from, to, amount: input.amount, wallet, recipient, slippageBps: input.slippageBps });
+  const [quoted, references] = await Promise.all([quoteRoute({ from, to, amount: input.amount, wallet, recipient, slippageBps: input.slippageBps }),
+    referencePrices([from.id, to.id], now)]);
   await ensureSubjectProfile(env.PROJECTION_DB, subject.subjectReference, now);
-  const references = await referencePrices([from.id, to.id], now);
   const quoteId = await saveRouteQuote(env.PROJECTION_DB, { subject: subject.subjectReference, wallet, from, to, recipient, route: quoted }, now);
   return Response.json({ quote: {
     id: quoteId, from, to, recipient, tool: quoted.tool, fromAmountRaw: quoted.fromAmountRaw, toAmountRaw: quoted.toAmountRaw,

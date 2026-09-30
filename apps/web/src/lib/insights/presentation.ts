@@ -4,7 +4,7 @@ export type InsightBucket = { start: string; incoming: number; outgoing: number 
 export type InsightMerchant = { name: string; total: number; payments: number };
 
 /** Days for the 7-day view, weeks (from Monday) up to 90 days, and months for a year, all in UTC. */
-export function bucketUnit(days: number): "day" | "week" | "month" {
+function bucketUnit(days: number): "day" | "week" | "month" {
   return days <= 7 ? "day" : days <= 90 ? "week" : "month";
 }
 

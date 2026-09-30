@@ -1,3 +1,5 @@
+import { STUCK_SETTLING_MS, STUCK_SUBMITTED_MS } from "@aurel/provider-projections";
+
 type ActionRow = { action_id: string; subject_reference: string; status: string };
 type WebhookRow = { event_id: string; subject_reference: string | null; provider: string };
 
@@ -37,8 +39,8 @@ export async function recordDeadLetter(db: D1Database, message: Message<{ event?
 
 export async function runScheduledReconciliation(db: D1Database, scheduledTime = Date.now()) {
   const now = new Date(scheduledTime).toISOString();
-  const staleBefore = new Date(scheduledTime - 15 * 60_000).toISOString();
-  const settlingBefore = new Date(scheduledTime - 2 * 60 * 60_000).toISOString();
+  const staleBefore = new Date(scheduledTime - STUCK_SUBMITTED_MS).toISOString();
+  const settlingBefore = new Date(scheduledTime - STUCK_SETTLING_MS).toISOString();
   const webhookStaleBefore = new Date(scheduledTime - 10 * 60_000).toISOString();
   const [staleActions, failedWebhooks, stuckWebhooks] = await db.batch([
     db.prepare(`SELECT action_id, subject_reference, status FROM actions

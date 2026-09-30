@@ -1,5 +1,6 @@
 import { decodeFunctionData, encodeFunctionData, getAddress, isAddress, maxUint256 } from "viem";
 import { z } from "zod";
+import { BASE_CHAIN_ID } from "@/lib/assets/registry";
 import { AAVE_BASE_ASSETS, AAVE_BASE_V3_MARKET } from "./aave";
 
 // Keep wallet calls bound to Aura's exact Base Aave methods and amounts.
@@ -10,14 +11,14 @@ const poolAbi = [
 const approvalAbi = [{ type: "function", name: "approve", inputs: [{ type: "address", name: "spender" }, { type: "uint256", name: "amount" }] }] as const;
 const address = z.string().refine(isAddress);
 const transactionSchema = z.strictObject({
-  chainId: z.literal(8453),
+  chainId: z.literal(BASE_CHAIN_ID),
   from: address,
   to: address,
   data: z.string().regex(/^0x(?:[a-fA-F0-9]{2})+$/),
   value: z.union([z.literal("0"), z.literal("0x0"), z.literal(0), z.literal(0n)])
 });
 
-export type AaveCallAction = "supply" | "withdraw" | "approve";
+type AaveCallAction = "supply" | "withdraw" | "approve";
 
 /**
  * Build the narrow call Aura can review; no provider-supplied calldata enters signing. `max` (withdraw only) asks the
@@ -37,7 +38,7 @@ export function buildAaveBaseCall(input: { action: AaveCallAction; wallet: strin
     : input.action === "supply"
       ? encodeFunctionData({ abi: poolAbi, functionName: "supply", args: [asset, input.amountRaw, wallet, 0] })
       : encodeFunctionData({ abi: poolAbi, functionName: "withdraw", args: [asset, input.max ? maxUint256 : input.amountRaw, wallet] });
-  const transaction = { chainId: 8453 as const, from: wallet, to: input.action === "approve" ? asset : pool, data, value: "0" as const };
+  const transaction = { chainId: BASE_CHAIN_ID, from: wallet, to: input.action === "approve" ? asset : pool, data, value: "0" as const };
   validateAaveCall({ ...input, transaction });
   return transaction;
 }

@@ -3,7 +3,7 @@ import { DatabaseSync } from "node:sqlite";
 import { resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
-  applyProviderEvent, claimProviderCommand, readCurrentCardAccount, readPreferences,
+  applyProviderEvent, claimProviderCommand, readPreferences,
   settleProviderCommand, updatePreferences, type ProjectionDatabase, type ProviderEvent
 } from "@aurel/provider-projections";
 
@@ -43,6 +43,13 @@ const event = (type: string, data: Record<string, unknown>, overrides: Partial<P
   id: crypto.randomUUID(), provider: type === "card.account.updated" ? "stripe" : "bridge", type, subjectReference: "alice", providerObjectId: "object-1",
   createdAt: "2026-09-25T10:00:00.000Z", data, ...overrides
 });
+/** The customer's most recently observed card that is not closed, as stored. */
+const readCurrentCardAccount = async (_db: ProjectionDatabase, subject: string) => {
+  const row = sqlite.prepare(`SELECT card_reference, provider, status, network, last_four, daily_limit, observed_at FROM card_account_projections
+    WHERE subject_reference = ? AND status != 'closed' ORDER BY observed_at DESC LIMIT 1`).get(subject) as Record<string, string> | undefined;
+  return row ? { cardReference: row.card_reference, provider: row.provider, status: row.status, network: row.network, lastFour: row.last_four,
+    dailyLimit: row.daily_limit, observedAt: row.observed_at } : null;
+};
 const card = { cardReference: "card-1", customerReference: "cust-1", status: "active", formFactor: "virtual", network: "visa",
   lastFour: "4242", dailyLimit: "2500.00", monthlyLimit: "10000", currency: "USD" };
 

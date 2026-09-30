@@ -1,6 +1,6 @@
 import { formatUnits, getAddress } from "viem";
-import { rpcEndpoints } from "@/lib/actions/chain";
-import { assetFor, networkName, type RegisteredAsset } from "@/lib/assets/registry";
+import { assetFor, BASE_CHAIN_ID, networkName, type RegisteredAsset } from "@/lib/assets/registry";
+import { jsonRpc, rpcEndpoints } from "@/lib/chain/rpc";
 import { localEdgeUrl } from "@/lib/testing/local-edge";
 
 /**
@@ -18,7 +18,7 @@ import { localEdgeUrl } from "@/lib/testing/local-edge";
  * zero chance of reversal after about 2 seconds), and marked final once its
  * block is final (about 20 minutes on Base).
  */
-export const INCOMING_NETWORKS = [8453, 1] as const;
+const INCOMING_NETWORKS = [BASE_CHAIN_ID, 1] as const;
 const PAGE = 100;
 
 export type IncomingTransfer = {
@@ -51,21 +51,12 @@ type RawTransfer = { blockNum?: string; uniqueId?: string; hash?: string; from?:
   rawContract?: { value?: string | null; address?: string | null }; metadata?: { blockTimestamp?: string } };
 
 /** The node that serves Alchemy's transfer index for a network: the local fake in tests, or a configured Alchemy URL. */
-export function transferIndexEndpoint(chainId: number): string | null {
+function transferIndexEndpoint(chainId: number): string | null {
   const local = localEdgeUrl(`RPC_URL_${chainId}`);
   if (local) return local;
   return rpcEndpoints(chainId).find((url) => {
     try { return new URL(url).hostname.endsWith(".alchemy.com"); } catch { return false; }
   }) ?? null;
-}
-
-async function call<T>(fetcher: typeof fetch, endpoint: string, method: string, params: unknown[]): Promise<T> {
-  const response = await fetcher(endpoint, { method: "POST", headers: { "content-type": "application/json" },
-    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }), signal: AbortSignal.timeout(8_000) });
-  if (!response.ok) throw new Error(`${method} failed`);
-  const body = await response.json() as { result?: T; error?: unknown };
-  if (body.error || body.result === undefined) throw new Error(`${method} failed`);
-  return body.result;
 }
 
 const hex = (value: unknown) => typeof value === "string" && /^0x[0-9a-f]+$/i.test(value) ? BigInt(value) : null;
@@ -109,11 +100,11 @@ export async function readIncoming(wallet: string, options: { exclude?: Iterable
     const endpoint = transferIndexEndpoint(chainId);
     if (!endpoint) { status = "unavailable"; return; }
     try {
-      const finalizedBlock = await call<{ number?: string } | null>(fetcher, endpoint, "eth_getBlockByNumber", ["finalized", false]);
+      const finalizedBlock = await jsonRpc<{ number?: string } | null>(fetcher, endpoint, "eth_getBlockByNumber", ["finalized", false]);
       const finalized = hex(finalizedBlock?.number) ?? 0n;
       let pageKey: string | undefined;
       for (let page = 0; page < maxPages; page++) {
-        const result = await call<{ transfers?: RawTransfer[]; pageKey?: string }>(fetcher, endpoint, "alchemy_getAssetTransfers", [{
+        const result = await jsonRpc<{ transfers?: RawTransfer[]; pageKey?: string }>(fetcher, endpoint, "alchemy_getAssetTransfers", [{
           fromBlock: "0x0", toBlock: "latest", toAddress: wallet.toLowerCase(), category: ["external", "erc20"], withMetadata: true,
           excludeZeroValue: true, order: "desc", maxCount: `0x${PAGE.toString(16)}`, ...(pageKey ? { pageKey } : {})
         }]);

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { sha256Hex } from "@/lib/platform/encoding";
 import type { BridgeClient } from "./client";
 
 const kycLinkSchema = z.object({
@@ -11,15 +12,10 @@ const kycLinkSchema = z.object({
   tos_status: z.string()
 }).passthrough();
 
-export type Onboarding = { kycLinkId: string; customerId: string | null; kycLink: string; tosLink: string; kycStatus: string; tosStatus: string };
+type Onboarding = { kycLinkId: string; customerId: string | null; kycLink: string; tosLink: string; kycStatus: string; tosStatus: string };
 
 function fromLink(link: z.infer<typeof kycLinkSchema>): Onboarding {
   return { kycLinkId: link.id, customerId: link.customer_id, kycLink: link.kyc_link, tosLink: link.tos_link, kycStatus: link.kyc_status, tosStatus: link.tos_status };
-}
-
-async function sha256(text: string) {
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
-  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("").slice(0, 32);
 }
 
 /** Start Bridge identity verification. Bridge hosts the KYC and terms pages. */
@@ -27,7 +23,7 @@ export async function startOnboarding(bridge: BridgeClient, input: { subject: st
   const body = { full_name: input.fullName, email: input.email, type: "individual" };
   // Bridge rejects a reused key with a different body, so the key follows the details.
   return fromLink(await bridge.request("/kyc_links", kycLinkSchema, {
-    method: "POST", idempotencyKey: `kyc-link:${input.subject}:${await sha256(JSON.stringify(body))}`, body
+    method: "POST", idempotencyKey: `kyc-link:${input.subject}:${(await sha256Hex(JSON.stringify(body))).slice(0, 32)}`, body
   }));
 }
 

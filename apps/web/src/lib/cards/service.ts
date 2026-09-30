@@ -1,10 +1,12 @@
 import { erc20Abi, formatUnits, isAddress } from "viem";
 import { baseClient } from "@/lib/assets/prices";
+import { BASE_USDC } from "@/lib/assets/registry";
 import { featureEnabled } from "@/lib/features/flags";
+import { formatCents } from "@/lib/money/format";
 import { activeBridgeCustomer, bridgeClient } from "@/lib/providers/bridge";
 import { cardsApplicationLink, readCardsApproval } from "@/lib/providers/bridge/cards";
 import { StripeClient } from "@/lib/providers/stripe/client";
-import { getCard, listAuthorizationPage, listDisputes, listTransactionPage, type IssuingAuthorization, type IssuingCard, type IssuingDispute,
+import { cardProjectionStatus, getCard, listAuthorizationPage, listDisputes, listTransactionPage, type IssuingAuthorization, type IssuingCard, type IssuingDispute,
   type IssuingTransaction, type ListWindow } from "@/lib/providers/stripe/issuing";
 
 /**
@@ -15,7 +17,6 @@ import { getCard, listAuthorizationPage, listDisputes, listTransactionPage, type
  * controls, and its transactions; the chain for the balance and allowance.
  * D1 keeps only which card is the customer's.
  */
-export const BASE_USDC = "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
 /** Stripe's default is 500 USD a day; Aura starts cards there and lets the customer change it. */
 export const DEFAULT_DAILY_LIMIT_USD = 500;
 export const MAX_DAILY_LIMIT_USD = 10_000;
@@ -67,12 +68,18 @@ export async function recordCard(db: D1Database, subject: string, cardholderId: 
   await db.prepare(`INSERT INTO card_account_projections (card_reference, subject_reference, provider, provider_customer_reference, status, form_factor, network,
       last_four, daily_limit, currency, observed_at) VALUES (?, ?, 'stripe', ?, ?, ?, 'visa', ?, ?, 'USD', ?)
     ON CONFLICT(card_reference) DO UPDATE SET status = excluded.status, last_four = excluded.last_four, daily_limit = excluded.daily_limit, observed_at = excluded.observed_at`)
-    .bind(card.id, subject, cardholderId, view.status === "frozen" ? "frozen" : view.status === "canceled" ? "closed" : "active", card.type, card.last4,
+    .bind(card.id, subject, cardholderId, cardProjectionStatus(card.status), card.type, card.last4,
       view.dailyLimitUsd === null ? null : view.dailyLimitUsd.toFixed(2), now.toISOString()).run();
 }
 
+/** Record what Stripe just reported for a card Aura already maps to the customer, keeping its cardholder. */
+export async function refreshCardProjection(db: D1Database, subject: string, card: IssuingCard, now = new Date()) {
+  const row = await db.prepare("SELECT provider_customer_reference FROM card_account_projections WHERE card_reference = ?").bind(card.id).first<{ provider_customer_reference: string }>();
+  await recordCard(db, subject, row?.provider_customer_reference ?? "", card, now);
+}
+
 /** How much USDC Bridge's card contract may pull, and how much the account holds, read from Base. */
-export async function readAllowance(wallet: `0x${string}`, spender: `0x${string}`, now = new Date()): Promise<Allowance> {
+async function readAllowance(wallet: `0x${string}`, spender: `0x${string}`, now = new Date()): Promise<Allowance> {
   try {
     const client = baseClient();
     const [allowance, balance] = await Promise.all([
@@ -84,13 +91,13 @@ export async function readAllowance(wallet: `0x${string}`, spender: `0x${string}
 }
 
 const DISPUTE_WINDOW_MS = 110 * 24 * 3600_000;
-const cents = (amount: number) => (Math.abs(amount) / 100).toFixed(2);
+const cents = (amount: number) => formatCents(Math.abs(amount));
 
 const hashOf = (auth: IssuingAuthorization | undefined) => auth?.crypto_transactions?.map((item) => item.crypto_transaction_confirmed?.transaction_hash)
   .find((hash): hash is string => typeof hash === "string" && /^0x[0-9a-fA-F]{64}$/.test(hash))?.toLowerCase() ?? null;
 
 /** Holds still pending (or declined, or reversed), and settled payments and refunds with any dispute, newest first. */
-export function cardActivity(authorizations: IssuingAuthorization[], transactions: IssuingTransaction[], disputes: IssuingDispute[], now = new Date()): CardActivity[] {
+function cardActivity(authorizations: IssuingAuthorization[], transactions: IssuingTransaction[], disputes: IssuingDispute[], now = new Date()): CardActivity[] {
   const disputeFor = new Map(disputes.map((dispute) => [dispute.transaction, dispute]));
   const authorizationFor = new Map(authorizations.map((auth) => [auth.id, auth]));
   const settled = new Set(transactions.map((transaction) => transaction.authorization).filter(Boolean));
@@ -145,17 +152,14 @@ export async function readCardHistory(db: D1Database, subject: string, window: L
 
 /** Everything the card screen needs, in one read. */
 export async function readCardState(db: D1Database, subject: string, wallet: `0x${string}`, now = new Date()): Promise<CardState> {
-  const provider = await cardsProvider(db);
-  const bridge = await bridgeClient(db);
+  const [provider, bridge] = await Promise.all([cardsProvider(db), bridgeClient(db)]);
   if (!provider || !bridge) return { state: "unavailable" };
-  const customer = await activeBridgeCustomer(db, subject);
+  const [customer, cardId] = await Promise.all([activeBridgeCustomer(db, subject), storedCardId(db, subject)]);
   if (!customer) return { state: "verify_first" };
-  const cardId = await storedCardId(db, subject);
   if (cardId) {
     const [card, allowance, activity] = await Promise.all([getCard(provider.stripe, cardId), readAllowance(wallet, provider.spender, now),
       readCardActivity(provider.stripe, cardId, now).then((items) => ({ items, status: "available" as const }), () => ({ items: [], status: "unavailable" as const }))]);
-    const row = await db.prepare("SELECT provider_customer_reference FROM card_account_projections WHERE card_reference = ?").bind(cardId).first<{ provider_customer_reference: string }>();
-    await recordCard(db, subject, row?.provider_customer_reference ?? "", card, now);
+    await refreshCardProjection(db, subject, card, now);
     if (card.status !== "canceled") return { state: "card", card: cardView(card), allowance, activity: activity.items, activityStatus: activity.status,
       publishableKey: process.env.STRIPE_PUBLISHABLE_KEY ?? null, walletsEnabled: await featureEnabled(db, "card_wallets"), observedAt: now.toISOString() };
   }
@@ -178,8 +182,7 @@ export async function freezeCardForLock(db: D1Database, subject: string, now = n
     if (!provider || !cardId) return;
     const { updateCard } = await import("@/lib/providers/stripe/issuing");
     const card = await updateCard(provider.stripe, cardId, { status: "inactive" }, `lock:${cardId}:${now.toISOString()}`);
-    const row = await db.prepare("SELECT provider_customer_reference FROM card_account_projections WHERE card_reference = ?").bind(cardId).first<{ provider_customer_reference: string }>();
-    await recordCard(db, subject, row?.provider_customer_reference ?? "", card, now);
+    await refreshCardProjection(db, subject, card, now);
   } catch (error) {
     console.error(JSON.stringify({ level: "warn", event: "cards.lock_freeze_failed", message: error instanceof Error ? error.message : "unknown" }));
   }

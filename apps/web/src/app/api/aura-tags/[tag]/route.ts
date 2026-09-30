@@ -2,7 +2,7 @@ import { env } from "cloudflare:workers";
 import { normalizeAuraTag, publicTagResponse, type AuraTagRow } from "@/lib/aura-tags";
 import { requireLinkedEvmWallet } from "@/lib/auth/wallet";
 import { RateLimitError } from "@/lib/http/errors";
-import { bridgeClient, getUsdAccount } from "@/lib/providers/bridge";
+import { activeBridgeCustomer, bridgeClient, getUsdAccount } from "@/lib/providers/bridge";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 
 const unavailable = () => Response.json({ error: "tag_unavailable" }, { status: 404, headers: { "Cache-Control": "no-store" } });
@@ -25,10 +25,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ tag:
     let bank;
     const bridge = row.public_bank_enabled === 1 ? await bridgeClient(env.PROJECTION_DB) : null;
     if (bridge) {
-      const link = await env.PROJECTION_DB.prepare("SELECT external_customer_id FROM provider_customer_links WHERE subject_reference = ? AND provider = 'bridge' AND status = 'active'")
-        .bind(row.subject_reference).first<{ external_customer_id: string }>();
+      const customerId = await activeBridgeCustomer(env.PROJECTION_DB, row.subject_reference);
       // A Bridge outage leaves crypto available and bank instructions hidden.
-      if (link) bank = await getUsdAccount(bridge, link.external_customer_id).catch(() => undefined);
+      if (customerId) bank = await getUsdAccount(bridge, customerId).catch(() => undefined);
     }
     return Response.json(publicTagResponse(row, bank), { headers: { "Cache-Control": "no-store" } });
   } catch {

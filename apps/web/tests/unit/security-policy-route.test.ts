@@ -10,7 +10,11 @@ vi.mock("@/lib/auth/server", () => ({ requireVerifiedSubject: async () => ({ sub
 vi.mock("@/lib/auth/privy", () => ({ privyClient: () => ({}) }));
 vi.mock("@/lib/auth/wallet", () => ({
   requireActionAccount: async () => ({ address: "0x1111111111111111111111111111111111111111", walletId: "wallet-alice" }),
-  requireMoneyMfa: async () => { if (!state.mfa) throw new httpErrors.MfaRequiredError(); }
+  requireMoneyMfa: async () => { if (!state.mfa) throw new httpErrors.MfaRequiredError(); },
+  requireMoneyAccount: async () => {
+    if (!state.mfa) throw new httpErrors.MfaRequiredError();
+    return { address: "0x1111111111111111111111111111111111111111", walletId: "wallet-alice" };
+  }
 }));
 vi.mock("@/lib/actions/privy-relay", async (original) => ({ ...await original<object>(),
   // Privy signs only for a valid authorization signature from the customer, which their passkey unlocks.

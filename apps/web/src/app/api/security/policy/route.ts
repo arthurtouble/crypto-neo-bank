@@ -1,7 +1,7 @@
 import { env } from "cloudflare:workers";
 import { z } from "zod";
 import { requireVerifiedSubject } from "@/lib/auth/server";
-import { requireActionAccount, requireMoneyMfa } from "@/lib/auth/wallet";
+import { requireMoneyAccount } from "@/lib/auth/wallet";
 import { errorResponse, route } from "@/lib/http/route";
 import { ensureSubjectProfile } from "@/lib/profile/ensure";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
@@ -66,8 +66,7 @@ export const PATCH = route("security.policy.patch", { unavailable: "security_pol
     dailyLimitCents: current.daily_limit_cents, newAddressDelaySeconds: current.new_address_delay_seconds }, next);
   if (reasons.length) {
     // Only a passkey (or authenticator app) makes the confirmation meaningful.
-    await requireMoneyMfa(subject.subjectReference);
-    const account = await requireActionAccount(subject.subjectReference);
+    const account = await requireMoneyAccount(subject.subjectReference);
     // The confirmation covers this exact change from this exact version of the controls.
     const payload = { changes: input, from: current.policy_version };
     if (!confirmation) {

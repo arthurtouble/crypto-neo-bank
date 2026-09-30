@@ -1,7 +1,7 @@
 import { env } from "cloudflare:workers";
 import { requireVerifiedSubject } from "@/lib/auth/server";
-import { requireActionWallet, requireMoneyMfa } from "@/lib/auth/wallet";
-import { loadControls } from "@/lib/actions/store";
+import { requireActionWallet, requireMoneyAccount } from "@/lib/auth/wallet";
+import { requireUnlocked } from "@/lib/actions/controls";
 import { cardsProvider, DEFAULT_DAILY_LIMIT_USD, readCardState, recordCard, storedCardId } from "@/lib/cards/service";
 import { errorResponse, route } from "@/lib/http/route";
 import { announce } from "@/lib/notifications/deliver";
@@ -30,16 +30,14 @@ export const POST = route("cards.create", { unavailable: "card_unavailable" }, a
   await enforceRateLimit(env.PROJECTION_DB, { namespace: "card_create", subject: subject.subjectReference, limit: 5, windowSeconds: 3600 });
   const [provider, bridge] = await Promise.all([cardsProvider(env.PROJECTION_DB), bridgeClient(env.PROJECTION_DB)]);
   if (!provider || !bridge) return errorResponse(503, "feature_unavailable", context, { message: "Cards aren't available yet." });
-  await requireMoneyMfa(subject.subjectReference);
+  const { address: wallet } = await requireMoneyAccount(subject.subjectReference);
   const now = new Date();
-  if ((await loadControls(env.PROJECTION_DB, subject.subjectReference, null, now)).accountLocked)
-    return errorResponse(409, "account_locked", context, { message: "Your account is locked. Unlock it in Settings to continue." });
+  await requireUnlocked(env.PROJECTION_DB, subject.subjectReference, now);
   if (await storedCardId(env.PROJECTION_DB, subject.subjectReference)) return errorResponse(409, "card_exists", context, { message: "You already have a card." });
   const customer = await activeBridgeCustomer(env.PROJECTION_DB, subject.subjectReference);
   if (!customer) return errorResponse(409, "verification_required", context, { message: "Verify your identity on Deposit first." });
   const approval = await readCardsApproval(bridge, customer);
   if (approval.status !== "approved" || !approval.cardholderId) return errorResponse(409, "card_approval_required", context, { message: "Apply for a card first." });
-  const wallet = await requireActionWallet(subject.subjectReference);
   // One request ID per cardholder: a double submit gets Stripe's first answer back, not a second card.
   const card = await createCard(provider.stripe, { cardholderId: approval.cardholderId, wallet, dailyLimitCents: DEFAULT_DAILY_LIMIT_USD * 100,
     requestId: `${subject.subjectReference}:${approval.cardholderId}` });

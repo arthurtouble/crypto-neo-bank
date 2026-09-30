@@ -8,7 +8,7 @@ import type { CardActivity } from "./service";
  * hold it came from, so a purchase is listed once. Best effort; a failure
  * here never breaks the read or webhook that found the activity.
  */
-export type CardObservation = Pick<CardActivity, "id" | "kind" | "status" | "amountUsd" | "merchant" | "createdAt" | "transactionHash"> & {
+type CardObservation = Pick<CardActivity, "id" | "kind" | "status" | "amountUsd" | "merchant" | "createdAt" | "transactionHash"> & {
   authorizationId: string | null; cardId?: string | null; disputeStatus?: string | null };
 
 export async function recordCardActivity(db: D1Database, subject: string, items: CardObservation[], now = new Date()): Promise<void> {

@@ -1,7 +1,7 @@
 import type { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { applyProviderEvent, type ProjectionDatabase, type ProviderEventMessage } from "@aurel/provider-projections";
-import { sha256Hex } from "@/lib/platform/events";
+import { sha256Hex } from "@/lib/platform/encoding";
 import { bridgeWebhooks } from "@/lib/providers/bridge/webhooks";
 import { privyWebhooks } from "@/lib/providers/privy/webhooks";
 import { stripeWebhooks } from "@/lib/providers/stripe/webhooks";

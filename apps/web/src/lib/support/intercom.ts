@@ -1,3 +1,5 @@
+import { bytesToBase64Url, hmacSha256 } from "@/lib/platform/encoding";
+
 /**
  * Support runs on Intercom: its Messenger (chat, with the Fin AI agent
  * answering first), tickets, and the team inbox. Aura identifies a signed-in
@@ -7,12 +9,11 @@
  * carries only the Privy user ID and, when the account has one, the verified
  * email. The signing secret never leaves the server.
  */
-export const INTERCOM_TOKEN_TTL_SECONDS = 3600;
+const INTERCOM_TOKEN_TTL_SECONDS = 3600;
 
-const base64url = (bytes: Uint8Array) => btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-const encode = (value: unknown) => base64url(new TextEncoder().encode(JSON.stringify(value)));
+const encode = (value: unknown) => bytesToBase64Url(new TextEncoder().encode(JSON.stringify(value)));
 
-export type MessengerIdentity = { userId: string; email: string | null };
+type MessengerIdentity = { userId: string; email: string | null };
 
 /** An HS256 JWT for Intercom's `intercom_user_jwt`, valid for an hour. */
 export async function intercomUserToken(identity: MessengerIdentity, secret: string, now = new Date()): Promise<{ token: string; expiresAt: string }> {
@@ -20,9 +21,7 @@ export async function intercomUserToken(identity: MessengerIdentity, secret: str
   const expires = issuedAt + INTERCOM_TOKEN_TTL_SECONDS;
   const payload = { user_id: identity.userId, ...(identity.email ? { email: identity.email } : {}), iat: issuedAt, exp: expires };
   const input = `${encode({ alg: "HS256", typ: "JWT" })}.${encode(payload)}`;
-  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
-  const signature = new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(input)));
-  return { token: `${input}.${base64url(signature)}`, expiresAt: new Date(expires * 1000).toISOString() };
+  return { token: `${input}.${bytesToBase64Url(await hmacSha256(secret, input))}`, expiresAt: new Date(expires * 1000).toISOString() };
 }
 
 /** Intercom is on only where both its app ID and identity secret are configured. */

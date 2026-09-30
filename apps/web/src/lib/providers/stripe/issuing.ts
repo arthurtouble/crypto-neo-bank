@@ -8,7 +8,7 @@ import type { StripeClient } from "./client";
  */
 
 const limitSchema = z.object({ amount: z.number().int().nonnegative(), interval: z.string(), categories: z.array(z.string()).nullable().optional() }).passthrough();
-export const cardSchema = z.object({
+const cardSchema = z.object({
   id: z.string().startsWith("ic_"),
   brand: z.string().optional(),
   status: z.enum(["active", "inactive", "canceled"]),
@@ -27,9 +27,14 @@ export const cardSchema = z.object({
 }).passthrough();
 export type IssuingCard = z.infer<typeof cardSchema>;
 
+/** A Stripe card status as Aura's card projection records it: inactive is frozen, canceled is closed. */
+export function cardProjectionStatus(status: string): "active" | "frozen" | "closed" {
+  return status === "inactive" ? "frozen" : status === "canceled" ? "closed" : "active";
+}
+
 const merchantSchema = z.object({ name: z.string().nullable().optional(), city: z.string().nullable().optional(), country: z.string().nullable().optional(),
   category: z.string().nullable().optional() }).passthrough();
-export const authorizationSchema = z.object({
+const authorizationSchema = z.object({
   id: z.string().startsWith("iauth_"),
   amount: z.number().int(),
   currency: z.string(),
@@ -54,7 +59,7 @@ export const transactionSchema = z.object({
 }).passthrough();
 export type IssuingTransaction = z.infer<typeof transactionSchema>;
 
-export const disputeSchema = z.object({
+const disputeSchema = z.object({
   id: z.string().startsWith("idp_"),
   status: z.enum(["unsubmitted", "submitted", "won", "lost", "expired"]),
   transaction: z.string(),
@@ -100,7 +105,6 @@ export async function listTransactionPage(stripe: StripeClient, cardId: string, 
   return { data: page.data, hasMore: page.has_more === true };
 }
 
-export const listAuthorizations = async (stripe: StripeClient, cardId: string, limit = 30) => (await listAuthorizationPage(stripe, cardId, { limit })).data;
 export const listTransactions = async (stripe: StripeClient, cardId: string, limit = 30) => (await listTransactionPage(stripe, cardId, { limit })).data;
 
 export async function listDisputes(stripe: StripeClient, limit = 100) {
@@ -116,7 +120,7 @@ export async function createEphemeralKey(stripe: StripeClient, cardId: string, n
     method: "POST", form: { issuing_card: cardId, nonce }, version: "2026-08-26.dahlia" })).secret;
 }
 
-export type DisputeReason = "fraudulent" | "not_received" | "duplicate" | "canceled" | "other";
+type DisputeReason = "fraudulent" | "not_received" | "duplicate" | "canceled" | "other";
 
 /** Open and submit a dispute for a settled card transaction. A dispute can be submitted only once. */
 export async function openDispute(stripe: StripeClient, input: { transactionId: string; reason: DisputeReason; explanation: string; requestId: string }) {

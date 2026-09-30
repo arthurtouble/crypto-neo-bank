@@ -3,6 +3,7 @@ import type { IncomingTransfer } from "@/lib/activity/incoming";
 import type { StoredAction } from "@/lib/actions/store";
 import { networkName } from "@/lib/assets/registry";
 import { failureText } from "@/lib/client/action-copy";
+import { formatCents, shortAddress } from "@/lib/money/format";
 import { payoutStateText } from "@/lib/providers/bridge/transfers";
 
 /**
@@ -15,7 +16,7 @@ export type Notice = { kind: NotificationKind; dedupeKey: string; title: string;
 export type NotificationView = { id: string; kind: NotificationKind; title: string; body: string; link: string | null; createdAt: string; read: boolean };
 
 // Shorten addresses only; names like a vault's stay whole.
-const short = (value: string) => /^0x[0-9a-fA-F]{40}$/.test(value) ? `${value.slice(0, 6)}…${value.slice(-4)}` : value;
+const short = (value: string) => /^0x[0-9a-fA-F]{40}$/.test(value) ? shortAddress(value) : value;
 
 /** Record a notice once. Returns true if it is new. */
 export async function notify(db: D1Database, subject: string, notice: Notice, now = new Date()): Promise<boolean> {
@@ -72,7 +73,7 @@ export function bankPayoutNotice(action: StoredAction, state: string): Notice {
 
 /** A card purchase was approved or declined. */
 export function cardSpendNotice(spend: { authorizationId: string; amountCents: number; approved: boolean; merchant: string | null }): Notice {
-  const amount = `$${(Math.abs(spend.amountCents) / 100).toFixed(2)}`;
+  const amount = `$${formatCents(Math.abs(spend.amountCents))}`;
   const where = spend.merchant ? ` at ${spend.merchant}` : "";
   return spend.approved
     ? { kind: "completed", dedupeKey: `card:${spend.authorizationId}`, title: `Card: ${amount}${where}`, body: "Paid from your USDC on Base.", link: "/app/cards" }

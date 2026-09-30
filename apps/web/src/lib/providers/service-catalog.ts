@@ -1,6 +1,6 @@
-export type ServiceState = "available" | "setup_required" | "locked";
+type ServiceState = "available" | "setup_required" | "locked";
 
-export type MoneyCapability = {
+type MoneyCapability = {
   key: "ach" | "wire" | "fednow" | "crypto";
   label: string;
   direction: "in" | "out" | "both";

@@ -26,7 +26,7 @@ const footer = (kind: NotificationKind) => kind === "security"
   ? "Security notices are always sent, so you know about every change to your account."
   : "You can choose which transaction notices you get in Settings, under Notifications. Security notices are always sent.";
 
-export function escapeHtml(value: string) {
+function escapeHtml(value: string) {
   return value.replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]!);
 }
 

@@ -30,7 +30,7 @@ const coinbaseSmartWallet = parseAbi([
 
 export type Log = { address: string; topics: string[]; data: string };
 
-export type OperationEvidence =
+type OperationEvidence =
   | { status: "found"; calls: Call[]; success: boolean; logs: Log[] }
   | { status: "unrecognized"; reason: string };
 

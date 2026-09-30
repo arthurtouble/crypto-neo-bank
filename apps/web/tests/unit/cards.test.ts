@@ -15,6 +15,7 @@ vi.mock("@/lib/auth/wallet", () => ({
   requireActionWallet: async () => wallet,
   requireActionAccount: async () => ({ address: wallet, walletId: "wallet-alice" }),
   requireMoneyMfa: async () => { if (!state.mfa) throw new httpErrors.MfaRequiredError(); },
+  requireMoneyAccount: async () => { if (!state.mfa) throw new httpErrors.MfaRequiredError(); return { address: wallet, walletId: "wallet-alice" }; },
   WalletOwnershipError: httpErrors.WalletOwnershipError
 }));
 // The customer's passkey unlocks the signature Privy checks; here every confirmation is valid.

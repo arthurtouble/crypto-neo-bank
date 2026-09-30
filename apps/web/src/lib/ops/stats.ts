@@ -4,7 +4,7 @@
  * value recorded when each action was prepared, and money that arrived
  * without an action (read from the chain) isn't counted.
  */
-export type StatsDay = { day: string; signups: number; active: number; completed: number; volumeUsd: number };
+type StatsDay = { day: string; signups: number; active: number; completed: number; volumeUsd: number };
 export type Stats = {
   days: number;
   customers: { total: number; new: number; closed: number };

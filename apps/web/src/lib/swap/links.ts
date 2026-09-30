@@ -1,7 +1,8 @@
 import { assetId, parseAssetId, type AssetId } from "@/lib/swap/assets";
+import { BASE_CHAIN_ID, BASE_USDC } from "@/lib/assets/registry";
 
-const ETH = assetId(8453, null);
-const USDC = assetId(8453, "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913");
+const ETH = assetId(BASE_CHAIN_ID, null);
+const USDC = assetId(BASE_CHAIN_ID, BASE_USDC);
 
 function validAsset(value: string | null | undefined): AssetId | null {
   return value && parseAssetId(value) ? value : null;

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { readBoundedJson } from "@/lib/http/bounded";
 import { lifiApiUrl } from "./lifi";
 
 const MAX_RESPONSE_BYTES = 256_000;
@@ -13,7 +14,7 @@ const responseSchema = z.object({
   receiving: transaction.optional()
 }).passthrough();
 
-export type LifiStatusExpectation = {
+type LifiStatusExpectation = {
   sourceHash: string;
   sourceChainId: number;
   destinationChainId: number;
@@ -37,33 +38,6 @@ export class LifiStatusError extends Error {
   }
 }
 
-async function readBoundedJson(response: Response): Promise<unknown> {
-  const length = response.headers.get("content-length");
-  if (!response.ok || length !== null && (!/^\d+$/.test(length) || Number(length) > MAX_RESPONSE_BYTES) || !response.body) {
-    await response.body?.cancel().catch(() => undefined);
-    throw new LifiStatusError("status_unavailable");
-  }
-  const reader = response.body.getReader();
-  try {
-    const chunks: Uint8Array[] = [];
-    let total = 0;
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      total += value.byteLength;
-      if (total > MAX_RESPONSE_BYTES) throw new Error("oversized");
-      chunks.push(value);
-    }
-    const bytes = new Uint8Array(total);
-    let offset = 0;
-    for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
-    return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)) as unknown;
-  } catch {
-    await reader.cancel().catch(() => undefined);
-    throw new LifiStatusError("status_unavailable");
-  }
-}
-
 export async function readLifiTransferStatus(
   expected: LifiStatusExpectation,
   options: { fetcher?: typeof fetch; apiKey?: string } = {}
@@ -82,7 +56,12 @@ export async function readLifiTransferStatus(
       signal: AbortSignal.timeout(8_000), cache: "no-store"
     });
   } catch { throw new LifiStatusError("status_unavailable"); }
-  const parsed = responseSchema.safeParse(await readBoundedJson(response));
+  if (!response.ok) {
+    await response.body?.cancel().catch(() => undefined);
+    throw new LifiStatusError("status_unavailable");
+  }
+  const body = await readBoundedJson(response, MAX_RESPONSE_BYTES).catch(() => { throw new LifiStatusError("status_unavailable"); });
+  const parsed = responseSchema.safeParse(body);
   if (!parsed.success) throw new LifiStatusError("status_unavailable");
   const result = parsed.data;
   if (result.status === "NOT_FOUND") {

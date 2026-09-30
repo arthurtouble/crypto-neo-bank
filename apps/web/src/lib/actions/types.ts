@@ -1,5 +1,6 @@
-import { getAddress, isAddress, isHex } from "viem";
+import { isAddress, isHex } from "viem";
 import { z } from "zod";
+import { sha256Hex } from "@/lib/platform/encoding";
 
 const address = z.string().refine(isAddress, "Invalid address.").transform((value) => value.toLowerCase() as `0x${string}`);
 const rawAmount = z.string().regex(/^[1-9]\d{0,77}$/, "Invalid amount.");
@@ -57,15 +58,6 @@ export function sameAddress(a: string, b: string): boolean {
   return a.toLowerCase() === b.toLowerCase();
 }
 
-export function checksum(value: string): `0x${string}` {
-  return getAddress(value);
-}
-
-async function sha256Hex(text: string): Promise<`0x${string}`> {
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
-  return `0x${Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("")}`;
-}
-
-export function callsFingerprint(chainId: number, calls: readonly Call[]): Promise<`0x${string}`> {
-  return sha256Hex(JSON.stringify([chainId, calls.map((call) => [call.to, call.value, call.data])]));
+export async function callsFingerprint(chainId: number, calls: readonly Call[]): Promise<`0x${string}`> {
+  return `0x${await sha256Hex(JSON.stringify([chainId, calls.map((call) => [call.to, call.value, call.data])]))}`;
 }

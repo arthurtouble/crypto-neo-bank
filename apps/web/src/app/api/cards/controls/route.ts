@@ -2,8 +2,8 @@ import { env } from "cloudflare:workers";
 import { z } from "zod";
 import { requireVerifiedSubject } from "@/lib/auth/server";
 import { requireActionWallet } from "@/lib/auth/wallet";
-import { loadControls } from "@/lib/actions/store";
-import { cardsProvider, cardView, MAX_DAILY_LIMIT_USD, readCardState, recordCard, storedCardId } from "@/lib/cards/service";
+import { requireUnlocked } from "@/lib/actions/controls";
+import { cardsProvider, cardView, MAX_DAILY_LIMIT_USD, readCardState, refreshCardProjection, storedCardId } from "@/lib/cards/service";
 import { errorResponse, route } from "@/lib/http/route";
 import { announce } from "@/lib/notifications/deliver";
 import { securityNotice } from "@/lib/notifications/store";
@@ -34,8 +34,7 @@ export const PATCH = route("cards.controls", { unavailable: "card_unavailable", 
   const unfreezing = change.frozen === false && current.status === "frozen";
   const raising = change.dailyLimitUsd !== undefined && (current.dailyLimitUsd === null || change.dailyLimitUsd > current.dailyLimitUsd);
   const now = new Date();
-  if (unfreezing && (await loadControls(env.PROJECTION_DB, subject.subjectReference, null, now)).accountLocked)
-    return errorResponse(409, "account_locked", context, { message: "Your account is locked. Unlock it in Settings first." });
+  if (unfreezing) await requireUnlocked(env.PROJECTION_DB, subject.subjectReference, now, "Your account is locked. Unlock it in Settings first.");
   if (unfreezing || raising) {
     const reasons = [unfreezing ? "unfreeze your card" : "", raising ? `raise your card's daily limit to ${change.dailyLimitUsd} USD` : ""].filter(Boolean);
     const asked = await confirmWithPasskey(env.PROJECTION_DB, { subject: subject.subjectReference, purpose: "card_controls",
@@ -44,8 +43,7 @@ export const PATCH = route("cards.controls", { unavailable: "card_unavailable", 
   }
   const card = await updateCard(provider.stripe, cardId, { status: change.frozen === undefined ? undefined : change.frozen ? "inactive" : "active",
     dailyLimitCents: change.dailyLimitUsd === undefined ? undefined : change.dailyLimitUsd * 100 }, crypto.randomUUID());
-  const row = await env.PROJECTION_DB.prepare("SELECT provider_customer_reference FROM card_account_projections WHERE card_reference = ?").bind(cardId).first<{ provider_customer_reference: string }>();
-  await recordCard(env.PROJECTION_DB, subject.subjectReference, row?.provider_customer_reference ?? "", card, now);
+  await refreshCardProjection(env.PROJECTION_DB, subject.subjectReference, card, now);
   if (unfreezing) await announce(env.PROJECTION_DB, subject.subjectReference, securityNotice("card_unfrozen", `Your card ending ${card.last4} can be used again.`, `${cardId}:${now.toISOString()}`), now);
   if (raising) await announce(env.PROJECTION_DB, subject.subjectReference, securityNotice("card_limit_raised", `Your card can now spend up to ${change.dailyLimitUsd} USD a day.`, `${cardId}:${now.toISOString()}`), now);
   const wallet = await requireActionWallet(subject.subjectReference);

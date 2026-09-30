@@ -1,4 +1,5 @@
 import { formatUnits } from "viem";
+import { BASE_CHAIN_ID } from "@/lib/assets/registry";
 import type { CardActivity } from "@/lib/cards/service";
 import { FAILED_PAYOUT_STATES, payoutStateText } from "@/lib/providers/bridge/transfers";
 import type { IncomingTransfer } from "./incoming";
@@ -10,10 +11,10 @@ import type { IncomingTransfer } from "./incoming";
  * receipt, exports, statements, and Insights, so they always agree. Card
  * payments come from Stripe, which issues the card.
  */
-export type EntryType = "sent" | "received" | "bank_deposit" | "bank_payout" | "card_payment" | "card_refund" | "card_allowance" | "swap" | "bridge" | "earn_deposit" | "earn_withdraw"
+type EntryType = "sent" | "received" | "bank_deposit" | "bank_payout" | "card_payment" | "card_refund" | "card_allowance" | "swap" | "bridge" | "earn_deposit" | "earn_withdraw"
   | "borrow" | "repay" | "liquidation" | "collateral_enabled" | "collateral_disabled" | "defi_activity";
-export type EntryStatus = "pending" | "completed" | "failed" | "not_confirmed";
-export type EntryOrigin = "aura" | "incoming" | "aave" | "card";
+type EntryStatus = "pending" | "completed" | "failed" | "not_confirmed";
+type EntryOrigin = "aura" | "incoming" | "aave" | "card";
 
 export type ActivityEntry = {
   id: string;
@@ -45,7 +46,7 @@ export type ActivityEntry = {
 };
 
 /** The fields of a stored action (or its browser view) an entry needs. */
-export type ActionLike = { id: string; kind: "transfer" | "earn" | "route"; chainId: number; status: string; summary: Record<string, unknown>;
+type ActionLike = { id: string; kind: "transfer" | "earn" | "route"; chainId: number; status: string; summary: Record<string, unknown>;
   usdCents: number | null; transactionHash: string | null; destinationChainId: number | null; destinationTransactionHash: string | null;
   failureReason: string | null; createdAt: string; bankState?: string | null };
 
@@ -58,7 +59,7 @@ const raw = (value: unknown, decimals: unknown) => typeof value === "string" && 
  * what was prepared (`settling`); `confirmed` adds that its block is final.
  * A move to another network stays pending until it arrives.
  */
-export function entryStatus(status: string, crossNetwork = false): { status: EntryStatus; final: boolean } {
+function entryStatus(status: string, crossNetwork = false): { status: EntryStatus; final: boolean } {
   if (status === "confirmed") return { status: "completed", final: true };
   if (status === "settling" && !crossNetwork) return { status: "completed", final: false };
   if (status === "failed") return { status: "failed", final: false };
@@ -113,7 +114,7 @@ export function actionEntry(action: ActionLike): ActivityEntry {
 export function cardEntry(item: CardActivity): ActivityEntry {
   const status: EntryStatus = item.status === "completed" ? "completed" : item.status === "pending" ? "pending" : "failed";
   return { id: `card:${item.id}`, origin: "card", type: item.kind === "refund" ? "card_refund" : "card_payment", status, final: status === "completed",
-    createdAt: item.createdAt, chainId: 8453, asset: "USD", amount: item.amountUsd, counterparty: item.merchant ?? "Card payment",
+    createdAt: item.createdAt, chainId: BASE_CHAIN_ID, asset: "USD", amount: item.amountUsd, counterparty: item.merchant ?? "Card payment",
     estimatedUsd: status === "failed" ? undefined : Number(item.amountUsd), transactionHash: item.transactionHash ?? undefined,
     failureReason: item.status === "declined" ? "Declined" : item.status === "reversed" ? "Hold released" : undefined,
     cardDispute: item.dispute?.status, source: "Stripe" };
@@ -137,7 +138,7 @@ const LABELS: Record<EntryType, string> = {
 export const entryLabel = (type: EntryType) => LABELS[type];
 
 export const CATEGORIES = ["All", "Sent", "Received", "Card", "Swaps", "Earn", "Other"] as const;
-export type EntryCategory = Exclude<(typeof CATEGORIES)[number], "All">;
+type EntryCategory = Exclude<(typeof CATEGORIES)[number], "All">;
 export function entryCategory(type: EntryType): EntryCategory {
   if (type === "card_payment" || type === "card_refund" || type === "card_allowance") return "Card";
   if (type === "sent" || type === "bank_payout") return "Sent";
@@ -174,7 +175,7 @@ function csvCell(value: string | number | undefined) {
   return `"${safe.replaceAll('"', '""')}"`;
 }
 
-export const CSV_COLUMNS = ["Date", "Description", "Status", "Amount", "Asset", "Received amount", "Received asset", "Counterparty", "Estimated USD",
+const CSV_COLUMNS = ["Date", "Description", "Status", "Amount", "Asset", "Received amount", "Received asset", "Counterparty", "Estimated USD",
   "Network", "Transaction", "Final", "Source"] as const;
 
 /** Every export and statement uses these columns, one row per entry. */

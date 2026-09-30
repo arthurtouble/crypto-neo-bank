@@ -1,4 +1,4 @@
-import { requireActionAccount, requireMoneyMfa } from "@/lib/auth/wallet";
+import { requireMoneyAccount } from "@/lib/auth/wallet";
 import { completeStepUp, createStepUp, type Confirmation, type StepUpPurpose } from "./step-up";
 
 /**
@@ -9,8 +9,7 @@ import { completeStepUp, createStepUp, type Confirmation, type StepUpPurpose } f
 export async function confirmWithPasskey(db: D1Database, input: { subject: string; purpose: StepUpPurpose; payload: unknown; summary: string;
   confirmation?: Confirmation; traceId: string }): Promise<Response | null> {
   // Only a passkey (or authenticator app) makes the confirmation meaningful.
-  await requireMoneyMfa(input.subject);
-  const account = await requireActionAccount(input.subject);
+  const account = await requireMoneyAccount(input.subject);
   if (!input.confirmation) {
     const challenge = await createStepUp(db, input.subject, account, input.purpose, input.payload, input.summary);
     return Response.json({ error: "confirmation_required", message: `Confirm with your passkey to ${input.summary}.`, ...challenge, traceId: input.traceId }, { status: 428 });

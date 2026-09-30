@@ -1,4 +1,5 @@
 import { listActionsForOperator, type StoredAction } from "@/lib/actions/store";
+import { BASE_CHAIN_ID } from "@/lib/assets/registry";
 import { actionEntry, entryAmount, entryLabel, statusLabel } from "@/lib/activity/entries";
 
 /**
@@ -8,8 +9,8 @@ import { actionEntry, entryAmount, entryLabel, statusLabel } from "@/lib/activit
  * payments as Stripe reported them (`card_observations`). Status and stuck
  * filters are about Aura actions, so they leave the other two out.
  */
-export type MovementFilter = { status?: StoredAction["status"]; kind?: StoredAction["kind"] | "received" | "card"; subject?: string; stuck?: boolean; before?: string };
-export type MovementRow = { id: string; origin: "aura" | "incoming" | "card"; label: string; amountText: string | null; statusText: string; status: string;
+type MovementFilter = { status?: StoredAction["status"]; kind?: StoredAction["kind"] | "received" | "card"; subject?: string; stuck?: boolean; before?: string };
+type MovementRow = { id: string; origin: "aura" | "incoming" | "card"; label: string; amountText: string | null; statusText: string; status: string;
   subject: string; createdAt: string; counterparty: string | null; chainId: number; transactionHash: string | null; source: string };
 
 const PAGE = 50;
@@ -49,7 +50,7 @@ export async function listMovement(db: D1Database, filter: MovementFilter, now =
       statusText: row.status === "completed" ? (row.dispute_status ? `Completed, dispute ${row.dispute_status}` : "Completed")
         : row.status === "pending" ? "Pending" : row.status === "declined" ? "Declined" : "Hold released",
       status: row.status === "declined" ? "failed" : row.status, subject: row.subject_reference, createdAt: row.occurred_at,
-      counterparty: row.merchant, chainId: 8453, transactionHash: row.transaction_hash, source: "Stripe" }))
+      counterparty: row.merchant, chainId: BASE_CHAIN_ID, transactionHash: row.transaction_hash, source: "Stripe" }))
   ].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, PAGE);
   const more = actions.length === PAGE || incoming.length === PAGE || cards.length === PAGE;
   return { rows, next: more && rows.length ? rows.at(-1)!.createdAt : null };

@@ -1,6 +1,7 @@
 import type { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { applyVerification, expireIfStale, getAction, insertAction, loadControls, recordSubmission, type NewAction } from "@/lib/actions/store";
+import { insertAction, loadControls, type NewAction } from "@/lib/actions/controls";
+import { applyVerification, expireIfStale, getAction, recordSubmission } from "@/lib/actions/store";
 import { d1 } from "../support/d1";
 import { schemaDatabase } from "../support/schema";
 

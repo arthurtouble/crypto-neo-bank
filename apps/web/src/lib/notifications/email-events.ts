@@ -21,7 +21,7 @@ const eventSchema = z.object({
   }).passthrough()
 }).passthrough();
 
-export type EmailEventOutcome = "bounced" | "complained" | "ignored";
+type EmailEventOutcome = "bounced" | "complained" | "ignored";
 
 export async function applyEmailEvent(db: D1Database, payload: unknown): Promise<EmailEventOutcome> {
   const event = eventSchema.safeParse(payload);

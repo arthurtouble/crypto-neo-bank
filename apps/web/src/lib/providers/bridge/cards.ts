@@ -13,7 +13,7 @@ const customerSchema = z.object({
     requirements: z.object({ issues: z.array(z.unknown()).nullable().optional() }).passthrough().optional() }).passthrough()).optional()
 }).passthrough();
 
-export type CardsApproval = { status: "approved" | "incomplete" | "revoked" | "none"; cardholderId: string | null; issues: string[] };
+type CardsApproval = { status: "approved" | "incomplete" | "revoked" | "none"; cardholderId: string | null; issues: string[] };
 
 export async function readCardsApproval(bridge: BridgeClient, customerId: string): Promise<CardsApproval> {
   const customer = await bridge.request(`/customers/${encodeURIComponent(customerId)}`, customerSchema);

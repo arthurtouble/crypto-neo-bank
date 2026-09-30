@@ -1,37 +1,15 @@
 import { getAddress, isAddress, isHex } from "viem";
-import { localEdgeUrl } from "@/lib/testing/local-edge";
-
-export const RPC_BY_CHAIN: Record<number, readonly string[]> = {
-  1: ["https://ethereum-rpc.publicnode.com"],
-  10: ["https://mainnet.optimism.io"],
-  137: ["https://polygon-bor-rpc.publicnode.com"],
-  // publicnode refuses receipts without a token, so it is the last resort for Base.
-  8453: ["https://mainnet.base.org", "https://base.drpc.org", "https://1rpc.io/base", "https://base-rpc.publicnode.com"],
-  42161: ["https://arb1.arbitrum.io/rpc"]
-};
-
-/**
- * Endpoints to read a chain from, in order. A dedicated endpoint set as the
- * `RPC_URL_<chainId>` secret (for example an Alchemy URL) comes first; the
- * public ones stay as fallbacks, since they rate-limit shared Worker traffic.
- */
-export function rpcEndpoints(chainId: number): readonly string[] {
-  // A local node (end-to-end tests) is used alone, so a test never reaches a public network.
-  const local = localEdgeUrl(`RPC_URL_${chainId}`);
-  if (local) return [local];
-  const dedicated = process.env[`RPC_URL_${chainId}`];
-  const endpoints = RPC_BY_CHAIN[chainId] ?? [];
-  return dedicated && /^https:\/\//.test(dedicated) ? [dedicated, ...endpoints] : endpoints;
-}
+import { BASE_CHAIN_ID } from "@/lib/assets/registry";
+import { jsonRpc as rpc, rpcEndpoints } from "@/lib/chain/rpc";
 
 /** The outer transaction as the chain reports it. For a smart wallet this is the bundler's EntryPoint call. */
-export type ObservedTransaction = { chainId: number; from: string; to: string; value: string; data: string };
+type ObservedTransaction = { chainId: number; from: string; to: string; value: string; data: string };
 
-export type TransactionIdentityObservation =
+type TransactionIdentityObservation =
   | { status: "pending" }
   | { status: "found"; call: ObservedTransaction; blockHash: string | null };
 
-export type ChainReceipt = {
+type ChainReceipt = {
   status: "success" | "reverted" | "unknown";
   transactionHash: string;
   blockHash: string;
@@ -43,25 +21,12 @@ export type ChainObservation =
   | { status: "pending" }
   | { status: "found"; call: ObservedTransaction; blockHash: string | null; receipt: ChainReceipt | null; canonicalBlockHash: string | null; confirmations: number; finalizedBlockNumber: bigint | null };
 
-async function rpc(fetcher: typeof fetch, endpoint: string, method: string, params: unknown[]) {
-  const response = await fetcher(endpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
-    signal: AbortSignal.timeout(8_000)
-  });
-  if (!response.ok) throw new Error(`Chain RPC returned ${response.status}.`);
-  const payload = await response.json() as { result?: unknown; error?: { message?: string } };
-  if (payload.error || !("result" in payload)) throw new Error("Chain RPC returned an error.");
-  return payload.result;
-}
-
 function parseQuantity(value: unknown): bigint {
   if (typeof value !== "string" || !/^0x[0-9a-f]+$/i.test(value)) throw new Error("Chain RPC returned an invalid quantity.");
   return BigInt(value);
 }
 
-export async function observeTransactionIdentity(chainId: number, hash: string, fetcher: typeof fetch = fetch): Promise<TransactionIdentityObservation> {
+async function observeTransactionIdentity(chainId: number, hash: string, fetcher: typeof fetch = fetch): Promise<TransactionIdentityObservation> {
   const endpoints = rpcEndpoints(chainId);
   if (!endpoints.length || !/^0x[a-f0-9]{64}$/i.test(hash)) throw new Error("Unsupported chain or transaction hash.");
   let pending = false;
@@ -91,7 +56,7 @@ export function requiredConfirmations(chainId: number): number {
   if (chainId === 137) return 64;
   // Base orders blocks through one sequencer every 2 seconds; inclusion is enough to show a transfer as sent.
   // It is still confirmed only once the block is final.
-  if (chainId === 8453) return 1;
+  if (chainId === BASE_CHAIN_ID) return 1;
   return 3;
 }
 
@@ -128,9 +93,10 @@ async function observeReceipt(identity: Extract<TransactionIdentityObservation, 
   const rawBlock = await rpc(fetcher, endpoint, "eth_getBlockByNumber", [`0x${blockNumber.toString(16)}`, false]);
   const canonicalBlockHash = rawBlock && typeof rawBlock === "object" && typeof (rawBlock as Record<string, unknown>).hash === "string" ? (rawBlock as { hash: string }).hash : null;
   if (canonicalBlockHash && !/^0x[a-f0-9]{64}$/i.test(canonicalBlockHash)) throw new Error("Chain RPC returned a malformed block.");
-  const latest = parseQuantity(await rpc(fetcher, endpoint, "eth_blockNumber", []));
+  const [latestBlock, finalized] = await Promise.all([rpc(fetcher, endpoint, "eth_blockNumber", []),
+    rpc(fetcher, endpoint, "eth_getBlockByNumber", ["finalized", false])]);
+  const latest = parseQuantity(latestBlock);
   const confirmations = latest >= blockNumber ? Number(latest - blockNumber + 1n) : 0;
-  const finalized = await rpc(fetcher, endpoint, "eth_getBlockByNumber", ["finalized", false]);
   const finalizedBlockNumber = finalized && typeof finalized === "object" && "number" in finalized
     ? parseQuantity((finalized as { number: unknown }).number) : null;
   const status = row.status === "0x1" ? "success" : row.status === "0x0" ? "reverted" : "unknown";

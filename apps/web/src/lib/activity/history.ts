@@ -11,9 +11,9 @@ import type { BankDeposit } from "@/lib/providers/bridge/transfers";
 
 const RECHECK_MS = 30_000;
 const MAX_CHECKS = 3;
-export const MAX_ENTRIES = 150;
+const MAX_ENTRIES = 150;
 
-export type SourceState = { status: "available" | "unavailable"; partial: boolean };
+type SourceState = { status: "available" | "unavailable"; partial: boolean };
 export type History = { entries: ActivityEntry[]; sources: { aura: SourceState; incoming: SourceState; aave: SourceState; card: SourceState }; observedAt: string };
 
 type Deps = { bankDeposits?: (subject: string) => Promise<Map<string, BankDeposit>>; refreshPayouts?: (subject: string) => Promise<unknown>;

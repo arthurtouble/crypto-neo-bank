@@ -14,6 +14,7 @@ vi.mock("@/lib/auth/wallet", () => ({
   requireActionWallet: async () => account,
   requireActionAccount: async () => ({ address: account, walletId: "wallet-1" }),
   requireMoneyMfa: async () => { if (!state.mfa) throw new httpErrors.MfaRequiredError(); },
+  requireMoneyAccount: async () => { if (!state.mfa) throw new httpErrors.MfaRequiredError(); return { address: account, walletId: "wallet-1" }; },
   WalletOwnershipError: httpErrors.WalletOwnershipError
 }));
 vi.mock("@/lib/auth/privy", () => ({ privyClient: () => ({ wallets: () => ({ rpc: state.rpc }) }) }));

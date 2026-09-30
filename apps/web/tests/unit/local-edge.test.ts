@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { RPC_BY_CHAIN, rpcEndpoints } from "@/lib/actions/chain";
+import { RPC_BY_CHAIN, rpcEndpoints } from "@/lib/chain/rpc";
 import { localEdgeUrl } from "@/lib/testing/local-edge";
 
 describe("end-to-end test overrides", () => {

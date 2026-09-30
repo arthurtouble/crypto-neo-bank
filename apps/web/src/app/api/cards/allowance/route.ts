@@ -3,7 +3,7 @@ import { z } from "zod";
 import { buildCardAllowance } from "@/lib/actions/card-allowance";
 import { prepareBuiltAction } from "@/lib/actions/prepare";
 import { requireVerifiedSubject } from "@/lib/auth/server";
-import { requireActionWallet, requireMoneyMfa } from "@/lib/auth/wallet";
+import { requireMoneyAccount } from "@/lib/auth/wallet";
 import { cardsProvider, storedCardId } from "@/lib/cards/service";
 import { errorResponse, route } from "@/lib/http/route";
 import { ensureSubjectProfile } from "@/lib/profile/ensure";
@@ -23,8 +23,7 @@ export const POST = route("cards.allowance", { unavailable: "card_unavailable", 
   const input = schema.parse(await request.json());
   const provider = await cardsProvider(env.PROJECTION_DB);
   if (!provider || !await storedCardId(env.PROJECTION_DB, subject.subjectReference)) return errorResponse(404, "card_not_found", context, { message: "You don't have a card." });
-  await requireMoneyMfa(subject.subjectReference);
-  const wallet = await requireActionWallet(subject.subjectReference);
+  const { address: wallet } = await requireMoneyAccount(subject.subjectReference);
   await ensureSubjectProfile(env.PROJECTION_DB, subject.subjectReference);
   if (Number(input.amountUsd) === 0) return errorResponse(422, "invalid_amount", context, { message: "Enter an amount greater than zero, or freeze the card." });
   const prepared = await prepareBuiltAction(env.PROJECTION_DB, subject.subjectReference, wallet, buildCardAllowance(provider.spender, input.amountUsd), () => "payment_cards");

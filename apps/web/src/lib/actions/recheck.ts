@@ -2,11 +2,11 @@ import { checkAction, type CheckDependencies } from "./check";
 import { expireStalePrepared, listDueActions } from "./store";
 
 /** How long an open action waits between background checks. */
-export const RECHECK_INTERVAL_MS = 60_000;
+const RECHECK_INTERVAL_MS = 60_000;
 /** Actions checked per run. Each check makes a handful of public RPC reads, so runs stay small and frequent. */
-export const RECHECK_BATCH = 20;
+const RECHECK_BATCH = 20;
 
-export type RecheckSummary = { checked: number; advanced: number; failedChecks: number; expired: number };
+type RecheckSummary = { checked: number; advanced: number; failedChecks: number; expired: number };
 
 /**
  * Advance open actions from chain evidence without waiting for the customer

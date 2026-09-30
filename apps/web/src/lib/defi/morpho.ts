@@ -1,4 +1,5 @@
 import { encodeFunctionData, erc20Abi, getAddress, parseAbi } from "viem";
+import { BASE_CHAIN_ID, BASE_USDC } from "@/lib/assets/registry";
 import { localEdgeUrl } from "@/lib/testing/local-edge";
 import type { Call } from "@/lib/actions/types";
 
@@ -11,9 +12,9 @@ import type { Call } from "@/lib/actions/types";
  * To add a vault: check on chain that its asset is USDC and (for V2) that
  * every gate is unset, add it here in a reviewed change, and run the tests.
  */
-export type MorphoVault = { id: string; address: `0x${string}`; name: string; curator: string; version: 1 | 2; asset: `0x${string}`; assetSymbol: "USDC"; assetDecimals: 6 };
+type MorphoVault = { id: string; address: `0x${string}`; name: string; curator: string; version: 1 | 2; asset: `0x${string}`; assetSymbol: "USDC"; assetDecimals: 6 };
 
-export const MORPHO_USDC = "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913" as const;
+export const MORPHO_USDC = BASE_USDC;
 export const MORPHO_VAULTS: readonly MorphoVault[] = [
   { id: "steakhouse-prime-usdc", address: "0xbeef0e0834849acc03f0089f01f4f1eeb06873c9", name: "Steakhouse Prime USDC", curator: "Steakhouse Financial",
     version: 2, asset: MORPHO_USDC, assetSymbol: "USDC", assetDecimals: 6 },
@@ -59,7 +60,7 @@ export function morphoWithdrawCall(vault: MorphoVault, wallet: string, amount: {
     : call(vault.address, encodeFunctionData({ abi: vaultAbi, functionName: "redeem", args: [amount.shares, owner, owner] }));
 }
 
-export type VaultRate = { vaultId: string; netApyPct: number; totalAssetsUsd: number; liquidityUsd: number };
+type VaultRate = { vaultId: string; netApyPct: number; totalAssetsUsd: number; liquidityUsd: number };
 export type VaultRates = { rates: VaultRate[]; observedAt: string; source: "Morpho API" } | null;
 
 const MORPHO_API = "https://api.morpho.org/graphql";
@@ -71,8 +72,8 @@ const MORPHO_API = "https://api.morpho.org/graphql";
  */
 export async function morphoVaultRates(fetcher: typeof fetch = fetch, now = new Date()): Promise<VaultRates> {
   const fields = MORPHO_VAULTS.map((vault) => vault.version === 1
-    ? `${vault.id.replaceAll("-", "_")}: vaultByAddress(address: "${vault.address}", chainId: 8453) { state { netApy totalAssetsUsd } liquidity { usd } }`
-    : `${vault.id.replaceAll("-", "_")}: vaultV2ByAddress(address: "${vault.address}", chainId: 8453) { netApy totalAssetsUsd liquidityUsd }`).join(" ");
+    ? `${vault.id.replaceAll("-", "_")}: vaultByAddress(address: "${vault.address}", chainId: ${BASE_CHAIN_ID}) { state { netApy totalAssetsUsd } liquidity { usd } }`
+    : `${vault.id.replaceAll("-", "_")}: vaultV2ByAddress(address: "${vault.address}", chainId: ${BASE_CHAIN_ID}) { netApy totalAssetsUsd liquidityUsd }`).join(" ");
   try {
     const response = await fetcher(localEdgeUrl("MORPHO_API_URL") ?? MORPHO_API, { method: "POST", headers: { "content-type": "application/json" },
       body: JSON.stringify({ query: `{ ${fields} }` }), signal: AbortSignal.timeout(6_000) });

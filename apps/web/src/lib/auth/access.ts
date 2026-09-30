@@ -1,4 +1,5 @@
 import { AuthenticationError, AuthorizationError } from "@/lib/http/errors";
+import { base64UrlToBytes } from "@/lib/platform/encoding";
 import { localEdgeUrl } from "@/lib/testing/local-edge";
 
 /**
@@ -23,8 +24,7 @@ function teamDomain(): string | null {
   return localEdgeUrl("CF_ACCESS_TEAM_DOMAIN");
 }
 
-const base64url = (value: string) => Uint8Array.from(atob(value.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(value.length / 4) * 4, "=")), (char) => char.charCodeAt(0));
-const json = (value: string) => JSON.parse(new TextDecoder().decode(base64url(value))) as Record<string, unknown>;
+const json = (value: string) => JSON.parse(new TextDecoder().decode(base64UrlToBytes(value))) as Record<string, unknown>;
 
 async function signingKeys(team: string, refresh = false): Promise<Map<string, CryptoKey>> {
   const url = `${team}/cdn-cgi/access/certs`;
@@ -53,7 +53,7 @@ export async function verifyAccessToken(token: string, nowMs = Date.now()): Prom
   if (header.alg !== "RS256" || typeof header.kid !== "string") throw new AuthenticationError("Sign in to operations through Cloudflare Access.");
   // Access rotates its keys; an unknown key ID means fetching them again once.
   const key = (await signingKeys(team)).get(header.kid) ?? (await signingKeys(team, true)).get(header.kid);
-  const signed = key && await crypto.subtle.verify("RSASSA-PKCS1-v1_5", key, base64url(parts[2]), new TextEncoder().encode(`${parts[0]}.${parts[1]}`));
+  const signed = key && await crypto.subtle.verify("RSASSA-PKCS1-v1_5", key, base64UrlToBytes(parts[2]) as BufferSource, new TextEncoder().encode(`${parts[0]}.${parts[1]}`));
   if (!signed) throw new AuthenticationError("Sign in to operations through Cloudflare Access.");
   const now = Math.floor(nowMs / 1000);
   const audiences = Array.isArray(claims.aud) ? claims.aud : [claims.aud];
