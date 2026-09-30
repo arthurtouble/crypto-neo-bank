@@ -325,7 +325,7 @@ The journeys in [redesign-journeys.md](redesign-journeys.md#shared-patterns) set
 
 - WCAG 2.2 AA. Text contrast 4.5:1, large text and UI parts 3:1, in both themes.
 - A visible focus ring on everything focusable: 2px `--color-focus`, 2px offset.
-- Every action works with a keyboard. Desktop has ⌘K search (B4).
+- Every action works with a keyboard. Desktop has ⌘K search (B4): actions first (send, send to a bank, add money, swap, lock the account), then pages, chosen with the arrow keys and opened with Enter. An action opens where it happens; nothing moves money or changes a control from the search.
 - 44 × 44px minimum targets on the phone.
 - Status is never colour alone: a word goes with it.
 - Respect `prefers-reduced-motion` and `prefers-color-scheme`. The theme choice (`aurel-theme` in local storage, `data-theme` on `<html>`) overrides the device.
