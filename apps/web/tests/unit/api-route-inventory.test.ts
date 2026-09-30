@@ -22,7 +22,8 @@ const unwrapped: Record<string, string> = {
   "health": "public liveness probe with its own dependency report",
   "auth/session": "session probe returns authenticated:false rather than an error body",
   "aura-tags/[tag]": "public payment page; every failure is an indistinguishable 404",
-  "webhooks/[provider]": "provider-signed ingress; each provider's own scheme, with replay handling"
+  "webhooks/[provider]": "provider-signed ingress; each provider's own scheme, with replay handling",
+  "webhooks/resend": "Resend's Svix-signed delivery reports; only marks a notice's email as bounced"
 };
 
 describe("API route inventory", () => {

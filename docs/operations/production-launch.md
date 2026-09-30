@@ -43,6 +43,7 @@ Set each with `pnpm --filter @aurel/web exec wrangler secret put <NAME>` (no `--
 | --- | --- |
 | `PRIVY_APP_SECRET`, `PRIVY_WEBHOOK_SECRET` | Sign-in and Privy webhooks (required) |
 | `RESEND_API_KEY` | Email notices (a send-only key) |
+| `RESEND_WEBHOOK_SECRET` | Email bounce reports, from the Resend webhook for `/api/webhooks/resend` |
 | `VAPID_PRIVATE_KEY` | Push notices |
 | `INTERCOM_IDENTITY_SECRET`, `FIN_CONNECTOR_TOKEN` | Support chat |
 | `LIFI_API_KEY` | Swap and cross-chain quotes |
