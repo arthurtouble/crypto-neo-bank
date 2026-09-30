@@ -11,6 +11,7 @@ import { useAuraWallet } from "@/lib/client/use-aura-wallet";
 import { AddFromWallet } from "./add-from-wallet";
 import { BankDepositPanel } from "./bank-deposit-panel";
 import { GuestBanner } from "./guest-banner";
+import { shortAddress } from "@/lib/client/address";
 import { useToast } from "./toast";
 
 /** Change B3: everything that shows in Aura when it arrives on Base, from the asset registry. */
@@ -23,10 +24,6 @@ const tabs = [
   { id: "bank", label: "Bank", detail: "US bank details, once Bridge verifies you", icon: Building2 }
 ] as const;
 type Tab = (typeof tabs)[number]["id"];
-
-function shortAddress(address: string) {
-  return `${address.slice(0, 6)}…${address.slice(-4)}`;
-}
 
 /** Guests see what each way does, with one way to sign in. */
 function SignInToAdd({ onSignIn }: { onSignIn: () => void }) {

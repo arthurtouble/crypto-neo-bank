@@ -36,7 +36,7 @@ Every row in `docs/overview/feature-readiness.md` is done or cut. Product work n
 - Go area by area in the listed order, one branch and pull request per area. Update the status table in the same pull request.
 - The redesign changes how screens look, not what they do: no changes to server logic, API contracts, D1, switches, or money rules. Raise a needed behavior change as its own pull request.
 - Skeleton before style: screens follow the locked journeys and wireframes (`docs/product/redesign-journeys.md`, phase 2), then the visual direction (phase 3).
-- Build screens only from the design system: tokens in `apps/web/public/design-tokens.css`, rules in `DESIGN.md` and `docs/product/design-system.md`, rendered at `apps/web/public/design-system.html`. No one-off styles, no literal colours. Areas not yet rebuilt still use `src/app/globals.css` and `product-system.css` (the rebuilt app shell is in `src/app/shell.css`); don't mix the two inside one area.
+- Build screens only from the design system: tokens in `apps/web/public/design-tokens.css`, rules in `DESIGN.md` and `docs/product/design-system.md`, rendered at `apps/web/public/design-system.html`. No one-off styles, no literal colours. Every area is rebuilt, with its styles in an area stylesheet in `src/app` (`shell.css`, `overview.css`, `money.css`, …). The pre-redesign `globals.css`, `identity.css`, and `product-system.css` are trimmed to what the app still renders; don't add to them.
 - Existing e2e specs keep passing; update selectors, never the behavior checked.
 - Don't rewrite copy or do the final refactor yet. Those are steps 3 and 4.
 - Keep docs in sync with the code in the same pull request: internal docs in `docs/` and public docs in `apps/docs`.

@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { indexable, siteOrigin } from "@/lib/site/seo";
-import "@fontsource-variable/archivo";
 import "./globals.css";
 import "./identity.css";
 import "./product-system.css";

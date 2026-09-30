@@ -26,15 +26,9 @@ export const exampleOverview: Overview = {
     metals: { usdCents: 214000, partial: false }, earn: { usdCents: 265000, partial: false }, all: { usdCents: 3168800, partial: false } }
 };
 
-export const exampleSecurityPolicy = {
-  accountLocked: false, enforceAddressBook: false, dailyLimitUsd: null, newAddressDelayHours: 4, policyVersion: 1, updatedAt: at, enforcement: "aura" as const
-};
-
 export const exampleRecipients = [
   { id: "example-recipient", kind: "wallet" as const, name: "Sam (example)", destination: "0x000000000000000000000000000000000000e0b2", detail: "0x0000…e0b2", verified: true }
 ];
-
-export const exampleMoneyAccount = { available: false, account: null, nextAction: null };
 
 /** A few fictional transactions, for the Overview's recent list. */
 export const exampleActivity: ActivityEntry[] = [
