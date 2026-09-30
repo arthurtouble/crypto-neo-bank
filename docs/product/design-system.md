@@ -322,6 +322,16 @@ The journeys in [redesign-journeys.md](redesign-journeys.md#shared-patterns) set
 | Guest | The guest banner, fictional example data, and every action opens sign-in, then returns. |
 | Setup checklist | A card of numbered steps: done ones with a positive check, the current one expanded with its one button, later ones muted. |
 
+## Emails
+
+Notice emails (`apps/web/src/lib/notifications/email.ts`) follow the same system. Email clients can't read CSS variables, so the colours, radii, and font stack are copied from the tokens and inlined. `tests/unit/notification-email.test.ts` fails if they drift from `design-tokens.css`.
+
+- One column, 520px wide, on the canvas colour: the wordmark, one card, then a caption footer.
+- In the card: a caption label for the kind (Money received in positive, Didn't go through in negative, Security in the accent, Completed in secondary), the title in title-1, the message in body, and one primary button, **Open in Aura**.
+- The footer says which notices the customer can turn off. Security notices are always sent.
+- Dark mode uses the dark tokens in clients that support `prefers-color-scheme`.
+- Every email has a plain-text copy with the same words and the link written out.
+
 ## Accessibility
 
 - WCAG 2.2 AA. Text contrast 4.5:1, large text and UI parts 3:1, in both themes.

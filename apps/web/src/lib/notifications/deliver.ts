@@ -2,6 +2,7 @@ import { buildPushPayload, type PushSubscription } from "@block65/webcrypto-web-
 import { readPreferences } from "@aurel/provider-projections";
 import { privyEmail } from "@/lib/auth/privy";
 import { localEdgeUrl } from "@/lib/testing/local-edge";
+import { renderNoticeEmail } from "./email";
 import { notify, type Notice, type NotificationKind } from "./store";
 
 /**
@@ -26,19 +27,13 @@ async function sendEmail(notice: Pending, to: string | null, fetcher: typeof fet
   const key = process.env.RESEND_API_KEY;
   const from = process.env.EMAIL_FROM;
   if (!to || !key || !from) return "skipped";
-  const text = `${notice.body}\n\n${appLink(notice.link)}\n\nYou can choose which transaction notices you get in Aura's Settings. Security notices are always sent.`;
-  const html = `<p>${escape(notice.body)}</p><p><a href="${escape(appLink(notice.link))}">Open Aura</a></p>`
-    + `<p style="color:#666;font-size:12px">You can choose which transaction notices you get in Aura's Settings. Security notices are always sent.</p>`;
+  const { subject, text, html } = renderNoticeEmail(notice, appLink(notice.link));
   const response = await fetcher(`${localEdgeUrl("RESEND_API_URL") ?? RESEND_API}/emails`, { method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", "Idempotency-Key": notice.notification_id },
-    body: JSON.stringify({ from, to: [to], subject: notice.title, text, html }), signal: AbortSignal.timeout(8_000) });
+    body: JSON.stringify({ from, to: [to], subject, text, html }), signal: AbortSignal.timeout(8_000) });
   // 4xx other than rate limits won't succeed on a retry (for example an unverified recipient while Resend is in test mode).
   if (response.ok) return "sent";
   return response.status === 429 || response.status >= 500 ? "retry" : "failed";
-}
-
-function escape(value: string) {
-  return value.replace(/[&<>"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[character]!);
 }
 
 async function sendPush(db: D1Database, notice: Pending, fetcher: typeof fetch): Promise<Channel> {
