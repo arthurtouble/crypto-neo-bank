@@ -53,6 +53,8 @@
 .appFrame .mxField input, .appFrame .mxField select { width: 100%; height: var(--input-height); padding: 0 var(--space-3); border: 1px solid var(--color-line-strong); border-radius: var(--radius-sm); background: var(--color-surface); color: var(--color-text); font: var(--weight-regular) var(--text-body-size) / 1 var(--font-sans); font-variant-numeric: tabular-nums; }
 .appFrame .mxField input:focus-visible, .appFrame .mxField select:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; border-color: var(--color-focus); }
 .appFrame .mxField input[aria-invalid="true"] { border-color: var(--color-negative); box-shadow: 0 0 0 1px var(--color-negative); }
+.appFrame .mxField textarea { width: 100%; min-height: 96px; padding: var(--space-2) var(--space-3); border: 1px solid var(--color-line-strong); border-radius: var(--radius-sm); background: var(--color-surface); color: var(--color-text); font: var(--weight-regular) var(--text-body-size) / var(--text-body-line) var(--font-sans); resize: vertical; }
+.appFrame .mxField textarea:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; border-color: var(--color-focus); }
 .appFrame .mxField input:disabled, .appFrame .mxField select:disabled { background: var(--color-muted); color: var(--color-text-secondary); }
 .appFrame .mxFieldError { color: var(--color-negative); font-size: var(--text-small-size); }
 
@@ -153,10 +155,10 @@
 .mxPickerTrigger:hover { background: var(--color-hover); }
 .mxPickerTrigger:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
 .mxPickerNetwork { color: var(--color-text-secondary); font-weight: var(--weight-medium); }
-.mxPickerOverlay { position: fixed; inset: 0; z-index: 89; background: var(--color-scrim); }
-.mxPicker { position: fixed; z-index: 90; top: 50%; left: 50%; width: min(480px, calc(100vw - 2 * var(--space-4))); max-height: min(640px, calc(100dvh - 2 * var(--space-4))); transform: translate(-50%, -50%); display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-5); border: 1px solid var(--color-line); border-radius: var(--radius-lg); background: var(--color-raised); color: var(--color-text); box-shadow: var(--shadow-2); font-family: var(--font-sans); font-size: var(--text-body-size); line-height: var(--text-body-line); font-variant-numeric: tabular-nums; }
-.mxPickerHead { display: flex; align-items: center; justify-content: space-between; }
-.mxPickerHead h2 { margin: 0; font-size: var(--text-title-2-size); line-height: var(--text-title-2-line); font-weight: var(--weight-semibold); }
+.mxPickerOverlay, .mxDialogOverlay { position: fixed; inset: 0; z-index: 89; background: var(--color-scrim); }
+.mxPicker, .mxDialog { position: fixed; z-index: 90; top: 50%; left: 50%; width: min(480px, calc(100vw - 2 * var(--space-4))); max-height: min(640px, calc(100dvh - 2 * var(--space-4))); transform: translate(-50%, -50%); display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-5); border: 1px solid var(--color-line); border-radius: var(--radius-lg); background: var(--color-raised); color: var(--color-text); box-shadow: var(--shadow-2); font-family: var(--font-sans); font-size: var(--text-body-size); line-height: var(--text-body-line); font-variant-numeric: tabular-nums; }
+.mxPickerHead, .mxDialogHead { display: flex; align-items: center; justify-content: space-between; }
+.mxPickerHead h2, .mxDialogHead h2 { margin: 0; font-size: var(--text-title-2-size); line-height: var(--text-title-2-line); font-weight: var(--weight-semibold); }
 .mxPickerSearch { display: flex; align-items: center; gap: var(--space-2); height: var(--input-height); padding: 0 var(--space-3); border: 1px solid var(--color-line-strong); border-radius: var(--radius-sm); background: var(--color-surface); color: var(--color-text-secondary); }
 .mxPickerSearch:focus-within { border-color: var(--color-focus); box-shadow: 0 0 0 1px var(--color-focus); }
 .mxPickerSearch svg { width: 16px; height: 16px; flex: none; }
@@ -178,9 +180,17 @@
 .mxPickerTrust { display: inline-flex; align-items: center; gap: 4px; color: var(--color-text-secondary); font-size: var(--text-caption-size); white-space: nowrap; }
 .mxPickerTrust svg { width: 12px; height: 12px; color: var(--color-positive); }
 .mxPickerMore { margin-top: var(--space-2); }
+/* A short centred dialog (a bottom sheet on the phone) in the same frame as the picker */
+.mxDialog { width: min(420px, calc(100vw - 2 * var(--space-4))); }
+.mxDialog:focus-visible { outline: none; }
+.mxDialogNote { margin: 0; color: var(--color-text-secondary); font-size: var(--text-small-size); line-height: var(--text-small-line); }
+.mxDialogActions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-2); }
 @media (max-width: 767px) {
-  .mxPicker { top: auto; bottom: 0; left: 0; width: 100%; max-height: calc(100dvh - var(--space-8)); transform: none; border-radius: var(--radius-sheet) var(--radius-sheet) 0 0; padding-bottom: calc(var(--space-5) + env(safe-area-inset-bottom)); }
+  .mxPicker, .mxDialog { top: auto; bottom: 0; left: 0; width: 100%; max-height: calc(100dvh - var(--space-8)); transform: none; border-radius: var(--radius-sheet) var(--radius-sheet) 0 0; padding-bottom: calc(var(--space-5) + env(safe-area-inset-bottom)); }
   .mxPickerSearch input { font-size: 16px; }
+  .mxDialog { width: 100%; }
+  .mxDialogActions { flex-direction: column-reverse; }
+  .mxDialogActions .appButton { width: 100%; height: var(--control-height-lg); }
 }
 
 
@@ -230,7 +240,7 @@
   .appFrame .mxReceiveAddress { justify-items: center; }
   .appFrame .mxReceiveAddress .appButton { width: 100%; height: var(--control-height-lg); }
   .appFrame .mxFieldRow { grid-template-columns: minmax(0, 1fr); }
-  .appFrame .mxField input, .appFrame .mxField select { font-size: 16px; }
+  .appFrame .mxField input, .appFrame .mxField select, .appFrame .mxField textarea { font-size: 16px; }
   .appFrame .mxCard .appButton { justify-self: stretch; height: var(--control-height-lg); }
   .appFrame .mxAmountRow { grid-template-columns: minmax(0, 1fr) 110px; }
   /* The form and its review already say all this on a phone. */

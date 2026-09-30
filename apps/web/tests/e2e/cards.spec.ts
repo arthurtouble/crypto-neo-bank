@@ -179,7 +179,7 @@ test("freezing stops payments at once; unfreezing and a higher limit need the pa
 
   await controls(page).getByRole("button", { name: "Freeze card" }).click();
   await expect(toast(page, "Card frozen")).toBeVisible({ timeout: 20_000 });
-  await expect(page.getByRole("region", { name: /^Aura card ending/ })).toContainText("FROZEN");
+  await expect(page.getByRole("region", { name: /^Aura card ending/ })).toContainText("Frozen");
   expect(await edge("/__stripe/authorize", { amount: "5" })).toMatchObject({ approved: false });
 
   // Cancelling the passkey prompt leaves it frozen.

@@ -424,33 +424,7 @@
 .optionalLabel { color: var(--muted); font-weight: 500; }
 .financialModal form { display: grid; gap: 15px; }
 
-.cardWorkspace { max-width: 1060px; display: grid; grid-template-columns: minmax(360px, .95fr) minmax(360px, 1.05fr); gap: 18px; align-items: start; }
-.aurelCard { position: relative; aspect-ratio: 1.586; min-width: 0; overflow: hidden; padding: 30px; display: flex; flex-direction: column; justify-content: space-between; color: white; border-radius: 16px; box-shadow: 0 25px 65px rgba(11, 23, 32, .22); }
-.aurelCard.issued { background: linear-gradient(140deg, #1a4935, #07110f 72%); }
-.aurelCard.unissued { background: linear-gradient(140deg, #31463c, #111a16 72%); }
-.aurelCard .cardShine { pointer-events: none; }
-.cardPreviewIcon { position: relative; z-index: 1; margin-top: auto; margin-bottom: 16px; color: rgba(255,255,255,.65); }
-.aurelCard .cardNumber { font-size: var(--type-row-title); }
-.aurelCard .membershipBottom { min-height: 20px; align-items: flex-end; }
-.aurelCard .membershipBottom b { font-size: var(--type-body-small); }
-.cardOverview, .cardControlPanel { padding: 28px; }
-.cardSetup { min-height: 180px; display: grid; grid-template-columns: 36px minmax(0, 1fr); align-content: center; gap: 14px; }
-.cardSetup > svg { color: var(--accent); }
-.cardSetup strong, .cardSetup small { display: block; }
-.cardSetup strong { font-size: var(--type-row-title); }
-.cardSetup small { margin-top: 5px; color: var(--muted); font-size: var(--type-label); }
-.cardSetup .button { grid-column: 2; justify-self: start; }
-.cardLimitGrid { min-height: 180px; display: grid; grid-template-columns: 1fr 1fr; align-content: center; gap: 1px; }
-.cardLimitGrid span { padding: 20px; display: grid; gap: 7px; color: var(--muted); font-size: var(--type-label); border-left: 1px solid var(--border); }
-.cardLimitGrid strong { color: var(--text); font-size: var(--type-row-title); }
-.cardControlPanel { grid-column: 1 / -1; }
-.cardControlList { margin-top: 16px; display: grid; grid-template-columns: 1fr 1fr; column-gap: 22px; }
-.cardControlList > div { min-height: 66px; display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; align-items: center; gap: 12px; border-top: 1px solid var(--border); color: var(--muted); }
-.cardControlList > div > span { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 50%; background: var(--surface-subtle); }
-.cardControlList strong { font-size: var(--type-row-title); }
-.cardControlList em { font-size: var(--type-caption); font-style: normal; font-weight: 650; }
 .cardAuthority { grid-column: 1 / -1; margin: -6px 2px 0; }
-.cardWorkspaceLoading { min-height: 260px; display: flex; align-items: center; justify-content: center; gap: 9px; }
 
 /* Security, settings, status, and setup */
 .productShell .securityChecklist > div,
@@ -598,20 +572,14 @@
   .insightMetrics article:nth-child(2) { border-right: 0; }
   .insightMetrics article:nth-child(-n+2) { border-bottom: 1px solid var(--border); }
   .goalGrid { grid-template-columns: 1fr; }
-  .cardWorkspace { grid-template-columns: 1fr; }
-  .cardControlPanel, .cardAuthority { grid-column: auto; }
-  .cardControlList { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 520px) {
-  .insightsSummary, .cardOverview, .cardControlPanel { padding: 22px 18px; }
+  .insightsSummary { padding: 22px 18px; }
   .insightMetrics { grid-template-columns: 1fr; }
   .insightMetrics article { min-height: 86px; border-right: 0; border-bottom: 1px solid var(--border); }
   .insightMetrics article:last-child { border-bottom: 0; }
   .insightCategory { grid-template-columns: 96px minmax(70px, 1fr) 74px; gap: 9px; }
-  .aurelCard { padding: 23px; }
-  .cardWorkspace { grid-template-columns: minmax(0, 1fr); }
-  .cardSetup { grid-template-columns: 32px minmax(0, 1fr); }
   .billRows > div { grid-template-columns: 34px minmax(0, 1fr) auto; }
   .billRows button, .billRows em { grid-column: 3; grid-row: 1 / span 2; }
   .billRows b { grid-column: 2; text-align: left; color: var(--muted); font-size: var(--type-caption); }
@@ -657,14 +625,6 @@
 .supportActions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
 
 /* Card */
-.cardSecureDetails { display: grid; gap: 12px; margin: 16px 0; padding: 16px; border-radius: var(--radius-panel); background: #0f1f18; color: #f5f3ee; }
-.cardSecureDetails span { display: grid; gap: 4px; font-size: var(--type-caption); color: #c9c7c0; }
-.stripeFrame { min-height: 24px; }
-.cardActivityRow .cardDispute { display: grid; gap: 10px; margin-top: 12px; }
-.cardActivityRow .cardDispute textarea { min-height: 90px; padding: 10px; border: 1px solid var(--hairline); border-radius: var(--radius-control); background: var(--surface); color: var(--text); font: inherit; }
-.cardActivityAmount { display: grid; justify-items: end; gap: 6px; }
-.cardLimitForm { display: flex; gap: 8px; align-items: center; }
-.cardLimitForm input { width: 90px; padding: 7px 9px; border: 1px solid var(--hairline); border-radius: var(--radius-control); background: var(--surface); color: var(--text); }
 
 /* Insights: money in and out over time. Series colors are validated for color-vision deficiency on both surfaces. */
 .insightChart { --series-in: #1baf7a; --series-out: #eb6834; margin: 0 0 30px; }

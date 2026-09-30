@@ -1,4 +1,5 @@
 import type { ActivityEntry } from "@/lib/activity/entries";
+import type { CardState } from "@/lib/cards/service";
 import type { Overview } from "@/lib/overview/read";
 
 /**
@@ -44,3 +45,19 @@ export const exampleActivity: ActivityEntry[] = [
   { id: "example-sent", origin: "aura", type: "sent", status: "completed", createdAt: "2026-01-14T18:05:00.000Z", chainId: 8453,
     asset: "USDC", amount: "250", counterparty: "0x000000000000000000000000000000000000e0b2", source: "example" }
 ];
+
+/** A fictional card, for the guest Cards page: no real card number, key, or merchant. */
+export const exampleCard: Extract<CardState, { state: "card" }> = {
+  state: "card",
+  card: { id: "example-card", lastFour: "1000", brand: "visa", status: "active", expMonth: 9, expYear: 2029, dailyLimitUsd: 500, wallets: { applePay: false, googlePay: false } },
+  allowance: { status: "available", allowanceUsd: "37.50", balanceUsd: "1825.50", spender: "0x000000000000000000000000000000000000e0c3", observedAt: at },
+  activity: [
+    { id: "example-card-1", kind: "payment", status: "completed", amountUsd: "12.00", merchant: "Corner Cafe", createdAt: "2026-01-15T09:12:00.000Z",
+      transactionId: null, disputable: false, dispute: null, transactionHash: null, authorizationId: null },
+    { id: "example-card-2", kind: "payment", status: "completed", amountUsd: "30.00", merchant: "Bookshop", createdAt: "2026-01-14T16:40:00.000Z",
+      transactionId: null, disputable: false, dispute: null, transactionHash: null, authorizationId: null },
+    { id: "example-card-3", kind: "payment", status: "declined", amountUsd: "400.00", merchant: "Electronics", createdAt: "2026-01-14T11:05:00.000Z",
+      transactionId: null, disputable: false, dispute: null, transactionHash: null, authorizationId: null }
+  ],
+  activityStatus: "available", publishableKey: null, walletsEnabled: false, observedAt: at
+};

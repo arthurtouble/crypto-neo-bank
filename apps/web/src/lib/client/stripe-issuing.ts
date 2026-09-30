@@ -30,4 +30,8 @@ export async function loadStripe(publishableKey: string): Promise<StripeIssuing>
   return window.Stripe(publishableKey, { betas: ["issuing_elements_2", "issuing_add_to_wallet_button_element_1"] });
 }
 
-export const cardElementStyle = { base: { fontSize: "16px", color: "#f5f3ee", fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", letterSpacing: "0.04em" } };
+/** Stripe's frames can't read CSS variables, so pass them the page's text colour and mono font as values. */
+export function cardElementStyle() {
+  const tokens = getComputedStyle(document.documentElement);
+  return { base: { fontSize: "16px", color: tokens.getPropertyValue("--color-text").trim(), fontFamily: tokens.getPropertyValue("--font-mono").trim() } };
+}
