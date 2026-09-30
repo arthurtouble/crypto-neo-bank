@@ -23,6 +23,7 @@ pnpm typecheck:all       # tsc/astro check, every package (CI runs this)
 pnpm test:unit           # vitest (web) + scripts/mainnet-readiness.test.mjs
 pnpm test:e2e            # builds, then Playwright desktop + mobile Chromium
 pnpm build
+pnpm production:check   # what the production Worker config still lacks (exits 1 until ready)
 ```
 
 A single unit test: `pnpm --filter @aurel/web exec vitest run tests/unit/<file>.test.ts`.

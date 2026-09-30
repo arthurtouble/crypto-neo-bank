@@ -13,6 +13,7 @@ These files contain operational and security-sensitive context. Keep them in the
 - [Codebase audit, 25 September 2026](overview/codebase-audit-2026-09-25.md): findings, target architecture, and the refactor plan.
 - [Operations runbook](operations/operations-runbook.md): provider activation, secrets, migrations, reconciliation, the operations app (`apps/ops`), and recovery.
 - [Monitoring and alerts](operations/monitoring.md): what the Workers log, how to find a failure, and the Cloudflare alerts to set up.
+- [Production launch](operations/production-launch.md): the ordered steps to production, and `pnpm production:check`.
 - [Architecture](architecture/architecture.md): systems of record and the rule that D1 never owns money.
 - [Supported assets](architecture/assets.md): the asset registry, how to add an asset, and how to pause one.
 - [Money actions](architecture/money-actions.md): how every customer money movement is prepared, signed, verified, and recorded.

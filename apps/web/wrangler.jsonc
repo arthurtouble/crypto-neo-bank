@@ -16,7 +16,11 @@
     "NEXT_PUBLIC_PRIVY_APP_ID": "cmub5evr4013l0cjs0w5dijlb",
     // Cloudflare Access for the operations app (apps/ops): the team domain and the ops application's audience tag. Empty refuses every operator.
     "CF_ACCESS_TEAM_DOMAIN": "",
-    "CF_ACCESS_AUD": ""
+    "CF_ACCESS_AUD": "",
+    "LIFI_INTEGRATOR": "aurel",
+    "LIFI_INTEGRATOR_FEE": "0"
+    // Still to set before launch (docs/operations/production-launch.md, pnpm production:check): a production Privy app ID,
+    // the Access values above, EMAIL_FROM, APP_ORIGIN, VAPID_PUBLIC_KEY, and INTERCOM_APP_ID.
   },
   "secrets": {
     "required": ["PRIVY_APP_SECRET"]
