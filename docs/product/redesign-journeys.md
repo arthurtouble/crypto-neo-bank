@@ -125,7 +125,7 @@ These change what a flow does, not just how it looks. The owner approved all six
 | B3 | Receive lists every asset that shows up when received on Base, from the registry. Today the copy names only USDC, ETH, and cbBTC. | J4.1 | Done ([#71](https://github.com/arthurtouble/crypto-neo-bank/pull/71)) |
 | B4 | ⌘K search includes actions (Send, Deposit, Swap, lock account), not only pages | J0.1 | Done ([#72](https://github.com/arthurtouble/crypto-neo-bank/pull/72)) |
 | B5 | "Send with Aura" on the public pay page, opening Send with the tag, using the existing `sendTo` and `tag` link | J19 | Approved |
-| B6 | Card payment removed from the public pay page until it exists | J19 | Approved |
+| B6 | Card payment removed from the public pay page until it exists | J19 | Done ([#73](https://github.com/arthurtouble/crypto-neo-bank/pull/73)); bank transfer shows only when shared, as the J19 wireframe says |
 
 ## Decisions
 

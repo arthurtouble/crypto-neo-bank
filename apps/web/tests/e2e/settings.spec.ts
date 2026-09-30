@@ -113,6 +113,10 @@ test("an Aura tag can be saved and published", async ({ page }) => {
   await expect(toast(page, "Aura tag saved")).toBeVisible({ timeout: 20_000 });
   await page.goto(`/pay/${tag}`);
   await expect(page.getByText("Test Customer")).toBeVisible({ timeout: 30_000 });
+  // Only the ways that work (B6): crypto, no card payment, and no bank transfer unless its details were shared.
+  await expect(page.getByRole("heading", { name: "Crypto" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Card payment" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Bank transfer" })).toHaveCount(0);
 });
 
 test("the customer's data downloads straight away, and nothing offers to delete it", async ({ page }) => {
