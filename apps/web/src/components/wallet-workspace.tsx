@@ -10,13 +10,14 @@ import { useBalance, useReadContracts } from "wagmi";
 import { HOME_CHAIN, SUPPORTED_CHAINS } from "@/config/chains";
 import { assetsFor, networkName, sendDestinations } from "@/lib/assets/registry";
 import { ApiError, useApi } from "@/lib/client/api";
+import { formatDateTime, formatToken, formatUsd, shortAddress } from "@/lib/format";
 import { displayRawAmount } from "@/lib/swap/review-model";
 import { useAction } from "@/lib/client/use-action";
 import { MovePreviousAccount } from "./move-previous-account";
 import type { RouteQuote } from "./swap-workspace";
-import { shortAddress } from "@/lib/client/address";
 import { useToast } from "./toast";
 import { TransactionProgress } from "./transaction-progress";
+import { LoadingState, Notice } from "./states";
 
 /** What can be sent: the registry's "send" assets, on the network where the account holds each (Base, or Ethereum for Tether Gold). The server checks the same list and any pause. */
 const SENDABLE = assetsFor("send");
@@ -34,8 +35,7 @@ type Recipient = { id: string; kind: "wallet" | "bank"; name: string; destinatio
 
 function amountText(value: bigint | undefined, decimals: number) {
   if (value === undefined) return "—";
-  const numeric = Number(formatUnits(value, decimals));
-  return numeric.toLocaleString(undefined, { maximumFractionDigits: numeric < 1 ? 6 : 4 });
+  return formatToken(Number(formatUnits(value, decimals)));
 }
 
 function assetId(symbol: AssetSymbol) {
@@ -56,7 +56,7 @@ function expired(quote: RouteQuote) {
 function feesUsd(quote: RouteQuote): string | null {
   const from = Number(quote.fromAmountUsd), to = Number(quote.toAmountUsd);
   const fees = quote.fromAmountUsd && quote.toAmountUsd && Number.isFinite(from) && Number.isFinite(to) ? Math.max(0, from - to) : quote.providerFeeUsd;
-  return fees === null ? null : fees.toLocaleString(undefined, { style: "currency", currency: "USD", minimumFractionDigits: 2 });
+  return fees === null ? null : formatUsd(fees);
 }
 
 /** Send crypto from the Aura account (journey J5): amount and asset, then who, then its own review step and the passkey. */
@@ -227,9 +227,9 @@ export function WalletWorkspace({ children }: { children?: React.ReactNode }) {
   }, [ready]);
 
   if (!ready || !address) {
-    return <div className="mxState" role="status"><LoaderCircle className="spin" aria-hidden="true" /><div><strong>Setting up your account</strong>
+    return <LoadingState><div><strong>Setting up your account</strong>
       {slowSetup && <p>This is taking longer than usual. Refresh the page. If it keeps happening, contact support.</p>}
-      {inFlight && <p role="alert">A transfer may be pending. Check Transactions before you try again.</p>}</div></div>;
+      {inFlight && <p role="alert">A transfer may be pending. Check Transactions before you try again.</p>}</div></LoadingState>;
   }
 
   const done = transfer.phase === "done" || handedOff;
@@ -266,7 +266,7 @@ export function WalletWorkspace({ children }: { children?: React.ReactNode }) {
                 <p className="mxHint">{selected.value === undefined ? "Balance unavailable" : `${amountText(selected.value, selected.decimals)} ${asset} available`}
                   {selected.value !== undefined && selected.value > 0n && <> · <button type="button" className="appTextButton mxInlineButton" onClick={useMax}>Max</button></>}</p>
                 <label className="mxField">Network<select value={destination.chainId} disabled={inFlight} onChange={(event) => setNetwork(Number(event.target.value))}>{destinations.map((item) => <option key={item.chainId} value={item.chainId}>{item.name}</option>)}</select></label>
-                {crossChain && <p className="mxNote">Sent through LI.FI. Its fees come out of the amount, so the recipient gets a little less. You&apos;ll see how much before you confirm.</p>}
+                {crossChain && <Notice>Sent through LI.FI. Its fees come out of the amount, so the recipient gets a little less. You&apos;ll see how much before you confirm.</Notice>}
                 {(savedRecipients.length > 0 || recentRecipients.length > 0 || ownWallets.length > 0) && <div className="mxFaces" role="group" aria-label="Recipients">
                   {savedRecipients.map((item) => <button type="button" key={item.id} aria-pressed={item.destination.toLowerCase() === recipient.toLowerCase()} disabled={inFlight} onClick={() => setRecipient(item.destination)}>
                     <span className="mxFace" aria-hidden="true">{item.name.slice(0, 1).toUpperCase()}</span><strong>{item.name}</strong><small>{item.detail}{!item.verified && " · waiting period"}</small></button>)}
@@ -278,7 +278,7 @@ export function WalletWorkspace({ children }: { children?: React.ReactNode }) {
                 <div className="mxFieldGroup">
                   <label className="mxField">To<input className="mxMonoInput" autoComplete="off" autoCapitalize="none" spellCheck={false} placeholder="0x…" value={recipient} disabled={inFlight} onChange={(event) => { setRecipient(event.target.value.trim()); setSaveRecipient(false); }} /></label>
                   {validRecipient && <p className="mxHint" data-testid="recipient-status">
-                    {tagged ? `Aura tag @${requestedTag}` : ownWallet ? "Your wallet" : saved ? `Saved recipient: ${saved.name}${waitingUntil ? `. In its waiting period until ${waitingUntil.toLocaleString()}.` : ""}` : "New address. Check it carefully."}</p>}
+                    {tagged ? `Aura tag @${requestedTag}` : ownWallet ? "Your wallet" : saved ? `Saved recipient: ${saved.name}${waitingUntil ? `. In its waiting period until ${formatDateTime(waitingUntil)}.` : ""}` : "New address. Check it carefully."}</p>}
                 </div>
                 {canSave && <label className="mxCheck"><input type="checkbox" checked={saveRecipient} disabled={inFlight} onChange={(event) => setSaveRecipient(event.target.checked)} /> Save as a recipient</label>}
                 {canSave && saveRecipient && <label className="mxField">Name<input autoComplete="off" maxLength={48} placeholder="For example, Sam" value={nickname} disabled={inFlight} onChange={(event) => setNickname(event.target.value)} /></label>}
@@ -297,7 +297,7 @@ export function WalletWorkspace({ children }: { children?: React.ReactNode }) {
                   <div><dt>{crossChain ? `Network fee on ${networkName(selected.chainId)}` : "Network fee"}</dt><dd className="mxPositive">Paid by Aura</dd></div>
                   {canSave && saveRecipient && <div><dt>Save as</dt><dd>{nickname.trim()}</dd></div>}
                 </dl>
-                <p className="mxNote mxNoteWarning">{crossChain ? `Transfers can't be reversed. Check that the recipient can receive ${asset} on ${destination.name}.` : "Transfers can't be reversed. Check the address before you confirm."}</p>
+                <Notice tone="warning">{crossChain ? `Transfers can't be reversed. Check that the recipient can receive ${asset} on ${destination.name}.` : "Transfers can't be reversed. Check the address before you confirm."}</Notice>
                 {formError && <p className="mxFieldError" role="alert">{formError}</p>}
                 <TransactionProgress label="Transfer" phase={transfer.phase} action={transfer.action} outcomeUnknown={transfer.outcomeUnknown} />
                 {done

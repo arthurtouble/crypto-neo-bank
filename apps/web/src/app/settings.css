@@ -46,7 +46,7 @@
 /* Saved recipients */
 .appFrame .stList { margin: 0; padding: 0; list-style: none; display: grid; }
 .appFrame .stListRow { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto auto; gap: var(--space-3); align-items: center; min-height: var(--row-height); padding: var(--space-2) 0; border-top: 1px solid var(--color-line); }
-.appFrame .stFace { width: 32px; height: 32px; display: grid; place-items: center; border-radius: var(--radius-pill); background: var(--color-muted); color: var(--color-text-secondary); font-size: var(--text-small-size); font-weight: var(--weight-semibold); }
+.appFrame .stFace { font-size: var(--text-small-size); font-weight: var(--weight-semibold); }
 .appFrame .stListRow .appIconButton svg { width: 16px; height: 16px; }
 .appFrame .stEmpty { padding: var(--space-4) 0; border-top: 1px solid var(--color-line); color: var(--color-text-secondary); font-size: var(--text-small-size); }
 .appFrame .stAddForm { padding-top: var(--space-4); border-top: 1px solid var(--color-line); }
@@ -72,8 +72,8 @@
   .appFrame .stNavChevron { display: block; width: 16px; height: 16px; color: var(--color-text-tertiary); }
   .appFrame .stRow { flex-wrap: wrap; }
   .appFrame .stRow .stRowText { flex: 1 1 200px; }
-  .appFrame .stNumber { font-size: 16px; }
+  .appFrame .stNumber { font-size: var(--text-input-phone); }
   .appFrame .stCard .appButton { height: var(--control-height-lg); }
   .appFrame .stListRow { grid-template-columns: 32px minmax(0, 1fr) auto; }
-  .appFrame .stListRow .txStatus { display: none; }
+  .appFrame .stListRow .appStatus { display: none; }
 }

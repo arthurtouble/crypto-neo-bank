@@ -67,7 +67,7 @@ test("a customer verifies with Bridge, gets US bank details, and a bank deposit 
   await expect(row).toBeVisible({ timeout: 30_000 });
   await expect(row).toContainText("25 USDC");
   await expect(row).toContainText("Jane Customer");
-  await expect(page.locator(".activityRow").filter({ hasText: BRIDGE.sender.slice(0, 7) })).toHaveCount(0);
+  await expect(page.locator(".activityRow").filter({ hasText: BRIDGE.sender.slice(0, 6) })).toHaveCount(0);
   await row.click();
   await expect(page.getByRole("dialog")).toContainText("From");
   await expect(page.getByRole("dialog")).toContainText("Jane Customer");

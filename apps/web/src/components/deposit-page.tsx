@@ -8,12 +8,13 @@ import { useEffect, useState } from "react";
 import { HOME_CHAIN } from "@/config/chains";
 import { assetsFor } from "@/lib/assets/registry";
 import { useAuraWallet } from "@/lib/client/use-aura-wallet";
+import { shortAddress } from "@/lib/format";
 import { AddFromWallet } from "./add-from-wallet";
 import { BankDepositPanel } from "./bank-deposit-panel";
 import { CopyButton } from "./copy-button";
-import { GuestBanner } from "./guest-banner";
-import { shortAddress } from "@/lib/client/address";
+import { MoneyPage } from "./money-page";
 import { useToast } from "./toast";
+import { LoadingState, Notice } from "./states";
 
 /** Change B3: everything that shows in Aura when it arrives on Base, from the asset registry. */
 const RECEIVABLE = assetsFor("hold", HOME_CHAIN.id);
@@ -37,8 +38,8 @@ function SettingUp() {
     const timer = window.setTimeout(() => setSlow(true), 15_000);
     return () => window.clearTimeout(timer);
   }, []);
-  return <div className="mxState" role="status"><LoaderCircle className="spin" aria-hidden="true" /><div><strong>Setting up your account</strong>
-    {slow && <p>This is taking longer than usual. Refresh the page. If it keeps happening, contact support.</p>}</div></div>;
+  return <LoadingState><div><strong>Setting up your account</strong>
+    {slow && <p>This is taking longer than usual. Refresh the page. If it keeps happening, contact support.</p>}</div></LoadingState>;
 }
 
 function ReceivePanel({ address, isExample }: { address: string; isExample: boolean }) {
@@ -56,7 +57,7 @@ function ReceivePanel({ address, isExample }: { address: string; isExample: bool
     <ul className="mxAssetList" aria-label="Assets you can receive on Base">
       {RECEIVABLE.map((asset) => <li key={asset.id}><strong>{asset.symbol}</strong><small>{asset.name}</small></li>)}
     </ul>
-    <p className="mxNote mxNoteWarning">Only send on Base. Money sent on another network, or a token not listed here, won&apos;t show in Aura. To add from another network, use From a wallet.</p>
+    <Notice tone="warning">Only send on Base. Money sent on another network, or a token not listed here, won&apos;t show in Aura. To add from another network, use From a wallet.</Notice>
   </section>;
 }
 
@@ -113,9 +114,7 @@ export function DepositPage() {
   }
 
   const needsWallet = loading || (!isExample && (!walletReady || !address));
-  return <div className="mxPage">
-    {(isExample || loading) && <GuestBanner onSignIn={login} ready={ready} />}
-    <header className="mxHead"><h1>Deposit</h1></header>
+  return <MoneyPage title="Deposit" guest={isExample || loading} onSignIn={login} ready={ready}>
     <div className="mxColumns">
       <div className="mxMain">
         <div className="mxTabs" role="tablist" aria-label="Ways to deposit">
@@ -168,5 +167,5 @@ export function DepositPage() {
         </section>
       </aside>
     </div>
-  </div>;
+  </MoneyPage>;
 }

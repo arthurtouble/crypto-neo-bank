@@ -77,6 +77,8 @@
   --text-amount-line: 36px;
   --text-amount-hero-size: 52px;
   --text-amount-hero-line: 56px;
+  /* Text inside inputs on the phone: 16px, so the browser doesn't zoom into the field */
+  --text-input-phone: 16px;
   --tracking-tight: -0.02em;
   --tracking-snug: -0.01em;
 

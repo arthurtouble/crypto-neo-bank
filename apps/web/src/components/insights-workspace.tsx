@@ -2,12 +2,13 @@
 
 import { usePrivy } from "@privy-io/react-auth";
 import { useQuery } from "@tanstack/react-query";
-import { LoaderCircle } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useApi } from "@/lib/client/api";
 import { exampleInsightActivity, exampleInsightsNow } from "@/lib/example/data";
+import { formatUsd } from "@/lib/format";
 import { buildInsights, type InsightBucket, type InsightMerchant } from "@/lib/insights/presentation";
 import { GuestBanner } from "./guest-banner";
+import { LoadingState, Notice } from "./states";
 
 type Insights = {
   periodDays: number;
@@ -23,8 +24,8 @@ type Insights = {
 };
 
 const periods = [7, 30, 90, 365] as const;
-const money = new Intl.NumberFormat(undefined, { style: "currency", currency: "USD", maximumFractionDigits: 0 });
-const exact = new Intl.NumberFormat(undefined, { style: "currency", currency: "USD" });
+const money = { format: (value: number) => formatUsd(value, { whole: true }) };
+const exact = { format: (value: number) => formatUsd(value) };
 
 function bucketLabel(start: string, unit: Insights["over"]["unit"], long = false) {
   const date = new Date(start);
@@ -51,7 +52,7 @@ function InOutChart({ data }: { data: Insights }) {
   return <section className="mxCard inChart" aria-labelledby="in-out-heading">
     <div className="inChartHead"><h2 id="in-out-heading">Money in and out</h2>
       {series.length > 1 && <div className="chartLegend inLegend">{series.map((item) => <span key={item.key}><i className={item.className} />{item.name}</span>)}</div>}</div>
-    {!series.length ? <p className="mxNote mxNoteWarning">Money in and out can&apos;t all be read right now.</p> : <>
+    {!series.length ? <Notice tone="warning">Money in and out can&apos;t all be read right now.</Notice> : <>
       {series.length < 2 && <p className="mxHint">{data.incomingComplete ? "Money out" : "Money in"} can&apos;t all be read right now, so only {series[0].name.toLowerCase()} is shown.</p>}
       <div className="inPlot" onMouseLeave={() => setActive(null)}>
         <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`${series.map((item) => item.name).join(" and ")} by ${data.over.unit}`} preserveAspectRatio="none">
@@ -119,7 +120,7 @@ function Categories({ data }: { data: Insights }) {
 function TopMerchants({ data }: { data: Insights }) {
   const peak = Math.max(...data.topMerchants.map((item) => item.total), 1);
   return <section className="mxCard" aria-labelledby="merchants-heading"><h2 id="merchants-heading">Top card merchants</h2>
-    {!data.outgoingComplete ? <p className="mxNote mxNoteWarning">Card payments can&apos;t all be read right now.</p>
+    {!data.outgoingComplete ? <Notice tone="warning">Card payments can&apos;t all be read right now.</Notice>
       : data.topMerchants.length ? <ul className="inBars">{data.topMerchants.map((item) => <BarRow key={item.name} testId="top-merchant" name={item.name}
         note={`${item.payments} payment${item.payments === 1 ? "" : "s"}`} value={item.total} peak={peak} />)}</ul>
         : <p className="mxHint">No card payments in this period.</p>}
@@ -154,11 +155,11 @@ export function InsightsWorkspace() {
     <header className="txHead"><h1>Insights</h1>
       <div className="appSegmented" role="group" aria-label="Insight period">{periods.map((period) =>
         <button key={period} type="button" aria-pressed={days === period} onClick={() => setDays(period)}>{period === 365 ? "1Y" : `${period}D`}</button>)}</div></header>
-    {loading || (!isExample && query.isPending) ? <div className="txState" role="status"><LoaderCircle className="spin" aria-hidden="true" /> Loading insights</div>
-      : !data ? <p className="mxNote mxNoteError" role="alert">{query.error?.message ?? "Insights couldn't be loaded."} <button type="button" className="appTextButton mxInlineButton" onClick={() => void query.refetch()}>Try again</button></p>
+    {loading || (!isExample && query.isPending) ? <LoadingState label="Loading insights" />
+      : !data ? <Notice tone="error" role="alert" onRetry={() => void query.refetch()}>{query.error?.message ?? "Insights couldn't be loaded."}</Notice>
         : <>
           <dl className="inStats">{stats.map((stat) => <div key={stat.label}><dt>{stat.label}</dt>
-            <dd data-testid={stat.testId} className={stat.unavailable ? "inUnavailable" : undefined}>{stat.value}</dd></div>)}</dl>
+            <dd data-testid={stat.testId} className={stat.unavailable ? "appUnavailable" : undefined}>{stat.value}</dd></div>)}</dl>
           <InOutChart data={data} />
           <div className="inCards"><Categories data={data} /><TopMerchants data={data} /></div>
           {data.totals.unvalued > 0 && <p className="mxHint">{data.totals.unvalued} completed action{data.totals.unvalued === 1 ? "" : "s"} could not be valued in dollars and {data.totals.unvalued === 1 ? "is" : "are"} left out.</p>}

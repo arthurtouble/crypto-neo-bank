@@ -2,20 +2,22 @@
 
 import { usePrivy } from "@privy-io/react-auth";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { LoaderCircle, Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import type { AuthorizationRequest } from "@/lib/actions/privy-relay";
 import { ApiError, useApi } from "@/lib/client/api";
 import { useAuraWallet } from "@/lib/client/use-aura-wallet";
+import { formatDateTime, shortAddress } from "@/lib/format";
 import { SettingRow } from "./setting-row";
 import { useToast } from "./toast";
+import { LoadingState, Notice } from "./states";
+import { StatusDot } from "./status-dot";
 
 type Policy = { accountLocked: boolean; enforceAddressBook: boolean; dailyLimitUsd: number | null; newAddressDelayHours: number;
   policyVersion: number; updatedAt: string; enforcement: "aura" };
 type PolicyChange = Partial<Pick<Policy, "accountLocked" | "enforceAddressBook" | "dailyLimitUsd" | "newAddressDelayHours">>;
 type Entry = { entryId: string; address: string; label: string; createdAt: string; availableAt: string; lastUsedAt?: string };
 
-function short(value: string) { return `${value.slice(0, 7)}…${value.slice(-5)}`; }
 
 /** A whole number within bounds, or undefined when the draft isn't one. */
 function wholeNumber(draft: string, min: number, max: number) {
@@ -29,7 +31,7 @@ function usePolicy() {
   return useQuery({ queryKey: ["security-policy", user?.id], enabled: Boolean(user), queryFn: () => api<{ policy: Policy }>("/api/security/policy") });
 }
 
-const Loading = ({ label }: { label: string }) => <section className="mxCard stCard"><div className="mxState" role="status"><LoaderCircle className="spin" aria-hidden="true" /> {label}</div></section>;
+const Loading = ({ label }: { label: string }) => <section className="mxCard stCard"><LoadingState label={label} /></section>;
 
 /** The emergency lock, daily limit, and saved-recipients-only. Tightening applies at once; loosening needs the passkey. */
 export function TransactionControls() {
@@ -75,11 +77,11 @@ export function TransactionControls() {
   }
 
   if (policy.isPending) return <Loading label="Loading transaction controls…" />;
-  if (policy.isError || !policy.data) return <section className="mxCard stCard"><p className="mxNote mxNoteError" role="alert">We couldn&apos;t load your controls. Your limits still apply.</p></section>;
+  if (policy.isError || !policy.data) return <section className="mxCard stCard"><Notice tone="error" role="alert">We couldn&apos;t load your controls. Your limits still apply.</Notice></section>;
   const current = policy.data.policy;
   return <section className="mxCard stCard" id="emergency-lock" aria-labelledby="controls-heading">
     <div className="stCardHead"><h2 id="controls-heading">Transaction controls</h2>
-      <span className={`txStatus ${current.accountLocked ? "txStatus-pending" : "txStatus-completed"}`}>{current.accountLocked ? "Locked" : "Active"}</span></div>
+      <StatusDot tone={current.accountLocked ? "warning" : "positive"} label={current.accountLocked ? "Locked" : "Active"} /></div>
     <SettingRow label title="Emergency lock" detail="Stop all sends, swaps, and Earn moves. Unlocking needs your passkey.">
       <input type="checkbox" className="appSwitch" checked={current.accountLocked} disabled={update.isPending} onChange={(event) => update.mutate({ accountLocked: event.target.checked })} /></SettingRow>
     <SettingRow label title="Daily transfer limit" detail="In USD. Leave empty for no limit.">
@@ -122,16 +124,16 @@ export function SavedRecipients() {
   }
 
   if (addresses.isPending || policy.isPending) return <Loading label="Loading saved recipients…" />;
-  if (addresses.isError || policy.isError) return <section className="mxCard stCard"><p className="mxNote mxNoteError" role="alert">We couldn&apos;t load your saved recipients. Try again.</p></section>;
+  if (addresses.isError || policy.isError) return <section className="mxCard stCard"><Notice tone="error" role="alert">We couldn&apos;t load your saved recipients. Try again.</Notice></section>;
   const current = policy.data?.policy;
   return <section className="mxCard stCard" id="recipients" aria-labelledby="recipients-heading"><h2 id="recipients-heading">Saved recipients</h2>
     <p className="mxHint">{!current?.enforceAddressBook || current.newAddressDelayHours === 0 ? "Pick them by name when you send." : `New recipients are ready after ${current.newAddressDelayHours} hours.`}</p>
     {addresses.data.entries.length ? <ul className="stList" aria-label="Saved recipients">{addresses.data.entries.map((entry) => {
       const cooling = new Date(entry.availableAt) > new Date();
       return <li key={entry.entryId} className="stListRow">
-        <span className="stFace" aria-hidden="true">{entry.label.slice(0, 1).toUpperCase()}</span>
-        <span className="stRowText"><strong>{entry.label}</strong><small>{short(entry.address)}{cooling ? ` · available ${new Date(entry.availableAt).toLocaleString()}` : ""}</small></span>
-        <span className={`txStatus ${cooling ? "txStatus-pending" : "txStatus-completed"}`}>{cooling ? "Waiting" : "Ready"}</span>
+        <span className="appIconDisc stFace" aria-hidden="true">{entry.label.slice(0, 1).toUpperCase()}</span>
+        <span className="stRowText"><strong>{entry.label}</strong><small>{shortAddress(entry.address)}{cooling ? ` · available ${formatDateTime(entry.availableAt)}` : ""}</small></span>
+        <StatusDot tone={cooling ? "warning" : "positive"} label={cooling ? "Waiting" : "Ready"} />
         <button type="button" className="appIconButton" aria-label={`Remove ${entry.label}`} onClick={() => void removeAddress(entry.entryId)}><Trash2 aria-hidden="true" /></button>
       </li>; })}</ul> : <p className="stEmpty">No saved recipients yet.</p>}
     <form onSubmit={(event) => void addAddress(event)} className="mxForm stAddForm" aria-label="Add a recipient">

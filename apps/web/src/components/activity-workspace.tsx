@@ -14,8 +14,12 @@ import type { History } from "@/lib/activity/history";
 import { CATEGORIES, entriesCsv, entryAmount, entryCategory, entryLabel, statusLabel, STATUSES, type ActivityEntry } from "@/lib/activity/entries";
 import { networkName } from "@/lib/assets/registry";
 import { exampleActivity } from "@/lib/example/data";
+import { formatDateTime, formatUsd, shortAddress } from "@/lib/format";
 import { ActionJourney, type ActionEvent } from "./action-journey";
 import { GuestBanner } from "./guest-banner";
+import { LoadingState, Notice } from "./states";
+import { entryTone, StatusDot } from "./status-dot";
+import { Sheet } from "./sheet";
 
 /** An Aura action's journey, re-read every few seconds while it's still moving. Reading it also advances the check. */
 function ReceiptJourney({ id }: { id: string }) {
@@ -25,21 +29,19 @@ function ReceiptJourney({ id }: { id: string }) {
     queryFn: () => api<{ action: ActionView; events: ActionEvent[] }>(`/api/actions/${encodeURIComponent(id)}`),
     refetchInterval: (query) => ["submitted", "settling"].includes(query.state.data?.action.status ?? "") ? 10_000 : false
   });
-  if (!detail.data) return detail.isError ? null : <div className="txState" role="status"><LoaderCircle className="spin" aria-hidden="true" /> Loading its progress</div>;
+  if (!detail.data) return detail.isError ? null : <LoadingState label="Loading its progress" />;
   return <ActionJourney action={detail.data.action} events={detail.data.events} />;
 }
 
-const short = (value?: string) => value && value.length > 14 ? `${value.slice(0, 7)}…${value.slice(-5)}` : value;
 const incoming = (entry: ActivityEntry) => entry.type === "received" || entry.type === "bank_deposit" || entry.type === "card_refund";
-const when = (value: string) => new Date(value).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 
 function EntryIcon({ entry }: { entry: ActivityEntry }) {
   const Icon = incoming(entry) ? ArrowDownToLine : entry.origin === "card" ? CreditCard : entry.type === "swap" || entry.type === "bridge" ? ArrowDownUp
     : entry.type.startsWith("earn") ? TrendingUp : ArrowUpFromLine;
-  return <span className="txIcon" aria-hidden="true"><Icon /></span>;
+  return <span className="appIconDisc" aria-hidden="true"><Icon /></span>;
 }
 
-const Status = ({ entry }: { entry: ActivityEntry }) => <span className={`txStatus txStatus-${entry.status}`}>{statusLabel(entry.status)}</span>;
+const Status = ({ entry }: { entry: ActivityEntry }) => <StatusDot tone={entryTone(entry.status)} label={statusLabel(entry.status)} />;
 
 function save(name: string, csv: string | Blob) {
   const url = URL.createObjectURL(typeof csv === "string" ? new Blob([csv], { type: "text/csv;charset=utf-8" }) : csv);
@@ -52,21 +54,18 @@ function Receipt({ entry, onClose, isExample }: { entry: ActivityEntry; onClose:
     { name: "View delivery", url: explorerTx(entry.destinationChainId, entry.destinationTransactionHash) }].filter((link) => link.url);
   const facts: Array<[string, React.ReactNode, string?]> = [
     ["Status", statusLabel(entry.status)],
-    ["Date", when(entry.createdAt)],
+    ["Date", formatDateTime(entry.createdAt)],
     ["Network", `${networkName(entry.chainId)}${entry.destinationChainId ? ` to ${networkName(entry.destinationChainId)}` : ""}`],
-    ...(entry.counterparty ? [[incoming(entry) ? "From" : "To", <span className="txBreak" key="who">{entry.counterparty}</span>] as [string, React.ReactNode]] : []),
+    ...(entry.counterparty ? [[incoming(entry) ? "From" : "To", <span className="mxBreak" key="who">{entry.counterparty}</span>] as [string, React.ReactNode]] : []),
     ...(entry.bankStatus ? [["Bank", entry.bankStatus, "bank-status"] as [string, React.ReactNode, string]] : []),
     ...(entry.cardDispute ? [["Dispute", entry.cardDispute === "submitted" ? "Under review" : entry.cardDispute === "won" ? "Won" : entry.cardDispute === "lost" ? "Lost" : entry.cardDispute] as [string, React.ReactNode]] : []),
-    ...(entry.estimatedUsd !== undefined ? [[entry.origin === "incoming" ? "Value today" : "Value", `$${entry.estimatedUsd.toFixed(2)}`] as [string, React.ReactNode]] : []),
+    ...(entry.estimatedUsd !== undefined ? [[entry.origin === "incoming" ? "Value today" : "Value", formatUsd(entry.estimatedUsd)] as [string, React.ReactNode]] : []),
     ["Source", entry.source],
-    ...(entry.origin === "aura" ? [["Reference", <span className="txBreak" key="ref">{entry.id}</span>] as [string, React.ReactNode]] : []),
+    ...(entry.origin === "aura" ? [["Reference", <span className="mxBreak" key="ref">{entry.id}</span>] as [string, React.ReactNode]] : []),
     ...(entry.failureReason ? [["Reason", entry.failureReason] as [string, React.ReactNode]] : [])
   ];
   const amount = entryAmount(entry);
-  return <Dialog.Root open onOpenChange={(open) => { if (!open) onClose(); }}>
-    <Dialog.Portal>
-      <Dialog.Overlay className="ovScrim" />
-      <Dialog.Content className="ovPanel txReceipt" aria-describedby={undefined}>
+  return <Sheet variant="panel" className="txReceipt" onOpenChange={(open) => { if (!open) onClose(); }}>
         <div className="ovPanelHead">
           <Dialog.Close className="appIconButton ovPanelBack" aria-label="Back"><ArrowLeft aria-hidden="true" /></Dialog.Close>
           <Dialog.Title>{entryLabel(entry.type)}</Dialog.Title>
@@ -86,9 +85,7 @@ function Receipt({ entry, onClose, isExample }: { entry: ActivityEntry; onClose:
           {links.map((link) => <a className="appButton appButtonLarge" key={link.name} href={link.url!} target="_blank" rel="noreferrer">{link.name} <ExternalLink aria-hidden="true" /></a>)}
           {!links.length && entry.origin !== "card" && <p className="ovNote">No transaction has been recorded for this yet.</p>}
         </div>}
-      </Dialog.Content>
-    </Dialog.Portal>
-  </Dialog.Root>;
+  </Sheet>;
 }
 
 /** Journey J13: this list, the tax-support preview, or a month's statement. A dialog on desktop, a sheet on the phone. */
@@ -111,20 +108,17 @@ function ExportDialog({ entries, onClose }: { entries: ActivityEntry[]; onClose:
   }
   const tax = { header: ["Tax classification", "Cost basis"], row: () => ["Review required", "Unavailable"] };
   const date = new Date().toISOString().slice(0, 10);
-  return <Dialog.Root open onOpenChange={(open) => { if (!open) onClose(); }}>
-    <Dialog.Portal>
-      <Dialog.Overlay className="mxDialogOverlay" />
-      <Dialog.Content className="mxDialog" aria-describedby="export-note">
+  return <Sheet onOpenChange={(open) => { if (!open) onClose(); }} describedBy="export-note">
         <div className="mxDialogHead"><Dialog.Title>Export</Dialog.Title>
           <Dialog.Close className="appIconButton" aria-label="Close"><X aria-hidden="true" /></Dialog.Close></div>
         <p id="export-note" className="mxDialogNote">Download the {entries.length} transactions in your list, or a full month.</p>
         <div className="txExport">
           <button type="button" className="txExportRow" onClick={() => save(`aura-transactions-${date}.csv`, entriesCsv(entries, networkName))}>
-            <span className="txIcon" aria-hidden="true"><Download /></span><span className="txExportText"><strong>This list</strong><small>The transactions shown, with your filters</small></span></button>
+            <span className="appIconDisc" aria-hidden="true"><Download /></span><span className="txExportText"><strong>This list</strong><small>The transactions shown, with your filters</small></span></button>
           <button type="button" className="txExportRow" onClick={() => save(`aura-tax-support-${date}.csv`, entriesCsv(entries, networkName, tax))}>
-            <span className="txIcon" aria-hidden="true"><FileSpreadsheet /></span><span className="txExportText"><strong>Tax-support preview</strong><small>The same list; cost basis isn&apos;t available</small></span></button>
+            <span className="appIconDisc" aria-hidden="true"><FileSpreadsheet /></span><span className="txExportText"><strong>Tax-support preview</strong><small>The same list; cost basis isn&apos;t available</small></span></button>
           <div className="txExportRow txExportMonth">
-            <span className="txIcon" aria-hidden="true"><FileText /></span>
+            <span className="appIconDisc" aria-hidden="true"><FileText /></span>
             <label className="txExportText"><strong>Monthly statement</strong>
               <input type="month" value={month} max={new Date().toISOString().slice(0, 7)} onChange={(event) => setMonth(event.target.value)} /></label>
             <button type="button" className="appButton" onClick={() => void downloadStatement()} disabled={statement.state === "loading" || !month}>
@@ -133,9 +127,7 @@ function ExportDialog({ entries, onClose }: { entries: ActivityEntry[]; onClose:
         </div>
         {statement.state === "error" && <p className="txNoteError" role="alert">{statement.message}</p>}
         <p className="mxDialogNote">These files support record keeping. They aren&apos;t bank statements, tax returns, or tax advice.</p>
-      </Dialog.Content>
-    </Dialog.Portal>
-  </Dialog.Root>;
+  </Sheet>;
 }
 
 /** Journey J12: every transaction, searchable, with type chips and a status filter. Guests see labelled examples. */
@@ -167,10 +159,10 @@ export function ActivityWorkspace() {
     {(isExample || loading) && <GuestBanner onSignIn={login} ready={ready} />}
     <header className="txHead"><h1>Transactions</h1>
       <button type="button" className="appButton" onClick={() => isExample ? login() : setExportOpen(true)} disabled={loading || (!isExample && !query.data)}><Download aria-hidden="true" /> Export</button></header>
-    {sources?.incoming.status === "unavailable" && <p className="mxNote mxNoteWarning" role="status">Money you received can&apos;t be read right now, so some deposits may be missing from this list.</p>}
-    {sources?.incoming.partial && <p className="mxNote mxNoteWarning" role="status">Only your most recent deposits are listed. Use a monthly statement for a full month.</p>}
-    {sources?.aave.status === "unavailable" && <p className="mxNote mxNoteWarning" role="status">Aave history can&apos;t be read right now.</p>}
-    {sources?.card.status === "unavailable" && <p className="mxNote mxNoteWarning" role="status">Card payments can&apos;t be read from Stripe right now, so some may be missing from this list.</p>}
+    {sources?.incoming.status === "unavailable" && <Notice tone="warning" role="status">Money you received can&apos;t be read right now, so some deposits may be missing from this list.</Notice>}
+    {sources?.incoming.partial && <Notice tone="warning" role="status">Only your most recent deposits are listed. Use a monthly statement for a full month.</Notice>}
+    {sources?.aave.status === "unavailable" && <Notice tone="warning" role="status">Aave history can&apos;t be read right now.</Notice>}
+    {sources?.card.status === "unavailable" && <Notice tone="warning" role="status">Card payments can&apos;t be read from Stripe right now, so some may be missing from this list.</Notice>}
     <div className="txFilters">
       <label className="txSearch"><Search aria-hidden="true" /><span className="srOnly">Search activity</span>
         <input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search activity" /></label>
@@ -180,15 +172,15 @@ export function ActivityWorkspace() {
         <select value={status} onChange={(event) => setStatus(event.target.value as typeof status)}>{STATUSES.map((item) => <option key={item} value={item}>{item === "All" ? "Any status" : item}</option>)}</select></label>
     </div>
     <section className="mxCard txList" aria-label="Transaction list">
-      {listLoading ? <div className="txState" role="status"><LoaderCircle className="spin" aria-hidden="true" /> Checking activity</div>
-        : !isExample && query.isError ? <p className="mxNote mxNoteError" role="alert">Activity couldn&apos;t be loaded. <button type="button" className="appTextButton mxInlineButton" onClick={() => void query.refetch()}>Try again</button></p>
+      {listLoading ? <LoadingState label="Checking activity" />
+        : !isExample && query.isError ? <Notice tone="error" role="alert" onRetry={() => void query.refetch()}>Activity couldn&apos;t be loaded.</Notice>
           : filtered.length === 0 ? <div className="txEmpty"><strong>{entries.length ? "No matching activity" : "No activity yet"}</strong>
             <span>{entries.length ? "Try changing the filters." : "Money you send, receive, swap, or earn will appear here."}</span></div>
             : <ul className="txRows">{filtered.map((entry) => { const amount = entryAmount(entry); return <li key={entry.id}>
               <button type="button" className="activityRow txRow" data-testid={`entry-${entry.id}`} onClick={() => setChosen(entry)}>
                 <EntryIcon entry={entry} />
                 <span className="txWhat"><strong>{entryLabel(entry.type)}</strong>
-                  <small>{when(entry.createdAt)} · {networkName(entry.chainId)}{entry.counterparty ? ` · ${short(entry.counterparty)}` : ""}</small></span>
+                  <small>{formatDateTime(entry.createdAt)} · {networkName(entry.chainId)}{entry.counterparty ? ` · ${entry.counterparty.startsWith("0x") ? shortAddress(entry.counterparty) : entry.counterparty}` : ""}</small></span>
                 <span className="txAmount"><strong className={incoming(entry) && entry.status === "completed" ? "txIn" : undefined}>{amount ? `${incoming(entry) ? "+" : ""}${amount}` : "—"}</strong><Status entry={entry} /></span>
               </button></li>; })}</ul>}
     </section>

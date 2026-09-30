@@ -4,6 +4,7 @@ import { usePrivy } from "@privy-io/react-auth";
 import { LogIn, LogOut } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
 import { useAuraWallet } from "@/lib/client/use-aura-wallet";
+import { shortAddress } from "@/lib/format";
 import { ThemeChoice } from "./theme-choice";
 
 /** Close a popover on Escape or a click outside it, and hand focus back to its button on Escape. */
@@ -18,7 +19,7 @@ export function useDismiss(open: boolean, close: () => void, root: RefObject<HTM
   }, [open, close, root, trigger]);
 }
 
-export function accountLabel(user: ReturnType<typeof usePrivy>["user"]) {
+function accountLabel(user: ReturnType<typeof usePrivy>["user"]) {
   return user?.email?.address ?? user?.google?.email ?? "Aura account";
 }
 
@@ -26,16 +27,14 @@ function initials(value: string) {
   return value.split(/\s|@/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("") || "A";
 }
 
-export function shortAddress(address?: string) {
-  return address ? `${address.slice(0, 6)}…${address.slice(-4)}` : "Wallet preparing";
-}
+const walletText = (address?: string) => address ? shortAddress(address) : "Wallet preparing";
 
 /** Who is signed in, the theme, and Log out. Shared by the desktop account menu and the phone menu sheet. */
 export function AccountDetails() {
   const { user, logout } = usePrivy();
   const { address } = useAuraWallet();
   return <div className="appAccount">
-    <div className="appAccountWho"><strong>{accountLabel(user)}</strong><span className="appMono">{shortAddress(address)}</span></div>
+    <div className="appAccountWho"><strong>{accountLabel(user)}</strong><span className="appMono">{walletText(address)}</span></div>
     <div className="appAccountRow"><span>Theme</span><ThemeChoice /></div>
     <button type="button" className="appButton" aria-label="Log out of Aura" onClick={() => void logout()}><LogOut aria-hidden="true" />Log out</button>
   </div>;

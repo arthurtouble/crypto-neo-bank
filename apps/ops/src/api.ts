@@ -1,3 +1,6 @@
+// The web app's client-safe formatters, so both apps write money and dates the same way.
+import { formatDateTime, formatUsd } from "../../web/src/lib/format";
+
 /** An operator API answered with an error. `code` is the API's error code. */
 export class ApiError extends Error {
   constructor(readonly status: number, readonly code: string, message: string) { super(message); this.name = "ApiError"; }
@@ -20,6 +23,6 @@ export async function api<T>(path: string, init: { method?: "GET" | "POST" | "PA
   throw new ApiError(response.status, body.error ?? "error", body.message ?? `Request failed (${response.status}).`);
 }
 
-export const money = (usd: number) => usd.toLocaleString("en-US", { style: "currency", currency: "USD" });
-export const when = (iso: string | null | undefined) => iso ? new Date(iso).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) : "—";
+export const money = (usd: number) => formatUsd(usd);
+export const when = (iso: string | null | undefined) => iso ? formatDateTime(iso) : "—";
 export const short = (value: string) => value.length > 18 ? `${value.slice(0, 10)}…${value.slice(-6)}` : value;

@@ -3,10 +3,11 @@
 import { usePrivy } from "@privy-io/react-auth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Dialog from "@radix-ui/react-dialog";
-import { ExternalLink, LoaderCircle } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import { useState } from "react";
 import { legalDocuments } from "@/lib/legal/documents";
 import { AppBrand } from "./brand";
+import { LoadingScreen } from "./states";
 
 const docs = process.env.NEXT_PUBLIC_DOCS_URL ?? "https://aurel-docs.aurel-events.workers.dev";
 type TermsResponse = { accepted: boolean };
@@ -41,7 +42,7 @@ export function TermsGate({ children }: { children: React.ReactNode }) {
   };
   const query = useQuery({ queryKey: ["terms", user?.id], queryFn: () => call(), enabled: authenticated, retry: false });
   if (!authenticated || query.data?.accepted) return children;
-  if (query.isPending) return <div className="appLoading" role="status"><LoaderCircle className="spin" aria-hidden="true" /><p>Loading your account</p></div>;
+  if (query.isPending) return <LoadingScreen label="Loading your account" />;
   if (query.error instanceof SessionExpired) return <AccountScreen title="Your session expired">
     <button type="button" className="appButton appButtonPrimary appButtonLarge" onClick={() => void logout().then(() => login())}>Sign in again</button></AccountScreen>;
   if (query.isError) return <AccountScreen title="We couldn’t load your account"><p>Check your connection, then try again. If it keeps happening, contact support.</p>

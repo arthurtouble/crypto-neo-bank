@@ -9,7 +9,7 @@ import { useBalance, usePublicClient, useReadContract } from "wagmi";
 import { HOME_CHAIN } from "@/config/chains";
 import { ApiError, useApi } from "@/lib/client/api";
 import { DEPOSIT_NETWORKS, depositSource, depositSymbols, type DepositSymbol } from "@/lib/deposits/networks";
-import { shortAddress } from "@/lib/client/address";
+import { formatToken, formatUsd, shortAddress } from "@/lib/format";
 import { useToast } from "./toast";
 
 type Phase = "idle" | "quoting" | "review" | "confirm" | "pending" | "bridging" | "done";
@@ -23,8 +23,7 @@ type SupportedChainId = (typeof DEPOSIT_NETWORKS)[number]["chainId"];
 const POLL_MS = 10_000;
 
 function amountText(raw: bigint | string, decimals: number) {
-  const value = Number(formatUnits(BigInt(raw), decimals));
-  return value.toLocaleString(undefined, { maximumFractionDigits: value < 1 ? 6 : 4 });
+  return formatToken(Number(formatUnits(BigInt(raw), decimals)));
 }
 
 function quoteExpired(quote: Quote) {
@@ -32,7 +31,7 @@ function quoteExpired(quote: Quote) {
 }
 
 function usdText(value: number | null) {
-  return value === null ? "unavailable" : `$${value.toFixed(2)}`;
+  return value === null ? "unavailable" : formatUsd(value);
 }
 
 /**

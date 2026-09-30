@@ -5,7 +5,5 @@ export function formatCents(cents: number): string {
   return (cents / 100).toFixed(2);
 }
 
-/** An address shortened for display: the first six and last four characters, e.g. "0x1234…abcd". */
-export function shortAddress(address: string): string {
-  return `${address.slice(0, 6)}…${address.slice(-4)}`;
-}
+/** An address shortened for display: the first six and last four characters, e.g. "0x1234…abcd". The screens' own. */
+export { shortAddress } from "@/lib/format";

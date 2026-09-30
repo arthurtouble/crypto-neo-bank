@@ -29,8 +29,6 @@
 .appFrame .mxCard .appButton { justify-self: start; }
 .appFrame .mxBadge { justify-self: start; display: inline-flex; align-items: center; height: 22px; padding: 0 var(--space-2); border-radius: var(--radius-pill); background: var(--color-muted); color: var(--color-text-secondary); font-size: var(--text-caption-size); font-weight: var(--weight-medium); }
 .appFrame .mxLabel { color: var(--color-text-secondary); font-size: var(--text-small-size); font-weight: var(--weight-medium); }
-.appFrame .mxState { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-4) 0; color: var(--color-text-secondary); }
-.appFrame .mxState strong { color: var(--color-text); font-weight: var(--weight-medium); }
 .appFrame .mxActions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 
 /* Receive */
@@ -105,7 +103,7 @@
 .appFrame .mxFaces button[aria-pressed="true"] .mxFace { background: var(--color-accent); color: var(--color-on-accent); }
 .appFrame .mxCheck { display: flex; align-items: center; gap: var(--space-2); cursor: pointer; }
 .appFrame .mxCheck input { width: 18px; height: 18px; margin: 0; accent-color: var(--color-accent); }
-.appFrame .mxBreak { overflow-wrap: anywhere; font-family: var(--font-mono); font-size: var(--text-small-size); }
+.appFrame .mxBreak, .ovPanel .mxBreak { overflow-wrap: anywhere; font-family: var(--font-mono); font-size: var(--text-small-size); }
 .appFrame .mxPositive { color: var(--color-positive); }
 .appFrame .mxActionsStack { display: grid; }
 .appFrame .mxSubForm { padding: var(--space-4); border: 1px solid var(--color-line); border-radius: var(--radius-md); }
@@ -130,7 +128,7 @@
 .appFrame .mxPage .transactionSteps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-2); }
 .appFrame .mxPage .transactionSteps span { display: flex; align-items: center; gap: 6px; color: var(--color-text-tertiary); font-size: var(--text-caption-size); font-weight: var(--weight-medium); }
 .appFrame .mxPage .transactionSteps span.done { color: var(--color-text); }
-.appFrame .mxPage .transactionSteps i { width: 18px; height: 18px; flex: none; display: grid; place-items: center; border: 1px solid var(--color-line-strong); border-radius: 50%; font-style: normal; font-size: 10px; background: var(--color-surface); }
+.appFrame .mxPage .transactionSteps i { width: 18px; height: 18px; flex: none; display: grid; place-items: center; border: 1px solid var(--color-line-strong); border-radius: 50%; font-style: normal; font-size: var(--text-caption-size); background: var(--color-surface); }
 .appFrame .mxPage .transactionSteps span.done i { border-color: var(--color-positive); background: var(--color-positive); color: var(--color-on-accent); }
 .appFrame .mxPage .transactionSteps svg { width: 10px; height: 10px; }
 .appFrame .mxPage .transactionFailureHint { display: flex; align-items: center; gap: 6px; color: var(--color-negative); font-size: var(--text-small-size); }
@@ -176,7 +174,7 @@
 .mxPickerOption:hover, .mxPickerOption.isActive { background: var(--color-hover); }
 .mxPickerOption:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; }
 .mxPickerOption:disabled { opacity: .45; cursor: not-allowed; }
-.mxPickerGlyph { width: 32px; height: 32px; flex: none; display: grid; place-items: center; border-radius: var(--radius-pill); background: var(--color-muted); color: var(--color-text-secondary); font-size: var(--text-small-size); font-weight: var(--weight-semibold); }
+.mxPickerGlyph { font-size: var(--text-small-size); font-weight: var(--weight-semibold); }
 .mxPickerIdentity { flex: 1; min-width: 0; display: grid; }
 .mxPickerIdentity strong { display: flex; align-items: baseline; gap: var(--space-2); min-width: 0; font-weight: var(--weight-semibold); }
 .mxPickerIdentity strong small { min-width: 0; }
@@ -192,7 +190,7 @@
 .mxDialogActions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-2); }
 @media (max-width: 767px) {
   .mxPicker, .mxDialog { top: auto; bottom: 0; left: 0; width: 100%; max-height: calc(100dvh - var(--space-8)); transform: none; border-radius: var(--radius-sheet) var(--radius-sheet) 0 0; padding-bottom: calc(var(--space-5) + env(safe-area-inset-bottom)); }
-  .mxPickerSearch input { font-size: 16px; }
+  .mxPickerSearch input { font-size: var(--text-input-phone); }
   .mxDialog { width: 100%; }
   .mxDialogActions { flex-direction: column-reverse; }
   .mxDialogActions .appButton { width: 100%; height: var(--control-height-lg); }
@@ -214,9 +212,9 @@
 .appFrame .erHeld { display: grid; justify-items: end; }
 .appFrame .erHeld small { font-weight: var(--weight-regular); }
 .appFrame .erRate strong { font-size: var(--text-title-2-size); line-height: var(--text-title-2-line); font-weight: var(--weight-semibold); color: var(--color-positive); }
-.appFrame .erRate strong.erUnavailable, .appFrame .erUnavailable { color: var(--color-warning); }
+.appFrame .erRate strong.appUnavailable { color: var(--color-warning); }
 .appFrame .erOptions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); align-items: start; }
-.appFrame .erOptions > h2, .appFrame .erOptions > .mxState { grid-column: 1 / -1; }
+.appFrame .erOptions > h2, .appFrame .erOptions > .appState { grid-column: 1 / -1; }
 .appFrame .erOption { gap: var(--space-3); }
 .appFrame .erOptionTop { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-3); }
 .appFrame .erToggle { justify-self: stretch; }
@@ -247,7 +245,7 @@
   .appFrame .mxReceiveAddress { justify-items: center; }
   .appFrame .mxReceiveAddress .appButton { width: 100%; height: var(--control-height-lg); }
   .appFrame .mxFieldRow { grid-template-columns: minmax(0, 1fr); }
-  .appFrame .mxField input, .appFrame .mxField select, .appFrame .mxField textarea { font-size: 16px; }
+  .appFrame .mxField input, .appFrame .mxField select, .appFrame .mxField textarea { font-size: var(--text-input-phone); }
   .appFrame .mxCard .appButton { justify-self: stretch; height: var(--control-height-lg); }
   .appFrame .mxAmountRow { grid-template-columns: minmax(0, 1fr) 110px; }
   /* The form and its review already say all this on a phone. */

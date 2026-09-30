@@ -1,12 +1,15 @@
 "use client";
 
-import { ArrowLeft, ExternalLink, LoaderCircle } from "lucide-react";
+import { ArrowLeft, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { actionEntry, entryAmount, entryLabel, statusLabel } from "@/lib/activity/entries";
 import { networkName } from "@/lib/assets/registry";
 import { explorerTx } from "@/lib/client/explorer";
 import { useActionDetail } from "@/lib/client/queries";
+import { formatCents, formatDateTime } from "@/lib/format";
 import { ActionJourney } from "./action-journey";
+import { LoadingState, Notice } from "./states";
+import { entryTone, StatusDot } from "./status-dot";
 
 const bankStateText: Record<string, string> = { awaiting_funds: "Waiting for your USDC", funds_received: "Bridge received your USDC",
   payment_submitted: "Sent to your bank", payment_processed: "Delivered to your bank", returned: "Returned by the bank", refunded: "Refunded" };
@@ -16,8 +19,8 @@ const Back = () => <Link className="appTextButton txBack" href="/app/transaction
 /** One action and its history (the receipt's "Full history"). Status comes from the chain; bank updates come from Bridge. */
 export function TransactionDetail({ id }: { id: string }) {
   const query = useActionDetail(id);
-  if (query.isPending) return <div className="mxPage txPage"><Back /><div className="txState" role="status"><LoaderCircle className="spin" aria-hidden="true" /> Loading</div></div>;
-  if (query.error || !query.data) return <div className="mxPage txPage"><Back /><p className="mxNote mxNoteError" role="alert">This transaction couldn&apos;t be loaded.</p></div>;
+  if (query.isPending) return <div className="mxPage txPage"><Back /><LoadingState label="Loading" /></div>;
+  if (query.error || !query.data) return <div className="mxPage txPage"><Back /><Notice tone="error" role="alert">This transaction couldn&apos;t be loaded.</Notice></div>;
   const { action, events } = query.data;
   // The same description, amount, and status as the Transactions list.
   const entry = actionEntry(action);
@@ -27,13 +30,13 @@ export function TransactionDetail({ id }: { id: string }) {
   return <div className="mxPage txPage txDetail">
     <Back />
     <header className="txDetailHead"><h1>{entryLabel(entry.type)}{entryAmount(entry) ? ` ${entryAmount(entry)}` : ""}</h1>
-      <span className={`txStatus txStatus-${entry.status}`}>{action.status === "prepared" ? "Waiting for you to confirm" : statusLabel(entry.status)}</span></header>
+      <StatusDot tone={entryTone(entry.status)} label={action.status === "prepared" ? "Waiting for you to confirm" : statusLabel(entry.status)} /></header>
     <section className="mxCard" aria-labelledby="detail-facts"><h2 id="detail-facts">Details</h2>
       <dl className="mxSummary">
         <div><dt>Network</dt><dd>{networkName(entry.chainId)}{entry.destinationChainId ? ` to ${networkName(entry.destinationChainId)}` : ""}</dd></div>
-        {entry.counterparty && <div><dt>To</dt><dd className="txBreak">{entry.counterparty}</dd></div>}
-        {action.usdCents !== null && <div><dt>Value</dt><dd>${(action.usdCents / 100).toFixed(2)}</dd></div>}
-        <div><dt>Reference</dt><dd className="txBreak">{action.id}</dd></div>
+        {entry.counterparty && <div><dt>To</dt><dd className="mxBreak">{entry.counterparty}</dd></div>}
+        {action.usdCents !== null && <div><dt>Value</dt><dd>{formatCents(action.usdCents)}</dd></div>}
+        <div><dt>Reference</dt><dd className="mxBreak">{action.id}</dd></div>
       </dl>
     </section>
     <section className="mxCard" aria-labelledby="detail-progress"><h2 id="detail-progress">Progress</h2>
@@ -42,7 +45,7 @@ export function TransactionDetail({ id }: { id: string }) {
     </section>
     {bankUpdates.length > 0 && <section className="mxCard" aria-labelledby="detail-bank"><h2 id="detail-bank">Bank updates</h2>
       <ol className="actionJourney">{bankUpdates.map((event, index) => <li key={`${event.type}-${index}`} className="done"><i />
-        <span><strong>{bankStateText[String(event.evidence.state)] ?? "Bank update"}</strong><small>{new Date(event.occurredAt).toLocaleString()}</small></span></li>)}</ol>
+        <span><strong>{bankStateText[String(event.evidence.state)] ?? "Bank update"}</strong><small>{formatDateTime(event.occurredAt)}</small></span></li>)}</ol>
     </section>}
   </div>;
 }

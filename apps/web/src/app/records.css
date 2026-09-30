@@ -6,18 +6,8 @@
 
 .appFrame .txHead { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); flex-wrap: wrap; }
 .appFrame .txHead h1 { margin: 0; font-size: var(--text-title-1-size); line-height: var(--text-title-1-line); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-tight); }
-.appFrame .txState, .ovPanel .txState { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-4) 0; color: var(--color-text-secondary); }
-.appFrame .txState svg, .ovPanel .txState svg { width: 16px; height: 16px; }
-.appFrame .txBreak, .ovPanel .txBreak { overflow-wrap: anywhere; font-family: var(--font-mono); font-size: var(--text-small-size); }
 .appFrame .txIn, .ovPanel .txIn { color: var(--color-positive); }
 
-/* Status: a dot and a word */
-.appFrame .txStatus, .ovPanel .txStatus { display: inline-flex; align-items: center; gap: 6px; color: var(--color-text-secondary); font-size: var(--text-caption-size); font-weight: var(--weight-medium); }
-.appFrame .txStatus::before, .ovPanel .txStatus::before { content: ""; width: 6px; height: 6px; flex: none; border-radius: 50%; background: var(--color-text-tertiary); }
-.appFrame .txStatus-completed::before, .ovPanel .txStatus-completed::before { background: var(--color-positive); }
-.appFrame .txStatus-pending::before, .ovPanel .txStatus-pending::before { background: var(--color-warning); }
-.appFrame .txStatus-failed, .ovPanel .txStatus-failed { color: var(--color-negative); }
-.appFrame .txStatus-failed::before, .ovPanel .txStatus-failed::before { background: var(--color-negative); }
 
 /* Search, type chips, status */
 .appFrame .txFilters { display: grid; grid-template-columns: minmax(200px, 320px) minmax(0, 1fr) 160px; gap: var(--space-3); align-items: center; }
@@ -29,14 +19,12 @@
 
 /* The list */
 .appFrame .txList { padding: 0; gap: 0; overflow: hidden; }
-.appFrame .txList > .txState, .appFrame .txList > .mxNote { margin: var(--space-4) var(--space-5); }
+.appFrame .txList > .appState, .appFrame .txList > .mxNote { margin: var(--space-4) var(--space-5); }
 .appFrame .txRows { margin: 0; padding: 0; list-style: none; display: grid; }
 .appFrame .txRows li + li .txRow { border-top: 1px solid var(--color-line); }
 .appFrame .txRow { width: 100%; min-height: var(--row-height); display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; gap: var(--space-3); align-items: center; padding: var(--space-2) var(--space-5); border: 0; background: none; color: var(--color-text); font: inherit; text-align: left; cursor: pointer; }
 .appFrame .txRow:hover { background: var(--color-hover); }
 .appFrame .txRow:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; }
-.appFrame .txIcon, .ovPanel .txIcon, .mxDialog .txIcon { width: 32px; height: 32px; flex: none; display: grid; place-items: center; border-radius: var(--radius-pill); background: var(--color-muted); color: var(--color-text-secondary); }
-.appFrame .txIcon svg, .mxDialog .txIcon svg { width: 16px; height: 16px; }
 .appFrame .txWhat, .appFrame .txAmount { display: grid; gap: 2px; min-width: 0; }
 .appFrame .txRow strong { display: block; font-size: var(--text-body-size); font-weight: var(--weight-medium); }
 .appFrame .txRow small { display: block; overflow: hidden; color: var(--color-text-secondary); font-size: var(--text-small-size); text-overflow: ellipsis; white-space: nowrap; }
@@ -93,7 +81,7 @@
 .appFrame .inStats div { display: grid; gap: var(--space-1); }
 .appFrame .inStats dt { color: var(--color-text-secondary); font-size: var(--text-small-size); font-weight: var(--weight-medium); }
 .appFrame .inStats dd { margin: 0; font-size: var(--text-amount-size); line-height: var(--text-amount-line); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-tight); }
-.appFrame .inStats dd.inUnavailable { color: var(--color-warning); }
+.appFrame .inStats dd.appUnavailable { color: var(--color-warning); }
 .appFrame .inChartHead { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; }
 .appFrame .inLegend { display: flex; gap: var(--space-4); color: var(--color-text-secondary); font-size: var(--text-small-size); }
 .appFrame .inLegend span, .appFrame .inTooltip span { display: inline-flex; align-items: center; gap: 6px; }
@@ -137,7 +125,7 @@
 /* Phone */
 @media (max-width: 767px) {
   .appFrame .txFilters { grid-template-columns: minmax(0, 1fr) 128px; }
-  .appFrame .txSearch input { font-size: 16px; }
+  .appFrame .txSearch input { font-size: var(--text-input-phone); }
   .appFrame .txRow { padding-inline: var(--space-4); }
   .appFrame .txHead .appSegmented { width: 100%; }
   .appFrame .txHead .appSegmented button { flex: 1; height: 36px; }

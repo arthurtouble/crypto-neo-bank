@@ -9,6 +9,7 @@ import { erc20Abi, formatUnits, parseUnits } from "viem";
 import { SUPPORTED_CHAINS } from "@/config/chains";
 import { ApiError, useApi } from "@/lib/client/api";
 import { useAction } from "@/lib/client/use-action";
+import { formatWeekdayTime } from "@/lib/format";
 import type { AssetId, CatalogAsset } from "@/lib/swap/assets";
 import { assetNetwork } from "@/lib/swap/picker-model";
 import { displayRawAmount, formatEstimatedFeeUsd } from "@/lib/swap/review-model";
@@ -16,6 +17,7 @@ import { parseSwapDeepLink } from "@/lib/swap/links";
 import { SwapAssetPicker } from "./swap-asset-picker";
 import { useToast } from "./toast";
 import { TransactionProgress } from "./transaction-progress";
+import { Notice } from "./states";
 
 export type RouteQuote = {
   id: string; from: CatalogAsset; to: CatalogAsset; recipient: string; tool: string;
@@ -30,7 +32,7 @@ export type RouteQuote = {
 const REFERENCE_WARNING_PERCENT = 2;
 
 function referenceTime(iso: string) {
-  return new Date(iso).toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit" });
+  return formatWeekdayTime(iso);
 }
 
 /** The quote's price per token of a feed-priced asset, from LI.FI's dollar value of the other side. */
@@ -183,7 +185,7 @@ export function SwapWorkspace() {
             {far ? ` This quote is about ${gap.toFixed(1)}% away from it. Markets may be closed or thin, so check the amount.` : ""}
           </p>;
         })}
-        {crossChain && <p className="mxNote">Arrival on {assetNetwork(quote.to.chainId)} usually takes up to 30 minutes. You can leave this screen once it&apos;s sent.</p>}
+        {crossChain && <Notice>Arrival on {assetNetwork(quote.to.chainId)} usually takes up to 30 minutes. You can leave this screen once it&apos;s sent.</Notice>}
         {done
           ? <button className="appButton appButtonPrimary appButtonLarge" type="button" onClick={() => { swap.reset(); setQuote(null); setAmount(""); }}>New swap</button>
           : swap.phase !== "idle"
