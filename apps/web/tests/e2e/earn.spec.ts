@@ -31,7 +31,14 @@ async function openEarn(page: Page, balances: Record<string, string> = { [ASSETS
   return customer;
 }
 
+/** Each way to earn opens to show its deposit and withdraw form. */
+async function openOption(page: Page, title: string) {
+  const toggle = card(page, title).getByRole("button", { name: "Deposit or withdraw" });
+  if (await toggle.getAttribute("aria-expanded") !== "true") await toggle.click();
+}
+
 async function act(page: Page, title: string, direction: "Deposit" | "Withdraw", amount: string) {
+  await openOption(page, title);
   await form(page, title).getByLabel("Action").selectOption(direction.toLowerCase());
   await form(page, title).getByLabel("Amount").fill(amount);
   await form(page, title).getByRole("button", { name: direction, exact: true }).click();

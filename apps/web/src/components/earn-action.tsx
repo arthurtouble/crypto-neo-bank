@@ -32,20 +32,20 @@ export function EarnAction({ option, symbol, hasPosition }: { option: EarnOption
 
   function edit(change: () => void) { change(); if (earn.phase === "done" || handedOff || (earn.error && !earn.outcomeUnknown)) earn.reset(); }
 
-  return <form className="aavePreviewForm" aria-label={`${option.label}: deposit or withdraw`} onSubmit={(event) => { event.preventDefault(); void submit(); }}>
-    <div className="aavePreviewFields">
-      <label>Action<select value={direction} disabled={locked} onChange={(event) => edit(() => setDirection(event.target.value as Direction))}>
+  return <form className="mxForm erForm" aria-label={`${option.label}: deposit or withdraw`} onSubmit={(event) => { event.preventDefault(); void submit(); }}>
+    <div className="mxFieldRow">
+      <label className="mxField">Action<select value={direction} disabled={locked} onChange={(event) => edit(() => setDirection(event.target.value as Direction))}>
         <option value="deposit">Deposit</option><option value="withdraw">Withdraw</option>
       </select></label>
-      <label>Amount<input type="text" inputMode="decimal" autoComplete="off" value={amount} disabled={locked}
+      <label className="mxField">Amount<input type="text" inputMode="decimal" autoComplete="off" value={amount} disabled={locked}
         onChange={(event) => edit(() => setAmount(event.target.value))} placeholder={`0 ${symbol}`} /></label>
     </div>
-    <div className="aavePreviewButtons">
-      <button className="button primary" type="submit" disabled={locked || !earn.wallet.address || !amount.trim()}>
+    <div className="mxActions">
+      <button className="appButton appButtonPrimary" type="submit" disabled={locked || !earn.wallet.address || !amount.trim()}>
         {earn.phase === "preparing" ? "Checking" : earn.phase === "signing" ? "Confirm with your passkey" : earn.outcomeUnknown ? "Check Transactions first" : labels[direction]}
       </button>
       {option.protocol === "morpho" && direction === "withdraw" && hasPosition &&
-        <button className="button secondary" type="button" disabled={locked || !earn.wallet.address} onClick={() => void submit(true)}>Withdraw all</button>}
+        <button className="appButton" type="button" disabled={locked || !earn.wallet.address} onClick={() => void submit(true)}>Withdraw all</button>}
     </div>
     <TransactionProgress label={labels[direction]} phase={earn.phase} action={earn.action} outcomeUnknown={earn.outcomeUnknown} />
   </form>;
