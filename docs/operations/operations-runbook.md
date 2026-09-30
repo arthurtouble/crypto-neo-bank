@@ -75,7 +75,7 @@ For the first launch, follow [production launch](production-launch.md) first.
 - Availability: 99.95%, excluding upstream chain or provider incidents shown as degraded dependencies.
 - Route preparation success: at least 98% when a provider route is available.
 - Traceability: 100% of actions have an action ID and, after signing, a transaction hash.
-- Stale actions: open an issue after 15 minutes `submitted` without a receipt, or `settling` without delivery.
+- Stale actions: open an issue after 15 minutes `submitted` without a receipt, or 2 hours `settling` without delivery.
 - Urgent security or funds-at-risk case: acknowledged within 15 minutes during published coverage.
 - Normal case: first response within one business day.
 

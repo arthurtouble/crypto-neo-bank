@@ -200,6 +200,19 @@ describe("getting a card", () => {
     expect(await readCardHistory(state.db!, "alice")).toMatchObject({ status: "unavailable" });
   });
 
+  it("reads disputes once for all of a customer's cards, and shows each only on its own card's payment", async () => {
+    await create();
+    sqlite.exec(`INSERT INTO card_account_projections (card_reference, subject_reference, provider, provider_customer_reference, status, observed_at)
+      VALUES ('ic_2', 'alice', 'stripe', 'ich_1', 'closed', '2020-01-01T00:00:00.000Z')`);
+    disputes = [{ id: "idp_1", status: "submitted", transaction: "ipi_1", amount: 2500, created: nowSeconds },
+      { id: "idp_other", status: "won", transaction: "ipi_someone_else", amount: 100, created: nowSeconds }];
+    calls = [];
+    const history = await readCardHistory(state.db!, "alice", { since: new Date(1_000_000_000) });
+    expect(calls.filter((call) => call.path === "/v1/issuing/disputes" && call.method === "GET")).toHaveLength(1);
+    expect(history.items.filter((item) => item.id === "ipi_1").map((item) => item.dispute)).toEqual([{ id: "idp_1", status: "submitted" }, { id: "idp_1", status: "submitted" }]);
+    expect(history.items.some((item) => item.dispute?.id === "idp_other")).toBe(false);
+  });
+
   it("shows the allowance as unavailable when Base can't be read, never as zero", async () => {
     await create();
     state.chain = "down";

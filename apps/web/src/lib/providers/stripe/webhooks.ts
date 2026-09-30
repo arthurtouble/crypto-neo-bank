@@ -54,7 +54,7 @@ function normalize(payload: unknown): NormalizedEvent | null {
     if (!cardId) return null;
     const merchant = (object.merchant_data as { name?: string } | undefined)?.name ?? null;
     return { ...base, type: "card.authorization.created", subject: { kind: "provider_card", value: cardId },
-      data: { authorizationId: text(object.id), amountCents: typeof object.amount === "number" ? object.amount : 0, approved: object.approved === true, merchant } };
+      data: { authorizationId: text(object.id), amountCents: typeof object.amount === "number" ? object.amount : null, approved: object.approved === true, merchant } };
   }
   if (event.type === "issuing_transaction.created") {
     const cardId = id(object.card);

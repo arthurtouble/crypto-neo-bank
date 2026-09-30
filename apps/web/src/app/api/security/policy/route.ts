@@ -2,7 +2,7 @@ import { env } from "cloudflare:workers";
 import { z } from "zod";
 import { requireVerifiedSubject } from "@/lib/auth/server";
 import { requireMoneyAccount } from "@/lib/auth/wallet";
-import { errorResponse, route } from "@/lib/http/route";
+import { errorResponse, route, readJsonBody } from "@/lib/http/route";
 import { ensureSubjectProfile } from "@/lib/profile/ensure";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { freezeCardForLock } from "@/lib/cards/service";
@@ -53,7 +53,7 @@ export const GET = route("security.policy.get", { unavailable: "security_policy_
 export const PATCH = route("security.policy.patch", { unavailable: "security_policy_update_unavailable", invalid: "invalid_security_policy" }, async (request, context) => {
   const subject = await requireVerifiedSubject(request);
   await enforceRateLimit(env.PROJECTION_DB, { namespace: "security_policy", subject: subject.subjectReference, limit: 30, windowSeconds: 600 });
-  const { confirmation, ...input } = updateSchema.parse(await request.json());
+  const { confirmation, ...input } = updateSchema.parse(await readJsonBody(request));
   await ensureSubjectProfile(env.PROJECTION_DB, subject.subjectReference);
   const current = await readPolicy(env.PROJECTION_DB, subject.subjectReference);
   const next = {

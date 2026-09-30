@@ -20,7 +20,8 @@ Each log line the code writes is one JSON object with:
 | --- | --- | --- | --- |
 | `<route>.failed` | error | web API (`lib/http/route.ts`) | An API handler failed unexpectedly. The customer got the route's `…_unavailable` error with the same `traceId`. |
 | `request.failed` | error | web Worker (`worker/index.ts`) | A page answered 5xx, or a request threw before any handler caught it. |
-| `actions.recheck.failed`, `bank.payouts.refresh.failed`, `notifications.run.failed` | error | web cron, every 2 minutes | A scheduled job failed. Open money actions stop settling until it works again. |
+| `actions.recheck.failed`, `bank.payouts.refresh.failed`, `notifications.scan.failed`, `notifications.deliver.failed` | error | web cron, every 2 minutes | A scheduled job failed. Each job runs on its own, so the others keep going; if it's `actions.recheck`, open money actions stop settling until it works again. `actions.recheck.completed` counts checks that couldn't read the chain as `failedChecks`. |
+| `webhook.card_event_skipped` | warn | web API (`/api/webhooks/stripe`) | A Stripe card authorization came without an amount or an authorization ID. No notice was sent and nothing was recorded; the card history read fills it in from Stripe. |
 | `notifications.email.bounced` | warn | web API (`/api/webhooks/resend`) | Resend reported a notice email bounced; the notice's email is marked failed. The in-app notice is unaffected. |
 | `notifications.email.complained` | warn | web API | Someone marked a notice email as spam. |
 | `edge.place_blocked` | info | web Worker | A request from a sanctioned place was refused. Useful for volume, not an alert. |

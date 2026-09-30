@@ -2,7 +2,8 @@ import type { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { decodeFunctionData, erc20Abi } from "viem";
 import { LIFI_DIAMOND, quoteRoute, validateRoute, type RouteQuoteRequest } from "@/lib/actions/lifi";
-import { prepareAction } from "@/lib/actions/prepare";
+import { insertAction } from "@/lib/actions/controls";
+import { prepareAction, prepareBuiltAction } from "@/lib/actions/prepare";
 import { buildRoute, markQuoteUsed, saveRouteQuote } from "@/lib/actions/route";
 import { ensureSubjectProfile } from "@/lib/profile/ensure";
 import type { CatalogAsset } from "@/lib/swap/assets";
@@ -127,6 +128,18 @@ describe("server-held route quotes", () => {
     sqlite.exec("UPDATE feature_flags SET enabled = 1 WHERE flag_key = 'direct_transfers'");
     const payout = await prepareAction(db, "alice", wallet, { kind: "route", quoteId: await saved(external) }, new Date(now));
     expect(payout).toMatchObject({ ok: true, action: { kind: "route", destinationChainId: 42161, summary: { recipient: external } } });
+  });
+
+  it("answers quote_used when another request turned the same quote into an action first", async () => {
+    await ensureSubjectProfile(db, "alice", new Date(now));
+    sqlite.exec("UPDATE feature_flags SET enabled = 1");
+    const built = await buildRoute(db, { kind: "route", quoteId: await saved() }, "alice", wallet, new Date(now));
+    // The other request's insert landed between this one's quote check and its own insert.
+    expect(await insertAction(db, { subject: "alice", wallet, kind: "route", chainId: built.chainId, summary: built.summary, calls: built.calls,
+      callsFingerprint: "0xother", effects: built.effects, countsTowardLimit: false, usdCents: 1000, valuationSource: "test",
+      routeQuoteId: built.routeQuoteId!, destinationChainId: built.destinationChainId ?? null }, new Date(now))).toMatch(/^[0-9a-f-]{36}$/);
+    expect(await prepareBuiltAction(db, "alice", wallet, built, () => "cross_chain", new Date(now)))
+      .toEqual({ ok: false, block: { code: "quote_used", message: "This quote was already used. Get a new one." } });
   });
 
   it("refuses another customer's, an expired, or a used quote", async () => {

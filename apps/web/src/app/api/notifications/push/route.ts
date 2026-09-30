@@ -1,7 +1,7 @@
 import { env } from "cloudflare:workers";
 import { z } from "zod";
 import { requireVerifiedSubject } from "@/lib/auth/server";
-import { route } from "@/lib/http/route";
+import { route, readJsonBody } from "@/lib/http/route";
 import { ensureSubjectProfile } from "@/lib/profile/ensure";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { localEdgeUrl } from "@/lib/testing/local-edge";
@@ -23,7 +23,7 @@ export const GET = route("notifications.push.get", { unavailable: "push_unavaila
 export const PUT = route("notifications.push.put", { unavailable: "push_unavailable", invalid: "invalid_subscription" }, async (request, { traceId }) => {
   const subject = await requireVerifiedSubject(request);
   await enforceRateLimit(env.PROJECTION_DB, { namespace: "push_subscribe", subject: subject.subjectReference, limit: 20, windowSeconds: 3600 });
-  const input = subscribeSchema.parse(await request.json());
+  const input = subscribeSchema.parse(await readJsonBody(request));
   await ensureSubjectProfile(env.PROJECTION_DB, subject.subjectReference);
   await env.PROJECTION_DB.prepare(`INSERT INTO push_subscriptions (endpoint, subject_reference, p256dh, auth, created_at) VALUES (?, ?, ?, ?, ?)
     ON CONFLICT (endpoint) DO UPDATE SET subject_reference = excluded.subject_reference, p256dh = excluded.p256dh, auth = excluded.auth, failures = 0`)
@@ -34,7 +34,7 @@ export const PUT = route("notifications.push.put", { unavailable: "push_unavaila
 /** Turn them off in this browser. */
 export const DELETE = route("notifications.push.delete", { unavailable: "push_unavailable", invalid: "invalid_subscription" }, async (request, { traceId }) => {
   const subject = await requireVerifiedSubject(request);
-  const input = z.strictObject({ endpoint }).parse(await request.json());
+  const input = z.strictObject({ endpoint }).parse(await readJsonBody(request));
   await env.PROJECTION_DB.prepare("DELETE FROM push_subscriptions WHERE endpoint = ? AND subject_reference = ?").bind(input.endpoint, subject.subjectReference).run();
   return Response.json({ subscribed: false, traceId });
 });

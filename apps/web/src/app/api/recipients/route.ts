@@ -5,7 +5,7 @@ import { shortAddress } from "@/lib/money/format";
 import { ensureSubjectProfile } from "@/lib/profile/ensure";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { saveWalletAddress } from "@/lib/security/wallet-address-book";
-import { route } from "@/lib/http/route";
+import { route, readJsonBody } from "@/lib/http/route";
 
 const createSchema = z.object({ kind: z.literal("wallet"), address: z.string().regex(/^0x[a-fA-F0-9]{40}$/), name: z.string().trim().min(1).max(48) });
 type WalletRow = { entry_id: string; address: string; label: string; available_at: string; last_used_at: string | null };
@@ -37,7 +37,7 @@ export const GET = route("recipients.get", { unavailable: "recipients_unavailabl
 export const POST = route("recipients.post", { unavailable: "recipient_create_unavailable", invalid: "invalid_recipient" }, async (request: Request, { traceId }) => {
   const subject = await requireVerifiedSubject(request);
   await enforceRateLimit(env.PROJECTION_DB, { namespace: "recipient_create", subject: subject.subjectReference, limit: 12, windowSeconds: 3600 });
-  const input = createSchema.parse(await request.json());
+  const input = createSchema.parse(await readJsonBody(request));
   await ensureSubjectProfile(env.PROJECTION_DB, subject.subjectReference);
   const saved = await saveWalletAddress(env.PROJECTION_DB, subject.subjectReference, input.address, input.name);
   return Response.json({ recipient: { id: saved.entry_id, kind: "wallet", name: saved.label, destination: saved.address, verified: new Date(saved.available_at).getTime() <= Date.now(), availableAt: saved.available_at }, traceId }, { status: 201, headers: { "Cache-Control": "no-store" } });

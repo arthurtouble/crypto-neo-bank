@@ -12,6 +12,28 @@ const logged = (spy: { mock: { calls: unknown[][] } }) => spy.mock.calls.map(([l
 
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllEnvs(); next.mockReset(); });
 
+describe("the web Worker's schedule", () => {
+  it("delivers notices even when the scan for money received fails, and logs each job on its own", async () => {
+    const { recheckOpenActions } = await import("@/lib/actions/recheck");
+    const { refreshBankPayouts } = await import("@/lib/money/bank-activity");
+    const { scanIncoming } = await import("@/lib/notifications/incoming");
+    const { deliverPending } = await import("@/lib/notifications/deliver");
+    vi.mocked(recheckOpenActions).mockResolvedValue({ checked: 0, advanced: 0, failedChecks: 0, expired: 0 });
+    vi.mocked(refreshBankPayouts).mockResolvedValue(undefined as never);
+    vi.mocked(scanIncoming).mockRejectedValue(new Error("alchemy down"));
+    vi.mocked(deliverPending).mockResolvedValue(3);
+    const info = vi.spyOn(console, "log").mockImplementation(() => {});
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const pending: Promise<unknown>[] = [];
+    const { scheduled } = (await import("../../worker/index")).default as unknown as { scheduled: (controller: unknown, env: unknown, ctx: unknown) => Promise<void> };
+    await scheduled({ scheduledTime: 0 }, { PROJECTION_DB: {} }, { waitUntil: (promise: Promise<unknown>) => pending.push(promise) });
+    await Promise.all(pending);
+    expect(deliverPending).toHaveBeenCalled();
+    expect(logged(info)).toContainEqual(expect.objectContaining({ event: "notifications.deliver.completed", summary: { delivered: 3 } }));
+    expect(logged(error)).toContainEqual(expect.objectContaining({ event: "notifications.scan.failed", message: "alchemy down" }));
+  });
+});
+
 describe("web Worker error logging", () => {
   it("logs a page that fails with 5xx, without the query string", async () => {
     const error = vi.spyOn(console, "error").mockImplementation(() => {});

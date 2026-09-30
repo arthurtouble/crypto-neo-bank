@@ -5,7 +5,7 @@ import { prepareBuiltAction } from "@/lib/actions/prepare";
 import { requireVerifiedSubject } from "@/lib/auth/server";
 import { requireMoneyAccount } from "@/lib/auth/wallet";
 import { cardsProvider, storedCardId } from "@/lib/cards/service";
-import { errorResponse, route } from "@/lib/http/route";
+import { errorResponse, route, readJsonBody } from "@/lib/http/route";
 import { ensureSubjectProfile } from "@/lib/profile/ensure";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { actionView } from "../../actions/view";
@@ -20,7 +20,7 @@ const schema = z.strictObject({ amountUsd: z.string().regex(/^\d{1,6}(\.\d{1,2})
 export const POST = route("cards.allowance", { unavailable: "card_unavailable", invalid: "invalid_allowance" }, async (request, context) => {
   const subject = await requireVerifiedSubject(request);
   await enforceRateLimit(env.PROJECTION_DB, { namespace: "card_allowance", subject: subject.subjectReference, limit: 20, windowSeconds: 3600 });
-  const input = schema.parse(await request.json());
+  const input = schema.parse(await readJsonBody(request));
   const provider = await cardsProvider(env.PROJECTION_DB);
   if (!provider || !await storedCardId(env.PROJECTION_DB, subject.subjectReference)) return errorResponse(404, "card_not_found", context, { message: "You don't have a card." });
   const { address: wallet } = await requireMoneyAccount(subject.subjectReference);

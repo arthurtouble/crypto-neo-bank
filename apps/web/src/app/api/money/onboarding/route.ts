@@ -2,7 +2,7 @@ import { env } from "cloudflare:workers";
 import { z } from "zod";
 import { requireVerifiedSubject } from "@/lib/auth/server";
 import { requireActionWallet } from "@/lib/auth/wallet";
-import { errorResponse, route } from "@/lib/http/route";
+import { errorResponse, route, readJsonBody } from "@/lib/http/route";
 import { ensureSubjectProfile } from "@/lib/profile/ensure";
 import { bridgeClient, startOnboarding } from "@/lib/providers/bridge";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
@@ -18,7 +18,7 @@ export const POST = route("money.onboarding", { invalid: "invalid_onboarding", u
   await enforceRateLimit(env.PROJECTION_DB, { namespace: "bank_onboarding", subject: subject.subjectReference, limit: 5, windowSeconds: 3600 });
   const bridge = await bridgeClient(env.PROJECTION_DB);
   if (!bridge) return errorResponse(503, "feature_unavailable", context, { message: "Bank accounts aren't available yet." });
-  const input = schema.parse(await request.json());
+  const input = schema.parse(await readJsonBody(request));
   // An Aura wallet must exist first: the USD account pays into it once verification passes.
   await requireActionWallet(subject.subjectReference);
   const now = new Date().toISOString();

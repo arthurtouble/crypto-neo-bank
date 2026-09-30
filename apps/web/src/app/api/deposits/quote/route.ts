@@ -8,7 +8,7 @@ import { requireAsset } from "@/lib/assets/pauses";
 import { depositDestination, depositSource } from "@/lib/deposits/networks";
 import { catalogAsset } from "@/lib/swap/catalog";
 import { featureEnabled } from "@/lib/features/flags";
-import { errorResponse, route } from "@/lib/http/route";
+import { errorResponse, route, readJsonBody } from "@/lib/http/route";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 
 const schema = z.object({
@@ -29,7 +29,7 @@ export const POST = route("deposits.quote", { invalid: "invalid_deposit", unavai
 async (request, { traceId }) => {
   const subject = await requireVerifiedSubject(request);
   await enforceRateLimit(env.PROJECTION_DB, { namespace: "deposit_quote", subject: subject.subjectReference, limit: 30, windowSeconds: 60 });
-  const input = schema.parse(await request.json());
+  const input = schema.parse(await readJsonBody(request));
   const source = depositSource(input.chainId, input.symbol);
   const destination = depositDestination(input.symbol);
   if (!source || !destination || source.chainId === destination.chainId) throw new RouteQuoteError("invalid_request", "Choose another network to deposit from.");

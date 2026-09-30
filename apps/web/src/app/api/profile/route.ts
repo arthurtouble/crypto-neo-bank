@@ -2,7 +2,7 @@ import { env } from "cloudflare:workers";
 import { z } from "zod";
 import { requireVerifiedSubject } from "@/lib/auth/server";
 import { ensureSubjectProfile } from "@/lib/profile/ensure";
-import { route } from "@/lib/http/route";
+import { route, readJsonBody } from "@/lib/http/route";
 
 const updateSchema = z.object({
   networkGuideRead: z.boolean().optional(),
@@ -35,7 +35,7 @@ export const GET = route("profile.get", { unavailable: "profile_unavailable" }, 
 
 export const PATCH = route("profile.patch", { unavailable: "profile_update_unavailable", invalid: "invalid_profile_update" }, async (request: Request, { traceId }) => {
   const subject = await requireVerifiedSubject(request);
-  const input = updateSchema.parse(await request.json());
+  const input = updateSchema.parse(await readJsonBody(request));
   await ensureSubjectProfile(env.PROJECTION_DB, subject.subjectReference);
   const now = new Date().toISOString();
   await env.PROJECTION_DB.batch([env.PROJECTION_DB.prepare(`UPDATE onboarding_progress SET

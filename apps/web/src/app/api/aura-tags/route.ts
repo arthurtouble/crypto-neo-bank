@@ -5,7 +5,7 @@ import { normalizeAuraTag, type AuraTagRow } from "@/lib/aura-tags";
 import { requireVerifiedSubject } from "@/lib/auth/server";
 import { requireLinkedEvmWallet } from "@/lib/auth/wallet";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
-import { errorResponse, route } from "@/lib/http/route";
+import { errorResponse, route, readJsonBody } from "@/lib/http/route";
 
 const inputSchema = z.object({ tag: z.string(), address: z.string(), displayName: z.string().trim().min(1).max(48).refine((value) => !/\p{C}/u.test(value)), publicEnabled: z.boolean(), publicBankEnabled: z.boolean().default(false) }).strict();
 
@@ -19,7 +19,7 @@ export const GET = route("aura_tags.get", { unavailable: "tag_unavailable" }, as
 export const PUT = route("aura_tags.put", { unavailable: "tag_unavailable", invalid: "invalid_tag", onError: (error, context) => !(error instanceof Error) ? undefined : error.message.startsWith("Choose a tag") ? errorResponse(400, "invalid_tag", context) : /UNIQUE constraint failed|PRIMARY KEY constraint failed/i.test(error.message) ? errorResponse(409, "tag_taken", context) : undefined }, async (request: Request) => {
   const subject = await requireVerifiedSubject(request);
   await enforceRateLimit(env.PROJECTION_DB, { namespace: "aura_tag_change", subject: subject.subjectReference, limit: 6, windowSeconds: 3600 });
-  const input = inputSchema.parse(await request.json());
+  const input = inputSchema.parse(await readJsonBody(request));
   const tag = normalizeAuraTag(input.tag);
   if (!isAddress(input.address)) return Response.json({ error: "invalid_address" }, { status: 400 });
   const address = await requireLinkedEvmWallet(subject.subjectReference, input.address);

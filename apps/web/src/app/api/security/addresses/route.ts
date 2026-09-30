@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireVerifiedSubject } from "@/lib/auth/server";
 import { ensureSubjectProfile } from "@/lib/profile/ensure";
 import { removeWalletAddress, saveWalletAddress } from "@/lib/security/wallet-address-book";
-import { route } from "@/lib/http/route";
+import { route, readJsonBody } from "@/lib/http/route";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 
 const createSchema = z.object({ address: z.string().regex(/^0x[a-fA-F0-9]{40}$/), label: z.string().trim().min(1).max(48) });
@@ -20,7 +20,7 @@ export const POST = route("security.addresses.post", { unavailable: "address_cre
   const subject = await requireVerifiedSubject(request);
   // Shared with saving from Send (`/api/recipients`).
   await enforceRateLimit(env.PROJECTION_DB, { namespace: "recipient_create", subject: subject.subjectReference, limit: 12, windowSeconds: 3600 });
-  const input = createSchema.parse(await request.json());
+  const input = createSchema.parse(await readJsonBody(request));
   await ensureSubjectProfile(env.PROJECTION_DB, subject.subjectReference);
   const saved = await saveWalletAddress(env.PROJECTION_DB, subject.subjectReference, input.address, input.label);
   return Response.json({ entry: { entryId: saved.entry_id, address: saved.address, label: saved.label, createdAt: saved.created_at, availableAt: saved.available_at }, traceId }, { status: 201, headers: { "Cache-Control": "no-store" } });

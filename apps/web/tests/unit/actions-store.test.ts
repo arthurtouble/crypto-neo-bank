@@ -118,6 +118,18 @@ describe("submission and status", () => {
     expect(events(transfer.id)).toEqual(["submitted", "confirmed"]);
   });
 
+  it("ignores a slower check that read an older status, and records nothing for it", async () => {
+    const stored = (await getAction(db, "alice", (await insertAction(db, action(), now))!))!;
+    await recordSubmission(db, stored, hash, now);
+    const read = (await getAction(db, "alice", stored.id))!;
+    await applyVerification(db, read, { status: "confirmed" }, now);
+    const stale = await applyVerification(db, read, { status: "failed", reason: "reverted" }, now);
+    expect(stale.status).toBe("submitted");
+    expect(await getAction(db, "alice", stored.id)).toMatchObject({ status: "confirmed", failureReason: null });
+    expect(sqlite.prepare("SELECT event_type FROM action_events WHERE action_id = ? ORDER BY rowid").all(stored.id).map((row) => (row as { event_type: string }).event_type))
+      .toEqual(["submitted", "confirmed"]);
+  });
+
   it("keeps what the customer reviewed and signed immutable", async () => {
     const id = (await insertAction(db, action(), now))!;
     for (const column of ["calls_json = '[]'", "effects_json = '[{}]'", "wallet_address = '0x0000000000000000000000000000000000000000'", "usd_cents = 1"]) {

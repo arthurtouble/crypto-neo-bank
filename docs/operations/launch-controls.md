@@ -37,7 +37,7 @@ Switch off the affected feature at once for signer ambiguity, wrong destination 
 ## Daily operating review
 
 - Scheduled reconciliation result and open critical/high issues.
-- Actions `submitted` or `settling` for more than 15 minutes.
+- Actions `submitted` for more than 15 minutes without a receipt, or `settling` (waiting for delivery on another network) for more than 2 hours.
 - Failed and dead-letter provider events, and replay evidence.
 - Support queue, suspected account compromise, and complaint escalation.
 - Upstream status, quote failure rate, and customer-visible degradation.

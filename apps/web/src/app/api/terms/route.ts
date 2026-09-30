@@ -1,7 +1,7 @@
 import { env } from "cloudflare:workers";
 import { z } from "zod";
 import { requireVerifiedSubject } from "@/lib/auth/server";
-import { route } from "@/lib/http/route";
+import { route, readJsonBody } from "@/lib/http/route";
 import { legalDocuments } from "@/lib/legal/documents";
 import { ensureSubjectProfile } from "@/lib/profile/ensure";
 import { writeAuditEvent } from "@/lib/security/audit";
@@ -26,7 +26,7 @@ export const GET = route("terms.get", { unavailable: "terms_unavailable" }, asyn
 /** Record acceptance of exactly the versions the customer was shown. */
 export const POST = route("terms.post", { unavailable: "terms_unavailable", invalid: "invalid_terms_acceptance" }, async (request: Request, context) => {
   const subject = await requireVerifiedSubject(request, { allowClosed: true });
-  const input = acceptSchema.parse(await request.json());
+  const input = acceptSchema.parse(await readJsonBody(request));
   if (input.termsVersion !== legalDocuments.terms.version || input.privacyVersion !== legalDocuments.privacy.version)
     return Response.json({ error: "terms_changed", documents: current, traceId: context.traceId }, { status: 409 });
   await ensureSubjectProfile(env.PROJECTION_DB, subject.subjectReference);

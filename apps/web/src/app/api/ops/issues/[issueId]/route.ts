@@ -1,7 +1,7 @@
 import { env } from "cloudflare:workers";
 import { z } from "zod";
 import { requireOperator } from "@/lib/auth/access";
-import { route } from "@/lib/http/route";
+import { route, readJsonBody } from "@/lib/http/route";
 
 const updateSchema = z.object({ status: z.enum(["acknowledged", "resolved"]) });
 
@@ -9,7 +9,7 @@ export const PATCH = route("ops.issues.issueId.patch", { unavailable: "issue_upd
   const operator = await requireOperator(request);
   const { issueId } = await context.params;
   z.string().uuid().parse(issueId);
-  const input = updateSchema.parse(await request.json());
+  const input = updateSchema.parse(await readJsonBody(request));
   const now = new Date().toISOString();
   const result = await env.PROJECTION_DB.prepare("UPDATE operational_issues SET status = ?, assigned_to = ?, resolved_at = ? WHERE issue_id = ?")
     .bind(input.status, operator.email, input.status === "resolved" ? now : null, issueId).run();

@@ -2,7 +2,7 @@ import { env } from "cloudflare:workers";
 import { z } from "zod";
 import { requireVerifiedSubject } from "@/lib/auth/server";
 import { cardsProvider, storedCardId } from "@/lib/cards/service";
-import { errorResponse, route } from "@/lib/http/route";
+import { errorResponse, route, readJsonBody } from "@/lib/http/route";
 import { createEphemeralKey } from "@/lib/providers/stripe/issuing";
 import { confirmWithPasskey } from "@/lib/security/confirm";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
@@ -19,7 +19,7 @@ const schema = z.strictObject({ nonce: z.string().min(8).max(512),
 export const POST = route("cards.details_key", { unavailable: "card_unavailable", invalid: "invalid_request" }, async (request, context) => {
   const subject = await requireVerifiedSubject(request);
   await enforceRateLimit(env.PROJECTION_DB, { namespace: "card_details", subject: subject.subjectReference, limit: 20, windowSeconds: 3600 });
-  const { nonce, confirmation } = schema.parse(await request.json());
+  const { nonce, confirmation } = schema.parse(await readJsonBody(request));
   const provider = await cardsProvider(env.PROJECTION_DB);
   const cardId = provider && await storedCardId(env.PROJECTION_DB, subject.subjectReference);
   if (!provider || !cardId) return errorResponse(404, "card_not_found", context, { message: "You don't have a card." });

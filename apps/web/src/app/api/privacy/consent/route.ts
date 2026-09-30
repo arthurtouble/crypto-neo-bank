@@ -2,7 +2,7 @@ import { env } from "cloudflare:workers";
 import { z } from "zod";
 import { requireVerifiedSubject } from "@/lib/auth/server";
 import { hasConsent } from "@/lib/privacy/consent-state";
-import { route } from "@/lib/http/route";
+import { route, readJsonBody } from "@/lib/http/route";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { writeAuditEvent } from "@/lib/security/audit";
 
@@ -20,7 +20,7 @@ export const GET = route("privacy.consent.get", { unavailable: "consent_unavaila
 export const POST = route("privacy.consent.post", { unavailable: "consent_change_unavailable", invalid: "invalid_consent_change" }, async (request: Request, { traceId }) => {
   const subject = await requireVerifiedSubject(request);
   await enforceRateLimit(env.PROJECTION_DB, { namespace: "consent_change", subject: subject.subjectReference, limit: 20, windowSeconds: 600 });
-  const input = schema.parse(await request.json());
+  const input = schema.parse(await readJsonBody(request));
   const now = new Date().toISOString();
   await env.PROJECTION_DB.prepare("INSERT INTO consent_events (consent_event_id, subject_reference, purpose, action, notice_version, occurred_at) VALUES (?, ?, ?, ?, ?, ?)")
     .bind(crypto.randomUUID(), subject.subjectReference, input.purpose, input.action, input.noticeVersion, now).run();
