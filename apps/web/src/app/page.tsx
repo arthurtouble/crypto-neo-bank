@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeftRight, AtSign, Check, ChevronDown, CreditCard, Send, Sprout, Wallet } from "lucide-react";
 import { AppBrand } from "@/components/brand";
@@ -25,9 +24,14 @@ const faqs = [
 ];
 const links = [{ label: "Features", href: "#features" }, { label: "Security", href: "#security" }, { label: "Questions", href: "#faq" }, { label: "Docs", href: docs }];
 
-/** A screen from the app, with fictional example data. */
+/**
+ * A screen from the app, with fictional example data: WebP at twice its display size. A plain image, since there is
+ * nothing for an image optimiser to do; the first one loads eagerly because it's the largest thing above the fold.
+ */
 function Screen({ name, alt, priority = false }: { name: string; alt: string; priority?: boolean }) {
-  return <div className="ldScreen"><Image src={`/images/aura-${name}.png`} alt={alt} width={960} height={600} unoptimized priority={priority} /></div>;
+  // eslint-disable-next-line @next/next/no-img-element
+  return <div className="ldScreen"><img src={`/images/aura-${name}.webp`} alt={alt} width={1920} height={1200} decoding="async"
+    loading={priority ? "eager" : "lazy"} fetchPriority={priority ? "high" : "auto"} /></div>;
 }
 
 /** The public landing page: what Aura is, what it does, how it keeps money safe, and where to start. */
