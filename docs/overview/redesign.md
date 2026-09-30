@@ -3,54 +3,39 @@ title: Redesign
 description: The plan for step 2, the redesign of Aura's screens on top of the working flows.
 ---
 
-Started on 28 September 2026, after every row in [feature readiness](feature-readiness.md) was done or cut. This is the working plan until the redesign is done. Update the status table in the same pull request that changes an area.
-
-It is step 2 of the four-step plan in feature readiness: make it work, **redesign**, words, launch hardening. Copy rewrites (step 3) and the final refactor (step 4) are not part of it.
+Started on 28 September 2026, after every row in [feature readiness](feature-readiness.md) was done or cut. Step 2 of four: make it work, **redesign**, words (step 3), launch hardening with the final refactor (step 4). Update the status table in the same pull request that changes an area.
 
 ## Rules
 
-- **The flows stay as they are.** The redesign changes how screens look and are laid out, not what they do. No changes to server logic, API contracts, D1, feature switches, or money rules. If a design needs a behavior change, raise it with the product owner as its own pull request.
+- **Flows stay as they are.** The redesign changes how screens look and are laid out, not what they do: no changes to server logic, API contracts, D1, feature switches, or money rules. A needed behavior change goes to the product owner as its own pull request.
 - **One area per pull request**, in the order below.
-- **Tests keep passing.** Existing end-to-end specs cover every customer step. Update selectors when markup changes, never the behavior a test checks. Don't delete a test to get green.
-- **Copy stays as it is**, unless a layout change forces a label to move or shorten. Step 3 rewrites it.
+- **Tests keep passing.** Update selectors when markup changes, never the behavior a test checks. Don't delete a test to get green.
+- **Copy stays**, unless a layout change forces a label to move or shorten.
 - **Guest pages keep their labeled example data.**
-- **The design system comes first.** [`docs/product/design-system.md`](../product/design-system.md) and the reference page `apps/web/public/design-system.html` are rewritten in phase 4, and screens are built from them. Don't make one-off styles in a screen.
+- **Design system first.** Screens are built from [`docs/product/design-system.md`](../product/design-system.md) and `apps/web/public/design-system.html` (rewritten in phase 4). No one-off styles.
 
 ## Phases
 
-1. **Inventory.** Every page, dialog, and state (loading, empty, error, disabled, signed out), on desktop and mobile, with screenshots from dev or the e2e fake. The result is the screen list below, filled in, and a short note of what's wrong today.
-2. **Journeys and wireframes.** The product skeleton, before any colour or type: every customer journey as numbered steps, the navigation, where each action lives, which buttons each screen has, and what opens what (pages, drawers, sheets, dialogs), for desktop and mobile separately. Greyscale wireframes only. The result is [redesign-journeys.md](../product/redesign-journeys.md) and the storyboards in [redesign-wireframes.html](../product/redesign-wireframes.html). The owner locks it before phase 3. Any journey that changes what a flow does is listed there as a behavior change and ships as its own pull request.
-3. **Visual direction.** Colour, type, and style, on top of the locked skeleton. The owner answers the rest of the open questions below. The result is [redesign-direction.md](../product/redesign-direction.md) and the high-fidelity mockup [redesign-visual.html](../product/redesign-visual.html). The three early mockups in [redesign-directions.html](../product/redesign-directions.html) are superseded.
-4. **Design system.** Tokens (color, type, spacing, radius, elevation, motion), components, and patterns (money amounts, statuses, confirmations, lists, empty and error states), in light and dark. Desktop and mobile share the tokens but have separate components and flows (see the journeys). It replaces the current design-system doc and reference page, adds a root `DESIGN.md` that coding agents read, and ships as its own pull request before any screen.
-5. **Screens.** Area by area, in the order of the status table, built to the locked wireframes.
+1. **Inventory.** Every page, dialog, and state (loading, empty, error, disabled, signed out), desktop and mobile, with screenshots from dev or the e2e fake. Result: the [screen inventory](#screen-inventory) below.
+2. **Journeys and wireframes.** The skeleton before colour or type: every journey as numbered steps, navigation, where each action lives, each screen's buttons, and what opens what (pages, drawers, sheets, dialogs), for desktop and mobile separately. Greyscale only. Result: [redesign-journeys.md](../product/redesign-journeys.md) and the storyboards in [redesign-wireframes.html](../product/redesign-wireframes.html), locked by the owner before phase 3. A journey that changes what a flow does is listed there as a behavior change and ships as its own pull request.
+3. **Visual direction.** Colour, type, and style on the locked skeleton, with the owner's answers to the open questions. Result: [redesign-direction.md](../product/redesign-direction.md) and the mockup [redesign-visual.html](../product/redesign-visual.html). The three early mockups in [redesign-directions.html](../product/redesign-directions.html) are superseded.
+4. **Design system.** Tokens (color, type, spacing, radius, elevation, motion), components, and patterns (money amounts, statuses, confirmations, lists, empty and error states), light and dark. Desktop and mobile share tokens but have separate components and flows. Replaces the design-system doc and reference page, adds a root `DESIGN.md` for coding agents, and ships as its own pull request before any screen.
+5. **Screens.** Area by area, in the status table's order, built to the locked wireframes.
 6. **Landing and public pages.** The landing page, the Aura tag pay page, the waitlist, and the docs site's look.
 
 ## Open questions for the product owner
 
-Navigation is settled in phase 2 with the journeys; the rest is answered in phase 3, before any visual design. On 28 September 2026 the owner set the brief: a clean break from today's design, which is only a map of the features, and an interface that is extremely professional, easy to use, streamlined, and fast. The answers, and proposed answers where the owner hasn't given one yet, are in [redesign-direction.md](../product/redesign-direction.md#answers-to-the-open-questions).
-
-| Question | Answer |
-| --- | --- |
-| Which apps are in scope: the customer app, the landing page, the docs site, the ops console? | |
-| Two or three products whose look and feel you like, and what about each | |
-| What should Aura feel like, in three words? Does the current "calm, exact, discreet" character still hold? | |
-| What to keep from today's design (fonts, colors, layout, anything) | |
-| Mobile first, or desktop and mobile equally? Is a native app planned? | |
-| Wireframes first, or straight to high-fidelity? | |
-| Where design happens: a design tool (Figma, Claude Design) or directly in code | |
-| Brand assets that exist or are needed: logo, icon, illustrations | |
-| Navigation: which sections are primary, which live under a menu | |
+On 28 September 2026 the owner set the brief: a clean break from today's design, which is only a map of the features, and an interface that is extremely professional, easy to use, streamlined, and fast. The questions (apps in scope, products liked, three words, what to keep, mobile first, wireframes or high fidelity, where design happens, brand assets, navigation) and their answers are in [redesign-direction.md](../product/redesign-direction.md#answers-to-the-open-questions).
 
 ## Definition of done for an area
 
-- Built only from the new design system; no one-off styles.
+- Built only from the new design system.
 - Every state designed and built: loading, empty, error, unavailable data, disabled, and narrow screens.
 - Accessible: keyboard use, focus, labels, contrast, reduced motion.
-- End-to-end specs for the area pass on desktop and mobile, with updated selectors only.
-- Designed and built separately for desktop and mobile, each with its own components and flow where the direction says so.
-- Screenshots of the area (desktop and mobile, light and dark) attached to the pull request.
+- Designed and built separately for desktop and mobile, with their own components and flow where the direction says so.
+- Screenshots (desktop and mobile, light and dark) attached to the pull request.
 - Docs that show or describe the screens (`docs/` and `apps/docs`) updated.
-- `pnpm lint`, `pnpm typecheck:all`, `pnpm test:unit`, and the area's e2e specs pass.
+- `pnpm lint`, `pnpm typecheck:all`, `pnpm test:unit`, and the area's e2e specs (desktop and mobile, selector changes only) pass.
 
 ## Order and status
 
@@ -74,36 +59,27 @@ Status values: Not started, In progress, Done (with the pull request link), Cut.
 
 ## Screen inventory
 
-Captured on 28 September 2026 against the end-to-end fake, on desktop (1280) and a Pixel 7 (412), in light and dark. `apps/web/tests/inventory/inventory.spec.ts` takes the screenshots of every page and state (`pnpm --filter @aurel/web exec playwright test -c playwright.inventory.config.ts`, into `output/inventory/`). The final screen of each desktop e2e test adds the dialogs, errors, and results of every flow. The owner has a browsable gallery of both, linked from the pull request.
+Captured on 28 September 2026 against the end-to-end fake, on desktop (1280) and a Pixel 7 (412), light and dark. `apps/web/tests/inventory/inventory.spec.ts` screenshots every page and state (`pnpm --filter @aurel/web exec playwright test -c playwright.inventory.config.ts`, into `output/inventory/`); the last screen of each desktop e2e test adds each flow's dialogs, errors, and results. The owner's gallery of both is linked from the pull request.
 
-The owner's brief (see [redesign-direction.md](../product/redesign-direction.md)) is a clean break from today's design, so this list records what each screen must do, and the friction the new design should remove. It is not a list of visual fixes.
+The brief is a clean break, so this records what each screen must do, not visual fixes. The friction noted in the old design is in [#54](https://github.com/arthurtouble/crypto-neo-bank/pull/54) and this file's git history.
 
-Across the app today:
-
-- Ten sections in a sidebar, and each money action is its own page that opens a dialog, so sending takes a page change and a dialog before the amount.
-- Guest pages are separate example screens (three big-number cards on the guest Overview) rather than the real layout with example data.
-- Loading is a spinner and a sentence inside an empty box. Earn shows "Unavailable" while rates are still loading.
-- Visual debt: 21 corner radii, about 40 font sizes, 150 literal colours, four breakpoints, and `:root` redefined four times across three style sheets. Native selects and checkboxes are unstyled.
-- Dialogs open mid-page with a blurred backdrop and can start above the top of the screen. Toasts cover the header.
-- The header shows "Secure Connection", which describes nothing the customer can act on. The sidebar footer's name is white on the light sidebar and clips on short screens.
-
-| Screen or dialog | Route | States seen | What it must do, and friction to remove |
+| Screen or dialog | Route | States seen | What it must do |
 | --- | --- | --- | --- |
-| Landing | `/` | Default, dark, phone menu | Explain Aura, link to the app and docs, FAQ, footnotes. Generic hero and feature blocks; unrelated to the app's look. |
-| Aura tag pay page | `/pay/[tag]` | Found, unknown tag | Show a public payee's address and QR code. Always lists bank and card as unavailable, which is noise for the payer. |
-| Terms gate | `/app` (first sign-in) | Unchecked, checked | Accept terms and privacy before anything else. Shown inside the full app shell with live navigation behind it; the document links don't read as links. |
+| Landing | `/` | Default, dark, phone menu | Explain Aura, link to the app and docs, FAQ, footnotes. |
+| Aura tag pay page | `/pay/[tag]` | Found, unknown tag | Show a public payee's address and QR code. |
+| Terms gate | `/app` (first sign-in) | Unchecked, checked | Accept terms and privacy before anything else. |
 | Session expired | `/app` | Expired | Ask to sign in again. |
-| App shell | all `/app` | Guest, signed in, nav open on phone, search (⌘K), notifications | Navigation, search, notifications, theme, sign in and out. Ten flat destinations; a separate theme button and "Secure Connection" label take header space. |
-| Overview | `/app` | Guest, loading, empty, funded, partial (chain or price down), error, locked, dark | Total in dollars, five groups (cash, crypto, stocks, metals, earn), unavailable values left out of the total and said so, Deposit and Send. Five separate panels; no recent activity; the empty state is a sentence and a link. |
-| Deposit | `/app/deposit` | Guest, loading, empty, switched off, error, dark | Receive by address and QR, add from a connected wallet (Base or another network, with fees shown first), pay by card, bank details and deposits through Bridge. Four stacked panels on one long page; the address block is cramped. |
-| Send | `/app/send` | Guest, loading, empty, switched off, dialog, invalid input, saved recipient, review, complete, unknown tag, bank form, locked, dark | To an address, saved recipient, own wallet, or Aura tag; other networks through LI.FI; bank payouts; passkey; limits and waiting periods. The page lists every asset (including zero balances) before a Send button opens the actual form in a dialog. |
+| App shell | all `/app` | Guest, signed in, nav open on phone, search (⌘K), notifications | Navigation, search, notifications, theme, sign in and out. |
+| Overview | `/app` | Guest, loading, empty, funded, partial (chain or price down), error, locked, dark | Total in dollars, five groups (cash, crypto, stocks, metals, earn), unavailable values left out of the total and said so, Deposit and Send. |
+| Deposit | `/app/deposit` | Guest, loading, empty, switched off, error, dark | Receive by address and QR, add from a connected wallet (Base or another network, with fees shown first), pay by card, bank details and deposits through Bridge. |
+| Send | `/app/send` | Guest, loading, empty, switched off, dialog, invalid input, saved recipient, review, complete, unknown tag, bank form, locked, dark | To an address, saved recipient, own wallet, or Aura tag; other networks through LI.FI; bank payouts; passkey; limits and waiting periods. |
 | Swap | `/app/swap` | Guest, loading, switched off, asset picker, quote, error, dark | Any registered asset, both ways, other networks, slippage, quote expiry, tracked bridge delivery. |
-| Earn | `/app/earn` | Guest, loading, empty, switched off, deposit form, rates unavailable, dark | Aave and two Morpho vaults with rates, liquidity, deposits, withdraw and withdraw all, live-growing positions. Every vault is a large card with its form inside. |
-| Cards | `/app/cards` | Guest, coming soon (off), not verified, card, frozen, details, dispute form, dark | Apply with Bridge, create a virtual card, allowance, freeze, daily limit, card details after passkey, card activity, disputes, phone wallets. A "Not issued" card picture shows while cards are switched off. |
-| Transactions | `/app/transactions` | Guest, loading, empty, list, receipt, statement, partial (transfers down), dark | History with search and filters, receipts, CSV export, monthly statement, network links. The explanation of sources sits in a mono paragraph under the list. |
+| Earn | `/app/earn` | Guest, loading, empty, switched off, deposit form, rates unavailable, dark | Aave and two Morpho vaults with rates, liquidity, deposits, withdraw and withdraw all, live-growing positions. |
+| Cards | `/app/cards` | Guest, coming soon (off), not verified, card, frozen, details, dispute form, dark | Apply with Bridge, create a virtual card, allowance, freeze, daily limit, card details after passkey, card activity, disputes, phone wallets. |
+| Transactions | `/app/transactions` | Guest, loading, empty, list, receipt, statement, partial (transfers down), dark | History with search and filters, receipts, CSV export, monthly statement, network links. |
 | Transaction detail | `/app/transactions/[id]` | Sent | The full journey of one action, from the receipt's "Full history". |
-| Insights | `/app/insights` | Guest, loading, empty, with data, table, unavailable, dark | Money in and out over time, top card merchants, periods (7D to 1Y). A separate section from Transactions for related data. |
-| Settings | `/app/settings` | Guest, loading, funded, no passkey, locked, dark | Sign-in and passkey, transaction controls and lock, saved recipients, Aura tag, notifications, this device, data download, account closing. One long page of mixed sections. |
+| Insights | `/app/insights` | Guest, loading, empty, with data, table, unavailable, dark | Money in and out over time, top card merchants, periods (7D to 1Y). |
+| Settings | `/app/settings` | Guest, loading, funded, no passkey, locked, dark | Sign-in and passkey, transaction controls and lock, saved recipients, Aura tag, notifications, this device, data download, account closing. |
 | Support | `/app/support` | Guest, loading, dark | Chat (Intercom), help articles, report a problem. |
 | Not found | any unknown route | Default | |
 | Design system reference | `/design-system.html` | Default | Replaced in phase 4 by the new reference page. |
