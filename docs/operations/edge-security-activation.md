@@ -40,9 +40,8 @@ Initial edge ceilings, measured before enforcement:
 
 | Path | Ceiling | Action |
 |---|---:|---|
-| `/api/support/cases` POST | 10 per IP / hour | Managed Challenge; application also enforces 5/customer/hour |
-| `/api/support/assistant` POST | 30 per customer/IP / minute | Block excess; application enforces its customer limit |
-| `/api/swap/quote` POST | 60 per customer/IP / 10 minutes | Block excess; application enforces 20/customer/10 minutes |
+| `/api/routes/quote` GET | 60 per customer/IP / minute | Block excess; application enforces 30/customer/minute |
+| `/api/actions` POST | 60 per customer/IP / minute | Block excess; application enforces 30/customer/minute |
 | `/api/webhooks/bridge`, `/api/webhooks/privy`, `/api/webhooks/stripe` POST | Provider events (Bridge RSA, Privy Svix, Stripe HMAC-SHA256) | Rate high enough for retry bursts; never replace signature verification |
 | `/api/ops/*` | Low operator volume | Access policy first, then strict per-identity/IP limit |
 
@@ -74,4 +73,4 @@ Record the destination, receiver, quiet hours, escalation, and test date in [lau
 
 ## Evidence to retain
 
-Hostname and TLS status, Access application and policy IDs, WAF/rate rule IDs and modes, API Shield schema ID, log export job/destination, alert delivery test, Privy/Turnstile hostname configuration, production smoke output, Worker version IDs and reviewer/date.
+Hostname and TLS status, Access application and policy IDs, WAF/rate rule IDs and modes, API Shield schema ID, log export job/destination, alert delivery test, Privy hostname configuration, production smoke output, Worker version IDs and reviewer/date.
