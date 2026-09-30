@@ -3,7 +3,7 @@ title: Customer communication templates
 description: Controlled templates for operational and incident communications.
 ---
 
-Replace brackets with verified facts. Remove any sentence that is not known. These templates are operational starting points, not automatic messages.
+Starting points, not automatic messages. Replace brackets with verified facts, and remove any sentence that isn't known.
 
 ## Investigating
 

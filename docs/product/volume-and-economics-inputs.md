@@ -3,7 +3,7 @@ title: Volume and unit-economics inputs
 description: Assumptions and evidence required for volume, cost, revenue, and contribution-margin planning.
 ---
 
-Use contracted provider pricing and observed early customer behavior. Blank cells are decisions, not zero-cost assumptions.
+Use contracted provider pricing and observed early customer behavior. TBD cells are open decisions, not zero cost.
 
 | Input | Low | Base | High | Evidence source |
 |---|---:|---:|---:|---|
@@ -21,6 +21,6 @@ Use contracted provider pricing and observed early customer behavior. Blank cell
 
 ## Revenue scenarios
 
-Model subscriptions, disclosed service fees, and interchange share separately. Do not count gross customer assets as revenue. Do not treat hidden spread, protocol yield, or a proprietary token as baseline revenue.
+Model subscriptions, disclosed service fees, and interchange share separately. Never count gross customer assets as revenue, or treat hidden spread, protocol yield, or a proprietary token as baseline revenue.
 
-The provider diligence request should ask for setup charges, monthly minimums, per-check fees, EDD, accounts, transfers, FX/conversion, stablecoin settlement, card lifecycle, authorization, disputes, chargebacks, reserves, prefunding, data export, support and termination.
+Ask providers in diligence for setup charges, monthly minimums, per-check fees, EDD, accounts, transfers, FX/conversion, stablecoin settlement, card lifecycle, authorization, disputes, chargebacks, reserves, prefunding, data export, support and termination.

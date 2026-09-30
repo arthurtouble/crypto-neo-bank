@@ -3,7 +3,7 @@ title: Data retention and deletion schedule
 description: Internal retention, deletion, and recovery rules by data category.
 ---
 
-Status: pre-launch operating baseline. Counsel and each regulated provider must approve the final periods before customer onboarding. Aurel does not retain data merely because storage is available.
+Status: pre-launch baseline. Counsel and each regulated provider must approve the final periods before customer onboarding. Aurel doesn't keep data just because storage is available.
 
 | Record | Purpose | Baseline period | Authority and deletion rule |
 |---|---|---:|---|

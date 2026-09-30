@@ -3,18 +3,18 @@ title: Monitoring and alerts
 description: What the Workers log, how to find a failure, and the alerts to set up in Cloudflare before launch.
 ---
 
-Aura uses Cloudflare's own tools for monitoring: Workers Logs, Workers Observability, and Cloudflare notifications. There is no separate error-tracking vendor. The owner chose this on 30 September 2026.
+Aura monitors with Cloudflare's own tools: Workers Logs, Workers Observability, and Cloudflare notifications. No separate error-tracking vendor (owner's decision, 30 September 2026).
 
 ## What the Workers log
 
-Workers Logs are on for every Worker, in both environments, with every request kept (`head_sampling_rate: 1`). Traces are sampled at 1% for the web app and the events Worker. The settings are in each `wrangler.jsonc`.
+Workers Logs are on for every Worker in both environments, keeping every request (`head_sampling_rate: 1`). Traces are sampled at 1% for the web and events Workers. Settings are in each `wrangler.jsonc`.
 
-Every log line the code writes itself is one JSON object with:
+Each log line the code writes is one JSON object with:
 
 - `level`: `info`, `warn`, `error`, or `critical`;
 - `event`: a dotted name, such as `actions.recheck.failed`;
-- a `traceId` for API requests, which the customer's error response also carries, so support can find the exact request;
-- only what's needed to find the cause: IDs, status, path, and an error message. Never secrets, tokens, bank account numbers, or request bodies. A page path is logged without its query string.
+- a `traceId` for API requests, also in the customer's error response, so support can find the exact request;
+- only what's needed to find the cause: IDs, status, path, and an error message. Never secrets, tokens, bank account numbers, or request bodies. Page paths are logged without the query string.
 
 | Event | Level | Where | What it means |
 | --- | --- | --- | --- |
@@ -37,12 +37,12 @@ For a live view, `pnpm --filter @aurel/web exec wrangler tail --env dev --format
 
 ## Alerts to set up before launch
 
-These are settings in the Cloudflare account, not code, so they belong on the [launch readiness](../overview/launch-readiness.md) checklist. Set them up on dev first and send a test alert, then repeat for production.
+These are Cloudflare account settings, not code, and are on the [launch readiness](../overview/launch-readiness.md) checklist. Set them up on dev, send a test alert, then repeat for production.
 
-1. **Error spikes.** In Workers Observability, save a query for each Worker filtered to `level` `error` or `critical`. Add an alert on it through **Notifications** (or the Observability alert option, if the account has it), for more than 5 errors in 5 minutes. Send it to the incident owner's email and the on-call channel from the [incident response plan](incident-response-plan.md).
-2. **Dead letters.** An alert on any `provider_event.dead_letter`. One is enough to act on.
-3. **Stopped cron.** An alert when `actions.recheck.completed` hasn't been logged for 10 minutes, if the account's alerting supports an absence check. If it doesn't, the daily operating review in [launch controls](launch-controls.md) checks for it.
+1. **Error spikes.** In Workers Observability, save a query per Worker filtered to `level` `error` or `critical`, and alert on it through **Notifications** (or the Observability alert option, if available) for more than 5 errors in 5 minutes. Send it to the incident owner's email and the on-call channel from the [incident response plan](incident-response-plan.md).
+2. **Dead letters.** Alert on any `provider_event.dead_letter`; one is enough to act on.
+3. **Stopped cron.** Alert when `actions.recheck.completed` hasn't been logged for 10 minutes, if the account supports absence checks; otherwise the daily operating review in [launch controls](launch-controls.md) covers it.
 4. **Health.** A Cloudflare health check, or any uptime monitor the owner approves, on `/api/health` every minute. It returns 503 when D1 is unreachable.
-5. **Usage.** Cloudflare's billing and usage notifications for Workers, D1, and Queues, so a traffic spike or a runaway loop is noticed before a limit is reached.
+5. **Usage.** Cloudflare billing and usage notifications for Workers, D1, and Queues, to catch a traffic spike or runaway loop before a limit.
 
 Record each alert's name, receiver, and test date in the launch evidence, as [edge security activation](edge-security-activation.md#evidence-to-retain) describes.
