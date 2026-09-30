@@ -47,6 +47,31 @@ test("theme and private access gate remain usable", async ({ page }) => {
   await expect(page.getByRole("button", { name: /Sign in to continue/ })).toBeVisible();
 });
 
+test("⌘K finds actions as well as pages, and opens where each happens (B4)", async ({ page }) => {
+  test.skip(page.viewportSize()!.width < 768, "The search box is in the desktop top bar");
+  await page.goto("/app");
+  await expect(page.getByText("Example data", { exact: true })).toBeVisible();
+  const search = page.getByRole("dialog", { name: "Search Aura" });
+  // The shortcut works once the page has hydrated.
+  await expect(async () => { await page.keyboard.press("ControlOrMeta+k"); await expect(search).toBeVisible({ timeout: 1_000 }); }).toPass({ timeout: 20_000 });
+  const results = search.getByRole("listbox", { name: "Actions and pages" });
+  await expect(results.getByRole("group", { name: "Actions" }).getByRole("option")).toHaveText([/^Send money/, /^Send to a bank/, /^Add money/, /^Swap assets/, /^Lock my account/]);
+  await expect(results.getByRole("group", { name: "Go to" }).getByRole("option", { name: /^Settings/ })).toBeVisible();
+  // Words a customer might use find the action; Enter opens where it happens, and nothing changes from here.
+  await search.getByRole("combobox").fill("stolen");
+  await expect(results.getByRole("option")).toHaveCount(1);
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/\/app\/settings#emergency-lock$/);
+  await expect(search).toHaveCount(0);
+  // The arrow keys choose among the results.
+  await page.keyboard.press("ControlOrMeta+k");
+  await search.getByRole("combobox").fill("send");
+  await page.keyboard.press("ArrowDown");
+  await expect(results.getByRole("option", { selected: true })).toHaveText(/^Send to a bank/);
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/\/app\/send#bank$/);
+});
+
 test("every Aura section is browsable with labeled fictional data", async ({ page }) => {
   test.setTimeout(90_000);
   for (const section of ["deposit", "send", "swap", "earn", "cards", "transactions", "insights", "settings", "support"]) {
