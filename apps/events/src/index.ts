@@ -41,7 +41,7 @@ export default {
           await env.PROJECTION_DB.prepare("UPDATE webhook_receipts SET processing_status = 'failed', last_error = ? WHERE event_id = ?")
             .bind(errorMessage.slice(0, 500), message.body.event.id).run();
         }
-        console.error(JSON.stringify({ message: "provider event processing failed", queueMessageId: message.id, attempt: message.attempts, error: errorMessage }));
+        console.error(JSON.stringify({ level: message.attempts >= 5 ? "critical" : "error", event: "provider_event.processing_failed", queueMessageId: message.id, attempt: message.attempts, message: errorMessage }));
         message.retry({ delaySeconds: Math.min(300, 2 ** message.attempts) });
       }
     }

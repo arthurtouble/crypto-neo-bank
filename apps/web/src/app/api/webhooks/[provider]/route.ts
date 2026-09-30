@@ -64,7 +64,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ pro
   const rawBody = await request.text();
   if (new TextEncoder().encode(rawBody).byteLength > MAX_BODY_BYTES) return reply(413, { error: "payload_too_large", traceId });
   if (!await provider.verify({ headers: request.headers, rawBody, secret, nowMs: Date.now() })) {
-    console.warn(JSON.stringify({ event: "webhook.signature_rejected", provider: provider.name, traceId }));
+    console.warn(JSON.stringify({ level: "warn", event: "webhook.signature_rejected", provider: provider.name, traceId }));
     return reply(401, { error: "invalid_signature", traceId });
   }
   let normalized: NormalizedEvent | null;
