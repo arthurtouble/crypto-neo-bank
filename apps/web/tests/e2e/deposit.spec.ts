@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { assetsFor } from "../../src/lib/assets/registry";
 import { expect, test } from "./support/fixtures";
 import { acceptTerms, ASSETS, edge, newCustomer, setBalances, setFeature, setIdentity, type Customer } from "./support/session";
 
@@ -47,6 +48,11 @@ test("the Deposit page shows all four ways to add money", async ({ page }) => {
   await expect(page.getByTestId("account-address")).toHaveText(customer.wallet);
   await expect(page.getByRole("img", { name: "QR code of your Aura account address" })).toBeVisible();
   await expect(page.getByText(/Only send on Base/)).toBeVisible();
+  // Receive names every asset that shows in Aura when it arrives on Base, straight from the registry (B3).
+  const receivable = page.getByRole("list", { name: "Assets you can receive on Base" }).getByRole("listitem");
+  await expect(receivable).toHaveCount(assetsFor("hold", 8453).length);
+  for (const symbol of ["USDC", "ETH", "cbBTC", "EURC"]) await expect(receivable.filter({ hasText: symbol }).first()).toBeVisible();
+  await expect(receivable.filter({ hasText: "XAUt" })).toHaveCount(0);
   await showWay(page, "From a wallet");
   await expect(page.getByRole("heading", { name: "From your wallet" })).toBeVisible();
   await showWay(page, "Card");

@@ -6,12 +6,15 @@ import Link from "next/link";
 import { QRCodeSVG } from "qrcode.react";
 import { useEffect, useState } from "react";
 import { HOME_CHAIN } from "@/config/chains";
+import { assetsFor } from "@/lib/assets/registry";
 import { useAuraWallet } from "@/lib/client/use-aura-wallet";
 import { AddFromWallet } from "./add-from-wallet";
 import { BankDepositPanel } from "./bank-deposit-panel";
 import { GuestBanner } from "./guest-banner";
 import { useToast } from "./toast";
 
+/** Change B3: everything that shows in Aura when it arrives on Base, from the asset registry. */
+const RECEIVABLE = assetsFor("hold", HOME_CHAIN.id);
 const EXAMPLE_ADDRESS = "0x000000000000000000000000000000000000e0a1";
 const tabs = [
   { id: "receive", label: "Receive", detail: "From an exchange or another wallet", icon: QrCode },
@@ -54,7 +57,7 @@ function ReceivePanel({ address, isExample }: { address: string; isExample: bool
   }
   return <section className="mxPanel" aria-labelledby="deposit-receive">
     <div className="mxPanelHead"><h2 id="deposit-receive">Receive on Base</h2>
-      <p>Send USDC, ETH, or cbBTC on Base to your Aura account from any wallet or exchange.</p></div>
+      <p>Send any asset listed below on Base to your Aura account, from any wallet or exchange.</p></div>
     <div className="mxReceive">
       <div className="mxQr"><QRCodeSVG value={address} size={168} bgColor="transparent" fgColor="currentColor" level="M" aria-label="QR code of your Aura account address" role="img" /></div>
       <div className="mxReceiveAddress">
@@ -63,7 +66,10 @@ function ReceivePanel({ address, isExample }: { address: string; isExample: bool
         <button type="button" className="appButton" onClick={() => void copyAddress()}>{copied ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}{copied ? "Copied" : "Copy address"}</button>
       </div>
     </div>
-    <p className="mxNote mxNoteWarning">Only send on Base. Money sent on another network won&apos;t show in Aura. To add from another network, use From a wallet.</p>
+    <ul className="mxAssetList" aria-label="Assets you can receive on Base">
+      {RECEIVABLE.map((asset) => <li key={asset.id}><strong>{asset.symbol}</strong><small>{asset.name}</small></li>)}
+    </ul>
+    <p className="mxNote mxNoteWarning">Only send on Base. Money sent on another network, or a token not listed here, won&apos;t show in Aura. To add from another network, use From a wallet.</p>
   </section>;
 }
 
