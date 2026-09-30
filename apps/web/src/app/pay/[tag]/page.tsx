@@ -48,6 +48,6 @@ export default async function AuraTagPage({ params }: { params: Promise<{ tag: s
         </dl>
       </section>}
     </> : <section className="pyCard pyUnavailable"><h1>Payment page unavailable</h1><p>This Aura tag is not available for public payments.</p></section>}</main>
-    <footer className="pyFooter">Aura is a wallet app. Crypto transfers may not be reversible, so check who you're paying before you send.</footer>
+    <footer className="pyFooter">Aura is a wallet app. Crypto transfers may not be reversible, so check who you&apos;re paying before you send.</footer>
   </div>;
 }

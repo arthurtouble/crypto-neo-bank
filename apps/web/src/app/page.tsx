@@ -76,7 +76,7 @@ export default function MarketingPage() {
         <div><h2>Legal</h2><a href={`${docs}/legal/privacy-notice/`}>Privacy</a><a href={`${docs}/legal/terms-of-use/`}>Terms</a><a href={`${docs}/legal/risk-disclosure/`}>Risk disclosure</a></div>
       </div>
       <ol id="footnotes" className="ldFootnotes">
-        <li>The screens show example values, not real accounts. <a href={`${docs}/getting-started/status/`}>See what's available now</a>.</li>
+        <li>The screens show example values, not real accounts. <a href={`${docs}/getting-started/status/`}>See what&apos;s available now</a>.</li>
         <li>How you control and recover your wallet depends on how you signed up. <a href={`${docs}/safety/security-model/`}>How security works</a>.</li>
         <li>Bank transfers and cards need connected, approved partners. <a href={`${docs}/company/provider-responsibilities/`}>Who does what</a>.</li>
       </ol>
