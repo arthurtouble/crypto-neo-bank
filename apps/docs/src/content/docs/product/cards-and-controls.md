@@ -11,6 +11,8 @@ The Aura card is a virtual Visa card. It spends the USDC in your Aura account on
 
 ## Getting a card
 
+Until you have a card, the Cards page shows what's left as a checklist: the steps you've done, the current one with its button, and the ones still to come. The last step is setting your spending allowance.
+
 1. **Verify your identity.** Bridge verifies you once, under **Deposit > Bank**, for both your bank account and your card.
 2. **Apply with Bridge.** On the Cards page, select **Apply with Bridge**. Bridge checks you're eligible on its own page. Select **Check status** to see its decision, or what it still needs from you.
 3. **Create your card.** Once you're approved, select **Create my card**. You need a passkey on your account, and your account can't be locked. Bridge's approval lasts 24 hours. If it runs out before you create the card, Bridge asks you to confirm your details again.
@@ -30,6 +32,8 @@ When you buy something, Bridge takes exactly the purchase amount from your USDC 
 The Cards page shows your allowance and your USDC balance, read from Base. If Base can't be read, they show **Unavailable**, never zero.
 
 ## Controls
+
+Once you have a card, the Cards page shows it with **Show card details**, then **Card controls** and your **Spending allowance** beside it, and your card activity below. On a phone they're in one column, in that order.
 
 - **Freeze card** stops all payments straight away. Unfreezing needs your passkey. You can't unfreeze while your account is locked.
 - **Daily limit.** Lowering it applies at once. Raising it needs your passkey.
@@ -51,7 +55,7 @@ The Cards page lists your card payments: pending holds, declines, paid, refunds,
 
 ## Disputes
 
-You can dispute a settled payment on your card within 110 days of it. Choose a reason:
+You can dispute a settled payment on your card within 110 days of it: select **Dispute** next to it in card activity. Choose a reason:
 
 - I didn't make this payment;
 - I didn't get what I paid for;

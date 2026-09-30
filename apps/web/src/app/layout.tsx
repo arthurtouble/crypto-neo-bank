@@ -8,6 +8,7 @@ import "../../public/design-tokens.css";
 import "./shell.css";
 import "./overview.css";
 import "./money.css";
+import "./cards.css";
 
 export const metadata: Metadata = {
   title: "Aura — Your Smart Account",
