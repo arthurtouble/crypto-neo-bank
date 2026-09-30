@@ -79,7 +79,7 @@ export function SwapAssetPicker({ value, onSelect, excludedId, label, held = fal
         <div className="mxPickerResults" aria-live="polite">
           {!debounced && !pages.isPending && !pages.isError && <div className="mxPickerState">{held ? "In your account" : "Supported assets"}</div>}
           {pages.isPending ? <div className="mxPickerState"><LoaderCircle className="spin" aria-hidden="true" /> Loading assets</div>
-            : pages.isError ? <div className="mxPickerState">Assets are unavailable. <button type="button" onClick={() => void pages.refetch()}>Try Again</button></div>
+            : pages.isError ? <div className="mxPickerState">Assets are unavailable. <button type="button" onClick={() => void pages.refetch()}>Try again</button></div>
               : assets.length === 0 ? <div className="mxPickerState">No matching assets</div>
                 : assets.map((asset, index) => <button type="button" key={asset.id} className={`swapPickerOption mxPickerOption${index === active ? " isActive" : ""}`} disabled={asset.id === excludedId || asset.eligibility !== "eligible"} onMouseEnter={() => setActive(index)} onClick={() => choose(asset)}>
                   <span className="mxPickerGlyph" aria-hidden="true">{asset.symbol.slice(0, 1).toUpperCase()}</span><span className="mxPickerIdentity"><strong>{asset.symbol}<small>{asset.name}</small></strong><span>{assetNetwork(asset.chainId)} · {contractHint(asset)}</span></span>

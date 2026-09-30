@@ -44,7 +44,7 @@ function quotedPrice(quote: RouteQuote, assetId: string): number | null {
 function quoteErrorText(error: unknown): string {
   if (error instanceof ApiError && error.code === "feature_unavailable") return "Swaps aren't available right now.";
   if (error instanceof ApiError && error.code === "rate_limited") return "Too many quotes. Wait a minute and try again.";
-  if (error instanceof ApiError && error.code === "provider_unavailable") return "The route provider is unavailable right now. Try again in a few minutes.";
+  if (error instanceof ApiError && error.code === "provider_unavailable") return "We can't get a price right now. Try again in a few minutes.";
   return error instanceof Error ? error.message : "We couldn't get a quote. Try again.";
 }
 
@@ -168,7 +168,7 @@ export function SwapWorkspace() {
           <div><dt>You receive</dt><dd>{displayRawAmount(quote.toAmountRaw, quote.to.decimals)} {quote.to.symbol} on {assetNetwork(quote.to.chainId)}</dd></div>
           <div><dt>Minimum received</dt><dd>{displayRawAmount(quote.toAmountMinRaw, quote.to.decimals)} {quote.to.symbol}</dd></div>
           <div><dt>Network fee on {assetNetwork(quote.from.chainId)}</dt><dd className="mxPositive">Paid by Aura</dd></div>
-          <div><dt>{crossChain ? "Bridge and provider fees" : "Provider fee"}</dt><dd>{crossChain && quote.fromAmountUsd && quote.toAmountUsd
+          <div><dt>{crossChain ? "Route fees" : "Provider fee"}</dt><dd>{crossChain && quote.fromAmountUsd && quote.toAmountUsd
             ? `About ${formatEstimatedFeeUsd(Math.max(0, Number(quote.fromAmountUsd) - Number(quote.toAmountUsd)))}, taken from the amount` : formatEstimatedFeeUsd(quote.providerFeeUsd)}</dd></div>
           <div><dt>Price impact</dt><dd>{quote.priceImpactPercent === null ? "Unavailable" : `${quote.priceImpactPercent.toFixed(2)}%`}</dd></div>
           <div><dt>Provider</dt><dd>{quote.tool}</dd></div>

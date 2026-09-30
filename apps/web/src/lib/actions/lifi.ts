@@ -124,7 +124,7 @@ export function validateRoute(response: unknown, request: RouteQuoteRequest, now
 
 async function readBoundedJson(response: Response): Promise<unknown> {
   const text = await response.text();
-  if (text.length > MAX_RESPONSE_BYTES) throw new RouteQuoteError("provider_unavailable", "The route provider returned an invalid response.");
+  if (text.length > MAX_RESPONSE_BYTES) throw new RouteQuoteError("provider_unavailable", "We can't get a price right now. Try again in a few minutes.");
   return JSON.parse(text) as unknown;
 }
 
@@ -152,23 +152,23 @@ export async function quoteRoute(request: RouteQuoteRequest, dependencies: { fet
       headers: process.env.LIFI_API_KEY ? { "x-lifi-api-key": process.env.LIFI_API_KEY } : undefined,
       signal: AbortSignal.timeout(12_000)
     });
-  } catch { throw new RouteQuoteError("provider_unavailable", "The route provider is unavailable right now."); }
+  } catch { throw new RouteQuoteError("provider_unavailable", "We can't get a price right now. Try again in a few minutes."); }
   if (!response.ok) {
     await response.body?.cancel().catch(() => undefined);
     // LI.FI answers 404 when no route exists; an outage or rate limit isn't a statement about the route.
-    if (response.status === 429 || response.status >= 500) throw new RouteQuoteError("provider_unavailable", "The route provider is unavailable right now. Try again in a few minutes.");
-    throw new RouteQuoteError("no_route", "No route is available for this amount right now.");
+    if (response.status === 429 || response.status >= 500) throw new RouteQuoteError("provider_unavailable", "We can't get a price right now. Try again in a few minutes.");
+    throw new RouteQuoteError("no_route", "We can't find a way to do this for that amount right now.");
   }
   let body: unknown;
   try { body = await readBoundedJson(response); }
-  catch { throw new RouteQuoteError("provider_unavailable", "The route provider returned an invalid response."); }
+  catch { throw new RouteQuoteError("provider_unavailable", "We can't get a price right now. Try again in a few minutes."); }
   const route = validateRoute(body, request, (dependencies.now ?? Date.now)());
   if (!route) {
     const estimate = (body as { estimate?: { fromAmountUSD?: string; toAmountUSD?: string } } | null)?.estimate;
     const impact = priceImpact(estimate?.fromAmountUSD, estimate?.toAmountUSD);
     if (impact !== null && impact > MAX_PRICE_IMPACT_PERCENT)
       throw new RouteQuoteError("price_impact", `This would lose about ${impact.toFixed(1)}% to price impact. Try a smaller amount.`);
-    throw new RouteQuoteError("no_route", "No route passed Aura's checks for this amount right now.");
+    throw new RouteQuoteError("no_route", "We can't find a safe way to do this for that amount right now.");
   }
   return route;
 }
