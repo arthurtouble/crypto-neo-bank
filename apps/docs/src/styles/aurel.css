@@ -1,52 +1,47 @@
-@import "@fontsource-variable/archivo";
-
-@font-face {
-  font-family: "Satoshi";
-  src: url("/fonts/Satoshi-Variable.woff2") format("woff2-variations");
-  font-style: normal;
-  font-weight: 300 900;
-  font-display: swap;
-}
+/*
+ * The docs site in Aura's look (redesign area 12): Starlight's colours and fonts mapped to the app's design tokens,
+ * imported from the web app so there's one source. Geist and Geist Mono are served from this site's /fonts.
+ */
+@import "../../../web/public/design-tokens.css";
 
 :root {
-  --sl-font: "Satoshi", ui-sans-serif, system-ui, sans-serif;
-  --sl-color-accent-low: #dce9df;
-  --sl-color-accent: #123524;
-  --sl-color-accent-high: #092018;
-  --sl-color-white: #171a18;
-  --sl-color-gray-1: #2c312e;
-  --sl-color-gray-2: #4d5550;
-  --sl-color-gray-3: #6c746f;
-  --sl-color-gray-4: #aab0ac;
-  --sl-color-gray-5: #dfe2df;
-  --sl-color-gray-6: #eff1ef;
-  --sl-color-black: #fbfcfa;
-  --sl-content-width: 50rem;
-  --sl-text-5xl: 3.55rem;
+  --sl-font: var(--font-sans);
+  --sl-font-mono: var(--font-mono);
+  --sl-color-accent-low: var(--color-accent-soft);
+  --sl-color-accent: var(--color-accent);
+  --sl-color-accent-high: var(--color-accent-pressed);
+  --sl-color-white: var(--color-text);
+  --sl-color-gray-1: var(--color-text);
+  --sl-color-gray-2: var(--color-text-secondary);
+  --sl-color-gray-3: var(--color-text-tertiary);
+  --sl-color-gray-4: var(--color-line-strong);
+  --sl-color-gray-5: var(--color-line);
+  --sl-color-gray-6: var(--color-muted);
+  --sl-color-gray-7: var(--color-surface);
+  --sl-color-black: var(--color-canvas);
+  --sl-color-bg-nav: var(--color-canvas);
+  --sl-color-bg-sidebar: var(--color-canvas);
+  --sl-color-hairline: var(--color-line);
+  --sl-color-hairline-light: var(--color-line);
+  --sl-color-hairline-shade: var(--color-line-strong);
+  --sl-content-width: 46rem;
 }
 
-:root[data-theme="dark"] {
-  --sl-color-accent-low: #102a1d;
-  --sl-color-accent: #69d298;
-  --sl-color-accent-high: #d8f6e4;
-  --sl-color-white: #f4f7f5;
-  --sl-color-gray-1: #dce2de;
-  --sl-color-gray-2: #b4beb8;
-  --sl-color-gray-3: #8d9992;
-  --sl-color-gray-4: #465149;
-  --sl-color-gray-5: #27312b;
-  --sl-color-gray-6: #18211b;
-  --sl-color-black: #0d120f;
-}
+/* In dark, the lighter accent reads as the accent's text colour. */
+:root[data-theme="dark"] { --sl-color-accent-high: var(--color-accent-hover); }
 
-body { letter-spacing: -.008em; }
-h1, h2, h3 { font-family: "Archivo Variable", "Satoshi", ui-sans-serif, system-ui, sans-serif; letter-spacing: -.035em; font-weight: 690; }
-.site-title { letter-spacing: .16em; text-transform: uppercase; font-size: .86rem; }
-.hero h1 { max-width: 13ch; }
-.hero .tagline { max-width: 42rem; font-size: 1.08rem; }
-.card { border-radius: .85rem; box-shadow: none; }
-.sl-link-button { border-radius: .58rem; transition: transform 140ms ease, background-color 140ms ease, box-shadow 140ms ease; }
-.sl-link-button:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(18, 53, 36, .12); }
-.sl-link-button:active { transform: translateY(0) scale(.985); box-shadow: none; }
-.starlight-aside { border-radius: .7rem; }
-@media (prefers-reduced-motion: reduce) { .sl-link-button { transition: none; } }
+body { font-feature-settings: "tnum" 0; }
+h1, h2, h3, h4 { font-family: var(--font-sans); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-tight); }
+.site-title { gap: var(--space-2); color: var(--color-text); font-weight: var(--weight-semibold); }
+.site-title img { width: 22px; height: 22px; }
+/* The current page: a muted fill with the text colour, as in the app's sidebar. */
+nav.sidebar a[aria-current="page"], nav.sidebar a[aria-current="page"]:hover, nav.sidebar a[aria-current="page"]:focus { background: var(--color-muted); color: var(--color-text); font-weight: var(--weight-semibold); }
+.hero h1 { max-width: 16ch; }
+.hero .tagline { max-width: 42rem; }
+/* Card icons carry no colour of their own: one accent. */
+.card .icon { border-color: var(--color-line) !important; background: var(--color-accent-soft) !important; color: var(--color-accent) !important; }
+.card { border-radius: var(--radius-lg); border-color: var(--color-line); background: var(--color-surface); box-shadow: var(--shadow-1); }
+.sl-link-button { border-radius: var(--radius-sm); font-weight: var(--weight-medium); }
+.starlight-aside { border-radius: var(--radius-md); }
+.expressive-code, code { font-family: var(--font-mono); }
+:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }

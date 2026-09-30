@@ -11,6 +11,7 @@ import "./money.css";
 import "./cards.css";
 import "./records.css";
 import "./settings.css";
+import "./public.css";
 
 export const metadata: Metadata = {
   title: "Aura — Your Smart Account",
