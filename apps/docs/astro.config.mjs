@@ -1,8 +1,28 @@
+import { appendFileSync, readFileSync } from "node:fs";
 import { defineConfig } from "astro/config";
 import starlight from "@astrojs/starlight";
 
+// Where the docs live, and the Aura app they link back to. Production's workers.dev addresses unless the build sets
+// them: the dev deploy sets both, and a production custom domain sets both (docs/operations/production-launch.md).
+const site = process.env.AURA_DOCS_SITE ?? "https://aurel-docs.aurel-events.workers.dev";
+const app = process.env.AURA_APP_URL ?? "https://aurel-financial-os.aurel-events.workers.dev";
+// Dev asks search engines to stay out: robots.txt (src/pages/robots.txt.ts), a robots meta, and an X-Robots-Tag header.
+const noindex = process.env.AURA_DOCS_NOINDEX === "1";
+
+// The browser's theme colour is the page canvas, light and dark, read from the design tokens.
+const tokens = readFileSync(new URL("../web/public/design-tokens.css", import.meta.url), "utf8");
+const canvas = (block) => tokens.match(new RegExp(`${block} \\{[^}]*--color-canvas: (#[0-9a-f]+);`))?.[1];
+const themeColor = { light: canvas(":root"), dark: canvas(':root\\[data-theme="dark"\\]') };
+if (!themeColor.light || !themeColor.dark) throw new Error("design-tokens.css has no --color-canvas for light and dark");
+
+/** Outside production, every file the docs Worker serves carries X-Robots-Tag (public/_headers has the cache rules). */
+const noindexHeader = {
+  name: "aura-noindex-header",
+  hooks: { "astro:build:done": ({ dir }) => { if (noindex) appendFileSync(new URL("_headers", dir), "\n/*\n  X-Robots-Tag: noindex, nofollow\n"); } }
+};
+
 export default defineConfig({
-  site: process.env.AURA_DOCS_SITE ?? "https://aurel-docs.aurel-events.workers.dev",
+  site,
   redirects: {
     "/safety/transaction-verification": "/safety/security-model/",
     "/product/tokenized-markets": "/product/tokenized-stocks-and-gold/"
@@ -14,6 +34,8 @@ export default defineConfig({
       favicon: "/favicon.svg",
       logo: { light: "./src/assets/aura-mark-light.svg", dark: "./src/assets/aura-mark-dark.svg" },
       customCss: ["./src/styles/aurel.css"],
+      social: [{ icon: "external", label: "Aura home", href: app }],
+      routeMiddleware: "./src/route-data.ts",
       pagefind: true,
       lastUpdated: true,
       pagination: true,
@@ -65,9 +87,18 @@ export default defineConfig({
         { label: "Legal", items: [{ autogenerate: { directory: "legal" } }] }
       ],
       head: [
-        { tag: "meta", attrs: { name: "theme-color", content: "#f7f8fa" } },
+        { tag: "meta", attrs: { name: "theme-color", media: "(prefers-color-scheme: light)", content: themeColor.light } },
+        { tag: "meta", attrs: { name: "theme-color", media: "(prefers-color-scheme: dark)", content: themeColor.dark } },
+        // The same preview image as the Aura home page: the Overview with fictional example data.
+        { tag: "meta", attrs: { property: "og:image", content: new URL("/images/aura-og.png", site).href } },
+        { tag: "meta", attrs: { property: "og:image:width", content: "1200" } },
+        { tag: "meta", attrs: { property: "og:image:height", content: "630" } },
+        { tag: "meta", attrs: { property: "og:image:alt", content: "Aura's Overview with example balances" } },
+        { tag: "meta", attrs: { name: "twitter:image", content: new URL("/images/aura-og.png", site).href } },
+        ...(noindex ? [{ tag: "meta", attrs: { name: "robots", content: "noindex, nofollow" } }] : []),
         { tag: "link", attrs: { rel: "preload", href: "/fonts/Geist-Variable.woff2", as: "font", type: "font/woff2", crossorigin: "anonymous" } }
       ]
-    })
+    }),
+    noindexHeader
   ]
 });

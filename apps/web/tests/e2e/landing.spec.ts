@@ -75,11 +75,18 @@ test("a sanctioned place gets the unavailable page for the app and the API, but 
 test("search engines may index the landing page, not the app or payment pages", async ({ page, request }) => {
   // The e2e server runs the production configuration; dev (--env dev) asks to be kept out entirely (tests/unit/seo.test.ts).
   const robots = await (await request.get("/robots.txt")).text();
-  for (const rule of ["Allow: /", "Disallow: /app", "Disallow: /api/", "Disallow: /pay/"]) expect(robots).toContain(rule);
+  // The app stays crawlable so search engines can read its noindex (lib/site/seo.ts).
+  for (const rule of ["Allow: /", "Disallow: /api/", "Disallow: /pay/"]) expect(robots).toContain(rule);
+  expect(robots).not.toContain("Disallow: /app");
   await page.goto("/");
-  await expect(page).toHaveTitle("Aura");
+  await expect(page).toHaveTitle(/^Aura: stablecoins, crypto, tokenized stocks, and gold/);
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /^index/);
   await expect(page.locator('meta[property="og:image"]')).toHaveAttribute("content", /\/images\/aura-og\.png$/);
+  const structured = JSON.parse(await page.locator('script[type="application/ld+json"]').textContent() ?? "");
+  expect(structured["@graph"].map((node: { "@type": string }) => node["@type"])).toContain("FAQPage");
+  expect(await (await request.get("/manifest.webmanifest")).json()).toMatchObject({ name: "Aura", start_url: "/app" });
+  expect(await (await request.get("/llms.txt")).text()).toMatch(/^# Aura\n/);
+  expect(await (await request.get("/app")).text()).toMatch(/<meta name="robots" content="noindex, nofollow"/);
   await page.goto("/pay/nobody");
   await expect(page).toHaveTitle("Pay with Aura");
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);

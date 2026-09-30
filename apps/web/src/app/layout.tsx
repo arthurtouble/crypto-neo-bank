@@ -1,19 +1,15 @@
-import type { Metadata } from "next";
-import { indexable, siteOrigin } from "@/lib/site/seo";
+import type { Metadata, Viewport } from "next";
+import { indexable, landingDescription, shareImage, siteOrigin, themeColors } from "@/lib/site/seo";
 import "./globals.css";
 import "./identity.css";
 import "./product-system.css";
 // The redesign's tokens (also served at /design-tokens.css for the reference page), then the rebuilt app shell.
 import "../../public/design-tokens.css";
 import "./shell.css";
-import "./overview.css";
-import "./money.css";
-import "./cards.css";
-import "./records.css";
-import "./settings.css";
 import "./public.css";
+// The app's own area stylesheets (overview, money, cards, records, settings) load with app/app/layout.tsx, so public pages don't carry them.
 
-const description = "Money you control, in one simple app. Hold stablecoins, crypto, tokenized stocks, and gold, then send, swap, and earn. What you can use depends on where you live.";
+const description = landingDescription;
 const origin = siteOrigin();
 
 export const metadata: Metadata = {
@@ -21,10 +17,17 @@ export const metadata: Metadata = {
   title: { default: "Aura", template: "%s · Aura" },
   description,
   applicationName: "Aura",
+  // Added to the home screen (app/manifest.ts), Aura opens on its own, which iOS needs for push notices.
+  appleWebApp: { capable: true, title: "Aura", statusBarStyle: "default" },
   robots: indexable() ? { index: true, follow: true } : { index: false, follow: false },
   openGraph: { type: "website", siteName: "Aura", title: "Aura", description,
-    images: [{ url: "/images/aura-og.png", width: 1200, height: 630, alt: "Aura's Overview with example balances" }] },
-  twitter: { card: "summary_large_image", title: "Aura", description, images: ["/images/aura-og.png"] }
+    images: [shareImage] },
+  twitter: { card: "summary_large_image", title: "Aura", description, images: [shareImage.url] }
+};
+
+// The browser's chrome follows the page canvas (--color-canvas in public/design-tokens.css), light and dark.
+export const viewport: Viewport = {
+  themeColor: [{ media: "(prefers-color-scheme: light)", color: themeColors.light }, { media: "(prefers-color-scheme: dark)", color: themeColors.dark }]
 };
 
 // Set only by the dev deploy, so dev shows which commit it runs and production shows nothing.

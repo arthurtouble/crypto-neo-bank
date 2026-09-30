@@ -7,11 +7,12 @@ const devVars = { PRODUCT_ENVIRONMENT: "development", NEXT_PUBLIC_PRIVY_APP_ID: 
 const ready = () => ({
   web: { name: "aurel-financial-os",
     vars: { PRODUCT_ENVIRONMENT: "production", NEXT_PUBLIC_PRIVY_APP_ID: "prod-app", CF_ACCESS_TEAM_DOMAIN: "https://team.cloudflareaccess.com", CF_ACCESS_AUD: "aud",
-      EMAIL_FROM: "Aura <hello@aura.example>", VAPID_PUBLIC_KEY: "prod-key" },
+      EMAIL_FROM: "Aura <hello@aura.example>", VAPID_PUBLIC_KEY: "prod-key", APP_ORIGIN: "https://aura.example" },
     d1_databases: [{ database_id: "prod-db" }], queues: { producers: [{ queue: "aurel-provider-events" }] },
     env: { dev: { vars: devVars, d1_databases: [{ database_id: "dev-db" }] } } },
   events: { d1_databases: [{ database_id: "prod-db" }], queues: { consumers: [{ queue: "aurel-provider-events" }] } },
-  ops: { services: [{ binding: "WEB", service: "aurel-financial-os" }] }
+  ops: { services: [{ binding: "WEB", service: "aurel-financial-os" }] },
+  build: { NEXT_PUBLIC_DOCS_URL: "https://docs.aura.example", AURA_DOCS_SITE: "https://docs.aura.example", AURA_APP_URL: "https://aura.example" }
 });
 
 test("a complete production configuration has no blockers", () => {
@@ -26,6 +27,18 @@ test("it catches dev values, missing variables, and mismatched Workers", () => {
   configs.ops.services[0].service = "aura-dev";
   const messages = productionBlockers(configs).map((blocker) => blocker.message).join("\n");
   for (const expected of ["no INTERCOM_APP_ID", "development Privy app", "every operator is refused", "test sender", "development VAPID key", "D1 database differs", "WEB binding"]) {
+    assert.match(messages, new RegExp(expected));
+  }
+});
+
+test("it asks for the docs and app addresses the builds use", () => {
+  const unset = ready();
+  unset.build = {};
+  assert.equal(productionBlockers(unset).filter((blocker) => /isn't set in this shell/.test(blocker.message)).length, 3);
+  const mismatched = ready();
+  Object.assign(mismatched.build, { NEXT_PUBLIC_DOCS_URL: "https://aurel-docs.aurel-events.workers.dev", AURA_APP_URL: "https://other.example" });
+  const messages = productionBlockers(mismatched).map((blocker) => blocker.message).join("\n");
+  for (const expected of ["NEXT_PUBLIC_DOCS_URL must be the custom domain", "name different docs addresses", "AURA_APP_URL differs from APP_ORIGIN"]) {
     assert.match(messages, new RegExp(expected));
   }
 });

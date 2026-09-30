@@ -4,6 +4,7 @@ import { refreshBankPayouts } from "@/lib/money/bank-activity";
 import { blockedPlace, isGatedPath, requestPlace } from "@/lib/legal/places";
 import { deliverPending } from "@/lib/notifications/deliver";
 import { scanIncoming } from "@/lib/notifications/incoming";
+import { indexable, noindexHeader } from "@/lib/site/seo";
 
 const log = (event: string, scheduledTime: number) => [
   (summary: unknown) => console.log(JSON.stringify({ level: "info", event: `${event}.completed`, scheduledTime, summary })),
@@ -25,7 +26,8 @@ const scheduled: ExportedHandlerScheduledHandler<Cloudflare.Env> = async (contro
 
 /**
  * Serve a request with vinext. API handlers log their own failures with a trace ID (lib/http/route.ts). A page that
- * answers 5xx, or anything that throws, is logged here as `request.failed`, with the path but not the query.
+ * answers 5xx, or anything that throws, is logged here as `request.failed`, with the path but not the query. Outside
+ * production, every response also asks search engines not to index it (lib/site/seo.ts).
  */
 async function serve(request: Request, env: Cloudflare.Env, ctx: ExecutionContext) {
   const path = new URL(request.url).pathname;
@@ -35,7 +37,10 @@ async function serve(request: Request, env: Cloudflare.Env, ctx: ExecutionContex
     // vinext types its env as the assets binding alone; the Worker passes the whole env through, as `{ ...app }` would.
     const response = await app.fetch(request, env as Parameters<typeof app.fetch>[1], ctx);
     if (response.status >= 500 && !path.startsWith("/api/")) failed({ status: response.status });
-    return response;
+    if (indexable()) return response;
+    const tagged = new Response(response.body, response);
+    tagged.headers.set("X-Robots-Tag", noindexHeader);
+    return tagged;
   } catch (error) {
     failed({ message: error instanceof Error ? error.message : "unknown" });
     throw error;

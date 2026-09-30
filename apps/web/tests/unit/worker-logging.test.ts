@@ -10,7 +10,7 @@ vi.mock("@/lib/notifications/incoming", () => ({ scanIncoming: vi.fn() }));
 const worker = async () => (await import("../../worker/index")).default as unknown as { fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> };
 const logged = (spy: { mock: { calls: unknown[][] } }) => spy.mock.calls.map(([line]) => JSON.parse(String(line)));
 
-afterEach(() => { vi.restoreAllMocks(); next.mockReset(); });
+afterEach(() => { vi.restoreAllMocks(); vi.unstubAllEnvs(); next.mockReset(); });
 
 describe("web Worker error logging", () => {
   it("logs a page that fails with 5xx, without the query string", async () => {
@@ -34,5 +34,22 @@ describe("web Worker error logging", () => {
     await app.fetch(new Request("https://aura.test/app"), {}, {});
     await app.fetch(new Request("https://aura.test/api/overview"), {}, {});
     expect(error).not.toHaveBeenCalled();
+  });
+});
+
+describe("web Worker search-engine header", () => {
+  it("asks search engines not to index any response outside production", async () => {
+    vi.stubEnv("PRODUCT_ENVIRONMENT", "development");
+    next.mockResolvedValue(new Response("ok", { headers: { "content-type": "text/html" } }));
+    const response = await (await worker()).fetch(new Request("https://aura.test/"), {}, {});
+    expect(response.headers.get("x-robots-tag")).toBe("noindex, nofollow");
+    expect(response.headers.get("content-type")).toBe("text/html");
+    expect(await response.text()).toBe("ok");
+  });
+
+  it("leaves production responses indexable", async () => {
+    vi.stubEnv("PRODUCT_ENVIRONMENT", "production");
+    next.mockResolvedValue(new Response("ok"));
+    expect((await (await worker()).fetch(new Request("https://aura.test/"), {}, {})).headers.get("x-robots-tag")).toBeNull();
   });
 });

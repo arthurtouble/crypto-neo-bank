@@ -16,7 +16,7 @@ Three files hold the system, and they must agree:
 
 Change a value in `design-tokens.css` first, then here, `DESIGN.md`, and the reference page, in the same pull request.
 
-The root layout loads `design-tokens.css` for the whole app, and every area is styled from the tokens in its own stylesheet (the table below). The pre-redesign `globals.css`, `identity.css`, and `product-system.css` still load first, trimmed in the step 4 refactor to what the app still renders: base resets, the legacy variables those rules read (the clashing one is renamed `--legacy-font-mono`), and a few legacy classes components still carry (`button`, `panel`, `emptyState`, `activityRow`, the theme toggle, transaction progress, `srOnly`, `buildTag`). Don't add to them; new styles go in the area stylesheets.
+The root layout loads `design-tokens.css` for the whole app, and every area is styled from the tokens in its own stylesheet (the table below). The root layout also loads the shell and public-page stylesheets; the app-only areas (overview, money, cards, records, settings) load from `src/app/app/layout.tsx`, after them, so the landing and payment pages don't download them. The pre-redesign `globals.css`, `identity.css`, and `product-system.css` still load first, trimmed in the step 4 refactor to what the app still renders: base resets, the legacy variables those rules read (the clashing one is renamed `--legacy-font-mono`), and a few legacy classes components still carry (`button`, `panel`, `emptyState`, `activityRow`, the theme toggle, transaction progress, `srOnly`, `buildTag`). Don't add to them; new styles go in the area stylesheets.
 
 | Area | Where | Status |
 | --- | --- | --- |

@@ -13,7 +13,17 @@ Every gate in [launch readiness](../overview/launch-readiness.md) is met and rec
 
 ## 2. Domain
 
-Add the custom domain to Cloudflare, set `APP_ORIGIN` to it in the production `vars`, and use it wherever a step below asks for an origin. `APP_ORIGIN` also sets the landing page's canonical address, preview image URLs, and sitemap. Only production is indexed; `robots.txt` asks search engines to keep out of the app, the API, and payment pages (`apps/web/src/lib/site/seo.ts`). Set the docs' address with `AURA_DOCS_SITE` when building them for a custom domain.
+Add the custom domains for the app and the docs to Cloudflare, set `APP_ORIGIN` to the app's in the production `vars`, and use it wherever a step below asks for an origin. `APP_ORIGIN` also sets the landing page's canonical address, preview image and structured-data URLs, and sitemap.
+
+The web app and the docs learn each other's address when they're built, not from `wrangler.jsonc`. Export these in the shell that runs `pnpm production:check` and the deploys in step 9; unset, each falls back to a workers.dev address and `pnpm production:check` flags it:
+
+| Build variable | Built into | Set to |
+| --- | --- | --- |
+| `NEXT_PUBLIC_DOCS_URL` | The web app: its docs links, `/docs`, and `/llms.txt` | The docs' origin, such as `https://docs.<domain>` |
+| `AURA_DOCS_SITE` | The docs: canonical URLs, sitemap, preview image, `llms.txt` | The same docs origin |
+| `AURA_APP_URL` | The docs: the header's link back to Aura | `APP_ORIGIN` |
+
+Only production is indexed (`apps/web/src/lib/site/seo.ts`). There, `robots.txt` keeps search engines out of the API, payment pages, and the unavailable page, and allows AI crawlers like any other. The app carries a noindex robots meta instead of a `robots.txt` rule, so search engines can read it. The landing page has structured data (organisation, site, app, and its questions), and `/llms.txt` summarises Aura for AI tools; the docs serve `/llms.txt` and `/llms-full.txt`. Everything that isn't production also sends `X-Robots-Tag: noindex, nofollow` ([the development Worker](aura-development-worker.md#configuration)). `/manifest.webmanifest` lets people add Aura to a home screen, which iPhone and iPad need for push notices.
 
 ## 3. Privy
 
@@ -71,14 +81,14 @@ Deploy `aurel-ops`, put Cloudflare Access in front of it allowing only the opera
 
 ## 9. Deploy
 
-In this order, from an up-to-date `main` with `pnpm production:check` passing:
+In this order, from an up-to-date `main` with `pnpm production:check` passing in a shell that has the build variables from step 2:
 
 1. `pnpm docs:deploy`
 2. `pnpm events:deploy`
 3. The web Worker, as a candidate first: follow [production release](operations-runbook.md#production-release) (upload, smoke the preview, then a gradual rollout).
 4. `pnpm --filter @aurel/ops deploy`
 
-Then smoke it: `AURA_SMOKE_URL=https://<domain> AURA_SMOKE_DOCS_URL=https://<docs domain> pnpm test:deployment`.
+Then smoke it: `AURA_SMOKE_URL=https://<domain> AURA_SMOKE_DOCS_URL=https://<docs domain> pnpm test:deployment`. On production it expects no `X-Robots-Tag`, and checks `/llms.txt`, the manifest, and the landing page's structured data.
 
 ## 10. Switch features on
 

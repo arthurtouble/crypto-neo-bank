@@ -3,8 +3,14 @@ import Link from "next/link";
 import { ArrowLeftRight, AtSign, Check, ChevronDown, CreditCard, Send, Sprout, Wallet } from "lucide-react";
 import { AppBrand } from "@/components/brand";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { jsonLd, landingDescription, landingStructuredData, landingTitle, shareImage } from "@/lib/site/seo";
 
-export const metadata: Metadata = { alternates: { canonical: "/" } };
+export const metadata: Metadata = {
+  title: { absolute: landingTitle },
+  alternates: { canonical: "/" },
+  openGraph: { type: "website", siteName: "Aura", url: "/", title: landingTitle, description: landingDescription, images: [shareImage] },
+  twitter: { card: "summary_large_image", title: landingTitle, description: landingDescription, images: [shareImage.url] }
+};
 
 const docs = process.env.NEXT_PUBLIC_DOCS_URL ?? "https://aurel-docs.aurel-events.workers.dev";
 const features = [
@@ -37,6 +43,7 @@ function Screen({ name, alt, priority = false }: { name: string; alt: string; pr
 /** The public landing page: what Aura is, what it does, how it keeps money safe, and where to start. */
 export default function MarketingPage() {
   return <div className="ldPage">
+    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(landingStructuredData(faqs)) }} />
     <header className="ldHeader">
       <div className="ldHeaderInner">
         <AppBrand href="/" />
@@ -86,9 +93,9 @@ export default function MarketingPage() {
     <footer className="ldFooter">
       <div className="ldFooterTop">
         <AppBrand href="/" />
-        <div><h2>Product</h2><a href="#features">Features</a><Link href="/app">Try Aura</Link><a href={`${docs}/getting-started/status/`}>Availability</a></div>
-        <div><h2>Help</h2><a href={`${docs}/getting-started/setup/`}>Get started</a><a href={`${docs}/safety/account-controls/`}>Security</a><a href={`${docs}/safety/report-a-security-issue/`}>Contact</a></div>
-        <div><h2>Legal</h2><a href={`${docs}/legal/privacy-notice/`}>Privacy</a><a href={`${docs}/legal/terms-of-use/`}>Terms</a><a href={`${docs}/legal/risk-disclosure/`}>Risk disclosure</a></div>
+        <div><p className="ldFooterLabel">Product</p><a href="#features">Features</a><Link href="/app">Try Aura</Link><a href={`${docs}/getting-started/status/`}>Availability</a></div>
+        <div><p className="ldFooterLabel">Help</p><a href={`${docs}/getting-started/setup/`}>Get started</a><a href={`${docs}/safety/account-controls/`}>Security</a><a href={`${docs}/safety/report-a-security-issue/`}>Contact</a></div>
+        <div><p className="ldFooterLabel">Legal</p><a href={`${docs}/legal/privacy-notice/`}>Privacy</a><a href={`${docs}/legal/terms-of-use/`}>Terms</a><a href={`${docs}/legal/risk-disclosure/`}>Risk disclosure</a></div>
       </div>
       <p className="ldDisclosure">Screens show example data, not real accounts. What you can use depends on where you live. Bank transfers and cards need approved partners. <a href={`${docs}/getting-started/status/`}>See what&apos;s available now</a>.</p>
       <div className="ldFooterBottom">© {new Date().getFullYear()} Aura <ThemeToggle /></div>
