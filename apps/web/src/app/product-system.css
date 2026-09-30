@@ -101,10 +101,6 @@
 
 .productShell .heroAmount small { font-size: var(--type-caption); }
 .productShell .metric strong { font-size: 18px; }
-.productShell .activityRow { min-height: var(--row-standard); }
-.productShell .activityRow > div:nth-child(2) strong,
-.productShell .activityAmount strong { font-size: var(--type-row-title); }
-.productShell .activityRow small { font-size: var(--type-caption); }
 
 .button.small { min-height: 34px; padding: 0 12px; font-size: var(--type-caption); }
 .button.quiet { border-color: transparent; background: transparent; color: var(--accent); }
@@ -213,56 +209,8 @@
 .billsPanel small { margin-top: 3px; color: var(--muted); font-size: var(--type-label); }
 .formSplit { display: grid; grid-template-columns: 1fr 120px; gap: 12px; }
 
-.activityWorkspace { padding: 28px; }
-.activityFilters { margin: 18px 0 4px; display: grid; grid-template-columns: minmax(220px, 1fr) 160px 170px; gap: 10px; }
-.activityFilters label { min-width: 0; }
-.activityFilters select, .activitySearch { width: 100%; min-height: 42px; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--surface); color: var(--text); font: 500 var(--type-body-small)/1 var(--font-body); }
-.activityFilters select { padding: 0 34px 0 12px; }
-.activitySearch { display: flex; align-items: center; gap: 8px; padding: 0 12px; color: var(--muted); }
-.activitySearch:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 12%, transparent); }
-.activitySearch input { width: 100%; border: 0; outline: 0; background: transparent; color: var(--text); font: inherit; }
-.activityButton { width: 100%; padding: 0; border: 0; border-top: 1px solid var(--border); background: transparent; color: var(--text); text-align: left; cursor: pointer; }
-.activityButton:hover { background: color-mix(in srgb, var(--accent) 4%, transparent); }
-.activityButton > span:nth-child(2) { min-width: 0; }
-.activityIcon.good { color: var(--success); background: color-mix(in srgb, var(--success) 12%, transparent); }
-.activityObservations { margin-top: 18px; padding: 14px; border: 1px solid var(--border); border-radius: var(--radius-control); }
-.activityObservations h3 { margin: 0; font-size: 14px; }
-.activityObservations p { margin: 5px 0 0; color: var(--text-tertiary); font-size: 12px; }
-.activityObservations .activityAmount { max-width: 220px; }
-.activityObservations .activityAmount strong { color: var(--warning); font-family: inherit; font-size: 12px; }
-.activityObservations .activityAmount a { display: inline-flex; align-items: center; gap: 4px; margin-top: 6px; font-size: 12px; }
 @media (max-width: 640px) {
-  .activityObservations .activityRow { grid-template-columns: 31px minmax(0, 1fr); }
-  .activityObservations .activityAmount { grid-column: 2; max-width: none; padding-bottom: 12px; text-align: left; }
 }
-.activityIcon.bad { color: var(--danger); background: color-mix(in srgb, var(--danger) 10%, transparent); }
-.receiptModal { text-align: center; }
-.receiptStatus { width: 44px; height: 44px; margin: 2px auto 14px; display: grid; place-items: center; border-radius: 50%; background: var(--accent-soft); color: var(--accent); }
-.receiptStatus.confirmed { background: color-mix(in srgb, var(--success) 12%, transparent); color: var(--success); }
-.receiptStatus.failed, .receiptStatus.blocked { background: color-mix(in srgb, var(--danger) 10%, transparent); color: var(--danger); }
-.receiptAmount { display: block; margin: 0 0 22px; font-family: "Archivo Variable", "Satoshi", system-ui, sans-serif; font-size: 28px; letter-spacing: -.03em; }
-.receiptDetails { margin-bottom: 20px; display: grid; text-align: left; border-top: 1px solid var(--border); }
-.receiptDetails > span { min-height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 20px; border-bottom: 1px solid var(--border); color: var(--muted); font-size: var(--type-label); }
-.receiptDetails strong { color: var(--text); font-size: var(--type-label); text-align: right; }
-.receiptTimeline { margin: 0 0 20px; display: grid; text-align: left; }
-.receiptTimeline h3 { margin: 0 0 10px; font-size: var(--type-body); }
-.receiptTimeline > div { position: relative; min-height: 48px; display: grid; grid-template-columns: 18px 1fr; gap: 10px; }
-.receiptTimeline > div:not(:last-child)::after { content: ""; position: absolute; left: 5px; top: 14px; bottom: 0; width: 1px; background: var(--border); }
-.receiptTimeline i { position: relative; z-index: 1; width: 11px; height: 11px; margin-top: 3px; border: 2px solid var(--surface-raised); border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
-.receiptTimeline strong, .receiptTimeline small { display: block; }
-.receiptTimeline strong { font-size: var(--type-label); }
-.receiptTimeline small { margin-top: 3px; color: var(--muted); font-size: var(--type-caption); }
-.exportModal > p:not(.eyebrow) { margin: -4px 0 20px; color: var(--muted); }
-.exportChoices { display: grid; gap: 10px; margin-bottom: 16px; }
-.statementPicker { display: flex; align-items: end; gap: 10px; margin-bottom: 16px; padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--radius-control); }
-.statementPicker label { flex: 1; display: grid; gap: 6px; font-size: var(--type-caption); color: var(--muted); }
-.statementPicker input { min-height: 40px; padding: 0 10px; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--surface); color: var(--text); }
-.exportChoice { width: 100%; min-height: 70px; padding: 14px 16px; display: grid; grid-template-columns: 24px 1fr; align-items: center; gap: 12px; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--surface); color: var(--text); text-align: left; transition: border-color var(--motion-fast), background var(--motion-fast), transform var(--motion-fast); }
-.exportChoice:hover { border-color: var(--accent); background: var(--accent-soft); transform: translateY(-1px); }
-.exportChoice:active { transform: translateY(0); }
-.exportChoice span, .exportChoice strong, .exportChoice small { display: block; }
-.exportChoice strong { font-size: var(--type-body); }
-.exportChoice small { margin-top: 4px; color: var(--muted); font-size: var(--type-caption); }
 
 /* Transaction lifecycle */
 .transactionProgress { margin: 2px 0 15px; padding: 15px; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--surface-subtle); }
@@ -395,20 +343,6 @@
 .productShell .nextTier small { font-size: var(--type-label); }
 
 /* Insights and issuer-backed card controls */
-.insightsWorkspace { display: grid; gap: 12px; }
-.insightsSummary { padding: 28px; }
-.insightMetrics { margin: 22px 0 30px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid var(--border); border-radius: var(--radius-panel); overflow: hidden; }
-.insightMetrics article { min-height: 108px; padding: 20px; display: grid; align-content: space-between; gap: 14px; border-right: 1px solid var(--border); background: var(--surface); }
-.insightMetrics article:last-child { border-right: 0; }
-.insightMetrics span { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: var(--type-label); font-weight: 620; }
-.insightMetrics strong { font-family: "Archivo Variable", "Satoshi", system-ui, sans-serif; font-size: 24px; letter-spacing: -.025em; }
-.insightCategories { display: grid; gap: 10px; }
-.insightCategories h3 { margin: 0 0 6px; font-size: 17px; }
-.insightCategory { min-height: 42px; display: grid; grid-template-columns: 130px minmax(120px, 1fr) 90px; align-items: center; gap: 14px; }
-.insightCategory > span, .insightCategory > strong { font-size: var(--type-body-small); }
-.insightCategory > strong { text-align: right; }
-.insightCategory > div { height: 7px; overflow: hidden; border-radius: 99px; background: var(--surface-subtle); }
-.insightCategory i { display: block; height: 100%; border-radius: inherit; background: var(--accent); }
 
 .goalGrid { margin-top: 18px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
 .goalCard { min-height: 230px; padding: 20px; display: grid; grid-template-columns: 38px minmax(0, 1fr); align-content: start; gap: 14px; border: 1px solid var(--border); border-radius: var(--radius-panel); background: var(--surface); }
@@ -551,15 +485,10 @@
   .productShell .railRows small { display: block; grid-column: 2; }
   .productShell .railRows b { grid-column: 3; grid-row: 1 / span 2; text-align: right; }
   .dailyMoneyGrid { grid-template-columns: 1fr; }
-  .dailyMoneyPanel, .activityWorkspace { padding: 22px 18px; }
   .recipientRow { grid-template-columns: 34px minmax(0, 1fr); padding: 12px 0; }
   .recipientActions { grid-column: 2; justify-content: flex-start; flex-wrap: wrap; }
   .billsPanel { align-items: flex-start; padding: 20px 18px; }
   .billsPanel small { max-width: 210px; }
-  .activityFilters { grid-template-columns: 1fr 1fr; }
-  .activitySearch { grid-column: 1 / -1; }
-  .activityButton { grid-template-columns: 34px minmax(0, 1fr) auto; gap: 9px; }
-  .activityButton small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .formSplit { grid-template-columns: 1fr; gap: 0; }
   .billsWorkspace, .defiPositions { padding: 22px 18px; }
   .paydayPanel { padding: 22px 18px; }
@@ -568,18 +497,10 @@
   .defiMetrics > span { min-height: 76px; border-right: 0; border-bottom: 1px solid var(--border); }
   .defiMetrics > span:last-child { border-bottom: 0; }
   .defiPositionFooter { align-items: flex-start; flex-direction: column; padding: 14px 0; gap: 6px; }
-  .insightMetrics { grid-template-columns: 1fr 1fr; }
-  .insightMetrics article:nth-child(2) { border-right: 0; }
-  .insightMetrics article:nth-child(-n+2) { border-bottom: 1px solid var(--border); }
   .goalGrid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 520px) {
-  .insightsSummary { padding: 22px 18px; }
-  .insightMetrics { grid-template-columns: 1fr; }
-  .insightMetrics article { min-height: 86px; border-right: 0; border-bottom: 1px solid var(--border); }
-  .insightMetrics article:last-child { border-bottom: 0; }
-  .insightCategory { grid-template-columns: 96px minmax(70px, 1fr) 74px; gap: 9px; }
   .billRows > div { grid-template-columns: 34px minmax(0, 1fr) auto; }
   .billRows button, .billRows em { grid-column: 3; grid-row: 1 / span 2; }
   .billRows b { grid-column: 2; text-align: left; color: var(--muted); font-size: var(--type-caption); }
@@ -608,17 +529,6 @@
 .productShell .checkRow { display: flex; gap: 8px; align-items: center; font-size: 11px; }
 .productShell .checkRow input { accent-color: var(--accent); }
 /* A transaction's journey: one row per step, only the current one in progress. */
-.actionJourney { margin: 0 0 20px; padding: 0; display: grid; list-style: none; text-align: left; }
-.actionJourney li { position: relative; min-height: 46px; display: grid; grid-template-columns: 20px 1fr; gap: 10px; }
-.actionJourney li:not(:last-child)::after { content: ""; position: absolute; left: 9px; top: 20px; bottom: 0; width: 1px; background: var(--border); }
-.actionJourney i { position: relative; z-index: 1; width: 20px; height: 20px; display: grid; place-items: center; border: 1px solid var(--border); border-radius: 50%; background: var(--surface-raised); color: var(--muted); }
-.actionJourney li.done i { border-color: var(--accent); background: var(--accent); color: var(--surface-raised); }
-.actionJourney li.current i { border-color: var(--accent); color: var(--accent); }
-.actionJourney li.failed i { border-color: var(--danger); color: var(--danger); }
-.actionJourney strong, .actionJourney small { display: block; }
-.actionJourney strong { font-size: var(--type-label); }
-.actionJourney li.waiting strong { color: var(--muted); }
-.actionJourney small { margin-top: 3px; color: var(--muted); font-size: var(--type-caption); }
 
 /* Settings */
 .settingState { color: var(--positive); font-size: var(--type-caption); font-weight: 600; }
@@ -627,28 +537,3 @@
 /* Card */
 
 /* Insights: money in and out over time. Series colors are validated for color-vision deficiency on both surfaces. */
-.insightChart { --series-in: #1baf7a; --series-out: #eb6834; margin: 0 0 30px; }
-html[data-theme="dark"] .insightChart { --series-in: #199e70; --series-out: #d95926; }
-.insightChartHead { margin-bottom: 10px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
-.insightChartHead h3 { margin: 0; font-size: 17px; }
-.chartLegend { display: flex; gap: 14px; color: var(--muted); font-size: var(--type-label); }
-.chartLegend span, .chartTooltip span { display: inline-flex; align-items: center; gap: 6px; }
-.chartLegend i, .chartTooltip i { width: 10px; height: 10px; border-radius: 3px; }
-.seriesIn { fill: var(--series-in); background: var(--series-in); }
-.seriesOut { fill: var(--series-out); background: var(--series-out); }
-.insightChartPlot { position: relative; }
-.insightChartPlot svg { display: block; width: 100%; height: 170px; overflow: visible; }
-.chartTicks { position: relative; height: 20px; margin-top: 6px; }
-.chartTicks span { position: absolute; top: 0; transform: translateX(-50%); color: var(--muted); font-size: 11px; white-space: nowrap; }
-.chartBaseline { stroke: var(--border); stroke-width: 1; }
-.chartHit { fill: transparent; }
-.chartActive { fill: var(--text); opacity: .05; pointer-events: none; }
-.chartTooltip { position: absolute; top: 0; z-index: 2; min-width: 160px; padding: 10px 12px; display: grid; gap: 5px; margin: 0 6px; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--surface-raised); color: var(--text); font-size: var(--type-label); pointer-events: none; box-shadow: 0 6px 18px rgba(0,0,0,.08); }
-.chartTooltip b { margin-left: auto; padding-left: 12px; font-variant-numeric: tabular-nums; }
-.chartTable { margin-top: 8px; color: var(--muted); font-size: var(--type-label); }
-.chartTable summary { cursor: pointer; }
-.chartTable table { width: 100%; margin-top: 8px; border-collapse: collapse; color: var(--text); }
-.chartTable th, .chartTable td { padding: 6px 4px; border-bottom: 1px solid var(--border); text-align: left; font-variant-numeric: tabular-nums; }
-.chartTable td { text-align: right; }
-.insightCategory > span small { display: block; color: var(--muted); }
-.insightCategories + .insightCategories { margin-top: 26px; }

@@ -1,0 +1,150 @@
+/*
+ * Transactions and Insights (redesign area 10, journeys J12 to J14), from the design tokens only, on the money parts in
+ * money.css. Classes prefixed tx (Transactions, receipt, export, full history) and in (Insights). The receipt uses the
+ * side panel from overview.css; filter chips are the Overview's.
+ */
+
+.appFrame .txHead { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); flex-wrap: wrap; }
+.appFrame .txHead h1 { margin: 0; font-size: var(--text-title-1-size); line-height: var(--text-title-1-line); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-tight); }
+.appFrame .txState, .ovPanel .txState { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-4) 0; color: var(--color-text-secondary); }
+.appFrame .txState svg, .ovPanel .txState svg { width: 16px; height: 16px; }
+.appFrame .txBreak, .ovPanel .txBreak { overflow-wrap: anywhere; font-family: var(--font-mono); font-size: var(--text-small-size); }
+.appFrame .txIn, .ovPanel .txIn { color: var(--color-positive); }
+
+/* Status: a dot and a word */
+.appFrame .txStatus, .ovPanel .txStatus { display: inline-flex; align-items: center; gap: 6px; color: var(--color-text-secondary); font-size: var(--text-caption-size); font-weight: var(--weight-medium); }
+.appFrame .txStatus::before, .ovPanel .txStatus::before { content: ""; width: 6px; height: 6px; flex: none; border-radius: 50%; background: var(--color-text-tertiary); }
+.appFrame .txStatus-completed::before, .ovPanel .txStatus-completed::before { background: var(--color-positive); }
+.appFrame .txStatus-pending::before, .ovPanel .txStatus-pending::before { background: var(--color-warning); }
+.appFrame .txStatus-failed, .ovPanel .txStatus-failed { color: var(--color-negative); }
+.appFrame .txStatus-failed::before, .ovPanel .txStatus-failed::before { background: var(--color-negative); }
+
+/* Search, type chips, status */
+.appFrame .txFilters { display: grid; grid-template-columns: minmax(200px, 320px) minmax(0, 1fr) 160px; gap: var(--space-3); align-items: center; }
+.appFrame .txSearch { display: flex; align-items: center; gap: var(--space-2); height: var(--input-height); padding: 0 var(--space-3); border: 1px solid var(--color-line-strong); border-radius: var(--radius-sm); background: var(--color-surface); color: var(--color-text-secondary); }
+.appFrame .txSearch:focus-within { border-color: var(--color-focus); box-shadow: 0 0 0 1px var(--color-focus); }
+.appFrame .txSearch svg { width: 16px; height: 16px; flex: none; }
+.appFrame .txSearch input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; color: var(--color-text); font: var(--weight-regular) var(--text-body-size) / 1 var(--font-sans); }
+.appFrame .txChips { min-width: 0; }
+
+/* The list */
+.appFrame .txList { padding: 0; gap: 0; overflow: hidden; }
+.appFrame .txList > .txState, .appFrame .txList > .mxNote { margin: var(--space-4) var(--space-5); }
+.appFrame .txRows { margin: 0; padding: 0; list-style: none; display: grid; }
+.appFrame .txRows li + li .txRow { border-top: 1px solid var(--color-line); }
+.appFrame .txRow { width: 100%; min-height: var(--row-height); display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; gap: var(--space-3); align-items: center; padding: var(--space-2) var(--space-5); border: 0; background: none; color: var(--color-text); font: inherit; text-align: left; cursor: pointer; }
+.appFrame .txRow:hover { background: var(--color-hover); }
+.appFrame .txRow:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; }
+.appFrame .txIcon, .ovPanel .txIcon, .mxDialog .txIcon { width: 32px; height: 32px; flex: none; display: grid; place-items: center; border-radius: var(--radius-pill); background: var(--color-muted); color: var(--color-text-secondary); }
+.appFrame .txIcon svg, .mxDialog .txIcon svg { width: 16px; height: 16px; }
+.appFrame .txWhat, .appFrame .txAmount { display: grid; gap: 2px; min-width: 0; }
+.appFrame .txRow strong { display: block; font-size: var(--text-body-size); font-weight: var(--weight-medium); }
+.appFrame .txRow small { display: block; overflow: hidden; color: var(--color-text-secondary); font-size: var(--text-small-size); text-overflow: ellipsis; white-space: nowrap; }
+.appFrame .txAmount { justify-items: end; text-align: right; }
+.appFrame .txAmount strong { white-space: nowrap; }
+.appFrame .txEmpty { display: grid; justify-items: center; gap: var(--space-1); padding: var(--space-8) var(--space-5); text-align: center; }
+.appFrame .txEmpty strong { font-size: var(--text-title-3-size); line-height: var(--text-title-3-line); font-weight: var(--weight-semibold); }
+.appFrame .txEmpty span { color: var(--color-text-secondary); font-size: var(--text-small-size); }
+
+/* The receipt, in the side panel */
+.ovPanel .ovFacts dd { min-width: 0; }
+.ovPanel .txReceiptAmount { display: grid; gap: var(--space-1); }
+.ovPanel .txReceiptAmount strong { font-size: var(--text-amount-size); line-height: var(--text-amount-line); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-tight); overflow-wrap: anywhere; }
+.ovPanel .ovPanelActions svg { width: 16px; height: 16px; }
+
+/* Export, in the dialog */
+.mxDialog .txExport { display: grid; border-top: 1px solid var(--color-line); }
+.mxDialog .txExportRow { width: 100%; min-height: var(--row-height); display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) 0; border: 0; border-bottom: 1px solid var(--color-line); background: none; color: var(--color-text); font: inherit; text-align: left; }
+.mxDialog button.txExportRow { cursor: pointer; }
+.mxDialog button.txExportRow:hover { background: var(--color-hover); }
+.mxDialog button.txExportRow:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; }
+.mxDialog .txExportText { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.mxDialog .txExportText strong { font-weight: var(--weight-medium); }
+.mxDialog .txExportText small { color: var(--color-text-secondary); font-size: var(--text-small-size); }
+.mxDialog .txExportText input { justify-self: start; height: 32px; padding: 0 var(--space-2); border: 1px solid var(--color-line-strong); border-radius: var(--radius-sm); background: var(--color-surface); color: var(--color-text); font: var(--weight-regular) var(--text-small-size) / 1 var(--font-sans); }
+.mxDialog .txExportText input:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; }
+.mxDialog .appIconButton svg, .mxDialog .appButton svg { width: 16px; height: 16px; }
+.txNoteError { margin: 0; padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); background: var(--color-negative-soft); font-size: var(--text-small-size); }
+
+/* Full history */
+.appFrame .txBack { justify-self: start; gap: var(--space-1); padding: 0; }
+.appFrame .txBack svg { width: 16px; height: 16px; }
+.appFrame .txDetailHead { display: grid; gap: var(--space-1); }
+.appFrame .txDetailHead h1 { margin: 0; font-size: var(--text-title-1-size); line-height: var(--text-title-1-line); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-tight); overflow-wrap: anywhere; }
+.appFrame .txDetail { max-width: 720px; }
+
+/* An action's steps: done in positive, current in accent, to come in line-strong */
+.actionJourney { margin: 0; padding: 0; display: grid; list-style: none; }
+.actionJourney li { position: relative; display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: var(--space-3); padding-bottom: var(--space-4); }
+.actionJourney li:last-child { padding-bottom: 0; }
+.actionJourney li:not(:last-child)::after { content: ""; position: absolute; left: 9.5px; top: 22px; bottom: 2px; width: 1px; background: var(--color-line-strong); }
+.actionJourney i { position: relative; z-index: 1; width: 20px; height: 20px; display: grid; place-items: center; border: 1px solid var(--color-line-strong); border-radius: 50%; background: var(--color-surface); color: var(--color-text-secondary); }
+.actionJourney i svg { width: 11px; height: 11px; }
+.actionJourney li.done i { border-color: var(--color-positive); background: var(--color-positive); color: var(--color-on-accent); }
+.actionJourney li.current i { border-color: var(--color-accent); color: var(--color-accent); }
+.actionJourney li.failed i { border-color: var(--color-negative); color: var(--color-negative); }
+.actionJourney strong, .actionJourney small { display: block; }
+.actionJourney strong { font-size: var(--text-body-size); font-weight: var(--weight-medium); color: var(--color-text); }
+.actionJourney li.waiting strong { color: var(--color-text-tertiary); }
+.actionJourney small { margin-top: 2px; color: var(--color-text-secondary); font-size: var(--text-small-size); }
+
+/* Insights: the four numbers, the chart, then categories and merchants */
+.appFrame .inStats { margin: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-4); }
+.appFrame .inStats div { display: grid; gap: var(--space-1); }
+.appFrame .inStats dt { color: var(--color-text-secondary); font-size: var(--text-small-size); font-weight: var(--weight-medium); }
+.appFrame .inStats dd { margin: 0; font-size: var(--text-amount-size); line-height: var(--text-amount-line); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-tight); }
+.appFrame .inStats dd.inUnavailable { color: var(--color-warning); }
+.appFrame .inChartHead { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; }
+.appFrame .inLegend { display: flex; gap: var(--space-4); color: var(--color-text-secondary); font-size: var(--text-small-size); }
+.appFrame .inLegend span, .appFrame .inTooltip span { display: inline-flex; align-items: center; gap: 6px; }
+.appFrame .inLegend i, .appFrame .inTooltip i { width: 10px; height: 10px; flex: none; border-radius: 2px; }
+/* Money in is green, as everywhere; money out is neutral, never red (red means failed). */
+.appFrame .inSeriesIn { fill: var(--color-positive); background: var(--color-positive); }
+.appFrame .inSeriesOut { fill: var(--color-text-tertiary); background: var(--color-text-tertiary); }
+.appFrame .inPlot { position: relative; }
+.appFrame .inPlot svg { display: block; width: 100%; height: 180px; overflow: visible; }
+.appFrame .inBaseline { stroke: var(--color-line-strong); stroke-width: 1; }
+.appFrame .inHit { fill: transparent; }
+.appFrame .inActive { fill: var(--color-hover); pointer-events: none; }
+.appFrame .inTicks { position: relative; height: 20px; margin-top: var(--space-1); }
+.appFrame .inTicks span { position: absolute; top: 0; transform: translateX(-50%); color: var(--color-text-tertiary); font-size: var(--text-caption-size); white-space: nowrap; }
+.appFrame .inTooltip { position: absolute; top: 0; z-index: 2; min-width: 170px; display: grid; gap: var(--space-1); padding: var(--space-2) var(--space-3); border: 1px solid var(--color-line); border-radius: var(--radius-md); background: var(--color-raised); box-shadow: var(--shadow-2); font-size: var(--text-small-size); pointer-events: none; }
+.appFrame .inTooltip strong { font-weight: var(--weight-semibold); }
+.appFrame .inTooltip b { margin-left: auto; padding-left: var(--space-3); font-weight: var(--weight-medium); }
+.appFrame .inTable { color: var(--color-text-secondary); font-size: var(--text-small-size); }
+.appFrame .inTable summary { justify-self: start; color: var(--color-accent); font-weight: var(--weight-medium); cursor: pointer; }
+.appFrame .inTable summary:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.appFrame .inTable table { width: 100%; margin-top: var(--space-2); border-collapse: collapse; color: var(--color-text); }
+.appFrame .inTable th, .appFrame .inTable td { padding: var(--space-2) var(--space-1); border-bottom: 1px solid var(--color-line); text-align: left; font-weight: var(--weight-regular); }
+.appFrame .inTable thead th { color: var(--color-text-secondary); font-size: var(--text-caption-size); font-weight: var(--weight-medium); }
+.appFrame .inTable td, .appFrame .inTable thead th:not(:first-child) { text-align: right; }
+.appFrame .inCards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); align-items: start; }
+.appFrame .inBars { margin: 0; padding: 0; list-style: none; display: grid; }
+.appFrame .inBarRow { display: grid; grid-template-columns: minmax(0, 140px) minmax(40px, 1fr) auto; gap: var(--space-3); align-items: center; min-height: 48px; border-top: 1px solid var(--color-line); }
+.appFrame .inBarName { display: grid; min-width: 0; }
+.appFrame .inBarName strong { overflow: hidden; font-weight: var(--weight-medium); text-overflow: ellipsis; white-space: nowrap; }
+.appFrame .inBar { height: 6px; overflow: hidden; border-radius: var(--radius-pill); background: var(--color-muted); }
+.appFrame .inBar i { display: block; height: 100%; border-radius: inherit; background: var(--color-text-secondary); }
+.appFrame .inBarValue { font-weight: var(--weight-medium); text-align: right; }
+
+/* Tablet */
+@media (max-width: 1023px) {
+  .appFrame .txFilters { grid-template-columns: minmax(0, 1fr) 160px; }
+  .appFrame .txChips { grid-column: 1 / -1; grid-row: 2; }
+  .appFrame .inStats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .appFrame .inCards { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Phone */
+@media (max-width: 767px) {
+  .appFrame .txFilters { grid-template-columns: minmax(0, 1fr) 128px; }
+  .appFrame .txSearch input { font-size: 16px; }
+  .appFrame .txRow { padding-inline: var(--space-4); }
+  .appFrame .txHead .appSegmented { width: 100%; }
+  .appFrame .txHead .appSegmented button { flex: 1; height: 36px; }
+  .appFrame .inStats dd { font-size: var(--text-title-1-size); line-height: var(--text-title-1-line); }
+  .appFrame .inBarRow { grid-template-columns: minmax(0, 1fr) auto; row-gap: var(--space-1); padding: var(--space-2) 0; }
+  .appFrame .inBar { grid-column: 1 / -1; grid-row: 2; }
+  .mxDialog .txExportMonth { flex-wrap: wrap; }
+  .mxDialog .txExportMonth .appButton { width: 100%; }
+}

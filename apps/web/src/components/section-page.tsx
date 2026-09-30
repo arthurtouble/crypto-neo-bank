@@ -1,13 +1,13 @@
 import dynamic from "next/dynamic";
 import type { CustomerSection } from "@/lib/product-map";
+import { ActivityWorkspace } from "./activity-workspace";
 import { CardWorkspace } from "./card-workspace";
 import { DepositPage } from "./deposit-page";
 import { EarnWorkspace } from "./earn-workspace";
+import { InsightsWorkspace } from "./insights-workspace";
 import { SendPage } from "./send-page";
 import { SwapPage } from "./swap-page";
 
-const ActivityWorkspace = dynamic(() => import("./activity-workspace").then((mod) => mod.ActivityWorkspace));
-const InsightsWorkspace = dynamic(() => import("./insights-workspace").then((mod) => mod.InsightsWorkspace));
 const SettingsWorkspace = dynamic(() => import("./settings-workspace").then((mod) => mod.SettingsWorkspace));
 const SupportWorkspace = dynamic(() => import("./support-workspace").then((mod) => mod.SupportWorkspace));
 
@@ -24,10 +24,10 @@ export function SectionPage({ section }: { section: CustomerSection }) {
   if (section === "swap") return <SwapPage />;
   if (section === "earn") return <EarnWorkspace />;
   if (section === "cards") return <CardWorkspace />;
+  if (section === "transactions") return <ActivityWorkspace />;
+  if (section === "insights") return <InsightsWorkspace />;
   return <div>
     <section className="pageIntro compact"><div><h1>{titles[section]}</h1></div></section>
-    {section === "transactions" && <ActivityWorkspace />}
-    {section === "insights" && <InsightsWorkspace />}
     {section === "settings" && <SettingsWorkspace />}
     {section === "support" && <SupportWorkspace />}
   </div>;

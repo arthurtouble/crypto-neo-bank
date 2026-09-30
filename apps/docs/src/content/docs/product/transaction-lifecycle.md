@@ -5,6 +5,8 @@ description: What Transactions lists, what pending, completed, failed, and not c
 
 Transactions lists the money you send, swap, move, and put in Earn with Aura, your card payments, and the money you receive. Getting a quote doesn't add anything to the list. If you start something and don't confirm it in time, it shows as **Not confirmed**.
 
+Search the list, pick a type (**All**, **Sent**, **Received**, **Card**, **Swaps**, **Earn**, or **Other**), or filter by status. If a source of your history can't be read, a note above the list names it, and the rest of the list still shows.
+
 ## How a money movement works
 
 1. **You ask.** You choose the action, amount, network, and recipient or position.
@@ -26,7 +28,7 @@ A transaction hash only proves something was submitted. Before Aura marks a tran
 
 Like mainstream wallets and apps, Aura shows a transaction on Base as completed once it's in a block, which usually takes a few seconds. Base then makes it **final** about 20 minutes later, once it's settled on Ethereum. Until then a block could, very rarely, be rewritten, so Aura keeps checking and the receipt shows when it's final. Exports show it too.
 
-Open any item to see its receipt. For something you did in Aura, the receipt shows its journey, step by step, with the time of each step. A send on Base goes from sent, to complete on Base, to final on Base. A send to another network goes from sent from Base, to confirmed on Base, to delivered on the other network, to complete. The journey updates by itself while you watch. **Full history** opens the same transaction on its own page.
+Open any item to see its receipt: beside the list on a computer, or on its own screen on a phone. For something you did in Aura, the receipt shows its journey, step by step, with the time of each step. A send on Base goes from sent, to complete on Base, to final on Base. A send to another network goes from sent from Base, to confirmed on Base, to delivered on the other network, to complete. The journey updates by itself while you watch. **Full history** opens the same transaction on its own page.
 
 ## Money you receive
 
@@ -48,7 +50,7 @@ Transactions can also show your Aave history, from Aave. Each record shows where
 
 ## Exports and statements
 
-**Export** downloads a CSV file:
+**Export**, at the top of Transactions, downloads a CSV file:
 
 - **This list** has the transactions you see, with your filters: date, description, status, amounts, assets, who it was with, estimated US dollar value, network, transaction, and source.
 - **Tax-support preview** is the same list, with blanks marked for tax classification and cost basis.
