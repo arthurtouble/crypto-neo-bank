@@ -3,17 +3,17 @@ import { expect, test } from "@playwright/test";
 
 test("landing introduces Aura and its provider boundaries", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Your Smart Account" })).toBeVisible();
-  await expect(page.getByText("Spend anywhere, invest in global markets, and earn on your money. All from one app.")).toBeVisible();
-  await expect(page.getByRole("link", { name: "Get Started" })).toHaveCount(4);
+  await expect(page.getByRole("heading", { name: "One app for the money you hold yourself" })).toBeVisible();
+  await expect(page.getByText("See every balance, then send, swap, or earn.", { exact: false })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Get started" })).toHaveCount(4);
   await expect(page.locator('a[href="/apply"], a[href="/tour"]')).toHaveCount(0);
-  for (const title of ["A home for all your assets", "Spend", "Earn", "Send", "Swap", "Security"]) {
+  for (const title of ["Everything you hold, in one place", "Send", "Swap", "Earn", "Spend with a card", "Security"]) {
     await expect(page.getByRole("heading", { name: title, exact: true })).toHaveCount(1);
   }
   await expect(page.locator("#faq details")).toHaveCount(5);
-  await page.locator("#faq summary").filter({ hasText: "Are bank transfers and cards available?" }).click();
-  await expect(page.getByText("These depend on provider connection", { exact: false })).toBeVisible();
-  await expect(page.locator("#footnotes li")).toHaveCount(4);
+  await page.locator("#faq summary").filter({ hasText: "Can I use bank transfers and cards?" }).click();
+  await expect(page.getByText("Both need our banking and card partners", { exact: false })).toBeVisible();
+  await expect(page.locator("#footnotes li")).toHaveCount(3);
   await expect(page.getByText(`© ${new Date().getFullYear()} Aura`)).toBeVisible();
 });
 

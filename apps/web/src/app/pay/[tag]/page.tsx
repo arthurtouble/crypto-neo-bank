@@ -44,10 +44,10 @@ export default async function AuraTagPage({ params }: { params: Promise<{ tag: s
           {data.bank.instructions.beneficiaryAddress && <div><dt>Beneficiary address</dt><dd>{data.bank.instructions.beneficiaryAddress}</dd></div>}
           <div><dt>Account number</dt><dd className="pyMono">{data.bank.instructions.accountNumber}</dd></div>
           <div><dt>Routing number</dt><dd className="pyMono">{data.bank.instructions.routingNumber}</dd></div>
-          <div><dt>Accepted rails</dt><dd>{data.bank.instructions.rails.map((rail) => rail === "ach" ? "ACH push" : rail === "wire" ? "Wire" : "FedNow").join(", ")}</dd></div>
+          <div><dt>Accepts</dt><dd>{data.bank.instructions.rails.map((rail) => rail === "ach" ? "ACH push" : rail === "wire" ? "Wire" : "FedNow").join(", ")}</dd></div>
         </dl>
       </section>}
     </> : <section className="pyCard pyUnavailable"><h1>Payment page unavailable</h1><p>This Aura tag is not available for public payments.</p></section>}</main>
-    <footer className="pyFooter">Aura is a wallet interface. Crypto transfers may be irreversible. Confirm the recipient before sending.</footer>
+    <footer className="pyFooter">Aura is a wallet app. Crypto transfers may not be reversible, so check who you're paying before you send.</footer>
   </div>;
 }

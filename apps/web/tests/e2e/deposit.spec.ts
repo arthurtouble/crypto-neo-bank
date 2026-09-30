@@ -244,7 +244,7 @@ test("when the bridge provider is down, no route is offered and nothing is sent"
   await wallet(page).getByLabel("Amount in USDC").fill("10");
   await wallet(page).getByRole("button", { name: "Review" }).click();
   await expect(toast(page, "Not available right now")).toBeVisible({ timeout: 20_000 });
-  await expect(page.locator(".toastRegion")).toContainText("route provider is unavailable");
+  await expect(page.locator(".toastRegion")).toContainText("We can't get a price right now");
   expect(await sent()).toEqual([]);
   await setFeature(page, "cross_chain", false);
 });

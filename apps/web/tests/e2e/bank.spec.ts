@@ -78,7 +78,7 @@ test("verification Bridge rejects says so and offers no account", async ({ page 
   await asCustomer(page, customer, "POST", "/api/money/onboarding", { fullName: "Jane Customer", email: customer.email });
   await edge("/__bridge/kyc", { email: customer.email, status: "rejected" });
   await page.goto("/app/deposit#bank");
-  await expect(depositPanel(page).getByText("Bridge couldn't verify your identity. Contact Support.")).toBeVisible({ timeout: 30_000 });
+  await expect(depositPanel(page).getByText("Bridge couldn't verify your identity. Contact support.")).toBeVisible({ timeout: 30_000 });
   await page.goto("/app/send#bank");
   await expect(sendPanel(page).getByText(/Set up your bank account on/)).toBeVisible({ timeout: 30_000 });
 });

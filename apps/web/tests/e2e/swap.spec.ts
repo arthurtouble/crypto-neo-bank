@@ -108,7 +108,7 @@ test("moving to another network is sent, then tracked: no spinner while the brid
   await setFeature(page, "cross_chain", true);
   await openSwap(page, { from: `8453:${ASSETS.usdc}`, to: ARBITRUM_USDC });
   await getQuote(page, "10");
-  await expect(quote(page)).toContainText("Bridge and provider fees", { timeout: 20_000 });
+  await expect(quote(page)).toContainText("Route fees", { timeout: 20_000 });
   await expect(quote(page)).toContainText("usually takes up to 30 minutes");
   await quote(page).getByRole("button", { name: "Swap", exact: true }).click();
 
@@ -144,11 +144,11 @@ test("when LI.FI has no route, is unavailable, or the price impact is too high, 
   await openSwap(page);
   await edge("/__state", { lifiQuote: "no_route" });
   await getQuote(page, "5");
-  await expect(toasts(page)).toContainText("No route is available for this amount right now.", { timeout: 20_000 });
+  await expect(toasts(page)).toContainText("We can't find a way to do this for that amount right now.", { timeout: 20_000 });
 
   await edge("/__state", { lifiQuote: "ok", down: ["lifi"] });
   await page.getByRole("button", { name: "Get quote" }).click();
-  await expect(toasts(page)).toContainText("The route provider is unavailable right now.", { timeout: 20_000 });
+  await expect(toasts(page)).toContainText("We can't get a price right now.", { timeout: 20_000 });
 
   await edge("/__state", { down: [], lifiQuote: "impact" });
   await page.getByRole("button", { name: "Get quote" }).click();
@@ -200,5 +200,5 @@ test("a swap that pays out less than the minimum is not marked complete", async 
   await getQuote(page, "2");
   await quote(page).getByRole("button", { name: "Swap", exact: true }).click({ timeout: 20_000 });
   await expect(toast(page, "Swap failed")).toBeVisible({ timeout: 30_000 });
-  await expect(toasts(page)).toContainText("Less than the minimum arrived. Contact Support.");
+  await expect(toasts(page)).toContainText("Less than the minimum arrived. Contact support.");
 });

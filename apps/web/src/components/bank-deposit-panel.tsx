@@ -88,7 +88,7 @@ export function BankDepositPanel() {
       <p className="mxHint">Bridge is reviewing your details. This can take a few minutes.</p>
       <div className="mxActions"><button type="button" className="appButton" disabled={account.isFetching} onClick={() => void account.refetch()}>{account.isFetching ? "Checking…" : "Check status"}</button></div>
     </>}
-    {stage === "rejected" && <p className="mxNote mxNoteError">Bridge couldn&apos;t verify your identity. Contact Support.</p>}
+    {stage === "rejected" && <p className="mxNote mxNoteError">Bridge couldn&apos;t verify your identity. Contact support.</p>}
     {stage === "active" && instructions && <>
       <p className="mxHint">Send USD from your bank to these details. Deposits arrive as USDC in your Aura account.</p>
       <dl className="mxSummary">

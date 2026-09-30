@@ -6,19 +6,19 @@ import { ThemeToggle } from "@/components/theme-toggle";
 
 const docs = process.env.NEXT_PUBLIC_DOCS_URL ?? "https://aurel-docs.aurel-events.workers.dev";
 const features = [
-  { title: "A home for all your assets", text: "Cash, vaults, and investments together.", href: "/app", image: "overview" },
-  { title: "Spend", text: "Card controls built around you.", href: "/app/cards", image: "cards" },
-  { title: "Earn", text: "A few vaults, with the risks in view.", href: "/app/earn", image: "earn" },
-  { title: "Send", text: "An address, a saved contact, or an Aura tag.", href: "/app/send", image: "send" },
-  { title: "Swap", text: "Crypto, tokenized stocks, and gold.", href: "/app/swap", image: "swap" },
-  { title: "Security", text: "Your access, limits, and recovery in one place.", href: "/app/settings", image: "settings" }
+  { title: "Everything you hold, in one place", text: "Cash, crypto, tokenized stocks, gold, and what you've put to work, all valued in dollars.", href: "/app", image: "overview" },
+  { title: "Send", text: "Pay an address, a saved recipient, or an Aura tag. A new address gets a second look before you confirm.", href: "/app/send", image: "send" },
+  { title: "Swap", text: "Move between crypto, tokenized stocks, and gold. You see the fees and the price before you confirm.", href: "/app/swap", image: "swap" },
+  { title: "Earn", text: "A few lending markets and vaults, with the risks shown next to the rate.", href: "/app/earn", image: "earn" },
+  { title: "Spend with a card", text: "A virtual Visa card that spends your USDC, with a freeze and limits you set. Coming soon.", href: "/app/cards", image: "cards" },
+  { title: "Security", text: "Your passkey, your limits, and an emergency lock, all in Settings.", href: "/app/settings", image: "settings" }
 ] as const;
 const faqs = [
-  { question: "Can I explore Aura without an account?", answer: "Yes. Browse every section using clearly marked example data. Sign in to see your own records or take an action." },
-  { question: "Where does my balance come from?", answer: "Supported wallet and protocol values come from public chains. Bank and card records come from their connected providers. Aura does not create a balance ledger." },
-  { question: "Are bank transfers and cards available?", answer: "These depend on provider connection, eligibility, and country. Aura shows unavailable where a service is not connected." },
-  { question: "How does an Aura tag work?", answer: "Members can create a public payment page. Crypto uses their verified wallet address. Bank transfer and card payment appear only when the relevant provider is connected." },
-  { question: "Do I approve transactions?", answer: "Supported wallet actions require your confirmation. Availability and additional security checks depend on the action." }
+  { question: "Can I look around without an account?", answer: "Yes. Every section works with example data, clearly labelled. Sign in when you want to see your own money or do something with it." },
+  { question: "Where does my balance come from?", answer: "From the blockchains and protocols that hold your money, read when you open the app. Bank and card records come from our partners. Aura doesn't keep a balance ledger of its own." },
+  { question: "Can I use bank transfers and cards?", answer: "Not yet. Both need our banking and card partners to approve Aura, and both will depend on where you live. Until then, the app shows them as coming soon." },
+  { question: "How does an Aura tag work?", answer: "It's a short public name, like @sam, with its own payment page. People can pay you there in crypto, and by bank transfer if you choose to show your bank details." },
+  { question: "Do I approve every transaction?", answer: "Yes. Every send, swap, and Earn move waits for you to review it and confirm it with your passkey." }
 ];
 const links = [{ label: "Features", href: "#features" }, { label: "Security", href: "#security" }, { label: "FAQs", href: "#faq" }, { label: "Docs", href: docs }];
 
@@ -36,36 +36,37 @@ export default function MarketingPage() {
         <nav className="ldNav" aria-label="Main navigation">{links.map((link) => <a key={link.label} href={link.href}>{link.label}</a>)}</nav>
         <details className="ldMobileNav"><summary>Menu <ChevronDown aria-hidden="true" /></summary>
           <nav aria-label="Mobile navigation">{links.map((link) => <a key={link.label} href={link.href}>{link.label}</a>)}</nav></details>
-        <div className="ldHeaderActions"><ThemeToggle /><Link className="appButton appButtonPrimary" href="/app">Get Started</Link></div>
+        <div className="ldHeaderActions"><ThemeToggle /><Link className="appButton appButtonPrimary" href="/app">Get started</Link></div>
       </div>
     </header>
     <main>
       <section className="ldHero">
         <div className="ldHeroCopy">
-          <h1>Your Smart Account</h1>
-          <p>Spend anywhere, invest in global markets, and earn on your money. All from one app.</p>
-          <Link className="appButton appButtonPrimary appButtonLarge" href="/app">Get Started</Link>
-          <small>Explore with example data. Features vary by provider, country, and eligibility.<sup><a href="#footnotes">1</a></sup></small>
+          <h1>One app for the money you hold yourself</h1>
+          <p>See every balance, then send, swap, or earn. You approve each transaction, and you see the fees and risks first.</p>
+          <Link className="appButton appButtonPrimary appButtonLarge" href="/app">Get started</Link>
+          <small>Try it with example data first. What you can use depends on where you live and on our partners.<sup><a href="#footnotes">1</a></sup></small>
         </div>
-        <Screen name="overview" alt="Aura overview showing fictional cash, vault, and portfolio data" priority />
+        <Screen name="overview" alt="Aura's Overview with example balances" priority />
       </section>
       <section className="ldFeatures" id="features" aria-labelledby="features-heading">
-        <div className="ldSectionIntro"><h2 id="features-heading">Money, made clearer.</h2><p>One place to see what you hold and what you can do next.</p></div>
+        <div className="ldSectionIntro"><h2 id="features-heading">What you can do</h2><p>Each part of the app works with example data, so you can try it before you sign up.</p></div>
         {features.map((feature) => <article className="ldFeature" id={feature.title === "Security" ? "security" : undefined} key={feature.title}>
           <div className="ldFeatureCopy">
             <h3>{feature.title}</h3>
             <p>{feature.text}</p>
             {feature.title === "Security" && <ul className="ldFacts">
-              <li>Self-Custodial<sup><a href="#footnotes">2</a></sup></li><li>Bank-Grade Partners<sup><a href="#footnotes">3</a></sup></li><li>Audits<sup><a href="#footnotes">4</a></sup></li></ul>}
+              <li>You hold your keys<sup><a href="#footnotes">2</a></sup></li><li>A passkey for every payment</li><li>An emergency lock</li></ul>}
+            {feature.image === "cards" && <p className="ldNote">Cards and bank transfers need approved partners.<sup><a href="#footnotes">3</a></sup></p>}
             <Link className="appTextButton ldExplore" href={feature.href}>Explore<span className="srOnly"> {feature.title.toLowerCase()}</span></Link>
           </div>
-          <Screen name={feature.image} alt={`Aura ${feature.title.toLowerCase()} screen with example data`} />
+          <Screen name={feature.image} alt={`Aura's ${feature.href === "/app" ? "Overview" : feature.href.split("/").pop()} screen with example data`} />
         </article>)}
       </section>
-      <section className="ldFaq" id="faq" aria-labelledby="faq-heading"><h2 id="faq-heading">Questions, answered.</h2>
+      <section className="ldFaq" id="faq" aria-labelledby="faq-heading"><h2 id="faq-heading">Questions</h2>
         <div className="ldFaqList">{faqs.map((item) => <details key={item.question}><summary>{item.question}<ChevronDown aria-hidden="true" /></summary><p>{item.answer}</p></details>)}</div>
       </section>
-      <section className="ldClosing"><h2>See what Aura can do.</h2><Link className="appButton appButtonPrimary appButtonLarge" href="/app">Get Started</Link></section>
+      <section className="ldClosing"><h2>Look around with example data</h2><Link className="appButton appButtonPrimary appButtonLarge" href="/app">Get started</Link></section>
     </main>
     <footer className="ldFooter">
       <div className="ldFooterTop">
@@ -75,13 +76,12 @@ export default function MarketingPage() {
         <div><h2>Legal</h2><a href={`${docs}/legal/privacy-notice/`}>Privacy</a><a href={`${docs}/legal/terms-of-use/`}>Terms</a><a href={`${docs}/legal/risk-disclosure/`}>Risk disclosure</a></div>
       </div>
       <ol id="footnotes" className="ldFootnotes">
-        <li>Illustrative screens use fictional values. <a href={`${docs}/getting-started/status/`}>Check current availability</a>.</li>
-        <li>Wallet control and recovery depend on the wallet type. <a href={`${docs}/safety/security-model/`}>How security works</a>.</li>
-        <li>Bank and card features require connected, approved providers. <a href={`${docs}/company/provider-responsibilities/`}>Provider responsibilities</a>.</li>
-        <li>Audits must be completed and published before an audited claim applies. <a href={`${docs}/safety/security-model/`}>Security status</a>.</li>
+        <li>The screens show example values, not real accounts. <a href={`${docs}/getting-started/status/`}>See what's available now</a>.</li>
+        <li>How you control and recover your wallet depends on how you signed up. <a href={`${docs}/safety/security-model/`}>How security works</a>.</li>
+        <li>Bank transfers and cards need connected, approved partners. <a href={`${docs}/company/provider-responsibilities/`}>Who does what</a>.</li>
       </ol>
       <div className="ldFooterBottom">© {new Date().getFullYear()} Aura <ThemeToggle /></div>
     </footer>
-    <Link className="ldMobileCta appButton appButtonPrimary appButtonLarge" href="/app">Get Started</Link>
+    <Link className="ldMobileCta appButton appButtonPrimary appButtonLarge" href="/app">Get started</Link>
   </div>;
 }
