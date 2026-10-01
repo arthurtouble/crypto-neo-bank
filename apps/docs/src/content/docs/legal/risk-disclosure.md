@@ -5,7 +5,7 @@ sidebar:
   order: 4
 ---
 
-**Version:** 2026-09-25
+**Version:** 2026-10-01
 
 Digital assets can lose most or all of their value. Only use assets you can afford to lose. Get independent advice when you need it.
 

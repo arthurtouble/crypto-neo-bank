@@ -5,7 +5,7 @@ sidebar:
   order: 3
 ---
 
-**Version:** 2026-09-25
+**Version:** 2026-10-01
 
 Aura is run by the Aurel operating entity. In this notice, "Aurel", "we" and "us" mean that entity.
 

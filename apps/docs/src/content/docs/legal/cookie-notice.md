@@ -5,7 +5,7 @@ sidebar:
   order: 6
 ---
 
-**Version:** 2026-09-25
+**Version:** 2026-10-01
 
 Aura only uses the storage it needs to run and protect the service. It doesn't use advertising cookies or cross-site tracking cookies.
 
