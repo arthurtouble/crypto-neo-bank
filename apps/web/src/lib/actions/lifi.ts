@@ -114,6 +114,9 @@ export function validateRoute(response: unknown, request: RouteQuoteRequest, now
       token: request.to.address?.toLowerCase() as `0x${string}` | undefined ?? null, to: recipient, minimumRaw: toAmountMin.toString() });
   } else if (request.to.address) {
     effects.push({ type: "erc20_credit_min", token: request.to.address.toLowerCase() as `0x${string}`, to: recipient, minimumRaw: toAmountMin.toString() });
+  } else {
+    // Native ETH out has no Transfer log; the verifier reads the recipient's credit from the chain instead.
+    effects.push({ type: "native_credit_min", to: recipient, minimumRaw: toAmountMin.toString() });
   }
   return {
     tool: quote.tool.toLowerCase(), fromAmountRaw: raw.toString(), toAmountRaw: toAmount.toString(), toAmountMinRaw: toAmountMin.toString(),

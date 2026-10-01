@@ -1,6 +1,7 @@
 import type { PrivyClient } from "@privy-io/node";
 import { readRelayedTransaction, type RelayedTransaction } from "./privy-relay";
-import { appendEvidenceOnce, applyVerification, attachRelayHash, type StoredAction } from "./store";
+import { nativeCreditEvidenceSchema, type NativeCreditEvidence } from "./native-credit";
+import { appendEvidenceOnce, applyVerification, attachRelayHash, listActionEvents, type StoredAction } from "./store";
 import { verifyAction, type Verification } from "./verify";
 
 /**
@@ -16,6 +17,14 @@ async function announce(db: D1Database, before: StoredAction, after: StoredActio
   const [{ actionNotice }, notices] = await Promise.all([import("@/lib/notifications/store"), import("@/lib/notifications/deliver")]);
   await notices.announce(db, after.subject, actionNotice(after, outcome), now);
   return after;
+}
+
+/** Native credit observed by earlier checks, for an action that pays out native ETH. Malformed rows are ignored. */
+async function storedNativeEvidence(db: D1Database, action: StoredAction): Promise<NativeCreditEvidence[] | null> {
+  const native = action.effects.some((effect) => effect.type === "native_credit_min" || (effect.type === "delivery" && effect.token === null));
+  if (!native) return null;
+  return (await listActionEvents(db, action.id)).filter((event) => event.type === "native_credit")
+    .flatMap((event) => { const parsed = nativeCreditEvidenceSchema.safeParse(event.evidence); return parsed.success ? [parsed.data] : []; });
 }
 
 export type CheckDependencies = {
@@ -52,12 +61,15 @@ export async function checkAction(db: D1Database, action: StoredAction, now: Dat
     if (!current.transactionHash) return applyVerification(db, current, { status: "pending", reason: "hash_in_use" }, now);
   }
   if (!current.transactionHash) return current;
+  const nativeEvidence = await storedNativeEvidence(db, current);
   const result: Verification = await (dependencies.verify ?? verifyAction)({ chainId: current.chainId, walletAddress: current.wallet,
-    calls: current.calls, effects: current.effects, transactionHash: current.transactionHash })
+    calls: current.calls, effects: current.effects, transactionHash: current.transactionHash, ...(nativeEvidence ? { nativeEvidence } : {}) })
     .catch((error: unknown) => {
       console.error(JSON.stringify({ level: "warn", event: "actions.check.failed", actionId: current.id, message: error instanceof Error ? error.message : "unknown" }));
       return { status: "pending" as const, reason: "check_failed" };
     });
+  // A native payout's chain reading is kept as evidence, so later checks don't need the endpoint to still hold that block's history.
+  if (result.nativeCredit) await appendEvidenceOnce(db, current.id, "native_credit", result.nativeCredit, now);
   if (result.status === "pending") console.log(JSON.stringify({ level: "info", event: "actions.check.pending", actionId: current.id, reason: result.reason }));
   return announce(db, action, await applyVerification(db, current, result, now), now);
 }

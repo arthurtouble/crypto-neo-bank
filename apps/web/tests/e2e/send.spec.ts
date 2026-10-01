@@ -386,6 +386,25 @@ test("USDC can be sent to another network: LI.FI's fees come out of the amount, 
   await setFeature(page, "cross_chain", false);
 });
 
+test("ETH sent to someone on another network completes only once the ETH is seen arriving there", async ({ page }) => {
+  await openSend(page, { balances: { native: "1000000000000000000" } });
+  await setFeature(page, "cross_chain", true);
+  await fillSend(page, { asset: "ETH", amount: "0.1", to: RECIPIENT });
+  await dialog(page).getByLabel("Network").selectOption("Arbitrum");
+  await reviewAndConfirm(page);
+  await expect.poll(async () => (await relayed()).length, { timeout: 30_000 }).toBe(1);
+  const progress = dialog(page).getByRole("status");
+  await expect(progress).toContainText("waiting for the bridge to deliver it on Arbitrum", { timeout: 30_000 });
+
+  // ETH leaves no token log; the verifier reads the recipient's ETH on Arbitrum across the payout's block.
+  await progress.getByRole("link", { name: "Track in Transactions" }).click();
+  const journey = page.getByRole("dialog").getByRole("list", { name: "Progress" });
+  await expect(journey.getByRole("listitem")).toHaveText([/^Sent from Base/, /^Confirmed on Base/, /^Delivered on ArbitrumIn progress/, /^Complete$/], { timeout: 30_000 });
+  await edge("/__state", { bridge: { status: "DONE", substatus: "COMPLETED" } });
+  await expect(journey.locator("li.done")).toHaveCount(4, { timeout: 45_000 });
+  await setFeature(page, "cross_chain", false);
+});
+
 test("sending to another network needs both the send and cross-network switches, and only offers networks where the asset is registered", async ({ page }) => {
   await openSend(page, { balances: { [ASSETS.usdc]: "50000000", [ASSETS.weth]: "1000000000000000000" } });
   await fillSend(page, { asset: "WETH", amount: "0.1", to: RECIPIENT });

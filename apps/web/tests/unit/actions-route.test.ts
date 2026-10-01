@@ -54,6 +54,18 @@ describe("validating a LI.FI quote", () => {
     expect(route.effects[1]).toEqual({ type: "erc20_credit_min", token: "0x4200000000000000000000000000000000000006", to: wallet, minimumRaw: "9940000" });
   });
 
+  it("checks a same-chain native ETH output from the chain, for the recipient, since it leaves no Transfer log", () => {
+    const route = validateRoute(lifiQuote({ to: baseEth, toAddress: external }), { ...request, to: baseEth, recipient: external }, now)!;
+    expect(route.effects).toEqual([
+      { type: "erc20_debit", token: baseUsdc.address, amountRaw: "10000000" },
+      { type: "native_credit_min", to: external, minimumRaw: "9940000" }
+    ]);
+    // Cross-chain native output stays a delivery with no token, verified on the destination network.
+    const arbEth = asset(42161, null, "ETH", 18);
+    expect(validateRoute(lifiQuote({ to: arbEth }), { ...request, to: arbEth }, now)!.effects[1])
+      .toEqual({ type: "delivery", tool: "across", destinationChainId: 42161, token: null, to: wallet, minimumRaw: "9940000" });
+  });
+
   it("sends native value without an approval", () => {
     const quote = lifiQuote({ value: "10000000000000000", approval: null, fromAmount: "10000000000000000" });
     quote.action.fromToken = { address: "0x0000000000000000000000000000000000000000", chainId: 8453, decimals: 18, symbol: "ETH" };

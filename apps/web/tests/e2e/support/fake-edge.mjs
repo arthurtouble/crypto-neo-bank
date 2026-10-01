@@ -185,6 +185,32 @@ export function startFakeEdge({ port }) {
 
   const blockHash = (number) => `0x${number.toString(16).padStart(64, "0")}`;
 
+  /**
+   * Native ETH history: each mined transaction keeps how it changed native
+   * balances (`tx.native`), so `eth_getBalance` at a past block is today's
+   * balance less every later change, as an archive node answers. Balances set
+   * directly by a test count as before the first block.
+   */
+  const nativeBook = (chainId) => ({ ...state.balances[chainId]?.native });
+  function nativeChange(chainId, before) {
+    const after = state.balances[chainId]?.native ?? {};
+    const change = {};
+    for (const owner of new Set([...Object.keys(before), ...Object.keys(after)])) {
+      const delta = BigInt(after[owner] ?? "0") - BigInt(before[owner] ?? "0");
+      if (delta !== 0n) change[owner] = delta.toString();
+    }
+    return change;
+  }
+  function balanceAt(chainId, owner, tag) {
+    let total = balance(chainId, "native", owner);
+    if (typeof tag !== "string" || !/^0x[0-9a-f]+$/i.test(tag)) return total;
+    const number = Number.parseInt(tag, 16);
+    for (const tx of Object.values(state.txs)) {
+      if (tx.chainId === chainId && tx.blockNumber > number) total -= BigInt(tx.native?.[owner.toLowerCase()] ?? "0");
+    }
+    return total;
+  }
+
   /** Put a transaction in the next block. */
   function mine(tx) {
     const hash = `0x${randomBytes(32).toString("hex")}`;
@@ -286,6 +312,7 @@ export function startFakeEdge({ port }) {
     let success = !state.revertNext;
     state.revertNext = false;
     let logs = [];
+    const before = nativeBook(chainId);
     if (success) {
       try {
         if (to.toLowerCase() === LIFI_DIAMOND) {
@@ -299,7 +326,7 @@ export function startFakeEdge({ port }) {
         } else logs = apply(chainId, from, effectsOf(chainId, from, [{ to, data, value }]));
       } catch { success = false; }
     }
-    const hash = mine({ chainId, from, to, value: `0x${amount.toString(16)}`, input: data, success, logs });
+    const hash = mine({ chainId, from, to, value: `0x${amount.toString(16)}`, input: data, success, logs, native: nativeChange(chainId, before) });
     state.sent.push({ hash, chainId, from: from.toLowerCase(), to: to.toLowerCase(), data, value: amount.toString(), success });
     return hash;
   }
@@ -313,6 +340,7 @@ export function startFakeEdge({ port }) {
   function relay(wallet, chainId, calls) {
     let success = state.relay !== "revert";
     let execution = [];
+    const before = nativeBook(chainId);
     try { if (success) execution = apply(chainId, wallet, effectsOf(chainId, wallet, calls)); }
     catch { success = false; }
     const batch = encodeAbiParameters([{ type: "tuple[]", components: [{ name: "target", type: "address" }, { name: "value", type: "uint256" }, { name: "callData", type: "bytes" }] }],
@@ -327,7 +355,7 @@ export function startFakeEdge({ port }) {
       { address: ENTRY_POINT, topics: encodeEventTopics({ abi: [userOperationEvent], eventName: "UserOperationEvent", args: { userOpHash: `0x${randomBytes(32).toString("hex")}`, sender: wallet, paymaster: PAYMASTER } }),
         data: encodeAbiParameters([{ type: "uint256" }, { type: "bool" }, { type: "uint256" }, { type: "uint256" }], [0n, success, 0n, 0n]) }
     ];
-    const hash = mine({ chainId, from: BUNDLER, to: ENTRY_POINT, value: "0x0", input, success: true, logs });
+    const hash = mine({ chainId, from: BUNDLER, to: ENTRY_POINT, value: "0x0", input, success: true, logs, native: nativeChange(chainId, before) });
     state.sent.push({ hash, chainId, from: wallet.toLowerCase(), to: ENTRY_POINT, data: input, value: "0", success, relayed: true, calls });
     return hash;
   }
@@ -399,7 +427,7 @@ export function startFakeEdge({ port }) {
     state.balances[chainId] ??= {}; state.balances[chainId][key] ??= {};
     state.balances[chainId][key][to.toLowerCase()] = (balance(chainId, key, to) + value).toString();
     return key === "native"
-      ? mine({ chainId, from, to, value: `0x${value.toString(16)}`, input: "0x", success: true, logs: [] })
+      ? mine({ chainId, from, to, value: `0x${value.toString(16)}`, input: "0x", success: true, logs: [], native: { [to.toLowerCase()]: value.toString() } })
       : mine({ chainId, from, to: key, value: "0x0", input: "0x", success: true, logs: [{ address: key,
         topics: encodeEventTopics({ abi: [transferEvent], eventName: "Transfer", args: { from, to } }), data: encodeAbiParameters([{ type: "uint256" }], [value]) }] });
   }
@@ -412,7 +440,7 @@ export function startFakeEdge({ port }) {
     if (method === "eth_getBlockByNumber") return result(block(params[0]));
     if (method === "alchemy_getAssetTransfers") return state.down.includes("transfers") ? { jsonrpc: "2.0", id, error: { code: -32000, message: "unavailable" } }
       : result(assetTransfers(chainId, params[0]));
-    if (method === "eth_getBalance") return result(`0x${balance(chainId, "native", params[0]).toString(16)}`);
+    if (method === "eth_getBalance") return result(`0x${balanceAt(chainId, params[0], params[1]).toString(16)}`);
     if (method === "eth_getTransactionReceipt") return result(receipt(params[0]));
     if (method === "eth_getTransactionByHash") {
       const tx = state.txs[params[0]];
@@ -475,7 +503,8 @@ export function startFakeEdge({ port }) {
     const logs = quote.toToken ? [{ address: quote.toToken, topics: encodeEventTopics({ abi: [transferEvent], eventName: "Transfer", args: { from: LIFI_DIAMOND, to: quote.toAddress } }),
       data: encodeAbiParameters([{ type: "uint256" }], [quote.toAmount]) }] : [];
     state.deliveries[sourceHash] = mine({ chainId: quote.toChain, from: LIFI_DIAMOND, to: quote.toToken ?? quote.toAddress,
-      value: quote.toToken ? "0x0" : `0x${quote.toAmount.toString(16)}`, input: "0x", success: true, logs });
+      value: quote.toToken ? "0x0" : `0x${quote.toAmount.toString(16)}`, input: "0x", success: true, logs,
+      native: quote.toToken ? {} : { [quote.toAddress]: quote.toAmount.toString() } });
     // The destination keeps producing blocks, so the payout gathers the confirmations it needs (64 on Polygon).
     state.head += 64;
     return state.deliveries[sourceHash];
