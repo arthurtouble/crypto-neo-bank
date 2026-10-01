@@ -18,7 +18,7 @@ Your money lives on the blockchain, not with us, so we keep as little financial 
 | Support chats and complaints | Intercom, for Aura | Keep enough to investigate and reply |
 | Consent and documents you accepted | Aura | Record which version you saw or accepted, and when |
 | Notification choices | Your choices | Keep them until you change them |
-| Notices sent to you | Aura | Keep each notice and whether it was delivered. Keep where to send browser notifications until you turn them off |
+| Notices sent to you | Aura | Keep each notice and whether it was delivered, for 180 days. Keep where to send browser notifications until you turn them off |
 | Card and wallet-rule records, once live | The card issuer (Stripe) or wallet provider | Keep the status the partner reports, and a copy of your card payments with their source and time. We can always rebuild these |
 | Product analytics | Aura | Accept only a fixed list of events. Never used for balances |
 | Partner updates | The partner and Aura | Keep them so we can retry, reconcile, and investigate |
@@ -37,7 +37,7 @@ When bank transfers or cards go live, our partners may collect identity, sanctio
 
 Every table in Aura that holds your data is listed with whether it's in your data download and why we keep it. An automated test fails if a new table is missing. We don't delete your records on request: money movements, security settings, and consent are evidence we need. When an account closes, we unpublish its Aura tag and keep the records the law and account safety require.
 
-Retention periods for each country, and a process for legal holds, will be set before launch.
+Short-lived records are deleted automatically every hour: product events and delivered notices after 180 days, and rate-limit counters and one-time passkey confirmations a day after they expire. Retention periods for each country, and a process for legal holds, will be set before launch.
 
 ## Logs and analytics
 

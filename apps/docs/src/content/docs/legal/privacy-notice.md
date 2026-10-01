@@ -143,11 +143,17 @@ Our service providers may process data outside your country.
 
 | Data | How long we keep it |
 | --- | --- |
-| Preferences, product events, public Aura tag, and account history we can rebuild | While your account is open, then as the retention schedule allows |
+| Preferences, public Aura tag, and account history we can rebuild | While your account is open, then as the retention schedule allows |
+| Product events | 180 days |
+| Notices Aura sent you | 180 days, once we've finished delivering them |
+| Browsers you turned on notifications in | Until you turn them off there, or the browser's push service tells us they're gone |
 | Transactions, security settings, and records of changes to them | As long as required for security, fraud prevention, and financial record-keeping laws |
 | Consent and document-acceptance records | As long as we rely on them, plus the applicable limitation period |
 | Support chats and complaints | For the complaint-handling retention period in each country, kept in Intercom |
-| Diagnostic logs and rate-limit counters | Days to weeks |
+| Rate-limit counters and one-time passkey confirmations | About a day after they expire |
+| Diagnostic logs | Days to weeks |
+
+We delete records with a fixed period automatically. The cleanup runs every hour.
 
 **Before launch, we will set the exact periods for each launch country.**
 

@@ -4,6 +4,7 @@ import { refreshBankPayouts } from "@/lib/money/bank-activity";
 import { blockedPlace, isGatedPath, requestPlace } from "@/lib/legal/places";
 import { deliverPending } from "@/lib/notifications/deliver";
 import { scanIncoming } from "@/lib/notifications/incoming";
+import { purgeDue, purgeExpired } from "@/lib/privacy/retention";
 import { withSecurityHeaders } from "@/lib/http/security-headers";
 import { indexable, noindexHeader } from "@/lib/site/seo";
 
@@ -15,8 +16,10 @@ const log = (event: string, scheduledTime: number) => [
 /**
  * Every 2 minutes: advance open money actions from chain evidence, so they
  * settle even when nobody is looking at them; check watched accounts for
- * money received; and deliver pending notices by email and push. Each job
- * runs and logs on its own, so one failing never stops another.
+ * money received; and deliver pending notices by email and push. At the top
+ * of each hour, also delete short-lived records past their retention period
+ * (lib/privacy/retention.ts). Each job runs and logs on its own, so one
+ * failing never stops another.
  */
 const scheduled: ExportedHandlerScheduledHandler<Cloudflare.Env> = async (controller, env, ctx) => {
   const now = new Date(controller.scheduledTime);
@@ -27,6 +30,7 @@ const scheduled: ExportedHandlerScheduledHandler<Cloudflare.Env> = async (contro
     .then(...log("notifications.scan", controller.scheduledTime)));
   ctx.waitUntil(deliverPending(env.PROJECTION_DB, { limit: 50 }).then((delivered) => ({ delivered }))
     .then(...log("notifications.deliver", controller.scheduledTime)));
+  if (purgeDue(now)) ctx.waitUntil(purgeExpired(env.PROJECTION_DB, now).then(...log("retention.purge", controller.scheduledTime)));
 };
 
 /**

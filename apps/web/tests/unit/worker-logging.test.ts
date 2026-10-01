@@ -6,6 +6,7 @@ vi.mock("@/lib/actions/recheck", () => ({ recheckOpenActions: vi.fn() }));
 vi.mock("@/lib/money/bank-activity", () => ({ refreshBankPayouts: vi.fn() }));
 vi.mock("@/lib/notifications/deliver", () => ({ deliverPending: vi.fn() }));
 vi.mock("@/lib/notifications/incoming", () => ({ scanIncoming: vi.fn() }));
+vi.mock("@/lib/privacy/retention", () => ({ purgeDue: (now: Date) => now.getUTCMinutes() === 0, purgeExpired: vi.fn(async () => ({})) }));
 
 const worker = async () => (await import("../../worker/index")).default as unknown as { fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> };
 const logged = (spy: { mock: { calls: unknown[][] } }) => spy.mock.calls.map(([line]) => JSON.parse(String(line)));
@@ -31,6 +32,24 @@ describe("the web Worker's schedule", () => {
     expect(deliverPending).toHaveBeenCalled();
     expect(logged(info)).toContainEqual(expect.objectContaining({ event: "notifications.deliver.completed", summary: { delivered: 3 } }));
     expect(logged(error)).toContainEqual(expect.objectContaining({ event: "notifications.scan.failed", message: "alchemy down" }));
+  });
+
+  it("cleans up expired records once an hour, logging one summary", async () => {
+    const { purgeExpired } = await import("@/lib/privacy/retention");
+    vi.mocked(purgeExpired).mockResolvedValue({ product_events: 2 } as never);
+    const info = vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const { scheduled } = (await import("../../worker/index")).default as unknown as { scheduled: (controller: unknown, env: unknown, ctx: unknown) => Promise<void> };
+    const run = async (scheduledTime: number) => {
+      const pending: Promise<unknown>[] = [];
+      await scheduled({ scheduledTime }, { PROJECTION_DB: {} }, { waitUntil: (promise: Promise<unknown>) => pending.push(promise) });
+      await Promise.allSettled(pending);
+    };
+    await run(Date.parse("2026-10-01T12:02:00.000Z"));
+    expect(purgeExpired).not.toHaveBeenCalled();
+    await run(Date.parse("2026-10-01T13:00:00.000Z"));
+    expect(purgeExpired).toHaveBeenCalledTimes(1);
+    expect(logged(info)).toContainEqual(expect.objectContaining({ event: "retention.purge.completed", summary: { product_events: 2 } }));
   });
 });
 
