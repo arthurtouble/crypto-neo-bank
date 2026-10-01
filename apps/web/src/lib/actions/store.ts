@@ -121,14 +121,15 @@ async function appendEvent(db: D1Database, actionId: string, type: string, evide
 /**
  * Record, once, evidence that explains why an open action hasn't moved:
  * Privy reported its relay as failed (`relay_failed`), or the hash Privy
- * reported is already linked to another action (`hash_in_use`).
+ * reported is already linked to another action (`hash_in_use`). Also the
+ * chain reading behind a native ETH payout (`native_credit`, see native-credit.ts).
  */
-export async function appendEvidenceOnce(db: D1Database, actionId: string, type: "relay_failed" | "hash_in_use", evidence: Record<string, unknown>, now: Date) {
+export async function appendEvidenceOnce(db: D1Database, actionId: string, type: "relay_failed" | "hash_in_use" | "native_credit", evidence: Record<string, unknown>, now: Date) {
   await appendMilestone(db, actionId, type, now, evidence);
 }
 
 /** Record a milestone once, the first time it's reached. */
-async function appendMilestone(db: D1Database, actionId: string, type: "source_final" | "delivered" | "relay_failed" | "hash_in_use", now: Date, evidence: Record<string, unknown> = {}) {
+async function appendMilestone(db: D1Database, actionId: string, type: "source_final" | "delivered" | "relay_failed" | "hash_in_use" | "native_credit", now: Date, evidence: Record<string, unknown> = {}) {
   await db.prepare(`INSERT INTO action_events (event_id, action_id, event_type, evidence_json, occurred_at)
       SELECT ?, ?, ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM action_events WHERE action_id = ? AND event_type = ?)`)
     .bind(crypto.randomUUID(), actionId, type, JSON.stringify(evidence), now.toISOString(), actionId, type).run();

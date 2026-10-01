@@ -67,8 +67,8 @@ sequenceDiagram
 3. **Verify.** On each status read, the server reads the receipt independently:
    - **Identity.** The transaction is an EntryPoint `handleOps` call containing an operation from the customer's account whose decoded calls equal the prepared calls, and its `UserOperationEvent` reports success.
    - **Finality.** Base: included (1 confirmation) and at or below the finalized block. Ethereum: 12. Base finalizes 15 to 25 minutes after inclusion, so a fully matching included operation becomes `settling` (shown as sent for a same-chain action), then `confirmed` at finality. Nothing fails before finality: a mismatch or revert waits for the final block.
-   - **Effects.** Within that operation's logs, every expected effect is present: the exact ERC-20 transfer, the Aave `Supply` or `Withdraw` event, the Morpho vault's own `Deposit` or `Withdraw` event for the account, or the route's source debit and minimum output.
-   - **Delivery.** Cross-chain routes stay `settling` until LI.FI reports the destination transaction and its receipt shows at least the minimum output reaching the customer.
+   - **Effects.** Within that operation's logs, every expected effect is present: the exact ERC-20 transfer, the Aave `Supply` or `Withdraw` event, the Morpho vault's own `Deposit` or `Withdraw` event for the account, or the route's source debit and minimum output. Native ETH output leaves no log, so it's read from the chain instead ([native ETH output](#native-eth-output)).
+   - **Delivery.** Cross-chain routes stay `settling` until LI.FI reports the destination transaction for this source transaction, on the expected network, and that transaction shows at least the minimum output reaching the recipient: a token `Transfer` in its receipt, or for ETH, the recipient's credit in its block.
    - **Reads.** Each read falls back across the chain's public endpoints. publicnode refuses receipts as archive requests, so receipt reads move to the next endpoint.
 
 ### When actions are checked
@@ -108,7 +108,7 @@ D1 records are projections. A `confirmed` row reflects chain evidence Aura obser
 | --- | --- | --- | --- |
 | `transfer` | `lib/actions/transfer.ts` | ERC-20 `transfer`, or a native value call | ERC-20 `Transfer` from the wallet; native transfers rely on operation identity |
 | `earn` | `lib/actions/earn.ts` (`lib/defi/aave-call-policy.ts`, `lib/defi/morpho.ts`) | Aave on Base: exact approve + Pool `supply`, Pool `withdraw` of an exact amount, or Pool `withdraw` of the maximum ("Withdraw all"), after reading the account's aToken balance through `getReserveData`; nothing to withdraw refuses with `insufficient_balance`. Morpho vault on Base: exact USDC approve + ERC-4626 `deposit` for the account, `withdraw` of an exact amount, or `redeem` of every share ("Withdraw all"). Before building, the server re-reads the vault's `asset()` (must be USDC) and, for Vault V2, its four access gates (must be unset); otherwise it refuses with `contract_changed`. Deposits need enough USDC, withdrawals enough shares | Aave `Supply`/`Withdraw` for the wallet, for the exact amount; for Withdraw all (`aave_withdraw_all`), a `Withdraw` to the wallet of at least the balance read before signing, since interest adds to it. Morpho: the vault's `Deposit` (sender and owner = account, exact assets, plus exactly that USDC paid from the account to the vault) or `Withdraw` (sender, receiver, and owner = account, exact assets for `withdraw` or exact shares for `redeem`). A market that can't release enough liquidity reverts the withdrawal, and nothing moves |
-| `route` | `lib/actions/route.ts` | LI.FI approval (if needed) + LI.FI call | Source debit of the exact amount; same-chain minimum output, or cross-chain delivery |
+| `route` | `lib/actions/route.ts` | LI.FI approval (if needed) + LI.FI call | Source debit of the exact amount; same-chain minimum output (`erc20_credit_min`, or `native_credit_min` for ETH), or cross-chain delivery |
 
 The card's spending allowance is a `transfer` action built by `lib/actions/card-allowance.ts` (`POST /api/cards/allowance`): one USDC `approve` on Base to `BRIDGE_CARDS_SPENDER`, replacing any previous allowance. Its effect is an `erc20_approval`, verified from the `Approval` log (owner = account, exact spender and amount). Nothing leaves the account, so it doesn't count toward the daily limit; Transactions shows it as `card_allowance` ("Card allowance set").
 
@@ -126,6 +126,16 @@ Swap, cross-chain deposit, and cross-chain withdrawal are all `route` actions; t
 `GET /api/routes/quote` asks LI.FI for a quote with the Aura account as sender and recipient, validates it, and stores it server-side as a `route_quote` with a short expiry. The browser gets an opaque quote ID, never raw calldata to trust.
 
 Validation checks assets, chains, amounts, recipient, slippage, price impact, and that the call target and approval spender are the LI.FI Diamond (`0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE`). Aura doesn't decode bridge-specific calldata: outcome verification is the control. LI.FI's integrator fee is `LIFI_INTEGRATOR_FEE` (a fraction, default 0), integrator `aura`.
+
+### Native ETH output
+
+A route that pays out ETH (a swap to ETH on Base, or ETH sent to another network) has no `Transfer` log to check, so `lib/actions/native-credit.ts` reads the recipient's credit from the chain, for the transaction's own block: the operation's block on the same network (effect `native_credit_min`), or, for a cross-network move, the block of the receiving transaction LI.FI reports for this source transaction (a `delivery` with `token: null`).
+
+- **Trace first.** Where an endpoint serves `debug_traceTransaction` with `callTracer` (public endpoints usually don't; a dedicated `RPC_URL_<chainId>` may), the credit is the value of every call in that transaction that reached the recipient and didn't revert.
+- **Otherwise the balance change.** The recipient's `eth_getBalance` at the block before and at the transaction's block, from an endpoint whose block hash matches the receipt's. Anything else in the same block is counted too: another incoming transfer can make a short payout look complete (accepted: the check is "at least the minimum"), and the recipient's own spending can hide a credit. So a balance shortfall is never treated as proof of failure: a same-network action stays `submitted` (`native_credit_below_minimum`), a cross-network one stays `settling`, and both show in the operators' stuck list. A traced shortfall fails like a token shortfall (`effect_missing_native_credit_min`, `delivery_below_minimum`).
+- **No reading, no confirmation.** If no endpoint can trace or answer a historical balance (pruned state), the action stays open with `native_credit_unavailable`: `submitted` (shown as pending, not complete) on the same network, `settling` across networks. It is never confirmed on the debit and LI.FI's `DONE` alone.
+- **Evidence.** Each reading is stored once as a `native_credit` action event: method, endpoint host, chain, transaction hash, block number and hash, recipient, credited amount, and `observedAt`. Later checks reuse it while the receipt's block hash is unchanged, so an endpoint that has since pruned that block's state doesn't hold the action back; after a reorg it is read again.
+- Actions prepared before this check existed keep the effects they were stored with.
 
 ## Limits and recipient rules
 
@@ -155,7 +165,7 @@ Bank limits come from Bridge once connected and appear beside these. A bank payo
 ## Data
 
 - `actions`: one row per action. Calls, effects, and review summary are immutable after insert. Status moves forward only: `prepared` → `submitted` → `settling` → `confirmed`, or `failed` / `expired`.
-- `action_events`: append-only evidence (submission, status changes, delivery). A route to another network also gets two milestones, each recorded once: `source_final` when the source transaction is final, and `delivered` when the payout is seen on the destination network. The Transactions journey (`action-journey.tsx`) is built from these.
+- `action_events`: append-only evidence (submission, status changes, delivery, and `native_credit` readings). A route to another network also gets two milestones, each recorded once: `source_final` when the source transaction is final, and `delivered` when the payout is seen on the destination network. The Transactions journey (`action-journey.tsx`) is built from these.
 - `route_quotes`: server-held LI.FI quotes, deleted after expiry unless used by an action. A quote makes one action: if two requests race to use it, the second gets `409 quote_used`.
 
 ## API

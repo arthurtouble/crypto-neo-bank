@@ -68,6 +68,16 @@ test("USDC buys a tokenized stock on Base, with the reference price shown, and t
   expect(await balance(page, customer, `8453:${ASSETS.apple}`)).toBe("199000000");
 });
 
+test("USDC buys ETH on Base, confirmed from the ETH reaching the account, which leaves no token log", async ({ page }) => {
+  const customer = await openSwap(page, { from: `8453:${ASSETS.usdc}`, to: "8453:native" });
+  await getQuote(page, "2");
+  await expect(quote(page)).toContainText("Minimum received", { timeout: 20_000 });
+  await quote(page).getByRole("button", { name: "Swap", exact: true }).click();
+  await expect(toast(page, "Swap complete")).toBeVisible({ timeout: 30_000 });
+  expect(await balance(page, customer, `8453:${ASSETS.usdc}`)).toBe("48000000");
+  expect(await balance(page, customer, "8453:native")).toBe("1990000000000000000");
+});
+
 test("a stock sells back to USDC, the other way round", async ({ page }) => {
   const customer = await openSwap(page, { balances: { 8453: { [ASSETS.apple]: "300000000" } }, from: `8453:${ASSETS.apple}`, to: `8453:${ASSETS.usdc}` });
   await expect(page.getByText("3 AAPLc available")).toBeVisible({ timeout: 20_000 });

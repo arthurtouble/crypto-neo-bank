@@ -3,14 +3,17 @@ import { AAVE_BASE_V3_MARKET } from "@/lib/defi/aave";
 import { MORPHO_USDC } from "@/lib/defi/morpho";
 import { observeTransaction, observeTransactionIdentity, requiredConfirmations, type ChainObservation } from "./chain";
 import { LifiStatusError, readLifiTransferStatus } from "./lifi-status";
+import { observeNativeCredit, storedNativeCredit, type NativeCredit, type NativeCreditEvidence } from "./native-credit";
 import { sameAddress, type Call, type Effect } from "./types";
 import { readWalletOperation, walletOperationCalls, type Log } from "./user-operation";
 
+/** `nativeCredit` is the chain observation behind a native ETH payout, kept as the action's evidence. */
+type Observed = { nativeCredit?: NativeCreditEvidence };
 export type Verification =
-  | { status: "pending"; reason: string }
-  | { status: "settling"; reason: string; destinationHash?: string }
-  | { status: "confirmed"; destinationHash?: string }
-  | { status: "failed"; reason: string };
+  | { status: "pending"; reason: string } & Observed
+  | { status: "settling"; reason: string; destinationHash?: string } & Observed
+  | { status: "confirmed"; destinationHash?: string } & Observed
+  | { status: "failed"; reason: string } & Observed;
 
 export type VerifiableAction = {
   chainId: number;
@@ -18,12 +21,25 @@ export type VerifiableAction = {
   calls: Call[];
   effects: Effect[];
   transactionHash: string;
+  /** Native credit already observed for this action, reused while its block is canonical. */
+  nativeEvidence?: NativeCreditEvidence[];
 };
 
 type Dependencies = {
   observe?: (chainId: number, hash: string) => Promise<ChainObservation>;
   lifiStatus?: typeof readLifiTransferStatus;
+  nativeCredit?: typeof observeNativeCredit;
 };
+
+type LogEffect = Exclude<Effect, { type: "delivery" | "native_credit_min" }>;
+
+/** The recipient's native credit in this receipt's block: stored evidence for the same canonical block, or a fresh chain read. */
+async function nativeCreditAt(action: VerifiableAction, chainId: number, receipt: { transactionHash: string; blockNumber: bigint; blockHash: string },
+  to: string, read: typeof observeNativeCredit): Promise<NativeCredit> {
+  const target = { chainId, transactionHash: receipt.transactionHash, blockNumber: receipt.blockNumber, blockHash: receipt.blockHash, to };
+  const stored = storedNativeCredit(action.nativeEvidence, target);
+  return stored ? { status: "observed", evidence: stored } : read(target);
+}
 
 const aaveEvents = {
   aave_supply: parseAbiItem("event Supply(address indexed reserve, address user, address indexed onBehalfOf, uint256 amount, uint16 indexed referralCode)"),
@@ -51,7 +67,7 @@ function transfers(logs: readonly Log[], token: string) {
 }
 
 /** Whether one expected same-chain effect is present in the operation's own logs. */
-export function effectPresent(effect: Exclude<Effect, { type: "delivery" }>, wallet: string, logs: readonly Log[]): boolean {
+export function effectPresent(effect: LogEffect, wallet: string, logs: readonly Log[]): boolean {
   switch (effect.type) {
     case "erc20_transfer":
       return transfers(logs, effect.token).some((item) => sameAddress(item.from, wallet)
@@ -178,17 +194,31 @@ export async function verifyAction(action: VerifiableAction, dependencies: Depen
   if (!callsMatch(action.calls, operation.calls)) return fail("calls_mismatch");
   if (!operation.success) return fail("operation_reverted");
   for (const effect of action.effects) {
-    if (effect.type === "delivery") continue;
+    if (effect.type === "delivery" || effect.type === "native_credit_min") continue;
     if (!effectPresent(effect, action.walletAddress, operation.logs)) return fail(`effect_missing_${effect.type}`);
   }
-  if (!source.final) return { status: "settling", reason: "finality" };
+  // Native ETH paid out on this network: read from the chain, since it leaves no log. Without that reading, it never moves on.
+  const native = action.effects.find((effect) => effect.type === "native_credit_min");
+  let evidence: Observed = {};
+  if (native) {
+    const credit = await nativeCreditAt(action, action.chainId, receipt!, native.to, dependencies.nativeCredit ?? observeNativeCredit);
+    if (credit.status === "unavailable") return { status: "pending", reason: credit.reason };
+    evidence = { nativeCredit: credit.evidence };
+    if (BigInt(credit.evidence.creditedRaw) < BigInt(native.minimumRaw)) {
+      // A trace is this transaction's own calls, so a shortfall there is a real one. A balance change can hide a credit
+      // behind the recipient's own spending in the same block, so it stays open for an operator rather than failing.
+      return credit.evidence.method === "trace" ? { ...fail("effect_missing_native_credit_min"), ...evidence }
+        : { status: "pending", reason: "native_credit_below_minimum", ...evidence };
+    }
+  }
+  if (!source.final) return { status: "settling", reason: "finality", ...evidence };
   const delivery = action.effects.find((effect) => effect.type === "delivery");
-  if (!delivery) return { status: "confirmed" };
-  return verifyDelivery(action, delivery, observe, dependencies.lifiStatus ?? readLifiTransferStatus);
+  if (!delivery) return { status: "confirmed", ...evidence };
+  return verifyDelivery(action, delivery, observe, dependencies.lifiStatus ?? readLifiTransferStatus, dependencies.nativeCredit ?? observeNativeCredit);
 }
 
 async function verifyDelivery(action: VerifiableAction, delivery: Extract<Effect, { type: "delivery" }>,
-  observe: NonNullable<Dependencies["observe"]>, lifiStatus: typeof readLifiTransferStatus): Promise<Verification> {
+  observe: NonNullable<Dependencies["observe"]>, lifiStatus: typeof readLifiTransferStatus, nativeCredit: typeof observeNativeCredit): Promise<Verification> {
   let status;
   try {
     status = await lifiStatus({ sourceHash: action.transactionHash, sourceChainId: action.chainId,
@@ -200,14 +230,27 @@ async function verifyDelivery(action: VerifiableAction, delivery: Extract<Effect
   if (status.status === "FAILED") return { status: "failed", reason: "delivery_failed" };
   if (status.status === "PARTIAL") return { status: "failed", reason: "partial_delivery" };
   if (status.status !== "DONE" || !status.destinationHash) return { status: "settling", reason: "awaiting_delivery" };
+  // The receiving transaction must be the one LI.FI reports for this very source transaction, on the expected network.
+  if (!status.sourceHash || status.sourceHash.toLowerCase() !== action.transactionHash.toLowerCase()
+    || status.destinationChainId !== delivery.destinationChainId) return { status: "settling", reason: "status_mismatch" };
   const destination = settledReceipt(await observe(delivery.destinationChainId, status.destinationHash),
     delivery.destinationChainId, status.destinationHash);
   if (destination.status === "failed") return { status: "failed", reason: `destination_${destination.reason}` };
   if (destination.status !== "found") return { status: "settling", reason: destination.reason, destinationHash: status.destinationHash };
-  if (delivery.token && transfers(destination.observed.receipt!.logs, delivery.token)
-    .filter((item) => sameAddress(item.to, delivery.to))
-    .reduce((sum, item) => sum + item.value, 0n) < BigInt(delivery.minimumRaw)) {
-    return { status: "failed", reason: "delivery_below_minimum" };
+  const receipt = destination.observed.receipt!;
+  if (delivery.token) {
+    if (transfers(receipt.logs, delivery.token).filter((item) => sameAddress(item.to, delivery.to))
+      .reduce((sum, item) => sum + item.value, 0n) < BigInt(delivery.minimumRaw)) return { status: "failed", reason: "delivery_below_minimum" };
+    return { status: "confirmed", destinationHash: status.destinationHash };
   }
-  return { status: "confirmed", destinationHash: status.destinationHash };
+  // Native ETH delivered: the recipient's credit in the receiving transaction's block on the destination network.
+  // Until it's read, the move stays settling; it is never confirmed on LI.FI's word alone.
+  const credit = await nativeCreditAt(action, delivery.destinationChainId, receipt, delivery.to, nativeCredit);
+  if (credit.status === "unavailable") return { status: "settling", reason: credit.reason };
+  const evidence = { nativeCredit: credit.evidence };
+  if (BigInt(credit.evidence.creditedRaw) < BigInt(delivery.minimumRaw)) {
+    return credit.evidence.method === "trace" ? { status: "failed", reason: "delivery_below_minimum", ...evidence }
+      : { status: "settling", reason: "native_credit_below_minimum", ...evidence };
+  }
+  return { status: "confirmed", destinationHash: status.destinationHash, ...evidence };
 }
