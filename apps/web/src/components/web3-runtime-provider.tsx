@@ -1,23 +1,24 @@
 "use client";
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+// The Privy runtime: Privy, its smart wallets, and wagmi. AuthProvider (auth-provider.tsx) loads this file only for a
+// saved session or when a guest signs in. It and the files only it imports (privy-bridge.tsx, passkey-added-toast.tsx,
+// config/chains.ts) are the only client code that may import @privy-io/*, wagmi, or viem's clients at runtime
+// (tests/unit/privy-runtime-boundary.test.ts).
 import { PrivyProvider } from "@privy-io/react-auth";
 import { SmartWalletsProvider } from "@privy-io/react-auth/smart-wallets";
 import { WagmiProvider } from "@privy-io/wagmi";
-import { useState } from "react";
-import { HOME_CHAIN, SUPPORTED_CHAINS, web3Config } from "@/config/chains";
+import { web3Config } from "@/config/chains";
 import { PRIVY_APP_ID } from "@/config/client";
-import { ApiError } from "@/lib/client/api";
+import { HOME_CHAIN, SUPPORTED_CHAINS } from "@/config/supported-chains";
 import { PasskeyAddedToast } from "./passkey-added-toast";
-import { ToastProvider } from "./toast";
+import { PrivyBridge } from "./privy-bridge";
 
-export default function Web3RuntimeProvider({ children }: { children: React.ReactNode }) {
-  const [queryClient] = useState(() => new QueryClient({
-    // A refused request (expired session, bad input) won't succeed on retry; a failed read might.
-    defaultOptions: { queries: { staleTime: 12_000, refetchOnWindowFocus: false,
-      retry: (failures, error) => failures < 2 && !(error instanceof ApiError && error.status < 500) } }
-  }));
-
+export default function Web3RuntimeProvider({ loginRequested, onLoginOpened, children }: {
+  loginRequested: boolean;
+  onLoginOpened: () => void;
+  children: React.ReactNode;
+}) {
+  // The QueryClient and toasts are AuthProvider's, so they exist for guests and survive loading this runtime.
   return (
     <PrivyProvider
       appId={PRIVY_APP_ID}
@@ -39,14 +40,12 @@ export default function Web3RuntimeProvider({ children }: { children: React.Reac
       }}
     >
       <SmartWalletsProvider>
-        <QueryClientProvider client={queryClient}>
-          <WagmiProvider config={web3Config}>
-            <ToastProvider>
-              <PasskeyAddedToast />
-              {children}
-            </ToastProvider>
-          </WagmiProvider>
-        </QueryClientProvider>
+        <WagmiProvider config={web3Config}>
+          <PrivyBridge loginRequested={loginRequested} onLoginOpened={onLoginOpened}>
+            <PasskeyAddedToast />
+            {children}
+          </PrivyBridge>
+        </WagmiProvider>
       </SmartWalletsProvider>
     </PrivyProvider>
   );

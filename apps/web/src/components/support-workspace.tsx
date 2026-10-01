@@ -1,6 +1,6 @@
 "use client";
 
-import { usePrivy } from "@privy-io/react-auth";
+import { useAuth } from "@/lib/client/auth";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { LoaderCircle, MessageCircle } from "lucide-react";
@@ -16,7 +16,7 @@ const docs = process.env.NEXT_PUBLIC_DOCS_URL ?? "https://aurel-docs.aurel-event
  * Settings. Card disputes start from the card payment itself.
  */
 export function SupportWorkspace() {
-  const { ready, authenticated, login } = usePrivy();
+  const { ready, authenticated, login } = useAuth();
   const isExample = ready && !authenticated;
   const chat = useSupportChat();
   const closing = useSearchParams().get("topic") === "close-account";

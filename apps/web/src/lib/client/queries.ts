@@ -1,6 +1,6 @@
 "use client";
 
-import { usePrivy } from "@privy-io/react-auth";
+import { useAuth } from "@/lib/client/auth";
 import { useQuery } from "@tanstack/react-query";
 import { exampleOverview } from "@/lib/example/data";
 import type { Overview } from "@/lib/overview/read";
@@ -15,7 +15,7 @@ import type { ActionView } from "./use-action";
 export type ScreenQuery<T> = { data: T | undefined; isExample: boolean; isPending: boolean; error: Error | null; refetch: () => void };
 
 function useScreenQuery<T>(key: string, path: string, example: T | null, options: { refetchInterval?: number } = {}): ScreenQuery<T> {
-  const { ready, authenticated, user } = usePrivy();
+  const { ready, authenticated, user } = useAuth();
   const api = useApi();
   const live = ready && authenticated;
   const query = useQuery({ queryKey: [key, user?.id], queryFn: () => api<T>(path), enabled: live, refetchInterval: options.refetchInterval });

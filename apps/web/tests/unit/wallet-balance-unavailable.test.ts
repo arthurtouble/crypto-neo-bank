@@ -2,26 +2,27 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("@privy-io/react-auth", () => ({
-  useFundWallet: () => ({ fundWallet: async () => undefined }),
-  useWallets: () => ({ wallets: [{ walletClientType: "privy", address: "0x1111111111111111111111111111111111111111" }] }),
-  useMfaEnrollment: () => ({ showMfaEnrollmentModal: () => undefined }),
-  useAuthorizationSignature: () => ({ generateAuthorizationSignature: async () => ({ signature: "sig" }) }),
-  usePrivy: () => ({ getAccessToken: async () => null, user: { linkedAccounts: [
+// Sign-in and the wallet runtime (Privy and wagmi, through lib/client/auth.tsx and lib/client/wallet-context.tsx).
+vi.mock("@/lib/client/auth", () => ({
+  useAuth: () => ({ getAccessToken: async () => null, user: { linkedAccounts: [
     { type: "wallet", chainType: "ethereum", walletClientType: "privy", address: "0x2222222222222222222222222222222222222222" },
     { type: "wallet", chainType: "ethereum", walletClientType: "metamask", address: "0xABE0750986FB2A72E0EBB71E28BB80402F7A6B54" }
   ] } })
 }));
-vi.mock("@privy-io/react-auth/smart-wallets", () => ({ useSmartWallets: () => ({ client: undefined }) }));
+vi.mock("@/lib/client/wallet-context", () => ({
+  useWallet: () => ({
+    wallets: [{ walletClientType: "privy", address: "0x1111111111111111111111111111111111111111" }],
+    fundWallet: async () => undefined, showMfaEnrollmentModal: () => undefined,
+    generateAuthorizationSignature: async () => ({ signature: "sig" }), smartWalletClient: undefined
+  }),
+  // Every chain balance read fails.
+  useNativeBalance: () => ({ data: undefined, isPending: false, isError: true }),
+  useTokenBalance: () => ({ data: undefined, isPending: false, isError: true }),
+  useTokenBalances: () => ({ data: undefined, isPending: false, isError: true })
+}));
 vi.mock("@tanstack/react-query", () => ({ useQuery: () => ({ data: undefined }), useQueryClient: () => ({ invalidateQueries: async () => undefined }) }));
 const search = vi.hoisted(() => ({ params: "" }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: () => undefined }), useSearchParams: () => new URLSearchParams(search.params) }));
-vi.mock("wagmi", async (importOriginal) => ({
-  ...await importOriginal<typeof import("wagmi")>(),
-  useBalance: () => ({ data: undefined, isPending: false, isError: true }),
-  useReadContract: () => ({ data: undefined, isPending: false, isError: true }),
-  useReadContracts: () => ({ data: undefined, isPending: false, isError: true })
-}));
 
 import { WalletWorkspace } from "@/components/wallet-workspace";
 import { assetsFor } from "@/lib/assets/registry";

@@ -1,6 +1,6 @@
 "use client";
 
-import { usePrivy } from "@privy-io/react-auth";
+import { useAuth, type AuthUser } from "@/lib/client/auth";
 import { LogIn, LogOut } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
 import { useAuraWallet } from "@/lib/client/use-aura-wallet";
@@ -19,7 +19,7 @@ export function useDismiss(open: boolean, close: () => void, root: RefObject<HTM
   }, [open, close, root, trigger]);
 }
 
-function accountLabel(user: ReturnType<typeof usePrivy>["user"]) {
+function accountLabel(user: AuthUser | null) {
   return user?.email?.address ?? user?.google?.email ?? "Aura account";
 }
 
@@ -31,7 +31,7 @@ const walletText = (address?: string) => address ? shortAddress(address) : "Wall
 
 /** Who is signed in, the theme, and Log out. Shared by the desktop account menu and the phone menu sheet. */
 export function AccountDetails() {
-  const { user, logout } = usePrivy();
+  const { user, logout } = useAuth();
   const { address } = useAuraWallet();
   return <div className="appAccount">
     <div className="appAccountWho"><strong>{accountLabel(user)}</strong><span className="appMono">{walletText(address)}</span></div>
@@ -42,7 +42,7 @@ export function AccountDetails() {
 
 /** Top bar, right: Sign in for guests; for customers, an avatar that opens the account menu (desktop only). */
 export function AccountMenu() {
-  const { authenticated, ready, login, user } = usePrivy();
+  const { authenticated, ready, login, user } = useAuth();
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const button = useRef<HTMLButtonElement>(null);

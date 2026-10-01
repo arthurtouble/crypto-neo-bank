@@ -1,13 +1,14 @@
 "use client";
 
-import { useFundWallet, usePrivy } from "@privy-io/react-auth";
 import { Building2, ChevronRight, CreditCard, LoaderCircle, QrCode, Wallet } from "lucide-react";
 import Link from "next/link";
 import { QRCodeSVG } from "qrcode.react";
 import { useEffect, useState } from "react";
-import { HOME_CHAIN } from "@/config/chains";
+import { HOME_CHAIN } from "@/config/supported-chains";
 import { assetsFor } from "@/lib/assets/registry";
+import { useAuth } from "@/lib/client/auth";
 import { useAuraWallet } from "@/lib/client/use-aura-wallet";
+import { useWallet } from "@/lib/client/wallet-context";
 import { shortAddress } from "@/lib/format";
 import { AddFromWallet } from "./add-from-wallet";
 import { BankDepositPanel } from "./bank-deposit-panel";
@@ -62,7 +63,7 @@ function ReceivePanel({ address, isExample }: { address: string; isExample: bool
 }
 
 function CardPanel({ address, isExample, onSignIn }: { address: string | undefined; isExample: boolean; onSignIn: () => void }) {
-  const { fundWallet } = useFundWallet();
+  const { fundWallet } = useWallet();
   const toast = useToast();
   const [paying, setPaying] = useState(false);
   async function payByCard() {
@@ -94,7 +95,7 @@ function initialTab(): Tab {
  * come from the chain; nothing here records a deposit.
  */
 export function DepositPage() {
-  const { authenticated, ready, login } = usePrivy();
+  const { authenticated, ready, login } = useAuth();
   const { address, ready: walletReady } = useAuraWallet();
   const isExample = ready && !authenticated;
   // Until Privy knows who this is, label the page as example data (so the first render, and the server's, is labelled)

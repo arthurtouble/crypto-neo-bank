@@ -1,7 +1,7 @@
 "use client";
 
 import * as Dialog from "@radix-ui/react-dialog";
-import { usePrivy } from "@privy-io/react-auth";
+import { useAuth } from "@/lib/client/auth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CreditCard, Eye, LoaderCircle, ShieldCheck } from "lucide-react";
 import Link from "next/link";
@@ -223,7 +223,7 @@ function CardControls({ data, onSignIn }: { data: Card; onSignIn: SignIn }) {
   const api = useApi();
   const client = useQueryClient();
   const toast = useToast();
-  const { user } = usePrivy();
+  const { user } = useAuth();
   const { authorize } = useAuraWallet();
   const fail = useCardErrors();
   const [busy, setBusy] = useState(false);
@@ -287,7 +287,7 @@ function Setup({ data, refetch, checking }: { data: Exclude<CardState, { state: 
   const api = useApi();
   const client = useQueryClient();
   const toast = useToast();
-  const { user } = usePrivy();
+  const { user } = useAuth();
   const fail = useCardErrors();
   const [busy, setBusy] = useState(false);
 
@@ -333,7 +333,7 @@ function Setup({ data, refetch, checking }: { data: Exclude<CardState, { state: 
 
 /** The Cards page: the steps to get a card, or the card itself. Guests see a labelled example card. */
 export function CardWorkspace() {
-  const { authenticated, ready, login, user } = usePrivy();
+  const { authenticated, ready, login, user } = useAuth();
   const api = useApi();
   const isExample = ready && !authenticated;
   const loading = !ready;

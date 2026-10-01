@@ -1,7 +1,7 @@
 "use client";
 
 import * as Dialog from "@radix-ui/react-dialog";
-import { usePrivy } from "@privy-io/react-auth";
+import { useAuth } from "@/lib/client/auth";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -69,7 +69,7 @@ function MenuSheet({ pathname }: { pathname: string }) {
     const frame = requestAnimationFrame(() => setMounted(true));
     return () => cancelAnimationFrame(frame);
   }, []);
-  const { authenticated, ready, login } = usePrivy();
+  const { authenticated, ready, login } = useAuth();
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Trigger asChild>

@@ -1,4 +1,4 @@
-import { formatUnits } from "viem";
+import { formatUnits } from "@/lib/format/units";
 import { BASE_CHAIN_ID } from "@/lib/assets/registry";
 import type { CardActivity } from "@/lib/cards/service";
 import { FAILED_PAYOUT_STATES, payoutStateText } from "@/lib/providers/bridge/transfers";

@@ -1,6 +1,6 @@
 "use client";
 
-import { usePrivy } from "@privy-io/react-auth";
+import { useAuth } from "@/lib/client/auth";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { useApi } from "@/lib/client/api";
@@ -129,7 +129,7 @@ function TopMerchants({ data }: { data: Insights }) {
 
 /** Journey J14: money in and out over a period, a chart with a table view, categories, and top card merchants. */
 export function InsightsWorkspace() {
-  const { user, ready, authenticated, login } = usePrivy();
+  const { user, ready, authenticated, login } = useAuth();
   const api = useApi();
   const isExample = ready && !authenticated;
   const loading = !ready;

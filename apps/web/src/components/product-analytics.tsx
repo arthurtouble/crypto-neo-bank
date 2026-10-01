@@ -1,12 +1,12 @@
 "use client";
 
-import { usePrivy } from "@privy-io/react-auth";
+import { useAuth } from "@/lib/client/auth";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 
 export function ProductAnalytics() {
   const pathname = usePathname();
-  const { authenticated, getAccessToken } = usePrivy();
+  const { authenticated, getAccessToken } = useAuth();
   useEffect(() => {
     if (!authenticated || !pathname.startsWith("/app")) return;
     let active = true;

@@ -1,6 +1,6 @@
 "use client";
 
-import { usePrivy } from "@privy-io/react-auth";
+import { useAuth } from "@/lib/client/auth";
 import { useAuraWallet } from "@/lib/client/use-aura-wallet";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
@@ -10,7 +10,7 @@ import { Notice } from "./states";
 type Tag = { tag: string; address: string; displayName: string; publicEnabled: boolean; publicBankEnabled: boolean };
 
 export function AuraTagControls() {
-  const { user, getAccessToken } = usePrivy();
+  const { user, getAccessToken } = useAuth();
   const { address } = useAuraWallet();
   const [current, setCurrent] = useState<Tag | null>(null);
   const [tag, setTag] = useState("");

@@ -3,9 +3,8 @@ import { http } from "wagmi";
 import { arbitrum, base, mainnet, optimism, polygon } from "viem/chains";
 import { SUPPORTED_CHAINS } from "@/config/supported-chains";
 
-export const HOME_CHAIN = base;
-export { SUPPORTED_CHAINS };
-
+// The wagmi configuration. Only the Privy runtime (components/web3-runtime-provider.tsx) imports this; screens take
+// HOME_CHAIN and SUPPORTED_CHAINS from config/supported-chains.ts.
 export const web3Config = createConfig({
   chains: SUPPORTED_CHAINS,
   transports: {

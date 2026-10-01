@@ -2,7 +2,7 @@
 
 import { Check, CircleAlert, Clock3, ExternalLink, LoaderCircle, X } from "lucide-react";
 import Link from "next/link";
-import { SUPPORTED_CHAINS } from "@/config/chains";
+import { SUPPORTED_CHAINS } from "@/config/supported-chains";
 import { networkName } from "@/lib/assets/registry";
 import { failureText } from "@/lib/client/action-copy";
 import { actionSettled, type ActionPhase, type ActionView } from "@/lib/client/use-action";

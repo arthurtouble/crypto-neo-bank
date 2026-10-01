@@ -1,6 +1,6 @@
 "use client";
 
-import { usePrivy } from "@privy-io/react-auth";
+import { useAuth } from "@/lib/client/auth";
 import { useCallback } from "react";
 
 export class ApiError extends Error {
@@ -13,7 +13,7 @@ export const ACCOUNT_CLOSED_EVENT = "aura:account-closed";
 
 /** Fetch an Aura API route with the customer's session, returning parsed JSON or throwing an ApiError. */
 export function useApi() {
-  const { getAccessToken } = usePrivy();
+  const { getAccessToken } = useAuth();
   return useCallback(async <T>(path: string, init: RequestInit & { json?: unknown } = {}): Promise<T> => {
     const token = await getAccessToken();
     if (!token) throw new ApiError(401, "unauthorized", "Your session expired. Sign in again.");
