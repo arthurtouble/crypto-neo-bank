@@ -66,9 +66,12 @@ const healthBody = await health.json().catch(() => ({}));
 assert(health.ok && healthBody.status === "ok" && healthBody.service === "aura-web", `Aura health reports ok (${health.status})`);
 assert(healthBody.dependencies?.operationalDatabase === "ok", "health confirms the projection database binding");
 
+// The server sends the app shell; the browser then shows a guest the labeled example data without loading Privy, or
+// loads Privy for a saved session (docs/architecture/frontend-data.md). The end-to-end tests check the guest label.
 for (const path of ["/app", "/app/deposit", "/app/earn", "/app/support"]) {
   const response = await request(path);
-  assert(response.ok && (await response.text()).includes("Example data"), `${path} offers labeled guest browsing (${response.status})`);
+  const html = await response.text();
+  assert(response.ok && html.includes("Getting your wallet ready") && /<meta name="robots" content="noindex/.test(html), `${path} serves the app shell, not indexed (${response.status})`);
 }
 const unknownTag = await request(`/pay/${crypto.randomUUID().replaceAll("-", "")}`);
 assert(unknownTag.ok && (await unknownTag.text()).includes("Payment page unavailable"), "unknown Aura tag reveals no recipient");
