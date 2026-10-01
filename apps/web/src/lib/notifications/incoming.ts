@@ -2,17 +2,20 @@ import { readIncoming } from "@/lib/activity/incoming";
 import { recordIncoming } from "@/lib/activity/observations";
 import { listActionHashes } from "@/lib/actions/store";
 import { readBankDeposits } from "@/lib/money/bank-activity";
+import { RECEIVED_NOTICE_WINDOW_DAYS } from "@/lib/privacy/retention";
 import { notify, receivedNotice } from "./store";
 
 /**
  * Notices for money received. An account is watched once the customer uses
  * Aura, and for 30 days after they were last active. Only money received
- * after the watch started is announced, so past deposits never arrive as new
- * notifications. The cron checks the least recently checked accounts; opening
+ * after the watch started, and in the last RECEIVED_NOTICE_WINDOW_DAYS, is
+ * announced, so past deposits never arrive as new notifications, even after
+ * their old notice was cleaned up (lib/privacy/retention.ts). The cron checks the least recently checked accounts; opening
  * the app checks the customer's own account at once.
  */
 const ACTIVE_MS = 30 * 24 * 3600_000;
 const RECHECK_MS = 30_000;
+const ANNOUNCE_WINDOW_MS = RECEIVED_NOTICE_WINDOW_DAYS * 24 * 3600_000;
 
 export async function watchAccount(db: D1Database, subject: string, wallet: string, now = new Date()) {
   const at = now.toISOString();
@@ -38,7 +41,8 @@ export async function scanIncoming(db: D1Database, options: { subject?: string; 
     await db.prepare("UPDATE incoming_watches SET checked_at = ? WHERE subject_reference = ?").bind(now.toISOString(), watch.subject_reference).run();
     const incoming = await (options.read ?? readIncoming)(watch.wallet_address, { exclude: await listActionHashes(db, watch.subject_reference), now });
     await recordIncoming(db, watch.subject_reference, watch.wallet_address, incoming.transfers, now);
-    const fresh = incoming.transfers.filter((transfer) => transfer.receivedAt >= watch.watched_since);
+    const announceSince = new Date(now.getTime() - ANNOUNCE_WINDOW_MS).toISOString();
+    const fresh = incoming.transfers.filter((transfer) => transfer.receivedAt >= watch.watched_since && transfer.receivedAt >= announceSince);
     // A bank deposit arrives from Bridge's address; say it's from the bank.
     const bank = fresh.length ? await (options.bankDeposits ?? readBankDeposits)(db, watch.subject_reference) : new Map();
     for (const transfer of fresh) {

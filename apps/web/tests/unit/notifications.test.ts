@@ -236,6 +236,16 @@ describe("noticing money received", () => {
     expect(excluded).toHaveLength(2);
   });
 
+  it("never announces money received before the announcement window, so a cleaned-up notice can't come back", async () => {
+    sqlite.exec(`INSERT INTO incoming_watches (subject_reference, wallet_address, watched_since, last_active_at)
+      VALUES ('alice', '${wallet}', '2025-01-01T00:00:00.000Z', '${now.toISOString()}')`);
+    const day = 24 * 3600_000;
+    const read: Read = async () => ({ transfers: [transfer("ancient", new Date(now.getTime() - 200 * day).toISOString()),
+      transfer("recent", new Date(now.getTime() - 89 * day).toISOString())], status: "available", partial: false, observedAt: "t" });
+    expect(await scanIncoming(db, { now, read })).toEqual(["alice"]);
+    expect(sqlite.prepare("SELECT dedupe_key FROM notifications").all()).toEqual([{ dedupe_key: "received:recent" }]);
+  });
+
   it("stops watching accounts not used for 30 days, and never watches an unknown customer", async () => {
     await watchAccount(db, "nobody", wallet, now);
     await watchAccount(db, "alice", wallet, now);
