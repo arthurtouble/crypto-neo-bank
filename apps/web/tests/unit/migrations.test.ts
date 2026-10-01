@@ -13,6 +13,7 @@ const APPLIED: Record<string, string> = {
   "0001_baseline.sql": "e4753039344c01f53cad5794edb7d6a004ded7ac1d6123ec446856591bcf63a3",
   "0002_incoming_observations.sql": "dbdbdfed897eff33a534c9b473d0da36da35817856f0f695d3ad77b3f79d85a4",
   "0003_card_observations.sql": "e7eebc12427d1fbe9a533e3888b7759167916742731ce2db7e82cb56d1e425e7",
+  "0004_notification_delivery_claims.sql": "38695fb639bfad69142c64daaeb5f202511fc2ddd75c2c6b18986ce554642996",
   "0005_bank_beneficiary_available_at.sql": "605be999f10c14c4795a98bad5258ed0a4c56f43eb4aec1e0bf3f48e559ff10a"
 };
 
