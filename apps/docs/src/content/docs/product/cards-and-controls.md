@@ -31,6 +31,14 @@ When you buy something, Bridge takes exactly the purchase amount from your USDC 
 
 The Cards page shows your allowance and USDC balance, read from Base. If Base can't be read, they show **Unavailable**, never zero.
 
+### Turning off card spending
+
+Under **Spending allowance**, select **Turn off** to set your allowance to 0 USD. Every purchase is then declined until you set a new allowance. Your USDC stays in your account.
+
+You confirm it with your passkey, like setting an allowance. It works even if you've used up your daily sending limit, but not while your account is locked. It shows in Transactions as **Card spending turned off**.
+
+To stop payments straight away, without a passkey, freeze the card instead.
+
 ## Controls
 
 The Cards page shows your card with **Show card details**, **Card controls**, your **Spending allowance**, and card activity below; on a phone, in one column in that order.

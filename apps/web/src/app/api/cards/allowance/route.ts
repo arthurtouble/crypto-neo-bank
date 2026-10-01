@@ -25,7 +25,7 @@ export const POST = route("cards.allowance", { unavailable: "card_unavailable", 
   if (!provider || !await storedCardId(env.PROJECTION_DB, subject.subjectReference)) return errorResponse(404, "card_not_found", context, { message: "You don't have a card." });
   const { address: wallet } = await requireMoneyAccount(subject.subjectReference);
   await ensureSubjectProfile(env.PROJECTION_DB, subject.subjectReference);
-  if (Number(input.amountUsd) === 0) return errorResponse(422, "invalid_amount", context, { message: "Enter an amount greater than zero, or freeze the card." });
+  // 0 is allowed: it turns card spending off on chain, under the same switch, lock, and passkey as any allowance.
   const prepared = await prepareBuiltAction(env.PROJECTION_DB, subject.subjectReference, wallet, buildCardAllowance(provider.spender, input.amountUsd), () => "payment_cards");
   if (!prepared.ok) return errorResponse(409, prepared.block.code, context, { message: prepared.block.message });
   return Response.json({ action: actionView(prepared.action), traceId: context.traceId }, { status: 201 });

@@ -171,6 +171,34 @@ test("the card spends only up to the allowance, its payments are in Transactions
   expect(rows.every((row) => row.label === "Card payment" && row.source === "Stripe")).toBe(true);
 });
 
+test("turning off card spending sets the allowance to $0.00 on chain, with the passkey", async ({ page }) => {
+  test.setTimeout(120_000);
+  await withCard(page);
+  await page.goto("/app/cards");
+  await expect(allowance(page).getByTestId("card-allowance")).toContainText("$0.00", { timeout: 20_000 });
+  // Nothing to turn off yet.
+  await expect(allowance(page).getByRole("button", { name: "Turn off" })).toHaveCount(0);
+  await setAllowance(page, "50");
+  await expect(allowance(page).getByTestId("card-allowance")).toContainText("$50.00", { timeout: 20_000 });
+  await allowance(page).getByRole("button", { name: "Change it again" }).click();
+
+  // Cancelling the passkey prompt changes nothing.
+  await page.evaluate(() => localStorage.setItem("aura-e2e-passkey", "reject"));
+  await allowance(page).getByRole("button", { name: "Turn off" }).click();
+  await expect(toast(page, "Cancelled")).toBeVisible({ timeout: 20_000 });
+  await page.evaluate(() => localStorage.removeItem("aura-e2e-passkey"));
+
+  await allowance(page).getByRole("button", { name: "Turn off" }).click();
+  await expect(toast(page, "Card allowance complete")).toBeVisible({ timeout: 30_000 });
+  await expect(allowance(page).getByTestId("card-allowance")).toContainText("Card can spend$0.00", { timeout: 20_000 });
+  await expect(allowance(page).getByText("Set an allowance to start using your card.")).toBeVisible();
+  // With the allowance at 0, Bridge can't take anything for a purchase.
+  expect(await edge("/__stripe/authorize", { amount: "5", merchant: "Corner Cafe" })).toMatchObject({ approved: false });
+
+  await page.goto("/app/transactions");
+  await expect(page.locator(".activityRow").filter({ hasText: "Card spending turned off" })).toContainText("Aura card", { timeout: 30_000 });
+});
+
 test("freezing stops payments at once; unfreezing and a higher limit need the passkey", async ({ page }) => {
   test.setTimeout(120_000);
   const customer = await withCard(page);

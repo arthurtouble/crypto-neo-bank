@@ -11,7 +11,7 @@ import type { IncomingTransfer } from "./incoming";
  * receipt, exports, statements, and Insights, so they always agree. Card
  * payments come from Stripe, which issues the card.
  */
-type EntryType = "sent" | "received" | "bank_deposit" | "bank_payout" | "card_payment" | "card_refund" | "card_allowance" | "swap" | "bridge" | "earn_deposit" | "earn_withdraw"
+type EntryType = "sent" | "received" | "bank_deposit" | "bank_payout" | "card_payment" | "card_refund" | "card_allowance" | "card_spending_off" | "swap" | "bridge" | "earn_deposit" | "earn_withdraw"
   | "borrow" | "repay" | "liquidation" | "collateral_enabled" | "collateral_disabled" | "defi_activity";
 type EntryStatus = "pending" | "completed" | "failed" | "not_confirmed";
 type EntryOrigin = "aura" | "incoming" | "aave" | "card";
@@ -102,7 +102,10 @@ export function actionEntry(action: ActionLike): ActivityEntry {
       bankStatus: chainDone ? payoutStateText(state ?? "awaiting_funds") : undefined };
   }
   // Approving the card to spend moves nothing; each purchase does, later.
-  if (summary.cardAllowance) return { ...base, type: "card_allowance", asset: symbol, amount, counterparty: "Aura card", estimatedUsd: undefined };
+  if (summary.cardAllowance) {
+    const off = (summary.cardAllowance as { off?: unknown }).off === true;
+    return { ...base, type: off ? "card_spending_off" : "card_allowance", asset: symbol, amount, counterparty: "Aura card", estimatedUsd: undefined };
+  }
   return { ...base, type: "sent", asset: symbol, amount, counterparty: typeof summary.to === "string" ? summary.to : undefined };
 }
 
@@ -131,7 +134,7 @@ export function incomingEntry(transfer: IncomingTransfer, usdCentsPerUnit?: numb
 }
 
 const LABELS: Record<EntryType, string> = {
-  sent: "Sent", received: "Received", bank_deposit: "Bank deposit", bank_payout: "Sent to bank", card_payment: "Card payment", card_refund: "Card refund", card_allowance: "Card allowance set", swap: "Swapped", bridge: "Moved between networks", earn_deposit: "Added to Earn",
+  sent: "Sent", received: "Received", bank_deposit: "Bank deposit", bank_payout: "Sent to bank", card_payment: "Card payment", card_refund: "Card refund", card_allowance: "Card allowance set", card_spending_off: "Card spending turned off", swap: "Swapped", bridge: "Moved between networks", earn_deposit: "Added to Earn",
   earn_withdraw: "Withdrawn from Earn", borrow: "Borrowed", repay: "Repaid", liquidation: "Collateral liquidated",
   collateral_enabled: "Enabled collateral", collateral_disabled: "Disabled collateral", defi_activity: "Aave activity"
 };
@@ -140,7 +143,7 @@ export const entryLabel = (type: EntryType) => LABELS[type];
 export const CATEGORIES = ["All", "Sent", "Received", "Card", "Swaps", "Earn", "Other"] as const;
 type EntryCategory = Exclude<(typeof CATEGORIES)[number], "All">;
 export function entryCategory(type: EntryType): EntryCategory {
-  if (type === "card_payment" || type === "card_refund" || type === "card_allowance") return "Card";
+  if (type === "card_payment" || type === "card_refund" || type === "card_allowance" || type === "card_spending_off") return "Card";
   if (type === "sent" || type === "bank_payout") return "Sent";
   if (type === "received" || type === "bank_deposit") return "Received";
   if (type === "swap" || type === "bridge") return "Swaps";

@@ -286,7 +286,6 @@ describe("card details, disputes, and allowance", () => {
   it("prepares a USDC approval for the card contract, not counted as spending", async () => {
     expect(await (await allowance(request("/api/cards/allowance", "POST", { amountUsd: "50" }))).json()).toMatchObject({ error: "card_not_found" });
     await create();
-    expect((await allowance(request("/api/cards/allowance", "POST", { amountUsd: "0" }))).status).toBe(422);
     const response = await allowance(request("/api/cards/allowance", "POST", { amountUsd: "50" }));
     expect(response.status).toBe(201);
     const { action } = await response.json() as { action: { id: string } };
@@ -296,6 +295,34 @@ describe("card details, disputes, and allowance", () => {
     expect(decodeFunctionData({ abi: erc20Abi, data: call.data })).toEqual({ functionName: "approve", args: [spender, 50_000_000n] });
     expect(JSON.parse(row.effects_json)).toEqual([{ type: "erc20_approval", token: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", spender, amountRaw: "50000000" }]);
     expect(row.counts_toward_limit).toBe(0);
+  });
+
+  it("turns card spending off with approve(spender, 0), past any daily limit but not past the lock or without a passkey", async () => {
+    await create();
+    // A daily limit already used up never blocks lowering the allowance to 0.
+    sqlite.exec(`INSERT INTO security_profiles (subject_reference, daily_limit_cents, updated_at) VALUES ('alice', 1, 't');
+      INSERT INTO actions (action_id, subject_reference, wallet_address, kind, chain_id, summary_json, calls_json, calls_fingerprint, effects_json,
+        counts_toward_limit, usd_cents, status, created_at, expires_at, updated_at)
+      VALUES ('spent', 'alice', '${wallet}', 'transfer', 8453, '{}', '[{}]', '0x', '[]', 1, 100, 'confirmed', '${new Date().toISOString()}', '${new Date().toISOString()}', 't');`);
+    const off = (amountUsd = "0") => allowance(request("/api/cards/allowance", "POST", { amountUsd }));
+    const response = await off("0.00");
+    expect(response.status).toBe(201);
+    const { action } = await response.json() as { action: { id: string; summary: Record<string, unknown> } };
+    expect(action.summary).toMatchObject({ amount: "0", amountRaw: "0", cardAllowance: { spender, off: true } });
+    const row = sqlite.prepare("SELECT calls_json, effects_json, counts_toward_limit, usd_cents FROM actions WHERE action_id = ?").get(action.id) as
+      { calls_json: string; effects_json: string; counts_toward_limit: number; usd_cents: number };
+    const [call] = JSON.parse(row.calls_json) as Array<{ to: string; data: `0x${string}` }>;
+    expect(decodeFunctionData({ abi: erc20Abi, data: call.data })).toEqual({ functionName: "approve", args: [spender, 0n] });
+    expect(JSON.parse(row.effects_json)).toEqual([{ type: "erc20_approval", token: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", spender, amountRaw: "0" }]);
+    expect([row.counts_toward_limit, row.usd_cents]).toEqual([0, 0]);
+    // The account lock and the passkey still apply to 0.
+    sqlite.exec("UPDATE security_profiles SET account_locked = 1 WHERE subject_reference = 'alice'");
+    const locked = await off();
+    expect(locked.status).toBe(409);
+    expect(await locked.json()).toMatchObject({ error: "account_locked" });
+    sqlite.exec("UPDATE security_profiles SET account_locked = 0 WHERE subject_reference = 'alice'");
+    state.mfa = false;
+    expect(await (await off()).json()).toMatchObject({ error: "mfa_required" });
   });
 
   it("never lets an older read of a card overwrite a newer one, or another customer's card (security review B7)", async () => {

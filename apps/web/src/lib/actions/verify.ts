@@ -60,6 +60,7 @@ export function effectPresent(effect: Exclude<Effect, { type: "delivery" }>, wal
       return transfers(logs, effect.token).filter((item) => sameAddress(item.from, wallet))
         .reduce((sum, item) => sum + item.value, 0n) === BigInt(effect.amountRaw);
     case "erc20_approval":
+      // Exactly this value: a zero approval (card spending off) confirms only when the Approval event says 0.
       return logs.some((log) => {
         if (!sameAddress(log.address, effect.token)) return false;
         const event = decode(erc20Abi, log);
