@@ -14,7 +14,8 @@ description: Assets, trust boundaries, threats, controls, and residual risks.
 | Threat | Prevent | Detect and recover |
 | --- | --- | --- |
 | Session theft | Privy token verification, short-lived sessions; loosening a control needs a server-verified passkey confirmation, so a stolen session can't undo a lock or a limit | Customer emergency lock, audit events, Privy session response |
-| Destination substitution | Optional saved-recipients-only mode, new-recipient cooling, final wallet confirmation | Action evidence, verified `Transfer` effect, transaction hash, support escalation |
+| Destination substitution | Optional saved-recipients-only mode and new-recipient cooling, for wallet addresses and saved bank accounts alike; changing an Aura tag's receiving address needs a fresh passkey confirmation; final wallet confirmation | Security notices for a new recipient, a new bank account, and a changed tag address; action evidence, verified `Transfer` effect, transaction hash, support escalation |
+| Transaction-hash squatting | A reported hash binds only after the chain shows it's the action's own wallet sending exactly the prepared calls; a hash Privy reports that's already taken is recorded as `hash_in_use`, never thrown | Each action is checked on its own, so one bad action can't stop the background check or Transactions |
 | Malicious transaction plan | Server-built calls, exact approvals batched with the action, LI.FI Diamond pinned as call target and spender, price-impact cap | Verifier checks decoded calls equal prepared calls and expected events are present; feature switch |
 | Quote tampering | Quotes held server-side (45 s); browser sees only a quote ID | Source debit and minimum output verified onchain |
 | Excessive or automated withdrawal | Optional daily limit, saved-recipients-only mode, application rate limits | Rate-limit records, product events, issue queue |

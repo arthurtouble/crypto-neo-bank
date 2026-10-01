@@ -82,6 +82,25 @@ function decodeHandleOps(input: `0x${string}`): Array<{ sender: string; callData
 type Transaction = { from: string; to: string; value: string; data: string };
 
 /**
+ * The calls the wallet's own operation in a transaction makes, read from the
+ * transaction alone: a plain transaction the wallet signed, or exactly one
+ * EntryPoint operation whose sender is the wallet. Anything else isn't the
+ * wallet's own operation.
+ */
+export function walletOperationCalls(wallet: string, transaction: Transaction): { status: "found"; calls: Call[] } | { status: "unrecognized"; reason: string } {
+  if (sameAddress(transaction.from, wallet)) return { status: "found", calls: [normalizeCall(transaction.to, BigInt(transaction.value), transaction.data)] };
+  const entryPoint = transaction.to.toLowerCase();
+  if (entryPoint !== ENTRY_POINT_V08 && entryPoint !== ENTRY_POINT_V07 && entryPoint !== ENTRY_POINT_V06) return { status: "unrecognized", reason: "not_entry_point" };
+  const ops = decodeHandleOps(transaction.data as `0x${string}`);
+  if (!ops) return { status: "unrecognized", reason: "not_handle_ops" };
+  const mine = ops.filter((op) => sameAddress(op.sender, wallet));
+  if (mine.length !== 1) return { status: "unrecognized", reason: mine.length ? "multiple_operations" : "operation_missing" };
+  const calls = decodeAccountCalls(mine[0].callData);
+  if (!calls) return { status: "unrecognized", reason: "account_encoding" };
+  return { status: "found", calls };
+}
+
+/**
  * Find the wallet's operation in a transaction and return its decoded calls,
  * its success flag, and only the logs its execution emitted.
  */
@@ -92,13 +111,9 @@ export function readWalletOperation(wallet: string, transaction: Transaction, lo
     return { status: "found", calls: [normalizeCall(transaction.to, BigInt(transaction.value), transaction.data)], success: receiptSuccess, logs: [...logs] };
   }
   const entryPoint = transaction.to.toLowerCase();
-  if (entryPoint !== ENTRY_POINT_V08 && entryPoint !== ENTRY_POINT_V07 && entryPoint !== ENTRY_POINT_V06) return { status: "unrecognized", reason: "not_entry_point" };
-  const ops = decodeHandleOps(transaction.data as `0x${string}`);
-  if (!ops) return { status: "unrecognized", reason: "not_handle_ops" };
-  const mine = ops.filter((op) => sameAddress(op.sender, wallet));
-  if (mine.length !== 1) return { status: "unrecognized", reason: mine.length ? "multiple_operations" : "operation_missing" };
-  const calls = decodeAccountCalls(mine[0].callData);
-  if (!calls) return { status: "unrecognized", reason: "account_encoding" };
+  const own = walletOperationCalls(wallet, transaction);
+  if (own.status === "unrecognized") return own;
+  const calls = own.calls;
 
   // Execution logs of operation i sit between BeforeExecution (or operation
   // i-1's UserOperationEvent) and operation i's UserOperationEvent.

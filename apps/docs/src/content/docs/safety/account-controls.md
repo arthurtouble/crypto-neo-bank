@@ -9,8 +9,8 @@ The controls are in **Settings → Security**. Making one stricter takes effect 
 | --- | --- | --- |
 | Emergency lock | Off | Stops every send, swap, and Earn move, including ones you started but haven't confirmed |
 | Daily limit | Off | Caps the US dollar value you send in any 24 hours, including to your own linked wallets |
-| Saved recipients only | Off | Lets you send only to recipients you've saved |
-| Wait before new recipients | 4 hours | When saved recipients only is on, a newly saved recipient can't receive until the wait ends |
+| Saved recipients only | Off | Lets you send only to recipients and bank accounts you've saved |
+| Wait before new recipients | 4 hours | When saved recipients only is on, a newly saved recipient or bank account can't receive until the wait ends |
 
 ## Passkey
 
@@ -39,6 +39,10 @@ If we can't work out the value of an amount, we block the action rather than ski
 ## Saved recipients
 
 Give recipients you trust clear names, and check each full address in a separate way before you save it. A name doesn't prove who owns the address.
+
+A bank account you save for bank transfers counts as a saved recipient. With saved recipients only on, it waits like any new recipient before you can send to it.
+
+We email you and tell you in the app each time a recipient or bank account is saved, and when your Aura tag's receiving address changes. If you didn't make the change, lock your account.
 
 ## When Aura switches a feature off
 

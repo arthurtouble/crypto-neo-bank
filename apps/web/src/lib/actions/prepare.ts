@@ -38,26 +38,34 @@ async function inOrder(checks: Array<Promise<unknown>>): Promise<void> {
 }
 
 /**
- * Refuse when one of the action's switches is off or its asset is paused. The
- * reads run together; the first refusal, in this order, is the answer.
+ * Refuse when one of the action's switches is off or one of its assets is
+ * paused. The reads run together; the first refusal, in this order, is the answer.
  */
-export async function requireAllowed(db: D1Database, features: readonly FeatureKey[], assetId: string | null): Promise<void> {
-  await inOrder([...features.map((key) => requireFeature(db, key)), ...(assetId ? [requireNotPaused(db, assetId)] : [])]);
+export async function requireAllowed(db: D1Database, features: readonly FeatureKey[], assetIds: string | null | readonly (string | null)[]): Promise<void> {
+  const assets = [assetIds].flat().filter((id): id is string => typeof id === "string" && id.length > 0);
+  await inOrder([...features.map((key) => requireFeature(db, key)), ...assets.map((id) => requireNotPaused(db, id))]);
 }
 
-/** The switches and the asset a stored action needs, the same ones it was prepared under. */
-export function storedActionGates(action: StoredAction): { features: FeatureKey[]; assetId: string | null } {
+/** The asset a swap or move delivers. An operator can pause it as well as the one it spends. */
+function destinationAsset(summary: Record<string, unknown>): string | null {
+  const to = summary.to as { id?: unknown } | null | undefined;
+  return to && typeof to === "object" && typeof to.id === "string" ? to.id : null;
+}
+
+/** The switches and the assets a stored action needs, the same ones it was prepared under. */
+export function storedActionGates(action: StoredAction): { features: FeatureKey[]; assetIds: string[] } {
   const summary = action.summary as { assetId?: unknown; bankPayout?: unknown; cardAllowance?: unknown; external?: unknown; from?: { id?: unknown };
     protocol?: unknown; symbol?: unknown; vault?: unknown };
   const text = (value: unknown) => typeof value === "string" ? value : null;
+  const assets = (...ids: Array<string | null>) => ids.filter((id): id is string => id !== null);
   if (action.kind === "route") return { features: routeFeatures({ crossChain: Boolean(action.destinationChainId), external: summary.external === true }),
-    assetId: text(summary.from?.id) };
+    assetIds: assets(text(summary.from?.id), destinationAsset(action.summary)) };
   if (action.kind === "earn") {
     const asset = summary.protocol === "morpho" ? morphoVault(text(summary.vault) ?? "")?.asset ?? BASE_USDC
       : AAVE_BASE_ASSETS[text(summary.symbol) as keyof typeof AAVE_BASE_ASSETS];
-    return { features: ["defi_actions"], assetId: asset ? `${BASE_CHAIN_ID}:${asset.toLowerCase()}` : null };
+    return { features: ["defi_actions"], assetIds: assets(asset ? `${BASE_CHAIN_ID}:${asset.toLowerCase()}` : null) };
   }
-  return { features: [summary.bankPayout ? "fiat_accounts" : summary.cardAllowance ? "payment_cards" : "direct_transfers"], assetId: text(summary.assetId) };
+  return { features: [summary.bankPayout ? "fiat_accounts" : summary.cardAllowance ? "payment_cards" : "direct_transfers"], assetIds: assets(text(summary.assetId)) };
 }
 
 export type Prepared = { ok: true; action: StoredAction } | { ok: false; block: Block };
@@ -75,7 +83,8 @@ export async function precheckAction(db: D1Database, subject: string, built: Bui
 /** Check, value, and store an action built elsewhere, such as a bank payout's funding transfer. */
 export async function prepareBuiltAction(db: D1Database, subject: string, wallet: string, built: BuiltAction,
   feature: (action: BuiltAction) => FeatureKey | FeatureKey[], now = new Date()): Promise<Prepared> {
-  await requireAllowed(db, [feature(built)].flat(), built.valuation.assetId);
+  // A swap or move is also refused when the asset it delivers is paused.
+  await requireAllowed(db, [feature(built)].flat(), [built.valuation.assetId, built.kind === "route" ? destinationAsset(built.summary) : null]);
   const [valuation, controls] = await Promise.all([valueAsset(built.valuation, { now }), loadControls(db, subject, built.recipient ?? null, now)]);
   const block = checkControls(built, valuation, controls);
   if (block) return { ok: false, block };

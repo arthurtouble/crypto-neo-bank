@@ -6,7 +6,8 @@ import type { BuiltAction } from "./types";
 /**
  * The transfer that funds a Bridge bank payout: exactly the USDC amount Bridge
  * asked for, to the Base address Bridge returned. Saved-address rules do not
- * apply to that address; the bank account is what the customer saved.
+ * apply to that address; the bank account is what the customer saved, and
+ * the payout route applies them to it (`checkBankAccount` in `./controls`).
  */
 export function buildPayoutFunding(payout: Payout, bank: { id: string; displayName: string; lastFour: string | null }): BuiltAction {
   const amountRaw = parseUnits(payout.amount, 6);

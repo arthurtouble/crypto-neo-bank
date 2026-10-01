@@ -88,6 +88,23 @@ describe("sending an action through Privy", () => {
     expect((await submit(new Request("https://aura.test", json({ signature })), params(id))).status).toBe(202);
   });
 
+  it("a swap stops when the asset it delivers is paused, at prepare and at submit", async () => {
+    const weth = "8453:0x4200000000000000000000000000000000000006";
+    const swap = { kind: "route" as const, chainId: 8453, calls: [{ to: usdc as `0x${string}`, value: "0", data: "0x" as `0x${string}` }], effects: [],
+      summary: { from: { id: `8453:${usdc}`, symbol: "USDC", decimals: 6 }, to: { id: weth, symbol: "WETH", decimals: 18 } },
+      countsTowardLimit: false, valuation: { assetId: `8453:${usdc}`, amountRaw: "2000000", decimals: 6 } };
+    await prepared();
+    const db = d1(sqlite);
+    const { prepareBuiltAction } = await import("@/lib/actions/prepare");
+    const first = await prepareBuiltAction(db, "alice", account, swap, () => "swaps");
+    expect(first.ok).toBe(true);
+    const id = (first as { action: { id: string } }).action.id;
+    sqlite.exec(`INSERT INTO asset_pauses (asset_id, reason, paused_at, paused_by) VALUES ('${weth}', 'Bridge incident', 't', 'ops')`);
+    await expect(prepareBuiltAction(db, "alice", account, swap, () => "swaps")).rejects.toMatchObject({ code: "asset_paused" });
+    expect(await (await submit(new Request("https://aura.test", json({ signature })), params(id))).json()).toMatchObject({ error: "asset_paused" });
+    expect(state.rpc).not.toHaveBeenCalled();
+  });
+
   it("tells a rejected request apart from one whose outcome is unknown", async () => {
     const id = await prepared();
     state.rpc = vi.fn(async () => { throw Object.assign(new Error("bad signature"), { status: 401 }); });
@@ -111,12 +128,30 @@ describe("sending an action through Privy", () => {
     expect(sqlite.prepare("SELECT status, transaction_hash FROM actions").get()).toEqual({ status: "settling", transaction_hash: hash });
   });
 
-  it("records a relay Privy reports as failed", async () => {
+  it("keeps checking a relay Privy reports as failed, and fails it only once its signed request expired with no hash", async () => {
     const id = await prepared();
     await submit(new Request("https://aura.test", json({ signature })), params(id));
     const db = d1(sqlite);
-    await checkAction(db, (await getAction(db, "alice", id))!, new Date(), { relayStatus: async () => ({ status: "failed", reason: "relay_failed" }) });
+    const failed = async () => ({ status: "failed" as const, reason: "relay_failed" });
+    const action = (await getAction(db, "alice", id))!;
+    // Privy's answer isn't chain evidence: while the request could still be sent, the action stays open.
+    await checkAction(db, action, new Date(Date.parse(action.expiresAt) - 1000), { relayStatus: failed });
+    expect(sqlite.prepare("SELECT status, failure_reason FROM actions").get()).toEqual({ status: "submitted", failure_reason: null });
+    expect(sqlite.prepare("SELECT event_type, evidence_json FROM action_events WHERE event_type = 'relay_failed'").all())
+      .toEqual([{ event_type: "relay_failed", evidence_json: JSON.stringify({ reason: "relay_failed" }) }]);
+    await checkAction(db, (await getAction(db, "alice", id))!, new Date(Date.parse(action.expiresAt) + 1000), { relayStatus: failed });
     expect(sqlite.prepare("SELECT status, failure_reason FROM actions").get()).toEqual({ status: "failed", failure_reason: "relay_failed" });
+  });
+
+  it("follows a relay Privy first reported as failed that lands after all", async () => {
+    const id = await prepared();
+    await submit(new Request("https://aura.test", json({ signature })), params(id));
+    const db = d1(sqlite);
+    await checkAction(db, (await getAction(db, "alice", id))!, new Date(), { relayStatus: async () => ({ status: "failed", reason: "relay_provider_error" }) });
+    const hash = `0x${"cd".repeat(32)}`;
+    await checkAction(db, (await getAction(db, "alice", id))!, new Date(), { relayStatus: async () => ({ status: "landed", hash }),
+      verify: async () => ({ status: "settling", reason: "finality" }) });
+    expect(sqlite.prepare("SELECT status, transaction_hash FROM actions").get()).toEqual({ status: "settling", transaction_hash: hash });
   });
 
   it("keeps the relay reference fixed and never lets an action settle without a chain hash", async () => {

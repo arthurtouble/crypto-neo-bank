@@ -35,7 +35,7 @@ export const subjectDataInventory = {
   step_up_challenges: { export: false, reason: "Short-lived passkey confirmations; the change itself is in the audit trail" },
   route_quotes: { export: false, reason: "Short-lived route quotes; used quotes are summarized on their action" },
   card_account_projections: { export: true, reason: "Rebuildable issuer projection" },
-  bank_beneficiary_projections: { export: true, reason: "Rebuildable provider projection" },
+  bank_beneficiary_projections: { export: true, reason: "Provider projection, with when each saved bank account can first receive a payout" },
   wallet_policies: { export: true, reason: "Rebuildable wallet-provider projection" },
   command_idempotency: { export: false, reason: "Short-lived retry protection" },
   webhook_receipts: { export: false, reason: "Provider event replay protection" },

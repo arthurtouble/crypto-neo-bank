@@ -118,8 +118,17 @@ async function appendEvent(db: D1Database, actionId: string, type: string, evide
     .bind(crypto.randomUUID(), actionId, type, JSON.stringify(evidence), now.toISOString()).run();
 }
 
+/**
+ * Record, once, evidence that explains why an open action hasn't moved:
+ * Privy reported its relay as failed (`relay_failed`), or the hash Privy
+ * reported is already linked to another action (`hash_in_use`).
+ */
+export async function appendEvidenceOnce(db: D1Database, actionId: string, type: "relay_failed" | "hash_in_use", evidence: Record<string, unknown>, now: Date) {
+  await appendMilestone(db, actionId, type, now, evidence);
+}
+
 /** Record a milestone once, the first time it's reached. */
-async function appendMilestone(db: D1Database, actionId: string, type: "source_final" | "delivered", now: Date, evidence: Record<string, unknown> = {}) {
+async function appendMilestone(db: D1Database, actionId: string, type: "source_final" | "delivered" | "relay_failed" | "hash_in_use", now: Date, evidence: Record<string, unknown> = {}) {
   await db.prepare(`INSERT INTO action_events (event_id, action_id, event_type, evidence_json, occurred_at)
       SELECT ?, ?, ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM action_events WHERE action_id = ? AND event_type = ?)`)
     .bind(crypto.randomUUID(), actionId, type, JSON.stringify(evidence), now.toISOString(), actionId, type).run();
@@ -127,15 +136,20 @@ async function appendMilestone(db: D1Database, actionId: string, type: "source_f
 
 type SubmitResult = "submitted" | "already_submitted" | "hash_in_use" | "not_submittable";
 
-/** Bind a reported transaction hash to an action, once. A late report after expiry is accepted; the chain decides. */
+/**
+ * Bind a reported transaction hash to a prepared action, once, within its
+ * signing window. The caller first checks on the chain that the hash is the
+ * wallet's own operation with these calls (`checkReportedTransaction`). An
+ * expired action stays expired.
+ */
 export async function recordSubmission(db: D1Database, action: StoredAction, hash: string, now: Date): Promise<SubmitResult> {
   const normalized = hash.toLowerCase();
   if (action.transactionHash) return action.transactionHash === normalized ? "already_submitted" : "not_submittable";
-  if (action.status !== "prepared" && action.status !== "expired") return "not_submittable";
+  if (action.status !== "prepared") return "not_submittable";
   try {
     const result = await db.prepare(`UPDATE actions SET status = 'submitted', transaction_hash = ?, submitted_at = ?, updated_at = ?
-      WHERE action_id = ? AND subject_reference = ? AND transaction_hash IS NULL AND status IN ('prepared', 'expired')`)
-      .bind(normalized, now.toISOString(), now.toISOString(), action.id, action.subject).run();
+      WHERE action_id = ? AND subject_reference = ? AND transaction_hash IS NULL AND status = 'prepared' AND expires_at > ?`)
+      .bind(normalized, now.toISOString(), now.toISOString(), action.id, action.subject, now.toISOString()).run();
     if (result.meta.changes !== 1) return "not_submittable";
   } catch (error) {
     if (String(error).includes("UNIQUE")) return "hash_in_use";
@@ -159,11 +173,22 @@ export async function recordRelay(db: D1Database, action: StoredAction, referenc
   return true;
 }
 
-/** Attach the chain hash Privy reported for a relayed action. */
+/**
+ * Attach the chain hash Privy reported for a relayed action. When another
+ * action already holds that hash, nothing is attached: the conflict is
+ * recorded once as evidence (`hash_in_use`) for operators, and the action
+ * stays open without a hash instead of failing every later check.
+ */
 export async function attachRelayHash(db: D1Database, action: StoredAction, hash: string, now: Date): Promise<StoredAction> {
   const normalized = hash.toLowerCase();
-  await db.prepare("UPDATE actions SET transaction_hash = ?, updated_at = ? WHERE action_id = ? AND transaction_hash IS NULL")
-    .bind(normalized, now.toISOString(), action.id).run();
+  try {
+    await db.prepare("UPDATE actions SET transaction_hash = ?, updated_at = ? WHERE action_id = ? AND transaction_hash IS NULL")
+      .bind(normalized, now.toISOString(), action.id).run();
+  } catch (error) {
+    if (!String(error).includes("UNIQUE")) throw error;
+    await appendEvidenceOnce(db, action.id, "hash_in_use", { transactionHash: normalized }, now);
+    return action;
+  }
   return { ...action, transactionHash: normalized };
 }
 

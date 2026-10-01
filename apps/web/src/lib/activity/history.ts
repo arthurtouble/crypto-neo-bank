@@ -59,8 +59,9 @@ export async function readHistory(db: D1Database, subject: string, wallet: strin
   // Opening Transactions also advances a few open actions, so they settle even if the customer left the screen they started on.
   const due = stored.filter((action) => (action.status === "submitted" || action.status === "settling") && (action.transactionHash || action.relayReference)
     && (!action.checkedAt || now.getTime() - Date.parse(action.checkedAt) >= RECHECK_MS)).slice(0, MAX_CHECKS);
+  // A check that fails leaves that action as stored; it never hides the customer's other activity.
   const checked = new Map<string, StoredAction>(await Promise.all(due.map(async (action) =>
-    [action.id, await (deps.check ?? checkAction)(db, action, now)] as const)));
+    [action.id, await (deps.check ?? checkAction)(db, action, now).catch(() => action)] as const)));
   const own = stored.map((action) => actionEntry(checked.get(action.id) ?? action));
   const hashSet = new Set(hashes);
   const aaveEntries: ActivityEntry[] = aave.items.filter((item) => !hashSet.has(item.transactionHash.toLowerCase())).map((item) => ({

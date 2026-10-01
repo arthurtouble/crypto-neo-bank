@@ -1,6 +1,7 @@
 import { env } from "cloudflare:workers";
 import { claimProviderCommand, settleProviderCommand } from "@aurel/provider-projections";
 import { z } from "zod";
+import { checkBankAccount, loadControls } from "@/lib/actions/controls";
 import { buildPayoutFunding } from "@/lib/actions/payout";
 import { precheckAction, prepareBuiltAction, requireAllowed } from "@/lib/actions/prepare";
 import { ACTION_TTL_MS, getAction } from "@/lib/actions/store";
@@ -18,7 +19,8 @@ const schema = z.strictObject({ bankAccountId: z.uuid(), amountUsd: z.string().r
 /**
  * Send money to a saved bank account. Bridge creates the payout and names a
  * Base address; Aura prepares the USDC transfer to it as an ordinary action,
- * under the customer's lock and daily limit. Everything that would refuse the
+ * under the customer's lock, daily limit, and saved-recipient rules (the bank
+ * account is the saved recipient). Everything that would refuse the
  * action is checked before Bridge is asked, and one payout request is claimed
  * for the action's signing window, so a retry never creates a second payout.
  */
@@ -31,9 +33,10 @@ export const POST = route("money.payouts.post", { invalid: "invalid_payout", una
   if (Number(input.amountUsd) <= 0) return errorResponse(422, "invalid_amount", context, { message: "Enter an amount greater than zero." });
   const [customerId, bank] = await Promise.all([
     activeBridgeCustomer(env.PROJECTION_DB, subject.subjectReference),
-    env.PROJECTION_DB.prepare(`SELECT beneficiary_id, provider_beneficiary_reference, display_name, account_hint FROM bank_beneficiary_projections
+    env.PROJECTION_DB.prepare(`SELECT beneficiary_id, provider_beneficiary_reference, display_name, account_hint, available_at FROM bank_beneficiary_projections
       WHERE beneficiary_id = ? AND subject_reference = ? AND provider = 'bridge' AND verification_status = 'verified'`)
-      .bind(input.bankAccountId, subject.subjectReference).first<{ beneficiary_id: string; provider_beneficiary_reference: string; display_name: string; account_hint: string | null }>()
+      .bind(input.bankAccountId, subject.subjectReference).first<{ beneficiary_id: string; provider_beneficiary_reference: string; display_name: string;
+        account_hint: string | null; available_at: string | null }>()
   ]);
   if (!customerId) return errorResponse(409, "verification_required", context, { message: "Finish bank account setup first." });
   if (!bank) return errorResponse(404, "bank_account_not_found", context, { message: "Choose a saved bank account." });
@@ -44,11 +47,13 @@ export const POST = route("money.payouts.post", { invalid: "invalid_payout", una
   // customer's controls. The deposit address does not affect them.
   const draft = buildPayoutFunding({ transferId: "", depositAddress: wallet, amount: input.amountUsd }, destination);
   await requireAllowed(env.PROJECTION_DB, ["fiat_accounts"], draft.valuation.assetId);
-  const blocked = await precheckAction(env.PROJECTION_DB, subject.subjectReference, draft);
+  const now = new Date();
+  // The bank account is the recipient the customer saved: with saved-recipients-only on, it must be past its waiting period.
+  const blocked = checkBankAccount(await loadControls(env.PROJECTION_DB, subject.subjectReference, null, now), bank.available_at, now)
+    ?? await precheckAction(env.PROJECTION_DB, subject.subjectReference, draft);
   if (blocked) return errorResponse(409, blocked.code, context, { message: blocked.message });
 
   // The same payout (account, amount, rail) is claimed once per signing window: a retry gets the first answer.
-  const now = new Date();
   const claim = await claimProviderCommand(env.PROJECTION_DB, { subjectReference: subject.subjectReference, commandType: "bank_payout", provider: "bridge",
     idempotencyKey: `${bank.beneficiary_id}:${draft.valuation.amountRaw}:${input.rail}`, ttlSeconds: ACTION_TTL_MS / 1000, now });
   if (claim.outcome !== "claimed") {

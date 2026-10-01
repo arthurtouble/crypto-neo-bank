@@ -1,6 +1,6 @@
 import type { PrivyClient } from "@privy-io/node";
 import { readRelayedTransaction, type RelayedTransaction } from "./privy-relay";
-import { applyVerification, attachRelayHash, type StoredAction } from "./store";
+import { appendEvidenceOnce, applyVerification, attachRelayHash, type StoredAction } from "./store";
 import { verifyAction, type Verification } from "./verify";
 
 /**
@@ -37,9 +37,19 @@ export async function checkAction(db: D1Database, action: StoredAction, now: Dat
       const { privyClient } = await import("@/lib/auth/privy");
       return readRelayedTransaction((dependencies.privy ?? privyClient)(), id);
     }))(reference).catch((): RelayedTransaction => ({ status: "pending" }));
-    if (status.status === "failed") return announce(db, action, await applyVerification(db, current, { status: "failed", reason: status.reason }, now), now);
+    if (status.status === "failed") {
+      // Privy's answer alone isn't chain evidence. Until the signed request has expired with no hash, it could still be
+      // sent, so the action stays submitted and keeps being checked; only then does it fail.
+      if (now.getTime() <= Date.parse(current.expiresAt)) {
+        await appendEvidenceOnce(db, current.id, "relay_failed", { reason: status.reason }, now);
+        return applyVerification(db, current, { status: "pending", reason: "relay_failed" }, now);
+      }
+      return announce(db, action, await applyVerification(db, current, { status: "failed", reason: status.reason }, now), now);
+    }
     if (status.status === "pending") return applyVerification(db, current, { status: "pending", reason: "relay_pending" }, now);
     current = await attachRelayHash(db, current, status.hash, now);
+    // The hash is already linked to another action: recorded as evidence, and checked again later.
+    if (!current.transactionHash) return applyVerification(db, current, { status: "pending", reason: "hash_in_use" }, now);
   }
   if (!current.transactionHash) return current;
   const result: Verification = await (dependencies.verify ?? verifyAction)({ chainId: current.chainId, walletAddress: current.wallet,

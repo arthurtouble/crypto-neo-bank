@@ -102,6 +102,20 @@ export function checkControls(action: BuiltAction, valuation: Valuation, control
   return null;
 }
 
+/** The new-recipient wait a customer without a security profile yet gets: the schema's default, 4 hours. */
+export const DEFAULT_NEW_RECIPIENT_DELAY_SECONDS = 14_400;
+
+/**
+ * A saved bank account under the same rules as a saved recipient: with
+ * saved-recipients-only on, a payout goes only to an account whose waiting
+ * period has passed. An account with no recorded time counts as waiting.
+ */
+export function checkBankAccount(controls: Pick<Controls, "enforceAddressBook">, availableAt: string | null, now: Date): Block | null {
+  if (!controls.enforceAddressBook) return null;
+  if (!availableAt || availableAt > now.toISOString()) return { code: "recipient_cooling", message: "This bank account is still in its waiting period." };
+  return null;
+}
+
 /**
  * Stop here when the customer has locked their account. A lock also stops
  * actions prepared before it, card creation, and unfreezing a card.
