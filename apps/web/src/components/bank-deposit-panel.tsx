@@ -8,6 +8,7 @@ import { bankRailNames as railNames } from "@/lib/format/bank";
 import { CopyButton } from "./copy-button";
 import { useToast } from "./toast";
 import { LoadingState, Notice } from "./states";
+import { httpsUrl } from "@/lib/client/safe-url";
 
 function CopyValue({ label, value }: { label: string; value: string }) {
   return <div><dt>{label}</dt><dd className="mxCopy"><span className="mxMono">{value}</span>
@@ -29,7 +30,9 @@ function VerificationForm({ onStarted }: { onStarted: () => void }) {
     const tab = window.open("", "_blank");
     try {
       const result = await api<{ verificationUrl: string; termsUrl: string }>("/api/money/onboarding", { method: "POST", json: { fullName: fullName.trim(), email: email.trim() } });
-      if (tab) { tab.opener = null; tab.location.href = result.verificationUrl; }
+      const link = httpsUrl(result.verificationUrl);
+      if (!link) throw new Error("The link we got back isn't safe to open. Try again.");
+      if (tab) { tab.opener = null; tab.location.href = link; }
       onStarted();
     } catch (reason) {
       tab?.close();
@@ -67,10 +70,10 @@ export function BankDepositPanel() {
       {steps.map((step) => <li key={step.label} className={step.done ? "isDone" : step.current ? "isCurrent" : undefined}>{step.label}</li>)}
     </ol>}
     {stage === "start" && <VerificationForm onStarted={() => void account.refetch()} />}
-    {stage === "continue" && nextAction?.type === "continue_verification" && <>
+    {stage === "continue" && nextAction?.type === "continue_verification" && httpsUrl(nextAction.url) && <>
       <p className="mxHint">Finish identity verification with Bridge. After you finish, it can take a few minutes to confirm.</p>
       <div className="mxActions">
-        <a className="appButton appButtonPrimary" href={nextAction.url} target="_blank" rel="noreferrer">Continue verification</a>
+        <a className="appButton appButtonPrimary" href={httpsUrl(nextAction.url) ?? undefined} target="_blank" rel="noreferrer">Continue verification</a>
         <button type="button" className="appButton" disabled={account.isFetching} onClick={() => void account.refetch()}>{account.isFetching ? "Checking…" : "Check status"}</button>
       </div>
     </>}

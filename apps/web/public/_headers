@@ -6,3 +6,17 @@
   Cache-Control: public, max-age=86400, stale-while-revalidate=604800
 /fonts/*
   Cache-Control: public, max-age=604800, stale-while-revalidate=2592000
+
+# Security headers for every static file (the Worker, which sets the same list on its own responses, never sees them).
+# Kept identical to src/lib/http/security-headers.ts by tests/unit/security-headers.test.ts.
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Permitted-Cross-Domain-Policies: none
+  Origin-Agent-Cluster: ?1
+  Cross-Origin-Resource-Policy: same-site
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+  Cross-Origin-Opener-Policy: same-origin-allow-popups
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  Content-Security-Policy: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self' https://intercom.help https://api-iam.intercom.io; script-src 'self' 'unsafe-inline' https://*.privy.io https://widget.intercom.io https://js.intercomcdn.com https://js.stripe.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data: https://js.intercomcdn.com https://fonts.intercomcdn.com; media-src 'self' https://js.intercomcdn.com; connect-src 'self' https: wss:; frame-src https://*.privy.io https://intercom-sheets.com https://www.intercom-reporting.com https://js.stripe.com https://*.stripe.com; worker-src 'self' blob:; upgrade-insecure-requests

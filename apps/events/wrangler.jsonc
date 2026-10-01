@@ -4,6 +4,9 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-09-21",
   "compatibility_flags": ["nodejs_compat"],
+  // This Worker only consumes queues and runs crons; nothing needs its public workers.dev address in production.
+  // Wrangler environments inherit this setting, so dev turns it back on below to stay as it was.
+  "workers_dev": false,
   "d1_databases": [
     {
       "binding": "PROJECTION_DB",
@@ -40,6 +43,7 @@
   "env": {
     "dev": {
       "name": "aura-dev-provider-event-consumer",
+      "workers_dev": true,
       "d1_databases": [{
         "binding": "PROJECTION_DB",
         "database_name": "aura-dev-projections",

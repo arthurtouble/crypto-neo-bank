@@ -22,6 +22,8 @@ Cloudflare Access is the only operator sign-in, in front of the operations app W
 3. Copy the application's AUD tag and the team domain (`https://<team>.cloudflareaccess.com`) into the web app's `CF_ACCESS_AUD` and `CF_ACCESS_TEAM_DOMAIN` variables (not secrets) for that environment, and deploy the web Worker.
 4. Sign in to the operations app and check it shows your email. Check that a request to the web app's `/api/ops/*` without a token, or with a made-up one, is refused (the deployment smoke does this).
 
+The operations Worker also checks every write itself: it must carry `Sec-Fetch-Site: same-origin` (or an `Origin` equal to the app's own) and, with a body, `Content-Type: application/json`. It runs first for every path (`run_worker_first` in `apps/ops/wrangler.jsonc`) so the security headers are on the page and its files too. Scripts that call `/api/*` on the ops hostname outside a browser must send one of those headers.
+
 The web app doesn't rely on the edge alone: every `/api/ops/*` route verifies the Access token itself, including requests to the web app's own hostname ([how](../architecture/architecture.md#operations-app)). While either variable is empty, every operator request is refused.
 
 ## WAF rules
