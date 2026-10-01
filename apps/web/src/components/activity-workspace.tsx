@@ -1,7 +1,7 @@
 "use client";
 
 import * as Dialog from "@radix-ui/react-dialog";
-import { usePrivy } from "@privy-io/react-auth";
+import { useAuth } from "@/lib/client/auth";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowDownToLine, ArrowDownUp, ArrowLeft, ArrowUpFromLine, CreditCard, Download, ExternalLink, FileSpreadsheet, FileText, LoaderCircle, Search, TrendingUp, X } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -90,7 +90,7 @@ function Receipt({ entry, onClose, isExample }: { entry: ActivityEntry; onClose:
 
 /** Journey J13: this list, the tax-support preview, or a month's statement. A dialog on desktop, a sheet on the phone. */
 function ExportDialog({ entries, onClose }: { entries: ActivityEntry[]; onClose: () => void }) {
-  const { getAccessToken } = usePrivy();
+  const { getAccessToken } = useAuth();
   const [month, setMonth] = useState(new Date().toISOString().slice(0, 7));
   const [statement, setStatement] = useState<{ state: "idle" | "loading" | "error"; message?: string }>({ state: "idle" });
   async function downloadStatement() {
@@ -132,7 +132,7 @@ function ExportDialog({ entries, onClose }: { entries: ActivityEntry[]; onClose:
 
 /** Journey J12: every transaction, searchable, with type chips and a status filter. Guests see labelled examples. */
 export function ActivityWorkspace() {
-  const { user, ready, authenticated, login } = usePrivy();
+  const { user, ready, authenticated, login } = useAuth();
   const api = useApi();
   const isExample = ready && !authenticated;
   const loading = !ready;

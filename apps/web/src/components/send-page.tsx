@@ -1,6 +1,6 @@
 "use client";
 
-import { usePrivy } from "@privy-io/react-auth";
+import { useAuth } from "@/lib/client/auth";
 import { Building2, ChevronRight, Wallet } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -29,7 +29,7 @@ function TagCard({ isExample, onSignIn }: { isExample: boolean; onSignIn: () => 
  * phone. Each ends on its own review, then the passkey.
  */
 export function SendPage() {
-  const { authenticated, ready, login } = usePrivy();
+  const { authenticated, ready, login } = useAuth();
   const searchParams = useSearchParams();
   const isExample = ready && !authenticated;
   const loading = !ready;

@@ -1,6 +1,6 @@
 "use client";
 
-import { usePrivy } from "@privy-io/react-auth";
+import { useAuth } from "@/lib/client/auth";
 import { useQuery } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 import Link from "next/link";
@@ -142,7 +142,7 @@ function PayoutForm({ banks }: { banks: Recipient[] }) {
 }
 
 function ActiveBankSend() {
-  const { user } = usePrivy();
+  const { user } = useAuth();
   const api = useApi();
   const [adding, setAdding] = useState(false);
   const toast = useToast();

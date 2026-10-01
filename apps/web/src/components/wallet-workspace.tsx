@@ -1,18 +1,19 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { usePrivy } from "@privy-io/react-auth";
+import { useAuth } from "@/lib/client/auth";
 import { LoaderCircle, Send } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { erc20Abi, formatUnits, getAddress, isAddress, parseUnits } from "viem";
-import { useBalance, useReadContracts } from "wagmi";
-import { HOME_CHAIN, SUPPORTED_CHAINS } from "@/config/chains";
+import { getAddress, isAddress } from "viem";
+import { formatUnits, parseUnits } from "@/lib/format/units";
+import { HOME_CHAIN } from "@/config/supported-chains";
 import { assetsFor, networkName, sendDestinations } from "@/lib/assets/registry";
 import { ApiError, useApi } from "@/lib/client/api";
 import { formatDateTime, formatToken, formatUsd, shortAddress } from "@/lib/format";
 import { displayRawAmount } from "@/lib/swap/review-model";
 import { useAction } from "@/lib/client/use-action";
+import { useNativeBalance, useTokenBalances } from "@/lib/client/wallet-context";
 import { MovePreviousAccount } from "./move-previous-account";
 import type { RouteQuote } from "./swap-workspace";
 import { useToast } from "./toast";
@@ -22,6 +23,7 @@ import { LoadingState, Notice } from "./states";
 /** What can be sent: the registry's "send" assets, on the network where the account holds each (Base, or Ethereum for Tether Gold). The server checks the same list and any pause. */
 const SENDABLE = assetsFor("send");
 const TOKENS = SENDABLE.filter((item) => item.address !== null);
+const TOKEN_READS = TOKENS.map((item) => ({ token: item.address!, chainId: item.chainId }));
 type AssetSymbol = string;
 /** An address in groups of four, five groups a line, checksummed so its letters read as they were given. */
 function addressChunks(address: string) {
@@ -84,7 +86,7 @@ export function WalletWorkspace({ children }: { children?: React.ReactNode }) {
   const [checking, setChecking] = useState(false);
   const [checkedAddress, setCheckedAddress] = useState<string | null>(null);
   const [slowSetup, setSlowSetup] = useState(false);
-  const { user } = usePrivy();
+  const { user } = useAuth();
   const toast = useToast();
   const queryClient = useQueryClient();
   // Wallets the customer linked to their login, such as MetaMask. Never the Privy signer, which isn't theirs to send to.
@@ -97,9 +99,8 @@ export function WalletWorkspace({ children }: { children?: React.ReactNode }) {
   // Once it has left the account, it's sent: the customer can close this or start another. Transactions tracks the rest.
   const handedOff = transfer.action?.status === "settling";
   const inFlight = (transfer.phase !== "idle" && transfer.phase !== "done" && !handedOff) || transfer.outcomeUnknown;
-  const eth = useBalance({ address, chainId: HOME_CHAIN.id, query: { enabled: Boolean(address) } });
-  const tokens = useReadContracts({ contracts: TOKENS.map((item) => ({ address: item.address!, abi: erc20Abi, functionName: "balanceOf" as const,
-    args: [address!] as const, chainId: item.chainId as (typeof SUPPORTED_CHAINS)[number]["id"] })), query: { enabled: Boolean(address) } });
+  const eth = useNativeBalance(address, HOME_CHAIN.id);
+  const tokens = useTokenBalances(TOKEN_READS, address);
   const recipients = useQuery<{ recipients: Recipient[] }>({
     queryKey: ["recipients", address],
     queryFn: () => api("/api/recipients"),
@@ -111,7 +112,7 @@ export function WalletWorkspace({ children }: { children?: React.ReactNode }) {
 
   const rows = SENDABLE.map((item) => {
     const index = TOKENS.indexOf(item);
-    const value = index < 0 ? eth.data?.value : tokens.data?.[index]?.status === "success" ? tokens.data[index].result as bigint : undefined;
+    const value = index < 0 ? eth.data : tokens.data?.[index];
     return { ...item, value, source: `Aura account on ${networkName(item.chainId)}`, pending: index < 0 ? eth.isPending : tokens.isPending };
   });
 

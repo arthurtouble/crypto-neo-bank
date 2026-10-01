@@ -1,13 +1,13 @@
 "use client";
 
-import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowDownToLine, LoaderCircle, Wallet } from "lucide-react";
 import { useEffect, useState } from "react";
-import { encodeFunctionData, erc20Abi, formatUnits, parseUnits } from "viem";
-import { useBalance, usePublicClient, useReadContract } from "wagmi";
-import { HOME_CHAIN } from "@/config/chains";
+import { erc20TransferData } from "@/lib/chain/erc20-transfer";
+import { formatUnits, parseUnits } from "@/lib/format/units";
+import { HOME_CHAIN } from "@/config/supported-chains";
 import { ApiError, useApi } from "@/lib/client/api";
+import { useNativeBalance, useTokenBalance, useWallet } from "@/lib/client/wallet-context";
 import { DEPOSIT_NETWORKS, depositSource, depositSymbols, type DepositSymbol } from "@/lib/deposits/networks";
 import { formatToken, formatUsd, shortAddress } from "@/lib/format";
 import { useToast } from "./toast";
@@ -43,21 +43,18 @@ function usdText(value: number | null) {
  */
 export function AddFromWallet({ account }: { account: `0x${string}` }) {
   const api = useApi();
-  const { connectWallet } = usePrivy();
-  const { wallets } = useWallets();
+  const { connectWallet, wallets, chain } = useWallet();
   const source = wallets.find((wallet) => !wallet.walletClientType.startsWith("privy"));
   const sourceAddress = source?.address as `0x${string}` | undefined;
   const [chainId, setChainId] = useState<SupportedChainId>(HOME_CHAIN.id);
   const [symbol, setSymbol] = useState<DepositSymbol>("USDC");
   const asset = depositSource(chainId, symbol) ?? depositSource(chainId, depositSymbols(chainId)[0])!;
   const home = chainId === HOME_CHAIN.id;
-  const publicClient = usePublicClient({ chainId });
   const queryClient = useQueryClient();
   const toast = useToast();
-  const nativeBalance = useBalance({ address: sourceAddress, chainId, query: { enabled: Boolean(sourceAddress) && asset.address === null } });
-  const tokenBalance = useReadContract({ address: asset.address ?? undefined, abi: erc20Abi, functionName: "balanceOf", args: sourceAddress ? [sourceAddress] : undefined,
-    chainId, query: { enabled: Boolean(sourceAddress) && asset.address !== null } });
-  const available = asset.address === null ? nativeBalance.data?.value : tokenBalance.data;
+  const nativeBalance = useNativeBalance(sourceAddress, chainId, asset.address === null);
+  const tokenBalance = useTokenBalance(asset.address ?? undefined, sourceAddress, chainId, asset.address !== null);
+  const available = asset.address === null ? nativeBalance.data : tokenBalance.data;
   const [amount, setAmount] = useState("");
   const [phase, setPhase] = useState<Phase>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -111,7 +108,7 @@ export function AddFromWallet({ account }: { account: `0x${string}` }) {
 
   /** Send each call from the connected wallet on the source network, waiting for each to land. */
   async function sendFromWallet(calls: Call[]): Promise<`0x${string}`> {
-    if (!source || !sourceAddress || !publicClient) throw new Error("wallet_unavailable");
+    if (!source || !sourceAddress || !chain) throw new Error("wallet_unavailable");
     await source.switchChain(chainId);
     const provider = await source.getEthereumProvider();
     let last: `0x${string}` | null = null;
@@ -120,7 +117,7 @@ export function AddFromWallet({ account }: { account: `0x${string}` }) {
       const hash = await provider.request({ method: "eth_sendTransaction", params: [{ from: sourceAddress, to: call.to, data: call.data,
         value: `0x${BigInt(call.value).toString(16)}` }] }) as `0x${string}`;
       setPhase("pending");
-      const receipt = await publicClient.waitForTransactionReceipt({ hash, timeout: 300_000 });
+      const receipt = await chain.waitForReceipt({ chainId, hash, timeout: 300_000 });
       if (receipt.status !== "success") throw new Error("reverted");
       last = hash;
     }
@@ -144,7 +141,7 @@ export function AddFromWallet({ account }: { account: `0x${string}` }) {
       try {
         await sendFromWallet([asset.address === null
           ? { to: account, value: raw.toString(), data: "0x" }
-          : { to: asset.address, value: "0", data: encodeFunctionData({ abi: erc20Abi, functionName: "transfer", args: [account, raw] }) }]);
+          : { to: asset.address, value: "0", data: erc20TransferData(account, raw) }]);
         setPhase("done"); setAmount("");
         toast.success("Added", "Your balance updates in a moment.");
         await queryClient.invalidateQueries();

@@ -1,6 +1,6 @@
 "use client";
 
-import { usePrivy } from "@privy-io/react-auth";
+import { useAuth } from "@/lib/client/auth";
 import { LoaderCircle } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
@@ -9,7 +9,7 @@ import { useToast } from "./toast";
 
 /** The customer's data and account: download everything, read the documents, or ask to close the account. */
 export function DataRightsPanel() {
-  const { getAccessToken } = usePrivy();
+  const { getAccessToken } = useAuth();
   const [working, setWorking] = useState(false);
   const toast = useToast();
   /** The customer's data downloads straight away as JSON. */

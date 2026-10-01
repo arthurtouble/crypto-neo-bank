@@ -1,6 +1,6 @@
 "use client";
 
-import { usePrivy } from "@privy-io/react-auth";
+import { useAuth } from "@/lib/client/auth";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
@@ -26,7 +26,7 @@ function wholeNumber(draft: string, min: number, max: number) {
 }
 
 function usePolicy() {
-  const { user } = usePrivy();
+  const { user } = useAuth();
   const api = useApi();
   return useQuery({ queryKey: ["security-policy", user?.id], enabled: Boolean(user), queryFn: () => api<{ policy: Policy }>("/api/security/policy") });
 }
@@ -35,7 +35,7 @@ const Loading = ({ label }: { label: string }) => <section className="mxCard stC
 
 /** The emergency lock, daily limit, and saved-recipients-only. Tightening applies at once; loosening needs the passkey. */
 export function TransactionControls() {
-  const { user } = usePrivy();
+  const { user } = useAuth();
   const api = useApi();
   const queryClient = useQueryClient();
   const toast = useToast();
@@ -98,7 +98,7 @@ export function TransactionControls() {
 
 /** Saved recipients: the same list Send picks from. Each new one sends a security notice. */
 export function SavedRecipients() {
-  const { user } = usePrivy();
+  const { user } = useAuth();
   const api = useApi();
   const queryClient = useQueryClient();
   const toast = useToast();

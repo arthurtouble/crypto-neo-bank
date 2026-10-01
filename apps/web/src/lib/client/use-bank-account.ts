@@ -1,6 +1,6 @@
 "use client";
 
-import { usePrivy } from "@privy-io/react-auth";
+import { useAuth } from "@/lib/client/auth";
 import { useQuery } from "@tanstack/react-query";
 import { useApi } from "@/lib/client/api";
 import type { MoneyAccount } from "@/lib/providers/service-catalog";
@@ -27,7 +27,7 @@ export function bankStage(state: BankAccountState): BankStage {
 
 /** The customer's bank account, shared by the Deposit and Send panels. */
 export function useBankAccount() {
-  const { user } = usePrivy();
+  const { user } = useAuth();
   const api = useApi();
   return useQuery<BankAccountState>({
     queryKey: ["money-account", user?.id],

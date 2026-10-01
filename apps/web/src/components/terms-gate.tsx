@@ -1,6 +1,6 @@
 "use client";
 
-import { usePrivy } from "@privy-io/react-auth";
+import { useAuth } from "@/lib/client/auth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Dialog from "@radix-ui/react-dialog";
 import { ExternalLink } from "lucide-react";
@@ -27,7 +27,7 @@ function AccountScreen({ title, children }: { title: string; children: React.Rea
 
 /** Signed-in customers accept the current terms once per version before personal features load. */
 export function TermsGate({ children }: { children: React.ReactNode }) {
-  const { authenticated, user, getAccessToken, login, logout } = usePrivy();
+  const { authenticated, user, getAccessToken, login, logout } = useAuth();
   const client = useQueryClient();
   const [agreed, setAgreed] = useState(false);
   const [error, setError] = useState("");

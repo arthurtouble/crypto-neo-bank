@@ -1,6 +1,6 @@
 "use client";
 
-import { usePrivy } from "@privy-io/react-auth";
+import { useAuth } from "@/lib/client/auth";
 import { useState, type FormEvent } from "react";
 import { useApi } from "@/lib/client/api";
 import { bankStage, useBankAccount } from "@/lib/client/use-bank-account";
@@ -15,7 +15,7 @@ function CopyValue({ label, value }: { label: string; value: string }) {
 }
 
 function VerificationForm({ onStarted }: { onStarted: () => void }) {
-  const { user } = usePrivy();
+  const { user } = useAuth();
   const api = useApi();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState(user?.email?.address ?? "");

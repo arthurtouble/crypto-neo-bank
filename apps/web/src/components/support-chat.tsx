@@ -1,6 +1,6 @@
 "use client";
 
-import { usePrivy } from "@privy-io/react-auth";
+import { useAuth } from "@/lib/client/auth";
 import { useQuery } from "@tanstack/react-query";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, type ReactNode } from "react";
 import { useApi } from "@/lib/client/api";
@@ -32,7 +32,7 @@ function loadIntercom(appId: string) {
  * Intercom session, so the next person on the device starts clean.
  */
 export function SupportChatProvider({ children }: { children: ReactNode }) {
-  const { user } = usePrivy();
+  const { user } = useAuth();
   const api = useApi();
   const bootedFor = useRef<string | null>(null);
   const session = useQuery({ queryKey: ["support-messenger", user?.id], queryFn: () => api<MessengerSession>("/api/support/messenger"),

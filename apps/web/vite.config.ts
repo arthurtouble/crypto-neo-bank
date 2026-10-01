@@ -13,7 +13,9 @@ export default defineConfig({
     { find: /^@privy-io\/react-auth\/smart-wallets$/, replacement: fake("privy-smart-wallets-fake.tsx") },
     { find: /^@privy-io\/react-auth\/ui$/, replacement: fake("privy-ui-fake.tsx") },
     { find: /^@privy-io\/react-auth$/, replacement: fake("privy-react-fake.tsx") },
-    { find: /^@privy-io\/wagmi$/, replacement: fake("privy-wagmi-fake.ts") }
+    { find: /^@privy-io\/wagmi$/, replacement: fake("privy-wagmi-fake.ts") },
+    // "Is there a saved Privy session?" reads the fake's sign-in flag instead of Privy's storage keys.
+    { find: /^@\/lib\/client\/privy-session$/, replacement: fake("privy-session-fake.ts") }
   ] } : undefined,
   // The browser reaches the fake edge through an HTTPS name that Playwright forwards (tests/e2e/support/fixtures.ts), so the CSP stays as deployed.
   define: e2e ? { __AURA_E2E_EDGE__: JSON.stringify("https://edge.aura-e2e.test") } : undefined,

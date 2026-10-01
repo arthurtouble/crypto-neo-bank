@@ -9,7 +9,7 @@
    - Cloudflare Access for the operations app: its published keys at `/access/cdn-cgi/access/certs`, and operator tokens from `/__access`;
 2. resets a separate local D1 (`.wrangler/e2e-state`) and applies the baseline schema;
 3. starts `vinext dev` with `AURA_E2E=1`, which:
-   - swaps Privy's browser SDK for `support/privy-react-fake.tsx` (see `vite.config.ts`);
+   - swaps Privy's browser SDK for `support/privy-react-fake.tsx`, and the saved-session check (`lib/client/privy-session.ts`) for `support/privy-session-fake.ts`, so a signed-in test loads the Privy runtime and a guest test doesn't until it signs in (see `vite.config.ts`);
    - points the Worker at the fake through `PRIVY_API_URL`, `PRIVY_VERIFICATION_KEY`, `RPC_URL_<chain>`, `KRAKEN_API_URL`, `CF_ACCESS_TEAM_DOMAIN` and `CF_ACCESS_AUD`;
 4. starts the operations app (`apps/ops`) with Vite on port 43175 (`AUREL_E2E_OPS_PORT`), forwarding its `/api` calls to the web app's `/api/ops`.
 

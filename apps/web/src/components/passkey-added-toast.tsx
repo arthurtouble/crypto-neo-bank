@@ -1,13 +1,13 @@
 "use client";
 
-import { usePrivy } from "@privy-io/react-auth";
+import { useAuth } from "@/lib/client/auth";
 import { useEffect, useRef } from "react";
 import { MFA_REQUIRED_TOAST } from "@/lib/client/use-action";
 import { useToast } from "./toast";
 
 /** Confirm when the customer adds a passkey or authenticator app, and clear the prompt that asked for one. */
 export function PasskeyAddedToast() {
-  const { ready, authenticated, user } = usePrivy();
+  const { ready, authenticated, user } = useAuth();
   const toast = useToast();
   const methods = user?.mfaMethods ?? [];
   const hasPasskey = methods.includes("passkey");

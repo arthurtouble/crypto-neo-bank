@@ -4,11 +4,11 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowDownUp, LoaderCircle, RefreshCw } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { useBalance, useReadContract } from "wagmi";
-import { erc20Abi, formatUnits, parseUnits } from "viem";
-import { SUPPORTED_CHAINS } from "@/config/chains";
+import { formatUnits, parseUnits } from "@/lib/format/units";
+import { SUPPORTED_CHAINS } from "@/config/supported-chains";
 import { ApiError, useApi } from "@/lib/client/api";
 import { useAction } from "@/lib/client/use-action";
+import { useNativeBalance, useTokenBalance } from "@/lib/client/wallet-context";
 import { formatWeekdayTime } from "@/lib/format";
 import type { AssetId, CatalogAsset } from "@/lib/swap/assets";
 import { assetNetwork } from "@/lib/swap/picker-model";
@@ -84,12 +84,9 @@ export function SwapWorkspace() {
   const source = fromAsset.data;
   const destination = toAsset.data;
   const sourceChainId = SUPPORTED_CHAINS.find((chain) => chain.id === source?.chainId)?.id;
-  const nativeBalance = useBalance({ address, chainId: sourceChainId,
-    query: { enabled: Boolean(address && source && source.address === null) } });
-  const tokenBalance = useReadContract({ address: source?.address as `0x${string}` | undefined,
-    abi: erc20Abi, functionName: "balanceOf", args: address ? [address] : undefined, chainId: sourceChainId,
-    query: { enabled: Boolean(address && source?.address) } });
-  const availableRaw = source?.address === null ? nativeBalance.data?.value : tokenBalance.data;
+  const nativeBalance = useNativeBalance(address, sourceChainId, Boolean(source && source.address === null));
+  const tokenBalance = useTokenBalance(source?.address as `0x${string}` | undefined, address, sourceChainId, Boolean(source?.address));
+  const availableRaw = source?.address === null ? nativeBalance.data : tokenBalance.data;
   const remaining = quote ? secondsLeft(quote.expiresAt, now) : 0;
   // Once it has left the account, the swap is sent: the rest is tracked in Transactions, like Send.
   const handedOff = swap.action?.status === "settling";

@@ -3,9 +3,13 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const state = vi.hoisted(() => ({ wallets: [] as Array<{ address: string; walletClientType: string }> }));
-vi.mock("@privy-io/react-auth", () => ({ usePrivy: () => ({ connectWallet: () => undefined, getAccessToken: async () => null }), useWallets: () => ({ wallets: state.wallets }) }));
+// The wallet runtime (Privy and wagmi, through lib/client/wallet-context.tsx): the connected wallets and their balances.
+vi.mock("@/lib/client/wallet-context", () => ({
+  useWallet: () => ({ connectWallet: () => undefined, wallets: state.wallets, chain: null }),
+  useNativeBalance: () => ({ data: undefined }),
+  useTokenBalance: () => ({ data: 5_000_000n, refetch: async () => undefined })
+}));
 vi.mock("@tanstack/react-query", () => ({ useQueryClient: () => ({ invalidateQueries: async () => undefined }) }));
-vi.mock("wagmi", async (importOriginal) => ({ ...await importOriginal<typeof import("wagmi")>(), usePublicClient: () => undefined, useBalance: () => ({ data: undefined }), useReadContract: () => ({ data: 5_000_000n, refetch: async () => undefined }) }));
 
 import { AddFromWallet } from "@/components/add-from-wallet";
 

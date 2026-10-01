@@ -1,9 +1,9 @@
 "use client";
 
-import { useExportWallet, useLinkAccount, useMfa, useMfaEnrollment, usePrivy, useWallets } from "@privy-io/react-auth";
-import { useUpdateEmail } from "@privy-io/react-auth/ui";
 import { LoaderCircle } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useAuth } from "@/lib/client/auth";
+import { useWallet } from "@/lib/client/wallet-context";
 import { SettingRow } from "./setting-row";
 import { useToast } from "./toast";
 
@@ -14,18 +14,14 @@ import { useToast } from "./toast";
  * wallet), and is where Aura sends email notices. Aura doesn't keep a copy.
  */
 export function SecurityCenter() {
-  const { user } = usePrivy();
-  const { wallets } = useWallets();
-  const { mfaMethods } = useMfa();
-  const { showMfaEnrollmentModal } = useMfaEnrollment();
-  const { exportWallet } = useExportWallet();
+  const { user } = useAuth();
+  const { wallets, mfaMethods, showMfaEnrollmentModal, exportWallet, linkEmail: startLinkEmail, updateEmail } = useWallet();
   const toast = useToast();
   const [exporting, setExporting] = useState(false);
-  const { linkEmail } = useLinkAccount({
+  const linkEmail = () => startLinkEmail({
     onSuccess: ({ linkMethod }) => { if (linkMethod === "email") toast.success("Email added"); },
     onError: (error) => { if (error !== "exited_link_flow") toast.error("Email not added", "Try again."); }
   });
-  const { update: updateEmail } = useUpdateEmail();
   const wallet = useMemo(() => wallets.find((item) => item.walletClientType === "privy") ?? wallets[0], [wallets]);
   // The server accepts a passkey or an authenticator app for money (`requireMoneyMfa`), so either counts here.
   const passkeyReady = mfaMethods.includes("passkey") || mfaMethods.includes("totp");

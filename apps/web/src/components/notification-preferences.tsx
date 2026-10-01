@@ -1,6 +1,6 @@
 "use client";
 
-import { usePrivy } from "@privy-io/react-auth";
+import { useAuth } from "@/lib/client/auth";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useApi } from "@/lib/client/api";
@@ -84,7 +84,7 @@ const pushNotes: Record<PushState, string> = {
  * Security notices are always sent.
  */
 export function NotificationPreferences() {
-  const { user } = usePrivy();
+  const { user } = useAuth();
   const api = useApi();
   const client = useQueryClient();
   const toast = useToast();

@@ -1,6 +1,6 @@
 "use client";
 
-import { usePrivy } from "@privy-io/react-auth";
+import { useAuth } from "@/lib/client/auth";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDown, ShieldCheck } from "lucide-react";
 import { useState } from "react";
@@ -29,7 +29,7 @@ type Card = { key: string; option: EarnOption; symbol: string; title: string; by
  * example positions with the live rates.
  */
 export function EarnWorkspace() {
-  const { getAccessToken, authenticated, ready, login } = usePrivy();
+  const { getAccessToken, authenticated, ready, login } = useAuth();
   const isExample = ready && !authenticated;
   const [open, setOpen] = useState<string[]>([]);
   const { address } = useAuraWallet();

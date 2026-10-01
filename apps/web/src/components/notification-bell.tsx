@@ -1,6 +1,6 @@
 "use client";
 
-import { usePrivy } from "@privy-io/react-auth";
+import { useAuth } from "@/lib/client/auth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Bell } from "lucide-react";
 import Link from "next/link";
@@ -20,7 +20,7 @@ type Inbox = { notifications: NotificationView[]; unread: number };
  * picks up money received (`GET /api/notifications`).
  */
 export function NotificationBell() {
-  const { user } = usePrivy();
+  const { user } = useAuth();
   const api = useApi();
   const client = useQueryClient();
   const toast = useToast();

@@ -1,7 +1,7 @@
 "use client";
 
 import * as Dialog from "@radix-ui/react-dialog";
-import { usePrivy } from "@privy-io/react-auth";
+import { useAuth } from "@/lib/client/auth";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowDownToLine, ArrowDownUp, ArrowLeft, ArrowUpFromLine, Building2, CreditCard, QrCode, TrendingUp, Wallet, X } from "lucide-react";
 import Link from "next/link";
@@ -143,7 +143,7 @@ function Holdings({ overview, isExample, onSignIn }: { overview: Overview; isExa
 
 /** Desktop only: the latest transactions beside the holdings. */
 function Recent({ isExample }: { isExample: boolean }) {
-  const { user } = usePrivy();
+  const { user } = useAuth();
   const api = useApi();
   const query = useQuery({ queryKey: ["activity", user?.id], queryFn: () => api<History>("/api/activity"), enabled: Boolean(user) && !isExample, refetchInterval: 30_000 });
   const entries = isExample ? exampleActivity : query.data?.entries.slice(0, 5);
@@ -179,7 +179,7 @@ function Loading() {
 /** The customer's balances on Base and their Earn deposits, each valued in US dollars, with one total. Guests see labelled example data. */
 export function Dashboard() {
   const overview = useOverview();
-  const { login, logout, ready } = usePrivy();
+  const { login, logout, ready } = useAuth();
   const expired = overview.error instanceof ApiError && overview.error.status === 401;
   const isExample = overview.isExample;
   const data = overview.data;

@@ -173,6 +173,8 @@ html[data-balance-privacy="hidden"] .sensitiveAmount { filter: blur(7px); opacit
 
 /* Toasts: bottom right on desktop, top on the phone */
 .toastRegion { position: fixed; z-index: 1000; right: var(--space-5); bottom: var(--space-5); width: min(360px, calc(100vw - 2 * var(--space-4))); display: grid; gap: var(--space-2); pointer-events: none; font-family: var(--font-sans); }
+.appSignInStatus { position: fixed; z-index: 80; left: 50%; top: calc(var(--topbar-height) + var(--space-3)); transform: translateX(-50%); display: flex; align-items: center; gap: var(--space-2); max-width: calc(100vw - 2 * var(--page-pad-x)); padding: var(--space-2) var(--space-4); border: 1px solid var(--color-line); border-radius: var(--radius-lg); background: var(--color-raised); color: var(--color-text); box-shadow: var(--shadow-2); font: var(--weight-medium) var(--text-small-size) / var(--text-small-line) var(--font-sans); }
+.appSignInStatus .appButton { flex: none; }
 .toast { pointer-events: auto; display: grid; grid-template-columns: 20px minmax(0, 1fr) 28px; align-items: start; gap: var(--space-3); padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4); border: 1px solid var(--color-line); border-radius: var(--radius-lg); background: var(--color-raised); color: var(--color-text); box-shadow: var(--shadow-2); animation: appToastIn var(--duration-base) var(--ease-enter); }
 .toastIcon { display: grid; place-items: center; height: 20px; color: var(--color-accent); }
 .toastIcon svg { width: 16px; height: 16px; }

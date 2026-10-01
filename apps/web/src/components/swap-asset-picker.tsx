@@ -1,7 +1,7 @@
 "use client";
 
 import * as Dialog from "@radix-ui/react-dialog";
-import { usePrivy } from "@privy-io/react-auth";
+import { useAuth } from "@/lib/client/auth";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { Check, LoaderCircle, Search, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -16,7 +16,7 @@ type Props = { value: AssetId | null; onSelect(id: AssetId): void; excludedId?: 
 
 /** Choose an asset from Aura's reviewed list. Nothing outside it can be found, even by contract address. */
 export function SwapAssetPicker({ value, onSelect, excludedId, label, held = false }: Props) {
-  const { getAccessToken } = usePrivy();
+  const { getAccessToken } = useAuth();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [debounced, setDebounced] = useState("");

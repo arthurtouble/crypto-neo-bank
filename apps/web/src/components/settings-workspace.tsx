@@ -1,6 +1,6 @@
 "use client";
 
-import { usePrivy } from "@privy-io/react-auth";
+import { useAuth } from "@/lib/client/auth";
 import { ArrowLeft, AtSign, Bell, ChevronRight, FileText, ShieldCheck, Smartphone, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { exampleRecipients } from "@/lib/example/data";
@@ -85,7 +85,7 @@ function AreaContent({ area, isExample, onSignIn }: { area: Area; isExample: boo
  * its own screen. The URL's hash names the area, so links and the back button work.
  */
 export function SettingsWorkspace() {
-  const { user, ready, authenticated, login } = usePrivy();
+  const { user, ready, authenticated, login } = useAuth();
   const isExample = ready && !authenticated;
   const [selected, setSelected] = useState<Area | null>(null);
   useEffect(() => {

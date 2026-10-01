@@ -1,4 +1,4 @@
-import { formatUnits } from "viem";
+import { formatUnits } from "@/lib/format/units";
 
 export function displayRawAmount(raw: string, decimals: number): string {
   if (!/^\d+$/.test(raw) || !Number.isInteger(decimals) || decimals < 0 || decimals > 36) throw new Error("Invalid token amount.");

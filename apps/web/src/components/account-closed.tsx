@@ -1,6 +1,6 @@
 "use client";
 
-import { usePrivy } from "@privy-io/react-auth";
+import { useAuth } from "@/lib/client/auth";
 import { Download, LoaderCircle, UserX } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -16,7 +16,7 @@ export function AccountClosedGate({ children }: { children: React.ReactNode }) {
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState("");
   const pathname = usePathname();
-  const { getAccessToken } = usePrivy();
+  const { getAccessToken } = useAuth();
   useEffect(() => {
     const onClosed = () => setClosed(true);
     window.addEventListener(ACCOUNT_CLOSED_EVENT, onClosed);
