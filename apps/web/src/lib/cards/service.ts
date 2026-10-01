@@ -1,4 +1,5 @@
 import { erc20Abi, formatUnits, isAddress } from "viem";
+import { cardObservationSupersedes } from "@aurel/provider-projections";
 import { baseClient } from "@/lib/assets/prices";
 import { BASE_USDC } from "@/lib/assets/registry";
 import { featureEnabled } from "@/lib/features/flags";
@@ -62,12 +63,14 @@ export function cardView(card: IssuingCard): CardView {
     wallets: { applePay: card.wallets?.apple_pay?.eligible === true, googlePay: card.wallets?.google_pay?.eligible === true } };
 }
 
-/** Keep the customer's card mapping in step with what Stripe reports. */
+/** Keep the customer's card mapping in step with what Stripe reports; an older read never overwrites a newer one, and another customer's card is never touched. */
 export async function recordCard(db: D1Database, subject: string, cardholderId: string, card: IssuingCard, now = new Date()) {
   const view = cardView(card);
   await db.prepare(`INSERT INTO card_account_projections (card_reference, subject_reference, provider, provider_customer_reference, status, form_factor, network,
       last_four, daily_limit, currency, observed_at) VALUES (?, ?, 'stripe', ?, ?, ?, 'visa', ?, ?, 'USD', ?)
-    ON CONFLICT(card_reference) DO UPDATE SET status = excluded.status, last_four = excluded.last_four, daily_limit = excluded.daily_limit, observed_at = excluded.observed_at`)
+    ON CONFLICT(card_reference) DO UPDATE SET status = excluded.status, last_four = excluded.last_four, daily_limit = excluded.daily_limit, observed_at = excluded.observed_at
+    WHERE card_account_projections.subject_reference = excluded.subject_reference AND card_account_projections.provider = excluded.provider
+      AND ${cardObservationSupersedes()}`)
     .bind(card.id, subject, cardholderId, cardProjectionStatus(card.status), card.type, card.last4,
       view.dailyLimitUsd === null ? null : view.dailyLimitUsd.toFixed(2), now.toISOString()).run();
 }

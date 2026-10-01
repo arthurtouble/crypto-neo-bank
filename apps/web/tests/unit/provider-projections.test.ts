@@ -83,6 +83,20 @@ describe("card account projection", () => {
     expect(await readCurrentCardAccount(db, "alice")).toMatchObject({ status: "frozen" });
   });
 
+  it("settles events from the same second the same way, whatever order they arrive in (security review B7)", async () => {
+    const at = { createdAt: "2026-09-25T11:00:00.000Z" };
+    await applyProviderEvent(db, event("card.account.updated", card, at));
+    // A freeze in the same second as the card's last update still lands.
+    expect(await applyProviderEvent(db, event("card.account.updated", { ...card, status: "frozen" }, at))).toMatchObject({ status: "applied" });
+    // An unfreeze reported in that same second can't be ordered against it: the more restrictive state stands until a later event.
+    expect(await applyProviderEvent(db, event("card.account.updated", card, at))).toMatchObject({ status: "stale" });
+    expect(await readCurrentCardAccount(db, "alice")).toMatchObject({ status: "frozen" });
+    // The same status with a new limit in the same second is applied.
+    expect(await applyProviderEvent(db, event("card.account.updated", { ...card, status: "frozen", dailyLimit: "100.00" }, at))).toMatchObject({ status: "applied" });
+    expect(await readCurrentCardAccount(db, "alice")).toMatchObject({ status: "frozen", dailyLimit: "100.00" });
+    expect(await applyProviderEvent(db, event("card.account.updated", card, { createdAt: "2026-09-25T11:00:01.000Z" }))).toMatchObject({ status: "applied" });
+  });
+
   it("does not move a card reference to another customer or provider", async () => {
     sqlite.exec(`INSERT INTO subject_profiles (subject_reference, privy_user_reference, created_at, updated_at)
       VALUES ('bob', 'bob', '2026-09-25T00:00:00.000Z', '2026-09-25T00:00:00.000Z')`);

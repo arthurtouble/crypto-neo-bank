@@ -108,6 +108,14 @@ describe("data rights", () => {
     expect(sqlite.prepare("SELECT action FROM audit_events WHERE action = 'data_exported'").get()).toBeTruthy();
   });
 
+  it("lists the customer's browsers without their push encryption keys (security review B3)", async () => {
+    sqlite.exec(`INSERT INTO push_subscriptions (endpoint, subject_reference, p256dh, auth, created_at)
+      VALUES ('https://fcm.googleapis.com/fcm/send/a', 'alice', 'secret-p256dh', 'secret-auth', '2026-09-25T00:00:00Z')`);
+    const body = await (await get(exportData)).json() as { data: Record<string, { rows: Array<Record<string, unknown>> }> };
+    expect(body.data.push_subscriptions.rows).toEqual([{ endpoint: "https://fcm.googleapis.com/fcm/send/a", created_at: "2026-09-25T00:00:00Z", failures: 0 }]);
+    expect(JSON.stringify(body)).not.toMatch(/secret-p256dh|secret-auth/);
+  });
+
   it("classifies every table that holds customer data", () => {
     const tables = (sqlite.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all() as Array<{ name: string }>).map((row) => row.name)
       .filter((table) => (sqlite.prepare(`SELECT COUNT(*) AS n FROM pragma_table_info('${table}') WHERE name = 'subject_reference'`).get() as { n: number }).n > 0);

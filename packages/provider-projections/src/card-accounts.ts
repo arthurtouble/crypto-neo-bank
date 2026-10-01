@@ -18,7 +18,21 @@ export const cardAccountEventSchema = z.object({
 }).strict();
 type CardAccountEvent = z.infer<typeof cardAccountEventSchema>;
 
-/** Upsert one card; an event older than the stored observation never overwrites it. */
+const statusRank = (column: string) => `(CASE ${column} WHEN 'eligible' THEN 0 WHEN 'pending' THEN 1 WHEN 'active' THEN 2
+  WHEN 'restricted' THEN 3 WHEN 'frozen' THEN 4 WHEN 'closed' THEN 5 ELSE 0 END)`;
+
+/**
+ * SQL for an upsert's WHERE: the incoming card observation (`excluded`)
+ * replaces the stored one only if it is newer. Stripe reports event times to
+ * the second, so two updates can share a timestamp; then the more restrictive
+ * status wins (closed, frozen, restricted, active, pending, eligible) and the
+ * same status is applied, so the outcome doesn't depend on arrival order.
+ */
+export const cardObservationSupersedes = (stored = "card_account_projections", incoming = "excluded") =>
+  `(${incoming}.observed_at > ${stored}.observed_at OR (${incoming}.observed_at = ${stored}.observed_at
+    AND ${statusRank(`${incoming}.status`)} >= ${statusRank(`${stored}.status`)}))`;
+
+/** Upsert one card; an event older than the stored observation never overwrites it (`cardObservationSupersedes`). */
 export async function applyCardAccount(db: ProjectionDatabase, subjectReference: string, data: unknown, source: ProjectionSource): Promise<ApplyResult> {
   const parsed = cardAccountEventSchema.safeParse(data);
   if (!parsed.success) return { status: "ignored", reason: "invalid_payload", detail: parsed.error.issues[0]?.message };
@@ -35,7 +49,7 @@ export async function applyCardAccount(db: ProjectionDatabase, subjectReference:
       observed_at = excluded.observed_at
     WHERE card_account_projections.subject_reference = excluded.subject_reference
       AND card_account_projections.provider = excluded.provider
-      AND excluded.observed_at > card_account_projections.observed_at`)
+      AND ${cardObservationSupersedes()}`)
     .bind(card.cardReference, subjectReference, source.provider, card.customerReference, card.status,
       card.formFactor ?? null, card.network ?? null, card.lastFour ?? null, card.dailyLimit ?? null,
       card.monthlyLimit ?? null, card.currency, source.observedAt).run();
