@@ -75,4 +75,4 @@ The operations app (`apps/ops`) is not a customer screen and has no example data
 
 ## Routes
 
-`/app/[section]` renders each section. Static folders take precedence, so sections can grow sub-routes one at a time; `/app/transactions/[id]` is the first. Old section names redirect through `lib/product-map.ts`.
+Each section has its own route folder (`/app/deposit`, `/app/send`, …) whose page imports only that section's screen, so opening one section doesn't load the others' code; `tests/unit/section-routes.test.ts` keeps it that way. Guests get the same pages: each screen labels its example data and turns actions into sign-in, and the terms gate only applies once signed in. `/app/[section]` only redirects old section names through `lib/product-map.ts` and 404s the rest. Sections grow sub-routes in their folder; `/app/transactions/[id]` is the first.

@@ -1,5 +1,5 @@
-import { SectionPage } from "@/components/section-page";
+import { ActivityWorkspace } from "@/components/activity-workspace";
 
-export default function TransactionsPage() {
-  return <SectionPage section="transactions" />;
+export default function Page() {
+  return <ActivityWorkspace />;
 }
