@@ -1,4 +1,5 @@
 import { env } from "cloudflare:workers";
+import { readBodyText } from "@/lib/http/body";
 import { applyEmailEvent } from "@/lib/notifications/email-events";
 import { verifySvix } from "@/lib/providers/webhooks";
 
@@ -13,9 +14,8 @@ export async function POST(request: Request) {
   const traceId = crypto.randomUUID();
   const secret = process.env.RESEND_WEBHOOK_SECRET;
   if (!secret) return reply(503, { error: "provider_not_connected", traceId });
-  if (Number(request.headers.get("content-length") ?? 0) > MAX_BODY_BYTES) return reply(413, { error: "payload_too_large", traceId });
-  const rawBody = await request.text();
-  if (new TextEncoder().encode(rawBody).byteLength > MAX_BODY_BYTES) return reply(413, { error: "payload_too_large", traceId });
+  const rawBody = await readBodyText(request, MAX_BODY_BYTES);
+  if (rawBody === null) return reply(413, { error: "payload_too_large", traceId });
   if (!await verifySvix({ headers: request.headers, rawBody, secret, nowMs: Date.now() })) {
     console.warn(JSON.stringify({ level: "warn", event: "webhook.signature_rejected", provider: "resend", traceId }));
     return reply(401, { error: "invalid_signature", traceId });

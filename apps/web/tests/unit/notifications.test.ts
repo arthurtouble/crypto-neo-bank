@@ -126,7 +126,7 @@ describe("delivering notices", () => {
 
   it("sends a closed account only security emails, and no push", async () => {
     sqlite.exec(`UPDATE subject_profiles SET closed_at = 't'`);
-    await addSubscription("https://push.example/one");
+    await addSubscription("https://fcm.googleapis.com/fcm/send/one");
     await notify(db, "alice", receivedNotice(transfer("t1", now.toISOString())), now);
     await notify(db, "alice", securityNotice("closed", "Closed.", "t"), new Date(now.getTime() + 1));
     const fake = edge();
@@ -173,8 +173,8 @@ describe("delivering notices", () => {
 
   it("pushes an encrypted, VAPID-signed message to each browser, and forgets browsers that unsubscribed", async () => {
     await vapid();
-    await addSubscription("https://push.example/one");
-    await addSubscription("https://push.example/gone");
+    await addSubscription("https://fcm.googleapis.com/fcm/send/one");
+    await addSubscription("https://fcm.googleapis.com/fcm/send/gone");
     await notify(db, "alice", securityNotice("locked", "Locked.", "2"), now);
     const sent: Array<{ url: string; init: RequestInit }> = [];
     const fetcher = (async (url: string, init: RequestInit) => {
@@ -182,7 +182,7 @@ describe("delivering notices", () => {
       return new Response(null, { status: url.endsWith("gone") ? 410 : url.includes("resend") ? 200 : 201 });
     }) as unknown as typeof fetch;
     await deliverPending(db, { fetcher, email: async () => "alice@example.com" });
-    const pushes = sent.filter(({ url }) => url.startsWith("https://push.example"));
+    const pushes = sent.filter(({ url }) => url.startsWith("https://fcm.googleapis.com"));
     expect(pushes).toHaveLength(2);
     const headers = new Headers(pushes[0].init.headers);
     expect(headers.get("content-encoding")).toBe("aes128gcm");
@@ -190,12 +190,12 @@ describe("delivering notices", () => {
     expect(headers.get("urgency")).toBe("high");
     // The payload is encrypted for the browser: nothing readable leaves Aura.
     expect(Buffer.from(pushes[0].init.body as ArrayBuffer).toString()).not.toContain("Locked");
-    expect(sqlite.prepare("SELECT endpoint FROM push_subscriptions").all()).toEqual([{ endpoint: "https://push.example/one" }]);
+    expect(sqlite.prepare("SELECT endpoint FROM push_subscriptions").all()).toEqual([{ endpoint: "https://fcm.googleapis.com/fcm/send/one" }]);
     expect(statuses()).toMatchObject([{ email_status: "sent", push_status: "sent" }]);
   });
 
   it("keeps push pending while every browser is failing, and skips it when push isn't configured", async () => {
-    await addSubscription("https://push.example/one");
+    await addSubscription("https://fcm.googleapis.com/fcm/send/one");
     await notify(db, "alice", securityNotice("locked", "Locked.", "2"), now);
     const fake = edge({ push: 500 });
     await deliverPending(db, { fetcher: fake.fetcher, email: fake.email });
@@ -320,26 +320,125 @@ describe("notification routes", () => {
   });
 
   it("subscribes a browser to push on an HTTPS push service, and unsubscribes it", async () => {
-    expect((await put({ endpoint: "https://push.example/sub", keys })).status).toBe(200);
-    expect((await put({ endpoint: "https://push.example/sub", keys })).status).toBe(200);
-    expect(sqlite.prepare("SELECT endpoint, subject_reference FROM push_subscriptions").all()).toEqual([{ endpoint: "https://push.example/sub", subject_reference: "alice" }]);
+    expect((await put({ endpoint: "https://fcm.googleapis.com/fcm/send/sub", keys })).status).toBe(200);
+    expect((await put({ endpoint: "https://fcm.googleapis.com/fcm/send/sub", keys })).status).toBe(200);
+    expect(sqlite.prepare("SELECT endpoint, subject_reference FROM push_subscriptions").all()).toEqual([{ endpoint: "https://fcm.googleapis.com/fcm/send/sub", subject_reference: "alice" }]);
     // Another customer can't remove it.
     state.subject = "bob";
-    await push.DELETE(request("/api/notifications/push", { method: "DELETE", body: JSON.stringify({ endpoint: "https://push.example/sub" }) }));
+    await push.DELETE(request("/api/notifications/push", { method: "DELETE", body: JSON.stringify({ endpoint: "https://fcm.googleapis.com/fcm/send/sub" }) }));
     expect(sqlite.prepare("SELECT COUNT(*) AS n FROM push_subscriptions").get()).toEqual({ n: 1 });
     state.subject = "alice";
-    expect(await (await push.DELETE(request("/api/notifications/push", { method: "DELETE", body: JSON.stringify({ endpoint: "https://push.example/sub" }) }))).json())
+    expect(await (await push.DELETE(request("/api/notifications/push", { method: "DELETE", body: JSON.stringify({ endpoint: "https://fcm.googleapis.com/fcm/send/sub" }) }))).json())
       .toMatchObject({ subscribed: false });
     expect(sqlite.prepare("SELECT COUNT(*) AS n FROM push_subscriptions").get()).toEqual({ n: 0 });
   });
 
   it("refuses push services that aren't HTTPS, and malformed keys", async () => {
-    for (const body of [{ endpoint: "http://push.example/sub", keys }, { endpoint: "http://127.0.0.1:9/sub", keys },
-      { endpoint: "https://push.example/sub", keys: { ...keys, auth: "not base64!" } }, { endpoint: "https://push.example/sub", keys, extra: 1 }]) {
+    for (const body of [{ endpoint: "http://fcm.googleapis.com/fcm/send/sub", keys }, { endpoint: "http://127.0.0.1:9/sub", keys },
+      { endpoint: "https://fcm.googleapis.com/fcm/send/sub", keys: { ...keys, auth: "not base64!" } }, { endpoint: "https://fcm.googleapis.com/fcm/send/sub", keys, extra: 1 }]) {
       const response = await put(body);
       expect(response.status).toBe(400);
       expect(await response.json()).toMatchObject({ error: "invalid_subscription" });
     }
     expect(sqlite.prepare("SELECT COUNT(*) AS n FROM push_subscriptions").get()).toEqual({ n: 0 });
+  });
+});
+
+describe("delivery limits (security review B1, B2, B9)", () => {
+  const request = (path: string, init: RequestInit = {}) => new Request(`https://aura.test${path}`, init);
+  const keys = { p256dh: b64(new Uint8Array(65).fill(4)), auth: b64(new Uint8Array(16).fill(7)) };
+  const put = (endpoint: string) => push.PUT(request("/api/notifications/push", { method: "PUT", body: JSON.stringify({ endpoint, keys }) }));
+  async function vapidKeys() {
+    const pair = await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, ["sign"]) as CryptoKeyPair;
+    vi.stubEnv("VAPID_PUBLIC_KEY", b64(await crypto.subtle.exportKey("raw", pair.publicKey)));
+    vi.stubEnv("VAPID_PRIVATE_KEY", (await crypto.subtle.exportKey("jwk", pair.privateKey)).d!);
+  }
+  async function subscribe(endpoint: string) {
+    const client = await crypto.subtle.generateKey({ name: "ECDH", namedCurve: "P-256" }, true, ["deriveBits"]) as CryptoKeyPair;
+    sqlite.prepare("INSERT INTO push_subscriptions (endpoint, subject_reference, p256dh, auth, created_at) VALUES (?, 'alice', ?, ?, 't')")
+      .run(endpoint, b64(await crypto.subtle.exportKey("raw", client.publicKey)), b64(crypto.getRandomValues(new Uint8Array(16))));
+  }
+
+  it("gives up on a push service that doesn't answer in time", async () => {
+    await vapidKeys();
+    await subscribe("https://fcm.googleapis.com/fcm/send/slow");
+    await notify(db, "alice", securityNotice("locked", "Locked.", "2"), now);
+    const fetcher = (async (url: string, init: RequestInit) => {
+      if (url.includes("resend")) return new Response("{}", { status: 200 });
+      // A push service that never answers: only the request's own timeout ends it.
+      return new Promise((_, reject) => init.signal?.addEventListener("abort", () => reject(init.signal?.reason)));
+    }) as unknown as typeof fetch;
+    const hung = new Promise((resolve) => setTimeout(() => resolve("hung"), 2_000));
+    expect(await Promise.race([deliverPending(db, { fetcher, email: async () => "alice@example.com", pushTimeoutMs: 50 }), hung])).toBe(1);
+    expect(statuses()).toMatchObject([{ email_status: "sent", push_status: "pending" }]);
+    expect(sqlite.prepare("SELECT failures FROM push_subscriptions").get()).toEqual({ failures: 1 });
+  });
+
+  it("keeps at most ten browsers per customer, replacing the one subscribed longest ago", async () => {
+    for (let index = 0; index < 11; index += 1) {
+      vi.useFakeTimers({ now: now.getTime() + index * 1000, toFake: ["Date"] });
+      expect((await put(`https://fcm.googleapis.com/fcm/send/b${index}`)).status).toBe(200);
+    }
+    vi.useRealTimers();
+    const endpoints = (sqlite.prepare("SELECT endpoint FROM push_subscriptions ORDER BY endpoint").all() as Array<{ endpoint: string }>).map((row) => row.endpoint);
+    expect(endpoints).toHaveLength(10);
+    expect(endpoints).not.toContain("https://fcm.googleapis.com/fcm/send/b0");
+    expect(endpoints).toContain("https://fcm.googleapis.com/fcm/send/b10");
+  });
+
+  it("claims a notice before sending it, so overlapping runs send it once", async () => {
+    await notify(db, "alice", securityNotice("locked", "Locked.", "2"), now);
+    let release = () => undefined as void;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    const sent: string[] = [];
+    const fetcher = (async (url: string) => { sent.push(url); await gate; return new Response("{}", { status: 200 }); }) as unknown as typeof fetch;
+    const first = deliverPending(db, { fetcher, email: async () => "alice@example.com" });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    const second = deliverPending(db, { fetcher, email: async () => "alice@example.com" });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    release();
+    await Promise.all([first, second]);
+    expect(sent).toEqual(["https://api.resend.com/emails"]);
+    expect(statuses()).toMatchObject([{ email_status: "sent", delivery_attempts: 1 }]);
+  });
+
+  it("stops a run when its time is up, and leaves the rest for the next run", async () => {
+    for (const reference of ["1", "2", "3"]) await notify(db, "alice", securityNotice("locked", "Locked.", reference), new Date(now.getTime() + Number(reference)));
+    let clock = 0;
+    const fetcher = (async () => { clock += 10_000; return new Response("{}", { status: 200 }); }) as unknown as typeof fetch;
+    expect(await deliverPending(db, { fetcher, email: async () => "alice@example.com", budgetMs: 15_000, clock: () => clock })).toBe(2);
+    expect(statuses().map((row) => (row as { email_status: string }).email_status)).toEqual(["sent", "sent", "pending"]);
+  });
+
+  it("accepts only known push services", async () => {
+    for (const endpoint of ["https://fcm.googleapis.com/fcm/send/a", "https://web.push.apple.com/QAbc", "https://updates.push.services.mozilla.com/wpush/v2/a",
+      "https://wns2-par02p.notify.windows.com/w/?token=a"]) expect((await put(endpoint)).status, endpoint).toBe(200);
+    for (const endpoint of ["https://push.example/sub", "https://fcm.googleapis.com.evil.example/x", "https://evil.example/fcm.googleapis.com",
+      "https://user@fcm.googleapis.com/x", "https://fcm.googleapis.com:8443/x"]) {
+      const response = await put(endpoint);
+      expect(response.status, endpoint).toBe(400);
+      expect(await response.json()).toMatchObject({ error: "invalid_subscription" });
+    }
+    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM push_subscriptions").get()).toEqual({ n: 4 });
+  });
+
+  it("never moves another customer's browser to a different customer", async () => {
+    sqlite.exec(`INSERT INTO subject_profiles (subject_reference, privy_user_reference, created_at, updated_at) VALUES ('bob', 'bob', 't', 't')`);
+    expect((await put("https://fcm.googleapis.com/fcm/send/shared")).status).toBe(200);
+    state.subject = "bob";
+    const response = await put("https://fcm.googleapis.com/fcm/send/shared");
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({ error: "subscription_in_use" });
+    expect(sqlite.prepare("SELECT subject_reference FROM push_subscriptions").all()).toEqual([{ subject_reference: "alice" }]);
+  });
+
+  it("links notices only to paths in the app", async () => {
+    await notify(db, "alice", { ...securityNotice("locked", "Locked.", "2"), link: "@evil.example/x" }, now);
+    await notify(db, "alice", { ...securityNotice("locked", "Locked.", "3"), link: "//evil.example/x" }, new Date(now.getTime() + 1));
+    await notify(db, "alice", { ...securityNotice("locked", "Locked.", "4"), link: "/app/cards" }, new Date(now.getTime() + 2));
+    const fake = edge();
+    await deliverPending(db, { fetcher: fake.fetcher, email: fake.email });
+    expect(fake.sent.map(({ init }) => JSON.parse(init.body as string).text.match(/Open in Aura: (\S+)/)[1]))
+      .toEqual(["https://aura.test/app", "https://aura.test/app", "https://aura.test/app/cards"]);
   });
 });

@@ -47,7 +47,9 @@ function normalize(payload: unknown) {
   const event = parsed.data;
   const object = event.event_object;
   const text = (value: unknown) => typeof value === "string" ? value : undefined;
-  const createdAt = Number.isNaN(Date.parse(event.event_created_at)) ? new Date().toISOString() : new Date(event.event_created_at).toISOString();
+  // An event without a readable time can't be ordered against the stored projection: reject it rather than date it now.
+  if (Number.isNaN(Date.parse(event.event_created_at))) return null;
+  const createdAt = new Date(event.event_created_at).toISOString();
   const base = { id: `bridge:${event.event_id}`, providerObjectId: event.event_object_id, createdAt };
   if (event.event_category === "customer") {
     const status = text(object.status) ?? event.event_object_status ?? undefined;

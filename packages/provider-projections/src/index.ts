@@ -3,7 +3,7 @@ export type { ApplyResult, ProjectionSource } from "./source";
 export { applyProviderEvent, projectionAdapters, type ProviderEvent, type ProviderEventMessage } from "./events";
 export { applyCustomerLink, customerLinkEventSchema, linkStatus } from "./customer-links";
 export { applyBankPayout, bankPayoutEventSchema } from "./bank-payouts";
-export { applyCardAccount, cardAccountEventSchema } from "./card-accounts";
+export { applyCardAccount, cardAccountEventSchema, cardObservationSupersedes } from "./card-accounts";
 export { applyWalletPolicy, walletPolicyEventSchema, type WalletPolicy } from "./wallet-policies";
 export { defaultPreferences, preferencesSchema, preferencesUpdateSchema, readPreferences, updatePreferences,
   type Preferences, type PreferencesUpdate } from "./preferences";

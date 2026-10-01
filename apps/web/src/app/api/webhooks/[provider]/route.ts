@@ -1,5 +1,6 @@
 import { env } from "cloudflare:workers";
 import type { ProviderEventMessage } from "@aurel/provider-projections";
+import { readBodyText } from "@/lib/http/body";
 import { sha256Hex } from "@/lib/platform/encoding";
 import { webhookProviders } from "@/lib/providers/registry";
 import type { NormalizedEvent } from "@/lib/providers/webhooks";
@@ -45,6 +46,8 @@ async function announceCardSpend(subject: string, event: { id: string; type: str
 }
 
 const MAX_BODY_BYTES = 128 * 1024;
+/** How long a receipt may stay recorded but not queued before a provider retry queues the event again. */
+const REQUEUE_AFTER_MS = 60_000;
 const reply = (status: number, body: Record<string, unknown>) => Response.json(body, { status, headers: { "Cache-Control": "no-store" } });
 
 async function resolveSubject(provider: string, subject: NormalizedEvent["subject"]): Promise<string | undefined> {
@@ -73,9 +76,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ pro
   if (!provider) return reply(404, { error: "unknown_provider", traceId });
   const secret = provider.secret();
   if (!secret) return reply(503, { error: "provider_not_connected", traceId });
-  if (Number(request.headers.get("content-length") ?? 0) > MAX_BODY_BYTES) return reply(413, { error: "payload_too_large", traceId });
-  const rawBody = await request.text();
-  if (new TextEncoder().encode(rawBody).byteLength > MAX_BODY_BYTES) return reply(413, { error: "payload_too_large", traceId });
+  const rawBody = await readBodyText(request, MAX_BODY_BYTES);
+  if (rawBody === null) return reply(413, { error: "payload_too_large", traceId });
   if (!await provider.verify({ headers: request.headers, rawBody, secret, nowMs: Date.now() })) {
     console.warn(JSON.stringify({ level: "warn", event: "webhook.signature_rejected", provider: provider.name, traceId }));
     return reply(401, { error: "invalid_signature", traceId });
@@ -93,7 +95,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ pro
       (event_id, provider, event_type, subject_reference, payload_sha256, provider_created_at, received_at, processing_status)
     VALUES (?, ?, ?, ?, ?, ?, ?, 'received')`)
     .bind(event.id, event.provider, event.type, event.subjectReference ?? null, payloadSha256, event.createdAt, receivedAt).run();
-  if (!inserted.meta.changes) return reply(200, { accepted: true, duplicate: true, traceId });
+  if (!inserted.meta.changes) {
+    // A receipt still only 'received' after a minute never reached the queue (the Worker stopped in between): take it
+    // over and queue this retry. A younger one may still be on its way, and a queued one is done, so either is a duplicate.
+    const requeued = await env.PROJECTION_DB.prepare(`UPDATE webhook_receipts SET received_at = ? WHERE event_id = ? AND provider = ?
+        AND payload_sha256 = ? AND processing_status = 'received' AND received_at < ?`)
+      .bind(receivedAt, event.id, event.provider, payloadSha256, new Date(Date.parse(receivedAt) - REQUEUE_AFTER_MS).toISOString()).run();
+    if (!requeued.meta.changes) return reply(200, { accepted: true, duplicate: true, traceId });
+    console.warn(JSON.stringify({ level: "warn", event: "webhook.requeued", provider: event.provider, eventId: event.id, traceId }));
+  }
   // A card purchase is told to the customer straight away; the notice isn't a projection of money.
   if (event.type === "card.authorization.created" && event.subjectReference) await announceCardSpend(event.subjectReference, event);
   if (event.type.startsWith("card.") && event.subjectReference) await recordCardEvent(event.subjectReference, { ...event, subject: normalized.subject });

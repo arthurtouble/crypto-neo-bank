@@ -9,8 +9,10 @@
  * (`lib/account/closure.ts`).
  *
  * - export false: internal or short-lived records with no customer meaning.
+ * - columns: export only these columns, leaving out secrets the customer has no use for
+ *   (a browser's push encryption keys).
  */
-type Handling = { export: boolean; reason: string };
+type Handling = { export: boolean; reason: string; columns?: readonly string[] };
 
 export const subjectDataInventory = {
   subject_profiles: { export: true, reason: "Account record, including whether it is closed" },
@@ -28,7 +30,7 @@ export const subjectDataInventory = {
   audit_events: { export: true, reason: "Security and financial audit trail" },
   actions: { export: true, reason: "Financial transaction evidence" },
   notifications: { export: true, reason: "Notices Aura sent you, and whether they were emailed or pushed" },
-  push_subscriptions: { export: true, reason: "Browsers you turned on notifications in" },
+  push_subscriptions: { export: true, reason: "Browsers you turned on notifications in", columns: ["endpoint", "created_at", "failures"] },
   incoming_watches: { export: false, reason: "Internal: when Aura last checked your account for money received" },
   step_up_challenges: { export: false, reason: "Short-lived passkey confirmations; the change itself is in the audit trail" },
   route_quotes: { export: false, reason: "Short-lived route quotes; used quotes are summarized on their action" },
@@ -48,7 +50,8 @@ const rowLimit = 5_000;
 export async function exportSubjectData(db: D1Database, subjectReference: string) {
   const exported = tables.filter((table) => subjectDataInventory[table].export);
   const results = await db.batch([...exported.map((table) =>
-    db.prepare(`SELECT * FROM ${table} WHERE subject_reference = ? LIMIT ${rowLimit + 1}`).bind(subjectReference)),
+    db.prepare(`SELECT ${(subjectDataInventory[table] as Handling).columns?.join(", ") ?? "*"} FROM ${table} WHERE subject_reference = ? LIMIT ${rowLimit + 1}`)
+      .bind(subjectReference)),
   // An action's status history has no subject column of its own; it belongs to the customer through the action.
   db.prepare(`SELECT e.* FROM action_events e JOIN actions a ON a.action_id = e.action_id WHERE a.subject_reference = ? LIMIT ${rowLimit + 1}`).bind(subjectReference)]);
   const section = (rows: unknown[], reason: string) => ({ rows: rows.slice(0, rowLimit), truncated: rows.length > rowLimit, reason });

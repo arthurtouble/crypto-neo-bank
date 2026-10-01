@@ -5,7 +5,9 @@ import { AppBrand } from "@/components/brand";
 import { PaymentActions } from "@/components/payment-actions";
 import { StatusDot } from "@/components/status-dot";
 import { bankRailNames } from "@/lib/format/bank";
-import { GET as getPublicTag } from "@/app/api/aura-tags/[tag]/route";
+import { env } from "cloudflare:workers";
+import { headers } from "next/headers";
+import { lookupPublicTag } from "@/lib/aura-tag-public";
 
 type PaymentData = { tag: string; displayName: string; crypto: { network: string; address: string }; bank: { available: false } | { available: true; instructions: { bankName: string; bankAddress?: string; beneficiaryName: string; beneficiaryAddress?: string; accountNumber: string; routingNumber: string; rails: Array<"ach" | "wire" | "fednow"> } } };
 
@@ -16,8 +18,9 @@ const Status = ({ available }: { available: boolean }) => <StatusDot tone={avail
 /** An Aura tag's public payment page (journey J19): who you're paying, and the ways that are open. */
 export default async function AuraTagPage({ params }: { params: Promise<{ tag: string }> }) {
   const { tag } = await params;
-  const response = await getPublicTag(new Request(`https://aura.local/pay/${encodeURIComponent(tag)}`), { params: Promise.resolve({ tag }) });
-  const data = response.ok ? await response.json() as PaymentData : null;
+  // Limited per visitor, like the API: the address Cloudflare saw for this request.
+  const result = await lookupPublicTag(env.PROJECTION_DB, tag, (await headers()).get("cf-connecting-ip"));
+  const data = result.status === "available" ? result.payment as PaymentData : null;
   return <div className="pyPage">
     <header className="pyHeader"><AppBrand href="/" /></header>
     <main className="pyMain">{data ? <>

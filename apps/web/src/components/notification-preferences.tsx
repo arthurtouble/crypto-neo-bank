@@ -3,7 +3,7 @@
 import { useAuth } from "@/lib/client/auth";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { useApi } from "@/lib/client/api";
+import { ApiError, useApi } from "@/lib/client/api";
 import { marketingNoticeVersion } from "@/lib/legal/documents";
 import { SettingRow, Toggle } from "./setting-row";
 import { useToast } from "./toast";
@@ -49,9 +49,18 @@ function useBrowserPush() {
       if (permission !== "granted") return;
       const registration = await navigator.serviceWorker.register("/sw.js");
       await navigator.serviceWorker.ready;
-      const subscription = await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: decode(publicKey) });
-      const json = subscription.toJSON() as { endpoint: string; keys: { p256dh: string; auth: string } };
-      await api("/api/notifications/push", { method: "PUT", json: { endpoint: json.endpoint, keys: json.keys } });
+      const save = async () => {
+        const subscription = await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: decode(publicKey) });
+        const json = subscription.toJSON() as { endpoint: string; keys: { p256dh: string; auth: string } };
+        await api("/api/notifications/push", { method: "PUT", json: { endpoint: json.endpoint, keys: json.keys } });
+        return subscription;
+      };
+      // This browser's subscription still belongs to another account that used it: start a fresh one for this account.
+      await save().catch(async (error: unknown) => {
+        if (!(error instanceof ApiError && error.code === "subscription_in_use")) throw error;
+        await (await registration.pushManager.getSubscription())?.unsubscribe();
+        await save();
+      });
       setState("on");
     } finally { setBusy(false); }
   }

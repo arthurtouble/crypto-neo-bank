@@ -70,6 +70,14 @@ describe("Bridge signatures", () => {
     expect(event("virtual_account.activity", { customer_id: "cust_1" })).toMatchObject({ type: "bridge.virtual_account.activity", data: {} });
     expect(bridgeWebhooks.normalize({ event_id: "x" }, new Headers())).toBeNull();
   });
+
+  it("rejects an event whose time can't be read, instead of dating it now (security review B8)", () => {
+    const at = (event_created_at: string) => bridgeWebhooks.normalize({ event_id: "wh_1", event_category: "customer", event_type: "customer.updated",
+      event_object_id: "cust_1", event_object: { status: "active" }, event_created_at }, new Headers());
+    expect(at("not a date")).toBeNull();
+    expect(at("")).toBeNull();
+    expect(at("2026-09-25T11:59:00Z")).toMatchObject({ createdAt: "2026-09-25T11:59:00.000Z" });
+  });
 });
 
 describe("Privy (Svix) signatures", () => {
@@ -159,6 +167,41 @@ describe("POST /api/webhooks/:provider", () => {
     expect(sqlite.prepare("SELECT status, observed_at FROM provider_customer_links").get()).toEqual({ status: "active", observed_at: "2026-09-25T11:59:00.000Z" });
     expect(await applyProviderEvent(state.db as unknown as ProjectionDatabase, { ...message.event, createdAt: "2026-09-25T11:00:00.000Z", data: { status: "rejected" } }))
       .toMatchObject({ status: "stale" });
+  });
+
+  it("queues a retried event again when its first trip to the queue was lost (security review B5)", async () => {
+    expect((await post("bridge")).status).toBe(202);
+    // The Worker stopped after recording the receipt and before queueing the event.
+    sqlite.exec("UPDATE webhook_receipts SET processing_status = 'received', received_at = '2026-09-25T11:58:00.000Z'");
+    state.sent = [];
+    const retried = await post("bridge");
+    expect(retried.status).toBe(202);
+    expect(await retried.json()).toMatchObject({ accepted: true, duplicate: false });
+    expect(state.sent).toHaveLength(1);
+    expect(sqlite.prepare("SELECT processing_status FROM webhook_receipts").get()).toEqual({ processing_status: "enqueued" });
+    // A receipt that is only seconds old may still be on its way to the queue: a duplicate then is only acknowledged.
+    sqlite.exec("UPDATE webhook_receipts SET processing_status = 'received', received_at = '2026-09-25T11:59:50.000Z'");
+    state.sent = [];
+    expect(await (await post("bridge")).json()).toMatchObject({ duplicate: true });
+    expect(state.sent).toEqual([]);
+  });
+
+  it("stops reading a body past the size limit, whatever its Content-Length says (security review B6)", async () => {
+    vi.stubEnv("RESEND_WEBHOOK_SECRET", svixSecret);
+    const { POST: resend } = await import("@/app/api/webhooks/resend/route");
+    for (const [send, limit] of [
+      [(body: ReadableStream) => POST(new Request("https://aura.test/api/webhooks/bridge", { method: "POST", body, duplex: "half" } as RequestInit),
+        { params: Promise.resolve({ provider: "bridge" }) }), 128 * 1024],
+      [(body: ReadableStream) => resend(new Request("https://aura.test/api/webhooks/resend", { method: "POST", body, duplex: "half" } as RequestInit)), 64 * 1024]
+    ] as const) {
+      let pulled = 0;
+      const chunk = new Uint8Array(16 * 1024).fill(97);
+      // 16 MB, sent without a Content-Length.
+      const body = new ReadableStream({ pull(controller) { if (pulled >= 16 * 1024 * 1024) return controller.close(); pulled += chunk.byteLength; controller.enqueue(chunk); } });
+      expect((await send(body)).status).toBe(413);
+      expect(pulled).toBeLessThanOrEqual(limit + 2 * chunk.byteLength);
+    }
+    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM webhook_receipts").get()).toEqual({ n: 0 });
   });
 
   it("rejects unknown providers, unconnected providers, and bad signatures without recording anything", async () => {

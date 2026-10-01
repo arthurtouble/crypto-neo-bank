@@ -20,12 +20,13 @@ Each log line the code writes is one JSON object with:
 | --- | --- | --- | --- |
 | `<route>.failed` | error | web API (`lib/http/route.ts`) | An API handler failed unexpectedly. The customer got the route's `…_unavailable` error with the same `traceId`. |
 | `request.failed` | error | web Worker (`worker/index.ts`) | A page answered 5xx, or a request threw before any handler caught it. |
-| `actions.recheck.failed`, `bank.payouts.refresh.failed`, `notifications.scan.failed`, `notifications.deliver.failed` | error | web cron, every 2 minutes | A scheduled job failed. Each job runs on its own, so the others keep going; if it's `actions.recheck`, open money actions stop settling until it works again. `actions.recheck.completed` counts checks that couldn't read the chain as `failedChecks`. |
+| `actions.recheck.failed`, `bank.payouts.refresh.failed`, `notifications.scan.failed`, `notifications.deliver.failed` | error | web cron, every 2 minutes | A scheduled job failed. Each job runs on its own, so the others keep going; if it's `actions.recheck`, open money actions stop settling until it works again. `actions.recheck.completed` counts checks that couldn't read the chain as `failedChecks`. Notice delivery claims each notice before sending, times out each push request after 5 seconds, and stops a run after 25 seconds, so a slow push service delays notices by a run at most; notices still pending after five attempts are marked failed. |
 | `webhook.card_event_skipped` | warn | web API (`/api/webhooks/stripe`) | A Stripe card authorization came without an amount or an authorization ID. No notice was sent and nothing was recorded; the card history read fills it in from Stripe. |
 | `notifications.email.bounced` | warn | web API (`/api/webhooks/resend`) | Resend reported a notice email bounced; the notice's email is marked failed. The in-app notice is unaffected. |
 | `notifications.email.complained` | warn | web API | Someone marked a notice email as spam. |
 | `edge.place_blocked` | info | web Worker | A request from a sanctioned place was refused. Useful for volume, not an alert. |
 | `webhook.signature_rejected` | warn | web API | A provider webhook failed its signature check. |
+| `webhook.requeued` | warn | web API (`/api/webhooks/:provider`) | A provider retried an event whose receipt was recorded over a minute earlier but never queued (the Worker stopped in between). The retry queued it. Occasional is fine; a steady stream means queue sends are failing. |
 | `provider_event.processing_failed` | error, then critical from the 5th attempt | events Worker | A provider event couldn't be applied and will be retried. |
 | `provider_event.dead_letter` | critical | events Worker | A provider event gave up and needs an operator. It is also recorded as a critical operational issue. |
 | `operations.reconciliation.failed` | error | events Worker cron | The reconciliation and dependency check, every 5 minutes, failed. |

@@ -32,7 +32,7 @@ const { PATCH: controls } = await import("@/app/api/cards/controls/route");
 const { POST: detailsKey } = await import("@/app/api/cards/details-key/route");
 const { POST: dispute } = await import("@/app/api/cards/disputes/route");
 const { POST: allowance } = await import("@/app/api/cards/allowance/route");
-const { freezeCardForLock, readCardActivity, readCardHistory } = await import("@/lib/cards/service");
+const { freezeCardForLock, readCardActivity, readCardHistory, recordCard } = await import("@/lib/cards/service");
 const { StripeClient, stripeForm } = await import("@/lib/providers/stripe/client");
 
 type Call = { path: string; method: string; form: URLSearchParams; idempotencyKey: string | null; version: string | null };
@@ -296,5 +296,18 @@ describe("card details, disputes, and allowance", () => {
     expect(decodeFunctionData({ abi: erc20Abi, data: call.data })).toEqual({ functionName: "approve", args: [spender, 50_000_000n] });
     expect(JSON.parse(row.effects_json)).toEqual([{ type: "erc20_approval", token: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", spender, amountRaw: "50000000" }]);
     expect(row.counts_toward_limit).toBe(0);
+  });
+
+  it("never lets an older read of a card overwrite a newer one, or another customer's card (security review B7)", async () => {
+    const issued = (status: string) => ({ id: "ic_9", brand: "Visa", status, type: "virtual", last4: "4242", exp_month: 9, exp_year: 2030 }) as never;
+    const stored = () => sqlite.prepare("SELECT subject_reference, status, observed_at FROM card_account_projections WHERE card_reference = 'ic_9'").get();
+    await recordCard(state.db!, "alice", "ich_1", issued("inactive"), new Date("2026-09-28T12:00:01.000Z"));
+    await recordCard(state.db!, "alice", "ich_1", issued("active"), new Date("2026-09-28T12:00:00.000Z"));
+    expect(stored()).toEqual({ subject_reference: "alice", status: "frozen", observed_at: "2026-09-28T12:00:01.000Z" });
+    sqlite.exec("INSERT INTO subject_profiles (subject_reference, privy_user_reference, created_at, updated_at) VALUES ('bob', 'bob', 't', 't')");
+    await recordCard(state.db!, "bob", "ich_2", issued("canceled"), new Date("2026-09-28T12:00:02.000Z"));
+    expect(stored()).toEqual({ subject_reference: "alice", status: "frozen", observed_at: "2026-09-28T12:00:01.000Z" });
+    await recordCard(state.db!, "alice", "ich_1", issued("active"), new Date("2026-09-28T12:00:03.000Z"));
+    expect(stored()).toMatchObject({ status: "active" });
   });
 });
