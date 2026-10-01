@@ -5,7 +5,7 @@ import { jsonRpc as rpc, rpcEndpoints } from "@/lib/chain/rpc";
 /** The outer transaction as the chain reports it. For a smart wallet this is the bundler's EntryPoint call. */
 type ObservedTransaction = { chainId: number; from: string; to: string; value: string; data: string };
 
-type TransactionIdentityObservation =
+export type TransactionIdentityObservation =
   | { status: "pending" }
   | { status: "found"; call: ObservedTransaction; blockHash: string | null };
 
@@ -26,7 +26,8 @@ function parseQuantity(value: unknown): bigint {
   return BigInt(value);
 }
 
-async function observeTransactionIdentity(chainId: number, hash: string, fetcher: typeof fetch = fetch): Promise<TransactionIdentityObservation> {
+/** The transaction's sender, target, and input as the chain reports it, or pending while no endpoint has it yet. */
+export async function observeTransactionIdentity(chainId: number, hash: string, fetcher: typeof fetch = fetch): Promise<TransactionIdentityObservation> {
   const endpoints = rpcEndpoints(chainId);
   if (!endpoints.length || !/^0x[a-f0-9]{64}$/i.test(hash)) throw new Error("Unsupported chain or transaction hash.");
   let pending = false;

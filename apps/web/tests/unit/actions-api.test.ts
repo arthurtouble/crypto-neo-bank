@@ -14,7 +14,8 @@ vi.mock("cloudflare:workers", () => ({ env: { get PROJECTION_DB() { return state
 vi.mock("@/lib/auth/server", () => ({ requireVerifiedSubject: async () => ({ subjectReference: "alice", sessionReference: "s" }) }));
 vi.mock("@/lib/auth/wallet", () => ({ requireActionWallet: async () => wallet, requireMoneyMfa: async () => undefined,
   requireMoneyAccount: async () => ({ address: wallet, walletId: "wallet-1" }), WalletOwnershipError: httpErrors.WalletOwnershipError }));
-vi.mock("@/lib/actions/verify", () => ({ verifyAction: vi.fn(async () => state.verification) }));
+// The chain shows each reported hash as the wallet's own operation (checked in actions-hash-binding.test.ts).
+vi.mock("@/lib/actions/verify", () => ({ verifyAction: vi.fn(async () => state.verification), checkReportedTransaction: vi.fn(async () => "own") }));
 
 const { POST: prepare } = await import("@/app/api/actions/route");
 const { GET: status } = await import("@/app/api/actions/[id]/route");

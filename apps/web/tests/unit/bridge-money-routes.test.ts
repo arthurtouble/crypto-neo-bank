@@ -150,6 +150,25 @@ describe("bank payouts", () => {
     expect((await payout(new Request("https://aura.test", json({ bankAccountId, amountUsd: "25.00" })))).status).toBe(201);
   });
 
+  it("treats a new bank account like a new recipient: it waits, and saved-recipients-only applies", async () => {
+    const bankAccountId = await savedBankId();
+    sqlite.exec("UPDATE security_profiles SET enforce_address_book = 1");
+    const cooling = await payout(new Request("https://aura.test", json({ bankAccountId, amountUsd: "25.00" })));
+    expect([cooling.status, (await cooling.json() as { error: string }).error]).toEqual([409, "recipient_cooling"]);
+    expect(calls.some((call) => call.url === "/transfers")).toBe(false);
+    const saved = sqlite.prepare("SELECT observed_at, available_at FROM bank_beneficiary_projections").get() as { observed_at: string; available_at: string };
+    // The customer's waiting period (4 hours by default) starts when the account is added.
+    expect(Date.parse(saved.available_at) - Date.parse(saved.observed_at)).toBe(4 * 3600_000);
+    sqlite.exec("UPDATE bank_beneficiary_projections SET available_at = '2000-01-01T00:00:00.000Z'");
+    expect((await payout(new Request("https://aura.test", json({ bankAccountId, amountUsd: "25.00" })))).status).toBe(201);
+  });
+
+  it("announces a new bank account as a security notice", async () => {
+    await savedBankId();
+    expect(sqlite.prepare("SELECT kind, title FROM notifications WHERE subject_reference = 'alice'").all())
+      .toEqual([{ kind: "security", title: "New bank account" }]);
+  });
+
   it("applies the customer's daily limit and refuses a payout whose amount Bridge changed", async () => {
     const bankAccountId = await savedBankId();
     sqlite.exec("UPDATE security_profiles SET daily_limit_cents = 1000");

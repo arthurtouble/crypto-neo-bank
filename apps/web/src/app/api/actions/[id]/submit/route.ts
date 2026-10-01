@@ -5,6 +5,7 @@ import { actionRequest } from "@/lib/actions/relay-request";
 import { requireUnlocked } from "@/lib/actions/controls";
 import { requireAllowed, storedActionGates } from "@/lib/actions/prepare";
 import { expireIfStale, getAction, recordRelay, recordSubmission } from "@/lib/actions/store";
+import { checkReportedTransaction, type ReportedTransaction } from "@/lib/actions/verify";
 import { privyClient } from "@/lib/auth/privy";
 import { requireVerifiedSubject } from "@/lib/auth/server";
 import { requireMoneyAccount } from "@/lib/auth/wallet";
@@ -15,7 +16,7 @@ import { actionView } from "../../view";
 const schema = z.union([
   // The customer's authorization signature over the action's Privy request; Aura relays it with gas paid.
   z.strictObject({ signature: z.string().regex(/^[A-Za-z0-9+/]+={0,2}$/).min(40).max(400) }),
-  // A hash reported by a wallet that sent the calls itself.
+  // A hash reported by a wallet that sent the calls itself. It is bound only if the chain shows it is that wallet's own operation.
   z.strictObject({ transactionHash: z.string().regex(/^0x[a-fA-F0-9]{64}$/) })
 ]);
 
@@ -29,14 +30,15 @@ export const POST = route("actions.submit", { invalid: "invalid_submission", una
     if (!found) return errorResponse(404, "action_not_found", context);
     const now = new Date();
 
+    const account = await requireMoneyAccount(subject.subjectReference);
+    // A lock also stops actions prepared before it, whether Aura relays them or the wallet reports a hash.
+    await requireUnlocked(env.PROJECTION_DB, subject.subjectReference, now);
+    const action = await expireIfStale(env.PROJECTION_DB, found, now);
+    // A switch turned off or an asset paused after the action was prepared stops it too.
+    const gates = storedActionGates(action);
+    await requireAllowed(env.PROJECTION_DB, gates.features, gates.assetIds);
+
     if ("signature" in input) {
-      const account = await requireMoneyAccount(subject.subjectReference);
-      // A lock also stops actions prepared before it.
-      await requireUnlocked(env.PROJECTION_DB, subject.subjectReference, now);
-      const action = await expireIfStale(env.PROJECTION_DB, found, now);
-      // A switch turned off or an asset paused after the action was prepared stops it too.
-      const gates = storedActionGates(action);
-      await requireAllowed(env.PROJECTION_DB, gates.features, gates.assetId);
       const signable = actionRequest(action, account);
       if (!signable) return errorResponse(409, "not_submittable", context, { message: "This action can't be sent any more. Start again." });
       let reference: string;
@@ -55,9 +57,21 @@ export const POST = route("actions.submit", { invalid: "invalid_submission", una
       return Response.json({ action: actionView(current!), traceId: context.traceId }, { status: 202 });
     }
 
-    const result = await recordSubmission(env.PROJECTION_DB, found, input.transactionHash, now);
+    const hash = input.transactionHash.toLowerCase();
+    if (action.transactionHash !== hash) {
+      if (action.transactionHash || action.status !== "prepared")
+        return errorResponse(409, "not_submittable", context, { message: "This action can't take a transaction any more. Start again." });
+      // Bind a hash only once the chain shows it is this wallet's own operation with exactly these calls.
+      const reported = await checkReportedTransaction({ chainId: action.chainId, walletAddress: action.wallet, calls: action.calls }, hash)
+        .catch((): ReportedTransaction => "unavailable");
+      if (reported === "unavailable")
+        return errorResponse(409, "transaction_unavailable", context, { message: "We can't see this transaction on the network yet. Try again in a moment." });
+      if (reported === "not_own")
+        return errorResponse(409, "transaction_not_yours", context, { message: "This transaction wasn't sent by your account for this action." });
+    }
+    const result = await recordSubmission(env.PROJECTION_DB, action, hash, now);
     if (result === "hash_in_use") return errorResponse(409, "hash_in_use", context, { message: "This transaction is already linked to another action." });
     if (result === "not_submittable") return errorResponse(409, "not_submittable", context, { message: "This action already has a different transaction." });
-    const current = await getAction(env.PROJECTION_DB, subject.subjectReference, found.id);
+    const current = await getAction(env.PROJECTION_DB, subject.subjectReference, action.id);
     return Response.json({ action: actionView(current!), traceId: context.traceId }, { status: result === "submitted" ? 202 : 200 });
   });

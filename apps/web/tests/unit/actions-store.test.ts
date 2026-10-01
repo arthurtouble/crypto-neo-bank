@@ -74,12 +74,14 @@ describe("submission and status", () => {
     expect(await getAction(db, "bob", first.id)).toBeNull();
   });
 
-  it("expires unsigned actions but still accepts a late hash", async () => {
+  it("expires unsigned actions and doesn't bring them back with a late hash", async () => {
     const stored = (await getAction(db, "alice", (await insertAction(db, action(), now))!))!;
     const later = new Date(now.getTime() + 11 * 60_000);
     const expired = await expireIfStale(db, stored, later);
     expect(expired.status).toBe("expired");
-    expect(await recordSubmission(db, expired, hash, later)).toBe("submitted");
+    expect(await recordSubmission(db, expired, hash, later)).toBe("not_submittable");
+    // Nor one still marked prepared after its window passed.
+    expect(await recordSubmission(db, stored, hash, later)).toBe("not_submittable");
   });
 
   it("moves status forward only and records each change", async () => {

@@ -1,10 +1,10 @@
 import { decodeEventLog, erc20Abi, parseAbiItem } from "viem";
 import { AAVE_BASE_V3_MARKET } from "@/lib/defi/aave";
 import { MORPHO_USDC } from "@/lib/defi/morpho";
-import { observeTransaction, requiredConfirmations, type ChainObservation } from "./chain";
+import { observeTransaction, observeTransactionIdentity, requiredConfirmations, type ChainObservation } from "./chain";
 import { LifiStatusError, readLifiTransferStatus } from "./lifi-status";
 import { sameAddress, type Call, type Effect } from "./types";
-import { readWalletOperation, type Log } from "./user-operation";
+import { readWalletOperation, walletOperationCalls, type Log } from "./user-operation";
 
 export type Verification =
   | { status: "pending"; reason: string }
@@ -120,6 +120,22 @@ function callsMatch(expected: readonly Call[], observed: readonly Call[]): boole
   return expected.length === observed.length && expected.every((call, index) =>
     sameAddress(call.to, observed[index].to) && call.value === observed[index].value
     && call.data.toLowerCase() === observed[index].data.toLowerCase());
+}
+
+export type ReportedTransaction = "own" | "unavailable" | "not_own";
+
+/**
+ * Whether a hash the customer's wallet reported is that wallet's own
+ * operation carrying exactly the action's calls, read from the chain before
+ * the hash is bound. Without this, anyone could bind someone else's hash to
+ * their own action and keep it from the action it belongs to.
+ */
+export async function checkReportedTransaction(action: Pick<VerifiableAction, "chainId" | "walletAddress" | "calls">, hash: string,
+  observe: typeof observeTransactionIdentity = observeTransactionIdentity): Promise<ReportedTransaction> {
+  const observed = await observe(action.chainId, hash);
+  if (observed.status === "pending") return "unavailable";
+  const own = walletOperationCalls(action.walletAddress, observed.call);
+  return own.status === "found" && callsMatch(action.calls, own.calls) ? "own" : "not_own";
 }
 
 type Unsettled = { status: "pending"; reason: string } | { status: "failed"; reason: string };

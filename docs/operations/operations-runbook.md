@@ -13,7 +13,7 @@ Losing D1 doesn't lose customer funds: Privy, contracted providers, and public c
 2. Review webhook receipts left `received`, `enqueued`, or `failed` beyond the expected processing window.
 3. Reconcile provider transfer and card states and onchain positions against the latest projection.
 4. Escalate stale observations; never display them as current.
-5. Review actions left `submitted` or `settling` (operations app → Money movement → Stuck only), and sample confirmed actions against their chain evidence.
+5. Review actions left `submitted` or `settling` (operations app → Money movement → Stuck only), and sample confirmed actions against their chain evidence. A stuck action's journey can show `relay_failed` (Privy reported the relay failed; it fails on its own once its signed request expires with no hash) or `hash_in_use` (the hash Privy reported is already linked to another action; investigate both actions).
 6. Review notices whose email or push is `failed`, or still `pending` after several cron runs (`SELECT kind, email_status, push_status, delivery_attempts FROM notifications WHERE email_status IN ('pending','failed') OR push_status IN ('pending','failed')`). The cron logs `notifications.deliver.failed`; a run of Resend refusals usually means the sending domain or key changed.
 
 ## Webhook incident

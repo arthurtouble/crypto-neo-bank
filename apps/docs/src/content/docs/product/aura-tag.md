@@ -22,3 +22,5 @@ Someone with Aura can select **Send with Aura** to pay in the app, with your tag
 ## Changing your tag
 
 When you change your tag, the old page stops working. We never give an old tag to someone else, so an old link can't quietly start paying a stranger.
+
+Changing the address your tag pays needs your passkey, and we tell you by email and in the app. Someone who gets into your session can't redirect your payments without it.

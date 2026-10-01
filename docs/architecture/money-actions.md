@@ -62,7 +62,8 @@ sequenceDiagram
 ```
 
 1. **Prepare.** The server checks the switch, lock, limits, and recipient rules, and values the action in USD. A builder returns the exact calls and the effects they must produce. The action is stored as `prepared` with a fingerprint of its calls and a short expiry.
-2. **Sign and submit.** The customer signs Privy's request for exactly those calls; the server relays it with gas paid, never signs, and can't change what was signed ([accounts and custody](accounts-and-custody.md#how-a-money-action-is-sent)). A transaction hash binds to one action only.
+2. **Sign and submit.** The customer signs Privy's request for exactly those calls; the server relays it with gas paid, never signs, and can't change what was signed ([accounts and custody](accounts-and-custody.md#how-a-money-action-is-sent)). A transaction hash binds to one action only. Submit applies the lock, the action's switches, and its asset pauses again, whichever way it's sent.
+   - **A hash the wallet reports** (`{ transactionHash }`, for a wallet that sent the calls itself; the app always relays) binds only to a `prepared` action still in its signing window, and only once the chain shows that transaction is the action's own wallet sending exactly the prepared calls (`checkReportedTransaction` in `lib/actions/verify.ts`: a plain transaction from the wallet, or exactly one EntryPoint operation whose sender is the wallet). Otherwise it's refused with `transaction_not_yours`, or `transaction_unavailable` while no endpoint has the transaction yet. Nobody can bind someone else's hash to their own action, and an expired action stays expired.
 3. **Verify.** On each status read, the server reads the receipt independently:
    - **Identity.** The transaction is an EntryPoint `handleOps` call containing an operation from the customer's account whose decoded calls equal the prepared calls, and its `UserOperationEvent` reports success.
    - **Finality.** Base: included (1 confirmation) and at or below the finalized block. Ethereum: 12. Base finalizes 15 to 25 minutes after inclusion, so a fully matching included operation becomes `settling` (shown as sent for a same-chain action), then `confirmed` at finality. Nothing fails before finality: a mismatch or revert waits for the final block.
@@ -76,6 +77,12 @@ sequenceDiagram
 - When Transactions opens: up to 3 open actions not checked in the last 30 seconds.
 - Every 2 minutes by the web Worker's cron (`apps/web/worker/index.ts`, `lib/actions/recheck.ts`): up to 20 submitted or settling actions not checked in the last minute, least recently checked first, one at a time. It also expires prepared actions past their signing window, checks up to 20 watched accounts for money received, and delivers up to 50 pending notices. Each of these runs on its own, so one failing doesn't stop the others.
 - A check only writes over the status it read (`applyVerification`), so a slower check that started earlier can't move an action backwards or record an event twice.
+- Each action is checked on its own. If one check throws, the cron counts it in `failedChecks` and moves on, and Transactions shows that action as stored. One bad action can't stop the others.
+
+A relayed action needs its chain hash from Privy first:
+
+- **Privy reports the relay as failed with no hash** (`failed` or `provider_error`). Privy's answer isn't chain evidence, so the action stays `submitted` and keeps being checked, with a `relay_failed` event recorded once. It fails with that reason only once the signed request's expiry (`privy-request-expiry`, the action's `expires_at`) has passed with still no hash. If Privy reports a hash meanwhile, the chain decides as usual.
+- **The hash Privy reports is already linked to another action.** Nothing is attached. A `hash_in_use` event is recorded once for operators, and the action stays open (it shows in the stuck list) instead of failing every later check.
 
 When a check moves an action to complete (a same-network action in a block and matching, or a cross-network move delivered) or failed, the customer gets one notice (`lib/notifications/store.ts` `actionNotice`), keyed by action and outcome so it never repeats.
 
@@ -129,14 +136,15 @@ Customer settings, off by default, stored in `security_profiles`. Tightening app
 The challenge is bound to the exact change and current policy version, expires in 5 minutes, and is single-use. Loosening also needs a passkey or authenticator app on the account (`requireMoneyMfa`).
 
 - **Account lock** blocks every action at preparation and again at authorize and submit, so an action prepared before the lock can't be sent.
-- **Switches and pauses** are checked at preparation and again at submit: turning off an action's switch or pausing its asset stops an action already prepared from being relayed (`feature_unavailable`, `asset_paused`).
+- **Switches and pauses** are checked at preparation and again at submit: turning off an action's switch or pausing its asset stops an action already prepared from being relayed (`feature_unavailable`, `asset_paused`). For a route, both the asset it spends and the asset it delivers (`summary.to.id`) are checked (`storedActionGates`).
 - **Daily limit** (`daily_limit_cents`, null = none) caps the rolling 24-hour USD value of outgoing actions (transfers and routes). Earn (between the customer's own positions) and the card allowance (moves nothing) don't count. With a limit set, an action that can't be valued is blocked.
 - **Saved recipients only** (`enforce_address_book`) blocks transfers to unsaved addresses.
 - **New recipient cooling** (`new_address_delay_seconds`, default 4 hours) delays a newly saved address before it counts as saved. Applies only with saved recipients only on; a change doesn't move entries already saved.
+- **Saved bank accounts** follow the same two rules. Adding one sets `bank_beneficiary_projections.available_at` to the customer's wait after it was added, and announces a security notice. With saved recipients only on, a payout to an account still waiting (or with no `available_at`) is refused with `recipient_cooling` before Bridge is asked (`checkBankAccount` in `lib/actions/controls.ts`).
 
 These are enforced by the server on actions it prepares. They don't stop a customer who exports their key and signs elsewhere. Onchain or Privy-policy enforcement is a later feature ("Wealth protection"); the settings UI must say which kind applies.
 
-Bank limits come from Bridge once connected and appear beside these. A bank payout is an ordinary USDC transfer action to the address Bridge names (`lib/actions/payout.ts`), so the lock, daily limit, and passkey apply. They're checked, with the `fiat_accounts` switch and the USDC pause, before Bridge is asked for the payout, and the same payout is claimed once per signing window (`command_idempotency`), so a retry returns the first action rather than creating a second Bridge payout; its bank-side progress comes from Bridge (`lib/money/bank-activity.ts`) and never changes the action's chain status.
+Bank limits come from Bridge once connected and appear beside these. A bank payout is an ordinary USDC transfer action to the address Bridge names (`lib/actions/payout.ts`), so the lock, daily limit, and passkey apply, and the saved-recipient rules apply to the bank account. They're checked, with the `fiat_accounts` switch and the USDC pause, before Bridge is asked for the payout, and the same payout is claimed once per signing window (`command_idempotency`), so a retry returns the first action rather than creating a second Bridge payout; its bank-side progress comes from Bridge (`lib/money/bank-activity.ts`) and never changes the action's chain status.
 
 ## Valuation
 

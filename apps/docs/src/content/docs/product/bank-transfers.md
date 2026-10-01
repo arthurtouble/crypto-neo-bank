@@ -29,7 +29,9 @@ You can also use these details for your paycheck. When it arrives depends on you
 2. Choose the account, the amount, and bank transfer (ACH) or wire.
 3. Review the amount, the USDC it takes, the bank, and the speed. Select **Edit** to change it, or **Confirm and send** to go ahead.
 
-Confirming sends USDC to an address Bridge gives for that payout. You confirm with your passkey, and your account lock and daily limit apply. Bridge then sends the dollars to your bank. If you ask for the same payout again within 10 minutes, Aura shows you the first one instead of starting a second.
+Confirming sends USDC to an address Bridge gives for that payout. You confirm with your passkey, and your account lock and daily limit apply.
+
+A saved bank account counts as a saved recipient. We tell you each time one is added. If you've turned on saved recipients only, a new bank account waits like any new recipient before you can send to it. See [account controls](/safety/account-controls/). Bridge then sends the dollars to your bank. If you ask for the same payout again within 10 minutes, Aura shows you the first one instead of starting a second.
 
 In Transactions, the payout shows as **Sent to bank**. It stays pending until Bridge reports that your bank has it. Its steps are: waiting for your USDC, received by Bridge, sent to your bank, then arrived.
 

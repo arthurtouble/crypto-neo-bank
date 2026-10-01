@@ -14,7 +14,7 @@ import { sha256Hex } from "@/lib/platform/encoding";
  * unlocks their authorization key, so Privy's answer proves the passkey was
  * used moments ago for exactly this change. A session token alone can't.
  */
-export type StepUpPurpose = "security_policy" | "card_controls" | "card_details";
+export type StepUpPurpose = "security_policy" | "card_controls" | "card_details" | "aura_tag_address";
 type StepUpChallenge = { challengeId: string; request: AuthorizationRequest<PersonalSignBody> };
 export type Confirmation = { challengeId: string; signature: string };
 
