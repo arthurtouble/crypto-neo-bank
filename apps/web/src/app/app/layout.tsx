@@ -6,7 +6,6 @@ import "../cards.css";
 import "../records.css";
 import "../settings.css";
 import { AppShell } from "@/components/app-shell";
-import { ProductAccessGate } from "@/components/product-access-gate";
 import { AuthProvider } from "@/components/auth-provider";
 import { ProductAnalytics } from "@/components/product-analytics";
 import { TermsGate } from "@/components/terms-gate";
@@ -16,5 +15,5 @@ import { TermsGate } from "@/components/terms-gate";
 export const metadata: Metadata = { robots: { index: false, follow: false } };
 
 export default function ProductLayout({ children }: { children: React.ReactNode }) {
-  return <AuthProvider><ProductAnalytics /><AppShell><ProductAccessGate><TermsGate>{children}</TermsGate></ProductAccessGate></AppShell></AuthProvider>;
+  return <AuthProvider><ProductAnalytics /><AppShell><TermsGate>{children}</TermsGate></AppShell></AuthProvider>;
 }
