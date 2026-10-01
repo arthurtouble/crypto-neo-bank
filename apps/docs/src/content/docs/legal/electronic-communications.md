@@ -5,7 +5,7 @@ sidebar:
   order: 7
 ---
 
-**Version:** 2026-09-25
+**Version:** 2026-10-01
 
 When you accept the terms of use, you agree to receive agreements, disclosures, notices, confirmations, and other records electronically, where the law allows.
 

@@ -5,7 +5,7 @@ sidebar:
   order: 5
 ---
 
-**Version:** 2026-09-25
+**Version:** 2026-10-01
 
 You may not use Aura to:
 

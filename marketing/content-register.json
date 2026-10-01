@@ -13,5 +13,35 @@
     "reviewAt": "2026-12-31T00:00:00.000Z",
     "approvedBy": "product owner",
     "approvedAt": "2026-09-30T00:00:00.000Z"
+  },
+  {
+    "id": "aura-docs-home-v1",
+    "file": "apps/docs/src/content/docs/index.mdx",
+    "owner": "product",
+    "audience": "Public docs readers; personal features remain country- and provider-limited",
+    "countries": [
+      "GLOBAL"
+    ],
+    "disclosure": "States that bank transfers and cards aren't available yet and that confirmed transactions are real and usually can't be reversed; links to product status and the risk disclosure.",
+    "claimIds": [],
+    "reviewStatus": "approved",
+    "reviewAt": "2026-12-31T00:00:00.000Z",
+    "approvedBy": "product owner",
+    "approvedAt": "2026-10-01T00:00:00.000Z"
+  },
+  {
+    "id": "aura-llms-txt-v1",
+    "file": "apps/web/src/app/llms.txt/route.ts",
+    "owner": "product",
+    "audience": "AI assistants and search tools summarizing Aura for the public",
+    "countries": [
+      "GLOBAL"
+    ],
+    "disclosure": "Reuses approved landing copy and links to product status, the security model, fees, and the legal pages, including the risk disclosure.",
+    "claimIds": [],
+    "reviewStatus": "approved",
+    "reviewAt": "2026-12-31T00:00:00.000Z",
+    "approvedBy": "product owner",
+    "approvedAt": "2026-10-01T00:00:00.000Z"
   }
 ]

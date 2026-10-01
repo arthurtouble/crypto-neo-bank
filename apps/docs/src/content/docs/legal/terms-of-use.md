@@ -5,7 +5,7 @@ sidebar:
   order: 2
 ---
 
-**Version:** 2026-09-25
+**Version:** 2026-10-01
 
 These terms cover your use of Aura's website, app, and software.
 
