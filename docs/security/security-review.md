@@ -19,7 +19,10 @@ Later changes reflected below: on 25 September 2026 the private-beta invitation 
 - Card details show only inside Stripe's Issuing Elements frames, with a 15-minute ephemeral key bound to the card and a browser nonce, after a fresh passkey confirmation. Aura never receives the card number. Unfreezing and raising the daily limit need the same step-up; unfreezing is refused while the account is locked.
 - Queue failures reach a dead-letter queue and a critical issue; scheduled reconciliation runs every five minutes.
 - D1 is not authoritative for customer balances or settlement.
-- Security headers, abuse limits, structured logs, CI, CodeQL, dependency audit, and isolated recovery testing exist.
+- Security headers, abuse limits, structured logs, CI, CodeQL, dependency audit, and isolated recovery testing exist. All three web surfaces send a CSP with `frame-ancestors 'none'`, `X-Frame-Options: DENY`, `nosniff`, a referrer policy, and HSTS: the customer app on every response, including static files and the 451 answers (`apps/web/src/lib/http/security-headers.ts`, `apps/web/public/_headers`); the operations app's Worker on every response, with a CSP of `'self'` only; the docs through `apps/docs/public/_headers`, with inline scripts and styles allowed because Starlight emits them.
+- The operations Worker refuses writes that don't come from its own page (`Sec-Fetch-Site: same-origin`, or a matching `Origin` when the browser sends no fetch metadata) and bodies that aren't JSON, so a cross-site request carrying an Access cookie can't change a switch, lock, or note.
+- GitHub Actions are pinned by commit SHA with the version in a trailing comment (update them together, on purpose), and each `security.yml` job lists its own permissions.
+- The provider-event consumer has no public `workers.dev` address in production. A link from a provider that goes to a page is opened only if it is https.
 - Product capabilities have database-backed server-side kill switches. The public status and incident routes were removed on 28 September 2026; `GET /api/health` reports only whether the database, queue, and sign-in are configured.
 - The recovery drill does a real local backup, clean restore, integrity check, and retained-consent verification.
 

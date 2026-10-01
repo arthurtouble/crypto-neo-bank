@@ -124,13 +124,25 @@ export function WalletWorkspace({ children }: { children?: React.ReactNode }) {
     if (tag.crypto.address.toLowerCase() !== recipient.toLowerCase()) throw new Error("The Aura tag address changed. Find the recipient again before sending.");
   }
 
+  const tagLookup = useQuery<string>({
+    queryKey: ["aura-tag-address", requestedTag],
+    queryFn: async () => {
+      const response = await fetch(`/api/aura-tags/${encodeURIComponent(requestedTag!)}`, { cache: "no-store" });
+      if (!response.ok) throw new Error("tag_unavailable");
+      return ((await response.json()) as { crypto: { address: string } }).crypto.address;
+    },
+    enabled: Boolean(requestedTag) && isAddress(requestedRecipient),
+    retry: false
+  });
+
   const selected = rows.find((row) => row.symbol === asset) ?? rows[0];
   const destinations = sendDestinations(selected.id);
   const destination = destinations.find((item) => item.chainId === network) ?? destinations[0];
   // Sent from where the account holds it; anywhere else goes through a route.
   const crossChain = destination.chainId !== selected.chainId;
   const saved = savedRecipients.find((item) => item.destination.toLowerCase() === recipient.toLowerCase());
-  const tagged = Boolean(requestedTag && recipient.toLowerCase() === requestedRecipient.toLowerCase());
+  // The link's tag is only a claim. It names the recipient once Aura says the tag resolves to this very address.
+  const tagged = Boolean(requestedTag && tagLookup.data && tagLookup.data.toLowerCase() === requestedRecipient.toLowerCase() && recipient.toLowerCase() === requestedRecipient.toLowerCase());
   const ownWallet = ownWallets.some((wallet) => wallet === recipient.toLowerCase());
   const recipientName = tagged ? `@${requestedTag}` : ownWallet ? "Your wallet" : saved?.name ?? null;
   const validRecipient = isAddress(recipient, { strict: false }) && recipient.toLowerCase() !== address?.toLowerCase();

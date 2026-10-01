@@ -20,6 +20,7 @@ import { TransactionProgress } from "./transaction-progress";
 import { LoadingState, Notice } from "./states";
 import { StatusDot, type StatusTone } from "./status-dot";
 import { Sheet } from "./sheet";
+import { httpsUrl } from "@/lib/client/safe-url";
 
 type Card = Extract<CardState, { state: "card" }>;
 /** Set for guests: every action opens sign-in instead. */
@@ -297,7 +298,9 @@ function Setup({ data, refetch, checking }: { data: Exclude<CardState, { state: 
     const tab = window.open("", "_blank");
     try {
       const { url } = await api<{ url: string }>("/api/cards/apply", { method: "POST" });
-      if (tab) { tab.opener = null; tab.location.href = url; }
+      const link = httpsUrl(url);
+      if (!link) throw new ApiError(502, "bad_link", "The link we got back isn't safe to open. Try again.");
+      if (tab) { tab.opener = null; tab.location.href = link; }
     } catch (error) { tab?.close(); toast.error("Application didn't start", error instanceof ApiError ? error.message : "Try again."); }
     finally { setBusy(false); }
   }

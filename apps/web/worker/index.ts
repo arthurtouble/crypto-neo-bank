@@ -4,6 +4,7 @@ import { refreshBankPayouts } from "@/lib/money/bank-activity";
 import { blockedPlace, isGatedPath, requestPlace } from "@/lib/legal/places";
 import { deliverPending } from "@/lib/notifications/deliver";
 import { scanIncoming } from "@/lib/notifications/incoming";
+import { withSecurityHeaders } from "@/lib/http/security-headers";
 import { indexable, noindexHeader } from "@/lib/site/seo";
 
 const log = (event: string, scheduledTime: number) => [
@@ -39,7 +40,7 @@ async function serve(request: Request, env: Cloudflare.Env, ctx: ExecutionContex
     console.error(JSON.stringify({ level: "error", event: "request.failed", method: request.method, path, ...fields }));
   try {
     // vinext types its env as the assets binding alone; the Worker passes the whole env through, as `{ ...app }` would.
-    const response = await app.fetch(request, env as Parameters<typeof app.fetch>[1], ctx);
+    const response = withSecurityHeaders(await app.fetch(request, env as Parameters<typeof app.fetch>[1], ctx));
     if (response.status >= 500 && !path.startsWith("/api/")) failed({ status: response.status });
     if (indexable()) return response;
     const tagged = new Response(response.body, response);
@@ -63,7 +64,7 @@ const fetch: ExportedHandlerFetchHandler<Cloudflare.Env> = async (request, env, 
   console.log(JSON.stringify({ level: "info", event: "edge.place_blocked", country, region, path: url.pathname }));
   const headers = { "Cache-Control": "no-store", Vary: "CF-IPCountry" };
   if (url.pathname.startsWith("/api/")) {
-    return Response.json({ error: "place_unavailable", message: "Aura isn't available where you are." }, { status: 451, headers });
+    return withSecurityHeaders(Response.json({ error: "place_unavailable", message: "Aura isn't available where you are." }, { status: 451, headers }));
   }
   const page = await serve(new Request(new URL("/unavailable", url), { headers: request.headers }), env, ctx);
   const blocked = new Response(page.body, { status: 451, headers: page.headers });
