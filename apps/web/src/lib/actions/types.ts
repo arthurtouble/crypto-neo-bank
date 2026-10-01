@@ -4,6 +4,8 @@ import { sha256Hex } from "@/lib/platform/encoding";
 
 const address = z.string().refine(isAddress, "Invalid address.").transform((value) => value.toLowerCase() as `0x${string}`);
 const rawAmount = z.string().regex(/^[1-9]\d{0,77}$/, "Invalid amount.");
+/** Zero or more. Only an approval may be zero: approving 0 turns the spender's allowance off. */
+const approvalAmount = z.string().regex(/^(0|[1-9]\d{0,77})$/, "Invalid amount.");
 
 /** One call the smart wallet executes. The wallet batches every call of an action into one operation. */
 export const callSchema = z.strictObject({
@@ -26,8 +28,8 @@ export const effectSchema = z.discriminatedUnion("type", [
   z.strictObject({ type: z.literal("morpho_withdraw"), vault: address, assetsRaw: rawAmount }),
   z.strictObject({ type: z.literal("morpho_redeem"), vault: address, sharesRaw: rawAmount }),
   z.strictObject({ type: z.literal("erc20_debit"), token: address, amountRaw: rawAmount }),
-  // An ERC-20 approval from the account, for exactly this spender and amount (the card spending allowance).
-  z.strictObject({ type: z.literal("erc20_approval"), token: address, spender: address, amountRaw: rawAmount }),
+  // An ERC-20 approval from the account, for exactly this spender and amount (the card spending allowance; "0" turns it off).
+  z.strictObject({ type: z.literal("erc20_approval"), token: address, spender: address, amountRaw: approvalAmount }),
   z.strictObject({ type: z.literal("erc20_credit_min"), token: address, to: address, minimumRaw: rawAmount }),
   z.strictObject({ type: z.literal("delivery"), tool: z.string().min(1).max(80), destinationChainId: z.number().int().positive(),
     token: address.nullable(), to: address, minimumRaw: rawAmount })

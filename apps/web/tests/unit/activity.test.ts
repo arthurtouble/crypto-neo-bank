@@ -31,7 +31,7 @@ vi.mock("@/lib/cards/service", async (original) => ({ ...await original<object>(
     items: state.cards.items.filter((item) => (!window.since || Date.parse(item.createdAt) >= window.since.getTime()) && (!window.until || Date.parse(item.createdAt) < window.until.getTime())) }) }));
 
 const { parseTransfer, readIncoming } = await vi.importActual<typeof import("@/lib/activity/incoming")>("@/lib/activity/incoming");
-const { actionEntry, cardEntry, entriesCsv, entryAmount, entryCategory, incomingEntry } = await import("@/lib/activity/entries");
+const { actionEntry, cardEntry, entriesCsv, entryAmount, entryCategory, entryLabel, incomingEntry } = await import("@/lib/activity/entries");
 const { buildInsights } = await import("@/lib/insights/presentation");
 const { GET: activity } = await import("@/app/api/activity/route");
 const { GET: statement } = await import("@/app/api/statements/route");
@@ -128,6 +128,9 @@ describe("one entry per transaction", () => {
     const allowance = actionEntry(action({ summary: { symbol: "USDC", amount: "50", cardAllowance: { spender: friend } } }));
     expect(allowance).toMatchObject({ type: "card_allowance", counterparty: "Aura card", amount: "50" });
     expect(allowance.estimatedUsd).toBeUndefined();
+    const off = actionEntry(action({ summary: { symbol: "USDC", amount: "0", cardAllowance: { spender: friend, off: true } } }));
+    expect(off).toMatchObject({ type: "card_spending_off", counterparty: "Aura card" });
+    expect([entryLabel(off.type), entryCategory(off.type)]).toEqual(["Card spending turned off", "Card"]);
   });
 
   it("values money received at today's price, when there is one", () => {

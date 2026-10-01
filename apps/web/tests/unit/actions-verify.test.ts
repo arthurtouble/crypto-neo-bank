@@ -3,6 +3,7 @@ import { encodeAbiParameters, encodeEventTopics, encodeFunctionData, erc20Abi, p
 import type { ChainObservation } from "@/lib/actions/chain";
 import type { LifiStatusCorroboration } from "@/lib/actions/lifi-status";
 import { ENTRY_POINT_V07, type Log } from "@/lib/actions/user-operation";
+import { effectSchema } from "@/lib/actions/types";
 import { verifyAction, type VerifiableAction } from "@/lib/actions/verify";
 import { bundler, entryLog, handleOpsV07, kernelBatch, transferLog } from "../support/bundles";
 
@@ -128,5 +129,29 @@ describe("verifying a card allowance", () => {
     expect(await verifyAction(allowance, { observe: observe(withApproval(approval(wallet, 50_000_000n))) })).toEqual({ status: "confirmed" });
     expect(await verifyAction(allowance, { observe: observe(withApproval(approval(wallet, 1n))) })).toMatchObject({ status: "failed" });
     expect(await verifyAction(allowance, { observe: observe(withApproval(approval(recipient, 50_000_000n))) })).toMatchObject({ status: "failed" });
+  });
+
+  it("confirms turning spending off only when the Approval event value is exactly 0, from the account to the card contract", async () => {
+    const zero = encodeFunctionData({ abi: erc20Abi, functionName: "approve", args: [spender, 0n] });
+    const off: VerifiableAction = { ...allowance, calls: [{ to: usdc, value: "0", data: zero }],
+      effects: [effectSchema.parse({ type: "erc20_approval", token: usdc, spender, amountRaw: "0" })] };
+    const offWith = (log: Log) => observed({ data: handleOpsV07([{ sender: wallet, callData: kernelBatch([{ to: usdc, value: 0n, data: zero }]) }]),
+      logs: [entryLog(ENTRY_POINT_V07, "before"), log, entryLog(ENTRY_POINT_V07, { sender: wallet, success: true })] });
+    const other = "0x6666666666666666666666666666666666666666";
+    const otherApproval: Log = { ...approval(wallet, 0n),
+      topics: encodeEventTopics({ abi: [parseAbiItem("event Approval(address indexed owner, address indexed spender, uint256 value)")], eventName: "Approval", args: { owner: wallet, spender: other } }) as string[] };
+    expect(await verifyAction(off, { observe: observe(offWith(approval(wallet, 0n))) })).toEqual({ status: "confirmed" });
+    expect(await verifyAction(off, { observe: observe(offWith(approval(wallet, 1n))) })).toEqual({ status: "failed", reason: "effect_missing_erc20_approval" });
+    expect(await verifyAction(off, { observe: observe(offWith(approval(recipient, 0n))) })).toEqual({ status: "failed", reason: "effect_missing_erc20_approval" });
+    expect(await verifyAction(off, { observe: observe(offWith(otherApproval)) })).toEqual({ status: "failed", reason: "effect_missing_erc20_approval" });
+    // An approval on another token isn't the card's USDC allowance.
+    expect(await verifyAction(off, { observe: observe(offWith({ ...approval(wallet, 0n), address: arbUsdc })) })).toEqual({ status: "failed", reason: "effect_missing_erc20_approval" });
+  });
+
+  it("accepts a zero amount only for an approval", () => {
+    expect(effectSchema.safeParse({ type: "erc20_approval", token: usdc, spender, amountRaw: "0" }).success).toBe(true);
+    for (const effect of [{ type: "erc20_transfer", token: usdc, to: recipient, amountRaw: "0" }, { type: "erc20_debit", token: usdc, amountRaw: "0" },
+      { type: "erc20_credit_min", token: usdc, to: recipient, minimumRaw: "0" }, { type: "erc20_approval", token: usdc, spender, amountRaw: "00" },
+      { type: "erc20_approval", token: usdc, spender, amountRaw: "-1" }]) expect(effectSchema.safeParse(effect).success).toBe(false);
   });
 });

@@ -145,11 +145,18 @@ function Allowance({ data, onSignIn }: { data: Card; onSignIn: SignIn }) {
   const [amount, setAmount] = useState("");
   const allowance = data.allowance;
   const valid = /^\d{1,6}(\.\d{1,2})?$/.test(amount) && Number(amount) > 0;
+  const spending = allowance.status === "available" && Number(allowance.allowanceUsd) > 0;
+  const prepare = (amountUsd: string) => runPrepared(async () => (await api<{ action: ActionView }>("/api/cards/allowance", { method: "POST", json: { amountUsd } })).action);
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (onSignIn) return onSignIn();
     if (!valid) return;
-    await runPrepared(async () => (await api<{ action: ActionView }>("/api/cards/allowance", { method: "POST", json: { amountUsd: amount } })).action);
+    await prepare(amount);
+  }
+  /** Approve 0: the card can't take any USDC until a new allowance is set. Signed with the passkey like any allowance. */
+  async function turnOff() {
+    if (onSignIn) return onSignIn();
+    await prepare("0");
   }
   return <section className="mxCard" aria-labelledby="allowance-heading"><h2 id="allowance-heading">Spending allowance</h2>
     <p className="mxHint">Your card spends your USDC on Base. Nothing moves until you buy something: then Bridge takes exactly the purchase from your account, up to this allowance.</p>
@@ -167,6 +174,10 @@ function Allowance({ data, onSignIn }: { data: Card; onSignIn: SignIn }) {
       <TransactionProgress label="Card allowance" phase={phase} action={action} outcomeUnknown={outcomeUnknown} />
       <button type="submit" className="appButton appButtonPrimary" disabled={busy || (!onSignIn && !valid)}>{onSignIn ? "Sign in to set an allowance" : phase === "signing" ? "Confirm with your passkey" : "Set allowance"}</button>
     </form>}
+    {phase !== "done" && spending && <div className="cdSetting cdAllowanceOff">
+      <div className="cdSettingText"><strong>Turn off card spending</strong><small>Sets the allowance to $0.00, so every purchase is declined until you set a new one. Needs your passkey.</small></div>
+      <button type="button" className="appButton" disabled={busy} onClick={() => void turnOff()}>Turn off</button>
+    </div>}
   </section>;
 }
 

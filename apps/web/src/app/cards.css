@@ -29,6 +29,8 @@
 .appFrame .cdLimit { flex-wrap: wrap; }
 .appFrame .cdLimitField { display: flex; align-items: center; gap: var(--space-2); }
 .appFrame .cdLimitField .mxField { width: 96px; }
+/* Turn off card spending: a setting row under the allowance form, a plain secondary button, never red (nothing is lost) */
+.appFrame .cdAllowanceOff { margin-top: var(--space-2); }
 
 /* Card activity rows */
 .appFrame .cdRows { margin: 0; padding: 0; list-style: none; display: grid; }
@@ -61,5 +63,7 @@
   .appFrame .cdLimitField { width: 100%; }
   .appFrame .cdLimitField .mxField { flex: 1; width: auto; }
   .appFrame .cdLimitField .appButton { height: var(--control-height-lg); }
+  .appFrame .cdAllowanceOff { flex-wrap: wrap; }
+  .appFrame .cdAllowanceOff .appButton { flex: 1; height: var(--control-height-lg); }
   .appFrame .mxActions .appButton { flex: 1; height: var(--control-height-lg); }
 }
