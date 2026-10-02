@@ -72,9 +72,11 @@ export type IssuingDispute = z.infer<typeof disputeSchema>;
 const list = <T extends z.ZodTypeAny>(item: T) => z.object({ data: z.array(item), has_more: z.boolean().optional() }).passthrough();
 
 /** A virtual card that spends the customer's USDC on Base through Bridge (a non-custodial "standard" wallet). */
-export function createCard(stripe: StripeClient, input: { cardholderId: string; wallet: string; dailyLimitCents: number; requestId: string }) {
+export function createCard(stripe: StripeClient, input: { cardholderId: string; wallet: string; dailyLimitCents: number; requestId: string;
+  replacing?: { cardId: string; reason: "lost" | "stolen" } }) {
   return stripe.request("/v1/issuing/cards", cardSchema, { method: "POST", idempotencyKey: `card:${input.requestId}`, form: {
     cardholder: input.cardholderId, currency: "usd", type: "virtual", status: "active",
+    replacement_for: input.replacing?.cardId, replacement_reason: input.replacing?.reason,
     crypto_wallet: { chain: "base", currency: "usdc", type: "standard", address: input.wallet },
     spending_controls: { spending_limits: [{ amount: input.dailyLimitCents, interval: "daily" }] }
   } });
@@ -82,10 +84,11 @@ export function createCard(stripe: StripeClient, input: { cardholderId: string; 
 
 export const getCard = (stripe: StripeClient, cardId: string) => stripe.request(`/v1/issuing/cards/${encodeURIComponent(cardId)}`, cardSchema);
 
-/** Freeze (inactive), unfreeze (active), or change the daily limit. */
-export function updateCard(stripe: StripeClient, cardId: string, change: { status?: "active" | "inactive"; dailyLimitCents?: number }, requestId: string) {
+/** Freeze (inactive), unfreeze (active), change the daily limit, or cancel for good (canceled, with why). */
+export function updateCard(stripe: StripeClient, cardId: string, change: { status?: "active" | "inactive" | "canceled"; cancellationReason?: "lost" | "stolen";
+  dailyLimitCents?: number }, requestId: string) {
   return stripe.request(`/v1/issuing/cards/${encodeURIComponent(cardId)}`, cardSchema, { method: "POST", idempotencyKey: `card-update:${requestId}`, form: {
-    status: change.status,
+    status: change.status, cancellation_reason: change.cancellationReason,
     spending_controls: change.dailyLimitCents === undefined ? undefined : { spending_limits: [{ amount: change.dailyLimitCents, interval: "daily" }] }
   } });
 }

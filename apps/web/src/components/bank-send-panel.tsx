@@ -8,12 +8,12 @@ import { useState, type FormEvent } from "react";
 import { useApi } from "@/lib/client/api";
 import { useAction, type ActionView } from "@/lib/client/use-action";
 import { bankStage, useBankAccount } from "@/lib/client/use-bank-account";
-import { formatUsd } from "@/lib/format";
+import { formatDateTime, formatUsd } from "@/lib/format";
 import { useToast } from "./toast";
 import { TransactionProgress } from "./transaction-progress";
 import { LoadingState, Notice } from "./states";
 
-type Recipient = { id: string; kind: "wallet" | "bank"; name: string; detail: string; verified: boolean };
+type Recipient = { id: string; kind: "wallet" | "bank"; name: string; detail: string; verified: boolean; availableAt?: string | null };
 
 const amountPattern = /^\d{1,9}(\.\d{1,2})?$/;
 
@@ -153,19 +153,38 @@ function ActiveBankSend() {
   });
   const banks = recipients.data ?? [];
   const ready = banks.filter((item) => item.verified);
+  const [removing, setRemoving] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function remove(bank: Recipient) {
+    setBusy(true);
+    try {
+      await api("/api/money/bank-accounts", { method: "DELETE", json: { bankAccountId: bank.id } });
+      toast.success("Bank account removed", bankLabel(bank));
+      setRemoving(null);
+      void recipients.refetch();
+    } catch (reason) { toast.error("Bank account not removed", reason instanceof Error ? reason.message : "Try again."); }
+    finally { setBusy(false); }
+  }
 
   if (recipients.isPending) return <LoadingState label="Loading your bank accounts…" />;
   if (recipients.isError) return <Notice tone="error" role="alert" onRetry={() => void recipients.refetch()}>Your bank accounts are unavailable right now.</Notice>;
 
   return <>
     {banks.length > 0 && <dl className="mxSummary" aria-label="Saved bank accounts">
-      {banks.map((item) => <div key={item.id}><dt>{item.name}</dt><dd>{lastFour(item) ? `•••• ${lastFour(item)}` : ""}{item.verified ? "" : " · Not ready yet"}</dd></div>)}
+      {banks.map((item) => <div key={item.id} data-testid="saved-bank"><dt>{item.name}{lastFour(item) ? ` •••• ${lastFour(item)}` : ""}</dt>
+        <dd className="mxBankRow">{item.verified ? "" : item.availableAt ? `Ready from ${formatDateTime(item.availableAt)}` : "Not ready yet"}
+          {removing === item.id ? <>
+            <button type="button" className="appTextButton mxInlineButton" disabled={busy} onClick={() => void remove(item)}>{busy ? "Removing…" : "Remove"}</button>
+            <button type="button" className="appTextButton mxInlineButton" disabled={busy} onClick={() => setRemoving(null)}>Keep</button>
+          </> : <button type="button" className="appTextButton mxInlineButton" aria-label={`Remove ${bankLabel(item)}`} onClick={() => setRemoving(item.id)}>Remove</button>}
+        </dd></div>)}
     </dl>}
     {adding
       ? <AddBankAccountForm onCancel={() => setAdding(false)} onSaved={(name) => { setAdding(false); toast.success("Bank account saved", name); void recipients.refetch(); }} />
       : <button type="button" className="appButton mxStart" onClick={() => setAdding(true)}><Plus aria-hidden="true" /> Add bank account</button>}
     {ready.length > 0 ? <PayoutForm key={ready.map((item) => item.id).join(",")} banks={ready} />
-      : !adding && <p className="mxHint">Add a bank account to send money to it.</p>}
+      : !adding && <p className="mxHint">{banks.length ? "Your bank account can receive money once its waiting period ends." : "Add a bank account to send money to it."}</p>}
   </>;
 }
 

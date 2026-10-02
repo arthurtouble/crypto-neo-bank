@@ -30,15 +30,17 @@ export const PATCH = route("cards.controls", { unavailable: "card_unavailable", 
   const provider = await cardsProvider(env.PROJECTION_DB);
   const cardId = provider && await storedCardId(env.PROJECTION_DB, subject.subjectReference);
   if (!provider || !cardId) return errorResponse(404, "card_not_found", context, { message: "You don't have a card." });
-  const current = cardView(await getCard(provider.stripe, cardId));
-  const unfreezing = change.frozen === false && current.status === "frozen";
-  const raising = change.dailyLimitUsd !== undefined && (current.dailyLimitUsd === null || change.dailyLimitUsd > current.dailyLimitUsd);
+  // Freezing alone needs nothing from the card first, so it still works when Stripe can't be read.
+  const freezeOnly = change.frozen === true && change.dailyLimitUsd === undefined;
+  const current = freezeOnly ? null : cardView(await getCard(provider.stripe, cardId));
+  const unfreezing = change.frozen === false && current?.status === "frozen";
+  const raising = change.dailyLimitUsd !== undefined && (current?.dailyLimitUsd === null || change.dailyLimitUsd > (current?.dailyLimitUsd ?? 0));
   const now = new Date();
   if (unfreezing) await requireUnlocked(env.PROJECTION_DB, subject.subjectReference, now, "Your account is locked. Unlock it in Settings first.");
   if (unfreezing || raising) {
     const reasons = [unfreezing ? "unfreeze your card" : "", raising ? `raise your card's daily limit to ${change.dailyLimitUsd} USD` : ""].filter(Boolean);
     const asked = await confirmWithPasskey(env.PROJECTION_DB, { subject: subject.subjectReference, purpose: "card_controls",
-      payload: { cardId, change, from: { status: current.status, dailyLimitUsd: current.dailyLimitUsd } }, summary: reasons.join(" and "), confirmation, traceId: context.traceId });
+      payload: { cardId, change, from: { status: current?.status, dailyLimitUsd: current?.dailyLimitUsd } }, summary: reasons.join(" and "), confirmation, traceId: context.traceId });
     if (asked) return asked;
   }
   const card = await updateCard(provider.stripe, cardId, { status: change.frozen === undefined ? undefined : change.frozen ? "inactive" : "active",

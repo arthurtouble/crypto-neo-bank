@@ -12,7 +12,7 @@ export class BridgeClient {
     this.baseUrl = baseUrl.replace(/\/$/, "");
   }
 
-  async request<T>(path: string, schema: z.ZodType<T>, init: { method?: "GET" | "POST"; body?: unknown; idempotencyKey?: string } = {}): Promise<T> {
+  async request<T>(path: string, schema: z.ZodType<T>, init: { method?: "GET" | "POST" | "DELETE"; body?: unknown; idempotencyKey?: string } = {}): Promise<T> {
     const method = init.method ?? "GET";
     const response = await this.fetcher(`${this.baseUrl}${path}`, {
       method, signal: AbortSignal.timeout(12_000),

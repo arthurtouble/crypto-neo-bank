@@ -107,6 +107,7 @@
 .appFrame .mxAmountRow select { height: 56px; }
 .appFrame .mxField .mxMonoInput { font-family: var(--font-mono); font-size: var(--text-small-size); }
 .appFrame .mxInlineButton { height: auto; padding: 0; vertical-align: baseline; font-size: inherit; }
+.appFrame .mxBankRow { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: flex-end; gap: var(--space-3); font-weight: var(--weight-regular); color: var(--color-text-secondary); }
 .appFrame .mxFaces { display: flex; gap: var(--space-2); overflow-x: auto; padding-bottom: 2px; scrollbar-width: thin; }
 .appFrame .mxFaces button { flex: none; width: 104px; display: grid; justify-items: center; gap: 2px; padding: var(--space-2) var(--space-1); border: 1px solid transparent; border-radius: var(--radius-md); background: none; color: var(--color-text); font: inherit; text-align: center; cursor: pointer; }
 .appFrame .mxFaces button:hover { background: var(--color-hover); }
