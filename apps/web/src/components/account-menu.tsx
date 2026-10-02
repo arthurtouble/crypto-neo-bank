@@ -20,7 +20,7 @@ export function useDismiss(open: boolean, close: () => void, root: RefObject<HTM
 }
 
 function accountLabel(user: AuthUser | null) {
-  return user?.email?.address ?? user?.google?.email ?? user?.apple?.email ?? "Aura account";
+  return user?.email?.address ?? user?.google?.email ?? (user?.telegram?.username ? `@${user.telegram.username}` : null) ?? "Aura account";
 }
 
 function initial(value: string) {

@@ -41,8 +41,8 @@ export default function Web3RuntimeProvider({ loginRequested, onLoginOpened, chi
     <PrivyProvider
       appId={PRIVY_APP_ID}
       config={{
-        // Google and Apple also have to be turned on for the Privy app in Privy's dashboard (production-launch.md).
-        loginMethods: ["email", "google", "apple", "wallet"],
+        // Google and Telegram also have to be turned on for the Privy app in Privy's dashboard (production-launch.md).
+        loginMethods: ["email", "google", "telegram", "wallet"],
         defaultChain: HOME_CHAIN,
         supportedChains: [...SUPPORTED_CHAINS],
         appearance: {

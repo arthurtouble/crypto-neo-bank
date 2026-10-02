@@ -1,6 +1,6 @@
 ---
 title: Get started with Aura
-description: Look around Aura with example data, sign in with email, Google, Apple, or a wallet, add a passkey, and understand your account before you add money.
+description: Look around Aura with example data, sign in with email, Google, Telegram, or a wallet, add a passkey, and understand your account before you add money.
 ---
 
 ## Look around
@@ -11,7 +11,7 @@ You don't need an account to look around. Browse Overview, Deposit, Send, Swap, 
 
 ## Sign in and your account
 
-Select **Create account or sign in** and use your email, Google, Apple, or a wallet. Your first sign-in creates your account. Privy, an independent company, runs sign-in for Aura. Pick a method you can recover. Aura can't restore a lost sign-in.
+Select **Create account or sign in** and use your email, Google, Telegram, or a wallet. Your first sign-in creates your account. Privy, an independent company, runs sign-in for Aura. Pick a method you can recover. Aura can't restore a lost sign-in.
 
 Privy makes a wallet for you when you first sign in. That wallet is your Aura account. It has the same address on every network.
 

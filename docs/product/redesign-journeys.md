@@ -60,7 +60,7 @@ Each journey is drawn step by step in the storyboards. The frame numbers (J5.3 a
 
 - **J0 Get around.** The desktop sidebar with the ten sections. On the phone, the floating menu button and the sheet of ten tiles.
 - **J1 Explore as a guest.** Every section with example data and a banner. Any action opens sign-in (a dialog on desktop, a sheet on the phone).
-- **J2 Sign in and accept the terms.** Sign-in (Privy: email, Google, Apple, or wallet), then the terms on their own full screen, with Log out as the way out. There's no app shell behind it; the three documents are rows and the checkbox is required. Then:
+- **J2 Sign in and accept the terms.** Sign-in (Privy: email, Google, Telegram, or wallet), then the terms on their own full screen, with Log out as the way out. There's no app shell behind it; the three documents are rows and the checkbox is required. Then:
   - A first Overview with the four ways to deposit.
   - A "Secure your account" checklist: add a passkey, add an email.
   - A session that expires shows one banner on the current page.
