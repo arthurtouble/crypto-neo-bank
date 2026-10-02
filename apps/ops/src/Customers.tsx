@@ -1,12 +1,12 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Copy } from "lucide-react";
 import { useState, type FormEvent } from "react";
-import { api, short, when } from "./api";
+import { api, cents, short, tokens, when } from "./api";
 
-type Holding = { label: string; symbol: string; amountRaw: string | null; status: string };
+type Holding = { label: string; symbol: string; decimals: number; amountRaw: string | null; usdCents: number | null; status: string };
 type Account = { subjectReference: string; wallet: string; closedAt: string | null; closedReason: string | null; eligible: boolean; blockers: string[];
   holdings: Holding[]; observedAt: string };
-type Profile = { subjectReference: string; createdAt: string | null; closedAt: string | null;
+type Profile = { subjectReference: string; email: string | null; createdAt: string | null; closedAt: string | null;
   controls: { accountLocked: boolean; dailyLimitUsd: number | null; enforceAddressBook: boolean; updatedAt: string | null };
   auraTag: string | null; bank: { status: string; kycStatus: string | null } | null; card: { status: string; lastFour: string | null } | null;
   actions: { total: number; completed: number; failed: number; open: number; lastAt: string | null }; intercomUserId: string;
@@ -33,7 +33,7 @@ function ReasonAction({ label, disabled, onSubmit, pending }: { label: string; d
   </form>;
 }
 
-type Row = { subjectReference: string; createdAt: string; closedAt: string | null; accountLocked: boolean; auraTag: string | null;
+type Row = { subjectReference: string; email: string | null; createdAt: string; closedAt: string | null; accountLocked: boolean; auraTag: string | null;
   bankStatus: string | null; cardStatus: string | null; actions: number; lastActivityAt: string | null };
 
 /** Every customer, newest sign-up first, 50 at a time. */
@@ -52,7 +52,7 @@ function AllCustomers({ onOpen }: { onOpen: (subject: string) => void }) {
         <th scope="col">Transactions</th><th scope="col">Last activity</th></tr></thead>
       <tbody>{rows.map((row) => <tr key={row.subjectReference} className="clickable" onClick={() => onOpen(row.subjectReference)} data-testid="ops-customer-row">
         <td>{when(row.createdAt)}</td>
-        <td><button type="button" className="link" onClick={(event) => { event.stopPropagation(); onOpen(row.subjectReference); }}>{row.auraTag ? `@${row.auraTag}` : short(row.subjectReference)}</button></td>
+        <td><button type="button" className="link" onClick={(event) => { event.stopPropagation(); onOpen(row.subjectReference); }}>{row.email ?? (row.auraTag ? `@${row.auraTag}` : short(row.subjectReference))}</button></td>
         <td>{row.closedAt ? <span className="badge bad">Closed</span> : row.accountLocked ? <span className="badge warn">Locked</span> : <span className="badge good">Open</span>}</td>
         <td>{row.bankStatus ?? "—"}</td><td>{row.cardStatus ?? "—"}</td><td>{row.actions}</td><td>{when(row.lastActivityAt)}</td></tr>)}</tbody>
     </table></div>
@@ -61,10 +61,10 @@ function AllCustomers({ onOpen }: { onOpen: (subject: string) => void }) {
   </section>;
 }
 
-export function Customers({ onMovement }: { onMovement: (subject: string) => void }) {
+export function Customers({ subject, onMovement }: { subject: string | null; onMovement: (subject: string) => void }) {
   const client = useQueryClient();
-  const [input, setInput] = useState("");
-  const [query, setQuery] = useState("");
+  const [input, setInput] = useState(subject ?? "");
+  const [query, setQuery] = useState(subject ?? "");
   const [copied, setCopied] = useState<"" | "copied" | "failed">("");
   const lookup = useQuery({ queryKey: ["customer", query], queryFn: () => api<Lookup>(`accounts?q=${encodeURIComponent(query)}`), enabled: query.length > 0 });
   const act = useMutation({
@@ -90,7 +90,7 @@ export function Customers({ onMovement }: { onMovement: (subject: string) => voi
     {lookup.isError && <div className="notice error" role="alert">{lookup.error.message}</div>}
     {data && profile && <article className="customer" data-testid="ops-customer">
       <header>
-        <div><h2>{profile.auraTag ? `@${profile.auraTag}` : "Customer"}</h2><code>{profile.subjectReference}</code></div>
+        <div><h2>{profile.email ?? (profile.auraTag ? `@${profile.auraTag}` : "No email")}</h2><code>{profile.subjectReference}</code></div>
         <div className="badges">
           {data.account.closedAt ? <span className="badge bad">Closed</span> : <span className="badge good">Open</span>}
           {profile.controls.accountLocked && <span className="badge warn">Locked</span>}
@@ -98,6 +98,7 @@ export function Customers({ onMovement }: { onMovement: (subject: string) => voi
       </header>
       <dl className="facts">
         <div><dt>Joined</dt><dd>{when(profile.createdAt)}</dd></div>
+        <div><dt>Aura tag</dt><dd>{profile.auraTag ? `@${profile.auraTag}` : "None"}</dd></div>
         <div><dt>Wallet</dt><dd><code>{data.account.wallet}</code></dd></div>
         <div><dt>Bank (Bridge)</dt><dd>{profile.bank ? `${profile.bank.status}${profile.bank.kycStatus ? `, identity ${profile.bank.kycStatus}` : ""}` : "Not started"}</dd></div>
         <div><dt>Card</dt><dd>{profile.card ? `${profile.card.status}${profile.card.lastFour ? `, ending ${profile.card.lastFour}` : ""}` : "None"}</dd></div>
@@ -120,7 +121,8 @@ export function Customers({ onMovement }: { onMovement: (subject: string) => voi
       {profile.notices.emailFailed > 0 && <p className="muted">A failed email was refused or bounced by the customer&apos;s mail server. The notice is still in their app.</p>}
       <h3>Holdings <span className="muted">read from the chain {when(data.account.observedAt)}</span></h3>
       <ul className="holdings">{data.account.holdings.map((holding) => <li key={holding.label}>
-        <span>{holding.label}</span><span>{holding.status !== "observed" ? "Unavailable" : holding.amountRaw === "0" ? "Empty" : `Holds ${holding.symbol}`}</span></li>)}</ul>
+        <span>{holding.label}</span><span>{holding.status !== "observed" || holding.amountRaw === null ? "Unavailable" : holding.amountRaw === "0" ? "Empty"
+          : `${tokens(holding.amountRaw, holding.decimals, holding.symbol)}${holding.usdCents === null ? "" : ` · ${cents(holding.usdCents)}`}`}</span></li>)}</ul>
       {!data.account.closedAt && !data.account.eligible && <p className="muted">Can&apos;t close yet: {data.account.blockers.join("; ")}.</p>}
       <div className="actions">
         <button type="button" className="button" onClick={() => onMovement(profile.subjectReference)}>Money movement</button>

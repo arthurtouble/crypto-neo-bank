@@ -85,11 +85,11 @@ function CustomerHistory({ subject, onOpen }: { subject: string; onOpen: (id: st
   </>;
 }
 
-export function Movement({ subject, onClearSubject }: { subject: string | null; onClearSubject: () => void }) {
+export function Movement({ subject, action, onClearSubject }: { subject: string | null; action: string | null; onClearSubject: () => void }) {
   const [status, setStatus] = useState("");
   const [kind, setKind] = useState("");
   const [stuck, setStuck] = useState(false);
-  const [open, setOpen] = useState<string | null>(null);
+  const [open, setOpen] = useState<string | null>(action);
   const filter = new URLSearchParams({ ...(status ? { status } : {}), ...(kind ? { kind } : {}), ...(stuck ? { stuck: "1" } : {}), ...(subject ? { subject } : {}) });
   const list = useInfiniteQuery({
     queryKey: ["actions", filter.toString()], initialPageParam: null as string | null,

@@ -87,7 +87,7 @@ export async function pauseAsset(page: Page, assetId: string, paused: boolean) {
 
 /** Turn a feature switch on or off through the operations API, as an operator would. */
 export async function setFeature(page: Page, key: string, enabled: boolean) {
-  const response = await page.request.patch("/api/ops/features", { headers: { ...await operatorHeaders(), ...fresh }, data: { key, enabled } });
+  const response = await page.request.patch("/api/ops/features", { headers: { ...await operatorHeaders(), ...fresh }, data: { key, enabled, reason: "End-to-end test setup" } });
   if (!response.ok()) throw new Error(`setting ${key} failed: ${response.status()}`);
 }
 

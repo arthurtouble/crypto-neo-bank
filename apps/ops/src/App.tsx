@@ -15,11 +15,15 @@ const pages = [
 ] as const;
 type Page = (typeof pages)[number]["key"];
 
-/** Where we are: `#movement?subject=did:privy:…` opens Money movement for one customer. */
-function readHash(): { page: Page; subject: string | null } {
+/**
+ * Where we are: `#customers?subject=did:privy:…` opens one customer, `#movement?subject=…` Money movement for one
+ * customer, and `&action=<id>` that action's journey.
+ */
+function readHash(): { page: Page; subject: string | null; action: string | null } {
   const [page, query] = location.hash.slice(1).split("?");
   const known = pages.some((item) => item.key === page) ? page as Page : "customers";
-  return { page: known, subject: new URLSearchParams(query ?? "").get("subject") };
+  const params = new URLSearchParams(query ?? "");
+  return { page: known, subject: params.get("subject"), action: params.get("action") };
 }
 
 export function App() {
@@ -42,8 +46,8 @@ export function App() {
     </nav>
     <main className="main">
       {me.isError ? <div className="notice error" role="alert">{me.error.message}</div> : <>
-        {location_.page === "customers" && <Customers onMovement={(subject) => go("movement", subject)} />}
-        {location_.page === "movement" && <Movement subject={location_.subject} onClearSubject={() => go("movement")} />}
+        {location_.page === "customers" && <Customers key={location_.subject ?? ""} subject={location_.subject} onMovement={(subject) => go("movement", subject)} />}
+        {location_.page === "movement" && <Movement key={location_.action ?? ""} subject={location_.subject} action={location_.action} onClearSubject={() => go("movement")} />}
         {location_.page === "stats" && <Stats />}
         {location_.page === "controls" && <Controls />}
       </>}
