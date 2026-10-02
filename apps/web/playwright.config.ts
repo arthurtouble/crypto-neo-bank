@@ -11,6 +11,9 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   retries: process.env.CI ? 2 : 0,
+  // GitHub's runners take longer than 5 s to hydrate a dev-mode page in a fresh browser context, so a guest page can
+  // still be on its server-rendered "Loading" when the first check runs.
+  expect: { timeout: process.env.CI ? 15_000 : 5_000 },
   reporter: [["list"], ["html", { outputFolder: "../../output/playwright-report", open: "never" }]],
   use: { baseURL: serverURL, trace: "retain-on-failure", screenshot: "only-on-failure" },
   webServer: {
