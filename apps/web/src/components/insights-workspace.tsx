@@ -15,7 +15,6 @@ type Insights = {
   periodDays: number;
   completedCount: number;
   totals: { incoming: number; outgoing: number; allocation: number; movement: number; unvalued: number };
-  categories: Array<{ name: string; value: number }>;
   over: { unit: "day" | "week" | "month"; buckets: InsightBucket[] };
   topMerchants: InsightMerchant[];
   /** False when money received or card refunds couldn't all be read: money in is then unknown, not zero. */

@@ -163,10 +163,10 @@ export function entryAmount(entry: ActivityEntry) {
   return entry.toAmount && entry.toAsset && (entry.type === "swap" || entry.type === "bridge") ? `${paid} for ${entry.toAmount} ${entry.toAsset}` : paid;
 }
 
-/** Money in, money out, or moved within the account, for Insights. */
+/** Money in, money out, or moved within the account, for Insights. Borrowing and repaying aren't income or spending. */
 export function entryDirection(type: EntryType): "in" | "out" | "earn" | "moved" | "other" {
-  if (type === "received" || type === "bank_deposit" || type === "card_refund" || type === "borrow") return "in";
-  if (type === "sent" || type === "bank_payout" || type === "card_payment" || type === "repay") return "out";
+  if (type === "received" || type === "bank_deposit" || type === "card_refund") return "in";
+  if (type === "sent" || type === "bank_payout" || type === "card_payment") return "out";
   if (type === "earn_deposit") return "earn";
   if (type === "swap" || type === "bridge") return "moved";
   return "other";
