@@ -5,8 +5,7 @@ import { useMemo, useState } from "react";
 import { accountEmail } from "@/lib/client/account-email";
 import { useAuth } from "@/lib/client/auth";
 import { useWallet } from "@/lib/client/wallet-context";
-import { SettingRow } from "./setting-row";
-import { useToast } from "./toast";
+import { SettingRow, useSettingsToast } from "./setting-row";
 
 /**
  * How the customer signs in and protects the account. Privy holds the sign-in
@@ -18,8 +17,10 @@ import { useToast } from "./toast";
 export function SecurityCenter() {
   const { user } = useAuth();
   const { wallets, mfaMethods, showMfaEnrollmentModal, exportWallet, linkEmail: startLinkEmail, updateEmail } = useWallet();
-  const toast = useToast();
+  const toast = useSettingsToast();
   const [exporting, setExporting] = useState(false);
+  // Exporting is the riskiest thing in Settings, so it asks once more and says what the controls can't cover.
+  const [confirmingExport, setConfirmingExport] = useState(false);
   const linkEmail = () => startLinkEmail({
     onSuccess: ({ linkMethod }) => { if (linkMethod === "email") toast.success("Email added"); },
     onError: (error) => { if (error !== "exited_link_flow") toast.error("Email not added", "Try again."); }
@@ -32,18 +33,24 @@ export function SecurityCenter() {
   async function exportKey() {
     if (!wallet) return;
     setExporting(true);
+    setConfirmingExport(false);
     try { await exportWallet({ address: wallet.address }); }
     catch { toast.error("Key not exported", "Try again."); }
     finally { setExporting(false); }
   }
 
   // The passkey leads (journey J15): every money action needs it.
-  return <section className="mxCard stCard" aria-labelledby="sign-in-heading"><h2 id="sign-in-heading">Sign-in and security</h2>
+  return <section className="mxCard stCard" aria-labelledby="sign-in-heading"><h2 id="sign-in-heading">Passkey and sign-in</h2>
     <SettingRow title="Passkey" detail={passkeyReady ? "Added. Needed to move money and to loosen your controls." : "Add one to move money."}>
       {passkeyReady ? <span className="stState">Added</span> : <button type="button" className="appButton appButtonPrimary" onClick={() => showMfaEnrollmentModal()}>Add passkey</button>}</SettingRow>
     <SettingRow id="email" title="Email" detail={email?.source === "google" ? `${email.address}, from Google. Used for email notices.` : `${email?.address ?? "Your email"}. Used to sign in and for email notices.`}>
       <button type="button" className="appButton" onClick={() => email?.source === "google" ? linkEmail() : updateEmail()}>{email?.source === "google" ? "Use another email" : "Change"}</button></SettingRow>
-    <SettingRow title="Wallet key" detail="Export your account's key to use it in another wallet. Anyone with the key can move your money.">
-      <button type="button" className="appButton" disabled={!wallet || exporting} onClick={() => void exportKey()}>{exporting ? <LoaderCircle className="spin" aria-hidden="true" /> : "Export"}</button></SettingRow>
+    <SettingRow title="Account key" detail={confirmingExport
+      ? "Anyone with this key can move your money. Your lock, daily limit, and saved recipients only don't apply in another wallet. Never share it."
+      : "Export your account's key to use it in another wallet."}>
+      {confirmingExport
+        ? <><button type="button" className="appButton" onClick={() => setConfirmingExport(false)}>Cancel</button>
+          <button type="button" className="appButton appButtonPrimary" disabled={!wallet || exporting} onClick={() => void exportKey()}>Export key</button></>
+        : <button type="button" className="appButton" disabled={!wallet || exporting} onClick={() => setConfirmingExport(true)}>{exporting ? <LoaderCircle className="spin" aria-hidden="true" /> : "Export"}</button>}</SettingRow>
   </section>;
 }
