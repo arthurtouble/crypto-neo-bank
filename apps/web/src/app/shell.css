@@ -160,6 +160,7 @@ html[data-balance-privacy="hidden"] .sensitiveAmount { filter: blur(7px); opacit
 .appScreenBody .appBrand { justify-self: start; padding: 0; }
 .appScreenBody h1 { margin: var(--space-2) 0 0; font-size: var(--text-title-1-size); line-height: var(--text-title-1-line); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-tight); }
 .appScreenBody p { margin: 0; color: var(--color-text-secondary); }
+.appScreenActions { display: grid; gap: var(--space-2); }
 .appDocList { margin: 0; padding: 0; list-style: none; border: 1px solid var(--color-line); border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: var(--shadow-1); }
 .appDocList li + li { border-top: 1px solid var(--color-line); }
 .appDocList a { display: flex; align-items: center; justify-content: space-between; min-height: var(--row-height); padding: 0 var(--space-4); color: var(--color-text); font-weight: var(--weight-medium); text-decoration: none; }

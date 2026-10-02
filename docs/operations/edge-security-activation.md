@@ -11,7 +11,7 @@ Application-level controls are already active. These settings need the final cus
 - Documentation: `docs.<approved-domain>` → `aurel-docs`
 - Operations: `ops.<approved-domain>` → `aurel-ops`, behind Cloudflare Access (below)
 - Aura has no status page; announce incidents through the customer communication templates.
-- Update Privy allowed origins, Intercom's allowed domains, CSP, OpenAPI servers, documentation links, and the production smoke target together. The CSP (`apps/web/next.config.ts`) allows `https://js.stripe.com` in `script-src` and `https://js.stripe.com https://*.stripe.com` in `frame-src` for Stripe's card details and Add to Wallet frames; keep them when tightening it.
+- Update Privy allowed origins, Intercom's allowed domains, CSP, OpenAPI servers, documentation links, and the production smoke target together. The CSP (`apps/web/src/lib/http/security-headers.ts`, mirrored in `public/_headers`) allows `https://js.stripe.com` in `script-src` and `https://js.stripe.com https://*.stripe.com` in `frame-src` for Stripe's card details and Add to Wallet frames, and `https://telegram.org` in `script-src` and `https://oauth.telegram.org` in `frame-src` for Telegram sign-in through Privy; keep them when tightening it.
 
 ## Cloudflare Access
 

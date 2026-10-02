@@ -47,7 +47,7 @@ test("theme and private access gate remain usable", async ({ page }) => {
   await page.getByRole("link", { name: "Earn" }).click();
   await expect(page.getByRole("heading", { name: "Earn" })).toBeVisible();
   await expect(page.getByText("Example data", { exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: /Sign in to continue/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Create account or sign in/ })).toBeVisible();
 });
 
 test("⌘K finds actions as well as pages, and opens where each happens (B4)", async ({ page }) => {
@@ -81,7 +81,7 @@ test("every Aura section is browsable with labeled fictional data", async ({ pag
     await page.goto(`/app/${section}`);
     await expect(page.getByRole("heading", { name: section[0].toUpperCase() + section.slice(1), exact: true })).toBeVisible();
     await expect(page.getByText("Example data", { exact: true })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Sign in to continue" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Create account or sign in" })).toBeVisible();
   }
 });
 

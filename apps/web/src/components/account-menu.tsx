@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth, type AuthUser } from "@/lib/client/auth";
-import { LogIn, LogOut } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
 import { useAuraWallet } from "@/lib/client/use-aura-wallet";
 import { shortAddress } from "@/lib/format";
@@ -20,11 +20,11 @@ export function useDismiss(open: boolean, close: () => void, root: RefObject<HTM
 }
 
 function accountLabel(user: AuthUser | null) {
-  return user?.email?.address ?? user?.google?.email ?? "Aura account";
+  return user?.email?.address ?? user?.google?.email ?? (user?.telegram?.username ? `@${user.telegram.username}` : null) ?? "Aura account";
 }
 
-function initials(value: string) {
-  return value.split(/\s|@/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("") || "A";
+function initial(value: string) {
+  return value.match(/[a-z0-9]/i)?.[0]?.toUpperCase() ?? "A";
 }
 
 const walletText = (address?: string) => address ? shortAddress(address) : "Wallet preparing";
@@ -40,20 +40,19 @@ export function AccountDetails() {
   </div>;
 }
 
-/** Top bar, right: Sign in for guests; for customers, an avatar that opens the account menu (desktop only). */
+/** Top bar, right, for customers: an avatar that opens the account menu (desktop only). Guests sign in from the example-data banner. */
 export function AccountMenu() {
-  const { authenticated, ready, login, user } = useAuth();
+  const { authenticated, user } = useAuth();
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const button = useRef<HTMLButtonElement>(null);
   const close = useCallback(() => setOpen(false), []);
   useDismiss(open, close, root, button);
 
-  if (!authenticated) return <button type="button" className="appButton appButtonPrimary" disabled={!ready} aria-label="Sign in to Aura" onClick={() => login()}>
-    <LogIn aria-hidden="true" />Sign in</button>;
+  if (!authenticated) return null;
   return <div className="appAccountMenu" ref={root}>
     <button ref={button} type="button" className="appAvatar" aria-label="Account" aria-expanded={open} aria-haspopup="dialog" onClick={() => setOpen(!open)}>
-      {initials(accountLabel(user))}</button>
+      {initial(accountLabel(user))}</button>
     {open && <div className="appPopover" role="dialog" aria-label="Account"><AccountDetails /></div>}
   </div>;
 }

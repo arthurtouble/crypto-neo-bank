@@ -91,7 +91,7 @@ function MenuSheet({ pathname }: { pathname: string }) {
           </nav>
           {authenticated ? <AccountDetails /> : <div className="appAccount">
             <div className="appAccountRow"><span>Theme</span><ThemeChoice /></div>
-            <button type="button" className="appButton appButtonPrimary" disabled={!ready} onClick={() => { setOpen(false); login(); }}><LogIn aria-hidden="true" />Sign in</button>
+            <button type="button" className="appButton appButtonPrimary" disabled={!ready} onClick={() => { setOpen(false); login(); }}><LogIn aria-hidden="true" />Create account or sign in</button>
           </div>}
         </Dialog.Content>
       </Dialog.Portal>
