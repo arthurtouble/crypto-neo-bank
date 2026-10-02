@@ -10,7 +10,7 @@ The workflow needs two secrets on the `dev` GitHub environment (Settings → Env
 
 When GitHub Actions can't run (for example, the month's minutes are used up and jobs fail within seconds with no runner), do both jobs by hand:
 
-- **Checks:** `pnpm ci:local` runs what `ci.yml` and `security.yml` run, including `pnpm audit`. Add `--e2e` for both Playwright projects. gitleaks and CodeQL run only if installed; the summary lists what was skipped. Merge once it passes.
+- **Checks:** `pnpm ci:local` runs what `ci.yml` and `security.yml` run, including `pnpm audit`. Add `--e2e` for both Playwright projects (the full suite; CI runs it nightly, and pull requests run only the specs for what they change). gitleaks and CodeQL run only if installed; the summary lists what was skipped. Merge once it passes.
 - **Deploy:** after merging, check out and pull `main`, then run `pnpm deploy:dev:all`. It runs the same steps as `deploy-dev.yml` (migrations, the four Workers, the smoke), stops unless `main` is clean and matches `origin/main`, needs `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` in the environment, and only targets `--env dev`.
 
 To deploy single Workers from a machine:

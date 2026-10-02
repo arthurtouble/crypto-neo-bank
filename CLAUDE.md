@@ -27,7 +27,7 @@ pnpm production:check   # what the production Worker config still lacks (exits 1
 ```
 
 A single unit test: `pnpm --filter @aurel/web exec vitest run tests/unit/<file>.test.ts`.
-CI (`.github/workflows/ci.yml`) runs lint, `typecheck:all`, `test:unit`, build, and `test:recovery` in one job, and e2e as two parallel jobs (desktop and mobile Chromium; the tests share one fake chain, so each project runs one test at a time). Run the first three before pushing.
+CI (`.github/workflows/ci.yml`) runs lint, `typecheck:all`, `test:unit`, build, and `test:recovery` in one job. On a pull request, e2e runs only the specs for the features it changes, plus `sign-in-overview`, on desktop and mobile Chromium in parallel; `scripts/e2e-select.mjs` picks them, and shared code, e2e support, config, or migrations run every spec. The full e2e suite runs nightly on `main`, by hand (`workflow_dispatch`), and on a pull request labelled `full-e2e`, split into 4 shards per browser. Add the label for changes that cut across features. A red nightly run is the next thing to fix. Run the first three checks before pushing; `node scripts/e2e-select.mjs` shows which specs your branch will run.
 
 ## Current plan: launch
 

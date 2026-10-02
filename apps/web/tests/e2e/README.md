@@ -36,4 +36,12 @@ Use the helpers in `support/session.ts`:
 
 Each feature has one spec named after it, covering every step and failure listed in its pull request.
 
+## What CI runs
+
+A pull request runs only the specs for the features it changes, plus `sign-in-overview` as a smoke test. `scripts/e2e-select.mjs` maps changed paths to specs. Shared code (`lib/actions`, `lib/auth`, `lib/http`, the shell, `support/`, config, migrations, and any app file the map doesn't recognise) runs every spec. Run `node scripts/e2e-select.mjs` to see what your branch will run, and run the same specs locally with `pnpm test:e2e tests/e2e/<feature>.spec.ts`.
+
+When you add a spec, add its feature and path words to `features` in `scripts/e2e-select.mjs`; `scripts/e2e-select.test.mjs` fails until you do.
+
+The full suite runs every night on `main`, from the Actions tab (`workflow_dispatch`), and on a pull request labelled `full-e2e`, split with `--shard` into 4 jobs per browser. Each job has its own server and fake chain.
+
 To rerun against a server that's already running, start `node tests/e2e/support/serve.mjs` and set `AUREL_E2E_USE_EXISTING=1`.
