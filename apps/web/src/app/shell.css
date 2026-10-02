@@ -206,13 +206,10 @@ html[data-balance-privacy="hidden"] .sensitiveAmount { filter: blur(7px); opacit
   .appPhoneOnly { display: contents; }
   .appFrame .appTopbar { height: 56px; }
   .appFrame .appTopbar .appBrand { padding: 0; }
-  /* 100px clear of the floating menu button, plus the safe area it sits above */
+  /* 100px clear at the end of every page, plus the safe area, so the last button can always scroll above the menu button (78px) */
   .appFrame .appContent { padding-bottom: calc(100px + env(safe-area-inset-bottom)); }
   .appMenuButton { position: fixed; z-index: 50; left: 50%; bottom: calc(22px + env(safe-area-inset-bottom)); transform: translateX(-50%); width: var(--menu-button); height: var(--menu-button); display: grid; place-items: center; padding: 0; border: 0; border-radius: var(--radius-pill); background: var(--color-text); color: var(--color-canvas); box-shadow: var(--shadow-2); cursor: pointer; }
   .appMenuButton svg { width: 22px; height: 22px; stroke-width: var(--icon-stroke); }
-  /* Fades out while the page scrolls down or a form is under it (useMenuStepsAside), so it never covers a control. */
-  .appMenuButton { transition: opacity var(--duration-fast) var(--ease-enter), visibility 0s linear 0s; }
-  .appMenuButton[data-stepped-aside] { opacity: 0; visibility: hidden; pointer-events: none; transition: opacity var(--duration-fast) var(--ease-enter), visibility 0s linear var(--duration-fast); }
   .appInbox { position: fixed; z-index: 65; inset: 0; width: auto; max-width: none; max-height: none; border: 0; border-radius: 0; box-shadow: none; align-content: start; padding: var(--space-2) var(--page-pad-x) var(--space-8); }
   .appFrame .appInboxBack { display: grid; }
   .appFrame:has(.appInbox) .appMenuButton { display: none; }
@@ -223,7 +220,7 @@ html[data-balance-privacy="hidden"] .sensitiveAmount { filter: blur(7px); opacit
   @keyframes appToastIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
 }
 
-@media (prefers-reduced-motion: reduce) { .toast { animation: none; } .appMenuButton, .appMenuButton[data-stepped-aside] { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .toast { animation: none; } }
 
 /* ⌘K search (change B4): actions first, then pages, in the shared dialog frame (a sheet on the phone) */
 .cmDialog { gap: var(--space-2); padding: var(--space-3); }
