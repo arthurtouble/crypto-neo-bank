@@ -4,6 +4,7 @@ import { useAuth } from "@/lib/client/auth";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { LoaderCircle, MessageCircle } from "lucide-react";
+import { useAccountClosed } from "./account-closed";
 import { GuestBanner } from "./guest-banner";
 import { SettingRow } from "./setting-row";
 import { useSupportChat } from "./support-chat";
@@ -21,26 +22,28 @@ export function SupportWorkspace() {
   const chat = useSupportChat();
   const closing = useSearchParams().get("topic") === "close-account";
   const chatReady = chat.status === "ready";
+  const closed = useAccountClosed();
 
   // Guests read the articles; chat is for signed-in customers, so its buttons sign in first. The banner's
   // "Create account or sign in" stays the only primary button for guests.
   const chatButton = (label: string, message?: string, primary = false) => isExample
     ? <button type="button" className="appButton" onClick={login}>{label}</button>
     : <button type="button" className={`appButton${primary ? " appButtonPrimary" : ""}`} disabled={!chatReady} onClick={() => chat.open(message)}>
-      {chat.status === "loading" ? <LoaderCircle className="spin" aria-hidden="true" /> : primary ? <MessageCircle aria-hidden="true" /> : null} {label}</button>;
+      {primary ? chat.status === "loading" ? <LoaderCircle className="spin" aria-hidden="true" /> : <MessageCircle aria-hidden="true" /> : null} {label}</button>;
 
   return <div className="mxPage stPage suPage">
     {(isExample || !ready) && <GuestBanner onSignIn={login} ready={ready} />}
-    <header className="stHead"><h1>Support</h1></header>
+    <header className="stHead"><h1>Support</h1>
+      {closed && <p className="mxHint">Your account is closed. Chat with us if you think this is a mistake.</p>}</header>
     <section className="mxCard stCard" aria-labelledby="help-heading"><h2 id="help-heading">Get help</h2>
       <ul className="stRows">
         {closing && <li><SettingRow title="Close your account" detail="Move your money out first. We close accounts with no funds left, and keep the records the law requires.">
           {chatButton("Ask to close", "Please close my Aura account. I've moved all my money out.", true)}</SettingRow></li>}
-        <li><SettingRow title="Chat with us" detail={!isExample && chat.status === "unavailable" ? "Chat isn't available right now. Try again later."
-          : "Aura's assistant answers straight away, and our team takes over when it can't help. Never share a seed phrase, private key, or one-time code."}>
+        <li><SettingRow title="Chat with us" detail={!isExample && chat.status === "unavailable" ? "Chat isn't available right now. Try again later, or read the help articles."
+          : <>Our assistant answers first, and our team takes over if needed.<br />Never share a seed phrase, private key, or one-time code.</>}>
           {chatButton("Chat", undefined, !closing)}</SettingRow></li>
-        <li><SettingRow title="Help articles" detail="Getting started, account controls, and what's available now.">
-          <a className="appButton" href={`${docs}/getting-started/setup/`}>Open</a></SettingRow></li>
+        <li><SettingRow title="Help articles" detail="Guides to using Aura.">
+          <a className="appButton" href={`${docs}/`}>Open</a></SettingRow></li>
       </ul>
     </section>
     <section className="mxCard stCard" aria-labelledby="report-heading"><h2 id="report-heading">Report a problem</h2>
