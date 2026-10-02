@@ -182,7 +182,7 @@ describe("delivering notices", () => {
       return new Response(null, { status: url.endsWith("gone") ? 410 : url.includes("resend") ? 200 : 201 });
     }) as unknown as typeof fetch;
     await deliverPending(db, { fetcher, email: async () => "alice@example.com" });
-    const pushes = sent.filter(({ url }) => url.startsWith("https://fcm.googleapis.com"));
+    const pushes = sent.filter(({ url }) => new URL(url).hostname === "fcm.googleapis.com");
     expect(pushes).toHaveLength(2);
     const headers = new Headers(pushes[0].init.headers);
     expect(headers.get("content-encoding")).toBe("aes128gcm");
