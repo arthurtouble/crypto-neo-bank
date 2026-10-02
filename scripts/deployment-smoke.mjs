@@ -71,7 +71,7 @@ assert(healthBody.dependencies?.operationalDatabase === "ok", "health confirms t
 for (const path of ["/app", "/app/deposit", "/app/earn", "/app/support"]) {
   const response = await request(path);
   const html = await response.text();
-  assert(response.ok && html.includes("Getting your wallet ready") && /<meta name="robots" content="noindex/.test(html), `${path} serves the app shell, not indexed (${response.status})`);
+  assert(response.ok && /class="appLoading"[^>]*>.*?<p>Loading<\/p>/s.test(html) && /<meta name="robots" content="noindex/.test(html), `${path} serves the app shell, not indexed (${response.status})`);
 }
 const unknownTag = await request(`/pay/${crypto.randomUUID().replaceAll("-", "")}`);
 assert(unknownTag.ok && (await unknownTag.text()).includes("Payment page unavailable"), "unknown Aura tag reveals no recipient");
