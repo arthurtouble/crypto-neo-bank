@@ -1,5 +1,6 @@
 "use client";
 
+import { accountEmail } from "@/lib/client/account-email";
 import { useAuth } from "@/lib/client/auth";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
@@ -98,7 +99,7 @@ export function NotificationPreferences() {
   const client = useQueryClient();
   const toast = useToast();
   const push = useBrowserPush();
-  const email = user?.email?.address;
+  const email = accountEmail(user)?.address;
   const preferences = useQuery({ queryKey: ["preferences", user?.id], queryFn: () => api<PreferencesResponse>("/api/preferences"), enabled: Boolean(user) });
   const consent = useQuery({ queryKey: ["consent", user?.id], queryFn: () => api<ConsentResponse>("/api/privacy/consent"), enabled: Boolean(user) });
   const saveEmail = useMutation({
@@ -118,9 +119,8 @@ export function NotificationPreferences() {
 
   return <section className="mxCard stCard" id="notifications" aria-labelledby="notifications-heading"><h2 id="notifications-heading">Notifications</h2>
     <p className="mxHint">Everything shows in the app. Security notices, like a lock or a new recipient, are always sent.</p>
-    <SettingRow title="Transaction emails" detail={email ? `Money you receive, and when a send, swap, or Earn move completes or fails. Sent to ${email}.` : "Add an email in Security to get notices by email."}>
-      {email ? toggle("Transaction emails", transactionEmail, saveEmail.isPending, () => saveEmail.mutate(!transactionEmail))
-        : <a className="appButton" href="#email">Add email</a>}</SettingRow>
+    <SettingRow title="Transaction emails" detail={`Money you receive, and when a send, swap, or Earn move completes or fails. Sent to ${email ?? "your email"}.`}>
+      {toggle("Transaction emails", transactionEmail, saveEmail.isPending, () => saveEmail.mutate(!transactionEmail))}</SettingRow>
     <SettingRow title="Browser notifications" detail={push.state ? pushNotes[push.state] : "Checking this browser…"}>
       {push.state === "on" || push.state === "off"
         ? <Toggle label="Browser notifications" on={push.state === "on"} busy={push.busy}
@@ -129,7 +129,7 @@ export function NotificationPreferences() {
             toast.error("Notifications not turned on", pushFailure(error));
           })} />
         : null}</SettingRow>
-    {email && <SettingRow title="Product news" detail="Occasional emails about what's new in Aura. Off unless you turn it on.">
-      {toggle("Product news", marketing, saveMarketing.isPending || !consent.data, () => saveMarketing.mutate(!marketing))}</SettingRow>}
+    <SettingRow title="Product news" detail="Occasional emails about what's new in Aura. Off unless you turn it on.">
+      {toggle("Product news", marketing, saveMarketing.isPending || !consent.data, () => saveMarketing.mutate(!marketing))}</SettingRow>
   </section>;
 }

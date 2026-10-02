@@ -2,6 +2,7 @@
 
 import { LoaderCircle } from "lucide-react";
 import { useMemo, useState } from "react";
+import { accountEmail } from "@/lib/client/account-email";
 import { useAuth } from "@/lib/client/auth";
 import { useWallet } from "@/lib/client/wallet-context";
 import { SettingRow } from "./setting-row";
@@ -9,9 +10,10 @@ import { useToast } from "./toast";
 
 /**
  * How the customer signs in and protects the account. Privy holds the sign-in
- * methods and the wallet key: an email added here is verified by Privy with a
- * one-time code, becomes a way to sign in (so the account isn't tied to one
- * wallet), and is where Aura sends email notices. Aura doesn't keep a copy.
+ * methods and the wallet key. Every account has an email before it gets this
+ * far (components/terms-gate.tsx): one verified by Privy with a one-time code,
+ * which can be changed here, or the Google sign-in's, which can be replaced by
+ * adding one. Aura sends email notices there and doesn't keep a copy.
  */
 export function SecurityCenter() {
   const { user } = useAuth();
@@ -25,7 +27,7 @@ export function SecurityCenter() {
   const wallet = useMemo(() => wallets.find((item) => item.walletClientType === "privy") ?? wallets[0], [wallets]);
   // The server accepts a passkey or an authenticator app for money (`requireMoneyMfa`), so either counts here.
   const passkeyReady = mfaMethods.includes("passkey") || mfaMethods.includes("totp");
-  const email = user?.email?.address;
+  const email = accountEmail(user);
 
   async function exportKey() {
     if (!wallet) return;
@@ -39,8 +41,8 @@ export function SecurityCenter() {
   return <section className="mxCard stCard" aria-labelledby="sign-in-heading"><h2 id="sign-in-heading">Sign-in and security</h2>
     <SettingRow title="Passkey" detail={passkeyReady ? "Added. Needed to move money and to loosen your controls." : "Add one to move money."}>
       {passkeyReady ? <span className="stState">Added</span> : <button type="button" className="appButton appButtonPrimary" onClick={() => showMfaEnrollmentModal()}>Add passkey</button>}</SettingRow>
-    <SettingRow id="email" title="Email" detail={email ? `${email}. Used to sign in and for email notices.` : "Add an email to get notices by email and to sign in without your wallet."}>
-      <button type="button" className="appButton" onClick={() => email ? updateEmail() : linkEmail()}>{email ? "Change" : "Add email"}</button></SettingRow>
+    <SettingRow id="email" title="Email" detail={email?.source === "google" ? `${email.address}, from Google. Used for email notices.` : `${email?.address ?? "Your email"}. Used to sign in and for email notices.`}>
+      <button type="button" className="appButton" onClick={() => email?.source === "google" ? linkEmail() : updateEmail()}>{email?.source === "google" ? "Use another email" : "Change"}</button></SettingRow>
     <SettingRow title="Wallet key" detail="Export your account's key to use it in another wallet. Anyone with the key can move your money.">
       <button type="button" className="appButton" disabled={!wallet || exporting} onClick={() => void exportKey()}>{exporting ? <LoaderCircle className="spin" aria-hidden="true" /> : "Export"}</button></SettingRow>
   </section>;

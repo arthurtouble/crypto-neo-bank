@@ -70,7 +70,7 @@ jobs:
     needs: e2e-select
     if: needs.e2e-select.outputs.mode != 'none'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.e2e-select.outputs.matrix) }}

@@ -11,6 +11,9 @@ export class ApiError extends Error {
 /** Dispatched on `window` when the server answers 403 `account_closed`; `AccountClosedGate` (components/account-closed.tsx) listens. */
 export const ACCOUNT_CLOSED_EVENT = "aura:account-closed";
 
+/** Dispatched on `window` when the server answers 403 `terms_required`; `TermsGate` (components/terms-gate.tsx) shows the terms again. */
+export const TERMS_REQUIRED_EVENT = "aura:terms-required";
+
 /** Fetch an Aura API route with the customer's session, returning parsed JSON or throwing an ApiError. */
 export function useApi() {
   const { getAccessToken } = useAuth();
@@ -26,6 +29,8 @@ export function useApi() {
     const body = await response.json().catch(() => ({})) as { error?: string; message?: string };
     // A closed account: every page but Support shows the closed notice (components/account-closed.tsx).
     if (response.status === 403 && body.error === "account_closed") window.dispatchEvent(new Event(ACCOUNT_CLOSED_EVENT));
+    // New terms since the app loaded: show them before anything else.
+    if (response.status === 403 && body.error === "terms_required") window.dispatchEvent(new Event(TERMS_REQUIRED_EVENT));
     if (!response.ok) throw new ApiError(response.status, body.error ?? "request_failed", body.message ?? "Something went wrong. Try again.", body);
     return body as T;
   }, [getAccessToken]);

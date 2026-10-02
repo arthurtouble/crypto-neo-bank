@@ -172,29 +172,29 @@ test("the customer's own transactions show in the bell without a second toast", 
   await expect(page.locator(".toastRegion").getByText(/10 USDC/)).toHaveCount(0);
 });
 
-test("a customer who signed up with a wallet adds an email, verified by Privy, and then gets email notices there", async ({ page }) => {
-  const customer = await signIn(page, { email: false });
-  // Settings shows one area at a time: notifications, then security, where the email is.
+test("a customer who signed up with a wallet adds an email, verified by Privy, before using Aura, and gets email notices there", async ({ page }) => {
+  const customer = await newCustomer({ mfa: ["passkey"], email: false });
+  // The fake Privy session is set on each page load, so this test stays on one page once the email is added.
+  await setIdentity(page, customer, { signedIn: true });
   await page.goto("/app/settings#notifications");
-  await expect(page.getByText("Add an email in Security to get notices by email.")).toBeVisible({ timeout: 30_000 });
-  // No email yet: nothing to toggle, and product news isn't offered.
-  await expect(page.getByRole("button", { name: "Transaction emails" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Product news" })).toHaveCount(0);
-  await area(page, "Security");
-  await expect(page.getByText("Add an email to get notices by email and to sign in without your wallet.")).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole("heading", { name: "Add your email" })).toBeVisible({ timeout: 30_000 });
 
   // Closing Privy's email flow changes nothing.
   await page.getByRole("button", { name: "Add email" }).click();
-  await expect(page.getByText("Add an email to get notices by email and to sign in without your wallet.")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Add your email" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Add email" })).toBeEnabled();
 
   await page.evaluate(() => localStorage.setItem("aura-e2e-link-email", "new-owner@example.com"));
   await page.getByRole("button", { name: "Add email" }).click();
-  await expect(toast(page, "Email added")).toBeVisible({ timeout: 10_000 });
-  await expect(page.getByText("new-owner@example.com. Used to sign in and for email notices.")).toBeVisible();
-  await area(page, "Notifications");
+  await expect(page.getByRole("heading", { name: "Review Aura’s terms" })).toBeVisible({ timeout: 10_000 });
+  await page.getByRole("checkbox").check();
+  await page.getByRole("button", { name: "Continue" }).click();
+
+  await expect(page.getByText("new-owner@example.com", { exact: false }).first()).toBeVisible({ timeout: 30_000 });
   await expect(page.getByRole("button", { name: "Transaction emails" })).toHaveText("On");
   await expect(page.getByRole("button", { name: "Product news" })).toHaveText("Off");
   await area(page, "Security");
+  await expect(page.getByText("new-owner@example.com. Used to sign in and for email notices.")).toBeVisible();
 
   // Aura reads the address from Privy when it sends, so the next notice goes there.
   await lock(page).click();
