@@ -39,7 +39,7 @@ async function openOption(page: Page, title: string) {
 
 async function act(page: Page, title: string, direction: "Deposit" | "Withdraw", amount: string) {
   await openOption(page, title);
-  await form(page, title).getByLabel("Action").selectOption(direction.toLowerCase());
+  await form(page, title).getByRole("tab", { name: direction }).click();
   await form(page, title).getByLabel("Amount").fill(amount);
   await form(page, title).getByRole("button", { name: direction, exact: true }).click();
 }
@@ -75,7 +75,9 @@ test("USDC goes into Aave and comes back out, in part or all of it, checked agai
   expect(supply.calls!.map((call) => call.to.toLowerCase())).toEqual([ASSETS.usdc, AAVE_POOL]);
   expect(await held(page, customer, `aave:8453:${ASSETS.usdc}`)).toBe("10000000");
   await expect(page.getByTestId("position-aave-USDC")).toContainText("10 USDC", { timeout: 20_000 });
-  await expect(page.getByTestId("position-aave-USDC").locator(".liveAmount")).toHaveText(/^\$10\.\d{8}$/);
+  await expect(page.getByTestId("position-aave-USDC")).toContainText("$10.00");
+  // The amount clears once the money has moved.
+  await expect(form(page, "Aave USDC").getByLabel("Amount")).toHaveValue("");
 
   await page.locator(".toastRegion").getByRole("button").first().click().catch(() => undefined);
   await act(page, "Aave USDC", "Withdraw", "4");
@@ -100,7 +102,7 @@ test("USDC goes into a Morpho vault, and Withdraw all redeems every share", asyn
   await expect(page.getByTestId("position-steakhouse-prime-usdc")).toContainText(/19\.99\d* USDC/, { timeout: 20_000 });
 
   await page.locator(".toastRegion").getByRole("button").first().click().catch(() => undefined);
-  await form(page, "Steakhouse Prime USDC").getByLabel("Action").selectOption("withdraw");
+  await form(page, "Steakhouse Prime USDC").getByRole("tab", { name: "Withdraw" }).click();
   await form(page, "Steakhouse Prime USDC").getByRole("button", { name: "Withdraw all" }).click();
   await expect(toast(page, "Withdraw complete")).toBeVisible({ timeout: 30_000 });
   expect(await held(page, customer, `morpho:8453:${VAULTS.steakhouse}`)).toBe("0");
@@ -175,18 +177,29 @@ test("cancelling the passkey prompt deposits nothing", async ({ page }) => {
   expect(await relayed()).toEqual([]);
 });
 
-test("a position grows in real time at its yearly rate, to 8 decimals", async ({ page }) => {
+test("a position shows in plain dollars as last read, with its rate, here and on the Overview", async ({ page }) => {
   // 100 Steakhouse shares, worth 105 USDC, earning 4.41% a year.
   await openEarn(page, { [VAULTS.steakhouse]: "100000000000000000000" });
-  const position = page.getByTestId("position-steakhouse-prime-usdc").locator(".liveAmount");
-  await expect(position).toHaveText(/^\$105\.\d{8}$/, { timeout: 20_000 });
-  const read = async () => Number((await position.textContent())!.replace(/[$,]/g, ""));
-  const first = await read();
-  await page.waitForTimeout(1_500);
-  expect(await read()).toBeGreaterThan(first);
+  await expect(page.getByTestId("position-steakhouse-prime-usdc")).toContainText("$105.00", { timeout: 20_000 });
+  await expect(page.getByTestId("position-steakhouse-prime-usdc")).toContainText("105 USDC");
+  await expect(page.locator(".erPositions")).toContainText("Earning 4.41% a year");
+
+  // Deposit shows what the account holds, with Max; Withdraw shows what's in the vault.
+  await openOption(page, "Steakhouse Prime USDC");
+  await expect(form(page, "Steakhouse Prime USDC")).toContainText("In your account: 0 USDC");
+  await form(page, "Steakhouse Prime USDC").getByRole("tab", { name: "Withdraw" }).click();
+  await expect(form(page, "Steakhouse Prime USDC")).toContainText("In Steakhouse Prime USDC: 105 USDC");
 
   // The Overview shows the same position, with its rate, in plain dollars as last read.
   await page.goto("/app");
   await expect(page.getByTestId(`holding-morpho:8453:${VAULTS.steakhouse}`)).toContainText("Earning 4.41% a year", { timeout: 30_000 });
   await expect(page.getByTestId(`holding-morpho:8453:${VAULTS.steakhouse}`)).toContainText("$105.00");
+});
+
+test("Max fills in everything the account holds", async ({ page }) => {
+  await openEarn(page);
+  await openOption(page, "Aave USDC");
+  await expect(form(page, "Aave USDC")).toContainText("In your account: 50 USDC", { timeout: 20_000 });
+  await form(page, "Aave USDC").getByRole("button", { name: "Max" }).click();
+  await expect(form(page, "Aave USDC").getByLabel("Amount")).toHaveValue("50");
 });

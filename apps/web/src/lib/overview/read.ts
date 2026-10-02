@@ -25,7 +25,7 @@ export type Holding = {
   observedAt: string;
   /** When the price was last published, for a feed that pauses outside market hours (stocks, gold, the euro). */
   priceObservedAt?: string;
-  /** For an Earn position: the yearly rate it earns at, so a screen can show it growing between reads. */
+  /** For an Earn position: the yearly rate it earns at, shown beside its value. */
   apyPct?: number;
 };
 

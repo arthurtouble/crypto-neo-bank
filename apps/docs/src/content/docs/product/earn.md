@@ -26,7 +26,7 @@ None of these is a bank deposit, insured, or guaranteed.
 
 ## Depositing and withdrawing
 
-You confirm each deposit or withdrawal once, with your passkey; any token approval happens in the same step. Check the option, asset, and amount in the review first.
+You confirm each deposit or withdrawal once, with your passkey; any token approval happens in the same step. Check the option, asset, and amount before you confirm.
 
 - You need enough USDC or WETH in your account to deposit, and enough in the position to withdraw.
 - **Withdraw all** empties an Aave or Morpho position completely, including interest earned up to that moment.
@@ -37,10 +37,10 @@ Withdrawing depends on the lending markets having enough available. If a market 
 
 ## Your positions
 
-Positions show in three places: the Earn group on Overview, **Your positions** at the top of Earn, and each market or vault. Open a market or vault to deposit or withdraw.
+Positions show in three places: the Earn group on Overview, **Your positions** at the top of Earn, and each market or vault. Open a market or vault to deposit or withdraw: the **Deposit** tab shows how much you have in your account, with **Max**, and the **Withdraw** tab shows how much is in that position.
 
-Aura reads each position from the blockchain, then shows it growing live, to 8 decimals, at its current yearly rate: Aave's rate, or for a vault, Morpho's net rate after any fee. The live number is an estimate between reads; each new read replaces it.
+Aura reads each position from the blockchain and shows its value in dollars as last read, with its current yearly rate: Aave's rate, or for a vault, Morpho's net rate after any fee. Interest shows up at the next read.
 
-If Aura can't read a position, it shows it as unavailable, never as zero. If it can't read the rate, the position shows the amount read, without growing.
+If Aura can't read a position, it shows it as unavailable, never as zero. If it can't read the rate, the position shows without one.
 
 Smart contracts, price feeds, curators, governance, stablecoins, liquidity, and networks can fail or change. See the [risk disclosure](/legal/risk-disclosure/).
