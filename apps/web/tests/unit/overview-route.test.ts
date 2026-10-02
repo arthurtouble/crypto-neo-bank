@@ -4,7 +4,7 @@ import { AuthenticationError, WalletOwnershipError } from "@/lib/http/errors";
 import { d1 } from "../support/d1";
 import { schemaDatabase } from "../support/schema";
 
-const state = vi.hoisted(() => ({ db: null as D1Database | null, subject: "alice" as string | null, wallet: null as unknown, read: null as unknown }));
+const state = vi.hoisted(() => ({ db: null as D1Database | null, subject: "alice" as string | null, wallet: null as unknown, read: null as unknown, holdings: [] as unknown[] }));
 vi.mock("cloudflare:workers", () => ({ env: { get PROJECTION_DB() { return state.db; } } }));
 vi.mock("@/lib/auth/server", () => ({ requireVerifiedSubject: async () => {
   if (!state.subject) throw new AuthenticationError();
@@ -16,23 +16,24 @@ vi.mock("@/lib/auth/wallet", () => ({ requireActionWallet: async () => {
 } }));
 vi.mock("@/lib/overview/read", () => ({ readOverview: async (wallet: string) => {
   if (state.read instanceof Error) throw state.read;
-  return { wallet, holdings: [], totals: { cash: { usdCents: 0, partial: false }, crypto: { usdCents: 0, partial: false },
+  return { wallet, holdings: state.holdings, totals: { cash: { usdCents: 0, partial: false }, crypto: { usdCents: 0, partial: false },
     earn: { usdCents: 0, partial: false }, all: { usdCents: 0, partial: false } }, observedAt: "2026-09-26T12:00:00.000Z" };
 } }));
 
 const { GET } = await import("@/app/api/overview/route");
 const wallet = "0x1111111111111111111111111111111111111111";
+const usdc = (status: "observed" | "unavailable") => ({ id: "8453:usdc", group: "cash", status, amountRaw: status === "observed" ? "0" : null, usdCents: status === "observed" ? 0 : null });
 const get = () => GET(new Request("https://aura.test/api/overview"));
 let sqlite: DatabaseSync;
 
 describe("GET /api/overview", () => {
-  beforeEach(() => { sqlite = schemaDatabase(); state.db = d1(sqlite); state.subject = "alice"; state.wallet = wallet; state.read = null; });
+  beforeEach(() => { sqlite = schemaDatabase(); state.db = d1(sqlite); state.subject = "alice"; state.wallet = wallet; state.read = null; state.holdings = [usdc("observed")]; });
   afterEach(() => sqlite.close());
 
   it("returns the signed-in customer's own account, read from the chains", async () => {
     const response = await get();
     expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({ wallet, holdings: [], totals: { all: { usdCents: 0, partial: false } }, traceId: expect.any(String) });
+    expect(await response.json()).toMatchObject({ wallet, holdings: [usdc("observed")], totals: { all: { usdCents: 0, partial: false } }, traceId: expect.any(String) });
   });
 
   it("refuses a request without a valid session", async () => {
@@ -51,6 +52,13 @@ describe("GET /api/overview", () => {
 
   it("reports the Overview unavailable when the account can't be looked up", async () => {
     state.wallet = new Error("privy down");
+    const response = await get();
+    expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({ error: "overview_unavailable" });
+  });
+
+  it("reports the Overview unavailable, never $0.00, when no balance could be read", async () => {
+    state.holdings = [usdc("unavailable"), { ...usdc("unavailable"), id: "8453:native", group: "crypto" }];
     const response = await get();
     expect(response.status).toBe(503);
     expect(await response.json()).toMatchObject({ error: "overview_unavailable" });

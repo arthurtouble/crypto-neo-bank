@@ -17,7 +17,7 @@ The blockchain is the final record of what you hold. Aura may keep a copy or for
 
 Overview groups your balances into Cash, Crypto, Stocks, Metals, and Earn. The assets in each are listed in [networks and assets](/product/networks-and-assets/#supported-assets).
 
-Each item shows a US dollar value, and Overview adds them into a total. Stock, gold, and euro prices pause outside market hours, so those rows say when their price was published. Filter Overview by group, or select an item to see details and to send, swap, or deposit more.
+Each item shows a US dollar value, and Overview adds them into a total. Stock, gold, and euro prices pause outside market hours, so those rows say when their price was published. If a balance can't be read, it shows as unavailable and the total leaves it out. If none can be read, Overview says your balances are unavailable and offers to try again, rather than showing $0.00. Filter Overview by group, or select an item to see details and to send, swap, or deposit more.
 
 Balances can update at slightly different times in Aura, in your wallet, and on a block explorer. To confirm a payment, check the transaction on the right network's block explorer.
 
