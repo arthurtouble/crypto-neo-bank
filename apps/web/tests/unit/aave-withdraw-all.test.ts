@@ -81,4 +81,10 @@ describe("an exact Aave deposit or withdrawal", () => {
     await expect(buildEarn(input("withdraw", "5"), wallet, funded(0n, 4_999_999n))).rejects.toMatchObject({ code: "insufficient_balance", message: "You don't have that much USDC in Aave." });
     expect((await buildEarn(input("withdraw", "5"), wallet, funded(0n, 5_000_000n))).calls).toHaveLength(1);
   });
+
+  it("takes no new WETH deposits, but still lets WETH be withdrawn", async () => {
+    const weth = (direction: "deposit" | "withdraw") => earnInputSchema.parse({ kind: "earn", protocol: "aave", direction, asset: "WETH", amount: "1" });
+    await expect(buildEarn(weth("deposit"), wallet, funded(10n ** 24n, 0n))).rejects.toMatchObject({ code: "unsupported_asset" });
+    expect((await buildEarn(weth("withdraw"), wallet, funded(0n, 10n ** 18n))).calls).toHaveLength(1);
+  });
 });
