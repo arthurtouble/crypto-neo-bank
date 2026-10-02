@@ -32,5 +32,6 @@ describe("adding money from a connected wallet", () => {
     for (const network of ["Base", "Ethereum", "Arbitrum", "Optimism", "Polygon"]) expect(html).toContain(`>${network}</option>`);
     expect(html).toContain("5 USDC available");
     expect(html).toContain("Add from wallet");
+    expect(html).toContain(">Max</button>");
   });
 });

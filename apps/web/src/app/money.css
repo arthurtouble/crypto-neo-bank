@@ -19,6 +19,23 @@
 .appFrame .mxTabIcon, .appFrame .mxTabText small, .appFrame .mxTabChevron { display: none; }
 .appFrame .mxTabText strong { font-weight: inherit; }
 
+/* Deposit's ways: rows with what each one is for, beside the open one on desktop, above it on tablet and phone */
+.appFrame .mxWaysLayout { display: grid; grid-template-columns: var(--side-column) minmax(0, 1fr); gap: var(--gap-section); align-items: start; }
+.appFrame .mxTabs.mxWays { display: grid; justify-self: stretch; gap: 0; padding: 0; background: var(--color-surface); border: 1px solid var(--color-line); border-radius: var(--radius-lg); overflow: hidden; }
+.appFrame .mxWays [role="tab"] { height: auto; min-height: var(--row-height); gap: var(--space-3); padding: var(--space-2) var(--space-4); border-radius: 0; text-align: left; }
+.appFrame .mxWays [role="tab"]:hover { background: var(--color-hover); }
+.appFrame .mxWays [role="tab"] + [role="tab"] { border-top: 1px solid var(--color-line); }
+.appFrame .mxWays [role="tab"][aria-selected="true"] { background: var(--color-accent-soft); box-shadow: none; }
+.appFrame .mxWays .mxTabIcon { display: grid; place-items: center; width: 36px; height: 36px; flex: none; border-radius: var(--radius-md); background: var(--color-muted); color: var(--color-text-secondary); }
+.appFrame .mxWays [role="tab"][aria-selected="true"] .mxTabIcon { background: var(--color-surface); color: var(--color-accent); }
+.appFrame .mxWays .mxTabText { display: grid; gap: 2px; flex: 1; min-width: 0; }
+.appFrame .mxWays .mxTabText strong { color: var(--color-text); }
+.appFrame .mxWays .mxTabText small { display: block; font-weight: var(--weight-regular); line-height: var(--text-small-line); }
+.appFrame .mxWays .mxTabChevron { display: block; color: var(--color-text-tertiary); }
+.appFrame .mxAmountWithMax { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-2); align-items: end; }
+.appFrame .mxMaxButton { height: var(--input-height); }
+.appFrame .mxInlineLink { padding: 0; border: 0; background: none; color: var(--color-accent); font: inherit; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+
 /* Panels and cards */
 .appFrame .mxPanel, .appFrame .mxCard { display: grid; gap: var(--space-5); padding: var(--space-6); background: var(--color-surface); border: 1px solid var(--color-line); border-radius: var(--radius-lg); box-shadow: var(--shadow-1); min-width: 0; }
 .appFrame .mxCard { gap: var(--space-3); padding: var(--space-5); }
@@ -35,13 +52,10 @@
 .appFrame .mxReceive { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--space-6); align-items: center; }
 .appFrame .mxQr { padding: var(--space-3); border: 1px solid var(--color-line); border-radius: var(--radius-lg); background: var(--color-surface); color: var(--color-text); line-height: 0; }
 .appFrame .mxReceiveAddress { display: grid; gap: var(--space-2); justify-items: start; min-width: 0; }
-.appFrame .mxAddress { max-width: 100%; font-family: var(--font-mono); font-size: var(--text-body-size); line-height: var(--text-body-line); overflow-wrap: anywhere; color: var(--color-text); }
-
-/* What Receive accepts (B3): each registered asset on Base, as a pill with its name */
-.appFrame .mxAssetList { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: var(--space-2); }
-.appFrame .mxAssetList li { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 var(--space-3); border: 1px solid var(--color-line); border-radius: var(--radius-pill); background: var(--color-surface); font-size: var(--text-small-size); }
-.appFrame .mxAssetList strong { font-weight: var(--weight-semibold); }
-.appFrame .mxAssetList small { color: var(--color-text-secondary); font-size: var(--text-caption-size); }
+.appFrame .mxAddress { max-width: 100%; font-family: var(--font-mono); font-size: var(--text-body-size); line-height: var(--text-body-line); color: var(--color-text); }
+/* Desktop: the whole address in groups of four. Phone: the first and last four, which is what people compare. */
+.appFrame .mxAddressFull { display: flex; flex-wrap: wrap; column-gap: var(--space-2); }
+.appFrame .mxAddressShort { display: none; }
 
 /* Notes */
 .appFrame .mxNote { display: block; padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); background: var(--color-accent-soft); font-size: var(--text-small-size); line-height: var(--text-small-line); }
@@ -224,7 +238,7 @@
 
 /* Tablet: the side column moves below */
 @media (max-width: 1023px) {
-  .appFrame .mxColumns { grid-template-columns: minmax(0, 1fr); }
+  .appFrame .mxColumns, .appFrame .mxWaysLayout { grid-template-columns: minmax(0, 1fr); }
   .appFrame .erOptions { grid-template-columns: minmax(0, 1fr); }
 }
 
@@ -243,6 +257,8 @@
   .appFrame .mxPanel { padding: var(--space-5) var(--space-4); }
   .appFrame .mxReceive { grid-template-columns: minmax(0, 1fr); justify-items: center; text-align: center; }
   .appFrame .mxReceiveAddress { justify-items: center; }
+  .appFrame .mxAddressFull { display: none; }
+  .appFrame .mxAddressShort { display: inline; font-size: var(--text-title-3-size); }
   .appFrame .mxReceiveAddress .appButton { width: 100%; height: var(--control-height-lg); }
   .appFrame .mxFieldRow { grid-template-columns: minmax(0, 1fr); }
   .appFrame .mxField input, .appFrame .mxField select, .appFrame .mxField textarea { font-size: var(--text-input-phone); }

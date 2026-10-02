@@ -239,7 +239,7 @@ In the app, the shared parts are React components in `apps/web/src/components`, 
 
 ### Segmented control
 
-Two to four options that switch a view in place: Send's "To a person or wallet" and "To a bank account", Deposit's four ways on desktop, Insights periods. A muted track, the selected option on the surface with a hairline shadow.
+Two to four options that switch a view in place: Send's "To a person or wallet" and "To a bank account", Insights periods. A muted track, the selected option on the surface with a hairline shadow.
 
 ### Toggles and switches
 
@@ -262,6 +262,7 @@ A surface with a line border, `--radius-lg`, and shadow 1. A card groups things 
 - A row: a 32px icon or logo circle, a title and a small secondary line, and on the right the amount and, below it, a status or time.
 - 56px minimum on desktop, 60px on the phone. Hover fills with `--color-hover` on desktop. The whole row is the tap target.
 - Rows are separated by a line, inside a card or directly on the page.
+- A list of choices that open in place uses rows too: Deposit's four ways, each with what it's for, sit beside the open one on desktop and above it on tablet and phone. The selected row has the accent-soft fill.
 
 ### Tables (desktop)
 

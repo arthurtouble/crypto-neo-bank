@@ -15,7 +15,7 @@ The account is the customer's Privy embedded wallet, with gas paid by Privy; sig
 
 ### Deposit
 
-The Deposit screen (`deposit-workspace.tsx`) shows every way to add money at once: the account address and QR code (Base only, for sending from anywhere else), the connected wallet, a card, and bank deposits (coming soon until Bridge is connected).
+The Deposit screen (`deposit-page.tsx`) lists four ways to add money, each opening in place (`#receive`, `#wallet`, `#card`, `#bank` open one directly): **Receive** shows the account address and QR code, with a dropdown of the assets that show in Aura on Base (the registry's `hold` use) and the warning to send only on Base; **From a wallet**; **Card**; and **Bank** (`bank-deposit-panel.tsx`, coming soon until Bridge is connected).
 
 - **From a wallet** (`add-from-wallet.tsx`): the customer's connected wallet, such as MetaMask, with a network and asset: Base, Ethereum, Arbitrum, Optimism, or Polygon, and ETH or USDC, or EURC on Base (`lib/deposits/networks.ts`).
   - From Base it is a plain transfer.

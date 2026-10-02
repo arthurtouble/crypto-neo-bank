@@ -19,12 +19,13 @@ import { LoadingState, Notice } from "./states";
 
 /** Change B3: everything that shows in Aura when it arrives on Base, from the asset registry. */
 const RECEIVABLE = assetsFor("hold", HOME_CHAIN.id);
+const DEFAULT_RECEIVE = RECEIVABLE.find((asset) => asset.symbol === "USDC") ?? RECEIVABLE[0];
 const EXAMPLE_ADDRESS = "0x000000000000000000000000000000000000e0a1";
 const tabs = [
   { id: "receive", label: "Receive", detail: "From an exchange or another wallet", icon: QrCode },
-  { id: "wallet", label: "From a wallet", detail: "Move money from a wallet you connected", icon: Wallet },
+  { id: "wallet", label: "From a wallet", detail: "From a wallet you connected, like MetaMask", icon: Wallet },
   { id: "card", label: "Card", detail: "Buy USDC with a debit or credit card", icon: CreditCard },
-  { id: "bank", label: "Bank", detail: "US bank details, once Bridge verifies you", icon: Building2 }
+  { id: "bank", label: "Bank", detail: "US bank transfer", icon: Building2 }
 ] as const;
 type Tab = (typeof tabs)[number]["id"];
 
@@ -43,22 +44,44 @@ function SettingUp() {
     {slow && <p>This is taking longer than usual. Refresh the page. If it keeps happening, contact support.</p>}</div></LoadingState>;
 }
 
-function ReceivePanel({ address, isExample }: { address: string; isExample: boolean }) {
+/** The address in groups of four, so it's easy to check against what the other app shows. Copy and the QR code use it whole. */
+function AddressGroups({ address }: { address: string }) {
+  const groups = address.slice(2).match(/.{1,4}/g) ?? [];
+  return <>{["0x" + (groups.shift() ?? ""), ...groups].map((group, index) => <span key={index}>{group}</span>)}</>;
+}
+
+/** A link for a step that isn't this page's: the payment page in Settings, or sign-in for a guest. */
+function TagLink({ isExample, onSignIn }: { isExample: boolean; onSignIn: () => void }) {
+  return <p className="mxHint">Want people to pay you? {isExample
+    ? <button type="button" className="mxInlineLink" onClick={onSignIn}>Sign in to share your payment page</button>
+    : <Link className="mxInlineLink" href="/app/settings#tag">Share your payment page</Link>}</p>;
+}
+
+function ReceivePanel({ address, isExample, onSignIn }: { address: string; isExample: boolean; onSignIn: () => void }) {
+  const [assetId, setAssetId] = useState(DEFAULT_RECEIVE.id);
+  const asset = RECEIVABLE.find((item) => item.id === assetId) ?? DEFAULT_RECEIVE;
   return <section className="mxPanel" aria-labelledby="deposit-receive">
-    <div className="mxPanelHead"><h2 id="deposit-receive">Receive on Base</h2>
-      <p>Send any asset listed below on Base to your Aura account, from any wallet or exchange.</p></div>
+    <div className="mxPanelHead"><h2 id="deposit-receive">Receive</h2>
+      <p>Send to your Aura account from an exchange or another wallet, on the Base network.</p></div>
+    <label className="mxField">What you&apos;re sending
+      <select value={asset.id} onChange={(event) => setAssetId(event.target.value)} aria-describedby="deposit-receive-note">
+        {RECEIVABLE.map((item) => <option key={item.id} value={item.id}>{item.symbol} · {item.name}</option>)}
+      </select>
+    </label>
     <div className="mxReceive">
       <div className="mxQr"><QRCodeSVG value={address} size={168} bgColor="transparent" fgColor="currentColor" level="M" aria-label="QR code of your Aura account address" role="img" /></div>
       <div className="mxReceiveAddress">
-        <span className="mxLabel">{isExample ? "Example address" : "Your account address on Base"}</span>
-        <code className="mxAddress" data-testid={isExample ? undefined : "account-address"}>{address}</code>
+        <span className="mxLabel">{isExample ? "Example address" : "Your Aura address"}</span>
+        <code className="mxAddress" title={address}>
+          <span className="mxAddressFull" data-testid={isExample ? undefined : "account-address"}><AddressGroups address={address} /></span>
+          <span className="mxAddressShort">{shortAddress(address)}</span>
+        </code>
         <CopyButton value={address} label="Copy address" />
+        <p className="mxHint">Your balance updates once the money arrives.</p>
       </div>
     </div>
-    <ul className="mxAssetList" aria-label="Assets you can receive on Base">
-      {RECEIVABLE.map((asset) => <li key={asset.id}><strong>{asset.symbol}</strong><small>{asset.name}</small></li>)}
-    </ul>
-    <Notice tone="warning">Only send on Base. Money sent on another network, or a token not listed here, won&apos;t show in Aura. To add from another network, use From a wallet.</Notice>
+    <Notice tone="warning"><span id="deposit-receive-note">Only send {asset.symbol} on the Base network. Money sent on another network, or a token not in this list, won&apos;t show in Aura. To add from another network, use From a wallet.</span></Notice>
+    <TagLink isExample={isExample} onSignIn={onSignIn} />
   </section>;
 }
 
@@ -77,7 +100,8 @@ function CardPanel({ address, isExample, onSignIn }: { address: string | undefin
   }
   return <section className="mxPanel" aria-labelledby="deposit-card">
     <div className="mxPanelHead"><h2 id="deposit-card">Pay by card</h2>
-      <p>Buy USDC with a debit or credit card. It arrives in your Aura account on Base.</p></div>
+      <p>Buy USDC with a debit or credit card. It arrives in your Aura account.</p></div>
+    <p className="mxHint">A card payment partner takes the payment. It shows its fee and limits before you pay.</p>
     {isExample ? <SignInToAdd onSignIn={onSignIn} />
       : <button type="button" className="appButton appButtonPrimary appButtonLarge" disabled={paying || !address} onClick={() => void payByCard()}>
         {paying ? <LoaderCircle className="spin" aria-hidden="true" /> : <CreditCard aria-hidden="true" />} Pay by card</button>}
@@ -116,57 +140,39 @@ export function DepositPage() {
 
   const needsWallet = loading || (!isExample && (!walletReady || !address));
   return <MoneyPage title="Deposit" guest={isExample || loading} onSignIn={login} ready={ready}>
-    <div className="mxColumns">
-      <div className="mxMain">
-        <div className="mxTabs" role="tablist" aria-label="Ways to deposit">
-          {tabs.map(({ id, label, detail, icon: Icon }) => <button key={id} type="button" role="tab" id={`deposit-tab-${id}`} aria-controls={`deposit-panel-${id}`}
-            aria-labelledby={`deposit-tab-${id}-label`} aria-describedby={`deposit-tab-${id}-detail`}
-            aria-selected={tab === id} tabIndex={tab === id ? 0 : -1} onClick={() => choose(id)}
-            onKeyDown={(event) => {
-              const index = tabs.findIndex((item) => item.id === tab);
-              const step = event.key === "ArrowRight" || event.key === "ArrowDown" ? 1 : event.key === "ArrowLeft" || event.key === "ArrowUp" ? -1 : 0;
-              if (!step) return;
-              event.preventDefault();
-              const next = tabs[(index + step + tabs.length) % tabs.length].id;
-              choose(next);
-              document.getElementById(`deposit-tab-${next}`)?.focus();
-            }}>
-            <span className="mxTabIcon"><Icon aria-hidden="true" /></span>
-            <span className="mxTabText"><strong id={`deposit-tab-${id}-label`}>{label}</strong><small id={`deposit-tab-${id}-detail`}>{detail}</small></span>
-            <ChevronRight className="mxTabChevron" aria-hidden="true" />
-          </button>)}
-        </div>
-        <div role="tabpanel" id={`deposit-panel-${tab}`} aria-labelledby={`deposit-tab-${tab}-label`} className="mxTabPanel">
-          {tab === "receive" && (needsWallet || !account ? <SettingUp /> : <ReceivePanel address={account} isExample={isExample} />)}
-          {tab === "wallet" && <section className="mxPanel" aria-labelledby="deposit-wallet">
-            <div className="mxPanelHead"><h2 id="deposit-wallet">From your wallet</h2>
-              <p>Move money from a wallet you connected, like MetaMask. From another network, it&apos;s moved to Base as the same asset.</p></div>
-            {isExample ? <SignInToAdd onSignIn={login} /> : needsWallet || !address ? <SettingUp /> : <AddFromWallet account={address} />}
-          </section>}
-          {tab === "card" && (needsWallet ? <SettingUp /> : <CardPanel address={account} isExample={isExample} onSignIn={login} />)}
-          {tab === "bank" && (loading ? <SettingUp /> : isExample ? <section className="mxPanel" aria-labelledby="deposit-bank">
-            <div className="mxPanelHead"><h2 id="deposit-bank">Deposit from a bank</h2>
-              <p>Bridge, our banking partner, verifies your identity, then gives you US bank details. Deposits arrive as USDC in your Aura account.</p></div>
-            <SignInToAdd onSignIn={login} />
-          </section> : <BankDepositPanel />)}
-        </div>
+    <div className="mxWaysLayout">
+      <div className="mxTabs mxWays" role="tablist" aria-label="Ways to deposit">
+        {tabs.map(({ id, label, detail, icon: Icon }) => <button key={id} type="button" role="tab" id={`deposit-tab-${id}`} aria-controls={`deposit-panel-${id}`}
+          aria-labelledby={`deposit-tab-${id}-label`} aria-describedby={`deposit-tab-${id}-detail`}
+          aria-selected={tab === id} tabIndex={tab === id ? 0 : -1} onClick={() => choose(id)}
+          onKeyDown={(event) => {
+            const index = tabs.findIndex((item) => item.id === tab);
+            const step = event.key === "ArrowRight" || event.key === "ArrowDown" ? 1 : event.key === "ArrowLeft" || event.key === "ArrowUp" ? -1 : 0;
+            if (!step) return;
+            event.preventDefault();
+            const next = tabs[(index + step + tabs.length) % tabs.length].id;
+            choose(next);
+            document.getElementById(`deposit-tab-${next}`)?.focus();
+          }}>
+          <span className="mxTabIcon"><Icon aria-hidden="true" /></span>
+          <span className="mxTabText"><strong id={`deposit-tab-${id}-label`}>{label}</strong><small id={`deposit-tab-${id}-detail`}>{detail}</small></span>
+          <ChevronRight className="mxTabChevron" aria-hidden="true" />
+        </button>)}
       </div>
-      <aside className="mxSide">
-        <section className="mxCard" aria-label="Where it arrives">
-          <h2>Where it arrives</h2>
-          <dl className="mxSummary">
-            <div><dt>Account</dt><dd className="mxMono">{account ? shortAddress(account) : "Setting up"}</dd></div>
-            <div><dt>Network</dt><dd>Base</dd></div>
-          </dl>
-          <p className="mxHint">Your balance comes from the network, so it updates once the money arrives.</p>
-        </section>
-        <section className="mxCard" aria-labelledby="deposit-tag">
-          <h2 id="deposit-tag">Get paid with your tag</h2>
-          <p className="mxHint">Share a public payment page where people can pay you in crypto, and by bank transfer if you choose to show your bank details.</p>
-          {isExample ? <button type="button" className="appButton" onClick={login}>Sign in to manage your tag</button>
-            : <Link className="appButton" href="/app/settings#tag">Manage your tag</Link>}
-        </section>
-      </aside>
+      <div role="tabpanel" id={`deposit-panel-${tab}`} aria-labelledby={`deposit-tab-${tab}-label`} className="mxTabPanel">
+        {tab === "receive" && (needsWallet || !account ? <SettingUp /> : <ReceivePanel address={account} isExample={isExample} onSignIn={login} />)}
+        {tab === "wallet" && <section className="mxPanel" aria-labelledby="deposit-wallet">
+          <div className="mxPanelHead"><h2 id="deposit-wallet">From your wallet</h2>
+            <p>Move money from a wallet you connected, like MetaMask. From another network, it arrives as the same asset.</p></div>
+          {isExample ? <SignInToAdd onSignIn={login} /> : needsWallet || !address ? <SettingUp /> : <AddFromWallet account={address} />}
+        </section>}
+        {tab === "card" && (needsWallet ? <SettingUp /> : <CardPanel address={account} isExample={isExample} onSignIn={login} />)}
+        {tab === "bank" && (loading ? <SettingUp /> : isExample ? <section className="mxPanel" aria-labelledby="deposit-bank">
+          <div className="mxPanelHead"><h2 id="deposit-bank">Deposit from a bank</h2>
+            <p>Get US bank details. Deposits arrive as USDC in your Aura account.</p></div>
+          <SignInToAdd onSignIn={login} />
+        </section> : <BankDepositPanel />)}
+      </div>
     </div>
   </MoneyPage>;
 }
