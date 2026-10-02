@@ -3,10 +3,9 @@ title: Earn
 description: Earn a variable return on Base with Aave and two Morpho USDC vaults.
 ---
 
-Earn has four options, all on Base:
+Earn has three options, all on Base:
 
 - **Aave USDC.** Supply USDC to Aave's lending market and withdraw it when you like.
-- **Aave WETH.** Supply WETH to the same market.
 - **Steakhouse Prime USDC.** A Morpho vault curated by Steakhouse Financial.
 - **Gauntlet USDC Prime.** A Morpho vault curated by Gauntlet.
 
@@ -28,7 +27,8 @@ None of these is a bank deposit, insured, or guaranteed.
 
 You confirm each deposit or withdrawal once, with your passkey; any token approval happens in the same step. Check the option, asset, and amount before you confirm.
 
-- You need enough USDC or WETH in your account to deposit, and enough in the position to withdraw.
+- You need enough USDC in your account to deposit, and enough in the position to withdraw. Aura checks both before you confirm.
+- Aave WETH no longer takes deposits. If you supplied WETH before, it shows on Earn so you can withdraw it.
 - **Withdraw all** empties an Aave or Morpho position completely, including interest earned up to that moment.
 - Aura pays the network fee. Earn moves money between your own positions, so it doesn't count toward your daily limit.
 - Aura marks a deposit or withdrawal complete only after it sees the protocol's own record of it on the blockchain.

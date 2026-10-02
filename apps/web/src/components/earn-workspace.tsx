@@ -4,7 +4,6 @@ import { useAuth } from "@/lib/client/auth";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDown, ShieldCheck } from "lucide-react";
 import { useState } from "react";
-import { useAuraWallet } from "@/lib/client/use-aura-wallet";
 import { useOverview } from "@/lib/client/queries";
 import type { AaveBaseReserve } from "@/lib/defi/aave";
 import type { Holding } from "@/lib/overview/read";
@@ -34,16 +33,14 @@ const positionText = (held: Holding) => held.usdCents !== null ? formatCents(hel
  * example positions with the live rates.
  */
 export function EarnWorkspace() {
-  const { getAccessToken, authenticated, ready, login } = useAuth();
+  const { authenticated, ready, login } = useAuth();
   const isExample = ready && !authenticated;
   const [open, setOpen] = useState<string[]>([]);
-  const { address } = useAuraWallet();
   const overview = useOverview();
   const aave = useQuery<AaveResponse>({
-    queryKey: ["aave-base-market", address],
+    queryKey: ["aave-base-market"],
     queryFn: async () => {
-      const token = address ? await getAccessToken() : null;
-      const response = await fetch(`/api/defi/aave/markets${address ? `?address=${address}` : ""}`, { headers: token ? { Authorization: `Bearer ${token}` } : undefined, cache: "no-store" });
+      const response = await fetch("/api/defi/aave/markets", { cache: "no-store" });
       if (!response.ok) throw new Error("Aave rates are unavailable right now.");
       return response.json() as Promise<AaveResponse>;
     },
