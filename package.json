@@ -20,7 +20,7 @@
     "docs:deploy": "pnpm --filter @aurel/docs deploy",
     "docs:deploy:dev": "pnpm --filter @aurel/docs deploy:dev",
     "test": "pnpm --filter @aurel/web test",
-    "test:unit": "pnpm --filter @aurel/web test:unit && pnpm --filter @aurel/ops test && node --test scripts/mainnet-readiness.test.mjs scripts/check-assets.test.mjs scripts/production-check.test.mjs",
+    "test:unit": "pnpm --filter @aurel/web test:unit && pnpm --filter @aurel/ops test && node --test scripts/mainnet-readiness.test.mjs scripts/check-assets.test.mjs scripts/production-check.test.mjs scripts/e2e-select.test.mjs",
     "test:e2e": "pnpm --filter @aurel/web test:e2e",
     "test:mainnet-readiness": "node scripts/mainnet-readiness.mjs",
     "test:live:readonly": "pnpm --filter @aurel/web test:live:readonly",
