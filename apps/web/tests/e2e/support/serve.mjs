@@ -17,7 +17,9 @@ const migrate = spawnSync("pnpm", ["exec", "wrangler", "d1", "migrations", "appl
   { stdio: "inherit", env: { ...process.env, CI: "1" } });
 if (migrate.status !== 0) { await edge.close(); process.exit(migrate.status ?? 1); }
 
-const app = spawn("pnpm", ["dev", "--host", "127.0.0.1", "--port", appPort], {
+// vinext takes --hostname (it ignores --host). It binds "localhost", which can
+// resolve to ::1 only (GitHub's runners), so everything else calls it by that name.
+const app = spawn("pnpm", ["dev", "--hostname", "localhost", "--port", appPort], {
   stdio: "inherit",
   env: {
     ...process.env,
@@ -33,7 +35,7 @@ const app = spawn("pnpm", ["dev", "--host", "127.0.0.1", "--port", appPort], {
 // The operations app, in development: its API calls go to the web app's /api/ops/*.
 const opsPort = process.env.AUREL_E2E_OPS_PORT ?? "43175";
 const ops = spawn("pnpm", ["--filter", "@aurel/ops", "exec", "vite", "--host", "127.0.0.1", "--port", opsPort, "--strictPort"], {
-  stdio: "inherit", env: { ...process.env, OPS_API_TARGET: `http://127.0.0.1:${appPort}`, OPS_PORT: opsPort }
+  stdio: "inherit", env: { ...process.env, OPS_API_TARGET: `http://localhost:${appPort}`, OPS_PORT: opsPort }
 });
 
 const stop = async () => { app.kill("SIGTERM"); ops.kill("SIGTERM"); await edge.close(); process.exit(0); };
