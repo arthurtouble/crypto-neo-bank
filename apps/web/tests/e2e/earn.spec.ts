@@ -185,8 +185,8 @@ test("a position grows in real time at its yearly rate, to 8 decimals", async ({
   await page.waitForTimeout(1_500);
   expect(await read()).toBeGreaterThan(first);
 
-  // The Overview's Earn rows grow the same way.
+  // The Overview shows the same position, with its rate, in plain dollars as last read.
   await page.goto("/app");
   await expect(page.getByTestId(`holding-morpho:8453:${VAULTS.steakhouse}`)).toContainText("Earning 4.41% a year", { timeout: 30_000 });
-  await expect(page.getByTestId(`holding-morpho:8453:${VAULTS.steakhouse}`).locator(".liveAmount")).toHaveText(/^\$105\.\d{8}$/);
+  await expect(page.getByTestId(`holding-morpho:8453:${VAULTS.steakhouse}`)).toContainText("$105.00");
 });
