@@ -35,7 +35,7 @@ The address is the Privy-held key, so leaving Privy means moving funds, not chan
 
 ## Migration from the smart-wallet account
 
-Earlier builds used a Privy Kernel smart wallet. Customers with funds there see "Move funds to your new account" on Overview (`dashboard.tsx`) and Send (`wallet-workspace.tsx`). It sends the old wallet's USDC, WETH, and ETH on Base to the embedded wallet in one approval, with gas paid by the old paymaster. `SmartWalletsProvider` and the Pimlico paymaster stay configured only until no smart wallet holds funds.
+Earlier builds used a Privy Kernel smart wallet. Customers with funds there see "Move funds to your new account" on Send (`wallet-workspace.tsx`). It sends the old wallet's USDC, WETH, and ETH on Base to the embedded wallet in one approval, with gas paid by the old paymaster. `SmartWalletsProvider` and the Pimlico paymaster stay configured only until no smart wallet holds funds.
 
 ## What stays outside Privy
 

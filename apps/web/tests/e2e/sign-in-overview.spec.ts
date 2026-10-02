@@ -74,13 +74,18 @@ test("the Overview values every holding in dollars and totals cash, crypto, and 
   await expect(row(page, `8453:${ASSETS.weth}`)).toContainText("$250.00");
   await expect(row(page, `8453:${ASSETS.cbbtc}`)).toContainText("0.01 cbBTC");
   await expect(row(page, `8453:${ASSETS.cbbtc}`)).toContainText("$600.00");
-  await expect(row(page, `aave:8453:${ASSETS.usdc}`)).toContainText("Aave on Base");
   await expect(row(page, `aave:8453:${ASSETS.usdc}`)).toContainText("$50.00");
-  await expect(row(page, `morpho:8453:${VAULTS.gauntlet}`)).toContainText("Morpho on Base");
   await expect(row(page, `morpho:8453:${VAULTS.gauntlet}`)).toContainText("105 USDC");
   await expect(row(page, `morpho:8453:${VAULTS.gauntlet}`)).toContainText("$105.00");
-  await expect(page.getByText(/Read from the chains at/)).toBeVisible();
+  await expect(page.getByText(/^Updated \d/)).toBeVisible();
   await expect(page.getByText(/total leaves them out/)).toHaveCount(0);
+
+  // Where each holding is kept shows in its detail.
+  await row(page, `morpho:8453:${VAULTS.gauntlet}`).click();
+  await expect(page.getByRole("dialog")).toContainText("Morpho on Base");
+  await page.keyboard.press("Escape");
+  await row(page, `aave:8453:${ASSETS.usdc}`).click();
+  await expect(page.getByRole("dialog")).toContainText("Aave on Base");
 });
 
 test("stocks, the euro, and Tether Gold on Ethereum are valued from their feeds, with the price time shown", async ({ page }) => {
@@ -98,8 +103,10 @@ test("stocks, the euro, and Tether Gold on Ethereum are valued from their feeds,
   await expect(page.getByRole("region", { name: "Stocks" })).toContainText("Apple");
   await expect(row(page, `8453:${ASSETS.apple}`)).toContainText("2.5 AAPLc");
   await expect(row(page, `8453:${ASSETS.apple}`)).toContainText("Price as of");
-  await expect(row(page, `1:${ASSETS.xaut}`)).toContainText("Ethereum");
   await expect(row(page, `1:${ASSETS.xaut}`)).toContainText("0.5 XAUt");
+  await row(page, `1:${ASSETS.xaut}`).click();
+  await expect(page.getByRole("dialog")).toContainText("Ethereum");
+  await page.keyboard.press("Escape");
   await expect(row(page, `8453:${ASSETS.eurc}`)).toContainText("100 EURC");
   await expect(row(page, `8453:${ASSETS.eurc}`)).toContainText("$114.00");
 });
@@ -130,6 +137,13 @@ test("an empty account says so and points to Deposit", async ({ page }) => {
   await openOverview(page, customer);
   await expect(page.getByText("Your account is empty")).toBeVisible({ timeout: 30_000 });
   await expect(page.getByTestId("portfolio-total")).toHaveText("$0.00");
+  // Recent transactions show on the phone as well as on desktop.
+  await expect(page.getByRole("region", { name: "Recent transactions" })).toContainText("No transactions yet");
+  // Each way to add money opens that way on Deposit.
+  await page.getByRole("link", { name: /^Card Buy with/ }).click();
+  await expect(page).toHaveURL(/\/app\/deposit#card$/);
+  await expect(page.getByRole("tab", { name: "Card", exact: true })).toHaveAttribute("aria-selected", "true");
+  await page.goto("/app");
   await page.getByRole("link", { name: "Deposit" }).last().click();
   await expect(page).toHaveURL(/\/app\/deposit$/);
 });
@@ -143,7 +157,7 @@ test("a balance that can't be read shows as unavailable, never as a number", asy
   // Tether Gold is held on Ethereum, so it's the one that can't be read.
   await expect(row(page, `1:${ASSETS.xaut}`)).toContainText("Unavailable", { timeout: 30_000 });
   await expect(page.getByTestId("portfolio-total")).toHaveText("$6,130.50");
-  await expect(page.getByTestId("total-metals")).toHaveText("$0.00 + unavailable");
+  await expect(page.getByTestId("total-metals")).toHaveText("Unavailable");
   await expect(page.getByTestId("total-earn")).toHaveText("$155.00");
   await expect(page.getByText(/total leaves them out/)).toBeVisible();
 });

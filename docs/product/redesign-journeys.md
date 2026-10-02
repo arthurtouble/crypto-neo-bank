@@ -61,18 +61,18 @@ Each journey is drawn step by step in the storyboards. The frame numbers (J5.3 a
 - **J0 Get around.** The desktop sidebar with the ten sections. On the phone, the floating menu button and the sheet of ten tiles.
 - **J1 Explore as a guest.** Every section with example data and a banner. Any action opens sign-in (a dialog on desktop, a sheet on the phone).
 - **J2 Sign in and accept the terms.** Sign-in (Privy: email, Google, Telegram, or wallet); a Telegram or wallet sign-in adds an email next, verified by Privy; then the terms on their own full screen, with Log out as the way out. There's no app shell behind it; the three documents are rows and the checkbox is required. Then:
-  - A first Overview with the four ways to deposit.
+  - A first Overview with the four ways to deposit, each opening that way on Deposit.
   - A "Secure your account" checklist: add a passkey.
   - A session that expires shows one banner on the current page.
   - A closed account replaces every page except Support.
-  - Money left in a previous account shows as an Overview banner with "Move everything".
+  - Money left in a previous account shows as a banner on Send with "Move everything".
 
 ### Overview
 
 - **J3 Check my money.** Total value, with when it was read and what it leaves out. Then:
   - Group filters with their totals, and one holdings table (desktop) or list (phone).
-  - Desktop only: recent transactions beside the table.
-  - Phone only: quick buttons for Deposit, Send, Swap, and Earn.
+  - Recent transactions: beside the table on desktop, the last three below the list on the phone.
+  - Deposit, Send, Swap, and Earn in that order: buttons in the header on desktop, round quick buttons on the phone.
   - A holding opens its detail, with Send, Swap, and Deposit for that asset.
 
 ### Money

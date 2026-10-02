@@ -44,7 +44,7 @@ test("theme and private access gate remain usable", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
   await expect(page.getByText("Example data", { exact: true })).toBeVisible();
   if (page.viewportSize()!.width < 768) await page.getByRole("button", { name: "Open menu" }).click();
-  await page.getByRole("link", { name: "Earn" }).click();
+  await page.getByRole("navigation", { name: /^(Primary|Sections)$/ }).getByRole("link", { name: "Earn" }).click();
   await expect(page.getByRole("heading", { name: "Earn" })).toBeVisible();
   await expect(page.getByText("Example data", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: /Create account or sign in/ })).toBeVisible();
