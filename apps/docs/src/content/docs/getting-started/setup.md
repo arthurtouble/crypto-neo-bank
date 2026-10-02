@@ -11,12 +11,12 @@ You don't need an account to look around. Browse Overview, Deposit, Send, Swap, 
 
 ## Sign in and your account
 
-Select **Create account or sign in** and use your email, Google, Telegram, or a wallet. Your first sign-in creates your account. Privy, an independent company, runs sign-in for Aura. Pick a method you can recover. Aura can't restore a lost sign-in.
+Select **Create account or sign in** and use your email, Google, Telegram, or a wallet. Your first sign-in creates your account. If you sign in with Telegram or a wallet, Aura then asks you to add an email, checked with a one-time code, because security notices are always emailed. Privy, an independent company, runs sign-in for Aura. Pick a method you can recover. Aura can't restore a lost sign-in.
 
 Privy makes a wallet for you when you first sign in. That wallet is your Aura account. It has the same address on every network.
 
 - Aura never holds your funds or keys. Privy secures the key that signs for your wallet, and handles its export.
-- To get back in, sign in with any method linked to your account. If you signed up with a wallet, add an email in **Settings → Security**. You can export your wallet key there too. If you can't get in, see [lost access and recovery](/help/lost-access/).
+- To get back in, sign in with any method linked to your account. Your email is one of them, unless it came from Google; change it in **Settings → Security**, where you can also export your wallet key. If you can't get in, see [lost access and recovery](/help/lost-access/).
 - Aura pays the network fee for actions from your account. You don't need ETH for fees.
 
 ## Add a passkey

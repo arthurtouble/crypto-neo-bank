@@ -21,10 +21,13 @@ const { POST: close } = await import("@/app/api/ops/accounts/[subject]/close/rou
 const { POST: reopen } = await import("@/app/api/ops/accounts/[subject]/reopen/route");
 const { GET: find } = await import("@/app/api/ops/accounts/route");
 const { requireVerifiedSubject } = await import("@/lib/auth/server");
+const { legalDocuments } = await import("@/lib/legal/documents");
 
 const holding = (label: string, amountRaw: string | null, status: Holding["status"] = "observed") =>
   ({ id: label, group: "cash", label, symbol: label, decimals: 6, source: "base", status, amountRaw, usdCents: 0, observedAt: "t" }) satisfies Holding;
 const params = { params: Promise.resolve({ subject: "alice" }) };
+const accept = (documents: Array<{ key: string; version: string }>) => sqlite.exec(documents.map((doc, index) => `INSERT INTO consent_evidence
+  (consent_id, subject_reference, document_key, document_version, accepted_at, evidence_json) VALUES ('c-${doc.key}-${doc.version}-${index}', 'alice', '${doc.key}', '${doc.version}', 't', '{}');`).join("\n"));
 const post = (handler: typeof close, body: unknown) => handler(new Request("https://aura.test", { method: "POST", body: JSON.stringify(body) }), params);
 
 let sqlite: DatabaseSync;
@@ -84,8 +87,20 @@ describe("closing an account", () => {
     expect((await lookup("ab")).status).toBe(400);
   });
 
+  it("refuses a customer until the current terms and privacy notice are accepted, except where it may come first", async () => {
+    const request = new Request("https://aura.test", { headers: { Authorization: "Bearer token" } });
+    await expect(requireVerifiedSubject(request)).rejects.toMatchObject({ status: 403, code: "terms_required" });
+    expect(await requireVerifiedSubject(request, { beforeTerms: true })).toMatchObject({ subjectReference: "alice" });
+    // An older version, or the terms without the privacy notice, isn't enough.
+    accept([{ key: legalDocuments.terms.key, version: "2020-01-01" }, { key: legalDocuments.privacy.key, version: "2020-01-01" }, legalDocuments.terms]);
+    await expect(requireVerifiedSubject(request)).rejects.toMatchObject({ code: "terms_required" });
+    accept([legalDocuments.privacy]);
+    expect(await requireVerifiedSubject(request)).toMatchObject({ subjectReference: "alice" });
+  });
+
   it("refuses a closed account everywhere except support and the data export", async () => {
     const request = new Request("https://aura.test", { headers: { Authorization: "Bearer token" } });
+    accept([legalDocuments.terms, legalDocuments.privacy]);
     expect(await requireVerifiedSubject(request)).toMatchObject({ subjectReference: "alice" });
     await post(close, { reason: "Support case 42" });
     await expect(requireVerifiedSubject(request)).rejects.toMatchObject({ status: 403, code: "account_closed" });

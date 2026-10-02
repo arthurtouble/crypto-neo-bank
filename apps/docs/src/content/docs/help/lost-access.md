@@ -7,7 +7,7 @@ Privy, an independent company, runs sign-in and secures the key for your wallet.
 
 ## Getting back in
 
-Sign in with any method linked to your account: your email, or the wallet you signed up with. You get the same account and the same address.
+Sign in with any method linked to your account: your email, Google, Telegram, or the wallet you signed up with. You get the same account and the same address.
 
 Aura can't restore a lost sign-in. We don't hold your key, and support can't sign in for you, reset your sign-in, or move your money.
 
@@ -21,7 +21,7 @@ Our team can also lock your account to protect it. Only you can unlock it, in Se
 
 ## Prepare now
 
-- Add a second way to sign in. If you signed up with a wallet, add an email in **Settings → Security**.
+- Keep a second way to sign in. Every account has an email; if yours came from Google, you can add another in **Settings → Security**.
 - Sign in with each method once, while your balance is small.
 - Keep your passkey device, email, and sign-in wallet secure.
 - Understand what exporting your wallet key means before you do it: anyone with the key can move your money, outside Aura's controls.

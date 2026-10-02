@@ -1,5 +1,6 @@
 "use client";
 
+import { accountEmail } from "@/lib/client/account-email";
 import { useAuth } from "@/lib/client/auth";
 import { ArrowLeft, AtSign, Bell, ChevronRight, FileText, ShieldCheck, Smartphone, Users } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -102,7 +103,7 @@ export function SettingsWorkspace() {
   }, []);
   // Desktop always shows an area; the phone shows the list until one is chosen.
   const area = selected ?? "security";
-  const who = isExample ? "Example account" : user?.email?.address ?? (user?.wallet?.address ? shortAddress(user.wallet.address) : null);
+  const who = isExample ? "Example account" : accountEmail(user)?.address ?? (user?.wallet?.address ? shortAddress(user.wallet.address) : null);
 
   return <div className="mxPage stPage" data-view={selected ? "area" : "index"}>
     {(isExample || !ready) && <GuestBanner onSignIn={login} ready={ready} />}

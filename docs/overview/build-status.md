@@ -7,7 +7,7 @@ Last reviewed: 30 September 2026. Describes `main`, deployed to `aura-dev.aurel-
 
 ## Built
 
-- **Public app and sign-in.** Landing page, the customer sections, desktop and mobile navigation, and guest browsing with labeled fictional data. Privy sign-in by email, Google, Telegram, or wallet, open to everyone, from one "Create account or sign in" button; acceptance of the current terms and privacy notice is recorded per version on first sign-in.
+- **Public app and sign-in.** Landing page, the customer sections, desktop and mobile navigation, and guest browsing with labeled fictional data. Privy sign-in by email, Google, Telegram, or wallet, open to everyone, from one "Create account or sign in" button. Every account has an email (a Telegram or wallet sign-in adds one, verified by Privy), and acceptance of the current terms and privacy notice is recorded per version; the server refuses customer routes until both are in place ([launch controls](../operations/launch-controls.md)).
 - **Account.** A Privy embedded wallet per customer, upgraded in place with EIP-7702, with the same address on every EVM network; Privy pays gas ([accounts and custody](../architecture/accounts-and-custody.md)).
 - **Server checks on every action**: feature switches, the passkey requirement, asset pauses, account lock, the optional daily limit, saved-recipients-only mode, and new-recipient cooling. Loosening a control needs a server-verified passkey confirmation. Details and switch names: [launch controls](../operations/launch-controls.md).
 - **Money actions**: prepared, signed, relayed through Privy, and verified from chain evidence ([money actions](../architecture/money-actions.md)).

@@ -32,7 +32,7 @@ Every financial value keeps its source and observation time to the screen. A hol
 | Support | `GET /api/support/messenger` (Intercom app ID and a one-hour identity JWT signed with `INTERCOM_IDENTITY_SECRET`; `appId: null` when chat is off), refreshed every 50 minutes by `components/support-chat.tsx`. Intercom's Fin reads `GET /api/support/fin/activity?user_id=` server to server with `FIN_CONNECTOR_TOKEN` (latest 10 entries, `incomplete` when a source couldn't be read) | Report a problem opens the Messenger with a prefilled message; locking and unlocking are only in Settings (`#emergency-lock`) |
 | Notifications (header bell) | `GET /api/notifications` every 30 seconds and on tab focus: the latest 30 notices and the unread count. Each call also checks the account for money received, at most every 30 seconds | `POST /api/notifications/read` when the list opens; `PUT`/`DELETE /api/notifications/push` to turn browser notifications on or off (up to 10 browsers per customer; a `409 subscription_in_use` means the browser's subscription belongs to another account, so the app unsubscribes it and subscribes again) |
 
-A `403 account_closed` from any route makes the app show the closed-account notice (`components/account-closed.tsx`) on every page but Support.
+A `403 account_closed` from any route makes the app show the closed-account notice (`components/account-closed.tsx`) on every page but Support. A `403 terms_required` (new terms since the page loaded) makes `TermsGate` check `/api/terms` again, which shows the terms; accepting them refetches everything the app had asked for.
 
 ### Bank activity
 

@@ -180,6 +180,7 @@ test("while bank accounts are switched off, Deposit and Send say they're coming 
   await page.goto("/app/deposit#bank");
   await expect(depositPanel(page).getByText("Coming soon", { exact: true })).toBeVisible({ timeout: 30_000 });
   const customer = await newCustomer();
+  await acceptTerms(page, customer);
   const response = await page.request.post("/api/money/onboarding", { headers: { Authorization: `Bearer ${customer.token}` }, data: { fullName: "Jane Customer", email: customer.email } });
   expect(response.status()).toBe(503);
 });
