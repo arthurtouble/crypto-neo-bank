@@ -3,6 +3,7 @@ import { base } from "viem/chains";
 import { z } from "zod";
 import { LifiStatusError, readLifiTransferStatus } from "@/lib/actions/lifi-status";
 import { requireVerifiedSubject } from "@/lib/auth/server";
+import { updateWalletDeposit } from "@/lib/deposits/tracking";
 import { route } from "@/lib/http/route";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 
@@ -14,7 +15,8 @@ const schema = z.object({
 
 /**
  * Progress of a bridged deposit, as LI.FI reports it. This is only progress:
- * the Aura balance comes from Base itself.
+ * the Aura balance comes from Base itself. A deposit kept for Transactions
+ * (`lib/deposits/tracking.ts`) takes the same progress.
  */
 export const GET = route("deposits.status", { invalid: "invalid_deposit_status", unavailable: "deposit_status_unavailable" }, async (request, { traceId }) => {
   const subject = await requireVerifiedSubject(request);
@@ -22,6 +24,7 @@ export const GET = route("deposits.status", { invalid: "invalid_deposit_status",
   const input = schema.parse(Object.fromEntries(new URL(request.url).searchParams));
   try {
     const status = await readLifiTransferStatus({ sourceHash: input.hash, sourceChainId: input.chainId, destinationChainId: base.id, toolId: input.tool });
+    await updateWalletDeposit(env.PROJECTION_DB, subject.subjectReference, input.hash, status.status, status.destinationHash);
     return Response.json({ status: status.status, destinationHash: status.destinationHash, traceId });
   } catch (error) {
     if (error instanceof LifiStatusError) return Response.json({ status: "UNKNOWN", destinationHash: null, traceId });

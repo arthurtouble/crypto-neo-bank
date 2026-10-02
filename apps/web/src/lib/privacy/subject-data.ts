@@ -25,6 +25,7 @@ export const subjectDataInventory = {
   product_events: { export: true, reason: "Product analytics; deleted after 180 days" },
   incoming_observations: { export: true, reason: "Money received, as the chain showed it; rebuildable from the chain" },
   card_observations: { export: true, reason: "Card payments, holds, and refunds as Stripe reported them; rebuildable from Stripe" },
+  wallet_deposits: { export: true, reason: "Deposits you bridged from your own wallet, with LI.FI's progress; rebuildable from the chains" },
   consent_events: { export: true, reason: "Proof of consent and withdrawal" },
   consent_evidence: { export: true, reason: "Proof of accepted terms and disclosures" },
   audit_events: { export: true, reason: "Security and financial audit trail" },

@@ -21,9 +21,10 @@ The Deposit screen (`deposit-page.tsx`) lists four ways to add money, each openi
   - From Base it is a plain transfer.
   - From another network, `POST /api/deposits/quote` gets a LI.FI route to the same asset on Base, paid to the Aura account from a wallet Privy shows is linked to the customer. Bridge fees come out of the amount that arrives. The connected wallet signs and pays the source network fee.
   - `GET /api/deposits/status` reports LI.FI's progress (delivered, pending, refunded, or `UNKNOWN` when LI.FI can't be read or reports another transfer). The balance is read from Base.
+  - Once the source transaction lands, the page sends it to `POST /api/deposits`, which keeps it in `wallet_deposits` (`lib/deposits/tracking.ts`) only if the source network shows it succeeded, went to the LI.FI Diamond, and came from a wallet Privy shows is the customer's. Transactions shows it as pending, with the quoted amount as "about", and asks LI.FI about up to three open ones per read (every 30 seconds at most); the status check above updates it too. When it arrives, the transfer on Base takes its place, labelled as from the customer's wallet. A refund or failure shows as Failed with the reason. The form is free for the next deposit while one travels.
   - A LI.FI outage or rate limit is `provider_unavailable`, never "no route". With `cross_chain` off, a quote is refused with a message and nothing is sent.
-- **Card:** Privy's funding flow (`useFundWallet`).
-- Deposits are not actions: the Aura account signs nothing, so nothing is stored in D1.
+- **Card:** Privy's funding flow (`useFundWallet`), shown only while the `card_deposits` switch is on (`GET /api/deposits/methods`). Aura can only hide the way in: Privy's funding setting in its dashboard is what stops a purchase.
+- Deposits are not actions: the Aura account signs nothing. The only D1 record is the `wallet_deposits` projection for bridged deposits, which never counts as a balance.
 
 ### Send
 
