@@ -45,9 +45,12 @@ The Cards page shows your card with **Show card details**, **Card controls**, yo
 
 - **Freeze card** stops all payments straight away. Unfreezing needs your passkey. You can't unfreeze while your account is locked.
 - **Daily limit.** Lowering it applies at once. Raising it needs your passkey.
+- **Replace card.** If your card is lost or stolen, select **Replace**, say which, and confirm with your passkey. Your card is canceled for good and you get a new card number, with the same daily limit and allowance. Update the new number wherever you saved the old one. You can't replace a card while your account is locked.
 - **Locking your account** in Settings also tries to freeze your card.
 
-We notify you when a card is created, unfrozen, or its limit is raised: in the app, and by email or browser if you turned those on.
+If Aura can't reach Stripe, the Cards page says your card is unavailable and shows nothing about it as current. You can still select **Freeze card**.
+
+We notify you when a card is created, replaced, unfrozen, or its limit is raised: in the app, and by email or browser if you turned those on.
 
 ## Card details
 

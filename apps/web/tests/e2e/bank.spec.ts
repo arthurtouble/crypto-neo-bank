@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 import { BRIDGE } from "./support/fake-edge.mjs";
 import { expect, test } from "./support/fixtures";
-import { acceptTerms, asCustomer, ASSETS, edge, newCustomer, setBalances, setFeature, setIdentity, type Customer } from "./support/session";
+import { acceptTerms, asCustomer, ASSETS, edge, newCustomer, setBalances, setControls, setFeature, setIdentity, type Customer } from "./support/session";
 
 // Feature 10 in docs/overview/feature-readiness.md: Bank and cards, the bank
 // half. Bridge (identity verification, the USD account, saved banks, and
@@ -183,4 +183,25 @@ test("while bank accounts are switched off, Deposit and Send say they're coming 
   await acceptTerms(page, customer);
   const response = await page.request.post("/api/money/onboarding", { headers: { Authorization: `Bearer ${customer.token}` }, data: { fullName: "Jane Customer", email: customer.email } });
   expect(response.status()).toBe(503);
+});
+
+test("a new bank account says when it can receive, and a saved one can be removed", async ({ page }) => {
+  test.setTimeout(120_000);
+  const customer = await signIn(page, "100000000");
+  await verified(page, customer);
+  await setControls(page, customer, { enforceAddressBook: true });
+  await asCustomer(page, customer, "POST", "/api/money/bank-accounts", { accountOwnerName: "Jane Customer", bankName: "Chase", accountNumber: "123456789",
+    routingNumber: "021000021", checkingOrSavings: "checking", address: { streetLine1: "1 Test Street", city: "New York", state: "NY", postalCode: "10001", country: "USA" } });
+  await page.goto("/app/send#bank");
+  const saved = sendPanel(page).getByTestId("saved-bank");
+  // With saved recipients only on, it waits like a new recipient, and the payout form isn't offered yet.
+  await expect(saved).toContainText("Ready from", { timeout: 30_000 });
+  await expect(sendPanel(page).getByRole("form", { name: "Send to a bank" })).toHaveCount(0);
+
+  await saved.getByRole("button", { name: "Remove Chase •••• 6789" }).click();
+  await saved.getByRole("button", { name: "Remove", exact: true }).click();
+  await expect(toast(page, "Bank account removed")).toBeVisible({ timeout: 20_000 });
+  await expect(saved).toHaveCount(0);
+  const { recipients } = await asCustomer(page, customer, "GET", "/api/recipients") as { recipients: Array<{ kind: string }> };
+  expect(recipients.filter((item) => item.kind === "bank")).toEqual([]);
 });
