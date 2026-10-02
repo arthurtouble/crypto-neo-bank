@@ -1,56 +1,27 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-const httpErrors = await vi.hoisted(() => import("@/lib/http/errors"));
 
-const state = vi.hoisted(() => ({
-  AuthenticationError: httpErrors.AuthenticationError,
-  WalletOwnershipError: httpErrors.WalletOwnershipError,
-  authenticated: false,
-  linked: false,
-  marketCalls: 0
-}));
-vi.mock("@/lib/auth/server", () => ({
-  AuthenticationError: state.AuthenticationError,
-  requireVerifiedSubject: async () => {
-    if (!state.authenticated) throw new state.AuthenticationError();
-    return { subjectReference: "subject-a" };
-  }
-}));
-vi.mock("@/lib/auth/wallet", () => ({
-  WalletOwnershipError: state.WalletOwnershipError,
-  requireLinkedEvmWallet: async (_subject: string, address: string) => {
-    if (!state.linked) throw new state.WalletOwnershipError();
-    return address.toLowerCase();
-  }
-}));
+const state = vi.hoisted(() => ({ marketCalls: 0, args: [] as unknown[] }));
 vi.mock("@/lib/defi/aave", () => ({
-  getAaveBaseMarkets: async (address?: string) => { state.marketCalls++; return { address }; },
+  getAaveBaseMarkets: async (...args: unknown[]) => { state.marketCalls++; state.args = args; return {}; },
 }));
 
 import { GET as markets } from "@/app/api/defi/aave/markets/route";
 
-
-const address = "0x2222222222222222222222222222222222222222";
 const request = (path: string) => new Request(`https://aura.test${path}`);
 
 describe("Aave read boundaries", () => {
-  beforeEach(() => Object.assign(state, { authenticated: false, linked: false, marketCalls: 0 }));
+  beforeEach(() => Object.assign(state, { marketCalls: 0, args: [] }));
 
-  it("keeps general market data public without a wallet", async () => {
+  it("serves general market data publicly and cacheably", async () => {
     const response = await markets(request("/api/defi/aave/markets"));
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({});
+    expect(response.headers.get("Cache-Control")).toContain("public");
     expect(state.marketCalls).toBe(1);
   });
 
-  it("requires a verified session and wallet ownership before address-scoped markets", async () => {
-    const path = `/api/defi/aave/markets?address=${address}`;
-    expect((await markets(request(path))).status).toBe(401);
-    state.authenticated = true;
-    expect((await markets(request(path))).status).toBe(403);
-    state.linked = true;
-    const response = await markets(request(path));
-    expect(response.status).toBe(200);
-    expect(response.headers.get("Cache-Control")).toBe("private, no-store");
-    expect(state.marketCalls).toBe(1);
+  it("never sends an account's address to Aave's data service", async () => {
+    await markets(request("/api/defi/aave/markets?address=0x2222222222222222222222222222222222222222"));
+    expect(state.args).toEqual([]);
   });
 });

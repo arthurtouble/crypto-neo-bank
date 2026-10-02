@@ -13,15 +13,15 @@ type Direction = "deposit" | "withdraw";
 const labels: Record<Direction, string> = { deposit: "Deposit", withdraw: "Withdraw" };
 
 /**
- * Deposit to or withdraw from one Earn option, on two tabs. Deposit shows what the account holds, with Max; Withdraw
+ * Deposit to or withdraw from one Earn option, on two tabs (withdraw only, without tabs, for an option closed to deposits). Deposit shows what the account holds, with Max; Withdraw
  * shows what's in this option, with "Withdraw all", which takes out everything, interest included: the whole Aave
  * balance, or every vault share. A deposit approves and deposits in one confirmation. Balances are null when they
  * can't be read, and then say so. The amount clears once the money has moved.
  */
-export function EarnAction({ option, symbol, decimals, hasPosition, walletRaw, positionRaw }: {
-  option: EarnOption; symbol: string; decimals: number; hasPosition: boolean; walletRaw: string | null; positionRaw: string | null;
+export function EarnAction({ option, symbol, decimals, hasPosition, walletRaw, positionRaw, withdrawOnly = false }: {
+  option: EarnOption; symbol: string; decimals: number; hasPosition: boolean; walletRaw: string | null; positionRaw: string | null; withdrawOnly?: boolean;
 }) {
-  const [direction, setDirection] = useState<Direction>("deposit");
+  const [direction, setDirection] = useState<Direction>(withdrawOnly ? "withdraw" : "deposit");
   const earn = useAction({ label: labels[direction] });
   const [amount, setAmount] = useState("");
   // Once it has left the account it's sent; Transactions tracks the rest, as in Send and Swap.
@@ -46,11 +46,11 @@ export function EarnAction({ option, symbol, decimals, hasPosition, walletRaw, p
   function edit(change: () => void) { change(); if (moved || (earn.error && !earn.outcomeUnknown)) earn.reset(); }
 
   return <form className="mxForm erForm" aria-label={`${option.label}: deposit or withdraw`} onSubmit={(event) => { event.preventDefault(); void submit(); }}>
-    <div className="appSegmented erTabs" role="tablist" aria-label="Deposit or withdraw">
+    {!withdrawOnly && <div className="appSegmented erTabs" role="tablist" aria-label="Deposit or withdraw">
       {(["deposit", "withdraw"] as const).map((item) => <button key={item} type="button" role="tab" id={`earn-tab-${id}-${item}`} aria-controls={`earn-panel-${id}`}
         aria-selected={direction === item} disabled={locked} onClick={() => edit(() => setDirection(item))}>{labels[item]}</button>)}
-    </div>
-    <div className="mxFieldGroup" role="tabpanel" id={`earn-panel-${id}`} aria-labelledby={`earn-tab-${id}-${direction}`}>
+    </div>}
+    <div className="mxFieldGroup" role={withdrawOnly ? undefined : "tabpanel"} id={`earn-panel-${id}`} aria-labelledby={withdrawOnly ? undefined : `earn-tab-${id}-${direction}`}>
       <div className="mxAmountWithMax">
         <label className="mxField">Amount in {symbol}<input type="text" inputMode="decimal" autoComplete="off" value={amount} disabled={locked}
           aria-describedby={`earn-balance-${id}`} onChange={(event) => edit(() => setAmount(event.target.value))} placeholder="0.00" /></label>

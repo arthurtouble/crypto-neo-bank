@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 import { assetsFor } from "../../src/lib/assets/registry";
 import { expect, test } from "./support/fixtures";
-import { acceptTerms, ASSETS, edge, newCustomer, setBalances, setFeature, setIdentity, type Customer } from "./support/session";
+import { acceptTerms, asCustomer, ASSETS, edge, newCustomer, setBalances, setFeature, setIdentity, type Customer } from "./support/session";
 
 // Feature 2 in docs/overview/feature-readiness.md: every way to add money.
 // The connected wallet (a fake MetaMask), the chains, LI.FI, and Privy's card
@@ -43,6 +43,7 @@ test.beforeAll(async ({ request }) => {
 
 test("the Deposit page shows all four ways to add money", async ({ page }) => {
   const customer = await newCustomer();
+  await setFeature(page, "card_deposits", true);
   await openDeposit(page, customer);
 
   await expect(page.getByTestId("account-address")).toHaveText(customer.wallet);
@@ -173,7 +174,9 @@ test("USDC from Arbitrum is bridged to USDC on Base, with fees shown first", asy
   await wallet(page).getByRole("button", { name: "Confirm deposit" }).click();
 
   await expect(toast(page, "Sent")).toBeVisible({ timeout: 30_000 });
-  await expect(wallet(page).getByRole("button", { name: "On its way" })).toBeVisible();
+  // The form is free again, and says the deposit is on its way.
+  await expect(wallet(page).getByTestId("deposit-travelling")).toContainText("About 39.8 USDC is on its way from Arbitrum");
+  await expect(wallet(page).getByRole("button", { name: "Review" })).toBeEnabled();
   const [approve, bridge] = await sent();
   expect(approve).toMatchObject({ chainId: 42161, to: ARBITRUM_USDC, success: true });
   expect(bridge).toMatchObject({ chainId: 42161, to: LIFI_DIAMOND, value: "0", success: true });
@@ -181,6 +184,36 @@ test("USDC from Arbitrum is bridged to USDC on Base, with fees shown first", asy
   // LI.FI reports delivery; the page follows it and says so.
   await edge("/__state", { bridge: { status: "DONE", substatus: "COMPLETED" } });
   await expect(toast(page, "Added")).toBeVisible({ timeout: 30_000 });
+  await setFeature(page, "cross_chain", false);
+});
+
+test("a bridged deposit shows in Transactions while it's on its way, and says when the bridge sent it back", async ({ page }) => {
+  const customer = await newCustomer({ connectedWallet: true });
+  await setBalances(customer.externalWallets[0], { 42161: { [ARBITRUM_USDC]: "100000000" } });
+  await setFeature(page, "cross_chain", true);
+  await openDeposit(page, customer, "From a wallet");
+  await wallet(page).getByLabel("Network").selectOption("Arbitrum");
+  await expect(wallet(page).getByText(/100 USDC available/)).toBeVisible({ timeout: 20_000 });
+  await wallet(page).getByLabel("Amount in USDC").fill("40");
+  await wallet(page).getByRole("button", { name: "Review" }).click();
+  await wallet(page).getByRole("button", { name: "Confirm deposit" }).click();
+  await expect(wallet(page).getByTestId("deposit-travelling")).toBeVisible({ timeout: 30_000 });
+  const bridge = (await sent()).at(-1)!;
+
+  // The customer leaves Deposit; Transactions keeps the deposit.
+  await page.goto("/app/transactions");
+  const row = page.locator(".activityRow").filter({ hasText: "39.8 USDC" });
+  await expect(row).toBeVisible({ timeout: 30_000 });
+  await expect(row).toContainText("Pending");
+  await row.click();
+  await expect(page.getByRole("dialog")).toContainText("Your wallet on Arbitrum");
+  await expect(page.getByTestId("deposit-note")).toContainText("On its way from your wallet");
+
+  // LI.FI reports a refund, as the next status check sees it.
+  await edge("/__state", { bridge: { status: "DONE", substatus: "REFUNDED" } });
+  await asCustomer(page, customer, "GET", `/api/deposits/status?chainId=42161&hash=${bridge.hash}&tool=across`);
+  await page.reload();
+  await expect(page.locator(".activityRow").filter({ hasText: "39.8 USDC" })).toContainText("Failed", { timeout: 30_000 });
   await setFeature(page, "cross_chain", false);
 });
 
@@ -269,8 +302,17 @@ test("an expired price must be reviewed again before anything is sent", async ({
   await setFeature(page, "cross_chain", false);
 });
 
+test("while card deposits are switched off, Card says so and offers no payment", async ({ page }) => {
+  const customer = await newCustomer();
+  await setFeature(page, "card_deposits", false);
+  await openDeposit(page, customer, "Card");
+  await expect(page.getByText("Card payments aren't available right now.")).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("button", { name: "Pay by card" })).toHaveCount(0);
+});
+
 test("paying by card opens Privy's card flow for USDC on Base", async ({ page }) => {
   const customer = await newCustomer();
+  await setFeature(page, "card_deposits", true);
   await openDeposit(page, customer, "Card");
   await page.getByRole("button", { name: "Pay by card" }).click();
   const calls = await page.evaluate(() => (window as unknown as { __auraE2E?: { fundWallet: unknown[] } }).__auraE2E?.fundWallet ?? []);
@@ -280,6 +322,7 @@ test("paying by card opens Privy's card flow for USDC on Base", async ({ page })
 
 test("a card payment that doesn't finish is reported", async ({ page }) => {
   const customer = await newCustomer();
+  await setFeature(page, "card_deposits", true);
   await page.addInitScript(() => localStorage.setItem("aura-e2e-card", "fail"));
   await openDeposit(page, customer, "Card");
   await page.getByRole("button", { name: "Pay by card" }).click();

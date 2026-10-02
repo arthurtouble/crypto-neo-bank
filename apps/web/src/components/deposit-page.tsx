@@ -6,6 +6,8 @@ import { QRCodeSVG } from "qrcode.react";
 import { useEffect, useState } from "react";
 import { HOME_CHAIN } from "@/config/supported-chains";
 import { assetsFor } from "@/lib/assets/registry";
+import { useQuery } from "@tanstack/react-query";
+import { useApi } from "@/lib/client/api";
 import { useAuth } from "@/lib/client/auth";
 import { useAuraWallet } from "@/lib/client/use-aura-wallet";
 import { useWallet } from "@/lib/client/wallet-context";
@@ -85,8 +87,15 @@ function ReceivePanel({ address, isExample, onSignIn }: { address: string; isExa
   </section>;
 }
 
+/** Whether card purchases are open (`card_deposits`); Privy's own funding setting is what stops a purchase. */
+function useCardOpen(enabled: boolean) {
+  const api = useApi();
+  return useQuery({ queryKey: ["deposit-methods"], queryFn: () => api<{ card: boolean }>("/api/deposits/methods"), enabled });
+}
+
 function CardPanel({ address, isExample, onSignIn }: { address: string | undefined; isExample: boolean; onSignIn: () => void }) {
   const { fundWallet } = useWallet();
+  const methods = useCardOpen(!isExample);
   const toast = useToast();
   const [paying, setPaying] = useState(false);
   async function payByCard() {
@@ -103,6 +112,9 @@ function CardPanel({ address, isExample, onSignIn }: { address: string | undefin
       <p>Buy USDC with a debit or credit card. It arrives in your Aura account.</p></div>
     <p className="mxHint">A card payment partner takes the payment. It shows its fee and limits before you pay.</p>
     {isExample ? <SignInToAdd onSignIn={onSignIn} />
+      : methods.isPending ? <LoadingState label="Checking card payments…" />
+      : methods.isError ? <Notice tone="error" role="alert" onRetry={() => void methods.refetch()}>Card payments are unavailable right now.</Notice>
+      : !methods.data.card ? <Notice tone="warning">Card payments aren&apos;t available right now. You can use one of the other ways here.</Notice>
       : <button type="button" className="appButton appButtonPrimary appButtonLarge" disabled={paying || !address} onClick={() => void payByCard()}>
         {paying ? <LoaderCircle className="spin" aria-hidden="true" /> : <CreditCard aria-hidden="true" />} Pay by card</button>}
   </section>;

@@ -13,7 +13,7 @@ const OPS = `http://127.0.0.1:${process.env.AUREL_E2E_OPS_PORT ?? "43175"}`;
 const FRIEND = "0x5555555555555555555555555555555555555555";
 const SECTIONS = ["overview", "deposit", "send", "swap", "earn", "cards", "transactions", "insights", "settings", "support"] as const;
 const path = (section: string) => section === "overview" ? "/app" : `/app/${section}`;
-const FEATURES = ["direct_transfers", "swaps", "cross_chain", "defi_actions", "fiat_accounts", "payment_cards", "card_wallets"];
+const FEATURES = ["direct_transfers", "swaps", "cross_chain", "defi_actions", "fiat_accounts", "payment_cards", "card_wallets", "card_deposits"];
 
 const funded = {
   8453: {

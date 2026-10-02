@@ -76,6 +76,9 @@ function Receipt({ entry, onClose, isExample }: { entry: ActivityEntry; onClose:
         {entry.origin === "aura" && !isExample ? <ReceiptJourney id={entry.id} />
           : entry.origin === "incoming" ? <p className="ovNote" data-testid="incoming-finality">{entry.final
             ? `Final on ${networkName(entry.chainId)}.` : `Received. ${networkName(entry.chainId)} makes it final in about 20 minutes.`}</p>
+            : entry.origin === "deposit" ? <p className="ovNote" data-testid="deposit-note">{entry.status === "pending"
+              ? "On its way from your wallet. It usually arrives in a few minutes, and the amount that arrives is read from Base."
+              : entry.status === "failed" ? "Nothing arrived in your Aura account." : "It arrived in your Aura account."}</p>
             : entry.origin === "card" ? <p className="ovNote" data-testid="card-payment-note">{entry.status === "pending"
               ? "The merchant hasn't settled this yet. The amount can change or be released." : entry.status === "failed"
                 ? "No money moved." : "Paid with your card from your USDC on Base. Manage or dispute it on Cards."}</p> : null}
