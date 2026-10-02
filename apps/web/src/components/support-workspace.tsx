@@ -22,9 +22,10 @@ export function SupportWorkspace() {
   const closing = useSearchParams().get("topic") === "close-account";
   const chatReady = chat.status === "ready";
 
-  // Guests read the articles; chat is for signed-in customers, so its buttons sign in first.
+  // Guests read the articles; chat is for signed-in customers, so its buttons sign in first. The banner's
+  // "Create account or sign in" stays the only primary button for guests.
   const chatButton = (label: string, message?: string, primary = false) => isExample
-    ? <button type="button" className={`appButton${primary ? " appButtonPrimary" : ""}`} onClick={login}>{label}</button>
+    ? <button type="button" className="appButton" onClick={login}>{label}</button>
     : <button type="button" className={`appButton${primary ? " appButtonPrimary" : ""}`} disabled={!chatReady} onClick={() => chat.open(message)}>
       {chat.status === "loading" ? <LoaderCircle className="spin" aria-hidden="true" /> : primary ? <MessageCircle aria-hidden="true" /> : null} {label}</button>;
 
@@ -37,7 +38,7 @@ export function SupportWorkspace() {
           {chatButton("Ask to close", "Please close my Aura account. I've moved all my money out.", true)}</SettingRow></li>}
         <li><SettingRow title="Chat with us" detail={!isExample && chat.status === "unavailable" ? "Chat isn't available right now. Try again later."
           : "Aura's assistant answers straight away, and our team takes over when it can't help. Never share a seed phrase, private key, or one-time code."}>
-          {chatButton(isExample ? "Sign in to chat" : "Chat", undefined, !closing)}</SettingRow></li>
+          {chatButton("Chat", undefined, !closing)}</SettingRow></li>
         <li><SettingRow title="Help articles" detail="Getting started, account controls, and what's available now.">
           <a className="appButton" href={`${docs}/getting-started/setup/`}>Open</a></SettingRow></li>
       </ul>

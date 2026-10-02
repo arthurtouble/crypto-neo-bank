@@ -8,7 +8,7 @@ import {
   ArrowDownToLine, ArrowDownUp, ArrowUpFromLine, ChartNoAxesColumn, CircleHelp, CreditCard,
   LayoutGrid, List, LogIn, Settings, TrendingUp, type LucideIcon
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import { navigation } from "@/lib/product-map";
 import { AccountDetails, AccountMenu } from "./account-menu";
 import { AccountClosedGate } from "./account-closed";
@@ -31,7 +31,8 @@ function isCurrent(pathname: string, href: string) {
 
 /**
  * Desktop: a sidebar with the ten sections, and a top bar with search, the bell, and the account menu.
- * Phone: a header with the wordmark and the bell, and a floating menu button that opens the sections as tiles.
+ * Phone: a header with the wordmark and the bell, and a floating menu button that opens the sections as tiles. It steps
+ * aside while the page scrolls down or a form is under it.
  */
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() ?? "/app";
@@ -60,7 +61,59 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** Phone only: the floating menu button and the sheet of ten tiles, three per row, with the account at the bottom. */
+/** Form controls the menu button must never cover: fields, and the buttons inside a form. */
+const formControl = "input, select, textarea, form button, [type='submit']";
+
+/**
+ * Phone only: whether the floating menu button should step aside. It does while the page scrolls down (as the
+ * customer reads on or reaches for a button lower down) and comes back when they scroll up, reach the top, or reach
+ * the end, where the page keeps 100px clear. It also steps aside whenever a field or a form's button is under it, so
+ * a tap meant for that control reaches it. Checked on scroll, resize, and when the page changes size, once a frame.
+ */
+function useMenuStepsAside(button: RefObject<HTMLButtonElement | null>) {
+  const [aside, setAside] = useState(false);
+  useEffect(() => {
+    const phone = window.matchMedia("(max-width: 767px)");
+    let frame = 0;
+    let lastY = window.scrollY;
+    let down = false;
+    const overForm = (el: HTMLElement) => {
+      const box = el.getBoundingClientRect();
+      const x = box.left + box.width / 2, y = box.top + box.height / 2, r = box.width / 2 - 4;
+      const points: Array<[number, number]> = [[x, y], [x - r, y], [x + r, y], [x, y - r], [x, y + r]];
+      return points.some(([px, py]) => Boolean(document.elementsFromPoint(px, py).find((item) => !el.contains(item))?.closest(formControl)));
+    };
+    const check = () => {
+      frame = 0;
+      const el = button.current;
+      if (!el || !phone.matches) { setAside(false); return; }
+      const y = window.scrollY;
+      const atEdge = y < 40 || y + window.innerHeight >= document.documentElement.scrollHeight - 4;
+      if (Math.abs(y - lastY) >= 8) { down = y > lastY; lastY = y; }
+      setAside((down && !atEdge) || overForm(el));
+    };
+    const schedule = () => { if (!frame) frame = requestAnimationFrame(check); };
+    const resized = new ResizeObserver(schedule);
+    resized.observe(document.body);
+    window.addEventListener("scroll", schedule, { passive: true });
+    window.addEventListener("resize", schedule);
+    phone.addEventListener("change", schedule);
+    schedule();
+    return () => {
+      cancelAnimationFrame(frame);
+      resized.disconnect();
+      window.removeEventListener("scroll", schedule);
+      window.removeEventListener("resize", schedule);
+      phone.removeEventListener("change", schedule);
+    };
+  }, [button]);
+  return aside;
+}
+
+/**
+ * Phone only: the floating menu button and the sheet of ten tiles, three per row, with the account at the bottom.
+ * The button steps aside while the page scrolls down or a form is under it (useMenuStepsAside).
+ */
 function MenuSheet({ pathname }: { pathname: string }) {
   const [open, setOpen] = useState(false);
   // Disabled until hydrated, so an early tap isn't lost.
@@ -70,10 +123,12 @@ function MenuSheet({ pathname }: { pathname: string }) {
     return () => cancelAnimationFrame(frame);
   }, []);
   const { authenticated, ready, login } = useAuth();
+  const button = useRef<HTMLButtonElement>(null);
+  const aside = useMenuStepsAside(button);
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Trigger asChild>
-        <button type="button" className="appMenuButton" aria-label="Open menu" disabled={!mounted}><LayoutGrid aria-hidden="true" /></button>
+        <button ref={button} type="button" className="appMenuButton" aria-label="Open menu" disabled={!mounted} data-stepped-aside={aside && !open ? "" : undefined}><LayoutGrid aria-hidden="true" /></button>
       </Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Overlay className="appScrim" />

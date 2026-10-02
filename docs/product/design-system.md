@@ -279,7 +279,7 @@ A 6px dot and a literal word: Completed (positive), Pending or the provider's st
 
 - A note: a soft background in the status colour (warning, error, or info in accent-soft), a 16px icon, and one or two short sentences. At most one link or button.
 - A banner: full width at the top of the page, for things about the whole page: example data for guests, an expired session, a missing source.
-- Guest banner: "Example data. Values and activity here are fictional." with a Sign in button.
+- Guest banner: "Example data. Values and activity here are fictional." with "Create account or sign in", the only primary sign-in button on the page. Other guest actions keep their own label (Chat, Tell us) or a secondary "Sign in to …" button, and open sign-in; a page that only describes settings has no second button.
 
 ### Toasts
 
@@ -288,9 +288,9 @@ On the raised surface with shadow 2, a status icon, a title, one line, and a clo
 ### Navigation
 
 - **Desktop sidebar.** 232px, the surface colour, a line on its right. The wordmark at the top, then the ten sections as 36px items: an 18px icon and the name. The current item has a muted fill, text colour, and an accent icon. Tablet: 72px, icons only, names in tooltips.
-- **Desktop top bar.** 60px: the page title or search (⌘K) on the left, the bell and the avatar menu on the right.
+- **Desktop top bar.** 60px: the page title or search (⌘K) on the left, the bell and the avatar menu on the right. The bell's unread count is a small accent pill on the bell's top-right corner, never over the bell. The avatar shows the first letter of the account's email or name; with no letter (an email like 3@…), a person icon.
 - **Phone header.** 56px: the section title, and the bell on the right. In a step, a back button on the left and the step's title instead.
-- **Phone menu button.** A 56px circle, filled with the text colour, floating bottom centre with shadow 2. It hides during a step. It stays put while typing: hiding it on focus moved it under the finger as the field lost focus, so taps meant for a form button opened the menu. The page leaves 100px clear at the bottom instead.
+- **Phone menu button.** A 56px circle, filled with the text colour, floating bottom centre with shadow 2. It hides during a step. It steps aside (fades out) while the page scrolls down, and comes back when the customer scrolls up or reaches the top or the end. It also steps aside whenever a field or a form's button is under it, so a tap meant for that control reaches it. It doesn't react to focus: hiding it on focus moved it under the finger as the field lost focus, so taps meant for a form button opened the menu. The page leaves 100px clear at the bottom as well.
 - **Phone menu sheet.** From the bottom, `--radius-sheet` top corners, a grab handle. "Menu" and the email at the top, the ten sections as tiles three per row (a 22px icon above the name, the current tile outlined in accent), and Log out at the bottom.
 
 ### Overlays
