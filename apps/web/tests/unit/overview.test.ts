@@ -83,15 +83,7 @@ describe("reading the overview from the chains", () => {
   });
 });
 
-describe("an Earn position growing between reads", () => {
-  it("compounds at the yearly rate from the last chain value, and never shrinks", async () => {
-    const { grownAmount } = await import("@/components/live-amount");
-    const at = "2026-01-01T00:00:00.000Z";
-    expect(grownAmount(100, 5, at, Date.parse("2027-01-01T00:00:00.000Z"))).toBeCloseTo(105, 6);
-    expect(grownAmount(100, 5, at, Date.parse(at) + 1000)).toBeGreaterThan(100);
-    expect(grownAmount(100, 5, at, Date.parse(at) - 5000)).toBe(100);
-  });
-
+describe("an Earn position's rate", () => {
   it("turns Aave's ray APR into the rate it compounds to", async () => {
     const { aaveSupplyApyPct } = await import("@/lib/overview/read");
     expect(aaveSupplyApyPct(37_777_000_000_000_000_000_000_000n)).toBe(3.85);

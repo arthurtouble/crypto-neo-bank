@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useAction } from "@/lib/client/use-action";
+import { formatToken } from "@/lib/format";
+import { formatUnits } from "@/lib/format/units";
 import { TransactionProgress } from "./transaction-progress";
 
 /** Where the money goes: an Aave reserve on Base, or a Morpho vault on Base. */
@@ -11,16 +13,27 @@ type Direction = "deposit" | "withdraw";
 const labels: Record<Direction, string> = { deposit: "Deposit", withdraw: "Withdraw" };
 
 /**
- * Deposit to or withdraw from one Earn option. A deposit approves and deposits
- * in one confirmation. "Withdraw all" takes out everything, interest included: the whole Aave balance, or every vault share.
+ * Deposit to or withdraw from one Earn option, on two tabs. Deposit shows what the account holds, with Max; Withdraw
+ * shows what's in this option, with "Withdraw all", which takes out everything, interest included: the whole Aave
+ * balance, or every vault share. A deposit approves and deposits in one confirmation. Balances are null when they
+ * can't be read, and then say so. The amount clears once the money has moved.
  */
-export function EarnAction({ option, symbol, hasPosition }: { option: EarnOption; symbol: string; hasPosition: boolean }) {
+export function EarnAction({ option, symbol, decimals, hasPosition, walletRaw, positionRaw }: {
+  option: EarnOption; symbol: string; decimals: number; hasPosition: boolean; walletRaw: string | null; positionRaw: string | null;
+}) {
   const [direction, setDirection] = useState<Direction>("deposit");
   const earn = useAction({ label: labels[direction] });
   const [amount, setAmount] = useState("");
   // Once it has left the account it's sent; Transactions tracks the rest, as in Send and Swap.
   const handedOff = earn.action?.status === "settling";
   const locked = (earn.phase !== "idle" && earn.phase !== "done" && !handedOff) || earn.outcomeUnknown;
+  const moved = earn.phase === "done" || handedOff;
+  const [wasMoved, setWasMoved] = useState(false);
+  if (moved !== wasMoved) { setWasMoved(moved); if (moved) setAmount(""); }
+
+  const id = option.protocol === "aave" ? `aave-${option.asset}` : option.vault;
+  const balanceRaw = direction === "deposit" ? walletRaw : positionRaw;
+  const balanceText = balanceRaw === null ? "unavailable" : formatToken(formatUnits(BigInt(balanceRaw), decimals), symbol, { maxDecimals: 6 });
 
   async function submit(all = false) {
     if (locked || (!all && !amount.trim())) return;
@@ -30,15 +43,21 @@ export function EarnAction({ option, symbol, hasPosition }: { option: EarnOption
       : { kind: "earn", protocol: "morpho", direction, vault: option.vault, amount: value });
   }
 
-  function edit(change: () => void) { change(); if (earn.phase === "done" || handedOff || (earn.error && !earn.outcomeUnknown)) earn.reset(); }
+  function edit(change: () => void) { change(); if (moved || (earn.error && !earn.outcomeUnknown)) earn.reset(); }
 
   return <form className="mxForm erForm" aria-label={`${option.label}: deposit or withdraw`} onSubmit={(event) => { event.preventDefault(); void submit(); }}>
-    <div className="mxFieldRow">
-      <label className="mxField">Action<select value={direction} disabled={locked} onChange={(event) => edit(() => setDirection(event.target.value as Direction))}>
-        <option value="deposit">Deposit</option><option value="withdraw">Withdraw</option>
-      </select></label>
-      <label className="mxField">Amount<input type="text" inputMode="decimal" autoComplete="off" value={amount} disabled={locked}
-        onChange={(event) => edit(() => setAmount(event.target.value))} placeholder={`0 ${symbol}`} /></label>
+    <div className="appSegmented erTabs" role="tablist" aria-label="Deposit or withdraw">
+      {(["deposit", "withdraw"] as const).map((item) => <button key={item} type="button" role="tab" id={`earn-tab-${id}-${item}`} aria-controls={`earn-panel-${id}`}
+        aria-selected={direction === item} disabled={locked} onClick={() => edit(() => setDirection(item))}>{labels[item]}</button>)}
+    </div>
+    <div className="mxFieldGroup" role="tabpanel" id={`earn-panel-${id}`} aria-labelledby={`earn-tab-${id}-${direction}`}>
+      <div className="mxAmountWithMax">
+        <label className="mxField">Amount in {symbol}<input type="text" inputMode="decimal" autoComplete="off" value={amount} disabled={locked}
+          aria-describedby={`earn-balance-${id}`} onChange={(event) => edit(() => setAmount(event.target.value))} placeholder="0.00" /></label>
+        {direction === "deposit" && walletRaw !== null && walletRaw !== "0" && <button type="button" className="appButton mxMaxButton" disabled={locked}
+          onClick={() => edit(() => setAmount(formatUnits(BigInt(walletRaw), decimals)))}>Max</button>}
+      </div>
+      <span className="mxHint" id={`earn-balance-${id}`}>{direction === "deposit" ? `In your account: ${balanceText}` : `In ${option.label}: ${balanceText}`}</span>
     </div>
     <div className="mxActions">
       <button className="appButton appButtonPrimary" type="submit" disabled={locked || !earn.wallet.address || !amount.trim()}>
