@@ -211,6 +211,7 @@ Neutral cool greys and one accent. Use the semantic names, never a literal colou
 - **Positive:** completed, money in. **Negative:** failed, errors, destructive actions. **Warning:** pending, unavailable, needs attention. Always with a word, never colour alone.
 - Money out is the normal text colour with a minus sign, not red.
 - Tertiary text is for timestamps and hints, and never sits on `muted`.
+- QR codes are always dark on light (`--color-qr` on `--color-qr-background`), in both themes.
 - Dark is its own palette: near-black canvas, lighter surfaces as they rise.
 
 ## Typography

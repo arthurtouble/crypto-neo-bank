@@ -9,15 +9,17 @@ An Aura tag is a short public name, like `@sam`, that people can use to pay you.
 
 Anyone can open your page, with or without an Aura account, and copy your Base address or scan its QR code. The page shows an address only while that address is still verified on your account.
 
-Anyone paying you should check they're sending on Base, in an asset you can use. A payment on another network, or in a token Aura doesn't support, may not show in Aura.
+The page leads with your tag. The display name you chose shows under it, marked as the name you chose, because anyone can type any name.
+
+The page lists the assets that show in Aura on Base. The QR code names the Base network, so a wallet that reads it sends on Base. Anyone paying you should still check they're sending on Base, in one of those assets. A payment on another network, or in a token Aura doesn't support, may not show in Aura.
 
 The page shows only the ways to pay that work:
 
 - Crypto on Base is always there.
-- Your bank details show only if your Bridge bank account is active and you've chosen to show them.
+- Your bank details show only if your Bridge bank account is active and you've chosen to show them. They list the ways your account accepts dollars in the payer's bank's own terms, such as ACH and wire.
 - Card payment isn't offered.
 
-Someone with Aura can select **Send with Aura** to pay in the app, with your tag filled in. They sign in first if they need to. Aura checks the tag's address again before they confirm.
+Someone with Aura can select **Send with Aura** to pay in the app, with your tag filled in. If they aren't signed in, sign-in opens straight away. Aura checks the tag's address again before they confirm.
 
 ## Changing your tag
 
