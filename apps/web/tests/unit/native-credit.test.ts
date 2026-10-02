@@ -84,7 +84,7 @@ describe("observing a native credit on the chain", () => {
     const { fetcher, calls } = node({ "mainnet.base.org": { chainId: 1, balances: [0n, 9n] }, "base.drpc.org": { balances: [0n, 9n], blockHash: `0x${"e".repeat(64)}` },
       "1rpc.io": { balances: [0n, 5n] } });
     expect(await observeNativeCredit(target, { fetcher, now })).toMatchObject({ status: "observed", evidence: { method: "balance", source: "1rpc.io", creditedRaw: "5" } });
-    expect(calls.filter((call) => call.startsWith("mainnet.base.org"))).toEqual(["mainnet.base.org eth_chainId"]);
+    expect(calls.filter((call) => call.split(" ")[0] === "mainnet.base.org")).toEqual(["mainnet.base.org eth_chainId"]);
     // No history kept for the block, and no trace: unavailable, never zero.
     expect(await observeNativeCredit(target, { fetcher: node({ "mainnet.base.org": {} }).fetcher, now })).toEqual({ status: "unavailable", reason: "native_credit_unavailable" });
   });
