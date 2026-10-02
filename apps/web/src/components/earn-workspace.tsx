@@ -16,19 +16,19 @@ type AaveResponse = { reserves: AaveBaseReserve[]; observedAt: string };
 type VaultsResponse = { vaults: Array<{ id: string; address: string; name: string; curator: string; assetSymbol: string;
   rate: { netApyPct: number; totalAssetsUsd: number; liquidityUsd: number } | null }>; observedAt: string | null };
 
-const millions = (usd: number) => `$${(usd / 1_000_000).toFixed(1)}m`;
 const assetAddress = { USDC: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", WETH: "0x4200000000000000000000000000000000000006" } as const;
 
 type Card = { key: string; option: EarnOption; symbol: string; title: string; by: string; about: string;
-  apy: string | null; liquidity: string | null; deposits: string | null; positionId: string; assetId: string };
+  apy: string | null; positionId: string; assetId: string; withdrawOnly?: boolean };
 
 /** A position in dollars as last read from the chain, or its token amount when it has no price. */
 const positionText = (held: Holding) => held.usdCents !== null ? formatCents(held.usdCents)
   : formatToken(fromRaw(held.amountRaw ?? "0", held.decimals), held.symbol, { maxDecimals: 6 });
 
 /**
- * Earn on Base (journey J8): your positions first, in dollars as last read, then every way to earn. Supply USDC or WETH to Aave,
- * or deposit USDC into a Morpho vault; each opens to deposit or withdraw. Rates are live market data, shown as
+ * Earn on Base (journey J8): your positions first, in dollars as last read, then every way to earn. Supply USDC to Aave,
+ * or deposit USDC into a Morpho vault; each opens to deposit or withdraw. Aave WETH takes no deposits, so it shows only
+ * to an account that still holds a WETH position, to withdraw it. Rates are live market data, shown as
  * unavailable when they can't be read. Positions come from the chain, through the Overview. Guests see labelled
  * example positions with the live rates.
  */
@@ -61,16 +61,15 @@ export function EarnWorkspace() {
     ...(["USDC", "WETH"] as const).map((symbol): Card => {
       const data = reserve(symbol);
       return { key: `aave-${symbol}`, option: { protocol: "aave", asset: symbol, label: `Aave ${symbol}` }, symbol, title: `Aave ${symbol}`, by: "Aave on Base",
-        about: `Lend ${symbol} to Aave's market on Base. The rate moves with borrowing demand.`,
-        apy: data ? `${data.supplyApyPct}%` : null, liquidity: data ? millions(Number(data.availableLiquidity.usd)) : null,
-        deposits: data ? millions(Number(data.totalSuppliedUsd)) : null,
+        about: symbol === "WETH" ? "Aave WETH no longer takes deposits. You can withdraw what you supplied."
+          : `Lend ${symbol} to Aave's market on Base. The rate moves with borrowing demand.`,
+        apy: data ? `${data.supplyApyPct}%` : null, withdrawOnly: symbol === "WETH",
         positionId: `aave:8453:${assetAddress[symbol]}`, assetId: `8453:${assetAddress[symbol]}` };
     }),
     ...(vaults.data?.vaults ?? []).map((vault): Card => ({ key: vault.id, option: { protocol: "morpho", vault: vault.id, label: vault.name }, symbol: vault.assetSymbol,
       title: vault.name, by: `Morpho on Base, curated by ${vault.curator}`,
       about: `A USDC vault that ${vault.curator} spreads across Morpho lending markets. No fee.`,
-      apy: vault.rate ? `${vault.rate.netApyPct.toFixed(2)}%` : null, liquidity: vault.rate ? millions(vault.rate.liquidityUsd) : null,
-      deposits: vault.rate ? millions(vault.rate.totalAssetsUsd) : null, positionId: `morpho:8453:${vault.address}`, assetId: `8453:${assetAddress.USDC}` }))
+      apy: vault.rate ? `${vault.rate.netApyPct.toFixed(2)}%` : null, positionId: `morpho:8453:${vault.address}`, assetId: `8453:${assetAddress.USDC}` }))
   ];
   const position = (id: string) => overview.data?.holdings.find((holding) => holding.id === id);
 
@@ -113,6 +112,8 @@ export function EarnWorkspace() {
           const held = position(card.positionId);
           const holds = Boolean(held?.amountRaw && held.amountRaw !== "0");
           const expanded = open.includes(card.key);
+          // Once open, it stays while the withdrawal finishes, even after the position reaches zero.
+          if (card.withdrawOnly && !holds && !expanded && held?.status !== "unavailable") return null;
           const wallet = balance(card.assetId);
           return <article className="mxCard erOption" key={card.key} aria-label={card.title}>
             <div className="erOptionTop">
@@ -121,8 +122,6 @@ export function EarnWorkspace() {
             </div>
             <p className="mxHint">{card.about}</p>
             <dl className="mxSummary erFacts">
-              <div><dt>Can be withdrawn now</dt><dd className={card.liquidity ? undefined : "appUnavailable"}>{card.liquidity ?? "Unavailable"}</dd></div>
-              <div><dt>Total deposits</dt><dd className={card.deposits ? undefined : "appUnavailable"}>{card.deposits ?? "Unavailable"}</dd></div>
               <div><dt>Your position</dt><dd className={`sensitiveAmount${held?.status === "unavailable" || (!held && positionsUnavailable) ? " appUnavailable" : ""}`} data-testid={`position-${card.key}`}>
                 {overview.isPending ? "Reading"
                   : held?.status === "unavailable" || (!held && positionsUnavailable) ? "Unavailable"
@@ -133,9 +132,9 @@ export function EarnWorkspace() {
             {isExample ? <button type="button" className="appButton erToggle" onClick={login}>Sign in to deposit</button>
               : <>
                 <button type="button" className="appButton erToggle" aria-expanded={expanded} aria-controls={`earn-action-${card.key}`} onClick={() => toggle(card.key)}>
-                  Deposit or withdraw<ChevronDown aria-hidden="true" className="erChevron" /></button>
+                  {card.withdrawOnly ? "Withdraw" : "Deposit or withdraw"}<ChevronDown aria-hidden="true" className="erChevron" /></button>
                 <div id={`earn-action-${card.key}`} hidden={!expanded}>
-                  <EarnAction option={card.option} symbol={card.symbol} hasPosition={holds}
+                  <EarnAction option={card.option} symbol={card.symbol} hasPosition={holds} withdrawOnly={card.withdrawOnly}
                     walletRaw={wallet?.status === "observed" ? wallet.amountRaw ?? "0" : overview.data && !wallet ? "0" : null}
                     positionRaw={held?.status === "observed" ? held.amountRaw ?? "0" : overview.data && !held ? "0" : null} decimals={card.symbol === "WETH" ? 18 : 6} />
                 </div>

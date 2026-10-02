@@ -19,7 +19,7 @@ Neither vault charges a fee. We reviewed each vault before listing it. Before ev
 
 ## How returns work
 
-Each option shows its current rate, how much can be withdrawn now, and its total deposits. A rate is today's rate, not a forecast. It moves with supply and demand and can fall to zero. If Aura can't read a rate, it shows it as unavailable.
+Each option shows its current rate and your position. A rate is today's rate, not a forecast. It moves with supply and demand and can fall to zero. If Aura can't read a rate, it shows it as unavailable.
 
 None of these is a bank deposit, insured, or guaranteed.
 
