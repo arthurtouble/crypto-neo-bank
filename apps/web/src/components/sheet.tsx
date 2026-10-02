@@ -5,12 +5,10 @@ import * as Dialog from "@radix-ui/react-dialog";
 /**
  * dialog: centred on desktop, a bottom sheet on the phone (`mxDialog`, money.css).
  * panel: slides in from the right on desktop, full screen on the phone (`ovPanel`, overview.css).
- * picker: the asset picker (`mxPicker`, money.css).
  */
 const variants = {
   dialog: { overlay: "mxDialogOverlay", content: "mxDialog" },
-  panel: { overlay: "ovScrim", content: "ovPanel" },
-  picker: { overlay: "mxPickerOverlay", content: "mxPicker" }
+  panel: { overlay: "ovScrim", content: "ovPanel" }
 } as const;
 
 type SheetProps = {
