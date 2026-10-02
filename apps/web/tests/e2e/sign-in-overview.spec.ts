@@ -41,7 +41,8 @@ test("a new customer signs in, accepts the terms, and sees their balances", asyn
   await setIdentity(page, customer);
 
   await page.goto("/app");
-  await expect(page.getByText("Example data", { exact: true })).toBeVisible();
+  // The first guest load of /app in this file can sit on "Loading" while the dev server compiles it.
+  await expect(page.getByText("Example data", { exact: true })).toBeVisible({ timeout: 30_000 });
   await page.getByRole("button", { name: "Create account or sign in" }).click();
 
   await expect(page.getByRole("heading", { name: "Review Aura’s terms" })).toBeVisible();
