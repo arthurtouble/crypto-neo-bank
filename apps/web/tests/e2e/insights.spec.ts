@@ -79,7 +79,7 @@ test("Insights shows money in and out over time, and the card merchants paid mos
   await expect(merchants(page).getByTestId("top-merchant").nth(1)).toContainText("$20.00");
 
   // A year is shown by month.
-  await page.getByRole("button", { name: "1Y" }).click();
+  await page.getByRole("button", { name: "1 year" }).click();
   await chart(page).getByText("Show as a table").click({ timeout: 20_000 });
   await expect(chart(page).getByRole("columnheader", { name: "Month" })).toBeVisible();
   await expect(chart(page).locator(".chartHit")).toHaveCount(13);
@@ -94,6 +94,15 @@ test("when card payments can't be read from Stripe, money in and out show as una
   await expect(page.getByTestId("money-in")).toHaveText("Unavailable");
   await expect(chart(page).getByText("Money in and out can't all be read right now.")).toBeVisible();
   await expect(merchants(page).getByText("Card payments can't all be read right now.")).toBeVisible();
+});
+
+test("with nothing completed in the period, Insights says so and points to Deposit", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/app/insights");
+  const empty = page.getByRole("region", { name: "No transactions in this period" });
+  await expect(empty).toBeVisible({ timeout: 30_000 });
+  await expect(empty.getByRole("link", { name: "Deposit" })).toHaveAttribute("href", "/app/deposit");
+  await expect(chart(page)).toHaveCount(0);
 });
 
 test("without a card, Insights still shows money in and out, and says there are no card payments", async ({ page }) => {
