@@ -10,7 +10,7 @@ import { intercomConfig, intercomUserToken } from "@/lib/support/intercom";
  * `appId: null` means support chat isn't set up on this server.
  */
 export const GET = route("support.messenger.get", { unavailable: "support_unavailable" }, async (request, { traceId }) => {
-  const subject = await requireVerifiedSubject(request, { allowClosed: true });
+  const subject = await requireVerifiedSubject(request, { allowClosed: true, beforeTerms: true });
   const config = intercomConfig();
   if (!config) return Response.json({ appId: null, traceId }, { headers: { "Cache-Control": "no-store" } });
   const [email, wallet] = await Promise.all([privyEmail(subject.subjectReference).catch(() => null), requireActionWallet(subject.subjectReference)]);

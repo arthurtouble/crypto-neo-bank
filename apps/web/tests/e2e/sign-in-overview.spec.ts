@@ -161,13 +161,44 @@ test("without a price, amounts still show and values say unavailable", async ({ 
 test("when the account can't be looked up, the Overview offers to try again", async ({ page }) => {
   const customer = await newCustomer();
   await setBalances(customer.wallet, { 8453: { [ASSETS.usdc]: "5000000" } });
+  // Accepting the terms reads the account's email from Privy, so Privy goes down after that.
+  await acceptTerms(page, customer);
   await edge("/__state", { down: ["privy"] });
-  await openOverview(page, customer);
+  await setIdentity(page, customer, { signedIn: true });
+  await page.goto("/app");
 
   await expect(page.getByText("Your balances are unavailable right now.")).toBeVisible({ timeout: 30_000 });
   await edge("/__state", { down: [] });
   await page.getByRole("button", { name: "Try again" }).click();
   await expect(page.getByTestId("portfolio-total")).toHaveText("$5.00", { timeout: 30_000 });
+});
+
+test("a customer who signs in with a wallet adds an email before the terms", async ({ page }) => {
+  const customer = await newCustomer({ email: false });
+  await setIdentity(page, customer);
+  await page.goto("/app");
+  await page.getByRole("button", { name: "Create account or sign in" }).click();
+  await expect(page.getByRole("heading", { name: "Add your email" })).toBeVisible();
+  await page.evaluate(() => localStorage.setItem("aura-e2e-link-email", "wallet-owner@example.com"));
+  await page.getByRole("button", { name: "Add email" }).click();
+  await expect(page.getByRole("heading", { name: "Review Aura’s terms" })).toBeVisible();
+  await page.getByRole("checkbox").check();
+  await page.getByRole("button", { name: "Continue" }).click();
+  await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
+  await expect(page.getByText("Your account is empty")).toBeVisible({ timeout: 30_000 });
+});
+
+test("the server refuses the account until the current terms are accepted, and refuses them without an email", async ({ page }) => {
+  const customer = await newCustomer();
+  const headers = { Authorization: `Bearer ${customer.token}` };
+  const overview = await page.request.get("/api/overview", { headers });
+  expect(overview.status()).toBe(403);
+  expect(await overview.json()).toMatchObject({ error: "terms_required" });
+  await acceptTerms(page, customer);
+  expect((await page.request.get("/api/overview", { headers })).status()).toBe(200);
+
+  const noEmail = await newCustomer({ email: false });
+  await expect(acceptTerms(page, noEmail)).rejects.toThrow("accepting terms failed: 403");
 });
 
 test("a customer who doesn't accept the terms can log out to the example data", async ({ page }) => {

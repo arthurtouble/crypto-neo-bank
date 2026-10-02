@@ -23,6 +23,16 @@ export class AccountClosedError extends HttpError {
   constructor(message = "This account is closed. Contact support if you need help.") { super(403, "account_closed", message); this.name = "AccountClosedError"; }
 }
 
+/** The customer hasn't accepted the current terms and privacy notice (`/api/terms`); the app shows them again. */
+export class TermsRequiredError extends HttpError {
+  constructor(message = "Review and accept the current terms to continue.") { super(403, "terms_required", message); this.name = "TermsRequiredError"; }
+}
+
+/** Accepting the terms needs an email on the Privy account, so security notices always reach the customer. */
+export class EmailRequiredError extends HttpError {
+  constructor(message = "Add an email to your account to continue.") { super(403, "email_required", message); this.name = "EmailRequiredError"; }
+}
+
 export class MfaRequiredError extends HttpError {
   constructor(message = "Add a passkey before you move money.") { super(403, "mfa_required", message); this.name = "MfaRequiredError"; }
 }

@@ -2,7 +2,7 @@ import { AuthenticationError, requireVerifiedSubject } from "@/lib/auth/server";
 
 export async function GET(request: Request) {
   try {
-    const subject = await requireVerifiedSubject(request);
+    const subject = await requireVerifiedSubject(request, { beforeTerms: true });
     return Response.json({ authenticated: true, subject });
   } catch (error) {
     if (error instanceof AuthenticationError) {

@@ -3,6 +3,7 @@
 import { useAuth, type AuthUser } from "@/lib/client/auth";
 import { LogOut } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
+import { accountEmail } from "@/lib/client/account-email";
 import { useAuraWallet } from "@/lib/client/use-aura-wallet";
 import { shortAddress } from "@/lib/format";
 import { ThemeChoice } from "./theme-choice";
@@ -20,7 +21,7 @@ export function useDismiss(open: boolean, close: () => void, root: RefObject<HTM
 }
 
 function accountLabel(user: AuthUser | null) {
-  return user?.email?.address ?? user?.google?.email ?? (user?.telegram?.username ? `@${user.telegram.username}` : null) ?? "Aura account";
+  return accountEmail(user)?.address ?? (user?.telegram?.username ? `@${user.telegram.username}` : null) ?? "Aura account";
 }
 
 function initial(value: string) {

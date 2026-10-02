@@ -8,7 +8,7 @@ import { writeAuditEvent } from "@/lib/security/audit";
 
 /** The customer's data, as a JSON download, straight away. Also works for a closed account. */
 export const GET = route("privacy.export", { unavailable: "export_unavailable" }, async (request: Request) => {
-  const subject = await requireVerifiedSubject(request, { allowClosed: true });
+  const subject = await requireVerifiedSubject(request, { allowClosed: true, beforeTerms: true });
   await enforceRateLimit(env.PROJECTION_DB, { namespace: "data_export", subject: subject.subjectReference, limit: 5, windowSeconds: 86_400 });
   await ensureSubjectProfile(env.PROJECTION_DB, subject.subjectReference);
   const now = new Date().toISOString();

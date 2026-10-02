@@ -14,8 +14,12 @@ export function privyClient(): PrivyClient {
   return client;
 }
 
-/** The customer's verified email from Privy, if their account has one. Aura keeps no copy. */
+/**
+ * The customer's email from Privy: the one they added with a one-time code, or else their Google sign-in's.
+ * Aura keeps no copy. The app picks the same one (lib/client/account-email.ts).
+ */
 export async function privyEmail(subject: string): Promise<string | null> {
-  const user = await privyClient().users()._get(subject) as { linked_accounts: Array<{ type: string; address?: string }> };
-  return user.linked_accounts.find((account) => account.type === "email" && account.address)?.address ?? null;
+  const user = await privyClient().users()._get(subject) as { linked_accounts: Array<{ type: string; address?: string; email?: string }> };
+  return user.linked_accounts.find((account) => account.type === "email" && account.address)?.address
+    ?? user.linked_accounts.find((account) => account.type === "google_oauth" && account.email)?.email ?? null;
 }

@@ -4,10 +4,11 @@ import { resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const httpErrors = await vi.hoisted(() => import("@/lib/http/errors"));
 
-const state = vi.hoisted(() => ({ database: null as unknown }));
+const state = vi.hoisted(() => ({ database: null as unknown, email: "alice@example.com" as string | null }));
 vi.mock("cloudflare:workers", () => ({ env: { get PROJECTION_DB() { return state.database; } } }));
 vi.mock("@/lib/auth/server", () => ({ AuthenticationError: httpErrors.AuthenticationError,
   requireVerifiedSubject: async () => ({ subjectReference: "alice", sessionReference: "session-a" }) }));
+vi.mock("@/lib/auth/privy", () => ({ privyEmail: async () => state.email }));
 vi.mock("@/lib/auth/access", () => ({ requireOperator: async () => ({ email: "operator-1", subject: "access-operator-1" }) }));
 
 import { GET as consentState, POST as changeConsent } from "@/app/api/privacy/consent/route";
@@ -133,6 +134,16 @@ describe("terms acceptance", () => {
     expect((await post(acceptTerms, versions)).status).toBe(200);
     expect(await (await get(termsState)).json()).toMatchObject({ accepted: true });
     expect(count("consent_evidence")).toBe(2);
+  });
+
+  it("refuses acceptance until the account has an email", async () => {
+    state.email = null;
+    const response = await post(acceptTerms, versions);
+    expect(response.status).toBe(403);
+    expect(await response.json()).toMatchObject({ error: "email_required" });
+    expect(count("consent_evidence")).toBe(0);
+    state.email = "alice@example.com";
+    expect((await post(acceptTerms, versions)).status).toBe(200);
   });
 
   it("refuses acceptance of a version the customer was not shown", async () => {
