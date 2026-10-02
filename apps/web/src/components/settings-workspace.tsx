@@ -63,17 +63,17 @@ const guestRows: Record<Exclude<Area, "device">, Array<[string, string]>> = {
     ["Close your account", "Move your money out first, then contact support."]]
 };
 
-function GuestArea({ area, onSignIn }: { area: Exclude<Area, "device">; onSignIn: () => void }) {
+/** What each area holds, for guests. The example-data banner is the one way in, so there's no sign-in button here. */
+function GuestArea({ area }: { area: Exclude<Area, "device"> }) {
   const title = areas.find((item) => item.id === area)!.label;
   return <section className="mxCard stCard" aria-labelledby={`guest-${area}`}><h2 id={`guest-${area}`}>{title}</h2>
     {guestRows[area].map(([name, detail]) => <SettingRow key={name} title={name} detail={detail} />)}
-    <button type="button" className="appButton appButtonPrimary mxStart" onClick={onSignIn}>Sign in to change these</button>
   </section>;
 }
 
-function AreaContent({ area, isExample, onSignIn }: { area: Area; isExample: boolean; onSignIn: () => void }) {
+function AreaContent({ area, isExample }: { area: Area; isExample: boolean }) {
   if (area === "device") return <DeviceArea />;
-  if (isExample) return <GuestArea area={area} onSignIn={onSignIn} />;
+  if (isExample) return <GuestArea area={area} />;
   if (area === "security") return <><SecurityCenter /><TransactionControls /></>;
   if (area === "recipients") return <SavedRecipients />;
   if (area === "tag") return <AuraTagControls />;
@@ -120,7 +120,7 @@ export function SettingsWorkspace() {
         <div className="stArea">
           <button type="button" className="appTextButton stBack" onClick={() => { window.history.pushState(null, "", window.location.pathname); setSelected(null); }}>
             <ArrowLeft aria-hidden="true" /> All settings</button>
-          <AreaContent area={area} isExample={isExample} onSignIn={login} />
+          <AreaContent area={area} isExample={isExample} />
         </div>
       </div>}
   </div>;

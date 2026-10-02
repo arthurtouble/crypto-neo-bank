@@ -123,7 +123,8 @@ html[data-balance-privacy="hidden"] .sensitiveAmount { filter: blur(7px); opacit
 .appAccountWho span { color: var(--color-text-secondary); font-size: var(--text-small-size); }
 .appAccountRow { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); color: var(--color-text-secondary); font-size: var(--text-small-size); }
 
-.appBellCount { position: absolute; top: 3px; right: 2px; min-width: 16px; height: 16px; padding: 0 4px; display: grid; place-items: center; border: 2px solid var(--color-canvas); border-radius: var(--radius-pill); background: var(--color-accent); color: var(--color-on-accent); font: var(--weight-semibold) var(--text-caption-size) / 1 var(--font-sans); box-sizing: content-box; }
+/* The count sits on the bell's top-right corner, clear of the bell itself. */
+.appBellCount { position: absolute; top: 2px; left: calc(50% + 4px); min-width: 8px; height: 14px; padding: 0 3px; display: grid; place-items: center; border: 2px solid var(--color-canvas); border-radius: var(--radius-pill); background: var(--color-accent); color: var(--color-on-accent); font: var(--weight-semibold) var(--text-caption-size) / 1 var(--font-sans); box-sizing: content-box; }
 .appInbox { width: 360px; max-height: 70vh; overflow: auto; display: grid; gap: var(--space-2); padding: var(--space-3); }
 .appInboxHead { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-1) var(--space-2); }
 .appInbox h2 { margin: 0; font-size: var(--text-title-3-size); line-height: var(--text-title-3-line); font-weight: var(--weight-semibold); }
@@ -209,6 +210,9 @@ html[data-balance-privacy="hidden"] .sensitiveAmount { filter: blur(7px); opacit
   .appFrame .appContent { padding-bottom: calc(100px + env(safe-area-inset-bottom)); }
   .appMenuButton { position: fixed; z-index: 50; left: 50%; bottom: calc(22px + env(safe-area-inset-bottom)); transform: translateX(-50%); width: var(--menu-button); height: var(--menu-button); display: grid; place-items: center; padding: 0; border: 0; border-radius: var(--radius-pill); background: var(--color-text); color: var(--color-canvas); box-shadow: var(--shadow-2); cursor: pointer; }
   .appMenuButton svg { width: 22px; height: 22px; stroke-width: var(--icon-stroke); }
+  /* Fades out while the page scrolls down or a form is under it (useMenuStepsAside), so it never covers a control. */
+  .appMenuButton { transition: opacity var(--duration-fast) var(--ease-enter), visibility 0s linear 0s; }
+  .appMenuButton[data-stepped-aside] { opacity: 0; visibility: hidden; pointer-events: none; transition: opacity var(--duration-fast) var(--ease-enter), visibility 0s linear var(--duration-fast); }
   .appInbox { position: fixed; z-index: 65; inset: 0; width: auto; max-width: none; max-height: none; border: 0; border-radius: 0; box-shadow: none; align-content: start; padding: var(--space-2) var(--page-pad-x) var(--space-8); }
   .appFrame .appInboxBack { display: grid; }
   .appFrame:has(.appInbox) .appMenuButton { display: none; }
@@ -219,7 +223,7 @@ html[data-balance-privacy="hidden"] .sensitiveAmount { filter: blur(7px); opacit
   @keyframes appToastIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
 }
 
-@media (prefers-reduced-motion: reduce) { .toast { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .toast { animation: none; } .appMenuButton, .appMenuButton[data-stepped-aside] { transition: none; } }
 
 /* ⌘K search (change B4): actions first, then pages, in the shared dialog frame (a sheet on the phone) */
 .cmDialog { gap: var(--space-2); padding: var(--space-3); }

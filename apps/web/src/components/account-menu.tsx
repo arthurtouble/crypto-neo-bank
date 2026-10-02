@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth, type AuthUser } from "@/lib/client/auth";
-import { LogOut } from "lucide-react";
+import { LogOut, UserRound } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
 import { accountEmail } from "@/lib/client/account-email";
 import { useAuraWallet } from "@/lib/client/use-aura-wallet";
@@ -24,8 +24,10 @@ function accountLabel(user: AuthUser | null) {
   return accountEmail(user)?.address ?? (user?.telegram?.username ? `@${user.telegram.username}` : null) ?? "Aura account";
 }
 
-function initial(value: string) {
-  return value.match(/[a-z0-9]/i)?.[0]?.toUpperCase() ?? "A";
+/** The first letter of the account's email or name. An address with no letter before the @ (like 3@…) shows a person icon instead of a digit. */
+function Initial({ value }: { value: string }) {
+  const letter = value.split("@")[0]?.match(/\p{L}/u)?.[0];
+  return letter ? <>{letter.toUpperCase()}</> : <UserRound aria-hidden="true" />;
 }
 
 const walletText = (address?: string) => address ? shortAddress(address) : "Wallet preparing";
@@ -53,7 +55,7 @@ export function AccountMenu() {
   if (!authenticated) return null;
   return <div className="appAccountMenu" ref={root}>
     <button ref={button} type="button" className="appAvatar" aria-label="Account" aria-expanded={open} aria-haspopup="dialog" onClick={() => setOpen(!open)}>
-      {initial(accountLabel(user))}</button>
+      <Initial value={accountLabel(user)} /></button>
     {open && <div className="appPopover" role="dialog" aria-label="Account"><AccountDetails /></div>}
   </div>;
 }

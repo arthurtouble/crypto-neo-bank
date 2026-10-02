@@ -30,7 +30,7 @@ Decided on 29 September 2026: keep the ten sections, not grouped.
 | | Desktop | Phone |
 | --- | --- | --- |
 | Sections | Overview, Deposit, Send, Swap, Earn, Cards, Transactions, Insights, Settings, Support | The same ten |
-| How to get there | A sidebar listing all ten, each with an icon and its name, always visible, no group headings | No tab bar. A round menu button floats at the bottom centre of every section page. It opens a sheet from the bottom with the ten sections as tiles, three per row, each with an icon and its name. It hides during a step so it never covers a button. |
+| How to get there | A sidebar listing all ten, each with an icon and its name, always visible, no group headings | No tab bar. A round menu button floats at the bottom centre of every section page. It opens a sheet from the bottom with the ten sections as tiles, three per row, each with an icon and its name. It hides during a step, and steps aside while the page scrolls down or a form is under it, so it never covers a button. |
 | Search | ⌘K from anywhere: pages and actions (B4) | Search inside Transactions |
 | Notifications | Bell in the top bar, opens a popover | Bell in the header of each section page, opens a screen |
 | Account | Avatar menu: email, theme, log out | Log out in the menu sheet's footer |
