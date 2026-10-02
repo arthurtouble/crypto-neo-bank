@@ -53,8 +53,8 @@ const poolAbi = parseAbi([
   "function getReserveData(address asset) view returns (ReserveDataLegacy)"
 ]);
 
-function defaultClients(): Clients {
-  const now = new Date();
+/** The live chains and price feeds. `now` is the overview's own read time, so a live price carries the same time and shows no "price as of". */
+function defaultClients(now: Date): Clients {
   const baseClient = publicClient(base);
   const prices = new Map<string, Promise<FeedPrice | null>>();
   const fetchPrice = async (source: Priced): Promise<FeedPrice | null> => {
@@ -84,7 +84,8 @@ function cents(raw: bigint, decimals: number, price: string | null): number | nu
  * holding is read independently; one failed read marks only that holding
  * unavailable. Zero balances are left out, except cash, which always shows.
  */
-export async function readOverview(wallet: string, clients: Clients = defaultClients(), now = new Date()): Promise<Overview> {
+export async function readOverview(wallet: string, given?: Clients, now = new Date()): Promise<Overview> {
+  const clients = given ?? defaultClients(now);
   const owner = getAddress(wallet);
   const observedAt = now.toISOString();
   const read = async (id: string, group: HoldingGroup, label: string, symbol: string, decimals: number, source: string,

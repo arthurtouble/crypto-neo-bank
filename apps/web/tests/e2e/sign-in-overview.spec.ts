@@ -69,6 +69,8 @@ test("the Overview values every holding in dollars and totals cash, crypto, and 
   await expect(row(page, `8453:${ASSETS.usdc}`)).toContainText("125.5 USDC");
   await expect(row(page, "8453:native")).toContainText("2 ETH");
   await expect(row(page, "8453:native")).toContainText("$5,000.00");
+  // Crypto prices are live, so only paused feeds (stocks, gold, the euro) say when their price was published.
+  await expect(row(page, "8453:native")).not.toContainText("Price as of");
   await expect(row(page, `8453:${ASSETS.weth}`)).toContainText("$250.00");
   await expect(row(page, `8453:${ASSETS.cbbtc}`)).toContainText("0.01 cbBTC");
   await expect(row(page, `8453:${ASSETS.cbbtc}`)).toContainText("$600.00");
@@ -144,6 +146,19 @@ test("a balance that can't be read shows as unavailable, never as a number", asy
   await expect(page.getByTestId("total-metals")).toHaveText("$0.00 + unavailable");
   await expect(page.getByTestId("total-earn")).toHaveText("$155.00");
   await expect(page.getByText(/total leaves them out/)).toBeVisible();
+});
+
+test("when no balance can be read, the Overview says so instead of showing $0.00", async ({ page }) => {
+  const customer = await newCustomer();
+  await setBalances(customer.wallet, funded);
+  await edge("/__state", { down: ["rpc:1", "rpc:8453"] });
+  await openOverview(page, customer);
+
+  await expect(page.getByText("Your balances are unavailable right now.")).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByTestId("portfolio-total")).toHaveCount(0);
+  await edge("/__state", { down: [] });
+  await page.getByRole("button", { name: "Try again" }).click();
+  await expect(page.getByTestId("portfolio-total")).toHaveText("$6,130.50", { timeout: 30_000 });
 });
 
 test("without a price, amounts still show and values say unavailable", async ({ page }) => {
