@@ -42,7 +42,7 @@ test("a new customer signs in, accepts the terms, and sees their balances", asyn
 
   await page.goto("/app");
   await expect(page.getByText("Example data", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Sign in to continue" }).click();
+  await page.getByRole("button", { name: "Create account or sign in" }).click();
 
   await expect(page.getByRole("heading", { name: "Review Aura’s terms" })).toBeVisible();
   const accept = page.getByRole("button", { name: "Continue" });
@@ -170,6 +170,17 @@ test("when the account can't be looked up, the Overview offers to try again", as
   await expect(page.getByTestId("portfolio-total")).toHaveText("$5.00", { timeout: 30_000 });
 });
 
+test("a customer who doesn't accept the terms can log out to the example data", async ({ page }) => {
+  const customer = await newCustomer();
+  await setIdentity(page, customer);
+  await page.goto("/app");
+  await page.getByRole("button", { name: "Create account or sign in" }).click();
+  await expect(page.getByRole("heading", { name: "Review Aura’s terms" })).toBeVisible();
+  await page.getByRole("button", { name: "Log out" }).click();
+  await expect(page.getByRole("heading", { name: "Review Aura’s terms" })).toHaveCount(0);
+  await expect(page.getByText("Example data", { exact: true })).toBeVisible();
+});
+
 test("an expired session asks the customer to sign in again", async ({ page }) => {
   const valid = await newCustomer();
   await acceptTerms(page, valid);
@@ -178,6 +189,8 @@ test("an expired session asks the customer to sign in again", async ({ page }) =
   await page.goto("/app");
   await expect(page.getByRole("heading", { name: "Your session expired" })).toBeVisible({ timeout: 30_000 });
   await expect(page.getByRole("button", { name: "Sign in again" })).toBeVisible();
+  await page.getByRole("button", { name: "Not now" }).click();
+  await expect(page.getByText("Example data", { exact: true })).toBeVisible();
 });
 
 test("signing out returns to the example Overview", async ({ page }) => {

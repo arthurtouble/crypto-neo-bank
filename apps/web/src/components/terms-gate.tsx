@@ -43,10 +43,14 @@ export function TermsGate({ children }: { children: React.ReactNode }) {
   const query = useQuery({ queryKey: ["terms", user?.id], queryFn: () => call(), enabled: authenticated, retry: false });
   if (!authenticated || query.data?.accepted) return children;
   if (query.isPending) return <LoadingScreen label="Loading your account" />;
-  if (query.error instanceof SessionExpired) return <AccountScreen title="Your session expired">
-    <button type="button" className="appButton appButtonPrimary appButtonLarge" onClick={() => void logout().then(() => login())}>Sign in again</button></AccountScreen>;
+  // Every screen has a way out: logging out leaves the example data, so no one is held on a screen they can't pass.
+  const leave = (label: string) => <button type="button" className="appButton appButtonLarge" onClick={() => void logout()}>{label}</button>;
+  if (query.error instanceof SessionExpired) return <AccountScreen title="Your session expired"><p>Sign in again to keep using your account.</p>
+    <div className="appScreenActions"><button type="button" className="appButton appButtonPrimary appButtonLarge" onClick={() => void logout().then(() => login())}>Sign in again</button>
+      {leave("Not now")}</div></AccountScreen>;
   if (query.isError) return <AccountScreen title="We couldn’t load your account"><p>Check your connection, then try again. If it keeps happening, contact support.</p>
-    <button type="button" className="appButton appButtonPrimary appButtonLarge" onClick={() => void query.refetch()}>Try again</button></AccountScreen>;
+    <div className="appScreenActions"><button type="button" className="appButton appButtonPrimary appButtonLarge" onClick={() => void query.refetch()}>Try again</button>
+      {leave("Log out")}</div></AccountScreen>;
   async function accept() {
     setSubmitting(true); setError("");
     try {
@@ -66,6 +70,7 @@ export function TermsGate({ children }: { children: React.ReactNode }) {
     <label className="appCheck"><input type="checkbox" checked={agreed} onChange={(event) => setAgreed(event.target.checked)} />
       <span>I agree to the Terms of use and have read the Privacy notice and Risk disclosure.</span></label>
     {error ? <p className="appFieldError" role="alert">{error}</p> : null}
-    <button type="button" className="appButton appButtonPrimary appButtonLarge" disabled={!agreed || submitting} onClick={() => void accept()}>{submitting ? "Saving…" : "Continue"}</button>
+    <div className="appScreenActions"><button type="button" className="appButton appButtonPrimary appButtonLarge" disabled={!agreed || submitting} onClick={() => void accept()}>{submitting ? "Saving…" : "Continue"}</button>
+      {leave("Log out")}</div>
   </AccountScreen>;
 }

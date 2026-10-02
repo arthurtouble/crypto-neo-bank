@@ -29,7 +29,7 @@ Only production is indexed (`apps/web/src/lib/site/seo.ts`). There, `robots.txt`
 
 1. Create a production Privy app. Don't reuse the development one (`pnpm production:check` flags it).
 2. Allow only the production origin.
-3. Match the development app's settings: TEE execution, gas sponsorship on Base, MFA with passkeys, EIP-7702 upgrade ([accounts and custody](../architecture/accounts-and-custody.md)).
+3. Match the development app's settings: sign-in by email, Google, Telegram, and wallet (the app offers all four, so turn each on; Telegram needs Aura's Telegram bot and the production domain set on it), TEE execution, gas sponsorship on Base, MFA with passkeys, EIP-7702 upgrade ([accounts and custody](../architecture/accounts-and-custody.md)).
 4. Put its app ID in `NEXT_PUBLIC_PRIVY_APP_ID`.
 5. Set `PRIVY_APP_SECRET` and `PRIVY_WEBHOOK_SECRET` as secrets on `aurel-financial-os`.
 

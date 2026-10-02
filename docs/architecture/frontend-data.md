@@ -78,7 +78,7 @@ The operations app (`apps/ops`) is not a customer screen and has no example data
 
 Privy, its smart wallets, and wagmi are most of the app's JavaScript, so they load only when needed. `AuthProvider` (`components/auth-provider.tsx`, in the `/app` layout) owns the query client and toasts and decides:
 
-- While the server renders and the page hydrates, it shows "Getting your wallet ready", so a returning customer never sees the guest page flash first.
+- While the server renders and the page hydrates, it shows a plain "Loading" screen, so a returning customer never sees the guest page flash first; while the runtime downloads for a saved session it shows "Opening your account".
 - With a saved Privy session in this browser (`lib/client/privy-session.ts`: a `privy:token` or `privy:refresh_token` key in localStorage, or a `privy-token` or `privy-session` cookie, each possibly with a client segment), it loads the runtime (`components/web3-runtime-provider.tsx`) behind the same loading screen, as before. Privy then decides whether the session is still good.
 - Without one, the visitor is a guest: the page renders at once with example data and no Privy code. Sign in fetches the runtime while the page stays as it is, shows "Opening sign-in" meanwhile, mounts it, and opens Privy's sign-in once Privy is ready. If the runtime can't be downloaded, the status says so and the guest can try again. Signing out keeps Privy loaded for the rest of the visit.
 
