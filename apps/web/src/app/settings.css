@@ -72,6 +72,8 @@
   .appFrame .stNavChevron { display: block; width: 16px; height: 16px; color: var(--color-text-tertiary); }
   .appFrame .stRow { flex-wrap: wrap; }
   .appFrame .stRow .stRowText { flex: 1 1 200px; }
+  /* Support's rows all put their buttons under the text, so a row with two buttons matches a row with one. */
+  .appFrame .suPage .stRowControl { flex-basis: 100%; }
   .appFrame .stNumber { font-size: var(--text-input-phone); }
   .appFrame .stCard .appButton { height: var(--control-height-lg); }
   .appFrame .stListRow { grid-template-columns: 32px minmax(0, 1fr) auto; }

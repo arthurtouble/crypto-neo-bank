@@ -4,8 +4,13 @@ import { useAuth } from "@/lib/client/auth";
 import { Download, LoaderCircle, UserX } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { ACCOUNT_CLOSED_EVENT } from "@/lib/client/api";
+
+const AccountClosedContext = createContext(false);
+
+/** Whether the server has said this account is closed, for Support to say so. */
+export const useAccountClosed = () => useContext(AccountClosedContext);
 
 /**
  * Once the server says the account is closed, every page but Support shows
@@ -22,7 +27,7 @@ export function AccountClosedGate({ children }: { children: React.ReactNode }) {
     window.addEventListener(ACCOUNT_CLOSED_EVENT, onClosed);
     return () => window.removeEventListener(ACCOUNT_CLOSED_EVENT, onClosed);
   }, []);
-  if (!closed || pathname.startsWith("/app/support")) return <>{children}</>;
+  if (!closed || pathname.startsWith("/app/support")) return <AccountClosedContext.Provider value={closed}>{children}</AccountClosedContext.Provider>;
   async function exportData() {
     setDownloading(true); setError("");
     try {
