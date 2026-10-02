@@ -7,7 +7,7 @@ No single safeguard stops every loss, so we use several layers. We assume browse
 
 ## Signing in
 
-Privy runs sign-in and your wallet. You sign in with your email or a wallet. Our server checks your Privy sign-in on every protected request and never trusts an identity your browser claims.
+Privy runs sign-in and your wallet. You sign in with your email, Google, Apple, or a wallet. Our server checks your Privy sign-in on every protected request and never trusts an identity your browser claims.
 
 Signing in proves you can access the account, not that a transaction is safe. So you also need a passkey or an authenticator app before money can leave your account, and you confirm each money action with it. Someone with only your sign-in can't move money.
 

@@ -42,8 +42,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const onLoginOpened = useCallback(() => { setLoginRequested(false); setOpening(null); }, []);
   const guest = useMemo(() => guestAuth(login), [login]);
 
-  const loading = <LoadingScreen label="Getting your wallet ready" />;
-  const content = savedSession === null ? loading
+  const loading = <LoadingScreen label="Opening your account" />;
+  const content = savedSession === null ? <LoadingScreen label="Loading" />
     : savedSession || signingIn ? <Web3RuntimeProvider loginRequested={loginRequested} onLoginOpened={onLoginOpened}>{children}</Web3RuntimeProvider>
       : <AuthContext.Provider value={guest}>{children}</AuthContext.Provider>;
 

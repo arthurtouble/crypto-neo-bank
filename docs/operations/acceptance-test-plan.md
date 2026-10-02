@@ -19,7 +19,7 @@ description: Acceptance evidence required before expanding supported mainnet wor
 
 ## Human journeys
 
-1. New user: sign in with email or a wallet, accept the terms, confirm the Aura account address (the Privy embedded wallet, the same on every EVM network), and review risk disclosures.
+1. New user: sign in with email, Google, Apple, or a wallet, accept the terms, confirm the Aura account address (the Privy embedded wallet, the same on every EVM network), and review risk disclosures.
 2. Recovery: sign out, use the configured recovery path, confirm the same account address, and inspect or export through Privy's customer flow.
 3. Passkey: without a passkey or authenticator app, start a send; confirm it is refused with `mfa_required`, nothing is sent, and Privy's enrollment opens. Enroll, retry, and confirm Privy asks for the new factor before signing.
 4. Receive: copy the address and scan the QR code, fund with a small Base amount, and compare against BaseScan.

@@ -7,7 +7,7 @@ Last reviewed: 30 September 2026. Describes `main`, deployed to `aura-dev.aurel-
 
 ## Built
 
-- **Public app and sign-in.** Landing page, the customer sections, desktop and mobile navigation, and guest browsing with labeled fictional data. Privy sign-in by email or wallet, open to everyone; acceptance of the current terms and privacy notice is recorded per version on first sign-in.
+- **Public app and sign-in.** Landing page, the customer sections, desktop and mobile navigation, and guest browsing with labeled fictional data. Privy sign-in by email, Google, Apple, or wallet, open to everyone, from one "Create account or sign in" button; acceptance of the current terms and privacy notice is recorded per version on first sign-in.
 - **Account.** A Privy embedded wallet per customer, upgraded in place with EIP-7702, with the same address on every EVM network; Privy pays gas ([accounts and custody](../architecture/accounts-and-custody.md)).
 - **Server checks on every action**: feature switches, the passkey requirement, asset pauses, account lock, the optional daily limit, saved-recipients-only mode, and new-recipient cooling. Loosening a control needs a server-verified passkey confirmation. Details and switch names: [launch controls](../operations/launch-controls.md).
 - **Money actions**: prepared, signed, relayed through Privy, and verified from chain evidence ([money actions](../architecture/money-actions.md)).
@@ -40,7 +40,7 @@ Funded transactions run on dev are listed in the [development Worker](../operati
 | Bridge bank deposits and payouts | Built behind `fiat_accounts` and tested against a local Bridge fake. Needs Bridge approval, `BRIDGE_API_KEY`, `BRIDGE_WEBHOOK_PUBLIC_KEY`, a registered webhook, and a sandbox run ([partner integration](../architecture/partner-integration.md#bridge-activation)) |
 | Bridge + Stripe Issuing cards | Built behind `payment_cards` (phone wallets behind `card_wallets`) and tested against local fakes. Needs an approved Bridge card program, a Stripe account, `BRIDGE_CARDS_SPENDER`, a registered Stripe webhook, and a real card on dev. Apple and Google Pay need Stripe preview access |
 | Card payments on Aura tag pages | Acquiring or payment-link provider, recipient onboarding, payment state, refunds, and disputes |
-| Account and gas sponsorship | Privy dashboard: TEE execution, gas sponsorship on every network Aura sends from, and MFA with passkeys or authenticator apps |
+| Account and gas sponsorship | Privy dashboard: Google and Apple sign-in turned on, TEE execution, gas sponsorship on every network Aura sends from, and MFA with passkeys or authenticator apps |
 | Funded actions | Routes not yet run with real funds on dev need a funded rehearsal |
 | Sign-in recovery and remote sessions | Privy's recovery and session controls, exercised in the [acceptance plan](../operations/acceptance-test-plan.md) |
 | Syrup (Maple) in Earn | Deferred: deposits need Maple's per-wallet authorization, and withdrawals queue for up to 30 days |

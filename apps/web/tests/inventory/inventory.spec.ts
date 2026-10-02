@@ -124,7 +124,7 @@ test("sign-in, terms, and session", async ({ page }, info) => {
   await setIdentity(page, customer);
   await page.goto("/app");
   await settle(page, "Overview");
-  await page.getByRole("button", { name: "Sign in to continue" }).click();
+  await page.getByRole("button", { name: "Create account or sign in" }).click();
   await settle(page, "Review Aura’s terms");
   await shot(page, info, "06-terms-gate");
   await page.getByRole("checkbox").check();
