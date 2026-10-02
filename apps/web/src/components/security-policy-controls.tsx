@@ -8,8 +8,7 @@ import type { AuthorizationRequest } from "@/lib/actions/privy-relay";
 import { ApiError, useApi } from "@/lib/client/api";
 import { useAuraWallet } from "@/lib/client/use-aura-wallet";
 import { formatDateTime, shortAddress } from "@/lib/format";
-import { SettingRow } from "./setting-row";
-import { useToast } from "./toast";
+import { SettingRow, useSettingsToast } from "./setting-row";
 import { LoadingState, Notice } from "./states";
 import { StatusDot } from "./status-dot";
 
@@ -38,7 +37,7 @@ export function TransactionControls() {
   const { user } = useAuth();
   const api = useApi();
   const queryClient = useQueryClient();
-  const toast = useToast();
+  const toast = useSettingsToast();
   const [dailyDraft, setDailyDraft] = useState<string | null>(null);
   const [delayDraft, setDelayDraft] = useState<string | null>(null);
   const policy = usePolicy();
@@ -77,21 +76,27 @@ export function TransactionControls() {
   }
 
   if (policy.isPending) return <Loading label="Loading transaction controls…" />;
-  if (policy.isError || !policy.data) return <section className="mxCard stCard"><Notice tone="error" role="alert">We couldn&apos;t load your controls. Your limits still apply.</Notice></section>;
+  if (policy.isError || !policy.data) return <section className="mxCard stCard"><Notice tone="error" role="alert" onRetry={() => void policy.refetch()}>We couldn&apos;t load your controls. Your limits still apply.</Notice></section>;
   const current = policy.data.policy;
   return <section className="mxCard stCard" id="emergency-lock" aria-labelledby="controls-heading">
     <div className="stCardHead"><h2 id="controls-heading">Transaction controls</h2>
-      <StatusDot tone={current.accountLocked ? "warning" : "positive"} label={current.accountLocked ? "Locked" : "Active"} /></div>
+      <StatusDot tone={current.accountLocked ? "warning" : "positive"} label={current.accountLocked ? "Locked" : "Not locked"} /></div>
     <SettingRow label title="Emergency lock" detail="Stop all sends, swaps, and Earn moves. Unlocking needs your passkey.">
       <input type="checkbox" className="appSwitch" checked={current.accountLocked} disabled={update.isPending} onChange={(event) => update.mutate({ accountLocked: event.target.checked })} /></SettingRow>
-    <SettingRow label title="Daily transfer limit" detail="In USD. Leave empty for no limit.">
-      <input type="number" inputMode="numeric" autoComplete="off" className="stNumber" min="1" step="1" placeholder="No limit" disabled={update.isPending} value={dailyDraft ?? (current.dailyLimitUsd === null ? "" : String(current.dailyLimitUsd))}
-        onChange={(event) => setDailyDraft(event.target.value)} onBlur={() => saveDailyLimit(current.dailyLimitUsd)} /></SettingRow>
-    <SettingRow label title="Saved recipients only" detail="Only send to saved recipients, after their wait.">
+    <SettingRow title={<label htmlFor="daily-limit">Daily transfer limit</label>} detail="In US dollars. Leave empty for no limit.">
+      <form className="stInline" onSubmit={(event) => { event.preventDefault(); saveDailyLimit(current.dailyLimitUsd); }}>
+        <input id="daily-limit" type="number" inputMode="numeric" autoComplete="off" className="stNumber" min="1" step="1" placeholder="No limit" disabled={update.isPending}
+          value={dailyDraft ?? (current.dailyLimitUsd === null ? "" : String(current.dailyLimitUsd))} onChange={(event) => setDailyDraft(event.target.value)} />
+        {dailyDraft !== null && <button type="submit" className="appButton appButtonPrimary" aria-label="Save daily limit" disabled={update.isPending}>Save</button>}
+      </form></SettingRow>
+    <SettingRow label title="Saved recipients only" detail="Only send to people you've saved, once their wait is over.">
       <input type="checkbox" className="appSwitch" checked={current.enforceAddressBook} disabled={update.isPending} onChange={(event) => update.mutate({ enforceAddressBook: event.target.checked })} /></SettingRow>
-    {current.enforceAddressBook && <SettingRow label title="Wait before new recipients" detail="Hours before a new saved recipient can receive.">
-      <input type="number" inputMode="numeric" autoComplete="off" className="stNumber" min="0" max="168" step="1" disabled={update.isPending} value={delayDraft ?? String(current.newAddressDelayHours)}
-        onChange={(event) => setDelayDraft(event.target.value)} onBlur={() => saveDelay(current.newAddressDelayHours)} /></SettingRow>}
+    {current.enforceAddressBook && <SettingRow title={<label htmlFor="recipient-wait">Wait before new recipients</label>} detail="Hours before someone you save can receive. Up to 168.">
+      <form className="stInline" onSubmit={(event) => { event.preventDefault(); saveDelay(current.newAddressDelayHours); }}>
+        <input id="recipient-wait" type="number" inputMode="numeric" autoComplete="off" className="stNumber" min="0" max="168" step="1" disabled={update.isPending}
+          value={delayDraft ?? String(current.newAddressDelayHours)} onChange={(event) => setDelayDraft(event.target.value)} />
+        {delayDraft !== null && <button type="submit" className="appButton appButtonPrimary" aria-label="Save wait" disabled={update.isPending}>Save</button>}
+      </form></SettingRow>}
     <p className="mxHint">Making a control stricter applies right away. Loosening one needs your passkey.</p>
   </section>;
 }
@@ -101,9 +106,11 @@ export function SavedRecipients() {
   const { user } = useAuth();
   const api = useApi();
   const queryClient = useQueryClient();
-  const toast = useToast();
+  const toast = useSettingsToast();
   const [address, setAddress] = useState("");
   const [label, setLabel] = useState("");
+  // Removing asks once, on the row, so a stray tap can't drop a recipient.
+  const [removing, setRemoving] = useState<string | null>(null);
   const policy = usePolicy();
   const addresses = useQuery({ queryKey: ["address-book", user?.id], enabled: Boolean(user),
     queryFn: () => api<{ entries: Entry[] }>("/api/security/addresses") });
@@ -111,7 +118,7 @@ export function SavedRecipients() {
   async function addAddress(event: React.FormEvent) {
     event.preventDefault();
     try { await api("/api/security/addresses", { method: "POST", json: { address, label } }); }
-    catch (error) { toast.error("Recipient not saved", error instanceof ApiError && error.code === "invalid_address_entry" ? "Enter a valid wallet address and label." : "Try again."); return; }
+    catch (error) { toast.error("Recipient not saved", error instanceof ApiError && error.code === "invalid_address_entry" ? "Enter a name and a wallet address starting with 0x." : "Try again."); return; }
     setAddress(""); setLabel(""); toast.success("Recipient saved");
     await queryClient.invalidateQueries({ queryKey: ["address-book", user?.id] });
   }
@@ -119,12 +126,12 @@ export function SavedRecipients() {
   async function removeAddress(entryId: string) {
     try { await api(`/api/security/addresses?entryId=${encodeURIComponent(entryId)}`, { method: "DELETE" }); }
     catch { toast.error("Recipient not removed", "Try again."); return; }
-    toast.success("Recipient removed");
+    setRemoving(null); toast.success("Recipient removed");
     await queryClient.invalidateQueries({ queryKey: ["address-book", user?.id] });
   }
 
   if (addresses.isPending || policy.isPending) return <Loading label="Loading saved recipients…" />;
-  if (addresses.isError || policy.isError) return <section className="mxCard stCard"><Notice tone="error" role="alert">We couldn&apos;t load your saved recipients. Try again.</Notice></section>;
+  if (addresses.isError || policy.isError) return <section className="mxCard stCard"><Notice tone="error" role="alert" onRetry={() => { void addresses.refetch(); void policy.refetch(); }}>We couldn&apos;t load your saved recipients.</Notice></section>;
   const current = policy.data?.policy;
   return <section className="mxCard stCard" id="recipients" aria-labelledby="recipients-heading"><h2 id="recipients-heading">Saved recipients</h2>
     <p className="mxHint">{!current?.enforceAddressBook || current.newAddressDelayHours === 0 ? "Pick them by name when you send." : `New recipients are ready after ${current.newAddressDelayHours} hours.`}</p>
@@ -132,14 +139,17 @@ export function SavedRecipients() {
       const cooling = new Date(entry.availableAt) > new Date();
       return <li key={entry.entryId} className="stListRow">
         <span className="appIconDisc stFace" aria-hidden="true">{entry.label.slice(0, 1).toUpperCase()}</span>
-        <span className="stRowText"><strong>{entry.label}</strong><small>{shortAddress(entry.address)}{cooling ? ` · available ${formatDateTime(entry.availableAt)}` : ""}</small></span>
-        <StatusDot tone={cooling ? "warning" : "positive"} label={cooling ? "Waiting" : "Ready"} />
-        <button type="button" className="appIconButton" aria-label={`Remove ${entry.label}`} onClick={() => void removeAddress(entry.entryId)}><Trash2 aria-hidden="true" /></button>
+        <span className="stRowText"><strong>{entry.label}</strong><small>{shortAddress(entry.address)}{cooling ? ` · ready ${formatDateTime(entry.availableAt)}` : ""}</small></span>
+        {removing === entry.entryId
+          ? <span className="stRowControl"><button type="button" className="appButton" onClick={() => setRemoving(null)}>Keep</button>
+            <button type="button" className="appButton" onClick={() => void removeAddress(entry.entryId)}>Remove</button></span>
+          : <><StatusDot tone={cooling ? "warning" : "positive"} label={cooling ? "Waiting" : "Ready"} />
+            <button type="button" className="appIconButton" aria-label={`Remove ${entry.label}`} onClick={() => setRemoving(entry.entryId)}><Trash2 aria-hidden="true" /></button></>}
       </li>; })}</ul> : <p className="stEmpty">No saved recipients yet.</p>}
     <form onSubmit={(event) => void addAddress(event)} className="mxForm stAddForm" aria-label="Add a recipient">
       <div className="mxFieldRow">
-        <label className="mxField">Label<input value={label} onChange={(event) => setLabel(event.target.value)} placeholder="Treasury wallet" /></label>
-        <label className="mxField">EVM address<input className="mxMonoInput" value={address} onChange={(event) => setAddress(event.target.value.trim())} placeholder="0x…" autoComplete="off" autoCapitalize="none" spellCheck={false} /></label>
+        <label className="mxField">Name<input value={label} onChange={(event) => setLabel(event.target.value)} placeholder="Sam's wallet" maxLength={48} /></label>
+        <label className="mxField">Wallet address<input className="mxMonoInput" value={address} onChange={(event) => setAddress(event.target.value.trim())} placeholder="0x…" autoComplete="off" autoCapitalize="none" spellCheck={false} /></label>
       </div>
       <button type="submit" className="appButton mxStart" disabled={!address || !label}><Plus aria-hidden="true" /> Save</button>
     </form>

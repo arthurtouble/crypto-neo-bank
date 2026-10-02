@@ -24,5 +24,5 @@ Our team can also lock your account to protect it. Only you can unlock it, in Se
 - Keep a second way to sign in. Every account has an email; if yours came from Google, you can add another in **Settings → Security**.
 - Sign in with each method once, while your balance is small.
 - Keep your passkey device, email, and sign-in wallet secure.
-- Understand what exporting your wallet key means before you do it: anyone with the key can move your money, outside Aura's controls.
+- Understand what exporting your account key means before you do it: anyone with the key can move your money, outside Aura's controls.
 - Keep your public address separate from anything you use to recover access.

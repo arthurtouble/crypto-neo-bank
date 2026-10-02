@@ -43,7 +43,7 @@ test("tightening a control applies at once; loosening it needs the passkey", asy
   await dismissToasts(page);
 
   await limit(page).fill("100");
-  await limit(page).blur();
+  await page.getByRole("button", { name: "Save daily limit" }).click();
   await expect(toast(page, "Controls updated")).toBeVisible({ timeout: 20_000 });
   expect(await policy(page, customer)).toMatchObject({ dailyLimitUsd: 100 });
   await dismissToasts(page);
@@ -63,7 +63,7 @@ test("tightening a control applies at once; loosening it needs the passkey", asy
   expect(await policy(page, customer)).toMatchObject({ accountLocked: false });
   await dismissToasts(page);
   await limit(page).fill("1000");
-  await limit(page).blur();
+  await page.getByRole("button", { name: "Save daily limit" }).click();
   await expect(toast(page, "Controls updated")).toBeVisible({ timeout: 20_000 });
   expect(await policy(page, customer)).toMatchObject({ dailyLimitUsd: 1000 });
 });
@@ -87,13 +87,18 @@ test("an authenticator app counts as the passkey", async ({ page }) => {
 
 test("saved recipients can be added, wait their turn, and be removed", async ({ page }) => {
   await openSettings(page, { area: "recipients", heading: "Saved recipients" });
-  await page.getByLabel("Label").fill("Treasury");
-  await page.getByLabel("EVM address").fill("0x5555555555555555555555555555555555555555");
+  await page.getByLabel("Name", { exact: true }).fill("Treasury");
+  await page.getByLabel("Wallet address").fill("0x5555555555555555555555555555555555555555");
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(toast(page, "Recipient saved")).toBeVisible({ timeout: 20_000 });
   const entry = page.getByRole("list", { name: "Saved recipients" }).getByRole("listitem").filter({ hasText: "Treasury" });
   await expect(entry).toContainText("Waiting");
+  // Removing asks once, on the row: Keep leaves it, Remove removes it.
   await entry.getByRole("button", { name: "Remove Treasury" }).click();
+  await entry.getByRole("button", { name: "Keep" }).click();
+  await expect(entry).toContainText("Waiting");
+  await entry.getByRole("button", { name: "Remove Treasury" }).click();
+  await entry.getByRole("button", { name: "Remove", exact: true }).click();
   await expect(toast(page, "Recipient removed")).toBeVisible({ timeout: 20_000 });
   await expect(page.getByText("No saved recipients yet.")).toBeVisible();
 });
@@ -135,4 +140,25 @@ test("the customer's data downloads straight away, and nothing offers to delete 
   expect(data.subjectReference).toBe(customer.userId);
   expect(data.data).toHaveProperty("security_profiles");
   await expect(page.getByRole("link", { name: "Contact support" })).toHaveAttribute("href", "/app/support?topic=close-account");
+});
+
+test("exporting the account key asks first and says what the controls can't cover", async ({ page }) => {
+  await openSettings(page);
+  await page.getByRole("button", { name: "Export", exact: true }).click();
+  await expect(page.getByText(/Your lock, daily limit, and saved recipients only don't apply in another wallet/)).toBeVisible();
+  await page.getByRole("button", { name: "Cancel" }).click();
+  await expect(page.getByRole("button", { name: "Export key" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Export", exact: true })).toBeVisible();
+});
+
+test("an area that can't load says so with Try again, and the Aura tag form never shows empty", async ({ page }) => {
+  let fail = true;
+  await page.route("**/api/aura-tags", (route) => fail ? route.fulfill({ status: 503, json: { error: "aura_tag_unavailable" } }) : route.fallback());
+  await openSettings(page, { area: "tag", heading: "Aura tag and payment page" });
+  await expect(page.getByRole("alert").filter({ hasText: "We couldn't load your Aura tag." })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByLabel("Tag", { exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Save Aura tag" })).toHaveCount(0);
+  fail = false;
+  await page.getByRole("button", { name: "Try again" }).click();
+  await expect(page.getByLabel("Tag", { exact: true })).toBeVisible({ timeout: 20_000 });
 });

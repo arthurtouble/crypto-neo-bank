@@ -243,7 +243,7 @@ Two to four options that switch a view in place: Send's "To a person or wallet" 
 
 ### Toggles and switches
 
-A setting that saves as soon as it changes. An On/Off pill button (`appToggle`, `aria-pressed`), filled with the accent when on, for settings read aloud as a button; or a checkbox drawn as a 40 × 24 switch (`appSwitch`) inside a row that labels it. Tightening applies at once; loosening asks for the passkey first, so the control only moves once that succeeds.
+A setting that saves as soon as it changes: a checkbox drawn as a 40 × 24 switch (`appSwitch`) inside a row that labels it. Settings uses it for every on/off choice. The On/Off pill button (`appToggle`, `aria-pressed`), filled with the accent when on, is only for the card's freeze. Tightening applies at once; loosening asks for the passkey first, so the control only moves once that succeeds.
 
 ### Filter chips
 

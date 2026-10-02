@@ -41,6 +41,7 @@
 .appFrame .stState { color: var(--color-positive); font-size: var(--text-small-size); font-weight: var(--weight-medium); }
 .appFrame .stNumber { width: 120px; height: var(--input-height); padding: 0 var(--space-3); border: 1px solid var(--color-line-strong); border-radius: var(--radius-sm); background: var(--color-surface); color: var(--color-text); font: var(--weight-regular) var(--text-body-size) / 1 var(--font-sans); font-variant-numeric: tabular-nums; text-align: right; }
 .appFrame .stNumber:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; border-color: var(--color-focus); }
+.appFrame .stInline { display: flex; align-items: center; gap: var(--space-2); }
 .appFrame .stNumber:disabled { background: var(--color-muted); color: var(--color-text-secondary); }
 
 /* Saved recipients */
@@ -74,6 +75,4 @@
   .appFrame .stRow .stRowText { flex: 1 1 200px; }
   .appFrame .stNumber { font-size: var(--text-input-phone); }
   .appFrame .stCard .appButton { height: var(--control-height-lg); }
-  .appFrame .stListRow { grid-template-columns: 32px minmax(0, 1fr) auto; }
-  .appFrame .stListRow .appStatus { display: none; }
 }

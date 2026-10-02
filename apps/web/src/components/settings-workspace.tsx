@@ -12,7 +12,7 @@ import { GuestBanner } from "./guest-banner";
 import { NotificationPreferences } from "./notification-preferences";
 import { SecurityCenter } from "./security-center";
 import { SavedRecipients, TransactionControls } from "./security-policy-controls";
-import { SettingRow, Toggle } from "./setting-row";
+import { SettingRow, Toggle, useSettingsToast } from "./setting-row";
 import { ThemeChoice } from "./theme-choice";
 import { LoadingState } from "./states";
 
@@ -54,12 +54,12 @@ function DeviceArea() {
 const guestRows: Record<Exclude<Area, "device">, Array<[string, string]>> = {
   security: [["Passkey", "Needed to move money and to loosen your controls."], ["Email", "Used to sign in and for email notices."],
     ["Emergency lock", "Stop all sends, swaps, and Earn moves. Unlocking needs your passkey."], ["Daily transfer limit", "The most you can send in a day."],
-    ["Saved recipients only", "Only send to saved recipients, after their wait."], ["Wallet key", "Export your account's key to use it in another wallet."]],
+    ["Saved recipients only", "Only send to people you've saved, once their wait is over."], ["Account key", "Export your account's key to use it in another wallet."]],
   recipients: exampleRecipients.map((item) => [item.name, `${item.detail} · Ready`]),
   tag: [["Aura tag", "A public name for receiving crypto, with a payment page you can show or hide."]],
   notifications: [["Transaction emails", "Money you receive, and when a send, swap, or Earn move completes or fails."], ["Browser notifications", "On in the browsers where you turn them on."],
     ["Product news", "Occasional emails about what's new in Aura. Off unless you turn it on."]],
-  data: [["Download my data", "A copy of everything Aura holds about you, as a file."], ["Terms and privacy", "The documents you accept, and how Aura uses your data."],
+  data: [["Download my data", "A copy of everything Aura holds about you, as a file."], ["Terms and privacy", "The terms of use and privacy notice you accept."],
     ["Close your account", "Move your money out first, then contact support."]]
 };
 
@@ -89,6 +89,9 @@ export function SettingsWorkspace() {
   const { user, ready, authenticated, login } = useAuth();
   const isExample = ready && !authenticated;
   const [selected, setSelected] = useState<Area | null>(null);
+  // A toast about one area doesn't follow the customer into the next.
+  const { dismiss } = useSettingsToast();
+  useEffect(() => { dismiss(); }, [selected, dismiss]);
   useEffect(() => {
     const sync = () => {
       const next = areaFromHash();
@@ -103,7 +106,7 @@ export function SettingsWorkspace() {
   }, []);
   // Desktop always shows an area; the phone shows the list until one is chosen.
   const area = selected ?? "security";
-  const who = isExample ? "Example account" : accountEmail(user)?.address ?? (user?.wallet?.address ? shortAddress(user.wallet.address) : null);
+  const who = isExample ? null : accountEmail(user)?.address ?? (user?.wallet?.address ? shortAddress(user.wallet.address) : null);
 
   return <div className="mxPage stPage" data-view={selected ? "area" : "index"}>
     {(isExample || !ready) && <GuestBanner onSignIn={login} ready={ready} />}
