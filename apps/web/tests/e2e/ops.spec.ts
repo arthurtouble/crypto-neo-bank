@@ -51,7 +51,7 @@ test("only an operator Cloudflare Access signed in reaches operations", async ({
     await signedInToOps(other, options);
     const outsider = await other.newPage();
     await outsider.goto(`${OPS}/#customers`);
-    await expect(outsider.getByRole("alert")).toContainText("Your sign-in expired. Reload the page to sign in again.", { timeout: 30_000 });
+    await expect(outsider.getByRole("alert")).toContainText("You're signed out of operations. Reload the page to sign in.", { timeout: 30_000 });
     await expect(outsider.getByRole("region", { name: "Customers", exact: true })).toHaveCount(0);
     await other.close();
   }
@@ -216,7 +216,8 @@ test("stats show customers, activity, and the new-customer funnel", async ({ pag
   await expect(stats.getByTestId("funnel-step")).toHaveCount(4);
   await stats.getByRole("button", { name: "7 days" }).click();
   await expect(stats.getByRole("button", { name: "7 days" })).toHaveAttribute("aria-pressed", "true");
-  // A header and one row per day, today included.
+  // A header and one row per day, today included, once days with no activity are shown too.
+  await stats.getByLabel("Show days with no activity").check();
   await expect(stats.getByRole("table").last().getByRole("row")).toHaveCount(1 + 8, { timeout: 30_000 });
 });
 
@@ -249,7 +250,9 @@ test("controls: switches, asset pauses, and issues, each recorded with the opera
   await usdc.getByRole("button", { name: "Resume" }).click();
   await expect(usdc.getByRole("button", { name: "Pause" })).toBeVisible({ timeout: 30_000 });
 
+  // Issues have their own page.
+  await page.getByRole("navigation", { name: "Operations" }).getByRole("link", { name: "Issues" }).click();
   const issues = page.getByRole("region", { name: "Issues" });
   await issues.getByRole("button", { name: "Look for stuck actions and failed events" }).click();
-  await expect(issues.getByRole("status")).toContainText("Checked", { timeout: 30_000 });
+  await expect(issues.getByRole("status")).toContainText("No stuck actions or failed events found.", { timeout: 30_000 });
 });

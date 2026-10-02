@@ -1,7 +1,8 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Copy } from "lucide-react";
 import { useState, type FormEvent } from "react";
-import { api, cents, short, tokens, when } from "./api";
+import { api, cents, short, tokens, when, words } from "./api";
+import { ErrorNotice } from "./Notice";
 
 type Holding = { label: string; symbol: string; decimals: number; amountRaw: string | null; usdCents: number | null; status: string };
 type Account = { subjectReference: string; wallet: string; closedAt: string | null; closedReason: string | null; eligible: boolean; blockers: string[];
@@ -46,7 +47,7 @@ function AllCustomers({ onOpen }: { onOpen: (subject: string) => void }) {
   const rows = list.data?.pages.flatMap((page) => page.customers) ?? [];
   return <section aria-labelledby="all-customers-heading">
     <h2 id="all-customers-heading">All customers</h2>
-    {list.isError && <div className="notice error" role="alert">{list.error.message}</div>}
+    {list.isError && <ErrorNotice error={list.error} onRetry={() => void list.refetch()} />}
     <div className="tableWrap"><table>
       <thead><tr><th scope="col">Joined</th><th scope="col">Customer</th><th scope="col">Status</th><th scope="col">Bank</th><th scope="col">Card</th>
         <th scope="col">Transactions</th><th scope="col">Last activity</th></tr></thead>
@@ -54,7 +55,7 @@ function AllCustomers({ onOpen }: { onOpen: (subject: string) => void }) {
         <td>{when(row.createdAt)}</td>
         <td><button type="button" className="link" onClick={(event) => { event.stopPropagation(); onOpen(row.subjectReference); }}>{row.email ?? (row.auraTag ? `@${row.auraTag}` : short(row.subjectReference))}</button></td>
         <td>{row.closedAt ? <span className="badge bad">Closed</span> : row.accountLocked ? <span className="badge warn">Locked</span> : <span className="badge good">Open</span>}</td>
-        <td>{row.bankStatus ?? "—"}</td><td>{row.cardStatus ?? "—"}</td><td>{row.actions}</td><td>{when(row.lastActivityAt)}</td></tr>)}</tbody>
+        <td>{row.bankStatus ? words(row.bankStatus) : "—"}</td><td>{row.cardStatus ? words(row.cardStatus) : "—"}</td><td>{row.actions}</td><td>{when(row.lastActivityAt)}</td></tr>)}</tbody>
     </table></div>
     {list.isSuccess && !rows.length && <p className="muted">No customers yet.</p>}
     {list.hasNextPage && <button type="button" className="button" disabled={list.isFetchingNextPage} onClick={() => void list.fetchNextPage()}>{list.isFetchingNextPage ? "Loading…" : "Load more"}</button>}
@@ -87,21 +88,22 @@ export function Customers({ subject, onMovement }: { subject: string | null; onM
     </form>
     {!query && <AllCustomers onOpen={open} />}
     {lookup.isFetching && <p className="muted">Looking up…</p>}
-    {lookup.isError && <div className="notice error" role="alert">{lookup.error.message}</div>}
+    {lookup.isError && <ErrorNotice error={lookup.error} onRetry={(lookup.error as { status?: number }).status === 404 ? undefined : () => void lookup.refetch()} />}
     {data && profile && <article className="customer" data-testid="ops-customer">
       <header>
         <div><h2>{profile.email ?? (profile.auraTag ? `@${profile.auraTag}` : "No email")}</h2><code>{profile.subjectReference}</code></div>
         <div className="badges">
-          {data.account.closedAt ? <span className="badge bad">Closed</span> : <span className="badge good">Open</span>}
-          {profile.controls.accountLocked && <span className="badge warn">Locked</span>}
+          {/* A closed account is always locked too, so Locked shows only on an open one. */}
+          {data.account.closedAt ? <span className="badge bad">Closed</span> : <><span className="badge good">Open</span>
+            {profile.controls.accountLocked && <span className="badge warn">Locked</span>}</>}
         </div>
       </header>
       <dl className="facts">
         <div><dt>Joined</dt><dd>{when(profile.createdAt)}</dd></div>
         <div><dt>Aura tag</dt><dd>{profile.auraTag ? `@${profile.auraTag}` : "None"}</dd></div>
         <div><dt>Wallet</dt><dd><code>{data.account.wallet}</code></dd></div>
-        <div><dt>Bank (Bridge)</dt><dd>{profile.bank ? `${profile.bank.status}${profile.bank.kycStatus ? `, identity ${profile.bank.kycStatus}` : ""}` : "Not started"}</dd></div>
-        <div><dt>Card</dt><dd>{profile.card ? `${profile.card.status}${profile.card.lastFour ? `, ending ${profile.card.lastFour}` : ""}` : "None"}</dd></div>
+        <div><dt>Bank (Bridge)</dt><dd>{profile.bank ? `${words(profile.bank.status)}${profile.bank.kycStatus ? `, identity ${profile.bank.kycStatus.replaceAll("_", " ")}` : ""}` : "Not started"}</dd></div>
+        <div><dt>Card</dt><dd>{profile.card ? `${words(profile.card.status)}${profile.card.lastFour ? `, ending ${profile.card.lastFour}` : ""}` : "None"}</dd></div>
         <div><dt>Daily limit</dt><dd>{profile.controls.dailyLimitUsd === null ? "None" : `$${profile.controls.dailyLimitUsd}`}{profile.controls.enforceAddressBook ? ", saved recipients only" : ""}</dd></div>
         <div><dt>Transactions</dt><dd>{profile.actions.total} ({profile.actions.completed} completed, {profile.actions.failed} failed, {profile.actions.open} open)</dd></div>
         <div><dt>Intercom user ID</dt><dd><code>{profile.intercomUserId}</code>
@@ -131,7 +133,7 @@ export function Customers({ subject, onMovement }: { subject: string | null; onM
           ? <ReasonAction key="reopen" label="Reopen account" pending={act.isPending} onSubmit={(reason) => act.mutate({ action: "reopen", reason })} />
           : <ReasonAction key="close" label="Close account" disabled={!data.account.eligible} pending={act.isPending} onSubmit={(reason) => act.mutate({ action: "close", reason })} />}
       </div>
-      {act.isError && <div className="notice error" role="alert">{act.error.message}</div>}
+      {act.isError && <ErrorNotice error={act.error} />}
       {act.isSuccess && <div className="notice" role="status">Done. The customer was told by email and in the app.</div>}
       <p className="muted">Only the customer unlocks their account, in Settings with their passkey. Locking freezes their card too.</p>
     </article>}
