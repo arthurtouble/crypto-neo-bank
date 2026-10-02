@@ -26,8 +26,8 @@ You can also use these details for your paycheck. When it arrives depends on you
 ## Sending to a bank
 
 1. Save a US bank account. You only do this once.
-2. Choose the account, the amount, and bank transfer (ACH) or wire.
-3. Review the amount, the USDC it takes, the bank, and the speed. Select **Edit** to change it, or **Confirm and send** to go ahead.
+2. Choose the account, the amount, and bank transfer (ACH) or wire. The form shows the USDC you have available, with **Max**.
+3. Review the amount, the USDC it takes, what you have available, the bank, the speed, and when it usually arrives. Select **Edit** to change it, or **Confirm and send** to go ahead.
 
 Confirming sends USDC to an address Bridge gives for that payout. You confirm with your passkey, and your account lock and daily limit apply.
 
@@ -35,7 +35,7 @@ A saved bank account counts as a saved recipient. We tell you each time one is a
 
 In Transactions, the payout shows as **Sent to bank**. It stays pending until Bridge reports that your bank has it. Its steps are: waiting for your USDC, received by Bridge, sent to your bank, then arrived.
 
-A bank transfer usually takes 1 to 3 business days; that's an estimate. A bank or Bridge can still hold, return, or reject a transfer after you submit it. If your bank returns it, the payout shows as failed, with what Bridge is doing about it, and we tell you.
+A bank transfer usually takes 1 to 3 business days, and a wire usually arrives within 1 business day; both are estimates. Bridge's fees for payouts aren't shown yet; they will be once Bridge confirms its pricing. A bank or Bridge can still hold, return, or reject a transfer after you submit it. If your bank returns it, the payout shows as failed, with what Bridge is doing about it, and we tell you.
 
 To remove a saved bank account, select **Remove** next to it on **Send > To a bank account**. Bridge deletes it, so no new payout can reach it. Payouts already sent carry on. If you save it again later, it waits again.
 
