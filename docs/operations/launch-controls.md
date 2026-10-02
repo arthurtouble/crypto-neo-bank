@@ -7,7 +7,7 @@ Aura is open to anyone who signs in; safety comes from server-side controls, not
 
 ## Controls
 
-- **Feature switches** (`feature_flags`, operations app → Controls): each is on or off for everyone: `direct_transfers`, `swaps`, `cross_chain`, `defi_actions`, `fiat_accounts`, `payment_cards`, `card_wallets` (Apple and Google Pay). All default off. `POST /api/actions` checks the switch for each action and the `/api/cards` routes check `payment_cards`, so switching one off stops new preparation at once. Turning off `payment_cards` doesn't freeze existing cards; freeze them at Stripe.
+- **Feature switches** (`feature_flags`, operations app → Controls): each is on or off for everyone: `direct_transfers`, `swaps`, `cross_chain`, `defi_actions`, `fiat_accounts`, `payment_cards`, `card_wallets` (Apple and Google Pay), `card_deposits` (buying USDC by card on Deposit). All default off. `POST /api/actions` checks the switch for each action and the `/api/cards` routes check `payment_cards`, so switching one off stops new preparation at once. Turning off `payment_cards` doesn't freeze existing cards; freeze them at Stripe. `card_deposits` only hides Pay by card, since Privy runs the purchase; to stop card purchases for certain, turn off card funding in the Privy dashboard too.
 - **Customer controls** (`security_profiles`, set in Settings and audited; tightening applies immediately, loosening needs a server-verified passkey confirmation):
   - Account lock blocks every action, including ones prepared before it.
   - Daily limit (`daily_limit_cents`, off by default) caps the rolling 24-hour USD value of sends and routes that pay another address. Swaps and earn moves within the customer's own wallet don't count.

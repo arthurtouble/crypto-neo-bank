@@ -20,10 +20,10 @@ Pick what you're sending from the list, then copy your address or scan the QR co
 
 Connect your wallet, pick the network and asset, and enter an amount, or select **Max** to add all of a token. From Base, you can add ETH, USDC, or EURC. From Ethereum, Arbitrum, or Optimism, you can add ETH or USDC, and from Polygon, USDC. From another network, LI.FI finds a bridge to move it to the same asset on Base.
 
-The review shows about how much you'll get, the least you'll get, the bridge fee, and the network fee. Your wallet pays the network fee on the network you send from, and bridge fees come out of the amount. A move from another network usually reaches Base in a few minutes. If the bridge can't complete it, it sends the money back to your wallet.
+The review shows about how much you'll get, the least you'll get, the bridge fee, and the network fee. Your wallet pays the network fee on the network you send from, and bridge fees come out of the amount. A move from another network usually arrives in a few minutes. You can add more while it travels, and **Transactions** shows it as pending until it arrives, even if you leave Deposit. If the bridge can't complete it, it sends the money back to your wallet, and Transactions shows it as failed.
 
 ## Card
 
-Select **Pay by card** and follow the card provider's steps. The provider shows its fee before you pay, and the USDC arrives in your account on Base.
+Select **Pay by card** and follow the card provider's steps. If Card says card payments aren't available, use one of the other ways. The provider shows its fee before you pay, and the USDC arrives in your account on Base.
 
 Aura can't recover assets sent on the wrong network or in the wrong token. Check the network and token contract first; see [before you send to your Aura account](/product/networks-and-assets/#before-you-send-to-your-aura-account).

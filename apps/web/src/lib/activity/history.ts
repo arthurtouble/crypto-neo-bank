@@ -8,6 +8,8 @@ import { readIncoming, type IncomingRead } from "./incoming";
 import { recordIncoming } from "./observations";
 import { readBankDeposits, refreshBankPayouts } from "@/lib/money/bank-activity";
 import type { BankDeposit } from "@/lib/providers/bridge/transfers";
+import { readWalletDeposits, walletDepositEntry, type WalletDeposit } from "@/lib/deposits/tracking";
+import { networkName } from "@/lib/assets/registry";
 
 const RECHECK_MS = 30_000;
 const MAX_CHECKS = 3;
@@ -19,7 +21,8 @@ export type History = { entries: ActivityEntry[]; sources: { aura: SourceState; 
 type Deps = { bankDeposits?: (subject: string) => Promise<Map<string, BankDeposit>>; refreshPayouts?: (subject: string) => Promise<unknown>;
   readIncoming?: typeof readIncoming; aave?: (wallet: string) => Promise<AaveBaseActivity>; check?: typeof checkAction;
   unitCents?: (assetId: string, decimals: number) => Promise<number | null>;
-  cards?: (subject: string, window: { since?: Date; until?: Date }) => Promise<CardHistory> };
+  cards?: (subject: string, window: { since?: Date; until?: Date }) => Promise<CardHistory>;
+  walletDeposits?: (subject: string) => Promise<WalletDeposit[]> };
 
 const cardReader = (db: D1Database, deps: Deps, now: Date) => deps.cards ?? ((subject: string, window: { since?: Date; until?: Date }) => readCardHistory(db, subject, window, now));
 
@@ -49,11 +52,13 @@ export async function readHistory(db: D1Database, subject: string, wallet: strin
   // Pick up a few bank payouts' latest state from Bridge first, in case a webhook is late.
   await (deps.refreshPayouts ?? ((who: string) => refreshBankPayouts(db, { subject: who, limit: 3, now })))(subject).catch(() => undefined);
   const [stored, hashes] = await Promise.all([listActions(db, subject, 100), listActionHashes(db, subject)]);
-  const [incoming, aave, bank, cards] = await Promise.all([
+  const [incoming, aave, bank, cards, deposits] = await Promise.all([
     (deps.readIncoming ?? readIncoming)(wallet, { exclude: hashes, now }),
     (deps.aave ?? getAaveBaseActivity)(wallet).catch((): AaveBaseActivity => ({ items: [], partial: false, sourceStatus: "unavailable" })),
     (deps.bankDeposits ?? ((who: string) => readBankDeposits(db, who)))(subject),
-    cardReader(db, deps, now)(subject, {})
+    cardReader(db, deps, now)(subject, {}),
+    // Bridged deposits are a convenience while they travel; a failed read never hides the rest.
+    (deps.walletDeposits ?? ((who: string) => readWalletDeposits(db, who, now)))(subject).catch((): WalletDeposit[] => [])
   ]);
   await recordIncoming(db, subject, wallet, incoming.transfers, now);
   // Opening Transactions also advances a few open actions, so they settle even if the customer left the screen they started on.
@@ -69,7 +74,15 @@ export async function readHistory(db: D1Database, subject: string, wallet: strin
     chainId: item.chainId, asset: item.asset, amount: item.amount, estimatedUsd: item.estimatedUsd, counterparty: "Aave", transactionHash: item.transactionHash,
     source: "Aave"
   }));
-  const entries = [...own, ...await incomingEntries(incoming, deps, bank), ...aaveEntries, ...cards.items.map(cardEntry)]
+  // A bridged deposit shows until its transfer on Base does; then that transfer is the row, from the customer's wallet.
+  const arrived = new Map(deposits.filter((deposit) => deposit.destinationHash).map((deposit) => [deposit.destinationHash!, deposit]));
+  const received = (await incomingEntries(incoming, deps, bank)).map((entry) => {
+    const deposit = entry.transactionHash ? arrived.get(entry.transactionHash.toLowerCase()) : undefined;
+    return deposit ? { ...entry, counterparty: `Your wallet on ${networkName(deposit.sourceChainId)}`, source: `${entry.source} · LI.FI` } : entry;
+  });
+  const seen = new Set(received.map((entry) => entry.transactionHash?.toLowerCase()));
+  const travelling = deposits.filter((deposit) => !deposit.destinationHash || !seen.has(deposit.destinationHash)).map(walletDepositEntry);
+  const entries = [...own, ...received, ...travelling, ...aaveEntries, ...cards.items.map(cardEntry)]
     .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)).slice(0, MAX_ENTRIES);
   return { entries, observedAt: now.toISOString(), sources: {
     aura: { status: "available", partial: stored.length >= 100 },
