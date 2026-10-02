@@ -13,7 +13,7 @@ Appearing here doesn't approve a row. Before enabling the related feature, recor
 | Excluded countries/persons | Sanctioned places blocked at the edge (30 September 2026, owner). Other exclusions open | Counsel review of the list; provider screening for persons. See [blocked places](#blocked-places) |
 | Aura role for self-controlled wallet/DeFi interface | Open | Counsel characterization and activity-by-activity licensing analysis |
 | KYC/fiat/card allocation | Open | Signed provider agreement and the [responsibility matrix](compliance-responsibility-matrix.md) |
-| Tokenized assets | Disabled | Issuer, venue, distribution, transfer restriction, and country review |
+| Tokenized assets | Enabled (2 October 2026, owner): Coinbase tokenized stocks and Tether Gold, for everyone outside the [blocked places](#blocked-places). Coinbase's terms say its stock tokens are for people in eligible places outside the US; the public docs tell customers to check this | Issuer, venue, distribution, transfer restriction, and country review |
 | Membership/rewards | Cut | None now. Card cashback, if it returns as its own feature, needs vendor contracts, tax/consumer terms, and funding |
 | "Bank", "account", "deposit", insurance, and yield language | Restricted | Approved copy library reflecting the exact legal product |
 | Privacy roles and data transfers | Open | Privacy notice, DPA, subprocessors, residency, and transfer mechanism |
