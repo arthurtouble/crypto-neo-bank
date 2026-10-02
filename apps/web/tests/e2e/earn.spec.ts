@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { AAVE_POOL, VAULTS } from "./support/fake-edge.mjs";
+import { AAVE_POOL, aTokenFor, VAULTS } from "./support/fake-edge.mjs";
 import { expect, test } from "./support/fixtures";
 import { acceptTerms, asCustomer, ASSETS, edge, newCustomer, setBalances, setFeature, setIdentity, type Customer, setControls, pauseAsset } from "./support/session";
 
@@ -55,15 +55,16 @@ test.beforeAll(async ({ request }) => {
   for (const path of ["/app/earn", "/api/defi/morpho/vaults", "/api/defi/aave/markets"]) await request.get(path, { headers: { Authorization: `Bearer ${customer.token}` }, timeout: 120_000 });
 });
 
-test("Earn shows Aave and both Morpho vaults with their rates, liquidity, and deposits", async ({ page }) => {
+test("Earn shows Aave USDC and both Morpho vaults with their rates", async ({ page }) => {
   await openEarn(page);
   await expect(card(page, "Aave USDC")).toContainText("3.85%");
-  await expect(card(page, "Aave WETH")).toContainText("1.95%");
+  // Aave WETH takes no deposits, so it doesn't show to an account without a WETH position.
+  await expect(card(page, "Aave WETH")).toHaveCount(0);
   await expect(card(page, "Steakhouse Prime USDC")).toContainText("4.41%");
   await expect(card(page, "Steakhouse Prime USDC")).toContainText("curated by Steakhouse Financial");
-  await expect(card(page, "Steakhouse Prime USDC")).toContainText("$163.0m");
+  // Market-wide totals were cut: each option shows its rate and your position.
+  await expect(page.getByText("Total deposits")).toHaveCount(0);
   await expect(card(page, "Gauntlet USDC Prime")).toContainText("4.38%");
-  await expect(card(page, "Gauntlet USDC Prime")).toContainText("$415.0m");
   await expect(page.getByText("Sky")).toHaveCount(0);
 });
 
@@ -204,4 +205,17 @@ test("Max fills in everything the account holds", async ({ page }) => {
   await expect(form(page, "Aave USDC")).toContainText("In your account: 50 USDC", { timeout: 20_000 });
   await form(page, "Aave USDC").getByRole("button", { name: "Max" }).click();
   await expect(form(page, "Aave USDC").getByLabel("Amount")).toHaveValue("50");
+});
+
+test("an account that still holds Aave WETH can only withdraw it", async ({ page }) => {
+  const weth = "0x4200000000000000000000000000000000000006";
+  const customer = await openEarn(page, { [aTokenFor(weth)]: "1000000000000000000" });
+  const wethCard = card(page, "Aave WETH");
+  await expect(wethCard).toContainText("no longer takes deposits", { timeout: 20_000 });
+  await wethCard.getByRole("button", { name: "Withdraw", exact: true }).click();
+  await expect(form(page, "Aave WETH").getByRole("tab")).toHaveCount(0);
+  await expect(form(page, "Aave WETH")).toContainText("In Aave WETH: 1 WETH");
+  await form(page, "Aave WETH").getByRole("button", { name: "Withdraw all" }).click();
+  await expect(toast(page, "Withdraw complete")).toBeVisible({ timeout: 30_000 });
+  expect(await held(page, customer, `aave:8453:${weth}`)).toBe("0");
 });
