@@ -85,6 +85,24 @@ test("every Aura section is browsable with labeled fictional data", async ({ pag
   }
 });
 
+test("on the phone, every section scrolls far enough that nothing tappable is left under the menu button", async ({ page }) => {
+  test.skip(page.viewportSize()!.width >= 768, "The floating menu button is phone only");
+  test.setTimeout(90_000);
+  for (const section of ["", "deposit", "send", "swap", "earn", "cards", "transactions", "insights", "settings", "support"]) {
+    await page.goto(`/app/${section}`);
+    await expect(page.getByText("Example data", { exact: true })).toBeVisible();
+    // Scrolled to the end once the page has finished growing (example rows, prices).
+    await expect.poll(() => page.evaluate(() => {
+      window.scrollTo(0, document.documentElement.scrollHeight);
+      const menu = document.querySelector(".appMenuButton")!.getBoundingClientRect();
+      return [...document.querySelectorAll("main a[href], main button, main input, main select, main textarea")]
+        .map((el) => ({ name: (el.textContent || el.getAttribute("aria-label") || el.tagName).trim(), box: el.getBoundingClientRect() }))
+        .filter(({ box }) => box.width > 0 && box.bottom > menu.top && box.top < menu.bottom && box.right > menu.left && box.left < menu.right)
+        .map(({ name }) => name);
+    }), { message: `/app/${section}`, timeout: 10_000 }).toEqual([]);
+  }
+});
+
 test("Invest was cut: old links open Swap, where stocks, gold, and crypto are bought", async ({ page }) => {
   for (const path of ["/app/invest", "/app/markets"]) {
     await page.goto(path);

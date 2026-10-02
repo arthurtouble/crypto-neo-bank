@@ -222,7 +222,7 @@ Geist for everything, Geist Mono for addresses, hashes, and references, both sel
 A 4px spacing grid. Breakpoints: phone below 768px, tablet 768 to 1023px (sidebar 72px, icons only), desktop from 1024px, wide from 1440px.
 
 - Desktop: sidebar 232px, top bar 60px, page padding 28px top and 32px sides, content up to 1120px, a 340 to 360px side column, 20px between sections.
-- Phone: header 56px, 20px side margins (16px below 360px), 18px between sections, a 56px floating menu button bottom centre that steps aside while scrolling down or over a form, and 100px clear at the bottom.
+- Phone: header 56px, 20px side margins (16px below 360px), 18px between sections, a 56px floating menu button bottom centre, and 100px clear at the bottom so every button can scroll above it.
 - Controls are 36px on desktop and 44px on the phone; inputs 40px and 44px, with 16px text on the phone (`--text-input-phone`) so the browser doesn't zoom; rows at least 56px and 60px; touch targets at least 44 × 44px.
 
 ## Elevation & Depth
