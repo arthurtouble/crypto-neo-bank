@@ -29,7 +29,7 @@ Aura leaves out assets it doesn't recognize rather than guessing their value. A 
 
 ## Earn positions
 
-Aura reads the USDC and WETH you've supplied directly from Aave on Base, and your Morpho vault shares from Base, shown as their USDC value. On Earn, a position grows live between reads at its current yearly rate, as an estimate; the next read replaces it. Overview shows its value as last read. If a read fails, Aura shows the position as unavailable rather than an old value.
+Aura reads the USDC and WETH you've supplied directly from Aave on Base, and your Morpho vault shares from Base, shown as their USDC value. Earn and Overview show each position's value as last read, with its yearly rate. If a read fails, Aura shows the position as unavailable rather than an old value.
 
 Aura leaves what you've earned, cost basis, and tax value blank until it has complete history to back them up. See [Earn](/product/earn/).
 
