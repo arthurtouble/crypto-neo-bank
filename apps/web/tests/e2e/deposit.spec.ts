@@ -18,7 +18,7 @@ async function openDeposit(page: Page, customer: Customer, way?: Way) {
   await acceptTerms(page, customer);
   await setIdentity(page, customer, { signedIn: true });
   await page.goto("/app/deposit");
-  await expect(page.getByRole("heading", { name: "Receive on Base" })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole("heading", { name: "Receive", exact: true })).toBeVisible({ timeout: 30_000 });
   if (way) await showWay(page, way);
 }
 
@@ -47,11 +47,11 @@ test("the Deposit page shows all four ways to add money", async ({ page }) => {
 
   await expect(page.getByTestId("account-address")).toHaveText(customer.wallet);
   await expect(page.getByRole("img", { name: "QR code of your Aura account address" })).toBeVisible();
-  await expect(page.getByText(/Only send on Base/)).toBeVisible();
+  await expect(page.getByText(/Only send USDC on the Base network/)).toBeVisible();
   // Receive names every asset that shows in Aura when it arrives on Base, straight from the registry (B3).
-  const receivable = page.getByRole("list", { name: "Assets you can receive on Base" }).getByRole("listitem");
+  const receivable = page.getByLabel("What you're sending").locator("option");
   await expect(receivable).toHaveCount(assetsFor("hold", 8453).length);
-  for (const symbol of ["USDC", "ETH", "cbBTC", "EURC"]) await expect(receivable.filter({ hasText: symbol }).first()).toBeVisible();
+  for (const symbol of ["USDC", "ETH", "cbBTC", "EURC"]) await expect(receivable.filter({ hasText: symbol }).first()).toBeAttached();
   await expect(receivable.filter({ hasText: "XAUt" })).toHaveCount(0);
   await showWay(page, "From a wallet");
   await expect(page.getByRole("heading", { name: "From your wallet" })).toBeVisible();
@@ -85,6 +85,8 @@ test("USDC on Base moves from the connected wallet into the account", async ({ p
   await openDeposit(page, customer, "From a wallet");
 
   await expect(wallet(page).getByText(/100 USDC available/)).toBeVisible({ timeout: 20_000 });
+  await wallet(page).getByRole("button", { name: "Max" }).click();
+  await expect(wallet(page).getByLabel("Amount in USDC")).toHaveValue("100");
   await wallet(page).getByLabel("Amount in USDC").fill("25");
   await wallet(page).getByRole("button", { name: "Add from wallet" }).click();
 
@@ -164,14 +166,14 @@ test("USDC from Arbitrum is bridged to USDC on Base, with fees shown first", asy
   await wallet(page).getByRole("button", { name: "Review" }).click();
 
   const review = wallet(page).locator(".mxSummary");
-  await expect(review).toContainText("39.8 USDC on Base", { timeout: 20_000 });
+  await expect(review).toContainText("39.8 USDC", { timeout: 20_000 });
   await expect(review).toContainText("39.6 USDC");
   await expect(review).toContainText("$0.50");
   await expect(review).toContainText("$0.10");
   await wallet(page).getByRole("button", { name: "Confirm deposit" }).click();
 
   await expect(toast(page, "Sent")).toBeVisible({ timeout: 30_000 });
-  await expect(wallet(page).getByRole("button", { name: "Moving to Base" })).toBeVisible();
+  await expect(wallet(page).getByRole("button", { name: "On its way" })).toBeVisible();
   const [approve, bridge] = await sent();
   expect(approve).toMatchObject({ chainId: 42161, to: ARBITRUM_USDC, success: true });
   expect(bridge).toMatchObject({ chainId: 42161, to: LIFI_DIAMOND, value: "0", success: true });
@@ -193,7 +195,7 @@ test("ETH from Ethereum is bridged in one transaction", async ({ page }) => {
   await expect(wallet(page).getByText(/2 ETH available/)).toBeVisible({ timeout: 20_000 });
   await wallet(page).getByLabel("Amount in ETH").fill("1");
   await wallet(page).getByRole("button", { name: "Review" }).click();
-  await expect(wallet(page).locator(".mxSummary")).toContainText("0.995 ETH on Base", { timeout: 20_000 });
+  await expect(wallet(page).locator(".mxSummary")).toContainText("0.995 ETH", { timeout: 20_000 });
   await wallet(page).getByRole("button", { name: "Confirm deposit" }).click();
   await expect(toast(page, "Sent")).toBeVisible({ timeout: 30_000 });
   const transactions = await sent();

@@ -72,7 +72,7 @@ export function AddFromWallet({ account }: { account: `0x${string}` }) {
         if (cancelled) return;
         if (status === "DONE" || status === "PARTIAL") {
           setPhase("done"); setBridge(null);
-          toast.success("Added", "It reached your account on Base.");
+          toast.success("Added", "It reached your Aura account.");
           await queryClient.invalidateQueries(); return;
         }
         if (status === "REFUNDED" || status === "FAILED") {
@@ -155,7 +155,7 @@ export function AddFromWallet({ account }: { account: `0x${string}` }) {
     } catch (reason) {
       setPhase("idle");
       const unavailable = reason instanceof ApiError && ["provider_unavailable", "feature_unavailable"].includes(reason.code);
-      toast.error(unavailable ? "Not available right now" : "No route", reason instanceof ApiError ? reason.message : "We couldn't find a route right now. Try again.");
+      toast.error(unavailable ? "Not available right now" : "Can't move this amount", reason instanceof ApiError ? reason.message : "We couldn't find a route right now. Try again.");
     }
   }
 
@@ -164,13 +164,13 @@ export function AddFromWallet({ account }: { account: `0x${string}` }) {
     try {
       const hash = await sendFromWallet(current.calls);
       setPhase("bridging"); setAmount("");
-      toast.show({ tone: "info", title: "Sent", detail: "It usually reaches Base in a few minutes. You can leave this screen." });
+      toast.show({ tone: "info", title: "Sent", detail: "It usually arrives in a few minutes. You can leave this screen." });
       setBridge({ hash, chainId: current.chainId, tool: current.tool });
     } catch (reason) { walletError(reason); }
   }
 
-  const buttonText = phase === "quoting" ? "Finding a route" : phase === "confirm" ? "Confirm in your wallet" : phase === "pending" ? "Sending"
-    : phase === "bridging" ? "Moving to Base" : phase === "review" ? "Confirm deposit" : home ? "Add from wallet" : "Review";
+  const buttonText = phase === "quoting" ? "Getting a price" : phase === "confirm" ? "Confirm in your wallet" : phase === "pending" ? "Sending"
+    : phase === "bridging" ? "On its way" : phase === "review" ? "Confirm deposit" : home ? "Add from wallet" : "Review";
 
   return (
     <form className="mxForm" onSubmit={(event) => void submit(event)}>
@@ -187,16 +187,21 @@ export function AddFromWallet({ account }: { account: `0x${string}` }) {
         </label>
       </div>
       <div className="mxFieldGroup">
-        <label className="mxField">Amount in {asset.symbol}
-          <input inputMode="decimal" autoComplete="off" placeholder="0.00" value={amount} disabled={busy} aria-invalid={error ? true : undefined}
-            aria-describedby="wallet-available" onChange={(event) => { setAmount(event.target.value.trim()); reset(); }} />
-        </label>
+        <div className="mxAmountWithMax">
+          <label className="mxField">Amount in {asset.symbol}
+            <input inputMode="decimal" autoComplete="off" placeholder="0.00" value={amount} disabled={busy} aria-invalid={error ? true : undefined}
+              aria-describedby="wallet-available" onChange={(event) => { setAmount(event.target.value.trim()); reset(); }} />
+          </label>
+          {/* ETH also pays the network fee, so all of it can't be sent; Max is for tokens. */}
+          {asset.address !== null && available !== undefined && available > 0n && <button type="button" className="appButton mxMaxButton" disabled={busy}
+            onClick={() => { setAmount(formatUnits(available, asset.decimals)); reset(); }}>Max</button>}
+        </div>
         <span className="mxHint" id="wallet-available">
           From {shortAddress(sourceAddress)} on {networkName} · {available === undefined ? "balance unavailable" : `${amountText(available, asset.decimals)} ${asset.symbol} available`}
         </span>
       </div>
       {quote && phase === "review" && <dl className="mxSummary" aria-label="Deposit summary">
-        <div><dt>You get about</dt><dd>{amountText(quote.toAmountRaw, quote.decimals)} {quote.symbol} on Base</dd></div>
+        <div><dt>You get about</dt><dd>{amountText(quote.toAmountRaw, quote.decimals)} {quote.symbol}</dd></div>
         <div><dt>At least</dt><dd>{amountText(quote.toAmountMinRaw, quote.decimals)} {quote.symbol}</dd></div>
         <div><dt>Bridge fee</dt><dd>{usdText(quote.providerFeeUsd)}</dd></div>
         <div><dt>Network fee</dt><dd>{usdText(quote.networkFeeUsd)}</dd></div>
@@ -207,7 +212,7 @@ export function AddFromWallet({ account }: { account: `0x${string}` }) {
       </button>
       <p className="mxHint">
         {home ? "Your wallet pays a small Base network fee in ETH."
-          : `It arrives as ${asset.symbol} on Base. The bridge fee comes out of the amount, and your wallet pays the ${networkName} network fee.`}
+          : `It arrives in your Aura account as ${asset.symbol}. The bridge fee comes out of the amount, and your wallet pays the ${networkName} network fee.`}
       </p>
     </form>
   );

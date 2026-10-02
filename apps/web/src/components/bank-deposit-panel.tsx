@@ -19,7 +19,9 @@ function VerificationForm({ onStarted }: { onStarted: () => void }) {
   const { user } = useAuth();
   const api = useApi();
   const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState(user?.email?.address ?? "");
+  // Every account has an email (it's required at sign-up), so it's shown, not asked for again.
+  const accountEmail = user?.email?.address;
+  const [email, setEmail] = useState(accountEmail ?? "");
   const [busy, setBusy] = useState(false);
   const toast = useToast();
 
@@ -43,7 +45,9 @@ function VerificationForm({ onStarted }: { onStarted: () => void }) {
   return <form className="mxForm" onSubmit={(event) => void submit(event)}>
     <p className="mxHint">Bridge, our banking partner, verifies your identity before it opens a USD account for you.</p>
     <label className="mxField">Full legal name<input value={fullName} onChange={(event) => setFullName(event.target.value)} autoComplete="name" required minLength={2} maxLength={120} /></label>
-    <label className="mxField">Email<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" required maxLength={254} /></label>
+    <label className="mxField">Email<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} readOnly={Boolean(accountEmail)}
+      autoComplete="email" required maxLength={254} aria-describedby={accountEmail ? "bank-email-hint" : undefined} /></label>
+    {accountEmail && <p className="mxHint" id="bank-email-hint">Your Aura account email. Change it in Settings.</p>}
     <button type="submit" className="appButton appButtonPrimary appButtonLarge" disabled={busy || fullName.trim().length < 2 || !email}>{busy ? "Starting…" : "Verify with Bridge"}</button>
   </form>;
 }
@@ -65,7 +69,7 @@ export function BankDepositPanel() {
       {stage === "unavailable" ? <span className="mxBadge">Coming soon</span> : <span className="mxHint">Bank transfer · Bridge</span>}</div>
     {account.isPending && <LoadingState label="Loading your bank details…" />}
     {account.isError && <Notice tone="error" role="alert" onRetry={() => void account.refetch()}>Bank details are unavailable right now.</Notice>}
-    {stage === "unavailable" && <p className="mxHint">Coming soon. You&apos;ll get US bank details and deposits will arrive as USDC in your Aura account.</p>}
+    {stage === "unavailable" && <p className="mxHint">You&apos;ll get US bank details, and deposits will arrive as USDC in your Aura account.</p>}
     {stage && stage !== "unavailable" && stage !== "rejected" && stage !== "active" && <ol className="mxChecklist" aria-label="Bank setup">
       {steps.map((step) => <li key={step.label} className={step.done ? "isDone" : step.current ? "isCurrent" : undefined}>{step.label}</li>)}
     </ol>}
