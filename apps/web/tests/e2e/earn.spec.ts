@@ -143,6 +143,8 @@ test("the server refuses: switched off, account locked, not enough USDC, or USDC
 
   await act(page, "Steakhouse Prime USDC", "Deposit", "60");
   await expect(toasts(page)).toContainText("You don't have enough USDC.", { timeout: 20_000 });
+  await act(page, "Aave USDC", "Deposit", "60");
+  await expect(toasts(page).getByText("You don't have enough USDC.").last()).toBeVisible({ timeout: 20_000 });
 
   const pause = (paused: boolean) => pauseAsset(page, `8453:${ASSETS.usdc}`, paused);
   await pause(true);

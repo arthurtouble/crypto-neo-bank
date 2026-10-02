@@ -27,8 +27,9 @@ const aavePoolAbi = parseAbi([
 ]);
 
 /**
- * Aave V3 on Base. A deposit is an exact approval and supply in one operation. Withdraw all reads the account's
- * aToken balance first, then asks the pool for everything, so no interest is left behind.
+ * Aave V3 on Base. A deposit is an exact approval and supply in one operation, refused first when the account
+ * holds less than the amount; an exact withdrawal is refused when the position holds less. Withdraw all reads the
+ * account's aToken balance first, then asks the pool for everything, so no interest is left behind.
  */
 async function buildAave(input: Extract<EarnInput, { protocol: "aave" }>, wallet: string, client: PublicClient = baseClient()): Promise<BuiltAction> {
   const decimals = input.asset === "USDC" ? 6 : 18;
@@ -49,6 +50,15 @@ async function buildAave(input: Extract<EarnInput, { protocol: "aave" }>, wallet
   }
   const amountRaw = rawAmount(input.amount, decimals);
   const identity = { wallet: getAddress(wallet), asset, amountRaw };
+  // Checked before the passkey, as Morpho does, so a deposit or withdrawal that can't succeed never reaches the network.
+  if (input.direction === "deposit") {
+    const held = await client.readContract({ address: asset, abi: erc20Abi, functionName: "balanceOf", args: [identity.wallet] });
+    if (held < amountRaw) throw new ActionInputError("insufficient_balance", `You don't have enough ${input.asset}.`);
+  } else {
+    const reserve = await client.readContract({ address: AAVE_BASE_V3_MARKET, abi: aavePoolAbi, functionName: "getReserveData", args: [asset] });
+    const supplied = await client.readContract({ address: reserve.aTokenAddress, abi: erc20Abi, functionName: "balanceOf", args: [identity.wallet] });
+    if (supplied < amountRaw) throw new ActionInputError("insufficient_balance", `You don't have that much ${input.asset} in Aave.`);
+  }
   const calls = input.direction === "deposit"
     ? [toCall(buildAaveBaseCall({ action: "approve", ...identity })), toCall(buildAaveBaseCall({ action: "supply", ...identity }))]
     : [toCall(buildAaveBaseCall({ action: "withdraw", ...identity }))];

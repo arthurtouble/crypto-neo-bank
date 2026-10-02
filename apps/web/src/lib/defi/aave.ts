@@ -37,15 +37,13 @@ export type AaveBaseReserve = {
   canSupply: boolean;
   canBorrow: boolean;
   availableLiquidity: { value: string; usd: string };
-  walletBalance?: string;
 };
 
-export async function getAaveBaseMarkets(user?: string) {
+export async function getAaveBaseMarkets() {
   const result = await callAaveTool<{ data: { v3: { markets: Array<{ market: string; chainId: number; name: string; reserves: AaveBaseReserve[] }> } } }>("get_markets", {
     version: "v3",
     chainId: BASE_CHAIN_ID,
-    symbols: ["USDC", "WETH"],
-    ...(user ? { user } : {})
+    symbols: ["USDC", "WETH"]
   });
   const market = result.data.v3.markets.find((item) => item.market.toLowerCase() === AAVE_BASE_V3_MARKET.toLowerCase());
   if (!market) throw new Error("The governed Aave Base market is unavailable.");
