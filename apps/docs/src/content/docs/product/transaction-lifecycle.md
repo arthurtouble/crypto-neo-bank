@@ -70,12 +70,12 @@ Insights adds up your completed transactions for a period:
 
 - money in: received, and card refunds;
 - money out: sent, and card payments;
-- put to work: added to Earn;
-- moved: swaps and moves between networks.
+- added to Earn;
+- swapped: swaps and moves between networks.
 
 Anything without a US dollar value is counted separately, never as zero. If received money can't all be read, money in shows as **Unavailable**. If card payments can't all be read, both money in and money out show as **Unavailable**.
 
-Pick a period: **7D**, **30D**, **90D**, or **1Y**. **Money in and out** charts both, by day over 7 days, by week (starting Monday) over 30 or 90 days, and by month over a year. Days start at midnight UTC. Point at a bar to see its amounts, or choose **Show as a table**. If only one of money in or money out can be read, the chart shows that one and tells you. If neither can, it says so.
+Pick a period: **7D**, **30D**, **90D**, or **1Y**. If nothing completed in the period, Insights says so and offers **Deposit**. **Money in and out** charts both, by day over 7 days, by week (starting Monday) over 30 or 90 days, and by month over a year. Days start at midnight UTC. Point at a bar to see its amounts, or choose **Show as a table**. If only one of money in or money out can be read, the chart shows that one and tells you. If neither can, it says so.
 
 **Top card merchants** lists the five merchants you paid most by card in the period, with the number of payments to each. It counts settled payments only, not declines or refunds. If card payments can't all be read, it says so.
 
