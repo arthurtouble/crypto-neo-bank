@@ -6,7 +6,7 @@ import { route } from "@/lib/http/route";
 import { buildInsights } from "@/lib/insights/presentation";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 
-export const GET = route("insights.get", { unavailable: "insights_unavailable" }, async (request, { traceId }) => {
+export const GET = route("insights.get", { unavailable: "insights_unavailable", unavailableMessage: "Insights can't be loaded right now." }, async (request, { traceId }) => {
   const subject = await requireVerifiedSubject(request);
   await enforceRateLimit(env.PROJECTION_DB, { namespace: "insights", subject: subject.subjectReference, limit: 60, windowSeconds: 3600 });
   const requestedDays = Number(new URL(request.url).searchParams.get("days") ?? 30);

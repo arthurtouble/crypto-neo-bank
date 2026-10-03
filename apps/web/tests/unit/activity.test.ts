@@ -212,6 +212,13 @@ describe("insights", () => {
     expect(result.totals).toEqual({ incoming: 80, outgoing: 10, allocation: 50, movement: 0, unvalued: 1 });
     expect(result.completedCount).toBe(5);
   });
+
+  it("doesn't count borrowing as money in or repaying as money out", () => {
+    const entry = (type: "borrow" | "repay") => ({ id: type, origin: "aave", type, status: "completed", createdAt: "2026-09-21T00:00:00.000Z", chainId: 8453,
+      asset: "USDC", amount: "100", estimatedUsd: 100, source: "Aave" }) as import("@/lib/activity/entries").ActivityEntry;
+    const result = buildInsights([entry("borrow"), entry("repay")], new Date("2026-09-22T12:00:00Z"), 30);
+    expect(result.totals).toMatchObject({ incoming: 0, outgoing: 0 });
+  });
 });
 
 describe("the Transactions API", () => {
@@ -266,6 +273,13 @@ describe("the Transactions API", () => {
       state.incoming = { status: "available", partial: true, observedAt: "t", transfers: [] };
       expect(await (await insights(new Request("https://aura.test/api/insights?days=30"))).json()).toMatchObject({ incomingComplete: false });
     } finally { vi.useRealTimers(); }
+  });
+
+  it("says Insights can't be loaded, with a message for the customer, when the period can't be read", async () => {
+    state.incoming = null;
+    const response = await insights(new Request("https://aura.test/api/insights?days=30"));
+    expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({ error: "insights_unavailable", message: "Insights can't be loaded right now." });
   });
 
   it("lists card payments with everything else, and says when Stripe can't be read", async () => {

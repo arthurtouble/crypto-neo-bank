@@ -1,4 +1,4 @@
-import { entryCategory, entryDirection, type ActivityEntry } from "@/lib/activity/entries";
+import { entryDirection, type ActivityEntry } from "@/lib/activity/entries";
 
 export type InsightBucket = { start: string; incoming: number; outgoing: number };
 export type InsightMerchant = { name: string; total: number; payments: number };
@@ -36,7 +36,6 @@ export function buildInsights(entries: ActivityEntry[], now = new Date(), days =
   const start = now.getTime() - days * 86_400_000;
   const completed = entries.filter((entry) => entry.status === "completed" && Date.parse(entry.createdAt) >= start);
   const totals = { incoming: 0, outgoing: 0, allocation: 0, movement: 0, unvalued: 0 };
-  const categories = new Map<string, number>();
   const unit = bucketUnit(days);
   const buckets = new Map<number, InsightBucket>();
   for (let at = bucketStart(start, unit); at <= now.getTime(); at = nextBucket(at, unit)) buckets.set(at, { start: new Date(at).toISOString(), incoming: 0, outgoing: 0 });
@@ -50,8 +49,6 @@ export function buildInsights(entries: ActivityEntry[], now = new Date(), days =
     if (direction === "out") { totals.outgoing += value; if (bucket) bucket.outgoing += value; }
     if (direction === "earn") totals.allocation += value;
     if (direction === "moved") totals.movement += value;
-    const category = entryCategory(entry.type);
-    categories.set(category, (categories.get(category) ?? 0) + value);
     if (entry.type === "card_payment") {
       const name = entry.counterparty ?? "Card payment";
       const merchant = merchants.get(name) ?? { name, total: 0, payments: 0 };
@@ -62,7 +59,6 @@ export function buildInsights(entries: ActivityEntry[], now = new Date(), days =
     periodDays: days,
     completedCount: completed.length,
     totals: { incoming: round(totals.incoming), outgoing: round(totals.outgoing), allocation: round(totals.allocation), movement: round(totals.movement), unvalued: totals.unvalued },
-    categories: [...categories.entries()].map(([name, value]) => ({ name, value: round(value) })).sort((a, b) => b.value - a.value),
     over: { unit, buckets: [...buckets.values()].map((bucket) => ({ ...bucket, incoming: round(bucket.incoming), outgoing: round(bucket.outgoing) })) },
     topMerchants: [...merchants.values()].map((merchant) => ({ ...merchant, total: round(merchant.total) }))
       .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name)).slice(0, 5)
