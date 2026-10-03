@@ -5,7 +5,7 @@ description: What Transactions lists, what pending, completed, failed, and not s
 
 Transactions lists the money you send, swap, move, and put in Earn with Aura, your card payments, and the money you receive. Getting a quote doesn't add anything. If you start something and don't confirm it in time, it shows as **Not sent**.
 
-The list is grouped by day, newest first. You can search, pick a type (**All**, **Sent**, **Received**, **Card**, **Swaps**, **Earn**, **Markets**, or **Other**), or filter by status. If part of your history can't be read, one note above the list names what's missing, and the rest still shows. The list shows your most recent 150 items; for older activity, download a monthly statement.
+The list is grouped by day, newest first. You can search, pick a type (**All**, **Sent**, **Received**, **Card**, **Swaps**, **Earn**, **Markets**, or **Other**), or filter by status. If part of your history can't be read, one note above the list names what's missing, and the rest still shows. **Show more**, under the list, loads older activity.
 
 For the steps from asking to settling, see [how Aura works](/concepts/architecture/). You can cancel any time before you confirm.
 
@@ -36,7 +36,7 @@ Money sent to your Aura address shows as **Received**: a deposit from an exchang
 A deposit is **Completed** as soon as it's in a block. The receipt shows who sent it, a link to the network, and whether it's final yet.
 
 - Aura reads received money from Alchemy's record of the network and doesn't store it. If that record can't be read, Transactions says some deposits may be missing, rather than showing none.
-- The list shows your most recent deposits. A monthly statement covers a whole month.
+- **Show more** loads older deposits. A monthly statement covers a whole month.
 - ETH sent to you by a smart contract, rather than a wallet, may not be listed.
 - The value shown is today's value, not its value when it arrived.
 

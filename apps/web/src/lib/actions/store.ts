@@ -74,6 +74,13 @@ export async function listActions(db: D1Database, subject: string, limit = 50): 
   return rows.results.map(fromRow);
 }
 
+/** The customer's actions created at or before `before`, newest first: an older page of Transactions. */
+export async function listActionsBefore(db: D1Database, subject: string, before: Date, limit = 100): Promise<StoredAction[]> {
+  const rows = await db.prepare(`${ACTIONS} WHERE subject_reference = ? AND status != 'prepared' AND created_at <= ? ORDER BY created_at DESC LIMIT ?`)
+    .bind(subject, before.toISOString(), limit).all<ActionRow>();
+  return rows.results.map(fromRow);
+}
+
 /** Every transaction hash the customer's actions produced, on either network, lowercased. */
 export async function listActionHashes(db: D1Database, subject: string): Promise<string[]> {
   const rows = await db.prepare(`SELECT transaction_hash AS hash FROM actions WHERE subject_reference = ?1 AND transaction_hash IS NOT NULL

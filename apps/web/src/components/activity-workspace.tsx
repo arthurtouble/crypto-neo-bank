@@ -11,7 +11,7 @@ import { useApi } from "@/lib/client/api";
 import { explorerTx } from "@/lib/client/explorer";
 import type { ActionView } from "@/lib/client/use-action";
 import type { History } from "@/lib/activity/history";
-import { CATEGORIES, entriesCsv, entryCategory, entryLabel, HISTORY_LIMIT, statusLabel, STATUSES, type ActivityEntry } from "@/lib/activity/entries";
+import { CATEGORIES, entriesCsv, entryCategory, entryLabel, statusLabel, STATUSES, type ActivityEntry } from "@/lib/activity/entries";
 import { BASE_CHAIN_ID, networkName } from "@/lib/assets/registry";
 import { failureText } from "@/lib/client/action-copy";
 import { exampleActivity } from "@/lib/example/data";
@@ -231,7 +231,29 @@ export function ActivityWorkspace() {
   const [openId, setOpenId] = useState(useSearchParams().get("open"));
   const [exportOpen, setExportOpen] = useState(false);
   const query = useQuery({ queryKey: ["activity", user?.id], queryFn: () => api<History>("/api/activity"), enabled: authenticated && Boolean(user), refetchInterval: 30_000 });
-  const entries = useMemo(() => isExample ? exampleActivity : query.data?.entries ?? [], [isExample, query.data]);
+  // Older pages the customer asked for with "Show more", oldest last. A new account or sign-in starts over.
+  const [olderPages, setOlderPages] = useState<{ owner?: string; pages: History[] }>({ pages: [] });
+  const [olderState, setOlderState] = useState<"idle" | "loading" | "error">("idle");
+  const pages = useMemo(() => olderPages.owner === user?.id ? olderPages.pages : [], [olderPages, user?.id]);
+  const entries = useMemo(() => {
+    if (isExample) return exampleActivity;
+    const seen = new Set<string>();
+    return [...query.data?.entries ?? [], ...pages.flatMap((page) => page.entries)].filter((entry) => !seen.has(entry.id) && Boolean(seen.add(entry.id)));
+  }, [isExample, query.data, pages]);
+  const more = !isExample && Boolean(pages.length ? pages.at(-1)!.more : query.data?.more);
+  async function showMore() {
+    const oldest = entries.at(-1);
+    if (!oldest) return;
+    setOlderState("loading");
+    try {
+      const page = await api<History>(`/api/activity?before=${encodeURIComponent(oldest.createdAt)}`);
+      // A page that adds nothing new ends the list rather than offering the same page again.
+      const known = new Set(entries.map((entry) => entry.id));
+      const fresh = page.entries.some((entry) => !known.has(entry.id));
+      setOlderPages({ owner: user?.id, pages: [...pages, fresh ? page : { ...page, more: false }] });
+      setOlderState("idle");
+    } catch { setOlderState("error"); }
+  }
   const selected = chosen ? entries.find((entry) => entry.id === chosen.id) ?? chosen : entries.find((entry) => entry.id === openId) ?? null;
   const close = () => { setChosen(null); setOpenId(null); };
   const filtered = useMemo(() => entries.filter((entry) => {
@@ -243,7 +265,6 @@ export function ActivityWorkspace() {
   const listLoading = loading || (!isExample && query.isPending);
   const missing = [sources?.incoming.status === "unavailable" && "money you received", sources?.card.status === "unavailable" && "card payments",
     sources?.aave.status === "unavailable" && "Aave history"].filter((item): item is string => Boolean(item));
-  const older = Boolean(sources?.incoming.partial || sources?.aura.partial || entries.length >= HISTORY_LIMIT);
   const days = useMemo(() => byDay(filtered, new Date()), [filtered]);
 
   return <div className="mxPage txPage">
@@ -251,7 +272,6 @@ export function ActivityWorkspace() {
     <header className="txHead"><h1>Transactions</h1>
       <button type="button" className="appButton" onClick={() => isExample ? login() : setExportOpen(true)} disabled={loading || (!isExample && !query.data)}><Download aria-hidden="true" /> Export</button></header>
     {missing.length > 0 && <Notice tone="warning" role="status">{missing[0][0].toUpperCase() + listOf(missing).slice(1)} can&apos;t be read right now, so some activity may be missing.</Notice>}
-    {older && <Notice role="status">Only your most recent activity is listed. For older activity, download a monthly statement from Export.</Notice>}
     <div className="txFilters">
       <label className="txSearch"><Search aria-hidden="true" /><span className="srOnly">Search activity</span>
         <input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search activity" /></label>
@@ -273,6 +293,11 @@ export function ActivityWorkspace() {
                   <span className="txAmount">{amount && <strong className={incoming(entry) && entry.status === "completed" ? "txIn" : undefined}>{amount}</strong>}<Status entry={entry} /></span>
                 </button></li>; })}</ul></section>)}
     </section>
+    {more && !listLoading && !query.isError && <div className="txMore">
+      {olderState === "error" && <Notice tone="error" role="alert">Older activity couldn&apos;t be loaded. Try again.</Notice>}
+      <button type="button" className="appButton" onClick={() => void showMore()} disabled={olderState === "loading"}>
+        {olderState === "loading" && <LoaderCircle className="spin" aria-hidden="true" />} Show more</button>
+    </div>}
     {exportOpen && <ExportDialog entries={filtered} onClose={() => setExportOpen(false)} />}
     {selected && <Receipt entry={selected} onClose={close} isExample={isExample} />}
   </div>;

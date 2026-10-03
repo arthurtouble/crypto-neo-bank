@@ -84,7 +84,8 @@ export function parseTransfer(raw: RawTransfer, chainId: number, wallet: string,
 
 /**
  * Incoming transfers to `wallet`, newest first, received at or after `since`
- * (default: the latest page per network). `exclude` holds the transaction
+ * (default: the latest page per network). With `until` and no `since`, an
+ * older page: up to a page per network received at or before `until`. `exclude` holds the transaction
  * hashes of the account's own actions.
  */
 export async function readIncoming(wallet: string, options: { exclude?: Iterable<string>; since?: Date; until?: Date; maxPages?: number;
@@ -92,7 +93,8 @@ export async function readIncoming(wallet: string, options: { exclude?: Iterable
   const fetcher = options.fetcher ?? fetch;
   const now = options.now ?? new Date();
   const exclude = new Set([...(options.exclude ?? [])].map((hash) => hash.toLowerCase()));
-  const maxPages = options.since ? options.maxPages ?? 10 : 1;
+  // A month (since) or an older page (until only) pages back through the index; the latest page needs one read.
+  const maxPages = options.since || options.until ? options.maxPages ?? 10 : 1;
   let status: IncomingRead["status"] = "available";
   let partial = false;
   const transfers: IncomingTransfer[] = [];
@@ -116,14 +118,17 @@ export async function readIncoming(wallet: string, options: { exclude?: Iterable
         pageKey = typeof result.pageKey === "string" && result.pageKey ? result.pageKey : undefined;
         const oldest = rows.at(-1)?.metadata?.blockTimestamp;
         const reachedStart = options.since && oldest && Date.parse(oldest) < options.since.getTime();
-        if (!pageKey || reachedStart) break;
+        // An older page without a start stops once it holds a full page from before `until`.
+        const filledOlder = !options.since && options.until
+          && transfers.filter((transfer) => transfer.chainId === chainId && Date.parse(transfer.receivedAt) <= options.until!.getTime()).length >= PAGE;
+        if (!pageKey || reachedStart || filledOlder) break;
         if (page === maxPages - 1) partial = true;
       }
       if (!options.since && pageKey) partial = true;
     } catch { status = "unavailable"; }
   }));
   const inRange = transfers.filter((transfer) => (!options.since || Date.parse(transfer.receivedAt) >= options.since.getTime())
-    && (!options.until || Date.parse(transfer.receivedAt) < options.until.getTime()));
+    && (!options.until || (options.since ? Date.parse(transfer.receivedAt) < options.until.getTime() : Date.parse(transfer.receivedAt) <= options.until.getTime())));
   inRange.sort((a, b) => Date.parse(b.receivedAt) - Date.parse(a.receivedAt));
   return { transfers: inRange, status, partial, observedAt: now.toISOString() };
 }
