@@ -26,6 +26,7 @@ html[data-theme="dark"] .themeToggle .moonIcon { display: block; }
 .ldMobileNav summary svg { width: 16px; height: 16px; }
 .ldMobileNav nav { position: absolute; right: 0; top: calc(100% + var(--space-2)); min-width: 200px; display: grid; padding: var(--space-2); border: 1px solid var(--color-line); border-radius: var(--radius-md); background: var(--color-raised); box-shadow: var(--shadow-2); }
 .ldMobileNav nav a { padding: var(--space-3); border-radius: var(--radius-sm); }
+.ldMobileNav nav a[href^="/app"] { border-top: 1px solid var(--color-line); border-radius: 0; color: var(--color-text); }
 
 /* Hero: centred, one line of support, two actions */
 .ldHero { max-width: 760px; margin: 0 auto; padding: calc(var(--space-10) * 1.5) var(--page-pad-x) var(--space-10); display: grid; justify-items: center; gap: var(--space-6); text-align: center; }
@@ -39,6 +40,9 @@ html[data-theme="dark"] .themeToggle .moonIcon { display: block; }
 .ldShowcase { max-width: var(--content-max); margin: 0 auto; padding: 0 var(--page-pad-x); }
 .ldScreen { overflow: hidden; border: 1px solid var(--color-line); border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: var(--shadow-2); line-height: 0; }
 .ldScreen img { display: block; width: 100%; height: auto; }
+/* Each screen has a light and a dark shot; only the page's theme shows (and downloads, since the other stays lazy and hidden) */
+.ldScreen .ldScreen-dark, html[data-theme="dark"] .ldScreen .ldScreen-light { display: none; }
+html[data-theme="dark"] .ldScreen .ldScreen-dark { display: block; }
 
 /* Sections share one width and rhythm */
 /* The content width, without side padding, so divider lines line up with the content */
@@ -130,13 +134,15 @@ html[data-theme="dark"] .themeToggle .moonIcon { display: block; }
 .pyMain { max-width: 520px; margin: 0 auto; padding: var(--space-4) var(--page-pad-x) var(--space-8); display: grid; gap: var(--space-4); }
 .pyWho { display: grid; gap: var(--space-1); padding-bottom: var(--space-3); }
 .pyWho span, .pyWho p { color: var(--color-text-secondary); }
+.pyWho p { color: var(--color-text); font-weight: var(--weight-medium); }
+.pyWho p span { font-weight: var(--weight-regular); }
 .pyWho h1, .pyUnavailable h1 { font-size: var(--text-title-1-size); line-height: var(--text-title-1-line); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-tight); overflow-wrap: anywhere; }
 .pyCard { display: grid; gap: var(--space-4); padding: var(--space-5); border: 1px solid var(--color-line); border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: var(--shadow-1); }
 .pyCard > p { color: var(--color-text-secondary); font-size: var(--text-small-size); line-height: var(--text-small-line); }
 .pyCardHead { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
 .pyCardHead h2 { font-size: var(--text-title-3-size); line-height: var(--text-title-3-line); font-weight: var(--weight-semibold); }
-.pyQr { justify-self: center; padding: var(--space-3); border: 1px solid var(--color-line); border-radius: var(--radius-lg); color: var(--color-text); line-height: 0; }
-.pyAddress { padding: var(--space-3); border-radius: var(--radius-md); background: var(--color-muted); font-family: var(--font-mono); font-size: var(--text-small-size); line-height: var(--text-small-line); overflow-wrap: anywhere; text-align: center; }
+.pyQr { justify-self: center; padding: var(--space-3); border: 1px solid var(--color-line); border-radius: var(--radius-lg); background: var(--color-qr-background); color: var(--color-qr); line-height: 0; }
+.pyAddress { display: flex; flex-wrap: wrap; justify-content: center; column-gap: 0.5ch; padding: var(--space-3); border-radius: var(--radius-md); background: var(--color-muted); font-family: var(--font-mono); font-size: var(--text-small-size); line-height: var(--text-small-line); }
 .pyCard .appButton { justify-self: stretch; }
 .pyDetails { margin: 0; display: grid; border-top: 1px solid var(--color-line); }
 .pyDetails div { display: flex; justify-content: space-between; gap: var(--space-4); padding: var(--space-2) 0; border-bottom: 1px solid var(--color-line); }

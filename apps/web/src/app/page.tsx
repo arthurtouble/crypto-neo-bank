@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeftRight, AtSign, Check, ChevronDown, CreditCard, Send, Sprout, Wallet } from "lucide-react";
+import { ArrowDownToLine, ArrowLeftRight, AtSign, Check, ChevronDown, CreditCard, Send, Sprout } from "lucide-react";
 import { AppBrand } from "@/components/brand";
 import { LandingMobileCta } from "@/components/landing-mobile-cta";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -15,10 +15,10 @@ export const metadata: Metadata = {
 
 const docs = process.env.NEXT_PUBLIC_DOCS_URL ?? "https://aurel-docs.aurel-events.workers.dev";
 const features = [
-  { icon: Wallet, title: "Every balance", text: "Stablecoins, crypto, tokenized stocks, and gold, valued in dollars." },
+  { icon: ArrowDownToLine, title: "Deposit", text: "Add crypto from an exchange or another wallet. Everything you hold shows in dollars." },
   { icon: Send, title: "Send", text: "Pay an address, a saved contact, or an Aura tag. New addresses get a second check." },
   { icon: ArrowLeftRight, title: "Swap", text: "Move between crypto, stocks, and gold. See the price and fees before you confirm." },
-  { icon: Sprout, title: "Earn", text: "Lend through Aave or a Morpho vault, with the risks next to the rate." },
+  { icon: Sprout, title: "Earn", text: "Lend your USDC to earn interest, with the risks next to the rate." },
   { icon: AtSign, title: "Aura tag", text: "A short name like @sam, with its own page where people can pay you." },
   { icon: CreditCard, title: "Card", text: "A virtual Visa card that spends your USDC.", soon: true }
 ];
@@ -26,7 +26,7 @@ const safeguards = ["We never hold your keys or your money", "Your passkey confi
 const faqs = [
   { question: "Can I try it without an account?", answer: "Yes. Every screen works with example data, clearly labelled. Sign in when you want to use your own money." },
   { question: "Where do my balances come from?", answer: "From the blockchains and protocols that hold your money, read each time you open the app. Aura doesn't keep a ledger of its own." },
-  { question: "Can I use bank transfers and cards?", answer: "Not yet. Both need our banking and card partners to approve Aura, and both will depend on where you live." },
+  { question: "Can I use bank transfers and cards?", answer: "Bank transfers work once our banking partner approves Aura. The card is coming soon. Both depend on where you live." },
   { question: "Do I approve every transaction?", answer: "Yes. Every send, swap, and Earn move waits for you to review it and confirm it with your passkey." }
 ];
 const links = [{ label: "Features", href: "#features" }, { label: "Security", href: "#security" }, { label: "Questions", href: "#faq" }, { label: "Docs", href: docs }];
@@ -36,9 +36,11 @@ const links = [{ label: "Features", href: "#features" }, { label: "Security", hr
  * nothing for an image optimiser to do; the first one loads eagerly because it's the largest thing above the fold.
  */
 function Screen({ name, alt, priority = false }: { name: string; alt: string; priority?: boolean }) {
-  // eslint-disable-next-line @next/next/no-img-element
-  return <div className="ldScreen"><img src={`/images/aura-${name}.webp`} alt={alt} width={1920} height={1200} decoding="async"
-    loading={priority ? "eager" : "lazy"} fetchPriority={priority ? "high" : "auto"} /></div>;
+  // One shot per theme; public.css shows the one that matches the page.
+  return <div className="ldScreen">{(["light", "dark"] as const).map((theme) => (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img key={theme} className={`ldScreen-${theme}`} src={`/images/aura-${name}${theme === "dark" ? "-dark" : ""}.webp`} alt={alt} width={1920} height={1200}
+      decoding="async" loading={priority ? "eager" : "lazy"} fetchPriority={priority ? "high" : "auto"} />))}</div>;
 }
 
 /** The public landing page: what Aura is, what it does, how it keeps money safe, and where to start. */
@@ -50,8 +52,9 @@ export default function MarketingPage() {
         <AppBrand href="/" />
         <nav className="ldNav" aria-label="Main navigation">{links.map((link) => <a key={link.label} href={link.href}>{link.label}</a>)}</nav>
         <details className="ldMobileNav"><summary>Menu <ChevronDown aria-hidden="true" /></summary>
-          <nav aria-label="Mobile navigation">{links.map((link) => <a key={link.label} href={link.href}>{link.label}</a>)}</nav></details>
-        <div className="ldHeaderActions"><ThemeToggle /><Link className="appButton appButtonPrimary" href="/app">Get started</Link></div>
+          <nav aria-label="Mobile navigation">{links.map((link) => <a key={link.label} href={link.href}>{link.label}</a>)}<Link href="/app?sign-in">Sign in</Link></nav></details>
+        <div className="ldHeaderActions"><ThemeToggle /><Link className="appButton" href="/app?sign-in">Sign in</Link>
+          <Link className="appButton appButtonPrimary" href="/app">Get started</Link></div>
       </div>
     </header>
     <main>
@@ -60,7 +63,6 @@ export default function MarketingPage() {
         <p>Hold stablecoins, crypto, tokenized stocks, and gold. Send, swap, and earn from one wallet, and confirm every move with your passkey.</p>
         <div className="ldActions">
           <Link className="appButton appButtonPrimary appButtonLarge" href="/app">Get started</Link>
-          <a className="appButton appButtonLarge" href="#features">See what it does</a>
         </div>
         <small>Try it with example data first. No account needed.</small>
       </section>
@@ -95,11 +97,11 @@ export default function MarketingPage() {
       <div className="ldFooterTop">
         <AppBrand href="/" />
         <div><p className="ldFooterLabel">Product</p><a href="#features">Features</a><Link href="/app">Try Aura</Link><a href={`${docs}/getting-started/status/`}>Availability</a></div>
-        <div><p className="ldFooterLabel">Help</p><a href={`${docs}/getting-started/setup/`}>Get started</a><a href={`${docs}/safety/account-controls/`}>Security</a><a href={`${docs}/safety/report-a-security-issue/`}>Contact</a></div>
+        <div><p className="ldFooterLabel">Help</p><a href={`${docs}/help/faq/`}>Questions</a><a href={`${docs}/safety/account-controls/`}>Security</a><a href={`${docs}/help/contact-and-support/`}>Contact</a></div>
         <div><p className="ldFooterLabel">Legal</p><a href={`${docs}/legal/privacy-notice/`}>Privacy</a><a href={`${docs}/legal/terms-of-use/`}>Terms</a><a href={`${docs}/legal/risk-disclosure/`}>Risk disclosure</a></div>
       </div>
       <p className="ldDisclosure">Screens show example data, not real accounts. What you can use depends on where you live. Bank transfers and cards need approved partners. <a href={`${docs}/getting-started/status/`}>See what&apos;s available now</a>.</p>
-      <div className="ldFooterBottom">© {new Date().getFullYear()} Aura <ThemeToggle /></div>
+      <div className="ldFooterBottom">© {new Date().getFullYear()} Aura</div>
     </footer>
     <LandingMobileCta />
   </div>;

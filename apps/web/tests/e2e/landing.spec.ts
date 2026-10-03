@@ -1,23 +1,42 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
+import { acceptTerms, newCustomer, setIdentity } from "./support/session";
 
 test("landing introduces Aura and its provider boundaries", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Money you control, in one simple app" })).toBeVisible();
   await expect(page.getByText("Send, swap, and earn from one wallet", { exact: false })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Get started" })).toHaveCount(4);
+  // Header (or the phone's pinned button), hero, and closing section.
+  await expect(page.getByRole("link", { name: "Get started" })).toHaveCount(3);
   await expect(page.locator('a[href="/apply"], a[href="/tour"]')).toHaveCount(0);
-  for (const title of ["Every balance", "Send", "Swap", "Earn", "Aura tag", "Card"]) {
+  for (const title of ["Deposit", "Send", "Swap", "Earn", "Aura tag", "Card"]) {
     await expect(page.locator("#features h3").filter({ hasText: new RegExp(`^${title}`) })).toHaveCount(1);
   }
   await expect(page.locator("#features h3").filter({ hasText: "Card" })).toContainText("Coming soon");
   await expect(page.getByRole("heading", { name: "Only you can move your money" })).toBeVisible();
   await expect(page.locator("#faq details")).toHaveCount(4);
   await page.locator("#faq summary").filter({ hasText: "Can I use bank transfers and cards?" }).click();
-  await expect(page.getByText("Both need our banking and card partners", { exact: false })).toBeVisible();
+  await expect(page.getByText("Bank transfers work once our banking partner approves Aura.", { exact: false })).toBeVisible();
   await expect(page.locator(".ldDisclosure")).toContainText("Screens show example data, not real accounts.");
   await expect(page.locator(".ldDisclosure")).toContainText("Bank transfers and cards need approved partners.");
   await expect(page.getByText(`© ${new Date().getFullYear()} Aura`)).toBeVisible();
+  // Contact opens the support page, not the security report.
+  await expect(page.locator(".ldFooter").getByRole("link", { name: "Contact" })).toHaveAttribute("href", /\/help\/contact-and-support\/$/);
+  // The app's screens come in both themes; only the page's theme shows.
+  await expect(page.locator(".ldScreen img:visible")).toHaveCount(2);
+});
+
+test("a returning customer signs in from the landing page's header", async ({ page }) => {
+  const customer = await newCustomer();
+  await acceptTerms(page, customer);
+  await setIdentity(page, customer);
+  await page.goto("/");
+  const header = page.viewportSize()!.width >= 768 ? page.locator(".ldHeaderActions") : page.getByRole("navigation", { name: "Mobile navigation" });
+  if (page.viewportSize()!.width < 768) await page.getByText("Menu", { exact: true }).click();
+  await header.getByRole("link", { name: "Sign in" }).click();
+  // Sign-in opens straight away, without a stop at the example data.
+  await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText("Example data", { exact: true })).toHaveCount(0, { timeout: 30_000 });
 });
 
 test("mobile navigation keeps product, FAQ, and docs reachable", async ({ page }) => {

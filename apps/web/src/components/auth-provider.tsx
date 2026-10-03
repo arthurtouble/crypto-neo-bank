@@ -2,7 +2,8 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { LoaderCircle } from "lucide-react";
-import { lazy, startTransition, Suspense, useCallback, useMemo, useState, useSyncExternalStore } from "react";
+import { usePathname } from "next/navigation";
+import { lazy, startTransition, Suspense, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { ApiError } from "@/lib/client/api";
 import { AuthContext, guestAuth } from "@/lib/client/auth";
 import { hasSavedPrivySession } from "@/lib/client/privy-session";
@@ -40,6 +41,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     void loadRuntime().then(() => startTransition(() => { setLoginRequested(true); setSigningIn(true); }), () => setOpening("failed"));
   }, []);
   const onLoginOpened = useCallback(() => { setLoginRequested(false); setOpening(null); }, []);
+
+  // A link with `?sign-in` (the landing's Sign in, a pay page's Send with Aura) opens sign-in on arrival for a guest, once
+  // per address. The flag stays in the address: the app router can rewrite it during a navigation, and for a signed-in
+  // customer it does nothing. Checked on each page this provider stays mounted for, since links between pages don't remount it.
+  const pathname = usePathname();
+  const signInHandled = useRef<string | null>(null);
+  useEffect(() => {
+    if (savedSession !== false || signInHandled.current === window.location.href) return;
+    if (!new URLSearchParams(window.location.search).has("sign-in")) return;
+    signInHandled.current = window.location.href;
+    // After this render, as if the guest had pressed Sign in.
+    queueMicrotask(login);
+  }, [savedSession, login, pathname]);
   const guest = useMemo(() => guestAuth(login), [login]);
 
   const loading = <LoadingScreen label="Opening your account" />;
