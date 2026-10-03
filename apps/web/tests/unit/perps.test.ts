@@ -147,15 +147,16 @@ describe("trading from a dollar amount", () => {
   });
 });
 
-describe("adding money through Circle", () => {
+describe("adding money through Circle, when Relay can't quote", () => {
   it("burns Base USDC for the owner's perps balance, with Circle's fee out of the amount", async () => {
     const fee = vi.fn(async () => ({ protocolFeeRaw: "3250", forwardFeeRaw: "247000", maxFeeRaw: "265217", minimumCreditRaw: "24734783" }));
-    const built = await buildPerpsDeposit(owner, "25", { fee, balance: async () => undefined });
+    const noRelay = async () => { throw new Error("Relay is down"); };
+    const built = await buildPerpsDeposit(owner, "25", { fee, balance: async () => undefined, relay: noRelay });
     expect(built).toMatchObject({ kind: "route", chainId: 8453, destinationChainId: 1337, countsTowardLimit: false,
       effects: [{ type: "erc20_debit", amountRaw: "25000000" }, { type: "delivery", tool: "cctp", to: owner, minimumRaw: "24734783" }],
       summary: { market: "hyperliquid", tool: "cctp" } });
     expect(built.calls.map((call) => call.to)).toEqual(["0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", "0x28b5a0e9c621a5badaa536219b3a228c8168cf5d"]);
-    await expect(buildPerpsDeposit(owner, "5", { fee, balance: async () => undefined })).rejects.toMatchObject({ code: "amount_too_small" });
+    await expect(buildPerpsDeposit(owner, "5", { fee, balance: async () => undefined, relay: noRelay })).rejects.toMatchObject({ code: "amount_too_small" });
   });
 });
 

@@ -3,6 +3,7 @@ import { AAVE_BASE_V3_MARKET } from "@/lib/defi/aave";
 import { MORPHO_USDC } from "@/lib/defi/morpho";
 import { HYPERCORE_CHAIN_ID, observeHyperliquidCredit } from "@/lib/markets/funding";
 import { verifyCctpDeposit } from "@/lib/markets/hyperliquid/cctp";
+import { relayDeliveryStatus } from "@/lib/markets/relay";
 import { observeTransaction, observeTransactionIdentity, requiredConfirmations, type ChainObservation } from "./chain";
 import { LifiStatusError, readLifiTransferStatus } from "./lifi-status";
 import { observeNativeCredit, storedNativeCredit, type NativeCredit, type NativeCreditEvidence } from "./native-credit";
@@ -33,6 +34,7 @@ type Dependencies = {
   nativeCredit?: typeof observeNativeCredit;
   hyperliquidCredit?: typeof observeHyperliquidCredit;
   cctpDeposit?: typeof verifyCctpDeposit;
+  relayDelivery?: typeof relayDeliveryStatus;
 };
 
 type LogEffect = Exclude<Effect, { type: "delivery" | "native_credit_min" }>;
@@ -216,10 +218,11 @@ export async function verifyAction(action: VerifiableAction, dependencies: Depen
     }
   }
   const delivery = action.effects.find((effect) => effect.type === "delivery");
-  // A CCTP fast transfer settles on Circle's attestation, before Base is final: once Circle has forwarded the burn and
-  // Hyperliquid's ledger shows the credit, the money has arrived whatever happens to the source block, so it doesn't wait.
-  if (delivery?.tool === "cctp" && delivery.destinationChainId === HYPERCORE_CHAIN_ID) {
-    const verdict = await verifyHyperliquidCctp(action, delivery, dependencies.cctpDeposit ?? verifyCctpDeposit);
+  // A CCTP fast transfer or a Relay fill pays out before Base is final: once Hyperliquid's ledger shows the credit, the
+  // money has arrived whatever happens to the source block, so it doesn't wait.
+  if ((delivery?.tool === "cctp" || delivery?.tool === "relay_direct") && delivery.destinationChainId === HYPERCORE_CHAIN_ID) {
+    const verdict = delivery.tool === "cctp" ? await verifyHyperliquidCctp(action, delivery, dependencies.cctpDeposit ?? verifyCctpDeposit)
+      : await verifyHyperliquidRelay(action, delivery, dependencies.relayDelivery ?? relayDeliveryStatus, dependencies.hyperliquidCredit ?? observeHyperliquidCredit);
     return !source.final && verdict.status === "failed" ? { status: "settling", reason: "finality" } : verdict;
   }
   if (!source.final) return { status: "settling", reason: "finality", ...evidence };
@@ -246,6 +249,25 @@ async function verifyHyperliquidCctp(action: VerifiableAction, delivery: Extract
   if (verdict.state !== "credited") return { status: "settling", reason: verdict.state === "forwarding" ? "awaiting_hyperliquid_credit" : "awaiting_delivery" };
   if (BigInt(verdict.amountRaw) - BigInt(verdict.feeRaw) < BigInt(delivery.minimumRaw)) return { status: "failed", reason: "delivery_below_minimum" };
   return { status: "confirmed", destinationHash: verdict.forwardTxHash };
+}
+
+/**
+ * A deposit into Hyperliquid through Relay: Relay must report this Base transaction filled for this account, and
+ * Hyperliquid's ledger must show the credit under the hash Relay paid out with, for at least the minimum.
+ */
+async function verifyHyperliquidRelay(action: VerifiableAction, delivery: Extract<Effect, { type: "delivery" }>,
+  relayDelivery: typeof relayDeliveryStatus, hyperliquidCredit: typeof observeHyperliquidCredit): Promise<Verification> {
+  let status;
+  try { status = await relayDelivery(action.transactionHash, delivery.to); }
+  catch { return { status: "settling", reason: "relay_unavailable" }; }
+  if (status.state === "mismatch") return { status: "failed", reason: "relay_mismatch" };
+  if (status.state === "failed") return { status: "failed", reason: status.reason };
+  if (status.state === "pending") return { status: "settling", reason: "awaiting_delivery" };
+  const credit = await hyperliquidCredit({ user: delivery.to, hash: status.hyperliquidHash, since: Date.now() - HYPERLIQUID_LEDGER_WINDOW_MS });
+  if (credit.status === "unavailable") return { status: "settling", reason: credit.reason, destinationHash: status.hyperliquidHash };
+  if (credit.status === "missing") return { status: "settling", reason: "awaiting_hyperliquid_credit", destinationHash: status.hyperliquidHash };
+  if (BigInt(credit.creditedRaw) < BigInt(delivery.minimumRaw)) return { status: "failed", reason: "delivery_below_minimum" };
+  return { status: "confirmed", destinationHash: status.hyperliquidHash };
 }
 
 async function verifyDelivery(action: VerifiableAction, delivery: Extract<Effect, { type: "delivery" }>,
