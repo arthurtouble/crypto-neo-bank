@@ -3,6 +3,7 @@ import { BASE_CHAIN_ID, BASE_USDC } from "@/lib/assets/registry";
 import { AAVE_BASE_ASSETS } from "@/lib/defi/aave";
 import { morphoVault } from "@/lib/defi/morpho";
 import { requireFeature, type FeatureKey } from "@/lib/features/flags";
+import { marketOfDestination } from "@/lib/markets/funding";
 import { checkControls, insertAction, loadControls, type Block } from "./controls";
 import { buildEarn, earnInputSchema } from "./earn";
 import { buildRoute, markQuoteUsed, routeInputSchema } from "./route";
@@ -15,15 +16,19 @@ import { z } from "zod";
 export const actionInputSchema = z.discriminatedUnion("kind", [transferInputSchema, earnInputSchema, routeInputSchema]);
 export type ActionInput = z.infer<typeof actionInputSchema>;
 
-/** The switches a swap or cross-network move needs. A route that pays someone else is a send, so the send switch applies too. */
-export function routeFeatures(route: { crossChain: boolean; external: boolean }): FeatureKey[] {
+/**
+ * The switches a swap or cross-network move needs. A route that pays someone else is a send, so the send switch
+ * applies too. A move into the customer's own Hyperliquid account is part of Perps, under its switch alone.
+ */
+export function routeFeatures(route: { crossChain: boolean; external: boolean; destinationChainId?: number | null }): FeatureKey[] {
+  if (marketOfDestination(route.destinationChainId) === "hyperliquid" && !route.external) return ["perps"];
   return [route.crossChain ? "cross_chain" : "swaps", ...(route.external ? ["direct_transfers" as const] : [])];
 }
 
 function featureFor(action: BuiltAction): FeatureKey | FeatureKey[] {
   if (action.kind === "transfer") return "direct_transfers";
   if (action.kind === "earn") return "defi_actions";
-  return routeFeatures({ crossChain: Boolean(action.destinationChainId), external: Boolean(action.recipient) });
+  return routeFeatures({ crossChain: Boolean(action.destinationChainId), external: Boolean(action.recipient), destinationChainId: action.destinationChainId });
 }
 
 function build(db: D1Database, input: ActionInput, subject: string, wallet: string, now: Date): Promise<BuiltAction> {
@@ -58,14 +63,17 @@ export function storedActionGates(action: StoredAction): { features: FeatureKey[
     protocol?: unknown; symbol?: unknown; vault?: unknown };
   const text = (value: unknown) => typeof value === "string" ? value : null;
   const assets = (...ids: Array<string | null>) => ids.filter((id): id is string => id !== null);
-  if (action.kind === "route") return { features: routeFeatures({ crossChain: Boolean(action.destinationChainId), external: summary.external === true }),
+  if (action.kind === "route") return { features: routeFeatures({ crossChain: Boolean(action.destinationChainId), external: summary.external === true,
+    destinationChainId: action.destinationChainId }),
     assetIds: assets(text(summary.from?.id), destinationAsset(action.summary)) };
   if (action.kind === "earn") {
     const asset = summary.protocol === "morpho" ? morphoVault(text(summary.vault) ?? "")?.asset ?? BASE_USDC
       : AAVE_BASE_ASSETS[text(summary.symbol) as keyof typeof AAVE_BASE_ASSETS];
     return { features: ["defi_actions"], assetIds: assets(asset ? `${BASE_CHAIN_ID}:${asset.toLowerCase()}` : null) };
   }
-  return { features: [summary.bankPayout ? "fiat_accounts" : summary.cardAllowance ? "payment_cards" : "direct_transfers"], assetIds: assets(text(summary.assetId)) };
+  const market = (summary as { market?: unknown }).market;
+  return { features: [market === "polymarket" ? "predictions" : summary.bankPayout ? "fiat_accounts" : summary.cardAllowance ? "payment_cards" : "direct_transfers"],
+    assetIds: assets(text(summary.assetId)) };
 }
 
 export type Prepared = { ok: true; action: StoredAction } | { ok: false; block: Block };

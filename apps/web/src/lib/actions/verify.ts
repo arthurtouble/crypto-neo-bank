@@ -1,6 +1,8 @@
 import { decodeEventLog, erc20Abi, parseAbiItem } from "viem";
 import { AAVE_BASE_V3_MARKET } from "@/lib/defi/aave";
 import { MORPHO_USDC } from "@/lib/defi/morpho";
+import { HYPERCORE_CHAIN_ID, observeHyperliquidCredit } from "@/lib/markets/funding";
+import { verifyCctpDeposit } from "@/lib/markets/hyperliquid/cctp";
 import { observeTransaction, observeTransactionIdentity, requiredConfirmations, type ChainObservation } from "./chain";
 import { LifiStatusError, readLifiTransferStatus } from "./lifi-status";
 import { observeNativeCredit, storedNativeCredit, type NativeCredit, type NativeCreditEvidence } from "./native-credit";
@@ -29,6 +31,8 @@ type Dependencies = {
   observe?: (chainId: number, hash: string) => Promise<ChainObservation>;
   lifiStatus?: typeof readLifiTransferStatus;
   nativeCredit?: typeof observeNativeCredit;
+  hyperliquidCredit?: typeof observeHyperliquidCredit;
+  cctpDeposit?: typeof verifyCctpDeposit;
 };
 
 type LogEffect = Exclude<Effect, { type: "delivery" | "native_credit_min" }>;
@@ -214,11 +218,35 @@ export async function verifyAction(action: VerifiableAction, dependencies: Depen
   if (!source.final) return { status: "settling", reason: "finality", ...evidence };
   const delivery = action.effects.find((effect) => effect.type === "delivery");
   if (!delivery) return { status: "confirmed", ...evidence };
-  return verifyDelivery(action, delivery, observe, dependencies.lifiStatus ?? readLifiTransferStatus, dependencies.nativeCredit ?? observeNativeCredit);
+  if (delivery.tool === "cctp" && delivery.destinationChainId === HYPERCORE_CHAIN_ID)
+    return verifyHyperliquidCctp(action, delivery, dependencies.cctpDeposit ?? verifyCctpDeposit);
+  return verifyDelivery(action, delivery, observe, dependencies.lifiStatus ?? readLifiTransferStatus, dependencies.nativeCredit ?? observeNativeCredit,
+    dependencies.hyperliquidCredit ?? observeHyperliquidCredit);
+}
+
+/** How far back Hyperliquid's ledger is read for a delivery's credit. LI.FI reports the hash, so this only bounds the read. */
+const HYPERLIQUID_LEDGER_WINDOW_MS = 7 * 86_400_000;
+
+/**
+ * A deposit into Hyperliquid through Circle's CCTP: Circle's message for this
+ * burn must name the customer's perps balance and be forwarded, and
+ * Hyperliquid's ledger must show the credit, for at least the minimum.
+ */
+async function verifyHyperliquidCctp(action: VerifiableAction, delivery: Extract<Effect, { type: "delivery" }>,
+  cctpDeposit: typeof verifyCctpDeposit): Promise<Verification> {
+  let verdict;
+  try { verdict = await cctpDeposit({ owner: delivery.to, sourceTxHash: action.transactionHash, since: Date.now() - HYPERLIQUID_LEDGER_WINDOW_MS }); }
+  catch { return { status: "settling", reason: "cctp_unavailable" }; }
+  if (verdict.state === "mismatch") return { status: "failed", reason: "cctp_mismatch" };
+  if (verdict.state === "failed") return { status: "failed", reason: "delivery_failed" };
+  if (verdict.state !== "credited") return { status: "settling", reason: verdict.state === "forwarding" ? "awaiting_hyperliquid_credit" : "awaiting_delivery" };
+  if (BigInt(verdict.amountRaw) - BigInt(verdict.feeRaw) < BigInt(delivery.minimumRaw)) return { status: "failed", reason: "delivery_below_minimum" };
+  return { status: "confirmed", destinationHash: verdict.forwardTxHash };
 }
 
 async function verifyDelivery(action: VerifiableAction, delivery: Extract<Effect, { type: "delivery" }>,
-  observe: NonNullable<Dependencies["observe"]>, lifiStatus: typeof readLifiTransferStatus, nativeCredit: typeof observeNativeCredit): Promise<Verification> {
+  observe: NonNullable<Dependencies["observe"]>, lifiStatus: typeof readLifiTransferStatus, nativeCredit: typeof observeNativeCredit,
+  hyperliquidCredit: typeof observeHyperliquidCredit): Promise<Verification> {
   let status;
   try {
     status = await lifiStatus({ sourceHash: action.transactionHash, sourceChainId: action.chainId,
@@ -233,6 +261,14 @@ async function verifyDelivery(action: VerifiableAction, delivery: Extract<Effect
   // The receiving transaction must be the one LI.FI reports for this very source transaction, on the expected network.
   if (!status.sourceHash || status.sourceHash.toLowerCase() !== action.transactionHash.toLowerCase()
     || status.destinationChainId !== delivery.destinationChainId) return { status: "settling", reason: "status_mismatch" };
+  if (delivery.destinationChainId === HYPERCORE_CHAIN_ID) {
+    // Hyperliquid isn't an EVM chain: its own ledger shows the credit under the hash LI.FI reported.
+    const credit = await hyperliquidCredit({ user: delivery.to, hash: status.destinationHash, since: Date.now() - HYPERLIQUID_LEDGER_WINDOW_MS });
+    if (credit.status === "unavailable") return { status: "settling", reason: credit.reason, destinationHash: status.destinationHash };
+    if (credit.status === "missing") return { status: "settling", reason: "awaiting_hyperliquid_credit", destinationHash: status.destinationHash };
+    if (BigInt(credit.creditedRaw) < BigInt(delivery.minimumRaw)) return { status: "failed", reason: "delivery_below_minimum" };
+    return { status: "confirmed", destinationHash: status.destinationHash };
+  }
   const destination = settledReceipt(await observe(delivery.destinationChainId, status.destinationHash),
     delivery.destinationChainId, status.destinationHash);
   if (destination.status === "failed") return { status: "failed", reason: `destination_${destination.reason}` };

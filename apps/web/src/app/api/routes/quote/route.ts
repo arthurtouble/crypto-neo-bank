@@ -1,14 +1,14 @@
 import { env } from "cloudflare:workers";
 import { isAddress } from "viem";
 import { z } from "zod";
-import { quoteRoute, RouteQuoteError } from "@/lib/actions/lifi";
+import { quoteRoute, quoteRouteErrorResponse } from "@/lib/actions/lifi";
 import { routeFeatures } from "@/lib/actions/prepare";
 import { saveRouteQuote } from "@/lib/actions/route";
 import { rawAmount, refuseTokenContract } from "@/lib/actions/transfer";
 import { requireVerifiedSubject } from "@/lib/auth/server";
 import { requireActionWallet } from "@/lib/auth/wallet";
 import { featureEnabled } from "@/lib/features/flags";
-import { errorResponse, route } from "@/lib/http/route";
+import { route } from "@/lib/http/route";
 import { ensureSubjectProfile } from "@/lib/profile/ensure";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { requireCatalogAsset } from "@/lib/swap/catalog";
@@ -41,8 +41,7 @@ const schema = z.object({
 
 /** A server-held LI.FI quote for a swap or cross-chain move. */
 export const GET = route("routes.quote", { invalid: "invalid_quote_request", unavailable: "quote_unavailable",
-  onError: (error, context) => error instanceof RouteQuoteError
-    ? errorResponse(error.code === "provider_unavailable" ? 503 : 422, error.code, context, { message: error.message }) : undefined },
+  onError: quoteRouteErrorResponse },
 async (request, { traceId }) => {
   const subject = await requireVerifiedSubject(request);
   await enforceRateLimit(env.PROJECTION_DB, { namespace: "route_quote", subject: subject.subjectReference, limit: 30, windowSeconds: 60 });

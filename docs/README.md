@@ -14,6 +14,7 @@ Keep these files in the repository. Don't publish them to a public host, and nev
 - [Development Worker](operations/aura-development-worker.md): deploying dev, migrations, configuration, and the funded transactions run so far.
 - [Architecture](architecture/architecture.md): systems of record, Cloudflare bindings, and why D1 never owns money.
 - [Money actions](architecture/money-actions.md): how every money movement is prepared, signed, verified, and recorded.
+- [Markets](architecture/markets.md): perps on Hyperliquid and predictions on Polymarket, through the customer's own wallet.
 - [Supported assets](architecture/assets.md): the asset registry, adding an asset, and pausing one.
 - [Launch controls](operations/launch-controls.md): feature switches, customer controls, the passkey requirement, and stop conditions.
 
@@ -24,7 +25,7 @@ Done and closed: [feature readiness](overview/feature-readiness.md) (step 1, wit
 | Folder | Contents |
 | --- | --- |
 | `overview/` | Build status, launch readiness, feature readiness, redesign rules, codebase audit |
-| `architecture/` | Architecture, money actions, accounts and custody, assets, screen data, provider projections, fund flow and provider data, partner integration, dependency risks |
+| `architecture/` | Architecture, money actions, markets, accounts and custody, assets, screen data, provider projections, fund flow and provider data, partner integration, dependency risks |
 | `operations/` | Production launch, runbook, monitoring, development Worker, launch controls, incident response, customer communication templates, acceptance tests, data retention, edge security |
 | `security/` | Threat model, security review, external review scope |
 | `compliance/` | Responsibility matrix, legal and jurisdiction decisions, partner diligence, provider requirements |
