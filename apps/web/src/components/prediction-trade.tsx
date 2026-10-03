@@ -89,6 +89,10 @@ function BuyForm({ market, quotes, outcome, account, guest, onSignIn, onDone, on
   const short = value !== null ? Math.max(0, Math.round((value - (cash ?? 0)) * 100) / 100) : 0;
   const max = guest ? null : (cash ?? 0) + (usdc.amount ?? 0);
   const toWin = value !== null ? payoutIfWins(value, price) : null;
+  // What the buy can spend: predictions cash, plus USDC on Base, which is added first when cash is short.
+  const funds = [ready ? cash === null ? "Cash unavailable" : `${formatUsd(cash)} cash` : null, usdc.amount === null ? null : `${formatUsd(usdc.amount)} USDC on Base`]
+    .filter((part): part is string => part !== null);
+  const available = funds.length === 0 ? "Balance unavailable" : `${funds.join(" + ")} available`;
   const name = market.outcomes[outcome].name;
   const problem = value === null ? null : value < 1 ? "The smallest buy is $1."
     : price === null ? "There's no price for this outcome right now."
@@ -148,7 +152,10 @@ function BuyForm({ market, quotes, outcome, account, guest, onSignIn, onDone, on
     <dl className="mxSummary">
       <div><dt>Price</dt><dd>{formatCents(price) ?? <span className="appUnavailable">Unavailable</span>}</dd></div>
       <div><dt>Shares</dt><dd>{toWin !== null ? `About ${formatToken(Math.floor(toWin * 100) / 100)}` : "—"}</dd></div>
-      {!guest && <div><dt>Pay from</dt><dd>{short > 0 ? `${formatUsd(short)} from your USDC, then cash` : "Predictions cash"}</dd></div>}
+      {!guest && <div className="pdPayFrom"><dt>Pay from</dt><dd>
+        <span>{short > 0 ? `${formatUsd(short)} from your USDC, then cash` : "Predictions cash"}</span>
+        <span className="pdAvailable" data-testid="prediction-available">{available}</span>
+      </dd></div>}
     </dl>
     <p className="pdToWin" data-testid="prediction-payout"><span>To win</span><strong>{toWin !== null ? formatUsd(toWin) : "$0.00"}</strong></p>
     {!guest && !ready && <p className="mxHint">Your first buy sets up your predictions account: about a minute and two passkey confirmations, once.</p>}

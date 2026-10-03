@@ -220,6 +220,8 @@ test("a market page: the odds chart and its ranges, the order panel beside it (a
   await expect(form.getByTestId("prediction-payout")).toHaveText("To win$15.63");
   await expect(form).toContainText("Shares");
   await expect(form).toContainText("$10.00 from your USDC, then cash");
+  // What the buy can spend, under where it's paid from: no predictions account yet, so only the USDC on Base.
+  await expect(form.getByTestId("prediction-available")).toHaveText("$250.00 USDC on Base available");
   await expect(form).toContainText("Your first buy sets up your predictions account");
   // No fee line: Aura takes no fee.
   await expect(form).not.toContainText("Fee");
