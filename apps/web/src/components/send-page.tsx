@@ -4,7 +4,6 @@ import { useAuth } from "@/lib/client/auth";
 import { Building2, ChevronRight, Wallet } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { AuraTagLookup } from "./aura-tag-lookup";
 import { BankSendPanel } from "./bank-send-panel";
 import { MoneyPage, SignedOutPanel } from "./money-page";
 import { WalletWorkspace } from "./wallet-workspace";
@@ -12,21 +11,13 @@ import { LoadingState } from "./states";
 
 const tabs = [
   { id: "crypto", label: "To a person or wallet", detail: "Crypto to an address or an Aura tag", icon: Wallet },
-  { id: "bank", label: "To a bank account", detail: "Dollars to a US bank, through Bridge", icon: Building2 }
+  { id: "bank", label: "To a bank account", detail: "Dollars to a US bank account", icon: Building2 }
 ] as const;
 type Tab = (typeof tabs)[number]["id"];
 
-function TagCard({ isExample, onSignIn }: { isExample: boolean; onSignIn: () => void }) {
-  return <section className="mxCard">
-    <h2>Aura tag and saved recipients</h2>
-    <p className="mxHint">Find a recipient by Aura tag. The address is checked again before you sign.</p>
-    {isExample ? <button type="button" className="appButton" onClick={onSignIn}>Sign in to find a recipient</button> : <AuraTagLookup />}
-  </section>;
-}
-
 /**
- * Send (journeys J5 and J6): crypto to a person or wallet, or dollars to a bank account. Tabs on desktop, rows on the
- * phone. Each ends on its own review, then the passkey.
+ * Send (journeys J5 and J6): crypto to a person or wallet, or dollars to a bank account, as tabs. Each ends on its
+ * own review, then the passkey.
  */
 export function SendPage() {
   const { authenticated, ready, login } = useAuth();
@@ -63,15 +54,12 @@ export function SendPage() {
     </div>
     <div role="tabpanel" id={`send-panel-${tab}`} aria-labelledby={`send-tab-${tab}-label`} className="mxTabPanel">
       {loading ? <LoadingState><strong>Setting up your account</strong></LoadingState>
-        : tab === "crypto" ? (isExample ? <div className="mxColumns">
-          <div className="mxMain"><SignedOutPanel title="Send crypto" action="Sign in to send" onSignIn={login}>
+        : tab === "crypto" ? (isExample ? <div className="mxSingle"><SignedOutPanel title="Send crypto" action="Sign in to send" onSignIn={login}>
             Send USDC, ETH, and other supported assets from your Aura account to an address or an Aura tag. You review every transfer before you confirm it with your passkey.</SignedOutPanel></div>
-          <aside className="mxSide"><TagCard isExample onSignIn={login} /></aside>
-        </div>
           // Remount on a new ?sendTo= link so the form starts from it.
-          : <WalletWorkspace key={searchParams.toString()}><TagCard isExample={false} onSignIn={login} /></WalletWorkspace>)
-          : isExample ? <SignedOutPanel title="Send to a bank" action="Sign in to send" onSignIn={login}>
-            Send dollars from your Aura account to a US bank account, once Bridge has verified you.</SignedOutPanel> : <BankSendPanel />}
+          : <WalletWorkspace key={searchParams.toString()} />)
+          : <div className="mxSingle">{isExample ? <SignedOutPanel title="Send to a bank" action="Sign in to send" onSignIn={login}>
+            Send dollars from your Aura account to a US bank account, once Bridge has verified you.</SignedOutPanel> : <BankSendPanel />}</div>}
     </div>
   </MoneyPage>;
 }

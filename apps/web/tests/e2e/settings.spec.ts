@@ -129,9 +129,9 @@ test("an Aura tag can be saved and published", async ({ page }) => {
   await page.getByRole("link", { name: "Send with Aura" }).click();
   // `sign-in` only matters to a visitor who isn't signed in (the next test).
   await expect(page).toHaveURL(new RegExp(`/app/send\\?sendTo=${customer.wallet}&tag=${tag}&sign-in$`, "i"));
-  await expect(page.getByRole("region", { name: "Send crypto" }).getByLabel("To")).toHaveValue(new RegExp(`^${customer.wallet}$`, "i"), { timeout: 30_000 });
-  // The summary beside the form names the tag (it's hidden on the phone, where the review does).
-  if (page.viewportSize()!.width >= 768) await expect(page.getByRole("region", { name: "Summary" })).toContainText(`@${tag}`);
+  // The To field shows the tag, and under it the address Aura found for it.
+  await expect(page.getByRole("region", { name: "Send crypto" }).getByLabel("To")).toHaveValue(`@${tag}`, { timeout: 30_000 });
+  await expect(page.getByTestId("recipient-status")).toContainText(new RegExp(`@${tag} · ${customer.wallet.slice(0, 6)}…${customer.wallet.slice(-4)}`, "i"));
 });
 
 test("a visitor who isn't signed in signs in from Send with Aura and lands on the filled-in form", async ({ page }) => {
@@ -146,7 +146,8 @@ test("a visitor who isn't signed in signs in from Send with Aura and lands on th
   await setIdentity(page, payer);
   await page.goto(`/pay/${tag}`);
   await page.getByRole("link", { name: "Send with Aura" }).click();
-  await expect(page.getByRole("region", { name: "Send crypto" }).getByLabel("To")).toHaveValue(new RegExp(`^${owner.wallet}$`, "i"), { timeout: 30_000 });
+  await expect(page.getByRole("region", { name: "Send crypto" }).getByLabel("To")).toHaveValue(`@${tag}`, { timeout: 30_000 });
+  await expect(page.getByTestId("recipient-status")).toContainText(new RegExp(`@${tag} · ${owner.wallet.slice(0, 6)}…${owner.wallet.slice(-4)}`, "i"));
 });
 
 test("the customer's data downloads straight away, and nothing offers to delete it", async ({ page }) => {

@@ -32,7 +32,7 @@ export const actionSettled = (action: ActionView) => terminal.has(action.status)
  * settles it. Errors before anything is sent appear as toasts, named by `label`
  * ("Transfer", "Swap"); the outcome shows once, on the screen's `TransactionProgress`.
  */
-export function useAction(options: { label?: string; onSettled?: (action: ActionView) => void } = {}) {
+export function useAction(options: { label?: string; onSettled?: (action: ActionView) => void; inlineRefusals?: boolean } = {}) {
   const api = useApi();
   const wallet = useAuraWallet();
   const queryClient = useQueryClient();
@@ -45,6 +45,8 @@ export function useAction(options: { label?: string; onSettled?: (action: Action
   const [error, setError] = useState<string | null>(null);
   /** The operation may have been sent, but Aura couldn't confirm it. */
   const [outcomeUnknown, setOutcomeUnknown] = useState(false);
+  // A screen that shows `error` next to its button (Send) doesn't also need the refusal as a toast.
+  const inlineRefusals = options.inlineRefusals ?? false;
   const settledRef = useRef(options.onSettled);
   useEffect(() => { settledRef.current = options.onSettled; }, [options.onSettled]);
 
@@ -94,14 +96,14 @@ export function useAction(options: { label?: string; onSettled?: (action: Action
       }
       if (rejected) {
         setError("You cancelled. Nothing was sent.");
-        toast.show({ tone: "info", title: "Cancelled", detail: "Nothing was sent." });
+        if (!inlineRefusals) toast.show({ tone: "info", title: "Cancelled", detail: "Nothing was sent." });
         return;
       }
       const message = reason instanceof ApiError || reason instanceof Error ? reason.message : "Something went wrong. Try again.";
       setError(message);
-      toast.error(`${labelRef.current} not sent`, message);
+      if (!inlineRefusals) toast.error(`${labelRef.current} not sent`, message);
     }
-  }, [api, wallet, queryClient, toast]);
+  }, [api, wallet, queryClient, toast, inlineRefusals]);
 
   const run = useCallback((input: ActionInput) =>
     runPrepared(async () => (await api<{ action: ActionView }>("/api/actions", { method: "POST", json: input })).action), [api, runPrepared]);

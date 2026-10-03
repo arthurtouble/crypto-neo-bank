@@ -10,6 +10,8 @@
 .appFrame .mxHead h1 { font-size: var(--text-title-1-size); line-height: var(--text-title-1-line); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-tight); }
 .appFrame .mxColumns { display: grid; grid-template-columns: minmax(0, 1fr) var(--side-column); gap: var(--gap-section); align-items: start; }
 .appFrame .mxMain, .appFrame .mxSide { display: grid; gap: var(--space-4); min-width: 0; }
+/* One column, as wide as the main column beside a side column (Send) */
+.appFrame .mxSingle { display: grid; gap: var(--space-4); min-width: 0; max-width: calc(100% - var(--side-column) - var(--gap-section)); }
 .appFrame .mxMono { font-family: var(--font-mono); font-size: var(--text-small-size); }
 
 /* Tabs: a segmented bar on desktop, rows on the phone */
@@ -81,6 +83,8 @@
 .appFrame .mxSummary > div { display: flex; justify-content: space-between; align-items: center; gap: var(--space-4); min-height: 44px; padding: var(--space-2) 0; border-bottom: 1px solid var(--color-line); }
 .appFrame .mxSummary dt { color: var(--color-text-secondary); }
 .appFrame .mxSummary dd { margin: 0; text-align: right; font-weight: var(--weight-medium); overflow-wrap: anywhere; }
+.appFrame .mxSummary .mxAddressFull { justify-content: flex-end; }
+.appFrame .mxSummary .mxAddressShort { font-size: inherit; }
 .appFrame .mxCopy { display: inline-flex; align-items: center; gap: var(--space-2); }
 .appFrame .mxCopyButton { height: 28px; padding: 0 var(--space-2); font-size: var(--text-small-size); }
 
@@ -227,6 +231,7 @@
 /* Tablet: the side column moves below */
 @media (max-width: 1023px) {
   .appFrame .mxColumns, .appFrame .mxWaysLayout { grid-template-columns: minmax(0, 1fr); }
+  .appFrame .mxSingle { max-width: none; }
   .appFrame .erOptions { grid-template-columns: minmax(0, 1fr); }
 }
 
@@ -252,8 +257,12 @@
   .appFrame .mxField input, .appFrame .mxField select, .appFrame .mxField textarea { font-size: var(--text-input-phone); }
   .appFrame .mxCard .appButton { justify-self: stretch; height: var(--control-height-lg); }
   .appFrame .mxAmountRow { grid-template-columns: minmax(0, 1fr) 110px; }
-  /* The form and its review already say all this on a phone. */
-  .appFrame .mxSummaryCard { display: none; }
+  /* Send's tabs stay a two-part switch, full width; only Deposit's ways are rows */
+  .appFrame .mxTabs:not(.mxWays) { grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); padding: 2px; gap: 2px; border: 0; border-radius: var(--radius-md); background: var(--color-muted); }
+  .appFrame .mxTabs:not(.mxWays) [role="tab"] { justify-content: center; padding: var(--space-2); border-radius: var(--radius-sm); text-align: center; }
+  .appFrame .mxTabs:not(.mxWays) [role="tab"] + [role="tab"] { border-top: 0; }
+  .appFrame .mxTabs:not(.mxWays) [role="tab"][aria-selected="true"] { background: var(--color-surface); box-shadow: var(--shadow-1); }
+  .appFrame .mxTabs:not(.mxWays) .mxTabIcon, .appFrame .mxTabs:not(.mxWays) .mxTabText small, .appFrame .mxTabs:not(.mxWays) .mxTabChevron { display: none; }
   .appFrame .mxPanelHeadRow { flex-wrap: wrap; }
   .appFrame .mxPage .transactionSteps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
