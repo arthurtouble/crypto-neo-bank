@@ -292,7 +292,7 @@ test("positions: sell shares from the order form, and collect a market that was 
 
   // Sell from the market's order form.
   await positions.getByRole("link", { name: /ether close/ }).click();
-  await expect(page).toHaveURL(/\/app\/markets\/predictions\/market-5004$/);
+  await expect(page).toHaveURL(/\/app\/predictions\/market-5004$/);
   await expect(page.getByRole("heading", { name: "Will ether close the year above $4,000?" })).toBeVisible({ timeout: 30_000 });
   const position = page.getByRole("region", { name: "Your position" });
   await position.getByRole("button", { name: "Sell" }).click();
