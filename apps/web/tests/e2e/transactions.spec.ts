@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import type { Page } from "@playwright/test";
-import { expect, test } from "./support/fixtures";
+import { expect, outcome, test } from "./support/fixtures";
 import { acceptTerms, ASSETS, edge, newCustomer, setBalances, setFeature, setIdentity, type Customer } from "./support/session";
 
 // Feature 7 in docs/overview/feature-readiness.md: Transactions. The chain
@@ -36,7 +36,7 @@ async function send(page: Page) {
   // A first-time address is checked before the review (B2).
   await form.getByRole("button", { name: "It's correct" }).click();
   await form.getByRole("button", { name: "Confirm and send" }).click();
-  await expect(page.locator(".toastRegion").getByText("Transfer complete", { exact: true })).toBeVisible({ timeout: 30_000 });
+  await expect(outcome(page, "Transfer complete")).toBeVisible({ timeout: 30_000 });
 }
 
 const receive = (customer: Customer, amount: string, token: string = ASSETS.usdc, chainId = 8453) => edge("/__receive", { chainId, to: customer.wallet, token, amount, from: FRIEND });

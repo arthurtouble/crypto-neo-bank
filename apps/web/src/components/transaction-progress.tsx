@@ -39,8 +39,8 @@ function copy(label: string, phase: ActionPhase, action: ActionView | null) {
 
 /**
  * Progress for one action from `useAction`, shown where the customer started
- * it. Errors and outcomes also appear as toasts. Only an outcome the customer
- * must check stays here after the action ends.
+ * it, and its outcome. The outcome isn't repeated as a toast. Only an outcome
+ * the customer must check stays here after the action is reset.
  */
 export function TransactionProgress({ label, phase, action, outcomeUnknown }: Props) {
   if (phase === "idle") {

@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, test } from "./support/fixtures";
+import { expect, outcome, test } from "./support/fixtures";
 import { acceptTerms, asCustomer, ASSETS, edge, newCustomer, setBalances, setFeature, setIdentity, type Customer } from "./support/session";
 
 // Feature 8 in docs/overview/feature-readiness.md: Settings and security, its
@@ -163,10 +163,9 @@ test("the customer's own transactions show in the bell without a second toast", 
   // A first-time address is checked before the review (B2).
   await dialog.getByRole("button", { name: "It's correct" }).click();
   await dialog.getByRole("button", { name: "Confirm and send" }).click();
-  await expect(toast(page, "Transfer complete")).toBeVisible({ timeout: 30_000 });
+  await expect(outcome(page, "Transfer complete")).toBeVisible({ timeout: 30_000 });
   await returnToTab(page);
   await expect(count(page)).toHaveText("1", { timeout: 15_000 });
-  await page.locator(".toastRegion").getByRole("button", { name: "Close" }).first().click();
   await bell(page).click();
   await expect(page.getByRole("dialog", { name: "Notifications" }).getByText(/10 USDC/)).toBeVisible();
   await expect(page.locator(".toastRegion").getByText(/10 USDC/)).toHaveCount(0);

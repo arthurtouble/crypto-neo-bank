@@ -2,6 +2,9 @@ import { test as base } from "@playwright/test";
 
 export { expect } from "@playwright/test";
 
+/** The result of a money action, shown once on its progress card (not as a toast): "Swap complete", "Transfer failed". */
+export const outcome = (page: import("@playwright/test").Page, title: string) => page.locator(".transactionProgress strong").getByText(title, { exact: true });
+
 const edgeUrl = `http://127.0.0.1:${process.env.AUREL_E2E_EDGE_PORT ?? "43174"}`;
 
 /**

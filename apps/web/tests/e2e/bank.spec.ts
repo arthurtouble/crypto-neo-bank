@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { BRIDGE } from "./support/fake-edge.mjs";
-import { expect, test } from "./support/fixtures";
+import { expect, outcome, test } from "./support/fixtures";
 import { acceptTerms, asCustomer, ASSETS, edge, newCustomer, setBalances, setControls, setFeature, setIdentity, type Customer } from "./support/session";
 
 // Feature 10 in docs/overview/feature-readiness.md: Bank and cards, the bank
@@ -117,7 +117,7 @@ test("a customer saves a bank account and sends to it; Transactions follows Brid
   await expect(payout.getByLabel("Amount in USD")).toHaveValue("25");
   await payout.getByRole("button", { name: "Review" }).click();
   await review.getByRole("button", { name: "Confirm and send" }).click();
-  await expect(toast(page, "Bank transfer sent")).toBeVisible({ timeout: 30_000 });
+  await expect(outcome(page, "Bank transfer sent")).toBeVisible({ timeout: 30_000 });
   // Exactly the payout amount went to the address Bridge named.
   const { sent } = await edge("/__sent");
   const funding = sent!.find((item) => item.relayed);
@@ -153,7 +153,7 @@ test("a payout the bank returns shows as failed with what Bridge is doing about 
   await payout.getByLabel("Amount in USD").fill("10");
   await payout.getByRole("button", { name: "Review" }).click();
   await sendPanel(page).getByRole("region", { name: "Review bank transfer" }).getByRole("button", { name: "Confirm and send" }).click();
-  await expect(toast(page, "Bank transfer sent")).toBeVisible({ timeout: 30_000 });
+  await expect(outcome(page, "Bank transfer sent")).toBeVisible({ timeout: 30_000 });
   await edge("/__bridge/transfer", { state: "returned" });
   await page.goto("/app/transactions");
   const row = page.locator(".activityRow").filter({ hasText: "Sent to bank" });

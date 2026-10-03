@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { LIFI_DIAMOND } from "./support/fake-edge.mjs";
-import { expect, test } from "./support/fixtures";
+import { expect, outcome, test } from "./support/fixtures";
 import { acceptTerms, asCustomer, ASSETS, edge, newCustomer, setBalances, setFeature, setIdentity, type Customer, pauseAsset } from "./support/session";
 
 // Feature 4 in docs/overview/feature-readiness.md: Swap. LI.FI, Privy's
@@ -61,7 +61,7 @@ test("USDC buys a tokenized stock on Base, with the reference price shown, and t
   expect(await relayed()).toEqual([]);
 
   await quote(page).getByRole("button", { name: "Swap", exact: true }).click();
-  await expect(toast(page, "Swap complete")).toBeVisible({ timeout: 30_000 });
+  await expect(outcome(page, "Swap complete")).toBeVisible({ timeout: 30_000 });
   const [operation] = await relayed();
   expect(operation.calls!.map((call) => call.to.toLowerCase())).toEqual([ASSETS.usdc, LIFI_DIAMOND]);
   expect(await balance(page, customer, `8453:${ASSETS.usdc}`)).toBe("48000000");
@@ -73,7 +73,7 @@ test("USDC buys ETH on Base, confirmed from the ETH reaching the account, which 
   await getQuote(page, "2");
   await expect(quote(page)).toContainText("You get at least", { timeout: 20_000 });
   await quote(page).getByRole("button", { name: "Swap", exact: true }).click();
-  await expect(toast(page, "Swap complete")).toBeVisible({ timeout: 30_000 });
+  await expect(outcome(page, "Swap complete")).toBeVisible({ timeout: 30_000 });
   expect(await balance(page, customer, `8453:${ASSETS.usdc}`)).toBe("48000000");
   expect(await balance(page, customer, "8453:native")).toBe("1990000000000000000");
 });
@@ -84,7 +84,7 @@ test("a stock sells back to USDC, the other way round", async ({ page }) => {
   await getQuote(page, "1.5");
   await expect(quote(page)).toContainText("You receive about1.4925 USDC", { timeout: 20_000 });
   await quote(page).getByRole("button", { name: "Swap", exact: true }).click();
-  await expect(toast(page, "Swap complete")).toBeVisible({ timeout: 30_000 });
+  await expect(outcome(page, "Swap complete")).toBeVisible({ timeout: 30_000 });
   expect(await balance(page, customer, `8453:${ASSETS.apple}`)).toBe("150000000");
   expect(await balance(page, customer, `8453:${ASSETS.usdc}`)).toBe("1492500");
 });
@@ -121,9 +121,9 @@ test("moving to another network is sent, then tracked: no spinner while the brid
   await expect(progress).toContainText("waiting for the bridge to deliver it on Arbitrum", { timeout: 30_000 });
   await expect(progress.locator(".spin")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "New swap" })).toBeVisible();
-  await expect(toast(page, "Swap complete")).toHaveCount(0);
+  await expect(outcome(page, "Swap complete")).toHaveCount(0);
   await edge("/__state", { bridge: { status: "DONE", substatus: "COMPLETED" } });
-  await expect(toast(page, "Swap complete")).toBeVisible({ timeout: 45_000 });
+  await expect(outcome(page, "Swap complete")).toBeVisible({ timeout: 45_000 });
 });
 
 test("Tether Gold sells from Ethereum back to USDC on Base, with Ethereum's fee paid by Aura", async ({ page }) => {
@@ -142,7 +142,7 @@ test("Tether Gold sells from Ethereum back to USDC on Base, with Ethereum's fee 
   expect(operation).toMatchObject({ chainId: 1, success: true });
   expect(await balance(page, customer, `1:${ASSETS.xaut}`)).toBe("500000");
   await edge("/__state", { bridge: { status: "DONE", substatus: "COMPLETED" } });
-  await expect(toast(page, "Swap complete")).toBeVisible({ timeout: 45_000 });
+  await expect(outcome(page, "Swap complete")).toBeVisible({ timeout: 45_000 });
   await expect.poll(() => balance(page, customer, `8453:${ASSETS.usdc}`), { timeout: 20_000 }).toBe("497500");
 });
 
@@ -222,6 +222,6 @@ test("a swap that pays out less than the minimum is not marked complete", async 
   await openSwap(page, { from: `8453:${ASSETS.usdc}`, to: `8453:${ASSETS.apple}` });
   await getQuote(page, "2");
   await quote(page).getByRole("button", { name: "Swap", exact: true }).click({ timeout: 20_000 });
-  await expect(toast(page, "Swap failed")).toBeVisible({ timeout: 30_000 });
-  await expect(toasts(page)).toContainText("Less than the minimum arrived. Contact support.");
+  await expect(outcome(page, "Swap failed")).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator(".transactionProgress")).toContainText("Less than the minimum arrived. Contact support.");
 });

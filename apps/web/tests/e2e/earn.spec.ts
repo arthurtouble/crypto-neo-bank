@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { AAVE_POOL, aTokenFor, VAULTS } from "./support/fake-edge.mjs";
-import { expect, test } from "./support/fixtures";
+import { expect, outcome, test } from "./support/fixtures";
 import { acceptTerms, asCustomer, ASSETS, edge, newCustomer, setBalances, setFeature, setIdentity, type Customer, setControls, pauseAsset } from "./support/session";
 
 // Feature 5 in docs/overview/feature-readiness.md: Earn. Aave on Base and two
@@ -71,7 +71,7 @@ test("Earn shows Aave USDC and both Morpho vaults with their rates", async ({ pa
 test("USDC goes into Aave and comes back out, in part or all of it, checked against Aave's own events", async ({ page }) => {
   const customer = await openEarn(page);
   await act(page, "Aave USDC", "Deposit", "10");
-  await expect(toast(page, "Deposit complete")).toBeVisible({ timeout: 30_000 });
+  await expect(outcome(page, "Deposit complete")).toBeVisible({ timeout: 30_000 });
   const [supply] = await relayed();
   expect(supply.calls!.map((call) => call.to.toLowerCase())).toEqual([ASSETS.usdc, AAVE_POOL]);
   expect(await held(page, customer, `aave:8453:${ASSETS.usdc}`)).toBe("10000000");
@@ -80,16 +80,14 @@ test("USDC goes into Aave and comes back out, in part or all of it, checked agai
   // The amount clears once the money has moved.
   await expect(form(page, "Aave USDC").getByLabel("Amount")).toHaveValue("");
 
-  await page.locator(".toastRegion").getByRole("button").first().click().catch(() => undefined);
   await act(page, "Aave USDC", "Withdraw", "4");
-  await expect(toast(page, "Withdraw complete")).toBeVisible({ timeout: 30_000 });
+  await expect(outcome(page, "Withdraw complete")).toBeVisible({ timeout: 30_000 });
   expect(await held(page, customer, `aave:8453:${ASSETS.usdc}`)).toBe("6000000");
   expect(await held(page, customer, `8453:${ASSETS.usdc}`)).toBe("44000000");
 
   // Withdraw all takes out everything that's left, so nothing stays behind in Aave.
-  await page.locator(".toastRegion").getByRole("button").first().click().catch(() => undefined);
   await form(page, "Aave USDC").getByRole("button", { name: "Withdraw all" }).click();
-  await expect(toast(page, "Withdraw complete")).toBeVisible({ timeout: 30_000 });
+  await expect(outcome(page, "Withdraw complete")).toBeVisible({ timeout: 30_000 });
   expect(await held(page, customer, `aave:8453:${ASSETS.usdc}`)).toBe("0");
   expect(await held(page, customer, `8453:${ASSETS.usdc}`)).toBe("50000000");
 });
@@ -97,15 +95,14 @@ test("USDC goes into Aave and comes back out, in part or all of it, checked agai
 test("USDC goes into a Morpho vault, and Withdraw all redeems every share", async ({ page }) => {
   const customer = await openEarn(page);
   await act(page, "Steakhouse Prime USDC", "Deposit", "20");
-  await expect(toast(page, "Deposit complete")).toBeVisible({ timeout: 30_000 });
+  await expect(outcome(page, "Deposit complete")).toBeVisible({ timeout: 30_000 });
   const [deposit] = await relayed();
   expect(deposit.calls!.map((call) => call.to.toLowerCase())).toEqual([ASSETS.usdc, VAULTS.steakhouse]);
   await expect(page.getByTestId("position-steakhouse-prime-usdc")).toContainText(/19\.99\d* USDC/, { timeout: 20_000 });
 
-  await page.locator(".toastRegion").getByRole("button").first().click().catch(() => undefined);
   await form(page, "Steakhouse Prime USDC").getByRole("tab", { name: "Withdraw" }).click();
   await form(page, "Steakhouse Prime USDC").getByRole("button", { name: "Withdraw all" }).click();
-  await expect(toast(page, "Withdraw complete")).toBeVisible({ timeout: 30_000 });
+  await expect(outcome(page, "Withdraw complete")).toBeVisible({ timeout: 30_000 });
   expect(await held(page, customer, `morpho:8453:${VAULTS.steakhouse}`)).toBe("0");
   expect(Number(await held(page, customer, `8453:${ASSETS.usdc}`))).toBeGreaterThanOrEqual(49_999_999);
 });
@@ -115,7 +112,7 @@ test("an exact amount can be withdrawn from a Morpho vault", async ({ page }) =>
   const customer = await openEarn(page, { [VAULTS.gauntlet]: "100000000000000000000" });
   await expect(page.getByTestId("position-gauntlet-usdc-prime")).toContainText("105 USDC", { timeout: 20_000 });
   await act(page, "Gauntlet USDC Prime", "Withdraw", "30");
-  await expect(toast(page, "Withdraw complete")).toBeVisible({ timeout: 30_000 });
+  await expect(outcome(page, "Withdraw complete")).toBeVisible({ timeout: 30_000 });
   expect(await held(page, customer, `8453:${ASSETS.usdc}`)).toBe("30000000");
   expect(Number(await held(page, customer, `morpho:8453:${VAULTS.gauntlet}`))).toBeGreaterThanOrEqual(74_999_999);
 });
@@ -167,8 +164,8 @@ test("a vault without enough liquidity rejects the withdrawal, and nothing moves
   await edge("/__state", { vaultIlliquid: true });
   const customer = await openEarn(page, { [VAULTS.gauntlet]: "100000000000000000000" });
   await act(page, "Gauntlet USDC Prime", "Withdraw", "30");
-  await expect(toast(page, "Withdraw failed")).toBeVisible({ timeout: 30_000 });
-  await expect(toasts(page)).toContainText("The network rejected it. Nothing moved.");
+  await expect(outcome(page, "Withdraw failed")).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator(".transactionProgress")).toContainText("The network rejected it. Nothing moved.");
   expect(await held(page, customer, `8453:${ASSETS.usdc}`)).toBe("0");
 });
 
@@ -216,6 +213,6 @@ test("an account that still holds Aave WETH can only withdraw it", async ({ page
   await expect(form(page, "Aave WETH").getByRole("tab")).toHaveCount(0);
   await expect(form(page, "Aave WETH")).toContainText("In Aave WETH: 1 WETH");
   await form(page, "Aave WETH").getByRole("button", { name: "Withdraw all" }).click();
-  await expect(toast(page, "Withdraw complete")).toBeVisible({ timeout: 30_000 });
+  await expect(outcome(page, "Withdraw complete")).toBeVisible({ timeout: 30_000 });
   expect(await held(page, customer, `aave:8453:${weth}`)).toBe("0");
 });

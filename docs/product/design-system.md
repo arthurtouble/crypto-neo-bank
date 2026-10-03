@@ -286,7 +286,7 @@ A 6px dot and a literal word: Completed (positive), Pending or the provider's st
 
 ### Toasts
 
-On the raised surface with shadow 2, a status icon, a title, one line, and a close button. Desktop: bottom right. Phone: top, below the header. They report the outcome of something the customer just did: saved, sent, failed, cancelled; and, per the journeys, money received and security changes. Errors stay 8 seconds, others 5; an outcome the customer must act on stays until closed. Field hints, load failures, and live progress stay where they happen. (`useToast`, `apps/web/src/components/toast.tsx`.)
+On the raised surface with shadow 2, a status icon, a title, one line, and a close button. Desktop: bottom right. Phone: top, below the header. They report the outcome of something the customer just did: saved, sent, failed, cancelled; and, per the journeys, money received and security changes. A money action's result shows on its progress card instead, never twice. Errors stay 8 seconds, others 5; an outcome the customer must act on stays until closed. Field hints, load failures, and live progress stay where they happen. (`useToast`, `apps/web/src/components/toast.tsx`.)
 
 ### Navigation
 

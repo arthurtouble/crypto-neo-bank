@@ -38,7 +38,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() ?? "/app";
   return (
     <div className="productShell appFrame">
-      <aside className="appSidebar">
+      {/* The aside runs the page's full height, so its background never stops short; the brand and sections stay in view. */}
+      <aside className="appSidebar"><div className="appSidebarInner">
         <AppBrand />
         <nav className="appNav" aria-label="Primary">
           {sections.map((item) => {
@@ -48,7 +49,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Icon aria-hidden="true" /><span className="appNavLabel">{item.label}</span></Link>;
           })}
         </nav>
-      </aside>
+      </div></aside>
       <div className="appMain">
         <header className="appTopbar">
           <div className="appTopbarStart"><span className="appPhoneOnly"><AppBrand /></span><span className="appDesktopOnly"><CommandMenu /></span></div>

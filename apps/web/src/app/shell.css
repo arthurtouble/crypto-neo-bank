@@ -38,7 +38,9 @@ html[data-balance-privacy="hidden"] .sensitiveAmount { filter: blur(7px); opacit
 .appMono { font-family: var(--font-mono); }
 
 /* Sidebar */
-.appFrame .appSidebar { position: sticky; top: 0; height: 100vh; height: 100dvh; display: flex; flex-direction: column; gap: var(--space-5); padding: var(--space-5) var(--space-3); background: var(--color-surface); border-right: 1px solid var(--color-line); font-family: var(--font-sans); overflow-y: auto; z-index: 40; }
+/* The column fills the page's full height (its background never stops on long pages); its contents stick in view. */
+.appFrame .appSidebar { background: var(--color-surface); border-right: 1px solid var(--color-line); font-family: var(--font-sans); z-index: 40; }
+.appFrame .appSidebarInner { position: sticky; top: 0; height: 100vh; height: 100dvh; display: flex; flex-direction: column; gap: var(--space-5); padding: var(--space-5) var(--space-3); overflow-y: auto; }
 .appBrand { display: inline-flex; align-items: center; gap: var(--space-2); padding: 0 var(--space-2); height: var(--control-height); color: var(--color-text); font-family: var(--font-sans); font-size: var(--text-title-2-size); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-snug); text-decoration: none; }
 .appBrand svg { width: 22px; height: 22px; fill: none; stroke: var(--color-accent); stroke-width: 2.4; }
 .appBrand .appBrandDot { fill: var(--color-accent); stroke: none; }
@@ -193,7 +195,7 @@ html[data-balance-privacy="hidden"] .sensitiveAmount { filter: blur(7px); opacit
 /* Tablet: the sidebar narrows to icons, names in tooltips */
 @media (min-width: 768px) and (max-width: 1023px) {
   .productShell.appFrame { grid-template-columns: 72px minmax(0, 1fr); }
-  .appFrame .appSidebar { align-items: center; padding-inline: var(--space-2); }
+  .appFrame .appSidebarInner { align-items: center; padding-inline: var(--space-2); }
   .appFrame .appBrand span { display: none; }
   .appFrame .appNav a { justify-content: center; width: 44px; padding: 0; }
   .appFrame .appNavLabel { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
