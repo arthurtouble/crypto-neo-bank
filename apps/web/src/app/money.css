@@ -50,7 +50,8 @@
 
 /* Receive */
 .appFrame .mxReceive { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--space-6); align-items: center; }
-.appFrame .mxQr { padding: var(--space-3); border: 1px solid var(--color-line); border-radius: var(--radius-lg); background: var(--color-surface); color: var(--color-text); line-height: 0; }
+/* Dark on light in both themes, like the payment page: many wallets can't scan an inverted code */
+.appFrame .mxQr { padding: var(--space-3); border: 1px solid var(--color-line); border-radius: var(--radius-lg); background: var(--color-qr-background); color: var(--color-qr); line-height: 0; }
 .appFrame .mxReceiveAddress { display: grid; gap: var(--space-2); justify-items: start; min-width: 0; }
 .appFrame .mxAddress { max-width: 100%; font-family: var(--font-mono); font-size: var(--text-body-size); line-height: var(--text-body-line); color: var(--color-text); }
 /* Desktop: the whole address in groups of four. Phone: the first and last four, which is what people compare. */
