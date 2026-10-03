@@ -30,7 +30,7 @@ Decided on 29 September 2026: keep the ten sections, not grouped.
 | | Desktop | Phone |
 | --- | --- | --- |
 | Sections | Overview, Deposit, Send, Swap, Earn, Cards, Transactions, Insights, Settings, Support | The same ten |
-| How to get there | A sidebar listing all ten, each with an icon and its name, always visible, no group headings | No tab bar. A round menu button floats at the bottom centre of every section page. It opens a sheet from the bottom with the ten sections as tiles, three per row, each with an icon and its name. It hides during a step, and steps aside while the page scrolls down or a form is under it, so it never covers a button. |
+| How to get there | A sidebar listing all ten, each with an icon and its name, always visible, no group headings | No tab bar. A round menu button floats at the bottom centre of every section page. It opens a sheet from the bottom with the ten sections as tiles, three per row, each with an icon and its name. It hides during a step. Every page ends with room below the last button, so the customer can always scroll a button clear of it. |
 | Search | ⌘K from anywhere: pages and actions (B4) | Search inside Transactions |
 | Notifications | Bell in the top bar, opens a popover | Bell in the header of each section page, opens a screen |
 | Account | Avatar menu: email, theme, log out | Log out in the menu sheet's footer |
@@ -105,7 +105,7 @@ Each journey is drawn step by step in the storyboards. The frame numbers (J5.3 a
 
 ### Settings and support
 
-- **J15 Keep my account safe.** Settings › Security: the passkey first, then email, emergency lock, daily limit, saved-recipients-only, and the wallet key. Saved recipients are their own area. Tightening is instant; loosening needs the passkey.
+- **J15 Keep my account safe.** Settings › Security: the passkey first, then email, emergency lock, daily limit, saved-recipients-only, and the account key (export asks once more and warns that the controls stop applying). Saved recipients are their own area. Tightening is instant; loosening needs the passkey.
 - **J16 My profile and preferences.** Settings › Aura tag and payment page, notifications, this device, and your data (download, terms, close the account).
 - **J17 Get help.** The Support page: chat, articles, and report a problem.
 - **J18 Notifications.** An inbox that marks itself read. Each notice opens where it happened. Toasts only for money received and security changes.

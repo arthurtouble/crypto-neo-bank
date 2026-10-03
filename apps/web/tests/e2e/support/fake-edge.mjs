@@ -735,6 +735,13 @@ export function startFakeEdge({ port }) {
           account: { last_4: String(body.account?.account_number ?? "").slice(-4) }, active: true };
         return send(200, bridge.externalAccounts[id]);
       }
+      const removed = /^\/customers\/([^/]+)\/external_accounts\/([^/]+)$/.exec(path);
+      if (removed && req.method === "DELETE") {
+        const account = bridge.externalAccounts[removed[2]];
+        if (!account || account.customer_id !== removed[1]) return send(404, { message: "not found" });
+        delete bridge.externalAccounts[removed[2]];
+        return send(200, { ...account, active: false });
+      }
       const transfer = /^\/transfers(?:\/([^/]+))?$/.exec(path);
       if (transfer && req.method === "POST") {
         const id = `tr_${randomUUID().slice(0, 8)}`;
@@ -775,6 +782,8 @@ export function startFakeEdge({ port }) {
       if (card) {
         const item = stripe.cards[card[1]];
         if (!item) return send(404, { error: { message: "No such issuing card" } });
+        // "stripe:card-read" in `down` fails only reading a card, so changing it still works.
+        if (req.method === "GET" && down("stripe:card-read")) return send(503, { error: { message: "unavailable" } });
         if (req.method === "POST") {
           if (field("status")) item.status = field("status");
           const amount = field("spending_controls[spending_limits][0][amount]");

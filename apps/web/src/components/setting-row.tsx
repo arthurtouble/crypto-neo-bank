@@ -1,4 +1,5 @@
-import type { ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
+import { useToast } from "./toast";
 
 /**
  * One setting: a title and a short line on the left, its control on the right. As a label, the whole row names
@@ -9,7 +10,19 @@ export function SettingRow({ title, detail, children, id, label = false }: { tit
   return label ? <label className="stRow" id={id}>{body}</label> : <div className="stRow" id={id}>{body}</div>;
 }
 
-/** An On/Off button for a setting that saves as soon as it changes. */
+/** The one on/off control in Settings: a switch that saves as soon as it changes. */
 export function Toggle({ label, on, busy, onChange }: { label: string; on: boolean; busy?: boolean; onChange: () => void }) {
-  return <button type="button" className="appToggle" aria-pressed={on} aria-label={label} disabled={busy} onClick={onChange}>{on ? "On" : "Off"}</button>;
+  return <input type="checkbox" className="appSwitch" aria-label={label} checked={on} disabled={busy} onChange={onChange} />;
+}
+
+const settingsToast = "settings";
+
+/** Toasts for Settings: each replaces the last, and they close when the customer opens another area. */
+export function useSettingsToast() {
+  const toast = useToast();
+  return useMemo(() => ({
+    success: (title: string, detail?: string) => toast.show({ tone: "success", title, detail, key: settingsToast }),
+    error: (title: string, detail?: string) => toast.show({ tone: "error", title, detail, key: settingsToast }),
+    dismiss: () => toast.dismiss(settingsToast)
+  }), [toast]);
 }

@@ -7,12 +7,12 @@ Settings has six sections.
 
 | Section | What you can do |
 | --- | --- |
-| **Security** | Add a passkey, add or change your email, export your wallet key, and set the emergency lock, daily transfer limit, saved recipients only, and the wait before new recipients. See [account controls](/safety/account-controls/) |
-| **Saved recipients** | See and remove the people and wallets you send to by name |
+| **Security** | Add a passkey, add or change your email, export your account key, and set the emergency lock, daily transfer limit, saved recipients only, and the wait before new recipients. See [account controls](/safety/account-controls/) |
+| **Saved recipients** | Add, see, and remove the people and wallets you send to by name |
 | **Aura tag** | Choose your public name and show or hide its payment page. See [Aura tag](/product/aura-tag/) |
 | **Notifications** | Choose transaction emails, browser notifications, and product news |
 | **This device** | Hide balances on this screen, and choose light, dark, or your device's theme |
-| **Your data** | Download your data, read the terms and privacy notice, and ask to close your account |
+| **Your data** | Download your data, open the terms of use and privacy notice, and ask to close your account |
 
 ## Notifications
 

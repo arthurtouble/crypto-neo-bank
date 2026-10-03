@@ -19,6 +19,8 @@ import { useToast } from "./toast";
 import { TransactionProgress } from "./transaction-progress";
 import { Notice } from "./states";
 
+type SwapSwitches = { sameNetwork: boolean; otherNetwork: boolean };
+
 export type RouteQuote = {
   id: string; from: CatalogAsset; to: CatalogAsset; recipient: string; tool: string;
   fromAmountRaw: string; toAmountRaw: string; toAmountMinRaw: string; expiresAt: string;
@@ -47,6 +49,7 @@ function quoteErrorText(error: unknown): string {
   if (error instanceof ApiError && error.code === "feature_unavailable") return "Swaps aren't available right now.";
   if (error instanceof ApiError && error.code === "rate_limited") return "Too many quotes. Wait a minute and try again.";
   if (error instanceof ApiError && error.code === "provider_unavailable") return "We can't get a price right now. Try again in a few minutes.";
+  if (error instanceof ApiError && error.code === "balance_unavailable") return "We can't read your balance right now. Try again in a minute.";
   return error instanceof Error ? error.message : "We couldn't get a quote. Try again.";
 }
 
@@ -77,12 +80,16 @@ export function SwapWorkspace() {
     return () => window.clearInterval(timer);
   }, [quote]);
 
-  const readAsset = (id: AssetId) => api<{ asset: CatalogAsset }>(`/api/swap/assets?import=${encodeURIComponent(id)}`)
-    .then((body) => body.asset, (reason) => { if (reason instanceof ApiError && reason.status === 404) return null; throw reason; });
+  const readAsset = (id: AssetId) => api<{ asset: CatalogAsset; switches?: SwapSwitches }>(`/api/swap/assets?import=${encodeURIComponent(id)}`)
+    .catch((reason) => { if (reason instanceof ApiError && reason.status === 404) return null; throw reason; });
   const fromAsset = useQuery({ queryKey: ["swap-asset", fromAssetId], queryFn: () => readAsset(fromAssetId), staleTime: 30_000 });
   const toAsset = useQuery({ queryKey: ["swap-asset", toAssetId], queryFn: () => readAsset(toAssetId), staleTime: 30_000 });
-  const source = fromAsset.data;
-  const destination = toAsset.data;
+  const source = fromAsset.data?.asset;
+  const destination = toAsset.data?.asset;
+  // The server checks the switches again on every quote and swap; this only says so before the customer types an amount.
+  const switches = fromAsset.data?.switches ?? toAsset.data?.switches;
+  const otherNetwork = Boolean(source && destination && source.chainId !== destination.chainId);
+  const switchedOff = switches ? !(otherNetwork ? switches.otherNetwork : switches.sameNetwork) : false;
   const sourceChainId = SUPPORTED_CHAINS.find((chain) => chain.id === source?.chainId)?.id;
   const nativeBalance = useNativeBalance(address, sourceChainId, Boolean(source && source.address === null));
   const tokenBalance = useTokenBalance(source?.address as `0x${string}` | undefined, address, sourceChainId, Boolean(source?.address));
@@ -111,6 +118,8 @@ export function SwapWorkspace() {
       if (!source || !destination || !address) throw new Error("Choose two available assets.");
       if (source.id === destination.id) throw new Error("Choose two different assets.");
       if (!/^\d+(?:\.\d+)?$/.test(amount) || (amount.split(".")[1]?.length ?? 0) > source.decimals || parseUnits(amount, source.decimals) <= 0n) throw new Error("Enter a valid amount.");
+      if (availableRaw !== undefined && parseUnits(amount, source.decimals) > availableRaw)
+        throw new Error(availableRaw === 0n ? `You don't have any ${source.symbol}.` : `You have ${formatUnits(availableRaw, source.decimals)} ${source.symbol}. Enter that or less.`);
       setQuoting(true);
       requested = true;
       const query = new URLSearchParams({ from: source.id, to: destination.id, amount, slippageBps: String(slippageBps) });
@@ -119,7 +128,8 @@ export function SwapWorkspace() {
       setQuote(body.quote);
     } catch (caught) {
       // Input problems stay next to the form; a failed quote request is an outcome.
-      if (requested) toast.error("No quote", quoteErrorText(caught));
+      // Except not holding enough, which the customer fixes in the form.
+      if (requested && !(caught instanceof ApiError && caught.code === "insufficient_balance")) toast.error("No quote", quoteErrorText(caught));
       else setError(quoteErrorText(caught));
     }
     finally { setQuoting(false); }
@@ -151,9 +161,10 @@ export function SwapWorkspace() {
           </div>
           <div className="mxSwapSettings"><span className="mxLabel" id="swap-slippage">Max slippage</span>
             <div className="appSegmented" role="group" aria-labelledby="swap-slippage">{[10, 50, 100].map((value) => <button type="button" key={value} disabled={inFlight} aria-pressed={slippageBps === value} onClick={() => { setSlippageBps(value); clearQuote(); }}>{value / 100}%</button>)}</div></div>
+          {switchedOff && <Notice tone="warning">{otherNetwork ? "Swaps to or from another network aren't available right now." : "Swaps aren't available right now."}</Notice>}
           {error && <p className="mxFieldError" role="alert">{error}</p>}
           {/* One primary action at a time: once there's a quote, Swap is it. */}
-          <button className={`appButton appButtonLarge${quote ? "" : " appButtonPrimary"}`} type="submit" disabled={quoting || inFlight || !address || !source || !destination}>
+          <button className={`appButton appButtonLarge${quote ? "" : " appButtonPrimary"}`} type="submit" disabled={quoting || inFlight || switchedOff || !address || !source || !destination}>
             {quoting ? <><LoaderCircle className="spin" aria-hidden="true" /> Getting quote</> : !address ? "Preparing your wallet" : "Get quote"}
           </button>
         </form>

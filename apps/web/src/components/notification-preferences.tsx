@@ -6,8 +6,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { ApiError, useApi } from "@/lib/client/api";
 import { marketingNoticeVersion } from "@/lib/legal/documents";
-import { SettingRow, Toggle } from "./setting-row";
-import { useToast } from "./toast";
+import { SettingRow, Toggle, useSettingsToast } from "./setting-row";
+import { Notice } from "./states";
 
 type PreferencesResponse = { preferences: { notifications: { transactionEmail: boolean } } };
 type ConsentResponse = { consent: { marketing: boolean } };
@@ -97,7 +97,7 @@ export function NotificationPreferences() {
   const { user } = useAuth();
   const api = useApi();
   const client = useQueryClient();
-  const toast = useToast();
+  const toast = useSettingsToast();
   const push = useBrowserPush();
   const email = accountEmail(user)?.address;
   const preferences = useQuery({ queryKey: ["preferences", user?.id], queryFn: () => api<PreferencesResponse>("/api/preferences"), enabled: Boolean(user) });
@@ -114,11 +114,14 @@ export function NotificationPreferences() {
   });
   const transactionEmail = preferences.data?.preferences.notifications.transactionEmail;
   const marketing = consent.data?.consent.marketing;
+  // A choice that hasn't loaded shows no switch; the note under the heading says why.
   const toggle = (label: string, on: boolean | undefined, busy: boolean, change: () => void) => on === undefined
-    ? <span className="stState">—</span> : <Toggle label={label} on={on} busy={busy} onChange={change} />;
+    ? null : <Toggle label={label} on={on} busy={busy} onChange={change} />;
 
   return <section className="mxCard stCard" id="notifications" aria-labelledby="notifications-heading"><h2 id="notifications-heading">Notifications</h2>
     <p className="mxHint">Everything shows in the app. Security notices, like a lock or a new recipient, are always sent.</p>
+    {(preferences.isError || consent.isError) && <Notice tone="error" role="alert"
+      onRetry={() => { void preferences.refetch(); void consent.refetch(); }}>We couldn&apos;t load your email choices.</Notice>}
     <SettingRow title="Transaction emails" detail={`Money you receive, and when a send, swap, or Earn move completes or fails. Sent to ${email ?? "your email"}.`}>
       {toggle("Transaction emails", transactionEmail, saveEmail.isPending, () => saveEmail.mutate(!transactionEmail))}</SettingRow>
     <SettingRow title="Browser notifications" detail={push.state ? pushNotes[push.state] : "Checking this browser…"}>

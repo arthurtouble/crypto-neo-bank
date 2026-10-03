@@ -5,7 +5,7 @@ export { BridgeClient, BridgeError } from "./client";
 export { getUsdAccount, openUsdAccount } from "./accounts";
 export { readOnboarding, startOnboarding } from "./onboarding";
 export { createPayout } from "./payouts";
-export { addBankAccount, bankAccountInputSchema } from "./bank-accounts";
+export { addBankAccount, bankAccountInputSchema, removeBankAccount } from "./bank-accounts";
 export { FAILED_PAYOUT_STATES, listBankDeposits, payoutStateText, readTransferState, TERMINAL_PAYOUT_STATES, type BankDeposit } from "./transfers";
 
 /**

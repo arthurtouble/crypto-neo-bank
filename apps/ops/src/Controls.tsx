@@ -9,7 +9,7 @@ type Summary = { issues: Issue[]; webhooks: Array<{ status: string; count: numbe
 
 const flagText: Record<string, string> = {
   direct_transfers: "Send", swaps: "Swap", cross_chain: "Other networks (send, swap, deposit)", defi_actions: "Earn",
-  fiat_accounts: "Bank (Bridge)", payment_cards: "Cards (Stripe with Bridge)", card_wallets: "Apple Pay and Google Pay"
+  fiat_accounts: "Bank (Bridge)", payment_cards: "Cards (Stripe with Bridge)", card_wallets: "Apple Pay and Google Pay", card_deposits: "Card deposits (Privy)"
 };
 const networks: Record<number, string> = { 1: "Ethereum", 8453: "Base", 10: "Optimism", 137: "Polygon", 42161: "Arbitrum" };
 
