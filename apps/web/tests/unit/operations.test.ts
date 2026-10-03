@@ -6,11 +6,15 @@ import { schemaDatabase } from "../support/schema";
 const state = vi.hoisted(() => ({ db: null as D1Database | null, checked: [] as string[] }));
 vi.mock("cloudflare:workers", () => ({ env: { get PROJECTION_DB() { return state.db; } } }));
 vi.mock("@/lib/auth/privy", () => ({ privyClient: () => ({ users: () => ({ _get: async (id: string) => ({ id }),
-  getByEmailAddress: async () => { throw Object.assign(new Error("not found"), { status: 404 }); }, getByWalletAddress: async () => ({ id: "did:privy:alice" }) }) }) }));
+  getByEmailAddress: async () => { throw Object.assign(new Error("not found"), { status: 404 }); }, getByWalletAddress: async () => ({ id: "did:privy:alice" }) }) }),
+  // Alice has an email; Privy can't be read for Dan; the rest signed in with a wallet only.
+  privyEmail: async (id: string) => { if (id === "did:privy:dan") throw new Error("privy down"); return id === "did:privy:alice" ? "alice@example.com" : null; } }));
 vi.mock("@/lib/actions/check", () => ({ checkAction: async (_db: unknown, action: { id: string }) => { state.checked.push(action.id); return { ...action, status: "confirmed" }; } }));
 
 const { resetAccessKeys, verifyAccessToken } = await import("@/lib/auth/access");
-const { GET: features } = await import("@/app/api/ops/features/route");
+const { GET: features, PATCH: changeFeature } = await import("@/app/api/ops/features/route");
+const { PATCH: updateIssue } = await import("@/app/api/ops/issues/[issueId]/route");
+const { GET: summary } = await import("@/app/api/ops/summary/route");
 const { GET: findAccount } = await import("@/app/api/ops/accounts/route");
 const { POST: lock } = await import("@/app/api/ops/accounts/[subject]/lock/route");
 const { GET: listMovement } = await import("@/app/api/ops/movement/route");
@@ -118,7 +122,7 @@ describe("customers", () => {
     const { customerProfile, findCustomer } = await import("@/lib/ops/customers");
     expect(await findCustomer(state.db!, "@alice")).toBe("did:privy:alice");
     expect(await findCustomer(state.db!, "nobody_here")).toBeNull();
-    expect(await customerProfile(state.db!, "did:privy:alice")).toMatchObject({ auraTag: "alice", bank: { status: "active", kycStatus: "approved" }, card: null,
+    expect(await customerProfile(state.db!, "did:privy:alice")).toMatchObject({ email: "alice@example.com", auraTag: "alice", bank: { status: "active", kycStatus: "approved" }, card: null,
       controls: { accountLocked: false }, actions: { total: 0 }, intercomUserId: "did:privy:alice", notices: { recent: [], emailFailed: 0 } });
     sqlite.exec(`INSERT INTO notifications (notification_id, subject_reference, kind, dedupe_key, title, body, created_at, email_status, push_status) VALUES
       ('n1', 'did:privy:alice', 'completed', 'k1', 'Added to Earn 1 USDC', 'To Aave, on Base.', '2026-09-30T10:00:00.000Z', 'sent', 'skipped'),
@@ -137,7 +141,7 @@ describe("customers", () => {
       ('did:privy:dan', 'did:privy:dan', '2026-08-01T00:00:00.000Z', 't', NULL);
       INSERT INTO security_profiles (subject_reference, account_locked, updated_at) VALUES ('did:privy:bob', 1, 't');`);
     const page = async (after?: string) => await (await customers(await asOperator(`/api/ops/customers?limit=2${after ? `&after=${encodeURIComponent(after)}` : ""}`))).json() as
-      { customers: Array<{ subjectReference: string; auraTag: string | null; accountLocked: boolean; closedAt: string | null; bankStatus: string | null }>; next: string | null };
+      { customers: Array<{ subjectReference: string; email: string | null; auraTag: string | null; accountLocked: boolean; closedAt: string | null; bankStatus: string | null }>; next: string | null };
     const first = await page();
     // Carol and Bob signed up in the same instant; Alice on 1 September; Dan in August.
     expect(first.customers.map((row) => row.subjectReference)).toEqual(["did:privy:carol", "did:privy:bob"]);
@@ -145,6 +149,8 @@ describe("customers", () => {
     expect(first.customers[1].accountLocked).toBe(true);
     const second = await page(first.next!);
     expect(second.customers.map((row) => row.subjectReference)).toEqual(["did:privy:alice", "did:privy:dan"]);
+    // Emails come from Privy; one it can't read shows as none rather than failing the page.
+    expect(second.customers.map((row) => row.email)).toEqual(["alice@example.com", null]);
     expect(second.customers[0]).toMatchObject({ auraTag: "alice", bankStatus: "active", accountLocked: false });
     expect(second.next).toBeNull();
     expect((await customers(await asOperator("/api/ops/customers?after=nonsense"))).status).toBe(400);
@@ -268,5 +274,39 @@ describe("money movement", () => {
     expect(body.daily).toHaveLength(31);
     expect(body.daily.find((day) => day.day === "2026-09-27")).toEqual({ day: "2026-09-27", signups: 0, active: 2, completed: 1, volumeUsd: 10 });
     expect((await (await stats(await asOperator("/api/ops/stats?days=5"))).json() as { days: number }).days).toBe(30);
+  });
+});
+
+describe("controls", () => {
+  const send = async (handler: (request: Request, context: never) => Promise<Response>, url: string, body: unknown, context?: unknown) =>
+    handler(new Request(`https://aura.test${url}`, { method: "PATCH", body: JSON.stringify(body), headers: { "Cf-Access-Jwt-Assertion": await token() } }), context as never);
+
+  it("changes a feature switch only with a reason, audits it with the operator, and shows the latest reason", async () => {
+    vi.useFakeTimers({ now, toFake: ["Date"] });
+    expect((await send(changeFeature, "/api/ops/features", { key: "swaps", enabled: true })).status).toBe(400);
+    expect((await send(changeFeature, "/api/ops/features", { key: "swaps", enabled: true, reason: "no" })).status).toBe(400);
+    expect((await send(changeFeature, "/api/ops/features", { key: "swaps", enabled: true, reason: "Swap passed its launch gate" })).status).toBe(200);
+    expect(sqlite.prepare("SELECT actor_reference, action, target_reference, evidence_json FROM audit_events").get()).toEqual({ actor_reference: "ops@aura.test",
+      action: "feature_flag.updated", target_reference: "swaps", evidence_json: JSON.stringify({ enabled: true, reason: "Swap passed its launch gate" }) });
+    const { flags } = await (await features(await asOperator("/api/ops/features"))).json() as { flags: Array<{ flag_key: string; enabled: number; reason: string | null; updated_by: string }> };
+    expect(flags.find((flag) => flag.flag_key === "swaps")).toMatchObject({ enabled: 1, reason: "Swap passed its launch gate", updated_by: "ops@aura.test" });
+    expect(flags.find((flag) => flag.flag_key === "defi_actions")).toMatchObject({ reason: null });
+  });
+
+  it("acknowledges an issue as is, resolves it only with a note, and lists open ones with the customer and action they're about", async () => {
+    vi.useFakeTimers({ now, toFake: ["Date"] });
+    const id = "6f1b8c62-35a4-4f7e-9d0e-2b8a4f3c1d11";
+    sqlite.exec(`INSERT INTO operational_issues (issue_id, subject_reference, issue_type, severity, source_name, source_reference, summary, status, opened_at)
+      VALUES ('${id}', 'did:privy:alice', 'stale_action', 'high', 'source_chain', 'action-1', 'A submitted action has no settled receipt after 15 minutes.', 'open', 't')`);
+    const listed = await (await summary(await asOperator("/api/ops/summary"))).json() as { issues: Array<Record<string, unknown>> };
+    expect(listed.issues).toEqual([expect.objectContaining({ issue_id: id, subject_reference: "did:privy:alice", source_reference: "action-1" })]);
+    const params = { params: Promise.resolve({ issueId: id }) };
+    expect((await send(updateIssue, `/api/ops/issues/${id}`, { status: "acknowledged" }, params)).status).toBe(200);
+    expect((await send(updateIssue, `/api/ops/issues/${id}`, { status: "resolved" }, params)).status).toBe(400);
+    expect((await send(updateIssue, `/api/ops/issues/${id}`, { status: "resolved", note: "ok" }, params)).status).toBe(400);
+    expect((await send(updateIssue, `/api/ops/issues/${id}`, { status: "resolved", note: "Checked the chain; it settled" }, params)).status).toBe(200);
+    expect(sqlite.prepare("SELECT evidence_json FROM audit_events WHERE action = 'issue_resolved'").get())
+      .toEqual({ evidence_json: JSON.stringify({ status: "resolved", note: "Checked the chain; it settled" }) });
+    expect((await (await summary(await asOperator("/api/ops/summary"))).json() as { issues: unknown[] }).issues).toEqual([]);
   });
 });

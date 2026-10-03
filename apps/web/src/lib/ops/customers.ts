@@ -1,4 +1,5 @@
 import { findSubject } from "@/lib/account/closure";
+import { privyEmail } from "@/lib/auth/privy";
 import { freezeCardForLock } from "@/lib/cards/service";
 import { announce } from "@/lib/notifications/deliver";
 import { securityNotice } from "@/lib/notifications/store";
@@ -11,6 +12,8 @@ import { ensureSubjectProfile } from "@/lib/profile/ensure";
  */
 type CustomerProfile = {
   subjectReference: string;
+  /** Read from Privy on each lookup (Aura keeps no copy); null when they have none or Privy can't be read. */
+  email: string | null;
   createdAt: string | null;
   closedAt: string | null;
   closedReason: string | null;
@@ -37,7 +40,19 @@ export async function findCustomer(db: D1Database, query: string): Promise<strin
   return findSubject(value);
 }
 
-type CustomerRow = { subjectReference: string; createdAt: string; closedAt: string | null; accountLocked: boolean; auraTag: string | null;
+/** The customer's email from Privy, or null when they have none or Privy can't be read. Never stops the page. */
+async function emailOf(subject: string): Promise<string | null> {
+  try { return await privyEmail(subject); } catch { return null; }
+}
+
+/** Emails for a page of customers, a few Privy reads at a time so a page never bursts past its rate limit. */
+async function emailsOf(subjects: string[], batch = 10): Promise<Array<string | null>> {
+  const out: Array<string | null> = [];
+  for (let index = 0; index < subjects.length; index += batch) out.push(...await Promise.all(subjects.slice(index, index + batch).map(emailOf)));
+  return out;
+}
+
+type CustomerRow = { subjectReference: string; email: string | null; createdAt: string; closedAt: string | null; accountLocked: boolean; auraTag: string | null;
   bankStatus: string | null; cardStatus: string | null; actions: number; lastActivityAt: string | null };
 
 /**
@@ -63,8 +78,9 @@ export async function listCustomers(db: D1Database, options: { limit?: number; a
       card_status: string | null; actions: number; last_activity_at: string | null }>();
   const page = rows.results.slice(0, limit);
   const last = page.at(-1);
+  const emails = await emailsOf(page.map((row) => row.subject_reference));
   return {
-    customers: page.map((row) => ({ subjectReference: row.subject_reference, createdAt: row.created_at, closedAt: row.closed_at, accountLocked: Boolean(row.account_locked),
+    customers: page.map((row, index) => ({ subjectReference: row.subject_reference, email: emails[index], createdAt: row.created_at, closedAt: row.closed_at, accountLocked: Boolean(row.account_locked),
       auraTag: row.aura_tag, bankStatus: row.bank_status, cardStatus: row.card_status, actions: row.actions, lastActivityAt: row.last_activity_at })),
     next: rows.results.length > limit && last ? btoa(JSON.stringify([last.created_at, last.subject_reference])) : null
   };
@@ -80,7 +96,8 @@ export function readCustomerCursor(cursor: string | null): { createdAt: string; 
 }
 
 export async function customerProfile(db: D1Database, subject: string): Promise<CustomerProfile> {
-  const [profile, controls, tag, bank, card, actions, notices, failed] = await Promise.all([
+  const [email, profile, controls, tag, bank, card, actions, notices, failed] = await Promise.all([
+    emailOf(subject),
     db.prepare("SELECT created_at, closed_at, closed_reason FROM subject_profiles WHERE subject_reference = ?").bind(subject)
       .first<{ created_at: string; closed_at: string | null; closed_reason: string | null }>(),
     db.prepare("SELECT account_locked, daily_limit_cents, enforce_address_book, updated_at FROM security_profiles WHERE subject_reference = ?").bind(subject)
@@ -98,7 +115,7 @@ export async function customerProfile(db: D1Database, subject: string): Promise<
     db.prepare("SELECT COUNT(*) AS n FROM notifications WHERE subject_reference = ? AND email_status = 'failed'").bind(subject).first<{ n: number }>()
   ]);
   return {
-    subjectReference: subject, createdAt: profile?.created_at ?? null, closedAt: profile?.closed_at ?? null, closedReason: profile?.closed_reason ?? null,
+    subjectReference: subject, email, createdAt: profile?.created_at ?? null, closedAt: profile?.closed_at ?? null, closedReason: profile?.closed_reason ?? null,
     controls: { accountLocked: Boolean(controls?.account_locked), dailyLimitUsd: controls?.daily_limit_cents ? controls.daily_limit_cents / 100 : null,
       enforceAddressBook: Boolean(controls?.enforce_address_book), updatedAt: controls?.updated_at ?? null },
     auraTag: tag?.tag ?? null,

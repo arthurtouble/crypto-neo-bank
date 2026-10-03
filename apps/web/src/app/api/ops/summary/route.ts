@@ -3,7 +3,9 @@ import { requireOperator } from "@/lib/auth/access";
 import { route } from "@/lib/http/route";
 
 type CountRow = { status: string; count: number };
-type IssueRow = { issue_id: string; issue_type: string; severity: string; source_name: string; summary: string; status: string; opened_at: string };
+/** `subject_reference` is the customer and `source_reference` the action (stale_action) or provider event it's about, when known. */
+type IssueRow = { issue_id: string; subject_reference: string | null; issue_type: string; severity: string; source_name: string; source_reference: string | null; summary: string;
+  status: string; opened_at: string };
 type CheckRow = { check_key: string; status: string; details_json: string; checked_at: string };
 
 export const GET = route("ops.summary.get", { unavailable: "ops_unavailable" }, async (request: Request) => {
@@ -11,7 +13,7 @@ export const GET = route("ops.summary.get", { unavailable: "ops_unavailable" }, 
   const [intents, receipts, issues, funnel, reliability, checks] = await env.PROJECTION_DB.batch([
     env.PROJECTION_DB.prepare("SELECT status, COUNT(*) AS count FROM actions GROUP BY status"),
     env.PROJECTION_DB.prepare("SELECT processing_status AS status, COUNT(*) AS count FROM webhook_receipts GROUP BY processing_status"),
-    env.PROJECTION_DB.prepare("SELECT issue_id, issue_type, severity, source_name, summary, status, opened_at FROM operational_issues WHERE status != 'resolved' ORDER BY CASE severity WHEN 'critical' THEN 0 WHEN 'high' THEN 1 WHEN 'warning' THEN 2 ELSE 3 END, opened_at DESC LIMIT 100"),
+    env.PROJECTION_DB.prepare("SELECT issue_id, subject_reference, issue_type, severity, source_name, source_reference, summary, status, opened_at FROM operational_issues WHERE status != 'resolved' ORDER BY CASE severity WHEN 'critical' THEN 0 WHEN 'high' THEN 1 WHEN 'warning' THEN 2 ELSE 3 END, opened_at DESC LIMIT 100"),
     env.PROJECTION_DB.prepare("SELECT event_name AS status, COUNT(DISTINCT subject_reference) AS count FROM product_events WHERE occurred_at >= ? GROUP BY event_name").bind(new Date(Date.now() - 7 * 86_400_000).toISOString()),
     env.PROJECTION_DB.prepare(`SELECT
       SUM(CASE WHEN status = 'confirmed' THEN 1 ELSE 0 END) AS confirmed,

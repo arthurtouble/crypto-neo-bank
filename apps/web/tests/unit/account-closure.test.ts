@@ -14,7 +14,7 @@ vi.mock("@/lib/auth/privy", () => ({ privyClient: () => ({
   utils: () => ({ auth: () => ({ verifyAccessToken: async () => ({ user_id: "alice", session_id: "s", expiration: 1 }) }) }),
   users: () => ({ _get: async (id: string) => ({ id }), getByEmailAddress: async () => { throw Object.assign(new Error("not found"), { status: 404 }); },
     getByWalletAddress: async () => ({ id: "alice" }) })
-}) }));
+}), privyEmail: async () => "alice@example.com" }));
 
 const { checkClosure } = await import("@/lib/account/closure");
 const { POST: close } = await import("@/app/api/ops/accounts/[subject]/close/route");
@@ -81,7 +81,11 @@ describe("closing an account", () => {
 
   it("finds a customer by wallet or Privy ID, and says when nobody matches", async () => {
     const lookup = (q: string) => find(new Request(`https://aura.test/api/ops/accounts?q=${encodeURIComponent(q)}`));
-    expect(await (await lookup(wallet)).json()).toMatchObject({ account: { subjectReference: "alice", eligible: true } });
+    expect(await (await lookup(wallet)).json()).toMatchObject({ account: { subjectReference: "alice", eligible: true }, profile: { email: "alice@example.com" } });
+    // Each balance comes with what's needed to show the amount and its value.
+    state.holdings = [{ ...holding("USD Coin", "2500000"), usdCents: 250 }];
+    expect((await (await lookup(wallet)).json() as { account: { holdings: unknown[] } }).account.holdings)
+      .toEqual([{ label: "USD Coin", symbol: "USD Coin", decimals: 6, amountRaw: "2500000", usdCents: 250, status: "observed" }]);
     expect(await (await lookup("did:privy:alice")).json()).toMatchObject({ account: { subjectReference: "did:privy:alice" } });
     expect((await lookup("nobody@example.com")).status).toBe(404);
     expect((await lookup("ab")).status).toBe(400);
