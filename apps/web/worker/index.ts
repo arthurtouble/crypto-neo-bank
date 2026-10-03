@@ -1,7 +1,7 @@
 import app from "vinext/server/app-router-entry";
 import { recheckOpenActions } from "@/lib/actions/recheck";
 import { refreshBankPayouts } from "@/lib/money/bank-activity";
-import { blockedPlace, isGatedPath, requestPlace } from "@/lib/legal/places";
+import { blockedPlace, isGatedPath, requestPlace, withRegionHeader } from "@/lib/legal/places";
 import { deliverPending } from "@/lib/notifications/deliver";
 import { scanIncoming } from "@/lib/notifications/incoming";
 import { purgeDue, purgeExpired } from "@/lib/privacy/retention";
@@ -58,13 +58,14 @@ async function serve(request: Request, env: Cloudflare.Env, ctx: ExecutionContex
 
 /**
  * Refuse the app, the API, and payment pages to requests from a sanctioned place (lib/legal/places.ts), with 451.
- * Pages get the "not available where you are" page; the API gets a JSON error. Everything else goes to vinext.
+ * Pages get the "not available where you are" page; the API gets a JSON error. Everything else goes to vinext, with the
+ * region in a header so handlers can apply a provider's own list of places (`requireProviderPlace`).
  */
 const fetch: ExportedHandlerFetchHandler<Cloudflare.Env> = async (request, env, ctx) => {
   const url = new URL(request.url);
   const { country, region } = requestPlace(request);
   const place = isGatedPath(url.pathname) ? blockedPlace(country, region) : undefined;
-  if (!place) return serve(request, env, ctx);
+  if (!place) return serve(withRegionHeader(request), env, ctx);
   console.log(JSON.stringify({ level: "info", event: "edge.place_blocked", country, region, path: url.pathname }));
   const headers = { "Cache-Control": "no-store", Vary: "CF-IPCountry" };
   if (url.pathname.startsWith("/api/")) {

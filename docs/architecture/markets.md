@@ -2,7 +2,9 @@
 
 Aura gives customers perpetual futures on Hyperliquid and prediction markets on Polymarket. Aura is a front end, not a broker: the customer's own Privy wallet owns the account at each venue, and Aura never holds or moves their money. Code is in `apps/web/src/lib/markets/`, API routes are under `/api/perps/*` and `/api/predictions/*`, and two switches gate them: `perps` and `predictions` ([launch controls](../operations/launch-controls.md)). Both are off by default.
 
-Owner decisions (3 October 2026): no jurisdiction blocks for now, no Aura fee, no leverage cap beyond each market's own maximum, and no sports or esports markets.
+Owner decisions (3 October 2026): no Aura fee, no leverage cap beyond each market's own maximum, and no sports or esports markets.
+
+**Where they work.** Aura's server signs or sends these orders, so a venue never sees the customer's location and its own check can't apply. Aura applies each venue's published list instead (owner decision, 3 October 2026; `providerRestrictedPlace` in `lib/legal/places.ts`): Hyperliquid's for Perps (the United States and its territories, and Ontario), and Polymarket's for Predictions (every place it's close-only on its site or API, such as the United States, the United Kingdom, France, Germany, Australia, Singapore, and four Canadian provinces). From those places, setup, adding money, and opening or adding to a position answer 451 `place_restricted`; closing, reduce-only orders, cancelling, redeeming, and withdrawing always work. The place is Cloudflare's geolocation of the request; the Worker passes the region on in `X-Aura-Region`, replacing any value a client sent.
 
 ## Who holds what
 

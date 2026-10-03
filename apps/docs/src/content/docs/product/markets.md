@@ -19,6 +19,10 @@ Your Aura wallet owns your account on each venue. Aura never holds your money th
 
 Aura charges no fee on perps or predictions. Each venue charges its own trading fees. Moving USDC to your perps balance costs a network fee of a few cents, which comes out of the amount; the steps show it.
 
+## Where they work
+
+Perps follow Hyperliquid's terms, so they aren't available in the United States or Ontario. Predictions follow Polymarket's rules, so they aren't available where Polymarket doesn't take new orders, such as the United States, the United Kingdom, France, Germany, Australia, and Singapore. From those places you can't set up, add money, or open a position, but you can always close, sell, and withdraw. See [access and availability](/getting-started/access/).
+
 ## Perps
 
 A perp follows the price of an asset, such as bitcoin or a stock. You don't own the asset. You choose long, if you think the price will rise, or short, if you think it will fall.

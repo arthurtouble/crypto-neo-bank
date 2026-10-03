@@ -2,6 +2,7 @@ import { env } from "cloudflare:workers";
 import { isAddress } from "viem";
 import { z } from "zod";
 import { quoteRoute, quoteRouteErrorResponse } from "@/lib/actions/lifi";
+import { requireProviderPlace } from "@/lib/legal/places";
 import { routeFeatures } from "@/lib/actions/prepare";
 import { saveRouteQuote } from "@/lib/actions/route";
 import { rawAmount, refuseTokenContract } from "@/lib/actions/transfer";
@@ -51,6 +52,8 @@ async (request, { traceId }) => {
   // The account can only pay with what it holds: an asset on Base, or Tether Gold on Ethereum.
   if (!registeredAsset(from.id)?.uses.includes("hold"))
     return Response.json({ error: "unsupported_asset", message: `Your account doesn't hold ${from.symbol} on this network.`, traceId }, { status: 422 });
+  // Buying a stock token is refused where Coinbase doesn't offer them; selling one stays open everywhere.
+  if (registeredAsset(to.id)?.category === "stock") requireProviderPlace(request, "stocks");
   const crossChain = from.chainId !== to.chainId;
   const wallet = await requireActionWallet(subject.subjectReference);
   const recipient = (input.recipient ?? wallet).toLowerCase();

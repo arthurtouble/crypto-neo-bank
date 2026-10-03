@@ -1,4 +1,5 @@
 import { env } from "cloudflare:workers";
+import { requireProviderPlace } from "@/lib/legal/places";
 import { readJsonBody, route } from "@/lib/http/route";
 import { marketActor } from "@/lib/markets/guard";
 import { venueErrorResponse } from "@/lib/markets/http";
@@ -9,6 +10,7 @@ import { perpsTradeSchema } from "@/lib/markets/perps-input";
 export const POST = route("perps.trade", { invalid: "invalid_order", unavailable: "perps_unavailable", onError: venueErrorResponse },
   async (request, { traceId }) => {
     const { subject, account } = await marketActor(env.PROJECTION_DB, request, "perps", 60);
+    requireProviderPlace(request, "perps");
     const result = await placePerpsTrade(env.PROJECTION_DB, subject, account.address, perpsTradeSchema.parse(await readJsonBody(request)));
     return Response.json({ ...result, traceId }, { status: 201 });
   });

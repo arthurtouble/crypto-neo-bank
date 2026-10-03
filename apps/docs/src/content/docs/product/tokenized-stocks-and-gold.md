@@ -26,7 +26,7 @@ Aura identifies each one by its network and contract address, not its ticker.
 A Coinbase tokenized stock is a token on Base that tracks a US company's shares. It isn't a share in your name.
 
 - **One token isn't always one share.** For dividends and splits, Coinbase changes a multiplier instead of your token balance. Over time, one token can stand for more or less than one share.
-- **Who can hold them.** Coinbase says its tokenized stocks are only for people in eligible places outside the US. Check that this applies to you.
+- **Who can buy them.** Coinbase says its tokenized stocks are only for people in eligible places outside the US. Aura doesn't let you buy them from the United States or the United Kingdom. You can still sell or send ones you hold.
 - **Transfers can be blocked.** The issuer can block transfers to or from some addresses, such as sanctioned ones. A blocked send fails and nothing moves.
 - **Buying and selling.** You trade the token with other holders through Swap, at the market's price. Only Coinbase's approved partners can create or redeem tokens for real shares.
 

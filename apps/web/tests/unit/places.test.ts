@@ -2,8 +2,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { blockedPlace, isGatedPath, requestPlace } from "@/lib/legal/places";
 
 const served: string[] = [];
+const regions: Array<string | null> = [];
 vi.mock("vinext/server/app-router-entry", () => ({
-  default: { fetch: async (request: Request) => { served.push(new URL(request.url).pathname);
+  default: { fetch: async (request: Request) => { served.push(new URL(request.url).pathname); regions.push(request.headers.get("X-Aura-Region"));
     return new Response("<h1>page</h1>", { headers: { "Content-Type": "text/html", "Content-Security-Policy": "default-src 'self'" } }); } }
 }));
 vi.mock("@/lib/actions/recheck", () => ({ recheckOpenActions: vi.fn() }));
@@ -18,7 +19,7 @@ const from = (path: string, country?: string, regionCode?: string) => {
 };
 const worker = async () => (await import("../../worker/index")).default as unknown as { fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> };
 
-beforeEach(() => { served.length = 0; vi.spyOn(console, "log").mockImplementation(() => {}); });
+beforeEach(() => { served.length = 0; regions.length = 0; vi.spyOn(console, "log").mockImplementation(() => {}); });
 
 describe("sanctioned places", () => {
   it("blocks the listed countries and regions, and nothing else", () => {
@@ -66,5 +67,13 @@ describe("the web Worker's place check", () => {
       expect((await app.fetch(from(path, country), {}, {})).status, `${path} ${country}`).toBe(200);
     }
     expect(served).toEqual(["/app", "/api/overview", "/", "/api/health", "/app"]);
+  });
+
+  it("passes Cloudflare's region on to the app in a header, replacing any value the client sent", async () => {
+    const app = await worker();
+    const spoofed = new Request("https://aura.test/api/overview", { headers: { "CF-IPCountry": "CA", "X-Aura-Region": "ON" } });
+    const ontario = from("/api/overview", "CA", "ON");
+    for (const request of [spoofed, ontario]) expect((await app.fetch(request, {}, {})).status).toBe(200);
+    expect(regions).toEqual([null, "ON"]);
   });
 });

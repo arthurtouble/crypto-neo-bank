@@ -1,5 +1,6 @@
 import { env } from "cloudflare:workers";
 import { z } from "zod";
+import { requireProviderPlace } from "@/lib/legal/places";
 import { readJsonBody, route } from "@/lib/http/route";
 import { marketActor } from "@/lib/markets/guard";
 import { venueErrorResponse } from "@/lib/markets/http";
@@ -12,5 +13,6 @@ const schema = z.strictObject({ marketId: z.string().regex(/^\d{1,20}$/), outcom
 export const POST = route("predictions.buy", { invalid: "invalid_order", unavailable: "predictions_unavailable", onError: venueErrorResponse },
   async (request, { traceId }) => {
     const { subject, account } = await marketActor(env.PROJECTION_DB, request, "predictions", 60);
+    requireProviderPlace(request, "predictions");
     return Response.json({ ...await startPredictionBuy(env.PROJECTION_DB, subject, account, schema.parse(await readJsonBody(request))), traceId });
   });
