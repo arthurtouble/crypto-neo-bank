@@ -527,9 +527,18 @@ export type BookLevel = { price: string; size: string; orders: number };
 const levelSchema = z.object({ px: decimal, sz: decimal, n: z.number().int().nonnegative() });
 const bookSchema = z.object({ coin: z.string(), time: timeMs, levels: z.tuple([z.array(levelSchema).max(100), z.array(levelSchema).max(100)]) });
 
+/**
+ * How Hyperliquid groups book levels: prices rounded to `sigFigs` significant figures (2 to 5), and at 5, to a
+ * multiple of `mantissa` (2 or 5) in the last figure. Absent is full precision.
+ */
+export type BookGrouping = { sigFigs: 2 | 3 | 4 | 5; mantissa?: 2 | 5 };
+
 /** The order book: bids best (highest) first, asks best (lowest) first. */
-export async function l2Book(coin: string, options: InfoOptions = {}): Promise<{ bids: BookLevel[]; asks: BookLevel[]; time: number }> {
-  const book = await postInfo({ type: "l2Book", coin }, bookSchema, 200_000, options);
+export async function l2Book(coin: string, options: InfoOptions & { grouping?: BookGrouping } = {}): Promise<{ bids: BookLevel[]; asks: BookLevel[]; time: number }> {
+  const { grouping } = options;
+  if (grouping?.mantissa && grouping.sigFigs !== 5) throw new VenueError("hyperliquid", "invalid_request", "That grouping is not valid.", 400);
+  const body = grouping ? { type: "l2Book", coin, nSigFigs: grouping.sigFigs, ...(grouping.mantissa ? { mantissa: grouping.mantissa } : {}) } : { type: "l2Book", coin };
+  const book = await postInfo(body, bookSchema, 200_000, options);
   const level = ({ px, sz, n }: z.output<typeof levelSchema>): BookLevel => ({ price: px, size: sz, orders: n });
   return { bids: book.levels[0].map(level), asks: book.levels[1].map(level), time: book.time };
 }

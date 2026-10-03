@@ -5,7 +5,8 @@ import { localEdgeUrl } from "@/lib/testing/local-edge";
 export const RPC_BY_CHAIN: Record<number, readonly string[]> = {
   1: ["https://ethereum-rpc.publicnode.com"],
   10: ["https://mainnet.optimism.io"],
-  137: ["https://polygon-bor-rpc.publicnode.com"],
+  // publicnode refused Worker traffic on dev (3 October 2026), so dRPC goes first.
+  137: ["https://polygon.drpc.org", "https://polygon-bor-rpc.publicnode.com"],
   // publicnode refuses receipts without a token, so it is the last resort for Base.
   [BASE_CHAIN_ID]: ["https://mainnet.base.org", "https://base.drpc.org", "https://1rpc.io/base", "https://base-rpc.publicnode.com"],
   42161: ["https://arb1.arbitrum.io/rpc"]

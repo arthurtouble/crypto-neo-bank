@@ -215,11 +215,15 @@ export async function verifyAction(action: VerifiableAction, dependencies: Depen
         : { status: "pending", reason: "native_credit_below_minimum", ...evidence };
     }
   }
-  if (!source.final) return { status: "settling", reason: "finality", ...evidence };
   const delivery = action.effects.find((effect) => effect.type === "delivery");
+  // A CCTP fast transfer settles on Circle's attestation, before Base is final: once Circle has forwarded the burn and
+  // Hyperliquid's ledger shows the credit, the money has arrived whatever happens to the source block, so it doesn't wait.
+  if (delivery?.tool === "cctp" && delivery.destinationChainId === HYPERCORE_CHAIN_ID) {
+    const verdict = await verifyHyperliquidCctp(action, delivery, dependencies.cctpDeposit ?? verifyCctpDeposit);
+    return !source.final && verdict.status === "failed" ? { status: "settling", reason: "finality" } : verdict;
+  }
+  if (!source.final) return { status: "settling", reason: "finality", ...evidence };
   if (!delivery) return { status: "confirmed", ...evidence };
-  if (delivery.tool === "cctp" && delivery.destinationChainId === HYPERCORE_CHAIN_ID)
-    return verifyHyperliquidCctp(action, delivery, dependencies.cctpDeposit ?? verifyCctpDeposit);
   return verifyDelivery(action, delivery, observe, dependencies.lifiStatus ?? readLifiTransferStatus, dependencies.nativeCredit ?? observeNativeCredit,
     dependencies.hyperliquidCredit ?? observeHyperliquidCredit);
 }
