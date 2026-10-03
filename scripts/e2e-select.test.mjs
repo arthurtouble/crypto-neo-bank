@@ -12,6 +12,11 @@ test("a change to one feature runs its spec and the sign-in smoke test", () => {
   assert.deepEqual(result.specs, ["send", "sign-in-overview"]);
 });
 
+test("a Markets screen or route runs the markets spec", () => {
+  assert.deepEqual(selectSpecs(["apps/web/src/components/perps-sheets.tsx", "apps/web/src/app/markets.css"]).specs, ["markets", "sign-in-overview"]);
+  assert.deepEqual(selectSpecs(["apps/web/src/app/api/predictions/history/route.ts"]).specs, ["markets", "sign-in-overview"]);
+});
+
 test("a changed spec runs itself", () => {
   assert.deepEqual(selectSpecs(["apps/web/tests/e2e/cards.spec.ts"]).specs, ["cards"]);
 });

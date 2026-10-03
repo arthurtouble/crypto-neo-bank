@@ -19,7 +19,8 @@ describe("Aura product map", () => {
     expect(legacySectionDestination("borrow")).toBe("/app/earn");
     // Invest was cut: stocks, gold, and crypto are bought in Swap.
     expect(legacySectionDestination("invest")).toBe("/app/swap");
-    expect(legacySectionDestination("markets")).toBe("/app/swap");
+    // Markets is its own section again (perps and predictions), not an old link.
+    expect(legacySectionDestination("markets")).toBeNull();
     expect(legacySectionDestination("operations")).toBeNull();
   });
 });

@@ -1,0 +1,220 @@
+/*
+ * Markets: perps on Hyperliquid and predictions on Polymarket, from the design tokens only. Classes are prefixed mk and
+ * build on the mx parts in money.css. Desktop: cards and lists, the order sheet as a centred dialog. Phone: one column,
+ * a keypad for amounts, and the order sheet as a bottom sheet (mxDialog). Sheets render outside .appFrame, so the form
+ * parts they use are restated under .mkSheet.
+ */
+
+.appFrame .mkPage { gap: var(--gap-section); }
+.appFrame .mkSection { display: grid; gap: var(--gap-section); min-width: 0; }
+.appFrame .mkViews { justify-self: start; }
+.appFrame .mkRisk { max-width: 72ch; }
+.appFrame .mkCardHead { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; }
+.appFrame .mkCardHead h2 { font-size: var(--text-title-3-size); line-height: var(--text-title-3-line); font-weight: var(--weight-semibold); }
+.appFrame .mkSource, .mkSheet .mkSource { color: var(--color-text-tertiary); font-size: var(--text-caption-size); line-height: var(--text-caption-line); }
+.appFrame .mkSubhead { margin: var(--space-2) 0 0; font-size: var(--text-title-3-size); line-height: var(--text-title-3-line); font-weight: var(--weight-semibold); }
+.appFrame .mkUp, .mkSheet .mkUp { color: var(--color-positive); }
+.appFrame .mkFlat { color: var(--color-text-secondary); }
+
+/* Segmented control and list tabs */
+.mkSegmented { display: inline-flex; gap: 2px; padding: 2px; border-radius: var(--radius-md); background: var(--color-muted); }
+.mkSegmented button { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: var(--space-1); height: 32px; padding: 0 var(--space-3); border: 0; border-radius: var(--radius-sm); background: none; color: var(--color-text-secondary); font: var(--weight-medium) var(--text-body-size) / 1 var(--font-sans); white-space: nowrap; cursor: pointer; transition: background var(--duration-fast) var(--ease-enter); }
+.mkSegmented button[aria-checked="true"] { background: var(--color-surface); color: var(--color-text); box-shadow: var(--shadow-1); }
+.mkSegmented button:disabled { opacity: .45; cursor: not-allowed; }
+.mkSegmented button:focus-visible, .mkChip:focus-visible, .mkKeypad button:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.appFrame .mkListTabs { display: flex; gap: var(--space-4); border-bottom: 1px solid var(--color-line); }
+.appFrame .mkListTabs [role="tab"] { display: inline-flex; align-items: center; gap: var(--space-1); height: 36px; margin-bottom: -1px; padding: 0; border: 0; border-bottom: 2px solid transparent; background: none; color: var(--color-text-secondary); font: var(--weight-medium) var(--text-body-size) / 1 var(--font-sans); cursor: pointer; }
+.appFrame .mkListTabs [role="tab"][aria-selected="true"] { border-bottom-color: var(--color-accent); color: var(--color-text); }
+.appFrame .mkCount { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: var(--radius-pill); background: var(--color-muted); color: var(--color-text-secondary); font-size: var(--text-caption-size); }
+
+/* Chips: amount shortcuts and prediction categories */
+.mkChip { display: inline-flex; align-items: center; height: 30px; padding: 0 var(--space-3); border: 1px solid var(--color-line); border-radius: var(--radius-pill); background: var(--color-surface); color: var(--color-text-secondary); font: var(--weight-medium) var(--text-small-size) / 1 var(--font-sans); white-space: nowrap; cursor: pointer; transition: background var(--duration-fast) var(--ease-enter); }
+.mkChip:hover { background: var(--color-hover); }
+.mkChip[aria-pressed="true"] { background: var(--color-text); border-color: var(--color-text); color: var(--color-canvas); }
+.mkChip:disabled { opacity: .45; cursor: not-allowed; }
+.appFrame .mkChips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.appFrame .mkBadge, .mkSheet .mkBadge { display: inline-flex; align-items: center; height: 20px; padding: 0 6px; border-radius: var(--radius-pill); background: var(--color-muted); color: var(--color-text-secondary); font-size: var(--text-caption-size); font-weight: var(--weight-medium); vertical-align: middle; }
+.appFrame .mkBadgeLong { background: var(--color-positive-soft); color: var(--color-positive); }
+
+/* Accounts: the value, what's available, Add money and Withdraw */
+.appFrame .mkHero { font-size: var(--text-amount-size); line-height: var(--text-amount-line); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-tight); }
+.appFrame .mkHero small { font-size: var(--text-body-size); font-weight: var(--weight-regular); letter-spacing: 0; }
+.appFrame .mkAvailable { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; padding-top: var(--space-3); border-top: 1px solid var(--color-line); }
+.appFrame .mkAvailable > span:first-child { display: grid; }
+.appFrame .mkAvailable strong { font-weight: var(--weight-semibold); }
+.appFrame .mkAvailableActions { display: flex; gap: var(--space-2); }
+.appFrame .mkAccount .appButton { justify-self: auto; }
+
+/* Rows: markets, positions, orders, history */
+.appFrame .mkRows { margin: 0; padding: 0; list-style: none; display: grid; }
+.appFrame .mkRows > li + li { border-top: 1px solid var(--color-line); }
+.appFrame .mkRow { display: flex; align-items: center; gap: var(--space-3); min-height: var(--row-height); padding: var(--space-2) 0; color: var(--color-text); text-decoration: none; }
+.appFrame a.mkRow:hover { background: var(--color-hover); }
+.appFrame .mkPosition { flex-wrap: wrap; }
+.appFrame .mkTicker { font: var(--weight-semibold) 10px / 1 var(--font-sans); }
+.appFrame .mkRowMain { flex: 1; min-width: 0; display: grid; }
+.appFrame .mkRowMain strong { font-weight: var(--weight-medium); overflow-wrap: anywhere; }
+.appFrame .mkRowEnd { display: grid; justify-items: end; text-align: right; }
+.appFrame .mkRowEnd strong { font-weight: var(--weight-medium); }
+.appFrame .mkRowActions { display: flex; gap: var(--space-2); }
+.appFrame .mkRowActions .appButton { height: 32px; padding: 0 var(--space-3); }
+.appFrame .mkEmptyLine { padding: var(--space-3) 0; }
+.appFrame .mkActivity { gap: var(--space-2); }
+.appFrame .mkSearch { display: flex; align-items: center; gap: var(--space-2); height: var(--input-height); padding: 0 var(--space-3); border: 1px solid var(--color-line-strong); border-radius: var(--radius-sm); background: var(--color-surface); color: var(--color-text-secondary); }
+.appFrame .mkSearch:focus-within { outline: 2px solid var(--color-focus); outline-offset: 1px; }
+.appFrame .mkSearch input { flex: 1; min-width: 0; height: 100%; border: 0; background: none; color: var(--color-text); font: var(--weight-regular) var(--text-body-size) / 1 var(--font-sans); outline: none; }
+
+/* A market's page */
+.appFrame .mkBack { justify-self: start; display: inline-flex; align-items: center; gap: var(--space-1); color: var(--color-accent); font-weight: var(--weight-medium); text-decoration: none; }
+.appFrame .mkMarketHead { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); }
+.appFrame .mkQuote { display: grid; gap: var(--space-1); }
+.appFrame .mkQuoteLine { color: var(--color-text-secondary); }
+.appFrame .mkColumns { display: grid; grid-template-columns: minmax(0, 1fr) var(--side-column); gap: var(--gap-section); align-items: start; }
+.appFrame .mkTradeBar { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); max-width: 560px; }
+.appFrame .mkEmpty { display: grid; gap: var(--space-2); justify-items: center; padding: var(--space-9) var(--space-4); border: 1px solid var(--color-line); border-radius: var(--radius-lg); background: var(--color-surface); text-align: center; }
+.appFrame .mkEmpty h2 { font-size: var(--text-title-3-size); line-height: var(--text-title-3-line); font-weight: var(--weight-semibold); }
+.appFrame .mkEmpty p { color: var(--color-text-secondary); }
+
+/* Predictions: events, outcomes, odds */
+.appFrame .mkEvents { display: grid; gap: var(--space-4); }
+.appFrame .mkEventGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--space-4); align-items: start; }
+.appFrame .mkEvent { gap: var(--space-3); }
+.appFrame .mkEventHead { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-2); }
+.appFrame .mkEventHead h3 { margin: 0; font-size: var(--text-title-3-size); line-height: var(--text-title-3-line); font-weight: var(--weight-semibold); }
+.appFrame .mkEventHead a { color: var(--color-text); text-decoration: none; }
+.appFrame .mkOutcomeButtons { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
+.appFrame .mkOutcome { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); min-height: var(--control-height-lg); padding: 0 var(--space-3); border: 1px solid var(--color-line-strong); border-radius: var(--radius-sm); color: var(--color-text); font-weight: var(--weight-medium); text-decoration: none; }
+.appFrame .mkOutcome:hover { background: var(--color-hover); }
+.appFrame .mkOutcome strong { font-weight: var(--weight-semibold); }
+.appFrame .mkEventMarkets { margin: 0; padding: 0; list-style: none; display: grid; }
+.appFrame .mkEventMarkets a { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); min-height: 40px; color: var(--color-text); text-decoration: none; }
+.appFrame .mkEventMarkets li + li { border-top: 1px solid var(--color-line); }
+.appFrame .mkEventMarkets a:hover { color: var(--color-accent); }
+.appFrame .mkEventMarkets strong { flex: none; font-weight: var(--weight-semibold); }
+.appFrame .mkEventFoot { color: var(--color-text-secondary); font-size: var(--text-small-size); }
+.appFrame .mkOdds .mkCardHead { align-items: center; }
+.appFrame .mkChart { margin: 0; display: grid; gap: var(--space-1); }
+.appFrame .mkChart svg { width: 100%; height: 180px; touch-action: pan-y; }
+.appFrame .mkChartGrid { stroke: var(--color-line); stroke-width: 1; }
+.appFrame .mkChartLine { fill: none; stroke: var(--color-accent); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.appFrame .mkChartCursor { stroke: var(--color-line-strong); stroke-width: 1; }
+.appFrame .mkChartCaption { color: var(--color-text-secondary); font-size: var(--text-small-size); }
+.appFrame .mkChartCaption strong { color: var(--color-text); font-weight: var(--weight-semibold); }
+
+/* The order and money sheets */
+.mkSheet { width: min(460px, calc(100vw - 2 * var(--space-4))); overflow-y: auto; }
+.mkSheet .mkSheetBody { display: grid; gap: var(--space-4); }
+.mkSheet .mxHint, .mkSheet small { color: var(--color-text-secondary); font-size: var(--text-small-size); line-height: var(--text-small-line); margin: 0; }
+.mkSheet .mkLabel { color: var(--color-text-secondary); font-size: var(--text-small-size); font-weight: var(--weight-medium); }
+.mkSheet .mkLabel strong { color: var(--color-text); }
+.mkSheet .mkAmount { display: grid; gap: var(--space-2); }
+.mkSheet .mkAmountField { display: grid; gap: var(--space-1); }
+.mkSheet .mkAmountInput { display: flex; align-items: center; gap: var(--space-1); height: 56px; padding: 0 var(--space-3); border: 1px solid var(--color-line-strong); border-radius: var(--radius-md); background: var(--color-surface); font-size: var(--text-amount-size); font-weight: var(--weight-semibold); }
+.mkSheet .mkAmountInput:focus-within { border-color: var(--color-focus); box-shadow: 0 0 0 1px var(--color-focus); }
+.mkSheet .mkAmountInput input { flex: 1; min-width: 0; height: 100%; padding: 0; border: 0; background: none; color: var(--color-text); font: var(--weight-semibold) var(--text-amount-size) / var(--text-amount-line) var(--font-sans); letter-spacing: var(--tracking-tight); font-variant-numeric: tabular-nums; outline: none; }
+.mkSheet .mkAmountInput input[aria-invalid="true"] { color: var(--color-negative); }
+.mkSheet .mkShares { display: flex; gap: var(--space-2); }
+.mkSheet .mkKeypad { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-1); }
+.mkSheet .mkKeypad button { height: 48px; display: grid; place-items: center; border: 0; border-radius: var(--radius-md); background: none; color: var(--color-text); font: var(--weight-medium) var(--text-title-2-size) / 1 var(--font-sans); cursor: pointer; }
+.mkSheet .mkKeypad button:active { background: var(--color-hover); }
+.mkSheet .mkKeypad svg { width: 20px; height: 20px; }
+.mkSheet .mkPayWith { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3); border: 1px solid var(--color-line); border-radius: var(--radius-md); }
+.mkSheet .mkPayToken { width: 32px; height: 32px; flex: none; display: grid; place-items: center; border-radius: var(--radius-pill); background: var(--color-muted); color: var(--color-text-secondary); font-weight: var(--weight-semibold); }
+.mkSheet .mkPayText { flex: 1; min-width: 0; display: grid; }
+.mkSheet .mkPayText strong, .mkSheet .mkPayAmount { font-weight: var(--weight-medium); }
+.mkSheet .mkChoices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
+.mkSheet .mkChoices .mkSegmented, .mkSheet .mkOutcomes { display: flex; }
+.mkSheet .mkOutcomes button { height: var(--control-height-lg); }
+.mkSheet .mkOutcomes button span { color: var(--color-text-secondary); }
+.mkSheet .mkLeverage { display: grid; gap: var(--space-1); }
+.mkSheet .mkLeverage input { width: 100%; accent-color: var(--color-accent); }
+.mkSheet .mkLeverageEnds { display: flex; justify-content: space-between; color: var(--color-text-tertiary); font-size: var(--text-caption-size); }
+.mkSheet .mkSwitchRow { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); cursor: pointer; }
+.mkSheet .mkSwitchRow > span { display: grid; }
+.mkSheet .mkSwitchRow strong { font-weight: var(--weight-medium); }
+.mkSheet .appSwitch { appearance: none; flex: none; position: relative; width: 40px; height: 24px; margin: 0; border: 1px solid var(--color-line-strong); border-radius: var(--radius-pill); background: var(--color-muted); cursor: pointer; transition: background var(--duration-fast) var(--ease-enter); }
+.mkSheet .appSwitch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: var(--color-surface); box-shadow: var(--shadow-1); transition: transform var(--duration-fast) var(--ease-enter); }
+.mkSheet .appSwitch:checked { border-color: var(--color-accent); background: var(--color-accent); }
+.mkSheet .appSwitch:checked::after { transform: translateX(16px); }
+.mkSheet .mkPayout { padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); background: var(--color-positive-soft); margin: 0; }
+.mkSheet .mkPayout strong { color: var(--color-positive); font-weight: var(--weight-semibold); }
+.mkSheet .mkPayout span { color: var(--color-text-secondary); }
+.mkSheet .mxField { display: grid; gap: 6px; color: var(--color-text-secondary); font-size: var(--text-small-size); font-weight: var(--weight-medium); }
+.mkSheet .mxField input { width: 100%; height: var(--input-height); padding: 0 var(--space-3); border: 1px solid var(--color-line-strong); border-radius: var(--radius-sm); background: var(--color-surface); color: var(--color-text); font: var(--weight-regular) var(--text-body-size) / 1 var(--font-sans); font-variant-numeric: tabular-nums; }
+.mkSheet .mxField input:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; border-color: var(--color-focus); }
+.mkSheet .mxFieldRow { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
+.mkSheet .mxAmountWithMax { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-2); align-items: end; }
+.mkSheet .mxMaxButton { height: var(--input-height); }
+.mkSheet .mxFieldError { margin: 0; color: var(--color-negative); font-size: var(--text-small-size); }
+.mkSheet .mxSummary { margin: 0; display: grid; border-top: 1px solid var(--color-line); }
+.mkSheet .mxSummary > div { display: flex; justify-content: space-between; align-items: center; gap: var(--space-4); min-height: 40px; padding: var(--space-2) 0; border-bottom: 1px solid var(--color-line); }
+.mkSheet .mxSummary dt { color: var(--color-text-secondary); }
+.mkSheet .mxSummary dd { margin: 0; text-align: right; font-weight: var(--weight-medium); overflow-wrap: anywhere; }
+.mkSheet .appUnavailable { color: var(--color-warning); }
+.mkSheet .appButton svg { width: 16px; height: 16px; }
+
+/* A trade's steps, in place: done in positive, the current one in the accent, a failure in words */
+.mkFlow { display: grid; gap: var(--space-3); }
+.mkFlow ol { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--space-3); }
+.mkFlowStep { display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: var(--space-3); align-items: start; color: var(--color-text-tertiary); }
+.mkFlowStep i { width: 24px; height: 24px; display: grid; place-items: center; border: 1px solid var(--color-line-strong); border-radius: 50%; font-style: normal; }
+.mkFlowStep i svg { width: 14px; height: 14px; }
+.mkFlowStep > span { display: grid; }
+.mkFlowStep strong { font-weight: var(--weight-medium); }
+.mkFlowStep.is-done { color: var(--color-text-secondary); }
+.mkFlowStep.is-done i { border-color: var(--color-positive); background: var(--color-positive); color: var(--color-on-accent); }
+.mkFlowStep.is-active { color: var(--color-text); }
+.mkFlowStep.is-active i { border-color: var(--color-accent); color: var(--color-accent); }
+.mkFlowStep.is-failed { color: var(--color-text); }
+.mkFlowStep.is-failed i { border-color: var(--color-negative); background: var(--color-negative); color: var(--color-on-accent); }
+.mkFlowDone, .mkFlowFailed { margin: 0; padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); font-size: var(--text-small-size); line-height: var(--text-small-line); }
+.mkFlowDone { background: var(--color-positive-soft); }
+.mkFlowDone strong { font-weight: var(--weight-semibold); }
+.mkFlowFailed { background: var(--color-negative-soft); color: var(--color-text); }
+.mkSheet .transactionProgress { display: grid; gap: var(--space-2); padding: var(--space-3); border: 1px solid var(--color-line); border-radius: var(--radius-md); background: var(--color-surface); font-size: var(--text-small-size); }
+.mkSheet .transactionProgress.complete { border-color: var(--color-positive); background: var(--color-positive-soft); }
+.mkSheet .transactionProgress.failed { border-color: var(--color-negative); background: var(--color-negative-soft); }
+.mkSheet .transactionProgressHeadline { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: var(--space-2); align-items: start; }
+.mkSheet .transactionProgressHeadline strong { display: block; font-weight: var(--weight-semibold); }
+.mkSheet .transactionProgressHeadline svg { width: 14px; height: 14px; }
+.mkSheet .transactionSteps { display: none; }
+.mkSheet .transactionLinks { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+.mkSheet .transactionLinks a { color: var(--color-accent); font-weight: var(--weight-medium); text-decoration: none; }
+.mkSheet .transactionLinks svg { width: 12px; height: 12px; }
+.mkSheet .transactionFailureHint { display: flex; align-items: center; gap: 6px; color: var(--color-negative); }
+
+/* Tablet: the side column moves below */
+@media (max-width: 1023px) {
+  .appFrame .mkColumns { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Phone */
+@media (max-width: 767px) {
+  .appFrame .mkViews { justify-self: stretch; display: flex; }
+  .appFrame .mkViews button { height: var(--touch-min); }
+  .appFrame .mkChips { flex-wrap: nowrap; overflow-x: auto; margin: 0 calc(-1 * var(--page-pad-x)); padding: 0 var(--page-pad-x); scrollbar-width: none; }
+  .appFrame .mkTradeBar { max-width: none; }
+  .appFrame .mkAvailableActions { width: 100%; }
+  .appFrame .mkAvailableActions .appButton { flex: 1; height: var(--control-height-lg); }
+  .appFrame .mkRowActions { width: 100%; }
+  .appFrame .mkRowActions .appButton { flex: 1; height: var(--touch-min); }
+  .appFrame .mkSearch input { font-size: var(--text-input-phone); }
+  .appFrame .mkEventGrid { grid-template-columns: minmax(0, 1fr); }
+  .mkSheet { width: 100%; }
+  .mkSheet .mxField input { font-size: var(--text-input-phone); height: var(--input-height); }
+  .mkSheet .mkAmountInput { height: 64px; justify-content: center; border: 0; font-size: var(--text-amount-hero-size); }
+  .mkSheet .mkAmountInput:focus-within { box-shadow: none; }
+  .mkSheet .mkAmountInput input { flex: 0 1 auto; width: 6ch; font-size: var(--text-amount-hero-size); line-height: var(--text-amount-hero-line); text-align: left; }
+  .mkSheet .mkShares { justify-content: center; }
+  .mkSheet .mxFieldRow { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Touch targets: at least 44 × 44px on the phone and other touch screens */
+@media (max-width: 767px), (pointer: coarse) {
+  .mkChip, .mkSegmented button { min-height: var(--touch-min); }
+  .appFrame .mkListTabs [role="tab"] { min-height: var(--touch-min); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mkSegmented button, .mkChip, .mkSheet .appSwitch, .mkSheet .appSwitch::after { transition: none; }
+}

@@ -28,7 +28,7 @@ export const navigation = [
 
 const legacy: Record<string, string> = {
   transfers: "/app/deposit", assets: "/app", exchange: "/app/swap",
-  markets: "/app/swap", invest: "/app/swap", card: "/app/cards", activity: "/app/transactions",
+  invest: "/app/swap", card: "/app/cards", activity: "/app/transactions",
   goals: "/app", benefits: "/app/cards", rewards: "/app/cards", concierge: "/app/support",
   security: "/app/settings", status: "/app/support", borrow: "/app/earn"
 };

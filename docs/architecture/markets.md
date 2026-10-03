@@ -37,6 +37,16 @@ Markets include Hyperliquid's own and the HIP-3 dexes margined in USDC (stock pe
 
 `/events`, `/up-or-down`, `/markets/[id]`, and `/history` read Polymarket's public data. `/markets/[id]` takes a Gamma market id or a market slug, since Polymarket's positions name their market by slug. Sports and esports are filtered twice: Gamma excludes the Sports tag, then every event and market is checked again for sports and esports tags, game IDs, and team IDs (`isSports`). A sports market answers as not found.
 
+## Screens
+
+`/app/markets` shows Perps and Predictions as a segmented control (`?view=predictions` opens the second). `/app/markets/perps/[coin]` is a perp's page (a stock perp's coin is URL-encoded, such as `xyz%3ASPCX`, and shown without its dex), and `/app/markets/predictions/[id]` a prediction market's, by Gamma id or slug. Components are in `apps/web/src/components/` (`markets-*.ts(x)`, `perps-*.tsx`, `prediction*-*.tsx`), pure helpers in `lib/markets/view.ts`, and styles in `src/app/markets.css` (`mk`).
+
+- **One tap.** The order sheet runs every step the customer still needs, in place: if the perps balance is short, a deposit of the shortfall plus $1 (at least the $6 minimum), waited on until the action settles; then setup and its one passkey signature if the trading key isn't approved; then the trade. Predictions does the same: each setup step until `ready`, a deposit of the shortfall if pUSD cash is short (raised to the bridge's minimum when it refuses a smaller one), a wait until the cash shows on Polymarket, then the buy, signed with the passkey and posted to `/signatures`. A cancelled passkey stops the steps and says nothing more was sent.
+- **Reads.** Each panel shows its source and read time. A failed read shows as unavailable, never as the last value. With a switch off, the API answers `feature_unavailable` and the page says the area isn't available yet.
+- **Guests** see labelled example markets and accounts (`lib/example/markets.ts`) and sign in to trade.
+- **Prices.** A buy is priced at the best ask, else the midpoint. The order sheet's liquidation price comes from `/api/perps/trade/preview`, never the browser.
+- Markets isn't in the app's navigation yet: the shell's icon map needs a `Markets` entry first. The old `/app/markets` redirect to Swap is gone.
+
 ## Configuration
 
 - `MARKETS_CREDENTIAL_KEY` (secret): 32 random bytes, base64.
@@ -48,3 +58,5 @@ Markets include Hyperliquid's own and the HIP-3 dexes margined in USDC (stock pe
 - Polymarket session keys, so an order needs no passkey. They need Polymarket to approve the builder key.
 - Live checks on dev with real funds. The migration and secrets are on dev (3 October 2026); the code reaches dev when this merges. Signing was checked against Hyperliquid's live API with throwaway keys (its errors named exactly the signing address), and the CCTP burn was simulated on Base; fills, margin moves, and a real deposit are not yet checked.
 - The fee estimate assumes a market order pays the taker rate and that stock markets charge double; a dex in Hyperliquid's growth mode charges less.
+- A navigation entry for Markets (see Screens).
+- The Culture category reads Polymarket's `pop-culture` tag, which isn't yet checked against live Gamma data.

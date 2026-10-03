@@ -8,6 +8,7 @@
 
 import { createServer } from "node:http";
 import { createPrivateKey, generateKeyPairSync, randomBytes, randomUUID, sign } from "node:crypto";
+import { handleMarkets, initialMarkets } from "./fake-markets.mjs";
 import { decodeFunctionData, encodeAbiParameters, encodeEventTopics, encodeFunctionData, encodeFunctionResult, maxUint256, parseAbi, parseAbiItem } from "viem";
 
 /** The Privy user who may use the operations API in tests (feature switches). */
@@ -129,7 +130,9 @@ const initialState = () => ({
   deliveries: {},
   approvals: {},
   // Every transaction a connected wallet sent, for tests to inspect.
-  sent: []
+  sent: [],
+  // Hyperliquid and Polymarket, read-only (fake-markets.mjs).
+  markets: initialMarkets()
 });
 
 export function startFakeEdge({ port }) {
@@ -837,6 +840,9 @@ export function startFakeEdge({ port }) {
       return send(201, {});
     }
 
+    // Hyperliquid and Polymarket.
+    if (handleMarkets({ url, method: req.method, body, state, send })) return;
+
     // Kraken.
     if (url.pathname === "/kraken/0/public/OHLC") return down("kraken") ? send(503, { error: ["EService:Unavailable"] }) : send(200, kraken(url));
 
@@ -877,7 +883,14 @@ export function startFakeEdge({ port }) {
       STRIPE_PUBLISHABLE_KEY: "pk_test_e2e",
       BRIDGE_CARDS_SPENDER: BRIDGE.cardsSpender,
       INTERCOM_APP_ID: "e2eapp",
-      INTERCOM_IDENTITY_SECRET: "e2e-intercom-identity-secret"
+      INTERCOM_IDENTITY_SECRET: "e2e-intercom-identity-secret",
+      HYPERLIQUID_API_URL: `http://127.0.0.1:${port}/hyperliquid`,
+      POLYMARKET_GAMMA_URL: `http://127.0.0.1:${port}/polymarket/gamma`,
+      POLYMARKET_CLOB_URL: `http://127.0.0.1:${port}/polymarket/clob`,
+      POLYMARKET_DATA_URL: `http://127.0.0.1:${port}/polymarket/data`,
+      POLYMARKET_RELAYER_URL: `http://127.0.0.1:${port}/polymarket/relayer`,
+      POLYMARKET_BRIDGE_URL: `http://127.0.0.1:${port}/polymarket/bridge`,
+      POLYMARKET_WEB_URL: `http://127.0.0.1:${port}/polymarket/web`
     },
     url: `http://127.0.0.1:${port}`,
     close: () => new Promise((done) => server.close(done))
