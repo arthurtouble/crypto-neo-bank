@@ -104,7 +104,7 @@ test("on the phone, every section scrolls far enough that nothing tappable is le
 });
 
 test("Invest was cut: old links open Swap, where stocks, gold, and crypto are bought", async ({ page }) => {
-  // /app/markets is its own section again (perps and predictions; markets.spec.ts).
+  // /app/markets now redirects to Perps or Predictions (perps.spec.ts).
   for (const path of ["/app/invest"]) {
     await page.goto(path);
     await expect(page).toHaveURL(/\/app\/swap$/);
