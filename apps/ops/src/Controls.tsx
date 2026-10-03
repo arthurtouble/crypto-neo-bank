@@ -8,7 +8,8 @@ type Asset = { id: string; symbol: string; name: string; chainId: number; paused
 
 const flagText: Record<string, string> = {
   direct_transfers: "Send", swaps: "Swap", cross_chain: "Other networks (send, swap, deposit)", defi_actions: "Earn",
-  fiat_accounts: "Bank (Bridge)", payment_cards: "Cards (Stripe with Bridge)", card_wallets: "Apple Pay and Google Pay", card_deposits: "Card deposits (Privy)"
+  fiat_accounts: "Bank (Bridge)", payment_cards: "Cards (Stripe with Bridge)", card_wallets: "Apple Pay and Google Pay", card_deposits: "Card deposits (Privy)",
+  perps: "Perps (Hyperliquid)", predictions: "Predictions (Polymarket)"
 };
 const networks: Record<number, string> = { 1: "Ethereum", 8453: "Base", 10: "Optimism", 137: "Polygon", 42161: "Arbitrum" };
 

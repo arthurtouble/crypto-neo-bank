@@ -1,2 +1,4 @@
 # Empty LIFI_API_KEY= in .env.example; gitleaks read the next line as its value.
 d0d5bc7c8660298f23229df2f22010d7f84098ab:apps/web/.env.example:generic-api-key:23
+# A test credential literal in the first markets commit, replaced by btoa(...) in the next one.
+999c476551b81b990550eb9c5f7c9eb1b18120e8:apps/web/tests/unit/polymarket-account.test.ts:generic-api-key:15

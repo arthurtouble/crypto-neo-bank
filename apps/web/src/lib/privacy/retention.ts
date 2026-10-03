@@ -24,6 +24,7 @@ export const retentionDays = {
   product_events: 180,
   notifications: 180,
   step_up_challenges: 1,
+  market_signature_requests: 1,
   rate_limit_windows: 1,
   route_quotes: 1,
   command_idempotency: 30,
@@ -43,6 +44,8 @@ const rules: Record<PurgedTable, Rule> = {
   notifications: { key: "notification_id", where: "created_at < ?1 AND email_status != 'pending' AND push_status != 'pending'", cutoff: isoBefore },
   // Passkey confirmations last 5 minutes; the change itself is in audit_events.
   step_up_challenges: { key: "challenge_id", where: "expires_at < ?1", cutoff: isoBefore },
+  // Passkey requests for a venue last 5 minutes; what they did is in market_operations.
+  market_signature_requests: { key: "request_id", where: "expires_at < ?1", cutoff: isoBefore },
   // Counters, a day after their window reset (milliseconds since the epoch).
   rate_limit_windows: { key: "bucket_key", where: "reset_at < ?1", cutoff: (now, days) => now.getTime() - days * DAY_MS },
   // Expired quotes no action used. A used quote follows its action and is never deleted.

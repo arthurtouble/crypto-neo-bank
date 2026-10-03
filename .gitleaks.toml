@@ -3,5 +3,12 @@
 useDefault = true
 
 [allowlist]
-description = "D1 migration file names such as 0042_privacy_and_flag_vocabulary.sql are not secrets"
-regexes = ['''\d{4}_[a-z0-9_]+\.sql''']
+description = "Known non-secrets"
+regexes = [
+  # D1 migration file names such as 0042_privacy_and_flag_vocabulary.sql.
+  '''\d{4}_[a-z0-9_]+\.sql''',
+  # EVM addresses (contracts, tokens, test wallets) are public by definition.
+  '''^0x[0-9a-fA-F]{40}$''',
+  # Hyperliquid SDK (nktkas) published, never-funded test private key, used to reproduce its signing vectors.
+  '''^0x822e9959e022b78423eb653a62ea0020cd283e71a2a8133a6ff2aeffaf373cff$''',
+]

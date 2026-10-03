@@ -39,6 +39,7 @@ Each feature below stays switched off until it has been tested with real funds. 
 | Cashback and rewards | Not offered |
 | Card payments on Aura tag pages | Not available |
 | Borrowing | Not offered |
+| Markets | Built: perps on Hyperliquid and predictions on Polymarket, from accounts your wallet owns, with no Aura fee. Not switched on yet. See [markets](/product/markets/) |
 
 Seeing a feature in the app doesn't mean it's live. We won't offer a bank account or card until the partner, your country's rules, the terms, and our support for it are all in place. Aura doesn't give investment advice.
 

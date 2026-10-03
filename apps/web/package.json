@@ -25,6 +25,7 @@
     "@aurel/provider-projections": "workspace:*",
     "@block65/webcrypto-web-push": "2.0.0",
     "@coinbase/wallet-sdk": "4.3.2",
+    "@msgpack/msgpack": "3.1.3",
     "@privy-io/node": "^0.34.0",
     "@privy-io/react-auth": "3.45.0",
     "@privy-io/wagmi": "^4.0.17",
