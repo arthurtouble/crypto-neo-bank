@@ -1,6 +1,6 @@
 /*
  * Transactions and Insights (redesign area 10, journeys J12 to J14), from the design tokens only, on the money parts in
- * money.css. Classes prefixed tx (Transactions, receipt, export, full history) and in (Insights). The receipt uses the
+ * money.css. Classes prefixed tx (Transactions, receipt, export) and in (Insights). The receipt uses the
  * side panel from overview.css; filter chips are the Overview's.
  */
 
@@ -10,7 +10,7 @@
 
 
 /* Search, type chips, status */
-.appFrame .txFilters { display: grid; grid-template-columns: minmax(200px, 320px) minmax(0, 1fr) 160px; gap: var(--space-3); align-items: center; }
+.appFrame .txFilters { display: grid; grid-template-columns: minmax(180px, 260px) minmax(0, 1fr) 160px; gap: var(--space-3); align-items: center; }
 .appFrame .txSearch { display: flex; align-items: center; gap: var(--space-2); height: var(--input-height); padding: 0 var(--space-3); border: 1px solid var(--color-line-strong); border-radius: var(--radius-sm); background: var(--color-surface); color: var(--color-text-secondary); }
 .appFrame .txSearch:focus-within { border-color: var(--color-focus); box-shadow: 0 0 0 1px var(--color-focus); }
 .appFrame .txSearch svg { width: 16px; height: 16px; flex: none; }
@@ -20,13 +20,15 @@
 /* The list */
 .appFrame .txList { padding: 0; gap: 0; overflow: hidden; }
 .appFrame .txList > .appState, .appFrame .txList > .mxNote { margin: var(--space-4) var(--space-5); }
+.appFrame .txDay + .txDay { border-top: 1px solid var(--color-line); }
+.appFrame .txDay h2 { margin: 0; padding: var(--space-3) var(--space-5) var(--space-1); color: var(--color-text-secondary); font-size: var(--text-small-size); line-height: var(--text-small-line); font-weight: var(--weight-medium); }
 .appFrame .txRows { margin: 0; padding: 0; list-style: none; display: grid; }
 .appFrame .txRows li + li .txRow { border-top: 1px solid var(--color-line); }
 .appFrame .txRow { width: 100%; min-height: var(--row-height); display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; gap: var(--space-3); align-items: center; padding: var(--space-2) var(--space-5); border: 0; background: none; color: var(--color-text); font: inherit; text-align: left; cursor: pointer; }
 .appFrame .txRow:hover { background: var(--color-hover); }
 .appFrame .txRow:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; }
 .appFrame .txWhat, .appFrame .txAmount { display: grid; gap: 2px; min-width: 0; }
-.appFrame .txRow strong { display: block; font-size: var(--text-body-size); font-weight: var(--weight-medium); }
+.appFrame .txRow strong { display: block; overflow: hidden; font-size: var(--text-body-size); font-weight: var(--weight-medium); text-overflow: ellipsis; white-space: nowrap; }
 .appFrame .txRow small { display: block; overflow: hidden; color: var(--color-text-secondary); font-size: var(--text-small-size); text-overflow: ellipsis; white-space: nowrap; }
 .appFrame .txAmount { justify-items: end; text-align: right; }
 .appFrame .txAmount strong { white-space: nowrap; }
@@ -39,6 +41,9 @@
 .ovPanel .txReceiptAmount { display: grid; gap: var(--space-1); }
 .ovPanel .txReceiptAmount strong { font-size: var(--text-amount-size); line-height: var(--text-amount-line); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-tight); overflow-wrap: anywhere; }
 .ovPanel .ovPanelActions svg { width: 16px; height: 16px; }
+.ovPanel .txBankUpdates { display: grid; gap: var(--space-3); }
+.ovPanel .txBankUpdates h3 { margin: 0; font-size: var(--text-body-size); font-weight: var(--weight-semibold); }
+.ovPanel .txReceiptRef { margin: 0; color: var(--color-text-tertiary); font-size: var(--text-caption-size); line-height: var(--text-caption-line); }
 
 /* Export, in the dialog */
 .mxDialog .txExport { display: grid; border-top: 1px solid var(--color-line); }
@@ -49,17 +54,10 @@
 .mxDialog .txExportText { flex: 1; min-width: 0; display: grid; gap: 2px; }
 .mxDialog .txExportText strong { font-weight: var(--weight-medium); }
 .mxDialog .txExportText small { color: var(--color-text-secondary); font-size: var(--text-small-size); }
-.mxDialog .txExportText input { justify-self: start; height: 32px; padding: 0 var(--space-2); border: 1px solid var(--color-line-strong); border-radius: var(--radius-sm); background: var(--color-surface); color: var(--color-text); font: var(--weight-regular) var(--text-small-size) / 1 var(--font-sans); }
-.mxDialog .txExportText input:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; }
+.mxDialog .txExportText select { justify-self: start; height: 32px; padding: 0 var(--space-2); border: 1px solid var(--color-line-strong); border-radius: var(--radius-sm); background: var(--color-surface); color: var(--color-text); font: var(--weight-regular) var(--text-small-size) / 1 var(--font-sans); }
+.mxDialog .txExportText select:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; }
 .mxDialog .appIconButton svg, .mxDialog .appButton svg { width: 16px; height: 16px; }
 .txNoteError { margin: 0; padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); background: var(--color-negative-soft); font-size: var(--text-small-size); }
-
-/* Full history */
-.appFrame .txBack { justify-self: start; gap: var(--space-1); padding: 0; }
-.appFrame .txBack svg { width: 16px; height: 16px; }
-.appFrame .txDetailHead { display: grid; gap: var(--space-1); }
-.appFrame .txDetailHead h1 { margin: 0; font-size: var(--text-title-1-size); line-height: var(--text-title-1-line); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-tight); overflow-wrap: anywhere; }
-.appFrame .txDetail { max-width: 720px; }
 
 /* An action's steps: done in positive, current in accent, to come in line-strong */
 .actionJourney { margin: 0; padding: 0; display: grid; list-style: none; }
@@ -126,6 +124,8 @@
   .appFrame .txFilters { grid-template-columns: minmax(0, 1fr) 128px; }
   .appFrame .txSearch input { font-size: var(--text-input-phone); }
   .appFrame .txRow { padding-inline: var(--space-4); }
+  .appFrame .txDay h2 { padding-inline: var(--space-4); }
+  .appFrame .txChips { flex-wrap: wrap; overflow: visible; margin: 0; padding: 0; }
   .appFrame .txHead .appSegmented { width: 100%; }
   .appFrame .txHead .appSegmented button { flex: 1; height: 36px; }
   .appFrame .inStats dd { font-size: var(--text-title-1-size); line-height: var(--text-title-1-line); }

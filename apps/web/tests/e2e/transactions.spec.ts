@@ -88,13 +88,44 @@ test("money sent and money received both show, with who, where, and a link to th
   await page.getByPlaceholder("Search activity").fill("nothing like this");
   await expect(page.getByText("No matching activity")).toBeVisible();
 
-  // The sent transaction's full history, described the same way.
+  // The sent transaction's receipt carries its whole history, described the same way.
   await page.getByPlaceholder("Search activity").fill("");
+  await expect(page.getByRole("region", { name: "Today" })).toBeVisible();
   await rows(page).nth(1).click();
-  await dialog(page).getByRole("link", { name: "Full history" }).click();
-  await expect(page.getByRole("heading", { name: "Sent 10 USDC" })).toBeVisible({ timeout: 20_000 });
-  await expect(page.getByText("Completed").first()).toBeVisible();
-  await expect(page.getByText(FRIEND)).toBeVisible();
+  await expect(dialog(page).getByRole("heading", { name: "Sent" })).toBeVisible();
+  await expect(dialog(page)).toContainText("10 USDC");
+  await expect(dialog(page).getByText("Completed").first()).toBeVisible();
+  await expect(dialog(page)).toContainText(FRIEND);
+  await expect(dialog(page).getByRole("list", { name: "Progress" })).toContainText("Final on Base", { timeout: 20_000 });
+  const reference = (await dialog(page).locator(".txReceiptRef .mxBreak").textContent())!;
+  await closeReceipt(page);
+
+  // An old link to the Full history page opens the receipt instead.
+  await page.goto(`/app/transactions/${reference}`);
+  await expect(page).toHaveURL(/\/app\/transactions\?open=/);
+  await expect(dialog(page).getByRole("heading", { name: "Sent" })).toBeVisible({ timeout: 30_000 });
+});
+
+test("a failed action says why in plain words, and a card allowance moves no money", async ({ page }) => {
+  await signIn(page);
+  const sources = Object.fromEntries(["aura", "incoming", "aave", "card"].map((name) => [name, { status: "available", partial: false }]));
+  const at = new Date().toISOString();
+  // Only the list is stubbed here: an action that failed on the chain and a card allowance can't be made in one account by the fakes.
+  await page.route("**/api/activity", (route) => route.fulfill({ json: { observedAt: at, sources, entries: [
+    { id: "failed-swap", origin: "aura", type: "swap", status: "failed", createdAt: at, chainId: 8453, asset: "USDC", amount: "100", toAsset: "cbBTC", toAmount: "0.00104",
+      failureReason: "operation_reverted", source: "Aura" },
+    { id: "allowance", origin: "aura", type: "card_allowance", status: "completed", createdAt: at, chainId: 8453, asset: "USDC", amount: "500", counterparty: "Aura card", source: "Aura" }
+  ] } }));
+  await page.route("**/api/actions/*", (route) => route.fulfill({ status: 404, json: { error: "not_found" } }));
+  await page.goto("/app/transactions");
+  await expect(rows(page)).toHaveCount(2, { timeout: 30_000 });
+  await expect(rows(page).nth(1).locator(".txAmount strong")).toHaveCount(0);
+
+  await rows(page).nth(0).click();
+  await expect(dialog(page)).toContainText("100 USDC for 0.00104 cbBTC");
+  await expect(dialog(page)).toContainText("The network rejected it. Nothing moved.");
+  await expect(dialog(page)).not.toContainText("operation_reverted");
+  await expect(dialog(page)).toContainText("Nothing was sent.");
 });
 
 test("a deposit is completed once in a block, and final when Base finalizes it", async ({ page }) => {

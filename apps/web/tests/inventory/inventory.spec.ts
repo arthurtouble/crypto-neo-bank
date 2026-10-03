@@ -327,9 +327,6 @@ test("funded: every section, dialog, and flow step", async ({ page }, info) => {
     await settle(page, "Transactions");
     await page.locator(".activityRow").filter({ hasText: "12.5" }).first().click();
     await shot(page, info, "16-transactions--receipt-sent", { full: false });
-    await dialog.getByRole("link", { name: "Full history" }).click();
-    await settle(page);
-    await shot(page, info, "16-transactions--detail-page");
   });
 
   // Insights as a table.

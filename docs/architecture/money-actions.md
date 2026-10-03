@@ -97,7 +97,7 @@ A failed identity or effect check marks the action `failed` with a reason. An ac
 | `confirmed` | Completed, final |
 | `submitted`; `settling` cross-network (waiting for delivery) | Pending |
 | `failed` | Failed |
-| `expired` | Not confirmed (never failed) |
+| `expired` | Not sent (never failed) |
 
 The progress panel says "complete" at that point. Base's stages: in a block in about 2 seconds (near-zero reorg probability), batch posted to Ethereum in about 2 minutes, final in about 20 minutes ([Base transaction finality](https://docs.base.org/base-chain/network-information/transaction-finality)).
 

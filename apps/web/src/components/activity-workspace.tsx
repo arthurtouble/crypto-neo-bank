@@ -3,7 +3,7 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { useAuth } from "@/lib/client/auth";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowDownToLine, ArrowDownUp, ArrowLeft, ArrowUpFromLine, CandlestickChart, CirclePercent, CreditCard, Download, ExternalLink, FileSpreadsheet, FileText, LoaderCircle, Search, TrendingUp, X } from "lucide-react";
+import { ArrowDownToLine, ArrowDownUp, ArrowLeft, ArrowUpFromLine, CandlestickChart, CirclePercent, CreditCard, Download, ExternalLink, FileText, LoaderCircle, Search, SlidersHorizontal, TrendingUp, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -11,10 +11,11 @@ import { useApi } from "@/lib/client/api";
 import { explorerTx } from "@/lib/client/explorer";
 import type { ActionView } from "@/lib/client/use-action";
 import type { History } from "@/lib/activity/history";
-import { CATEGORIES, entriesCsv, entryAmount, entryCategory, entryLabel, statusLabel, STATUSES, type ActivityEntry } from "@/lib/activity/entries";
-import { networkName } from "@/lib/assets/registry";
+import { CATEGORIES, entriesCsv, entryCategory, entryLabel, HISTORY_LIMIT, statusLabel, STATUSES, type ActivityEntry } from "@/lib/activity/entries";
+import { BASE_CHAIN_ID, networkName } from "@/lib/assets/registry";
+import { failureText } from "@/lib/client/action-copy";
 import { exampleActivity } from "@/lib/example/data";
-import { formatDateTime, formatUsd, shortAddress } from "@/lib/format";
+import { formatDateTime, formatTime, formatToken, formatUsd, shortAddress } from "@/lib/format";
 import { ActionJourney, type ActionEvent } from "./action-journey";
 import { GuestBanner } from "./guest-banner";
 import { LoadingState, Notice } from "./states";
@@ -30,13 +31,96 @@ function ReceiptJourney({ id }: { id: string }) {
     refetchInterval: (query) => ["submitted", "settling"].includes(query.state.data?.action.status ?? "") ? 10_000 : false
   });
   if (!detail.data) return detail.isError ? null : <LoadingState label="Loading its progress" />;
-  return <ActionJourney action={detail.data.action} events={detail.data.events} />;
+  const bankUpdates = detail.data.events.filter((event) => event.type === "bank_payout");
+  return <>
+    <ActionJourney action={detail.data.action} events={detail.data.events} />
+    {bankUpdates.length > 0 && <section className="txBankUpdates" aria-labelledby="bank-updates"><h3 id="bank-updates">Bank updates</h3>
+      <ol className="actionJourney">{bankUpdates.map((event, index) => <li key={`${event.type}-${index}`} className="done"><i />
+        <span><strong>{bankStateText[String(event.evidence.state)] ?? "Bank update"}</strong><small>{formatDateTime(event.occurredAt)}</small></span></li>)}</ol>
+    </section>}
+  </>;
 }
 
+const bankStateText: Record<string, string> = { awaiting_funds: "Waiting for your USDC", funds_received: "Bridge received your USDC",
+  payment_submitted: "Sent to your bank", payment_processed: "Delivered to your bank", returned: "Returned by the bank", refunded: "Refunded" };
+
 const incoming = (entry: ActivityEntry) => entry.type === "received" || entry.type === "bank_deposit" || entry.type === "card_refund";
+/** Setting the card's allowance, or turning card spending off, moves no money. */
+const setting = (entry: ActivityEntry) => entry.type === "card_allowance" || entry.type === "card_spending_off";
+
+/** An amount as people read it: card amounts in dollars, tokens with at most 4 decimals ("20 USDC", "$8.50"). */
+function money(amount: string, asset?: string) {
+  return asset === "USD" ? formatUsd(amount) : formatToken(amount, asset);
+}
+
+/** The row's amount: what was paid, signed when money came in. A swap's other side is in the row's detail line. */
+function rowAmount(entry: ActivityEntry) {
+  if (!entry.amount || setting(entry)) return undefined;
+  return `${incoming(entry) ? "+" : ""}${money(entry.amount, entry.asset)}`;
+}
+
+/** The receipt's headline: the whole amount, both sides of a swap. */
+function receiptAmount(entry: ActivityEntry) {
+  if (!entry.amount) return statusLabel(entry.status);
+  if (entry.type === "card_spending_off") return "Off";
+  if (entry.type === "card_allowance") return `Up to ${money(entry.amount, entry.asset)}`;
+  const paid = money(entry.amount, entry.asset);
+  if (entry.toAmount && entry.toAsset && (entry.type === "swap" || entry.type === "bridge")) return `${paid} for ${money(entry.toAmount, entry.toAsset)}`;
+  return `${incoming(entry) ? "+" : ""}${paid}`;
+}
+
+/** Networks, only when the money isn't simply on Base: "Ethereum", "Base to Arbitrum". */
+function networks(entry: ActivityEntry) {
+  const to = entry.destinationChainId && entry.destinationChainId !== entry.chainId ? entry.destinationChainId : undefined;
+  if (entry.chainId === BASE_CHAIN_ID && !to) return undefined;
+  return to ? `${networkName(entry.chainId)} to ${networkName(to)}` : networkName(entry.chainId);
+}
+
+/** The row's detail line: time, who, and anything else that tells rows apart. */
+function rowDetail(entry: ActivityEntry) {
+  const where = networks(entry);
+  const who = entry.counterparty ? (entry.counterparty.startsWith("0x") ? shortAddress(entry.counterparty) : entry.counterparty) : undefined;
+  const swapped = (entry.type === "swap" || entry.type === "bridge") && entry.asset && entry.toAsset && entry.toAsset !== entry.asset ? `${entry.asset} to ${entry.toAsset}` : undefined;
+  return [formatTime(entry.createdAt), swapped, who, where && !who?.includes(where) ? where : undefined].filter(Boolean).join(" · ");
+}
+
+const dayFormat = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" });
+const dayYearFormat = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" });
+const dayKey = (date: Date) => `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+
+/** A day heading: "Today", "Yesterday", "Sep 29", or "Dec 20, 2025" in another year. */
+function dayLabel(iso: string, now: Date) {
+  const date = new Date(iso);
+  const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
+  if (dayKey(date) === dayKey(now)) return "Today";
+  if (dayKey(date) === dayKey(yesterday)) return "Yesterday";
+  return (date.getFullYear() === now.getFullYear() ? dayFormat : dayYearFormat).format(date);
+}
+
+/** Entries, newest first, grouped under their day. */
+function byDay(entries: ActivityEntry[], now: Date) {
+  const days: Array<{ label: string; entries: ActivityEntry[] }> = [];
+  for (const entry of entries) {
+    const label = dayLabel(entry.createdAt, now);
+    if (days.at(-1)?.label === label) days.at(-1)!.entries.push(entry);
+    else days.push({ label, entries: [entry] });
+  }
+  return days;
+}
+
+/** "a", "a and b", "a, b and c". */
+const listOf = (items: string[]) => items.length < 2 ? items.join("") : `${items.slice(0, -1).join(", ")} and ${items.at(-1)}`;
+
+/** The last 24 months, newest first, for the statement picker. */
+function recentMonths(now: Date) {
+  return Array.from({ length: 24 }, (_, index) => {
+    const month = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - index, 1));
+    return { value: month.toISOString().slice(0, 7), label: month.toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" }) };
+  });
+}
 
 function EntryIcon({ entry }: { entry: ActivityEntry }) {
-  const Icon = entry.type.startsWith("perps_") ? CandlestickChart : entry.type.startsWith("predictions_") ? CirclePercent
+  const Icon = setting(entry) ? SlidersHorizontal : entry.type.startsWith("perps_") ? CandlestickChart : entry.type.startsWith("predictions_") ? CirclePercent
     : incoming(entry) ? ArrowDownToLine : entry.origin === "card" ? CreditCard : entry.type === "swap" || entry.type === "bridge" ? ArrowDownUp
     : entry.type.startsWith("earn") ? TrendingUp : ArrowUpFromLine;
   return <span className="appIconDisc" aria-hidden="true"><Icon /></span>;
@@ -49,30 +133,31 @@ function save(name: string, csv: string | Blob) {
   const anchor = document.createElement("a"); anchor.href = url; anchor.download = name; anchor.click(); URL.revokeObjectURL(url);
 }
 
-/** Journey J12: a transaction's receipt. A side panel on desktop, with the list still in view; a pushed screen on the phone. */
+/** Journey J12: a transaction's receipt, with its progress. A side panel on desktop, with the list still in view; a pushed screen on the phone. */
 function Receipt({ entry, onClose, isExample }: { entry: ActivityEntry; onClose: () => void; isExample: boolean }) {
   const links = [{ name: "View on the network", url: explorerTx(entry.chainId, entry.transactionHash) },
     { name: "View delivery", url: explorerTx(entry.destinationChainId, entry.destinationTransactionHash) }].filter((link) => link.url);
+  const where = networks(entry);
+  const who = entry.counterparty ? <span className={entry.counterparty.startsWith("0x") ? "mxBreak" : undefined} key="who">{entry.counterparty}</span> : undefined;
+  // Aura records why an action failed as a code; card and deposit providers' reasons are already words.
+  const reason = entry.status === "failed" ? (entry.origin === "aura" ? failureText(entry.failureReason ?? null) : entry.failureReason) : undefined;
   const facts: Array<[string, React.ReactNode, string?]> = [
-    ["Status", statusLabel(entry.status)],
     ["Date", formatDateTime(entry.createdAt)],
-    ["Network", `${networkName(entry.chainId)}${entry.destinationChainId ? ` to ${networkName(entry.destinationChainId)}` : ""}`],
-    ...(entry.counterparty ? [[incoming(entry) ? "From" : "To", <span className="mxBreak" key="who">{entry.counterparty}</span>] as [string, React.ReactNode]] : []),
+    ...(where ? [["Network", where] as [string, React.ReactNode]] : []),
+    ...(who ? [[incoming(entry) ? "From" : setting(entry) ? "For" : "To", who] as [string, React.ReactNode]] : []),
     ...(entry.bankStatus ? [["Bank", entry.bankStatus, "bank-status"] as [string, React.ReactNode, string]] : []),
     ...(entry.cardDispute ? [["Dispute", entry.cardDispute === "submitted" ? "Under review" : entry.cardDispute === "won" ? "Won" : entry.cardDispute === "lost" ? "Lost" : entry.cardDispute] as [string, React.ReactNode]] : []),
-    ...(entry.estimatedUsd !== undefined ? [[entry.origin === "incoming" ? "Value today" : "Value", formatUsd(entry.estimatedUsd)] as [string, React.ReactNode]] : []),
-    ["Source", entry.source],
-    ...(entry.origin === "aura" ? [["Reference", <span className="mxBreak" key="ref">{entry.id}</span>] as [string, React.ReactNode]] : []),
-    ...(entry.failureReason ? [["Reason", entry.failureReason] as [string, React.ReactNode]] : [])
+    ...(entry.estimatedUsd !== undefined && entry.asset !== "USD" ? [[entry.origin === "incoming" ? "Value today" : "Value", formatUsd(entry.estimatedUsd)] as [string, React.ReactNode]] : []),
+    ...(reason ? [["Reason", reason] as [string, React.ReactNode]] : [])
   ];
-  const amount = entryAmount(entry);
+  const stopped = entry.status === "failed" || entry.status === "not_confirmed";
   return <Sheet variant="panel" className="txReceipt" onOpenChange={(open) => { if (!open) onClose(); }}>
         <div className="ovPanelHead">
           <Dialog.Close className="appIconButton ovPanelBack" aria-label="Back"><ArrowLeft aria-hidden="true" /></Dialog.Close>
           <Dialog.Title>{entryLabel(entry.type)}</Dialog.Title>
           <Dialog.Close className="appIconButton ovPanelClose" aria-label="Close"><X aria-hidden="true" /></Dialog.Close>
         </div>
-        <div className="txReceiptAmount"><strong className={incoming(entry) && entry.status === "completed" ? "txIn" : undefined}>{amount ? `${incoming(entry) ? "+" : ""}${amount}` : statusLabel(entry.status)}</strong><Status entry={entry} /></div>
+        <div className="txReceiptAmount"><strong className={incoming(entry) && entry.status === "completed" ? "txIn" : undefined}>{receiptAmount(entry)}</strong><Status entry={entry} /></div>
         <dl className="ovFacts">{facts.map(([label, value, testId]) => <div key={label}><dt>{label}</dt><dd data-testid={testId}>{value}</dd></div>)}</dl>
         {entry.origin === "aura" && !isExample ? <ReceiptJourney id={entry.id} />
           : entry.origin === "incoming" ? <p className="ovNote" data-testid="incoming-finality">{entry.final
@@ -85,17 +170,18 @@ function Receipt({ entry, onClose, isExample }: { entry: ActivityEntry; onClose:
                 ? "No money moved." : "Paid with your card from your USDC on Base. Manage or dispute it on Cards."}</p> : null}
         {!isExample && <div className="ovPanelActions">
           {entry.origin === "card" && <Link className="appButton appButtonLarge" href="/app/cards">Open Cards</Link>}
-          {entry.origin === "aura" && <Link className="appButton appButtonLarge" href={`/app/transactions/${entry.id}`}>Full history</Link>}
           {links.map((link) => <a className="appButton appButtonLarge" key={link.name} href={link.url!} target="_blank" rel="noreferrer">{link.name} <ExternalLink aria-hidden="true" /></a>)}
-          {!links.length && entry.origin !== "card" && <p className="ovNote">No transaction has been recorded for this yet.</p>}
+          {!links.length && entry.origin === "aura" && <p className="ovNote">{stopped ? "Nothing was sent." : "It hasn't reached the network yet."}</p>}
         </div>}
+        <p className="txReceiptRef">{entry.origin === "aura" ? <>Reference <span className="mxBreak">{entry.id}</span></> : `Record from ${entry.source}`}</p>
   </Sheet>;
 }
 
-/** Journey J13: this list, the tax-support preview, or a month's statement. A dialog on desktop, a sheet on the phone. */
+/** Journey J13: this list, or a month's statement. A dialog on desktop, a sheet on the phone. */
 function ExportDialog({ entries, onClose }: { entries: ActivityEntry[]; onClose: () => void }) {
   const { getAccessToken } = useAuth();
-  const [month, setMonth] = useState(new Date().toISOString().slice(0, 7));
+  const months = useMemo(() => recentMonths(new Date()), []);
+  const [month, setMonth] = useState(months[0].value);
   const [statement, setStatement] = useState<{ state: "idle" | "loading" | "error"; message?: string }>({ state: "idle" });
   async function downloadStatement() {
     setStatement({ state: "loading" });
@@ -110,7 +196,6 @@ function ExportDialog({ entries, onClose }: { entries: ActivityEntry[]; onClose:
       setStatement({ state: "idle" });
     } catch { setStatement({ state: "error", message: "The statement couldn't be made. Try again." }); }
   }
-  const tax = { header: ["Tax classification", "Cost basis"], row: () => ["Review required", "Unavailable"] };
   const date = new Date().toISOString().slice(0, 10);
   return <Sheet onOpenChange={(open) => { if (!open) onClose(); }} describedBy="export-note">
         <div className="mxDialogHead"><Dialog.Title>Export</Dialog.Title>
@@ -119,12 +204,10 @@ function ExportDialog({ entries, onClose }: { entries: ActivityEntry[]; onClose:
         <div className="txExport">
           <button type="button" className="txExportRow" onClick={() => save(`aura-transactions-${date}.csv`, entriesCsv(entries, networkName))}>
             <span className="appIconDisc" aria-hidden="true"><Download /></span><span className="txExportText"><strong>This list</strong><small>The transactions shown, with your filters</small></span></button>
-          <button type="button" className="txExportRow" onClick={() => save(`aura-tax-support-${date}.csv`, entriesCsv(entries, networkName, tax))}>
-            <span className="appIconDisc" aria-hidden="true"><FileSpreadsheet /></span><span className="txExportText"><strong>Tax-support preview</strong><small>The same list; cost basis isn&apos;t available</small></span></button>
           <div className="txExportRow txExportMonth">
             <span className="appIconDisc" aria-hidden="true"><FileText /></span>
             <label className="txExportText"><strong>Monthly statement</strong>
-              <input type="month" value={month} max={new Date().toISOString().slice(0, 7)} onChange={(event) => setMonth(event.target.value)} /></label>
+              <select value={month} onChange={(event) => setMonth(event.target.value)}>{months.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
             <button type="button" className="appButton" onClick={() => void downloadStatement()} disabled={statement.state === "loading" || !month}>
               {statement.state === "loading" ? <LoaderCircle className="spin" aria-hidden="true" /> : <Download aria-hidden="true" />} Download</button>
           </div>
@@ -158,15 +241,17 @@ export function ActivityWorkspace() {
   }), [entries, category, status, search]);
   const sources = isExample ? undefined : query.data?.sources;
   const listLoading = loading || (!isExample && query.isPending);
+  const missing = [sources?.incoming.status === "unavailable" && "money you received", sources?.card.status === "unavailable" && "card payments",
+    sources?.aave.status === "unavailable" && "Aave history"].filter((item): item is string => Boolean(item));
+  const older = Boolean(sources?.incoming.partial || sources?.aura.partial || entries.length >= HISTORY_LIMIT);
+  const days = useMemo(() => byDay(filtered, new Date()), [filtered]);
 
   return <div className="mxPage txPage">
     {(isExample || loading) && <GuestBanner onSignIn={login} ready={ready} />}
     <header className="txHead"><h1>Transactions</h1>
       <button type="button" className="appButton" onClick={() => isExample ? login() : setExportOpen(true)} disabled={loading || (!isExample && !query.data)}><Download aria-hidden="true" /> Export</button></header>
-    {sources?.incoming.status === "unavailable" && <Notice tone="warning" role="status">Money you received can&apos;t be read right now, so some deposits may be missing from this list.</Notice>}
-    {sources?.incoming.partial && <Notice tone="warning" role="status">Only your most recent deposits are listed. Use a monthly statement for a full month.</Notice>}
-    {sources?.aave.status === "unavailable" && <Notice tone="warning" role="status">Aave history can&apos;t be read right now.</Notice>}
-    {sources?.card.status === "unavailable" && <Notice tone="warning" role="status">Card payments can&apos;t be read from Stripe right now, so some may be missing from this list.</Notice>}
+    {missing.length > 0 && <Notice tone="warning" role="status">{missing[0][0].toUpperCase() + listOf(missing).slice(1)} can&apos;t be read right now, so some activity may be missing.</Notice>}
+    {older && <Notice role="status">Only your most recent activity is listed. For older activity, download a monthly statement from Export.</Notice>}
     <div className="txFilters">
       <label className="txSearch"><Search aria-hidden="true" /><span className="srOnly">Search activity</span>
         <input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search activity" /></label>
@@ -177,18 +262,17 @@ export function ActivityWorkspace() {
     </div>
     <section className="mxCard txList" aria-label="Transaction list">
       {listLoading ? <LoadingState label="Checking activity" />
-        : !isExample && query.isError ? <Notice tone="error" role="alert" onRetry={() => void query.refetch()}>Activity couldn&apos;t be loaded.</Notice>
+        : !isExample && query.isError ? <Notice tone="error" role="alert" onRetry={() => void query.refetch()}>Activity couldn&apos;t be loaded. If this keeps happening, contact Support.</Notice>
           : filtered.length === 0 ? <div className="txEmpty"><strong>{entries.length ? "No matching activity" : "No activity yet"}</strong>
             <span>{entries.length ? "Try changing the filters." : "Money you send, receive, swap, or earn will appear here."}</span></div>
-            : <ul className="txRows">{filtered.map((entry) => { const amount = entryAmount(entry); return <li key={entry.id}>
-              <button type="button" className="activityRow txRow" data-testid={`entry-${entry.id}`} onClick={() => setChosen(entry)}>
-                <EntryIcon entry={entry} />
-                <span className="txWhat"><strong>{entryLabel(entry.type)}</strong>
-                  <small>{formatDateTime(entry.createdAt)} · {networkName(entry.chainId)}{entry.counterparty ? ` · ${entry.counterparty.startsWith("0x") ? shortAddress(entry.counterparty) : entry.counterparty}` : ""}</small></span>
-                <span className="txAmount"><strong className={incoming(entry) && entry.status === "completed" ? "txIn" : undefined}>{amount ? `${incoming(entry) ? "+" : ""}${amount}` : "—"}</strong><Status entry={entry} /></span>
-              </button></li>; })}</ul>}
+            : days.map((day) => <section className="txDay" key={day.label} aria-label={day.label}><h2>{day.label}</h2>
+              <ul className="txRows">{day.entries.map((entry) => { const amount = rowAmount(entry); return <li key={entry.id}>
+                <button type="button" className="activityRow txRow" data-testid={`entry-${entry.id}`} onClick={() => setChosen(entry)}>
+                  <EntryIcon entry={entry} />
+                  <span className="txWhat"><strong>{entryLabel(entry.type)}</strong><small>{rowDetail(entry)}</small></span>
+                  <span className="txAmount">{amount && <strong className={incoming(entry) && entry.status === "completed" ? "txIn" : undefined}>{amount}</strong>}<Status entry={entry} /></span>
+                </button></li>; })}</ul></section>)}
     </section>
-    <p className="mxHint">Your Aura transactions are checked against the network. Money you received comes from Alchemy&apos;s record of the network, and Aave history from Aave.</p>
     {exportOpen && <ExportDialog entries={filtered} onClose={() => setExportOpen(false)} />}
     {selected && <Receipt entry={selected} onClose={close} isExample={isExample} />}
   </div>;

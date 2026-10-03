@@ -161,6 +161,9 @@ const LABELS: Record<EntryType, string> = {
 };
 export const entryLabel = (type: EntryType) => LABELS[type];
 
+/** The most entries Transactions lists at once, newest first. */
+export const HISTORY_LIMIT = 150;
+
 export const CATEGORIES = ["All", "Sent", "Received", "Card", "Swaps", "Earn", "Markets", "Other"] as const;
 type EntryCategory = Exclude<(typeof CATEGORIES)[number], "All">;
 export function entryCategory(type: EntryType): EntryCategory {
@@ -173,7 +176,7 @@ export function entryCategory(type: EntryType): EntryCategory {
   return "Other";
 }
 
-const STATUS_LABELS: Record<EntryStatus, string> = { pending: "Pending", completed: "Completed", failed: "Failed", not_confirmed: "Not confirmed" };
+const STATUS_LABELS: Record<EntryStatus, string> = { pending: "Pending", completed: "Completed", failed: "Failed", not_confirmed: "Not sent" };
 export const STATUSES = ["All", ...Object.values(STATUS_LABELS)] as const;
 export const statusLabel = (status: EntryStatus) => STATUS_LABELS[status];
 

@@ -5,7 +5,6 @@ import { useQuery } from "@tanstack/react-query";
 import { exampleOverview } from "@/lib/example/data";
 import type { Overview } from "@/lib/overview/read";
 import { useApi } from "./api";
-import type { ActionView } from "./use-action";
 
 /**
  * Data for a screen. Signed in, it comes from the API. Signed out, it is the
@@ -24,6 +23,4 @@ function useScreenQuery<T>(key: string, path: string, example: T | null, options
 }
 
 export const useOverview = () => useScreenQuery<Overview>("overview", "/api/overview", exampleOverview, { refetchInterval: 30_000 });
-export const useActionDetail = (id: string) => useScreenQuery<{ action: ActionView; events: Array<{ type: string; evidence: Record<string, unknown>; occurredAt: string }> }>(
-  `action:${id}`, `/api/actions/${encodeURIComponent(id)}`, null);
 
