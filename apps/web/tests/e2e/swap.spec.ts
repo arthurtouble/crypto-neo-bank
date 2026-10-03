@@ -137,7 +137,7 @@ test("Tether Gold sells from Ethereum back to USDC on Base, with Ethereum's fee 
   await expect(quote(page).getByTestId("swap-reference")).toContainText("XAUt reference price $4,285.62");
   await quote(page).getByRole("button", { name: "Swap", exact: true }).click();
 
-  await expect(page.getByRole("status").filter({ hasText: "Swap sent" })).toContainText("deliver it on Base", { timeout: 30_000 });
+  await expect(page.getByRole("status").filter({ hasText: "Swap sent" })).toContainText("on its way to Base", { timeout: 30_000 });
   const [operation] = await relayed();
   expect(operation).toMatchObject({ chainId: 1, success: true });
   expect(await balance(page, customer, `1:${ASSETS.xaut}`)).toBe("500000");
