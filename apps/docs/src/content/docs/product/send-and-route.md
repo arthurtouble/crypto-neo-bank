@@ -13,7 +13,7 @@ Your money is held on Base. You can choose the network it arrives on:
 
 Send has two tabs: **To a person or wallet** for crypto, and **To a bank account** for dollars to a US bank. Enter the amount, then who it's for: paste an address, or type an Aura tag like `@sam`, and Aura finds its address when you select **Review**. Then review the asset, amount, recipient, network, and fee. The network fee shows as **Paid by Aura**. You confirm with your passkey.
 
-If Aura can't send it, for example because it's over your daily limit, the reason shows above the button and nothing is sent.
+If Aura can't send it, for example because it's over your daily limit, the reason shows above the button and nothing is sent. If sending is paused, Send says so before you start. If sending to other networks is paused, only the network your account holds the asset on is offered.
 
 Aura checks that sending is switched on and applies your controls. It won't send to your own Aura address or to a token's contract address. These checks don't vouch for the recipient or guarantee the payment settles.
 

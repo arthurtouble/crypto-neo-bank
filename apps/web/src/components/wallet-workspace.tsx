@@ -13,6 +13,7 @@ import { ApiError, useApi } from "@/lib/client/api";
 import { formatDateTime, formatToken, formatUsd, shortAddress } from "@/lib/format";
 import { displayRawAmount } from "@/lib/swap/review-model";
 import { useAction } from "@/lib/client/use-action";
+import { quietNotice } from "@/lib/client/quiet-notices";
 import { useNativeBalance, useTokenBalances } from "@/lib/client/wallet-context";
 import { MovePreviousAccount } from "./move-previous-account";
 import type { RouteQuote } from "./swap-workspace";
@@ -112,6 +113,10 @@ export function WalletWorkspace() {
   const inFlight = (transfer.phase !== "idle" && transfer.phase !== "done" && !handedOff) || transfer.outcomeUnknown;
   const eth = useNativeBalance(address, HOME_CHAIN.id);
   const tokens = useTokenBalances(TOKEN_READS, address);
+  // The switches, so the page says what's off before anything is filled in. The quote and the action check them again.
+  const methods = useQuery<{ sending: boolean; otherNetworks: boolean }>({ queryKey: ["send-methods"], queryFn: () => api("/api/send/methods"), staleTime: 30_000 });
+  const sendingOff = methods.data?.sending === false;
+  const otherNetworksOff = methods.data?.otherNetworks === false;
   const recipients = useQuery<{ recipients: Recipient[] }>({
     queryKey: ["recipients", address],
     queryFn: () => api("/api/recipients"),
@@ -152,7 +157,8 @@ export function WalletWorkspace() {
   });
 
   const selected = rows.find((row) => row.symbol === asset) ?? rows[0];
-  const destinations = sendDestinations(selected.id);
+  // Other networks are offered only while sending to them is switched on.
+  const destinations = sendDestinations(selected.id).filter((item) => !otherNetworksOff || item.chainId === selected.chainId);
   const destination = destinations.find((item) => item.chainId === network) ?? destinations[0];
   // Sent from where the account holds it; anywhere else goes through a route.
   const crossChain = destination.chainId !== selected.chainId;
@@ -246,7 +252,9 @@ export function WalletWorkspace() {
   async function saveNewRecipient(): Promise<boolean> {
     if (!canSave || !saveRecipient) return true;
     try {
-      await api("/api/recipients", { method: "POST", json: { kind: "wallet", address: recipient, name: nickname.trim() } });
+      const { recipient: added } = await api<{ recipient: { id: string } }>("/api/recipients", { method: "POST", json: { kind: "wallet", address: recipient, name: nickname.trim() } });
+      // This screen says it was saved; the security notice still goes to the bell and email, without a second toast here.
+      quietNotice(`security:recipient_saved:${added.id}`);
       await queryClient.invalidateQueries({ queryKey: ["recipients"] });
       toast.success("Recipient saved", `${nickname.trim()} is in your saved recipients.`);
       setSaveRecipient(false);
@@ -298,6 +306,8 @@ export function WalletWorkspace() {
             <div className="mxPanelHead mxPanelHeadRow"><h2 id="send-crypto-title">Send crypto</h2>
               <ol className="mxSteps" aria-label="Send steps"><li aria-current={!reviewing && !checking ? "step" : undefined}>Details</li>
                 {showCheck && <li aria-current={checking ? "step" : undefined}>Check</li>}<li aria-current={reviewing ? "step" : undefined}>Review</li></ol></div>
+            {sendingOff && !reviewing && <Notice tone="warning" data-testid="sending-off">Sending is paused right now. Try again later.</Notice>}
+            {!sendingOff && otherNetworksOff && !reviewing && sendDestinations(selected.id).length > 1 && <p className="mxHint" data-testid="other-networks-off">Sending to other networks is paused right now. You can still send on {networkName(selected.chainId)}.</p>}
             <form className="mxForm" onSubmit={(event) => void review(event)}>
               {checking && !reviewing ? <section className="mxForm" aria-labelledby="address-check-title">
                 <h3 id="address-check-title" className="mxCheckTitle">You haven&apos;t sent to this address before</h3>
@@ -334,7 +344,7 @@ export function WalletWorkspace() {
                 {canSave && !typedTag(toText) && <label className="mxCheck"><input type="checkbox" checked={saveRecipient} disabled={inFlight} onChange={(event) => setSaveRecipient(event.target.checked)} /> Save as a recipient</label>}
                 {canSave && saveRecipient && <label className="mxField">Name<input autoComplete="off" maxLength={48} placeholder="For example, Sam" value={nickname} disabled={inFlight} onChange={(event) => { setNickname(event.target.value); setFormError(null); }} /></label>}
                 {formError && <p className="mxFieldError" role="alert">{formError}</p>}
-                <button type="submit" className="appButton appButtonPrimary appButtonLarge" disabled={inFlight || quoting || finding}>{quoting || finding ? <LoaderCircle className="spin" aria-hidden="true" /> : <Send aria-hidden="true" />} {finding ? "Finding recipient" : quoting ? "Getting a quote" : "Review"}</button>
+                <button type="submit" className="appButton appButtonPrimary appButtonLarge" disabled={inFlight || quoting || finding || sendingOff}>{quoting || finding ? <LoaderCircle className="spin" aria-hidden="true" /> : <Send aria-hidden="true" />} {finding ? "Finding recipient" : quoting ? "Getting a quote" : "Review"}</button>
               </> : <>
                 <dl className="mxSummary" data-testid="send-review">
                   <div><dt>Send</dt><dd>{amount} {asset}</dd></div>

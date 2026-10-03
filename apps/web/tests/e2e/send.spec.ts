@@ -264,13 +264,18 @@ test("cancelling the passkey prompt sends nothing", async ({ page }) => {
   expect(await relayed()).toEqual([]);
 });
 
-test("while sending is switched off, the customer is told and nothing is sent", async ({ page }) => {
-  await setFeature(page, "direct_transfers", false);
+test("while sending is switched off, the customer is told up front, and the server refuses a send already on screen", async ({ page }) => {
   await openSend(page);
   await fillSend(page, { amount: "1", to: RECIPIENT });
+  // Switched off after the page loaded: the server still refuses it.
+  await setFeature(page, "direct_transfers", false);
   await reviewAndConfirm(page);
   await expect(dialog(page).getByRole("alert")).toContainText("Transfer not sent", { timeout: 20_000 });
   await expect(dialog(page).getByRole("alert")).toContainText("temporarily unavailable");
+  // Loaded while it's off: the page says so before anything is filled in, and Review is off.
+  await page.reload();
+  await expect(page.getByTestId("sending-off")).toHaveText("Sending is paused right now. Try again later.", { timeout: 30_000 });
+  await expect(dialog(page).getByRole("button", { name: "Review" })).toBeDisabled();
   expect(await relayed()).toEqual([]);
 });
 
@@ -332,6 +337,11 @@ test("a new address can be saved as a recipient, with a name, as it's sent to", 
   await dialog(page).getByRole("button", { name: "Confirm and send" }).click();
   await expect(toast(page, "Recipient saved")).toBeVisible({ timeout: 20_000 });
   await expect(outcome(page, "Transfer complete")).toBeVisible({ timeout: 30_000 });
+  // The security notice goes to the bell (and email), but this browser isn't toasted about what the customer just did.
+  const inbox = page.waitForResponse((response) => response.url().endsWith("/api/notifications") && response.ok());
+  await page.evaluate(() => window.dispatchEvent(new Event("visibilitychange")));
+  expect(JSON.stringify(await (await inbox).json())).toContain("New saved recipient");
+  await expect(toast(page, "New saved recipient")).toHaveCount(0);
 
   // Next time it's one tap. New recipients start with the waiting period, which only matters with saved-recipients-only on.
   await dialog(page).getByRole("button", { name: "New transfer" }).click();
@@ -341,8 +351,8 @@ test("a new address can be saved as a recipient, with a name, as it's sent to", 
 });
 
 test("USDC can be sent to another network: LI.FI's fees come out of the amount, and delivery is checked there", async ({ page }) => {
-  const customer = await openSend(page);
   await setFeature(page, "cross_chain", true);
+  const customer = await openSend(page);
   await fillSend(page, { amount: "10", to: RECIPIENT });
   await expect(dialog(page).getByLabel("Network").locator("option")).toHaveText(["Base", "Ethereum", "Arbitrum", "Optimism", "Polygon"]);
   await dialog(page).getByLabel("Network").selectOption("Arbitrum");
@@ -385,8 +395,8 @@ test("USDC can be sent to another network: LI.FI's fees come out of the amount, 
 });
 
 test("ETH sent to someone on another network completes only once the ETH is seen arriving there", async ({ page }) => {
-  await openSend(page, { balances: { native: "1000000000000000000" } });
   await setFeature(page, "cross_chain", true);
+  await openSend(page, { balances: { native: "1000000000000000000" } });
   await fillSend(page, { asset: "ETH", amount: "0.1", to: RECIPIENT });
   await dialog(page).getByLabel("Network").selectOption("Arbitrum");
   await reviewAndConfirm(page);
@@ -407,8 +417,17 @@ test("sending to another network needs both the send and cross-network switches,
   await openSend(page, { balances: { [ASSETS.usdc]: "50000000", [ASSETS.weth]: "1000000000000000000" } });
   await fillSend(page, { asset: "WETH", amount: "0.1", to: RECIPIENT });
   await expect(dialog(page).getByLabel("Network").locator("option")).toHaveText(["Base"]);
+  // With other networks off, USDC is offered on Base only, and the page says why.
   await dialog(page).getByLabel("Asset").selectOption("USDC");
+  await expect(dialog(page).getByLabel("Network").locator("option")).toHaveText(["Base"]);
+  await expect(page.getByTestId("other-networks-off")).toContainText("Sending to other networks is paused right now.");
+
+  // Switched off after the page offered Polygon: the server refuses the quote.
+  await setFeature(page, "cross_chain", true);
+  await page.reload();
+  await fillSend(page, { asset: "USDC", amount: "0.1", to: RECIPIENT });
   await dialog(page).getByLabel("Network").selectOption("Polygon");
+  await setFeature(page, "cross_chain", false);
   await reviewSend(page);
   await expect(dialog(page).getByRole("alert")).toContainText("Sending to other networks isn't available right now.", { timeout: 20_000 });
   await expect(page.getByTestId("send-review")).toHaveCount(0);
@@ -423,8 +442,8 @@ test("sending to another network needs both the send and cross-network switches,
 });
 
 test("a token contract is refused as the recipient on another network too", async ({ page }) => {
-  await openSend(page);
   await setFeature(page, "cross_chain", true);
+  await openSend(page);
   await fillSend(page, { amount: "1", to: ASSETS.usdc });
   await dialog(page).getByLabel("Network").selectOption("Optimism");
   await reviewSend(page);

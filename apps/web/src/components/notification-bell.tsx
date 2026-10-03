@@ -9,6 +9,7 @@ import { useApi } from "@/lib/client/api";
 import { formatDateTime, formatShortDateTime } from "@/lib/format";
 import type { NotificationView } from "@/lib/notifications/store";
 import { useDismiss } from "./account-menu";
+import { isQuiet } from "@/lib/client/quiet-notices";
 import { useToast } from "./toast";
 
 type Inbox = { notifications: NotificationView[]; unread: number };
@@ -43,7 +44,7 @@ export function NotificationBell() {
     for (const item of [...list].reverse()) {
       if (seen.current.has(item.id)) continue;
       seen.current.add(item.id);
-      if (!item.read && (item.kind === "received" || item.kind === "security")) toast.show({ tone: item.kind === "security" ? "info" : "success", title: item.title, detail: item.body });
+      if (!item.read && (item.kind === "received" || item.kind === "security") && !isQuiet(item.key)) toast.show({ tone: item.kind === "security" ? "info" : "success", title: item.title, detail: item.body });
     }
     // A notice about money moving means balances and history changed.
     if (list.some((item) => !item.read && item.kind !== "security")) void client.invalidateQueries({ predicate: (query) => query.queryKey[0] !== "notifications" });
