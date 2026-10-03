@@ -7,6 +7,7 @@ import { catalogAsset, getCatalogPage } from "@/lib/swap/catalog";
 import { pausedAssets } from "@/lib/assets/pauses";
 import { assetFor } from "@/lib/assets/registry";
 import { route, errorResponse } from "@/lib/http/route";
+import { featureEnabled } from "@/lib/features/flags";
 
 const noStore = { "Cache-Control": "no-store" };
 const supportedIds = new Set<number>(SUPPORTED_CHAINS.map((chain) => chain.id));
@@ -40,7 +41,16 @@ function parseQuery(request: Request) {
   return { kind: "search" as const, query, chainIds, held: held === "1" };
 }
 
-/** Swap's asset list: the registry's swappable assets, searchable. A contract outside the registry is never found. */
+/** Whether swaps are switched on, on one network and between networks, so the page can say so before a quote is asked for. */
+async function switches(db: D1Database) {
+  const [sameNetwork, otherNetwork] = await Promise.all([featureEnabled(db, "swaps"), featureEnabled(db, "cross_chain")]);
+  return { sameNetwork, otherNetwork };
+}
+
+/**
+ * Swap's asset list: the registry's swappable assets, searchable. A contract outside the registry is never found.
+ * Every answer also carries the swap switches; the quote and the action check them again on the server.
+ */
 export const GET = route("swap.assets", { unavailable: "asset_catalog_unavailable",
   onError: (error, context) => error instanceof InvalidSearch ? errorResponse(400, "invalid_search", context, { message: error.message }) : undefined },
 async (request: Request, { traceId }) => {
@@ -50,7 +60,10 @@ async (request: Request, { traceId }) => {
   if (input.kind === "import") {
     const asset = assetFor(input.id, "swap");
     if (!asset) return json({ error: "asset_not_found", message: "This asset isn't supported.", traceId }, 404);
-    return json({ asset: catalogAsset(asset, (await pausedAssets(env.PROJECTION_DB)).get(asset.id)) });
+    const [paused, enabled] = await Promise.all([pausedAssets(env.PROJECTION_DB), switches(env.PROJECTION_DB)]);
+    return json({ asset: catalogAsset(asset, paused.get(asset.id)), switches: enabled });
   }
-  return json(await getCatalogPage(env.PROJECTION_DB, { query: input.query, chainIds: input.chainIds, held: input.held }));
+  const [page, enabled] = await Promise.all([getCatalogPage(env.PROJECTION_DB, { query: input.query, chainIds: input.chainIds, held: input.held }),
+    switches(env.PROJECTION_DB)]);
+  return json({ ...page, switches: enabled });
 });

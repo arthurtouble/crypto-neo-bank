@@ -182,6 +182,23 @@ test("switched off, or with a paused asset, there is no quote and nothing is sen
   expect(await relayed()).toEqual([]);
 });
 
+test("more than the account holds gets no quote, in the form or from the server, and nothing is sent", async ({ page }) => {
+  const customer = await openSwap(page, { from: `8453:${ASSETS.usdc}`, to: `8453:${ASSETS.apple}` });
+  await expect(page.getByText("50 USDC available")).toBeVisible({ timeout: 20_000 });
+  await getQuote(page, "500");
+  await expect(page.getByRole("alert")).toHaveText("You have 50 USDC. Enter that or less.");
+  await expect(quote(page)).toHaveCount(0);
+  await expect(asCustomer(page, customer, "GET", `/api/routes/quote?from=8453:${ASSETS.usdc}&to=8453:${ASSETS.apple}&amount=500`)).rejects.toThrow(/422.*insufficient_balance/);
+  expect(await relayed()).toEqual([]);
+});
+
+test("switched off, the form says so before anything is typed", async ({ page }) => {
+  await setFeature(page, "swaps", false);
+  await openSwap(page);
+  await expect(page.getByText("Swaps aren't available right now.")).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("button", { name: "Get quote" })).toBeDisabled();
+});
+
 test("an expired quote can't be confirmed; it asks for a fresh one", async ({ page }) => {
   // Quotes last 45 seconds, on the server as well as on screen, so this waits them out for real.
   test.setTimeout(120_000);

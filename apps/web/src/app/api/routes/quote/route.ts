@@ -4,7 +4,7 @@ import { z } from "zod";
 import { quoteRoute, RouteQuoteError } from "@/lib/actions/lifi";
 import { routeFeatures } from "@/lib/actions/prepare";
 import { saveRouteQuote } from "@/lib/actions/route";
-import { refuseTokenContract } from "@/lib/actions/transfer";
+import { rawAmount, refuseTokenContract } from "@/lib/actions/transfer";
 import { requireVerifiedSubject } from "@/lib/auth/server";
 import { requireActionWallet } from "@/lib/auth/wallet";
 import { featureEnabled } from "@/lib/features/flags";
@@ -12,6 +12,7 @@ import { errorResponse, route } from "@/lib/http/route";
 import { ensureSubjectProfile } from "@/lib/profile/ensure";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { requireCatalogAsset } from "@/lib/swap/catalog";
+import { requireSwapBalance } from "@/lib/swap/balance";
 import { chainlinkUsd } from "@/lib/assets/prices";
 import { registeredAsset } from "@/lib/assets/registry";
 
@@ -59,6 +60,8 @@ async (request, { traceId }) => {
   for (const key of routeFeatures({ crossChain, external }))
     if (!await featureEnabled(env.PROJECTION_DB, key)) return Response.json({ error: "feature_unavailable", traceId }, { status: 503 });
   if (external) refuseTokenContract(recipient);
+  // More than the account holds would fail on the chain, with Aura paying the network fee.
+  await requireSwapBalance(from, wallet, rawAmount(input.amount, from.decimals));
   const now = new Date();
   const [quoted, references] = await Promise.all([quoteRoute({ from, to, amount: input.amount, wallet, recipient, slippageBps: input.slippageBps }),
     referencePrices([from.id, to.id], now)]);

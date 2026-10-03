@@ -11,6 +11,7 @@ You pay with an asset on Base, or Tether Gold on Ethereum. You can receive any s
 
 The review shows the rate, the fees, and the price impact.
 
+- You can swap up to your balance. Aura checks it before it gets a quote.
 - A quote lasts 45 seconds. After that, get a new one.
 - You choose the slippage: 0.1%, 0.5%, or 1%. If you would get less than the minimum, the swap fails instead.
 - You can only swap assets on Aura's reviewed list. If a route would lose more than 3% to price impact, Aura tells you and suggests a smaller amount.

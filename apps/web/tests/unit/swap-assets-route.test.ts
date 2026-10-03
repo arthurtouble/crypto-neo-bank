@@ -53,6 +53,13 @@ describe("Swap asset catalog API", () => {
     expect(await (await request(`?import=${baseUsdc}`)).json()).toMatchObject({ asset: { id: baseUsdc, symbol: "USDC" } });
   });
 
+  it("says whether swaps are switched on, on one network and between networks", async () => {
+    sqlite.exec("UPDATE feature_flags SET enabled = CASE flag_key WHEN 'swaps' THEN 1 ELSE 0 END");
+    expect(await (await request(`?import=${baseUsdc}`)).json()).toMatchObject({ switches: { sameNetwork: true, otherNetwork: false } });
+    sqlite.exec("UPDATE feature_flags SET enabled = CASE flag_key WHEN 'cross_chain' THEN 1 ELSE 0 END");
+    expect(await (await request("?q=usdc")).json()).toMatchObject({ switches: { sameNetwork: false, otherNetwork: true } });
+  });
+
   it("lists a paused asset as unavailable", async () => {
     sqlite.exec(`INSERT INTO asset_pauses (asset_id, reason, paused_at, paused_by) VALUES ('${baseUsdc}', 'Depeg', '2026-09-26T00:00:00Z', 'op')`);
     const body = await (await request(`?import=${baseUsdc}`)).json() as { asset: { eligibility: string; unavailableReason: string } };
