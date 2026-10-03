@@ -234,7 +234,7 @@ function listable(market: GammaMarket, eventTags: GammaEvent["tags"]): boolean {
 
 const NAMED_WINDOWS: Record<string, string> = { hourly: "1H", daily: "1D", weekly: "1W" };
 /** Gamma tags a window as `5M`, `15M`, `1H`, `4h`, or by name (`daily`); returned as `5M`, `4H`, `1D`, …. */
-function upOrDownWindow(eventTags: GammaEvent["tags"]): string | null {
+function upOrDownWindow(eventTags: Array<{ slug: string }>): string | null {
   for (const entry of eventTags) {
     const slug = entry.slug.toLowerCase();
     if (/^\d{1,3}[mhdw]$/.test(slug)) return slug.toUpperCase();
@@ -265,6 +265,24 @@ export function normalizeEvent(raw: unknown): PolymarketEvent | null {
     volume: event.volume ?? null, volume24h: event.volume24hr ?? null, liquidity: event.liquidity ?? null,
     negRisk: event.negRisk === true, tags: event.tags.map(({ slug, label }) => ({ slug, label })), markets
   };
+}
+
+/** A market's Up or Down window from its own and its event's tags, or null when it isn't one. The price to beat is read separately. */
+export function marketUpOrDown(market: Pick<PolymarketMarket, "tags">): { window: string | null; priceToBeat: number | null } | null {
+  return market.tags.some((entry) => entry.slug === UP_OR_DOWN_TAG) ? { window: upOrDownWindow(market.tags), priceToBeat: null } : null;
+}
+
+/**
+ * An Up or Down window with its price to beat filled in while it runs, from
+ * `upOrDownPriceToBeat`. Best effort: a failed read leaves it null, which
+ * screens show as unavailable.
+ */
+export async function withPriceToBeat<T extends Pick<PolymarketEvent, "startTime" | "endDate" | "resolutionSource" | "upOrDown">>(event: T, options: RequestOptions = {}): Promise<T> {
+  if (!event.upOrDown || event.upOrDown.priceToBeat !== null) return event;
+  // A window that hasn't started has no price to beat yet.
+  if (!event.startTime || !(new Date(event.startTime).getTime() <= Date.now())) return event;
+  const read = await upOrDownPriceToBeat(event, options).catch(() => null);
+  return read?.priceToBeat == null ? event : { ...event, upOrDown: { ...event.upOrDown, priceToBeat: read.priceToBeat } };
 }
 
 export type ListEventsInput = {

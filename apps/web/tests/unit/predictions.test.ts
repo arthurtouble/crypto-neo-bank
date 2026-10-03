@@ -7,7 +7,7 @@ import { d1 } from "../support/d1";
 import { schemaDatabase } from "../support/schema";
 
 const venue = vi.hoisted(() => ({
-  deployed: false, approvalsReady: false, relayOutcome: "pending" as "pending" | "confirmed",
+  deployed: false, approvalsReady: false, relayOutcome: "pending" as "pending" | "confirmed", feeRate: 0,
   deploy: vi.fn(async () => ({ transactionId: "tx-deploy", state: "STATE_NEW", transactionHash: null })),
   submitBatch: vi.fn(async () => ({ transactionId: "tx-batch", state: "STATE_NEW", transactionHash: null })),
   postOrder: vi.fn(async () => ({ orderId: "0xabc", status: "matched", makingAmount: "10", takingAmount: "16.9", tradeIds: [] })),
@@ -32,6 +32,7 @@ vi.mock("@/lib/markets/polymarket", async (original) => {
       outcomes: [{ name: "Yes", tokenId: "111", price: 0.59 }, { name: "No", tokenId: "222", price: 0.41 }] }),
     orderBook: async (token: string) => ({ tokenId: token, market: `0x${"1".repeat(64)}`, negRisk: false, tickSize: 0.01, minOrderSize: 5,
       bids: [{ price: 0.58, size: 1000 }], asks: [{ price: 0.59, size: 1000 }], lastTradePrice: 0.59, observedAt: "t", hash: "h" }),
+    orderMarketInfo: async () => ({ fee: { rate: venue.feeRate, exponent: 2, takerOnly: true } }),
     postOrder: venue.postOrder,
     baseUsdcDepositMinimum: async () => 2,
     depositAddress: async () => "0x5555555555555555555555555555555555555555"
@@ -55,7 +56,7 @@ beforeEach(() => {
   sqlite = schemaDatabase();
   sqlite.exec(`INSERT INTO subject_profiles (subject_reference, privy_user_reference, created_at, updated_at) VALUES ('alice', 'alice', 't', 't');`);
   db = d1(sqlite);
-  Object.assign(venue, { deployed: false, approvalsReady: false, relayOutcome: "pending" });
+  Object.assign(venue, { deployed: false, approvalsReady: false, relayOutcome: "pending", feeRate: 0 });
   vi.stubEnv("PRIVY_APP_SECRET", "test-secret");
 });
 afterEach(() => { sqlite.close(); vi.unstubAllEnvs(); vi.clearAllMocks(); });
@@ -112,6 +113,21 @@ describe("trading an outcome", () => {
     expect(done).toMatchObject({ status: "accepted", kind: "order", order: { orderId: "0xabc" } });
     expect(venue.postOrder).toHaveBeenCalledWith(expect.objectContaining({ signature: signature.toLowerCase() }), expect.anything());
     expect((await listOperations(db, "alice", "polymarket")).find((item) => item.kind === "order")).toMatchObject({ kind: "order", status: "accepted", externalId: "0xabc" });
+  });
+});
+
+describe("Polymarket's taker fee", () => {
+  it("comes out of the amount asked for, so shares and fee together never cost more", async () => {
+    await connect();
+    const free = await startPredictionBuy(db, "alice", account, { marketId: "12", outcome: 0, amountUsd: 10 }, deps);
+    expect(free.quote).toMatchObject({ amount: 10, fee: null });
+    venue.feeRate = 0.25;
+    const fee = await startPredictionBuy(db, "alice", account, { marketId: "12", outcome: 0, amountUsd: 10 }, deps);
+    // 0.25 × (0.59 × 0.41)² per share, on about 16.5 shares.
+    expect(fee.quote.fee).toBeGreaterThan(0.2);
+    expect(fee.quote.amount).toBe(9.75);
+    expect(fee.quote.amount + fee.quote.fee!).toBeLessThanOrEqual(10);
+    expect(fee.quote.estimatedShares).toBeLessThan(free.quote.estimatedShares);
   });
 });
 

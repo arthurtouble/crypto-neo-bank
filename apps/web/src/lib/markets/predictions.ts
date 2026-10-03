@@ -9,7 +9,7 @@ import { listOperations, markAccountReady, readMarketAccount, recordOperation, s
 import { openCredentials, sealCredentials } from "./credentials";
 import {
   approvalCalls, baseUsdcDepositMinimum, batchDeadline, buildDollarBuy, buildOrder, cancelOrder, clobAuthTypedData, createOrDeriveApiKey,
-  depositAddress, depositWalletAddress, deployDepositWallet, fetchWalletNonce, getMarket, isDeployed, openOrders, orderBook, positions, postOrder,
+  depositAddress, depositWalletAddress, deployDepositWallet, fetchWalletNonce, getMarket, isDeployed, openOrders, orderBook, orderMarketInfo, positions, postOrder,
   pusdBalance, pusdTransferCall, redeemCalls, relayerTransaction, submitWalletBatch, syncClobAllowance, tradingApprovalsState,
   walletBatchTypedData, withdrawAddress, builderCode,
   type ApiCredentials, type BuiltOrder, type ClobSession, type WalletBatch
@@ -149,11 +149,17 @@ export async function startPredictionBuy(db: D1Database, subject: string, accoun
   const now = clock(deps);
   const clob = await session(db, subject, account.address, deps);
   const { market, tokenId } = await tradable(input.marketId, input.outcome, deps);
-  const buy = buildDollarBuy({ wallet: clob.wallet, book: await orderBook(tokenId, opts(deps)), amountUsd: input.amountUsd, negRisk: market.negRisk, builderCode: code(), now });
-  const summary = { marketId: market.id, question: market.question, outcome: market.outcomes[input.outcome].name, side: "BUY", amount: buy.amount,
+  const [book, info] = await Promise.all([orderBook(tokenId, opts(deps)), orderMarketInfo(tokenId, opts(deps))]);
+  const fee = info.fee.rate > 0 ? { rate: info.fee.rate, exponent: info.fee.exponent } : undefined;
+  const build = (amountUsd: number) => buildDollarBuy({ wallet: clob.wallet, book, amountUsd, negRisk: market.negRisk, fee, builderCode: code(), now });
+  // Polymarket charges its taker fee on top of what's spent on shares, so the amount asked for covers both:
+  // price the whole amount, then spend it less that fee (a smaller buy's fee is no larger).
+  const first = build(input.amountUsd);
+  const buy = first.fee ? build(Math.floor((input.amountUsd - first.fee) * 100) / 100) : first;
+  const summary = { marketId: market.id, question: market.question, outcome: market.outcomes[input.outcome].name, side: "BUY", amount: buy.amount, fee: buy.fee,
     estimatedShares: buy.estimatedShares, minimumShares: buy.minimumShares, averagePrice: buy.averagePrice };
   return { ...await sign(db, subject, account, "polymarket_order", buy.built.typedData, { kind: "order", built: buy.built, summary }, now),
-    quote: { amount: buy.amount, estimatedShares: buy.estimatedShares, payoutIfWins: buy.payoutIfWins, minimumPayoutIfWins: buy.minimumPayoutIfWins,
+    quote: { amount: buy.amount, fee: buy.fee, estimatedShares: buy.estimatedShares, payoutIfWins: buy.payoutIfWins, minimumPayoutIfWins: buy.minimumPayoutIfWins,
       averagePrice: buy.averagePrice } };
 }
 

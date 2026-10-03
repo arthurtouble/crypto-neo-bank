@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import { VenueError } from "@/lib/markets/types";
 import {
-  clobQuotes, getMarket, isSports, listEvents, listUpOrDown, normalizeEvent, orderBook, orderMarketInfo, parseOrderBook, priceHistory, upOrDownPriceToBeat, upOrDownSymbol
+  clobQuotes, getMarket, isSports, listEvents, listUpOrDown, normalizeEvent, orderBook, orderMarketInfo, parseOrderBook, priceHistory, upOrDownPriceToBeat, upOrDownSymbol,
+  marketUpOrDown, withPriceToBeat
 } from "@/lib/markets/polymarket/markets";
 
 const YES = "17010377994663817312158123655937348199252960045746746128731746451645055725586";
@@ -229,6 +230,24 @@ describe("Crypto Up or Down", () => {
     await expect(upOrDownPriceToBeat(settled, { fetcher })).resolves.toMatchObject({ priceToBeat: 1 });
     expect(fetcher).toHaveBeenCalledTimes(1);
     await expect(upOrDownPriceToBeat(normalizeEvent(event())!, { fetcher })).rejects.toMatchObject({ code: "invalid_request" });
+  });
+
+  it("fills a running window's price to beat, and leaves it empty before the window or when the read fails", async () => {
+    const running = normalizeEvent(upOrDown())!;
+    const fetcher = vi.fn(async () => Response.json({ openPrice: 84577.05, closePrice: null, completed: false })) as unknown as typeof fetch;
+    vi.useFakeTimers({ now: new Date("2026-10-03T09:31:00Z") });
+    try {
+      expect((await withPriceToBeat(running, { fetcher })).upOrDown).toEqual({ window: "15M", priceToBeat: 84577.05 });
+      const failing = vi.fn(async () => new Response("no", { status: 500 })) as unknown as typeof fetch;
+      expect((await withPriceToBeat(running, { fetcher: failing })).upOrDown).toEqual({ window: "15M", priceToBeat: null });
+      vi.setSystemTime(new Date("2026-10-03T09:29:00Z"));
+      vi.mocked(fetcher).mockClear();
+      expect((await withPriceToBeat(running, { fetcher })).upOrDown?.priceToBeat).toBeNull();
+      expect(fetcher).not.toHaveBeenCalled();
+    } finally { vi.useRealTimers(); }
+    // A market page finds its window in the tags it carries from its event.
+    expect(marketUpOrDown(running.markets[0]!)).toEqual({ window: "15M", priceToBeat: null });
+    expect(marketUpOrDown({ tags: [{ slug: "politics", label: "Politics" }] })).toBeNull();
   });
 
   it("finds the asset symbol in Chainlink and Binance sources only", () => {
