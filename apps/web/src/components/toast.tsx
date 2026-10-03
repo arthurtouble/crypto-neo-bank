@@ -11,7 +11,7 @@ export type ToastInput = {
   detail?: string;
   /** A link the customer can follow, such as "Open Transactions". */
   link?: { label: string; href: string };
-  /** Toasts with the same key replace each other instead of stacking. */
+  /** Names a group of toasts the screen can close together, such as Settings' when the customer leaves it. */
   key?: string;
   /** Keep it on screen until the customer closes it. Use for outcomes they must act on. */
   sticky?: boolean;
@@ -26,7 +26,6 @@ type ToastApi = {
 };
 
 const DURATION_MS: Record<ToastTone, number> = { success: 5_000, info: 5_000, error: 8_000 };
-const MAX_TOASTS = 3;
 const noop = () => undefined;
 const ToastContext = createContext<ToastApi>({ show: noop, success: noop, error: noop, dismiss: noop });
 
@@ -35,9 +34,12 @@ export function useToast() {
   return useContext(ToastContext);
 }
 
-/** Add a toast: one with the same key replaces the earlier one, and only the newest few stay. */
+/**
+ * Add a toast under the ones still showing, so a second notice arriving at the same moment never hides the first.
+ * Only a repeat of the same message (same title) takes the earlier one's place, with its newer detail, so it never shows twice.
+ */
 export function addToast(current: Toast[], toast: Toast): Toast[] {
-  return [...current.filter((item) => !toast.key || item.key !== toast.key), toast].slice(-MAX_TOASTS);
+  return [...current.filter((item) => item.title !== toast.title), toast];
 }
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {

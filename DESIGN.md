@@ -245,7 +245,7 @@ Soft and subtle: 6px for buttons and inputs, 8px for notes, segmented controls, 
 - **Rows:** icon or logo, title and secondary line, amount and status on the right. Tables on desktop become lists on the phone.
 - **Statuses:** a dot and a literal word.
 - **Notes** (soft status background, icon, short text) and **banners** (page-wide: guest example data, expired session, missing source).
-- **Toasts:** raised, one line, close button; bottom right on desktop, top on the phone.
+- **Toasts:** raised, one line, close button; bottom right on desktop, top on the phone. A new one stacks under those still showing, never replaces them.
 - **Navigation:** desktop sidebar with ten sections, each an icon and a name, current item muted with an accent icon. Phone: no tab bar; the menu button opens a sheet of ten tiles, three per row, with Log out at the bottom.
 - **Overlays:** details in a side panel on desktop, a pushed screen on the phone; short choices in a popover or bottom sheet; confirmations in a dialog or bottom sheet. All trap focus and close with Escape.
 - **Money flows:** amount, then who, then a review with "Confirm and send" and the passkey; progress as a timeline in place.
