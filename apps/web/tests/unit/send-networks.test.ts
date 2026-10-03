@@ -72,6 +72,20 @@ describe("GET /api/routes/quote for a send to another network", () => {
     expect(state.quoted).toHaveLength(2);
   });
 
+  it("refuses buying a stock token from the US or the UK before LI.FI is asked, and allows it elsewhere", async () => {
+    sqlite.exec("UPDATE feature_flags SET enabled = 1");
+    const from = (country: string, to = apple) => GET(new Request(`https://aura.test/api/routes/quote?${new URLSearchParams({ from: baseUsdc, to, amount: "10" })}`,
+      { headers: { "CF-IPCountry": country } }));
+    for (const country of ["US", "PR", "GB"]) {
+      const refused = await from(country);
+      expect(refused.status, country).toBe(451);
+      expect(await refused.json()).toMatchObject({ error: "place_restricted", message: expect.stringContaining("You can still sell") });
+    }
+    expect(state.quoted).toHaveLength(0);
+    expect((await from("FR")).status).toBe(200);
+    expect((await from("US", "8453:native")).status).toBe(200);
+  });
+
   it("refuses a token contract as the recipient before LI.FI is asked", async () => {
     sqlite.exec("UPDATE feature_flags SET enabled = 1");
     const response = await quote("0xaf88d065e77c8cc2239327c5edb3a432268e5831");

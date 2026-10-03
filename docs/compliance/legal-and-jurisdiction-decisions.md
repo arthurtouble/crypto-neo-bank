@@ -11,9 +11,10 @@ Appearing here doesn't approve a row. Before enabling the related feature, recor
 | Customer contracting entity | Open | Terms party aligned with actual service and provider agreements |
 | Initial countries | Open | Provider country matrix plus local product/marketing review |
 | Excluded countries/persons | Sanctioned places blocked at the edge (30 September 2026, owner). Other exclusions open | Counsel review of the list; provider screening for persons. See [blocked places](#blocked-places) |
+| Perps and Predictions availability | Each venue's own list applied (3 October 2026, owner); see [provider places](#provider-places) | Counsel review of Aura's role as the interface that sends the orders |
 | Aura role for self-controlled wallet/DeFi interface | Open | Counsel characterization and activity-by-activity licensing analysis |
 | KYC/fiat/card allocation | Open | Signed provider agreement and the [responsibility matrix](compliance-responsibility-matrix.md) |
-| Tokenized assets | Enabled (2 October 2026, owner): Coinbase tokenized stocks and Tether Gold, for everyone outside the [blocked places](#blocked-places). Coinbase's terms say its stock tokens are for people in eligible places outside the US; the public docs tell customers to check this | Issuer, venue, distribution, transfer restriction, and country review |
+| Tokenized assets | Enabled (2 October 2026, owner): Coinbase tokenized stocks and Tether Gold, for everyone outside the [blocked places](#blocked-places). Buying stock tokens is refused from the US and the UK (3 October 2026, owner), following Coinbase's Regulation S offer; see [provider places](#provider-places) | Issuer, venue, distribution, transfer restriction, and country review |
 | Membership/rewards | Cut | None now. Card cashback, if it returns as its own feature, needs vendor contracts, tax/consumer terms, and funding |
 | "Bank", "account", "deposit", insurance, and yield language | Restricted | Approved copy library reflecting the exact legal product |
 | Privacy roles and data transfers | Open | Privacy notice, DPA, subprocessors, residency, and transfer mechanism |
@@ -29,6 +30,20 @@ On 30 September 2026 the owner chose to block the places under comprehensive san
 - Each refusal is logged as `edge.place_blocked` with the country, region, and path, not the IP address.
 - It is one control, not proof of residence: a VPN gets around it. The terms exclude sanctioned people and places, and partners screen the people they onboard.
 - To add a place, add its country code, or country and ISO 3166-2 region code, to `places.ts` in a reviewed change, and record the decision here.
+
+## Provider places
+
+On 3 October 2026 the owner chose to apply each provider's own list of places for the features where Aura's server sends the order, so the provider can't see the customer's location: Perps (Hyperliquid), Predictions (Polymarket), and buying stock tokens (Coinbase). The lists are in `apps/web/src/lib/legal/places.ts`.
+
+| Feature | Provider's rule | Refused from |
+|---|---|---|
+| Perps | Hyperliquid's terms of use restrict US and Ontario persons | The United States and its territories; Ontario |
+| Predictions | Polymarket's [geographic restrictions](https://docs.polymarket.com/api-reference/geoblock), which builders must apply | Every place Polymarket makes close-only on its site or API: the United States and its territories, the United Kingdom, France, Germany, Italy, Belgium, the Netherlands, Ireland, Poland, Slovakia, Australia, New Zealand, Singapore, Japan, South Korea, Taiwan, Thailand, Brazil, Russia, Belarus, and others; Alberta, British Columbia, Ontario, and Quebec |
+| Buying stock tokens | Coinbase offers them under Regulation S, not to the US or the UK | The United States and its territories; the United Kingdom |
+
+- Only new things are refused (setup, adding money, opening or adding to a position, buying), with 451 `place_restricted` and a message saying what still works. Selling, closing, cancelling, redeeming, and withdrawing always work, so nobody's money is stuck.
+- It's the same control as the sanctions block: Cloudflare's geolocation of the request, so a VPN gets around it. Each provider's terms still bind the customer.
+- When a provider changes its list, change `places.ts` in a reviewed change and update this table.
 
 ## Offshore incorporation
 

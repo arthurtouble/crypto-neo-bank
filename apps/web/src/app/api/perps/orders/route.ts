@@ -1,5 +1,6 @@
 import { env } from "cloudflare:workers";
 import { z } from "zod";
+import { requireProviderPlace } from "@/lib/legal/places";
 import { readJsonBody, route } from "@/lib/http/route";
 import { marketActor } from "@/lib/markets/guard";
 import { venueErrorResponse } from "@/lib/markets/http";
@@ -15,6 +16,9 @@ const schema = z.strictObject({
 export const POST = route("perps.orders", { invalid: "invalid_order", unavailable: "perps_unavailable", onError: venueErrorResponse },
   async (request, { traceId }) => {
     const { subject, account } = await marketActor(env.PROJECTION_DB, request, "perps", 60);
-    const result = await placePerpsOrder(env.PROJECTION_DB, subject, account.address, schema.parse(await readJsonBody(request)));
+    const input = schema.parse(await readJsonBody(request));
+    // Closing is always allowed; opening or adding is refused where Hyperliquid doesn't serve.
+    if (!input.reduceOnly) requireProviderPlace(request, "perps");
+    const result = await placePerpsOrder(env.PROJECTION_DB, subject, account.address, input);
     return Response.json({ statuses: result.statuses, traceId }, { status: 201 });
   });
