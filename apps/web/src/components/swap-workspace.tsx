@@ -9,12 +9,15 @@ import { SUPPORTED_CHAINS } from "@/config/supported-chains";
 import { ApiError, useApi } from "@/lib/client/api";
 import { useAction } from "@/lib/client/use-action";
 import { useNativeBalance, useTokenBalance } from "@/lib/client/wallet-context";
-import { formatWeekdayTime } from "@/lib/format";
+import { formatToken, formatUsd, formatWeekdayTime, fromRaw } from "@/lib/format";
+import { BASE_CHAIN_ID, registeredAsset } from "@/lib/assets/registry";
+import { useOverview } from "@/lib/client/queries";
+import Link from "next/link";
 import type { AssetId, CatalogAsset } from "@/lib/swap/assets";
 import { assetNetwork } from "@/lib/swap/picker-model";
 import { displayRawAmount, formatEstimatedFeeUsd } from "@/lib/swap/review-model";
 import { parseSwapDeepLink } from "@/lib/swap/links";
-import { SwapAssetPicker } from "./swap-asset-picker";
+import { SwapAssetSelect } from "./swap-asset-select";
 import { useToast } from "./toast";
 import { TransactionProgress } from "./transaction-progress";
 import { Notice } from "./states";
@@ -53,6 +56,19 @@ function quoteErrorText(error: unknown): string {
   return error instanceof Error ? error.message : "We couldn't get a quote. Try again.";
 }
 
+/** " on Ethereum" for an asset off the account's own network; nothing on Base. */
+function onNetwork(chainId: number) { return chainId === BASE_CHAIN_ID ? "" : ` on ${assetNetwork(chainId)}`; }
+
+/** "1 USDC = 0.995 AAPLc", from the quote's own amounts. */
+function rateText(quote: RouteQuote) {
+  const paid = fromRaw(quote.fromAmountRaw, quote.from.decimals);
+  const received = fromRaw(quote.toAmountRaw, quote.to.decimals);
+  return paid > 0 ? `1 ${quote.from.symbol} = ${formatToken(received / paid)} ${quote.to.symbol}` : "Unavailable";
+}
+
+/** Delivered somewhere the account doesn't hold (USDC on Arbitrum, say), so it won't show in Aura. Gold on Ethereum is held. */
+function leavesAura(quote: RouteQuote) { return !registeredAsset(quote.to.id)?.uses.includes("hold"); }
+
 function secondsLeft(expiresAt: string, now: number) {
   const expires = Date.parse(expiresAt);
   return Number.isFinite(expires) ? Math.max(0, Math.floor((expires - now) / 1000)) : 0;
@@ -73,6 +89,7 @@ export function SwapWorkspace() {
   const [quoting, setQuoting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const toast = useToast();
+  const overview = useOverview();
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     if (!quote) return;
@@ -144,44 +161,60 @@ export function SwapWorkspace() {
 
   const quoteUsed = Boolean(quote && usedQuoteId === quote.id);
   const done = swap.phase === "done" || handedOff;
+  const failed = swap.action?.status === "failed" || swap.action?.status === "expired";
+  // An empty account has nothing to swap yet: point to Deposit rather than a form that can only say "you don't have any".
+  const empty = Boolean(overview.data && !overview.isExample && overview.data.holdings.length > 0 && overview.data.holdings.every((item) => item.amountRaw === "0"));
+  const showQuote = quote && !done;
+
+  function chooseFrom(id: AssetId) { if (id === toAssetId) reverse(); else { setFromAssetId(id); clearQuote(); } }
+  function chooseTo(id: AssetId) { if (id === fromAssetId) reverse(); else { setToAssetId(id); clearQuote(); } }
+  function startOver() { const keep = failed; swap.reset(); setQuote(null); setError(null); if (!keep) setAmount(""); }
+
   return <div className="mxColumns">
     <div className="mxMain">
       <section className="mxPanel" aria-label="Swap form">
         <form className="mxForm mxSwapForm" onSubmit={(event) => void getQuote(event)}>
+          {empty && <Notice>Your account is empty. <Link className="mxInlineLink" href="/app/deposit">Deposit</Link> first, then swap.</Notice>}
           <div className="mxSwapSide">
-            <div className="mxSwapSideHead"><span className="mxLabel">You pay</span><SwapAssetPicker value={fromAssetId} excludedId={toAssetId} label="You pay" held onSelect={(id) => { setFromAssetId(id); clearQuote(); }} /></div>
-            <input className="mxSwapAmount" aria-label="Amount to swap" inputMode="decimal" autoComplete="off" value={amount} disabled={inFlight} onChange={(event) => { setAmount(event.target.value); clearQuote(); }} placeholder="0.00" />
-            <span className="mxHint">{availableRaw !== undefined && source ? `${formatUnits(availableRaw, source.decimals)} ${source.symbol} available` : nativeBalance.isPending || tokenBalance.isPending ? "Reading balance" : "Balance unavailable"}</span>
+            <div className="mxSwapSideHead"><span className="mxLabel">You pay</span><SwapAssetSelect value={fromAssetId} label="You pay" held disabled={inFlight} onSelect={chooseFrom} /></div>
+            <div className="mxSwapAmountRow">
+              <input className="mxSwapAmount" aria-label="Amount to swap" inputMode="decimal" autoComplete="off" value={amount} disabled={inFlight} onChange={(event) => { setAmount(event.target.value.trim()); clearQuote(); }} placeholder="0.00" />
+              {/* Aura pays the network fee, so all of it can be swapped, ETH included. */}
+              {source && availableRaw !== undefined && availableRaw > 0n && <button type="button" className="appButton mxMaxButton" disabled={inFlight}
+                onClick={() => { setAmount(formatUnits(availableRaw, source.decimals)); clearQuote(); }}>Max</button>}
+            </div>
+            <span className="mxHint">{availableRaw !== undefined && source ? `${formatToken(fromRaw(availableRaw, source.decimals))} ${source.symbol} available` : nativeBalance.isPending || tokenBalance.isPending ? "Reading balance" : "Balance unavailable"}
+              {showQuote && quote.fromAmountUsd ? ` · ${formatUsd(quote.fromAmountUsd)}` : ""}</span>
           </div>
           <button className="mxSwapReverse" type="button" disabled={inFlight} onClick={reverse} aria-label="Reverse assets"><ArrowDownUp aria-hidden="true" /></button>
           <div className="mxSwapSide mxSwapReceive">
-            <div className="mxSwapSideHead"><span className="mxLabel">You receive</span><SwapAssetPicker value={toAssetId} excludedId={fromAssetId} label="You receive" onSelect={(id) => { setToAssetId(id); clearQuote(); }} /></div>
-            <strong className="mxSwapAmount mxSwapEstimate">{quote ? displayRawAmount(quote.toAmountRaw, quote.to.decimals) : "—"}</strong>
-            <span className="mxHint">{quote ? "Estimated" : "Choose an amount"}</span>
+            <div className="mxSwapSideHead"><span className="mxLabel">You receive</span><SwapAssetSelect value={toAssetId} label="You receive" disabled={inFlight} onSelect={chooseTo} /></div>
+            <strong className="mxSwapAmount mxSwapEstimate">{showQuote ? displayRawAmount(quote.toAmountRaw, quote.to.decimals) : "—"}</strong>
+            <span className="mxHint">{showQuote ? quote.toAmountUsd ? `About ${formatUsd(quote.toAmountUsd)}` : "Estimated" : "Enter an amount"}</span>
           </div>
-          <div className="mxSwapSettings"><span className="mxLabel" id="swap-slippage">Max slippage</span>
+          <div className="mxSwapSettings"><span className="mxLabel" id="swap-slippage">Price can move up to</span>
             <div className="appSegmented" role="group" aria-labelledby="swap-slippage">{[10, 50, 100].map((value) => <button type="button" key={value} disabled={inFlight} aria-pressed={slippageBps === value} onClick={() => { setSlippageBps(value); clearQuote(); }}>{value / 100}%</button>)}</div></div>
           {switchedOff && <Notice tone="warning">{otherNetwork ? "Swaps to or from another network aren't available right now." : "Swaps aren't available right now."}</Notice>}
           {error && <p className="mxFieldError" role="alert">{error}</p>}
-          {/* One primary action at a time: once there's a quote, Swap is it. */}
-          <button className={`appButton appButtonLarge${quote ? "" : " appButtonPrimary"}`} type="submit" disabled={quoting || inFlight || switchedOff || !address || !source || !destination}>
+          {/* One primary action at a time: once there's a quote, its Swap button is it. */}
+          {!showQuote && !done && <button className="appButton appButtonPrimary appButtonLarge" type="submit" disabled={quoting || inFlight || switchedOff || !address || !source || !destination}>
             {quoting ? <><LoaderCircle className="spin" aria-hidden="true" /> Getting quote</> : !address ? "Preparing your wallet" : "Get quote"}
-          </button>
+          </button>}
         </form>
       </section>
     </div>
     <aside className="mxSide">
-      {quote ? <section className="mxCard mxQuote" aria-label="Swap quote">
+      {showQuote ? <section className="mxCard mxQuote" aria-label="Swap quote">
         <div className="mxQuoteHead"><h2>Quote</h2><span className={`mxBadge${remaining > 0 && remaining <= 10 ? " mxBadgeWarning" : ""}`}>{remaining > 0 ? `Expires in ${remaining}s` : "Expired"}</span></div>
         <dl className="mxSummary">
-          <div><dt>You pay</dt><dd>{displayRawAmount(quote.fromAmountRaw, quote.from.decimals)} {quote.from.symbol} on {assetNetwork(quote.from.chainId)}</dd></div>
-          <div><dt>You receive</dt><dd>{displayRawAmount(quote.toAmountRaw, quote.to.decimals)} {quote.to.symbol} on {assetNetwork(quote.to.chainId)}</dd></div>
-          <div><dt>Minimum received</dt><dd>{displayRawAmount(quote.toAmountMinRaw, quote.to.decimals)} {quote.to.symbol}</dd></div>
-          <div><dt>Network fee on {assetNetwork(quote.from.chainId)}</dt><dd className="mxPositive">Paid by Aura</dd></div>
-          <div><dt>{crossChain ? "Route fees" : "Provider fee"}</dt><dd>{crossChain && quote.fromAmountUsd && quote.toAmountUsd
+          <div><dt>You pay</dt><dd>{displayRawAmount(quote.fromAmountRaw, quote.from.decimals)} {quote.from.symbol}{onNetwork(quote.from.chainId)}</dd></div>
+          <div><dt>You receive about</dt><dd>{displayRawAmount(quote.toAmountRaw, quote.to.decimals)} {quote.to.symbol}{onNetwork(quote.to.chainId)}</dd></div>
+          <div><dt>You get at least</dt><dd>{displayRawAmount(quote.toAmountMinRaw, quote.to.decimals)} {quote.to.symbol}</dd></div>
+          <div><dt>Rate</dt><dd>{rateText(quote)}</dd></div>
+          <div><dt>Network fee</dt><dd className="mxPositive">Paid by Aura</dd></div>
+          <div><dt>{crossChain ? "Exchange and transfer fees" : "Exchange fee"}</dt><dd>{crossChain && quote.fromAmountUsd && quote.toAmountUsd
             ? `About ${formatEstimatedFeeUsd(Math.max(0, Number(quote.fromAmountUsd) - Number(quote.toAmountUsd)))}, taken from the amount` : formatEstimatedFeeUsd(quote.providerFeeUsd)}</dd></div>
-          <div><dt>Price impact</dt><dd>{quote.priceImpactPercent === null ? "Unavailable" : `${quote.priceImpactPercent.toFixed(2)}%`}</dd></div>
-          <div><dt>Provider</dt><dd>{quote.tool}</dd></div>
+          {quote.priceImpactPercent !== null && <div><dt>Price effect of this swap</dt><dd>{quote.priceImpactPercent.toFixed(2)}%</dd></div>}
         </dl>
         {(quote.references ?? []).map((reference) => {
           const asset = reference.assetId === quote.to.id ? quote.to : quote.from;
@@ -191,21 +224,23 @@ export function SwapWorkspace() {
           return <p className={`mxNote${far ? " mxNoteWarning" : ""}`} key={reference.assetId} data-testid="swap-reference">
             {asset.symbol} reference price ${Number(reference.usd).toLocaleString("en-US", { maximumFractionDigits: 2 })}, as of {referenceTime(reference.observedAt)}.
             {far ? ` This quote is about ${gap.toFixed(1)}% away from it. Markets may be closed or thin, so check the amount.` : ""}
+            {crossChain ? ` Arrival on ${assetNetwork(quote.to.chainId)} usually takes up to 30 minutes.` : ""}
           </p>;
         })}
-        {crossChain && <Notice>Arrival on {assetNetwork(quote.to.chainId)} usually takes up to 30 minutes. You can leave this screen once it&apos;s sent.</Notice>}
-        {done
-          ? <button className="appButton appButtonPrimary appButtonLarge" type="button" onClick={() => { swap.reset(); setQuote(null); setAmount(""); }}>New swap</button>
-          : swap.phase !== "idle"
-            ? <button className="appButton appButtonPrimary appButtonLarge" type="button" disabled><LoaderCircle className="spin" aria-hidden="true" /> {swap.phase === "preparing" ? "Checking" : swap.phase === "signing" ? "Confirm with your passkey" : "Swapping"}</button>
-            : remaining === 0 || quoteUsed
-              ? <button className="appButton appButtonLarge" type="button" disabled={quoting || swap.outcomeUnknown} onClick={() => void getQuote()}><RefreshCw aria-hidden="true" /> {remaining === 0 ? "Quote expired. Refresh" : "Get a new quote"}</button>
-              : <button className="appButton appButtonPrimary appButtonLarge" type="button" onClick={() => void confirm()}>Swap</button>}
-      </section> : <section className="mxCard mxQuoteEmpty">
+        {/* Owner decision, 2 October 2026: keep receiving on other networks, and say plainly that it leaves Aura's view. */}
+        {leavesAura(quote) && <Notice tone="warning" data-testid="swap-leaves-aura">This goes to your address on {assetNetwork(quote.to.chainId)}. Aura doesn&apos;t show balances there, and can&apos;t move it back for you. Use a wallet that supports {assetNetwork(quote.to.chainId)} to see or move it.</Notice>}
+        {crossChain && !(quote.references ?? []).length && <Notice>Arrival on {assetNetwork(quote.to.chainId)} usually takes up to 30 minutes. You can leave this screen once it&apos;s sent.</Notice>}
+        {swap.phase !== "idle"
+          ? <button className="appButton appButtonPrimary appButtonLarge" type="button" disabled><LoaderCircle className="spin" aria-hidden="true" /> {swap.phase === "preparing" ? "Checking" : swap.phase === "signing" ? "Confirm with your passkey" : "Swapping"}</button>
+          : remaining === 0 || quoteUsed
+            ? <button className="appButton appButtonLarge" type="button" disabled={quoting || swap.outcomeUnknown} onClick={() => void getQuote()}><RefreshCw aria-hidden="true" /> {remaining === 0 ? "Quote expired. Refresh" : "Get a new quote"}</button>
+            : <button className="appButton appButtonPrimary appButtonLarge" type="button" onClick={() => void confirm()}>Swap</button>}
+      </section> : !done && <section className="mxCard mxQuoteEmpty">
         <h2>Quote</h2>
-        <p className="mxHint">Choose what you pay and receive, and an amount. The quote shows what you get, the fees, and the price impact before you swap.</p>
+        <p className="mxHint">Choose what you pay and receive, and an amount. The quote shows what you get and the fees before you swap.</p>
       </section>}
       <TransactionProgress label="Swap" phase={swap.phase} action={swap.action} outcomeUnknown={swap.outcomeUnknown} />
+      {done && <button className="appButton appButtonPrimary appButtonLarge" type="button" onClick={startOver}>{failed ? "Try again" : "New swap"}</button>}
     </aside>
   </div>;
 }
