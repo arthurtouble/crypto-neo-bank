@@ -4,7 +4,7 @@ import { customerSections, legacySectionDestination, navigation } from "@/lib/pr
 describe("Aura product map", () => {
   it("exposes only the approved customer sections", () => {
     expect(customerSections).toEqual([
-      "deposit", "send", "swap", "earn", "cards",
+      "deposit", "send", "swap", "earn", "markets", "cards",
       "transactions", "insights", "settings", "support"
     ]);
     expect(navigation.flatMap((group) => group.items.map((item) => item.href))).toEqual([

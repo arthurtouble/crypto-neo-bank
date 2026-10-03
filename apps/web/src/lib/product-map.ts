@@ -1,5 +1,5 @@
 export const customerSections = [
-  "deposit", "send", "swap", "earn", "cards",
+  "deposit", "send", "swap", "earn", "markets", "cards",
   "transactions", "insights", "settings", "support"
 ] as const;
 
@@ -13,7 +13,8 @@ export const navigation = [
     { label: "Swap", href: "/app/swap" }
   ] },
   { group: "Grow", items: [
-    { label: "Earn", href: "/app/earn" }
+    { label: "Earn", href: "/app/earn" },
+    { label: "Markets", href: "/app/markets" }
   ] },
   { group: "Everyday", items: [
     { label: "Cards", href: "/app/cards" },

@@ -291,11 +291,11 @@ On the raised surface with shadow 2, a status icon, a title, one line, and a clo
 
 ### Navigation
 
-- **Desktop sidebar.** 232px, the surface colour, a line on its right. The wordmark at the top, then the ten sections as 36px items: an 18px icon and the name. The current item has a muted fill, text colour, and an accent icon. Tablet: 72px, icons only, names in tooltips.
+- **Desktop sidebar.** 232px, the surface colour, a line on its right. The wordmark at the top, then the eleven sections as 36px items: an 18px icon and the name. The current item has a muted fill, text colour, and an accent icon. Tablet: 72px, icons only, names in tooltips.
 - **Desktop top bar.** 60px: the page title or search (⌘K) on the left, the bell and the avatar menu on the right. The bell's unread count is a small accent pill on the bell's top-right corner, never over the bell. The avatar shows the first letter of the account's email or name; with no letter (an email like 3@…), a person icon.
 - **Phone header.** 56px: the section title, and the bell on the right. In a step, a back button on the left and the step's title instead.
 - **Phone menu button.** A 56px circle, filled with the text colour, floating bottom centre with shadow 2. It hides during a step, and otherwise stays put: no hiding on scroll, focus, or overlap. Every page ends with 100px clear plus the safe area, so the customer can always scroll any button above it (owner, 2 October). Hiding it on focus moved it under the finger as the field lost focus, and hiding it on scroll or overlap didn't hold up on a real phone.
-- **Phone menu sheet.** From the bottom, `--radius-sheet` top corners, a grab handle. "Menu" and the email at the top, the ten sections as tiles three per row (a 22px icon above the name, the current tile outlined in accent), and Log out at the bottom.
+- **Phone menu sheet.** From the bottom, `--radius-sheet` top corners, a grab handle. "Menu" and the email at the top, the eleven sections as tiles three per row (a 22px icon above the name, the current tile outlined in accent), and Log out at the bottom.
 
 ### Overlays
 
