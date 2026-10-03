@@ -6,7 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   ArrowDownToLine, ArrowDownUp, ArrowUpFromLine, CandlestickChart, ChartNoAxesColumn, CircleHelp, CreditCard,
-  LayoutGrid, List, LogIn, Settings, TrendingUp, type LucideIcon
+  LayoutGrid, List, LogIn, CirclePercent, Settings, TrendingUp, type LucideIcon
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { navigation } from "@/lib/product-map";
@@ -18,10 +18,10 @@ import { NotificationBell } from "./notification-bell";
 import { SupportChatProvider } from "./support-chat";
 import { ThemeChoice } from "./theme-choice";
 
-/** The eleven sections, in order, not grouped (redesign-journeys.md, Navigation). */
+/** The twelve sections, in order, not grouped (redesign-journeys.md, Navigation). */
 const sections: { label: string; href: string }[] = navigation.flatMap((group) => [...group.items]);
 const iconFor: Record<string, LucideIcon> = {
-  Overview: LayoutGrid, Deposit: ArrowDownToLine, Send: ArrowUpFromLine, Swap: ArrowDownUp, Earn: TrendingUp, Markets: CandlestickChart,
+  Overview: LayoutGrid, Deposit: ArrowDownToLine, Send: ArrowUpFromLine, Swap: ArrowDownUp, Earn: TrendingUp, Perps: CandlestickChart, Predictions: CirclePercent,
   Cards: CreditCard, Transactions: List, Insights: ChartNoAxesColumn, Settings, Support: CircleHelp
 };
 
@@ -62,7 +62,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** Phone only: the floating menu button and the sheet of ten tiles, three per row, with the account at the bottom. */
+/** Phone only: the floating menu button and the sheet of twelve tiles, three per row, with the account at the bottom. */
 function MenuSheet({ pathname }: { pathname: string }) {
   const [open, setOpen] = useState(false);
   // Disabled until hydrated, so an early tap isn't lost.

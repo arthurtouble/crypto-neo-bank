@@ -1,8 +1,8 @@
-import { PerpsMarketPage } from "@/components/perps-market";
+import { redirect } from "next/navigation";
 
-/** A perp's name may arrive encoded ("xyz%3ASPCX" for the stock perp xyz:SPCX). */
-const decoded = (value: string) => { try { return decodeURIComponent(value); } catch { return value; } };
-
+/** The old address of a perp's page. A stock perp's coin stays encoded ("xyz%3ASPCX"). */
 export default async function Page({ params }: { params: Promise<{ coin: string }> }) {
-  return <PerpsMarketPage coin={decoded((await params).coin)} />;
+  redirect(`/app/perps/${encodeURIComponent(decoded((await params).coin))}`);
 }
+
+const decoded = (value: string) => { try { return decodeURIComponent(value); } catch { return value; } };

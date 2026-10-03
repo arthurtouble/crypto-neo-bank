@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ChevronDown, Search } from "lucide-react";
-import { useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useAuth } from "@/lib/client/auth";
 import { formatCompactUsd, formatFunding, formatPrice, formatSignedPercent, formatSignedPrice, perpDex, perpName, dayChangePercent } from "@/lib/markets/view";
 import { usePerpMarkets, usePerpsAccount, type PerpMarket } from "./markets-data";
@@ -10,8 +10,8 @@ import { NotAvailableYet, SourceLine, useIsPhone } from "./markets-parts";
 import { GuestBanner } from "./guest-banner";
 import { PerpsBook } from "./perps-book";
 import { PerpsChart } from "./perps-chart";
-import { PerpsActivity } from "./perps-home";
-import { PerpsOrderForm, PerpsOrderSheet } from "./perps-sheets";
+import { perpHref, PerpsActivity } from "./perps-home";
+import { PerpsOrderForm, PerpsOrderSheet, type OrderPreset } from "./perps-order";
 import { LoadingState, Notice } from "./states";
 
 /**
@@ -19,7 +19,7 @@ import { LoadingState, Notice } from "./states";
  * chart, and the customer's positions on the left; the order book in the
  * middle; the order panel on the right, always open. Phone: one column, the
  * order book as a tab beside positions, and Long and Short opening the order
- * sheet.
+ * sheet. Picking a price in the book starts a limit order there.
  */
 export function PerpsMarketPage({ coin }: { coin: string }) {
   const { ready, authenticated, login } = useAuth();
@@ -28,11 +28,22 @@ export function PerpsMarketPage({ coin }: { coin: string }) {
   const account = usePerpsAccount();
   const [side, setSide] = useState<"long" | "short">("long");
   const [sheet, setSheet] = useState(false);
+  const [preset, setPreset] = useState<OrderPreset | null>(null);
+  const [bookStep, setBookStep] = useState<number | null>(null);
+  const grouping = { step: bookStep, onStep: setBookStep };
   const list = markets.data?.markets;
   const all = list?.status === "observed" ? list.data : [];
   const market = all.find((item) => item.coin === coin);
   const name = perpName(coin);
   const guest = !ready || !authenticated;
+
+  // A price picked in the book: a limit order there, on the side that trades with it. On the phone it opens the order sheet.
+  const pick = useCallback((choice: { price: string; side: "long" | "short" }) => {
+    setSide(choice.side);
+    setPreset((current) => ({ ...choice, nonce: (current?.nonce ?? 0) + 1 }));
+    if (phone) { if (guest) login(); else setSheet(true); }
+  }, [phone, guest, login]);
+  const openSheet = (next: "long" | "short") => { if (guest) login(); else { setPreset(null); setSide(next); setSheet(true); } };
 
   const body = markets.switchedOff ? <NotAvailableYet name="Perps" />
     : markets.isPending ? <LoadingState label={`Reading ${name}`} />
@@ -44,25 +55,25 @@ export function PerpsMarketPage({ coin }: { coin: string }) {
                 <Quote market={market} observedAt={list.observedAt} isExample={markets.isExample} />
                 <PerpsChart coin={coin} name={name} />
                 <PerpsActivity account={account.data} isPending={account.isPending} isExample={account.isExample} coin={coin}
-                  extra={phone ? { label: "Order book", render: () => <PerpsBook coin={coin} name={name} depth={8} framed={false} /> } : undefined} />
+                  extra={phone ? { label: "Order book", render: () => <PerpsBook market={market} name={name} depth={8} framed={false} onPick={pick} grouping={grouping} /> } : undefined} />
               </div>
-              {!phone && <PerpsBook coin={coin} name={name} />}
+              {!phone && <PerpsBook market={market} name={name} onPick={pick} grouping={grouping} />}
               {!phone && <aside className="mxCard mkOrderPanel" aria-label="Place an order">
-                <PerpsOrderForm key={market.coin} market={market} side={side} onSide={setSide} account={account.data} variant="panel" onDone={() => undefined} />
+                <PerpsOrderForm key={market.coin} market={market} side={side} onSide={setSide} account={account.data} variant="panel" onDone={() => undefined} preset={preset} />
               </aside>}
             </div>
             {phone && <div className="mkTradeBar">
-              <button type="button" className="appButton appButtonPrimary appButtonLarge" onClick={() => { if (guest) login(); else { setSide("long"); setSheet(true); } }}>Long</button>
-              <button type="button" className="appButton appButtonLarge" onClick={() => { if (guest) login(); else { setSide("short"); setSheet(true); } }}>Short</button>
+              <button type="button" className="appButton appButtonPrimary appButtonLarge" onClick={() => openSheet("long")}>Long</button>
+              <button type="button" className="appButton appButtonLarge" onClick={() => openSheet("short")}>Short</button>
             </div>}
-            {phone && sheet && <PerpsOrderSheet market={market} side={side} account={account.data} onClose={() => setSheet(false)} />}
+            {phone && sheet && <PerpsOrderSheet market={market} side={side} account={account.data} preset={preset} onClose={() => setSheet(false)} />}
           </>;
 
   return <div className="mxPage mkPage mkPerpPage">
     {guest && <GuestBanner onSignIn={login} ready={ready} />}
     <nav className="mkCrumbs" aria-label="Breadcrumb">
       <ol>
-        <li><Link href="/app/markets">Perps</Link></li>
+        <li><Link href="/app/perps">Perps</Link></li>
         <li>{perpDex(coin) ? "Stocks" : "Crypto"}</li>
         <li aria-current="page" className="mkCrumbMarket">
           <h1><MarketSwitcher coin={coin} markets={all} /></h1>
@@ -71,7 +82,7 @@ export function PerpsMarketPage({ coin }: { coin: string }) {
       </ol>
     </nav>
     {body}
-    {phone && <p className="mxHint mkRisk">Trades happen on Hyperliquid, from an account your wallet owns. Aura charges no fee. With leverage, a small price move can wipe out what you put in.</p>}
+    {phone && <p className="mxHint mkRisk">Trades happen on Hyperliquid, from an account your wallet owns. Aura charges no fee. With leverage, a small price move can lose everything you put in.</p>}
   </div>;
 }
 
@@ -90,8 +101,10 @@ function Quote({ market, observedAt, isExample }: { market: PerpMarket; observed
       <div><dt>Open interest</dt><dd>{formatCompactUsd(Number(market.openInterest) * Number(market.markPx)) ?? "Unavailable"}</dd></div>
       <div><dt>Funding, hourly</dt><dd>{formatFunding(market.funding) ?? "Unavailable"}</dd></div>
     </dl>
-    <small className="mkQuoteNote">{dex ? `A stock perp on the ${dex} market on Hyperliquid. It tracks the share price; you don't own the share.`
-      : `A perpetual future on ${name}. You don't own ${name}; longs and shorts pay each other funding every hour.`} <SourceLine source="hyperliquid" observedAt={observedAt} example={isExample} /></small>
+    <small className="mkQuoteNote">{dex ? `A stock perp on the ${dex} market on Hyperliquid. It follows the share price; you don't own the share.`
+      : `A perpetual future on ${name}: it follows ${name}'s price, and you don't own ${name}.`} {Number(market.funding) >= 0
+      ? "Funding: longs pay shorts the hourly rate on their position's value now."
+      : "Funding: shorts pay longs the hourly rate on their position's value now."} <SourceLine source="hyperliquid" observedAt={observedAt} example={isExample} /></small>
   </section>;
 }
 
@@ -122,7 +135,7 @@ function MarketSwitcher({ coin, markets }: { coin: string; markets: PerpMarket[]
       {groups.filter((group) => group.items.length > 0).map((group) => <div key={group.label} className="mkSwitchGroup">
         <h2>{group.label}</h2>
         <ul>{group.items.map((item) => <li key={item.coin}>
-          <Link href={`/app/markets/perps/${encodeURIComponent(item.coin)}`} aria-current={item.coin === coin ? "page" : undefined} onClick={() => setOpen(false)}>
+          <Link href={perpHref(item.coin)} aria-current={item.coin === coin ? "page" : undefined} onClick={() => setOpen(false)}>
             <strong>{perpName(item.coin)}</strong><span className="mkBadge">{item.maxLeverage}x</span><span>{formatPrice(item.markPx) ?? "—"}</span></Link>
         </li>)}</ul>
       </div>)}

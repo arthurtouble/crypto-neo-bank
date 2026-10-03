@@ -12,9 +12,11 @@ test("a change to one feature runs its spec and the sign-in smoke test", () => {
   assert.deepEqual(result.specs, ["send", "sign-in-overview"]);
 });
 
-test("a Markets screen or route runs the markets spec", () => {
-  assert.deepEqual(selectSpecs(["apps/web/src/components/perps-sheets.tsx", "apps/web/src/app/markets.css"]).specs, ["markets", "sign-in-overview"]);
+test("a perps screen runs the perps spec, a predictions route the markets spec, and their shared parts both", () => {
+  assert.deepEqual(selectSpecs(["apps/web/src/components/perps-sheets.tsx", "apps/web/src/app/app/perps/page.tsx"]).specs, ["perps", "sign-in-overview"]);
   assert.deepEqual(selectSpecs(["apps/web/src/app/api/predictions/history/route.ts"]).specs, ["markets", "sign-in-overview"]);
+  assert.deepEqual(selectSpecs(["apps/web/src/app/markets.css"]).specs, ["markets", "perps", "sign-in-overview"]);
+  assert.deepEqual(selectSpecs(["apps/web/src/lib/markets/view.ts"]).specs, ["markets", "perps", "sign-in-overview"]);
 });
 
 test("a changed spec runs itself", () => {

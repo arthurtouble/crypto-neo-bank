@@ -8,7 +8,6 @@
 
 .appFrame .mkPage { gap: var(--gap-section); }
 .appFrame .mkSection { display: grid; gap: var(--gap-section); min-width: 0; }
-.appFrame .mkViews { justify-self: start; }
 .appFrame .mkRisk { max-width: 72ch; }
 .appFrame .mkCardHead { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; }
 .appFrame .mkCardHead h2 { font-size: var(--text-title-3-size); line-height: var(--text-title-3-line); font-weight: var(--weight-semibold); }
@@ -43,6 +42,10 @@
 .appFrame .mkAvailable { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; padding-top: var(--space-3); border-top: 1px solid var(--color-line); }
 .appFrame .mkAvailable > span:first-child { display: grid; }
 .appFrame .mkAvailable strong { font-weight: var(--weight-semibold); }
+.appFrame .mkBalances { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-6); margin: 0; }
+.appFrame .mkBalances > div { display: grid; }
+.appFrame .mkBalances dt { color: var(--color-text-secondary); font-size: var(--text-small-size); line-height: var(--text-small-line); }
+.appFrame .mkBalances dd { margin: 0; font-weight: var(--weight-semibold); font-variant-numeric: tabular-nums; }
 .appFrame .mkAvailableActions { display: flex; gap: var(--space-2); }
 .appFrame .mkAccount .appButton { justify-self: auto; }
 
@@ -52,6 +55,21 @@
 .appFrame .mkRow { display: flex; align-items: center; gap: var(--space-3); min-height: var(--row-height); padding: var(--space-2) 0; color: var(--color-text); text-decoration: none; }
 .appFrame a.mkRow:hover { background: var(--color-hover); }
 .appFrame .mkPosition { flex-wrap: wrap; }
+/* An open perp position: name, side, and profit; its numbers in a grid; TP/SL and Close */
+.appFrame .mkPerpPosition { display: grid; gap: var(--space-3); padding: var(--space-3) 0; }
+.appFrame .mkPerpPositionHead { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); }
+.appFrame .mkPerpPositionName { color: var(--color-text); text-decoration: none; }
+.appFrame .mkPerpPositionName:hover { color: var(--color-accent); }
+.appFrame .mkPerpPositionName strong { font-weight: var(--weight-semibold); }
+.appFrame .mkPerpPositionPnl { display: inline-flex; align-items: baseline; gap: var(--space-2); margin-left: auto; font-variant-numeric: tabular-nums; }
+.appFrame .mkPerpPositionPnl strong { font-weight: var(--weight-semibold); }
+.appFrame .mkPerpPositionPnl small { color: var(--color-text-secondary); }
+.appFrame .mkPerpPositionPnl .mkUp { color: var(--color-positive); }
+.appFrame .mkPerpPositionFacts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-2) var(--space-4); margin: 0; }
+.appFrame .mkPerpPositionFacts > div { display: grid; min-width: 0; }
+.appFrame .mkPerpPositionFacts dt { color: var(--color-text-secondary); font-size: var(--text-caption-size); line-height: var(--text-caption-line); }
+.appFrame .mkPerpPositionFacts dd { margin: 0; font-size: var(--text-small-size); line-height: var(--text-small-line); font-weight: var(--weight-medium); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.appFrame .mkPerpPosition .mkRowActions { justify-self: end; }
 .appFrame .mkTicker { font: var(--weight-semibold) 10px / 1 var(--font-sans); }
 .appFrame .mkRowMain { flex: 1; min-width: 0; display: grid; }
 .appFrame .mkRowMain strong { font-weight: var(--weight-medium); overflow-wrap: anywhere; }
@@ -144,6 +162,17 @@
 :is(.mkSheet, .mkOrderPanel) .mxField input { width: 100%; height: var(--input-height); padding: 0 var(--space-3); border: 1px solid var(--color-line-strong); border-radius: var(--radius-sm); background: var(--color-surface); color: var(--color-text); font: var(--weight-regular) var(--text-body-size) / 1 var(--font-sans); font-variant-numeric: tabular-nums; }
 :is(.mkSheet, .mkOrderPanel) .mxField input:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; border-color: var(--color-focus); }
 :is(.mkSheet, .mkOrderPanel) .mxFieldRow { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
+:is(.mkSheet, .mkOrderPanel) .mkPriceField { display: grid; gap: 6px; min-width: 0; }
+:is(.mkSheet, .mkOrderPanel) .mkPriceInput { display: flex; align-items: center; gap: var(--space-1); height: var(--input-height); padding: 0 var(--space-3); border: 1px solid var(--color-line-strong); border-radius: var(--radius-sm); background: var(--color-surface); color: var(--color-text-secondary); }
+:is(.mkSheet, .mkOrderPanel) .mkPriceInput:focus-within { outline: 2px solid var(--color-focus); outline-offset: 1px; border-color: var(--color-focus); }
+:is(.mkSheet, .mkOrderPanel) .mkPriceInput input { flex: 1; min-width: 0; height: 100%; padding: 0; border: 0; background: none; color: var(--color-text); font: var(--weight-regular) var(--text-body-size) / 1 var(--font-sans); font-variant-numeric: tabular-nums; outline: none; }
+:is(.mkSheet, .mkOrderPanel) .mkPriceInput:has(input[aria-invalid="true"]) { border-color: var(--color-negative); }
+:is(.mkSheet, .mkOrderPanel) .mkFieldAction { height: auto; padding: 0; font-size: var(--text-small-size); }
+:is(.mkSheet, .mkOrderPanel) .mkFieldHint, :is(.mkSheet, .mkOrderPanel) .mkAmountNote { color: var(--color-text-secondary); font-size: var(--text-caption-size); line-height: var(--text-caption-line); }
+:is(.mkSheet, .mkOrderPanel) .mkFill { display: flex; }
+:is(.mkSheet, .mkOrderPanel) .mkFill > * { flex: 1; justify-content: center; }
+.mkSheet .mkTriggers { margin: 0; padding: 0; list-style: none; display: grid; }
+.mkSheet .mkTriggers li { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); min-height: 40px; border-bottom: 1px solid var(--color-line); }
 :is(.mkSheet, .mkOrderPanel) .mxAmountWithMax { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-2); align-items: end; }
 :is(.mkSheet, .mkOrderPanel) .mxMaxButton { height: var(--input-height); }
 :is(.mkSheet, .mkOrderPanel) .mxFieldError { margin: 0; color: var(--color-negative); font-size: var(--text-small-size); }
@@ -236,6 +265,21 @@
 
 /* The order book: asks over the spread, bids under it, a bar for each row's depth */
 .appFrame .mkBookCard h2 { font-size: var(--text-title-3-size); line-height: var(--text-title-3-line); font-weight: var(--weight-semibold); }
+.appFrame .mkBookTools { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.appFrame .mkBookTools .mkLabel { color: var(--color-text-secondary); font-size: var(--text-small-size); }
+.appFrame .mkGroupMenu { position: relative; display: inline-flex; }
+.appFrame .mkGroupButton { display: inline-flex; align-items: center; gap: var(--space-1); height: 32px; padding: 0 var(--space-2); border: 1px solid var(--color-line-strong); border-radius: var(--radius-sm); background: var(--color-surface); color: var(--color-text); font: var(--weight-medium) var(--text-small-size) / 1 var(--font-sans); font-variant-numeric: tabular-nums; cursor: pointer; }
+.appFrame .mkGroupButton:hover { background: var(--color-hover); }
+.appFrame .mkGroupButton:focus-visible, .appFrame .mkGroupOptions button:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; }
+.appFrame .mkGroupButton svg { width: 14px; height: 14px; color: var(--color-text-secondary); }
+.appFrame .mkGroupOptions { position: absolute; z-index: 40; top: calc(100% + var(--space-1)); right: 0; min-width: 112px; display: grid; padding: var(--space-1); border: 1px solid var(--color-line); border-radius: var(--radius-md); background: var(--color-raised); box-shadow: var(--shadow-2); }
+.appFrame .mkGroupOptions button { height: 32px; padding: 0 var(--space-2); border: 0; border-radius: var(--radius-sm); background: none; color: var(--color-text); font: var(--weight-regular) var(--text-small-size) / 1 var(--font-sans); font-variant-numeric: tabular-nums; text-align: right; cursor: pointer; }
+.appFrame .mkGroupOptions button:hover { background: var(--color-hover); }
+.appFrame .mkGroupOptions button[aria-checked="true"] { color: var(--color-accent); font-weight: var(--weight-semibold); }
+.appFrame .mkBookFoot { margin: 0; color: var(--color-text-tertiary); font-size: var(--text-caption-size); line-height: var(--text-caption-line); }
+.appFrame .mkBookRow.is-pickable { cursor: pointer; border-radius: var(--radius-sm); }
+.appFrame .mkBookRow.is-pickable:hover { background: var(--color-hover); }
+.appFrame .mkBookRow.is-pickable:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; }
 .appFrame .mkBookWrap { display: grid; gap: var(--space-2); padding-top: var(--space-2); }
 .appFrame .mkBook { display: grid; font-size: var(--text-small-size); line-height: var(--text-small-line); font-variant-numeric: tabular-nums; }
 .appFrame .mkBookRow { position: relative; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-1); align-items: center; min-height: 24px; padding: 0 var(--space-1); }
@@ -286,14 +330,17 @@
 
 /* Phone */
 @media (max-width: 767px) {
-  .appFrame .mkViews { justify-self: stretch; display: flex; }
-  .appFrame .mkViews button { height: var(--touch-min); }
   .appFrame .mkChips { flex-wrap: nowrap; overflow-x: auto; margin: 0 calc(-1 * var(--page-pad-x)); padding: 0 var(--page-pad-x); scrollbar-width: none; }
   .appFrame .mkTradeBar { max-width: none; }
   .appFrame .mkAvailableActions { width: 100%; }
   .appFrame .mkAvailableActions .appButton { flex: 1; height: var(--control-height-lg); }
   .appFrame .mkRowActions { width: 100%; }
   .appFrame .mkRowActions .appButton { flex: 1; height: var(--touch-min); }
+  .appFrame .mkPerpPositionFacts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .appFrame .mkPerpPosition .mkRowActions { justify-self: stretch; }
+  .appFrame .mkGroupButton, .appFrame .mkGroupOptions button { height: var(--touch-min); }
+  .appFrame .mkBookRow { min-height: 32px; }
+  .mkSheet .mkPriceInput input { font-size: var(--text-input-phone); }
   .appFrame .mkSearch input { font-size: var(--text-input-phone); }
   .appFrame .mkEventGrid { grid-template-columns: minmax(0, 1fr); }
   .appFrame .mkListTabs { gap: var(--space-3); overflow-x: auto; scrollbar-width: none; }

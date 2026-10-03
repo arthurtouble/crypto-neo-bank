@@ -62,7 +62,7 @@ export default defineConfig({
         { label: "Swap and earn", items: [
           { label: "Swap", slug: "product/swaps" },
           { label: "Earn", slug: "product/earn" },
-          { label: "Markets", slug: "product/markets" },
+          { label: "Perps and predictions", slug: "product/markets" },
           { label: "Networks and assets", slug: "product/networks-and-assets" },
           { label: "Tokenized stocks and gold", slug: "product/tokenized-stocks-and-gold" }
         ] },

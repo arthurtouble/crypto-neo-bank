@@ -132,12 +132,15 @@ export function examplePerpCandles(coin: string, range: PerpRange) {
   return { status: "observed" as const, source: "hyperliquid" as const, observedAt: at, coin, interval: "1m", candles };
 }
 
-/** An example order book around the example price, 20 levels a side. */
-export function examplePerpBook(coin: string) {
+/** An example order book around the example price, 20 levels a side, grouped to `step` dollars when one is given. */
+export function examplePerpBook(coin: string, step: number | null = null) {
   const mark = exampleMark(coin);
-  const tick = mark >= 10_000 ? 1 : mark >= 1_000 ? 0.1 : mark >= 10 ? 0.01 : 0.001;
-  const size = (index: number) => ((2 + 3 * Math.abs(Math.sin(index * 2.3)) + index * 0.4) * 1_000 / mark).toPrecision(4);
-  const level = (side: 1 | -1) => (_: unknown, index: number) => ({ price: priceText(mark + side * tick * (index + 1)), size: size(index + (side > 0 ? 7 : 0)), orders: 1 + (index % 4) });
+  const native = mark >= 10_000 ? 1 : mark >= 1_000 ? 0.1 : mark >= 10 ? 0.01 : 0.001;
+  const tick = step && step > native ? step : native;
+  const size = (index: number) => ((2 + 3 * Math.abs(Math.sin(index * 2.3)) + index * 0.4) * 1_000 / mark * Math.sqrt(tick / native)).toPrecision(4);
+  const floor = Math.floor(mark / tick + 1e-9);
+  const level = (side: 1 | -1) => (_: unknown, index: number) => ({ price: priceText((side > 0 ? floor + 1 + index : floor - index) * tick),
+    size: size(index + (side > 0 ? 7 : 0)), orders: 1 + (index % 4) });
   const bids = Array.from({ length: 20 }, level(-1)), asks = Array.from({ length: 20 }, level(1));
   const spread = Number(asks[0].price) - Number(bids[0].price);
   return { status: "observed" as const, source: "hyperliquid" as const, observedAt: at, coin, bids, asks,

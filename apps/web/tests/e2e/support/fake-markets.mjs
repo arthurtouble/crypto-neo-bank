@@ -92,7 +92,8 @@ function hyperliquidInfo(markets, body) {
     case "userFills": return account.fills;
     case "allMids": return Object.fromEntries(DEXES[dex === "xyz" ? 1 : 0].universe.map((asset, index) => [asset.name, DEXES[dex === "xyz" ? 1 : 0].ctxs[index].midPx]));
     case "candleSnapshot": return candleSnapshot(body.req ?? {});
-    case "l2Book": markets.hyperliquid.bookReads = (markets.hyperliquid.bookReads ?? 0) + 1; return l2Book(String(body.coin ?? ""), markets.hyperliquid.bookReads);
+    case "l2Book": markets.hyperliquid.bookReads = (markets.hyperliquid.bookReads ?? 0) + 1;
+      return l2Book(String(body.coin ?? ""), markets.hyperliquid.bookReads, body.nSigFigs, body.mantissa);
     case "userFees": return { userCrossRate: "0.00045", userAddRate: "0.00015", activeReferralDiscount: "0.0" };
     default: return null;
   }
@@ -127,10 +128,21 @@ function candleSnapshot({ coin, interval, startTime, endTime }) {
   });
 }
 
-/** Hyperliquid's l2Book: 20 levels a side around the mid price, one tick apart; `ticks` shifts the sizes so each read differs. */
-function l2Book(coin, ticks) {
+/**
+ * Hyperliquid's l2Book: 20 levels a side around the mid price, one tick apart; `ticks` shifts the sizes so each read
+ * differs. With `nSigFigs` (and at 5 a `mantissa`), levels are that grouping's step apart, on multiples of it, as
+ * Hyperliquid groups them.
+ */
+function l2Book(coin, ticks, nSigFigs, mantissa) {
   const mid = midOf(coin);
   if (mid === null) return null;
+  if (nSigFigs) {
+    const step = (mantissa ?? 1) * 10 ** (Math.floor(Math.log10(mid)) + 1 - nSigFigs);
+    const floor = Math.floor(mid / step);
+    const grouped = (side) => (_, index) => ({ px: String(Number(((side > 0 ? floor + 1 + index : floor - index) * step).toPrecision(8))),
+      sz: ((1 + index * 0.35 + ((index + ticks) % 3) * 0.2) * step * 1_000 / mid).toPrecision(4), n: 3 + (index % 5) });
+    return { coin, time: Date.now(), levels: [Array.from({ length: 20 }, grouped(-1)), Array.from({ length: 20 }, grouped(1))] };
+  }
   const tick = mid >= 10_000 ? 1 : mid >= 1_000 ? 0.1 : 0.01;
   const level = (side) => (_, index) => ({ px: px(mid + side * tick * (index + 0.5)), sz: ((1 + index * 0.35 + ((index + ticks) % 3) * 0.2) * 1_000 / mid).toPrecision(4), n: 1 + (index % 4) });
   return { coin, time: Date.now(), levels: [Array.from({ length: 20 }, level(-1)), Array.from({ length: 20 }, level(1))] };

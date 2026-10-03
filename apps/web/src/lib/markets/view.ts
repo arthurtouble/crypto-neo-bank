@@ -241,3 +241,141 @@ export function clampLeverage(value: number, max: number): number {
   if (!Number.isFinite(value)) return 1;
   return Math.min(max, Math.max(1, Math.round(value)));
 }
+
+// ---------------------------------------------------------------- typed numbers, the book's grouping, and what's available
+
+/**
+ * What a number field keeps of what was typed: digits and one decimal point,
+ * at most `decimals` places. Letters, signs, spaces, commas, and a second
+ * point are dropped, so "1a2.3.4" is "12.34".
+ */
+export function cleanDecimal(text: string, decimals = 8): string {
+  const kept = text.replace(/[^\d.]/g, "");
+  const point = kept.indexOf(".");
+  if (point === -1) return kept.replace(/^0+(?=\d)/, "");
+  const whole = kept.slice(0, point).replace(/^0+(?=\d)/, "");
+  if (decimals <= 0) return whole;
+  return `${whole || "0"}.${kept.slice(point + 1).replace(/\./g, "").slice(0, decimals)}`;
+}
+
+/** A whole number field: digits only, at most `max`. Empty stays empty so it can be retyped. */
+export function cleanWhole(text: string, max: number): string {
+  const digits = text.replace(/\D/g, "").replace(/^0+(?=\d)/, "").slice(0, String(max).length);
+  return digits === "" ? "" : String(Math.min(max, Number(digits)));
+}
+
+/**
+ * One order book grouping as Hyperliquid offers it: a dollar step, and the
+ * request that gives it (`sig` significant figures, and at 5 a `mantissa` of
+ * 2 or 5). The first option, without `sig`, is the book at full precision.
+ */
+export type BookGroupingOption = { step: number; label: string; sig?: 2 | 3 | 4 | 5; mantissa?: 2 | 5 };
+
+/**
+ * The groupings that make sense at this price. Hyperliquid rounds a price to
+ * 2 to 5 significant figures, so the step depends on how many whole digits
+ * the price has: BTC at 84,553 offers 1, 2, 5, 10, 100, and 1,000; ETH at
+ * 3,120 offers 0.1, 0.2, 0.5, 1, 10, and 100. A price never has more than 5
+ * significant figures or (6 − size decimals) decimals, so the first option is
+ * the full book and nothing finer is offered.
+ */
+export function bookGroupings(price: string | number | null | undefined, szDecimals: number): BookGroupingOption[] {
+  const value = finite(price);
+  if (value === null || value <= 0) return [];
+  const digits = Math.floor(Math.log10(value)) + 1;
+  const step = (sig: number, mantissa = 1) => Number((mantissa * 10 ** (digits - sig)).toPrecision(6));
+  const tick = Math.max(step(5), Number((10 ** -(6 - Math.max(0, Math.min(6, szDecimals)))).toPrecision(6)));
+  const options: BookGroupingOption[] = [{ step: tick, label: "" }];
+  const candidates: BookGroupingOption[] = [
+    { step: step(5, 2), label: "", sig: 5, mantissa: 2 }, { step: step(5, 5), label: "", sig: 5, mantissa: 5 },
+    { step: step(4), label: "", sig: 4 }, { step: step(3), label: "", sig: 3 }, { step: step(2), label: "", sig: 2 }
+  ];
+  for (const option of candidates) if (option.step > options[options.length - 1].step) options.push(option);
+  return options.map((option) => ({ ...option, label: formatStep(option.step) }));
+}
+
+/** A grouping step as the dropdown shows it: "1,000", "1", "0.01". */
+export function formatStep(step: number): string {
+  const decimals = step >= 1 ? 0 : Math.min(8, Math.ceil(-Math.log10(step) - 1e-9));
+  return step.toLocaleString(LOCALE, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+}
+
+/** The book's query for a grouping: "" at full precision, else "&sig=5&mantissa=2". */
+export function bookGroupingQuery(option: Pick<BookGroupingOption, "sig" | "mantissa"> | null | undefined): string {
+  if (!option?.sig) return "";
+  return `&sig=${option.sig}${option.sig === 5 && option.mantissa ? `&mantissa=${option.mantissa}` : ""}`;
+}
+
+/**
+ * What one perps account (one dex) can open new positions with now, as
+ * Hyperliquid's order form says "Available to trade": its value less the
+ * margin its positions and orders already use, down to the cent. It's more
+ * than what can be withdrawn, which also keeps back a share of every open
+ * position's value.
+ */
+export function availableToTrade(state: { accountValue: string; totalMarginUsed: string }): number {
+  const free = Number(state.accountValue) - Number(state.totalMarginUsed);
+  return Number.isFinite(free) ? Math.max(0, Math.floor(free * 100 + 1e-6) / 100) : 0;
+}
+
+/**
+ * The most an order can put in as margin in one tap: what's available to
+ * trade, plus the Base USDC that would be added first, less the dollar kept
+ * for Circle's fee. Base USDC only counts when it covers the minimum deposit.
+ */
+export function maxOrderMargin(availableInPerps: number | null, baseUsdc: number | null): number | null {
+  if (availableInPerps === null) return null;
+  return Math.floor((availableInPerps + addableFromBase(baseUsdc)) * 100 + 1e-6) / 100;
+}
+
+/** The Base USDC an order can add to perps in the same tap: all but a dollar for Circle's fee, and only from the minimum deposit up. */
+export function addableFromBase(baseUsdc: number | null): number {
+  return baseUsdc !== null && baseUsdc >= PERPS_MINIMUM_DEPOSIT ? Math.floor((baseUsdc - 1) * 100 + 1e-6) / 100 : 0;
+}
+
+/** The profit (positive) or loss of `size` closed at `exit`, opened at `entry`, for a long or a short. Fees and funding aren't included. */
+export function pnlAt(side: "long" | "short", size: number, entry: number, exit: number): number | null {
+  if (![size, entry, exit].every(Number.isFinite) || size <= 0 || entry <= 0 || exit <= 0) return null;
+  return (side === "long" ? exit - entry : entry - exit) * size;
+}
+
+/** Why a take profit or stop loss is on the wrong side of the price for a long or a short, or null when it's right. */
+export function triggerProblem(kind: "tp" | "sl", side: "long" | "short", trigger: number | null, reference: number | null): string | null {
+  if (trigger === null || reference === null) return null;
+  const above = trigger > reference;
+  if (kind === "tp" && side === "long" && !above) return "Take profit must be above the price.";
+  if (kind === "tp" && side === "short" && above) return "Take profit must be below the price.";
+  if (kind === "sl" && side === "long" && above) return "Stop loss must be below the price.";
+  if (kind === "sl" && side === "short" && !above) return "Stop loss must be above the price.";
+  return null;
+}
+
+/** A share of a position's size, rounded down to the market's lot, as the API takes it; null when it rounds to nothing. */
+export function closeSize(size: string | number, share: number, szDecimals: number): string | null {
+  const whole = Math.abs(Number(size));
+  if (!Number.isFinite(whole) || whole <= 0 || !(share > 0) || share > 1) return null;
+  const decimals = Math.max(0, Math.min(8, szDecimals));
+  const factor = 10 ** decimals;
+  const lots = share === 1 ? Math.round(whole * factor) : Math.floor(whole * share * factor + 1e-9);
+  if (lots <= 0) return null;
+  const text = (lots / factor).toFixed(decimals);
+  return decimals ? text.replace(/\.?0+$/, "") : text;
+}
+
+/** Hyperliquid's name for a fill, in plain words: "Open Long" is "Opened long". */
+export function fillDirection(dir: string): string {
+  const match = /^(Open|Close) (Long|Short)$/i.exec(dir.trim());
+  if (match) return `${match[1].toLowerCase() === "open" ? "Opened" : "Closed"} ${match[2].toLowerCase()}`;
+  if (/liquidat/i.test(dir)) return "Liquidated";
+  if (/long\s*>\s*short/i.test(dir)) return "Switched to short";
+  if (/short\s*>\s*long/i.test(dir)) return "Switched to long";
+  return dir;
+}
+
+/** What an open order is, in plain words, from Hyperliquid's order type. */
+export function orderKind(orderType: string): { kind: "tp" | "sl" | "limit" | "other"; label: string } {
+  if (/^take profit/i.test(orderType)) return { kind: "tp", label: "Take profit" };
+  if (/^stop/i.test(orderType)) return { kind: "sl", label: "Stop loss" };
+  if (/^limit/i.test(orderType)) return { kind: "limit", label: "Limit" };
+  return { kind: "other", label: orderType };
+}
