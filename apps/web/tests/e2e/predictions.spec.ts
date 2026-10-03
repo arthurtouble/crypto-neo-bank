@@ -356,6 +356,16 @@ test("Polygon not answering: cash shows as unavailable and setup says why in pla
   await expect(flow(page)).not.toContainText("could not be read");
 });
 
+test("where Polymarket doesn't take orders, a buy is refused before anything is set up, and says what still works", async ({ page }, info) => {
+  await signIn(page);
+  await page.setExtraHTTPHeaders({ "CF-IPCountry": "US" });
+  await page.goto("/app/predictions/5001");
+  const form = await openTrade(page, info, "Yes");
+  await enterAmount(form, info, "5");
+  await form.getByRole("button", { name: "Buy Yes" }).click();
+  await expect(flow(page)).toContainText("Predictions aren't available where you are. You can still sell what you hold and withdraw.", { timeout: 30_000 });
+});
+
 test("Polymarket not answering shows unavailable", async ({ page }) => {
   await signIn(page);
   await edge("/__state", { down: ["polymarket"] });
