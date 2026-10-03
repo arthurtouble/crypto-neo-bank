@@ -168,6 +168,9 @@ describe("charts and the order book", () => {
     expect(request?.req).toEqual({ coin: "BTC", interval: "15m", startTime: now.getTime() - 86_400_000, endTime: now.getTime() });
     const book = await perpBook("BTC", deps);
     expect(book).toMatchObject({ status: "observed", data: { bids: [{ price: "59999", size: "1.2", orders: 3 }, { price: "59998" }], asks: [{ price: "60001" }], spread: "2" } });
+    await perpBook("BTC", { ...deps, grouping: { sigFigs: 5, mantissa: 5 } });
+    const last = (fetcher as unknown as { mock: { calls: [string, RequestInit][] } }).mock.calls.map(([, init]) => JSON.parse(String(init.body))).findLast((body) => body.type === "l2Book");
+    expect(last).toEqual({ type: "l2Book", coin: "BTC", nSigFigs: 5, mantissa: 5 });
     await expect(perpBook("NOPE", deps)).rejects.toMatchObject({ code: "market_not_found" });
   });
 });

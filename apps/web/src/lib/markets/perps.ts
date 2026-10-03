@@ -8,7 +8,7 @@ import {
   accountState, accountStates, approveAgentAction, buildAgentSendAssetAction, buildAgentSetAbstractionAction, buildCancelAction, buildCloseAction, buildOrderAction, buildPositionTpslAction, buildUpdateLeverageAction, crossLiquidationPrice, extraAgents,
   isolatedLiquidationPrice, sizeFromMargin,
   candles, l1ActionTypedData, l2Book, openOrders, perpDexs, perpMarkets, sendToEvmWithDataAction, submitExchange, userFees, userFills,
-  type BookLevel, type Candle, type CandleRange,
+  type BookGrouping, type BookLevel, type Candle, type CandleRange,
   type ApproveAgentAction, type ExchangeResult, type L1Action, type OpenOrder, type PerpAccountState, type PerpMarket, type SendToEvmWithDataAction, type TriggerSpec
 } from "./hyperliquid";
 import { completeMarketSignature, createMarketSignature, type MarketSignatureRequest } from "./signing";
@@ -270,12 +270,12 @@ export async function perpCandles(coin: string, range: CandleRange, deps: PerpsD
 }
 
 /** The order book now, with the spread between the best bid and ask. */
-export async function perpBook(coin: string, deps: PerpsDependencies = {}): Promise<Observed<{ coin: string; bids: BookLevel[]; asks: BookLevel[];
+export async function perpBook(coin: string, deps: PerpsDependencies & { grouping?: BookGrouping } = {}): Promise<Observed<{ coin: string; bids: BookLevel[]; asks: BookLevel[];
   spread: string | null; spreadPercent: string | null }>> {
   const now = clock(deps);
   const found = await listedMarket(coin, deps);
   return observe(async () => {
-    const book = await l2Book(found.coin, options(deps));
+    const book = await l2Book(found.coin, { ...options(deps), grouping: deps.grouping });
     const bid = book.bids[0] ? Number(book.bids[0].price) : null;
     const ask = book.asks[0] ? Number(book.asks[0].price) : null;
     const spread = bid !== null && ask !== null ? ask - bid : null;
