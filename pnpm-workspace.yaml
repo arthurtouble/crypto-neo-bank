@@ -18,3 +18,12 @@ allowBuilds:
   unrs-resolver: true
   utf-8-validate: false
   workerd: true
+
+# Advisories with no patched release yet, accepted by the owner on 3 October 2026.
+# Both are denial of service in build and docs tooling. Remove each once a fix ships.
+# GHSA-ch52-4w7c-c8xp: http-cache-semantics, via Astro in apps/docs.
+# GHSA-vfj7-8cjw-p6xm: braces, via fast-glob and micromatch in apps/web's build and lint tooling.
+auditConfig:
+  ignoreGhsas:
+    - GHSA-ch52-4w7c-c8xp
+    - GHSA-vfj7-8cjw-p6xm
