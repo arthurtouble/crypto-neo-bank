@@ -5,6 +5,7 @@ import type { LifiStatusCorroboration } from "@/lib/actions/lifi-status";
 import { ENTRY_POINT_V07, type Log } from "@/lib/actions/user-operation";
 import { effectSchema } from "@/lib/actions/types";
 import { verifyAction, type VerifiableAction } from "@/lib/actions/verify";
+import type { HyperliquidCredit } from "@/lib/markets/funding";
 import { bundler, entryLog, handleOpsV07, kernelBatch, transferLog } from "../support/bundles";
 
 const wallet = "0x1111111111111111111111111111111111111111";
@@ -109,6 +110,63 @@ describe("verifying cross-chain delivery", () => {
     expect(await verifyAction(route, { observe: byChain(0n), lifiStatus: lifi("REFUNDED", null) })).toEqual({ status: "failed", reason: "refunded" });
     expect(await verifyAction(route, { observe: byChain(0n), lifiStatus: lifi("FAILED", null) })).toEqual({ status: "failed", reason: "delivery_failed" });
     expect(await verifyAction(route, { observe: byChain(0n), lifiStatus: async () => { throw new Error("down"); } })).toMatchObject({ status: "settling" });
+  });
+});
+
+describe("verifying a deposit into Hyperliquid", () => {
+  const approve = encodeFunctionData({ abi: erc20Abi, functionName: "approve", args: [diamond, 10_000_000n] });
+  const route: VerifiableAction = { chainId: 8453, walletAddress: wallet, transactionHash: hash,
+    calls: [{ to: usdc, value: "0", data: approve }, { to: diamond, value: "0", data: "0x12345678" }],
+    effects: [{ type: "erc20_debit", token: usdc, amountRaw: "10000000" },
+      { type: "delivery", tool: "relay", destinationChainId: 1337, token: arbUsdc, to: wallet, minimumRaw: "9900000" }] };
+  const source = observed({
+    data: handleOpsV07([{ sender: wallet, callData: kernelBatch([{ to: usdc, value: 0n, data: approve }, { to: diamond, value: 0n, data: "0x12345678" }]) }]),
+    logs: [entryLog(ENTRY_POINT_V07, "before"), transferLog(usdc, wallet, diamond, 10_000_000n), entryLog(ENTRY_POINT_V07, { sender: wallet, success: true })]
+  });
+  const lifi = async () => ({ status: "DONE" as const, sourceHash: hash, destinationChainId: 1337, destinationHash, toolId: "relay", substatus: null });
+  const noRpc = async (chainId: number) => { if (chainId !== 8453) throw new Error("HyperCore has no RPC receipt"); return source; };
+
+  it("confirms from Hyperliquid's ledger, never an RPC receipt, and only for the minimum", async () => {
+    const credit = (result: HyperliquidCredit) => async () => result;
+    expect(await verifyAction(route, { observe: noRpc, lifiStatus: lifi,
+      hyperliquidCredit: credit({ status: "observed", creditedRaw: "9950000", hash: destinationHash, time: 1 }) })).toEqual({ status: "confirmed", destinationHash });
+    expect(await verifyAction(route, { observe: noRpc, lifiStatus: lifi,
+      hyperliquidCredit: credit({ status: "observed", creditedRaw: "0", hash: destinationHash, time: 1 }) })).toEqual({ status: "failed", reason: "delivery_below_minimum" });
+    expect(await verifyAction(route, { observe: noRpc, lifiStatus: lifi, hyperliquidCredit: credit({ status: "missing" }) }))
+      .toMatchObject({ status: "settling", reason: "awaiting_hyperliquid_credit" });
+    expect(await verifyAction(route, { observe: noRpc, lifiStatus: lifi, hyperliquidCredit: credit({ status: "unavailable", reason: "hyperliquid_unavailable" }) }))
+      .toMatchObject({ status: "settling", reason: "hyperliquid_unavailable" });
+  });
+});
+
+describe("verifying a deposit into Hyperliquid through Circle", () => {
+  const messenger = "0x28b5a0e9c621a5badaa536219b3a228c8168cf5d";
+  const approve = encodeFunctionData({ abi: erc20Abi, functionName: "approve", args: [messenger, 25_000_000n] });
+  const action: VerifiableAction = { chainId: 8453, walletAddress: wallet, transactionHash: hash,
+    calls: [{ to: usdc, value: "0", data: approve }, { to: messenger, value: "0", data: "0x12345678" }],
+    effects: [{ type: "erc20_debit", token: usdc, amountRaw: "25000000" },
+      { type: "delivery", tool: "cctp", destinationChainId: 1337, token: arbUsdc, to: wallet, minimumRaw: "24734783" }] };
+  const source = observed({
+    data: handleOpsV07([{ sender: wallet, callData: kernelBatch([{ to: usdc, value: 0n, data: approve }, { to: messenger, value: 0n, data: "0x12345678" }]) }]),
+    logs: [entryLog(ENTRY_POINT_V07, "before"), transferLog(usdc, wallet, messenger, 25_000_000n), entryLog(ENTRY_POINT_V07, { sender: wallet, success: true })]
+  });
+  const noLifi = async () => { throw new Error("CCTP deposits never ask LI.FI"); };
+  type Verdict = Awaited<ReturnType<NonNullable<NonNullable<Parameters<typeof verifyAction>[1]>["cctpDeposit"]>>>;
+  const cctp = (verdict: Verdict) => async () => verdict;
+  const credit = { kind: "deposit" as const, usdc: "24.75", fee: "0", hash: "0xcore", time: 1, route: "cctp" as const, dex: "" };
+
+  it("confirms only once Circle forwarded to this account and Hyperliquid's ledger shows at least the minimum", async () => {
+    expect(await verifyAction(action, { observe: observe(source), lifiStatus: noLifi,
+      cctpDeposit: cctp({ state: "credited", credit, amountRaw: "25000000", feeRaw: "250000", forwardTxHash: destinationHash }) }))
+      .toEqual({ status: "confirmed", destinationHash });
+    expect(await verifyAction(action, { observe: observe(source), lifiStatus: noLifi,
+      cctpDeposit: cctp({ state: "forwarding", creditedRaw: "24750000", forwardTxHash: destinationHash }) }))
+      .toMatchObject({ status: "settling", reason: "awaiting_hyperliquid_credit" });
+    expect(await verifyAction(action, { observe: observe(source), lifiStatus: noLifi, cctpDeposit: cctp({ state: "mismatch" }) }))
+      .toEqual({ status: "failed", reason: "cctp_mismatch" });
+    expect(await verifyAction(action, { observe: observe(source), lifiStatus: noLifi,
+      cctpDeposit: cctp({ state: "credited", credit, amountRaw: "25000000", feeRaw: "1000000", forwardTxHash: destinationHash }) }))
+      .toEqual({ status: "failed", reason: "delivery_below_minimum" });
   });
 });
 

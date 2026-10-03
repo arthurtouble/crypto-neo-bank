@@ -19,6 +19,9 @@ Status: pre-launch baseline. Counsel and each regulated provider must approve th
 | Browser push subscriptions (`push_subscriptions`) | Deliver browser notifications | Until the customer turns them off, a newer browser replaces it, or the push service says it's gone | Not on a timer, see below |
 | Abuse and rate-limit windows (`rate_limit_windows`) | Protect the service | 24 hours after window | Automatically delete expired counters |
 | Passkey confirmations (`step_up_challenges`) | Confirm a sensitive change | 1 day after expiry (they last 5 minutes) | The change itself is in `audit_events` |
+| Market connections (`market_accounts`) | Which venue account the customer's wallet uses, and the encrypted Polymarket order-book key | Active relationship + 90 days | Delete after closure; the venue account itself belongs to the customer's wallet and stays with the venue |
+| Market requests (`market_operations`) | What Aura sent to Hyperliquid or Polymarket for the customer, and the answer | 7 years, like actions | Evidence of the request only; fills and positions are the venue's records |
+| Market signature requests (`market_signature_requests`) | Typed data waiting for the customer's passkey | 1 day after expiry (they last 5 minutes) | Used once; what it led to is in `market_operations` |
 | Provider command claims (`command_idempotency`) | Stop a retried request sending a provider command twice | 30 days after the claim expires | An expired claim can already be taken again, so deleting it changes nothing |
 | Application logs and traces | Reliability and security investigation | 30 days hot; up to 1 year security archive | No keys, tokens, recovery material or full identity documents |
 | KYC source documents | Regulated onboarding | Not stored by Aura by design | Remain with the contracted regulated provider |
@@ -33,6 +36,7 @@ Status: pre-launch baseline. Counsel and each regulated provider must approve th
 | `product_events` | `occurred_at` is over 180 days old | Analytics only. The operations app reads 90 days at most. |
 | `notifications` | `created_at` is over 180 days old and neither email nor push is `pending` | A notice's `dedupe_key` stops the same event notifying twice, so it must outlive any chance of seeing the event again. Money received is announced only if it arrived in the last 90 days (`RECEIVED_NOTICE_WINDOW_DAYS`), so a deleted received notice can't come back. Action and bank-payout notices fire once on a forward status change; card notices fire only on a new webhook receipt, which is kept 2 years. A notice still being delivered is never deleted. |
 | `step_up_challenges` | `expires_at` is over 1 day ago | A confirmation is refused after expiry anyway. |
+| `market_signature_requests` | `expires_at` is over 1 day ago | A request is refused after expiry anyway. |
 | `rate_limit_windows` | `reset_at` is over 1 day ago | An expired counter starts again from 1 whether its row exists or not. |
 | `route_quotes` | unused (`action_id` is null), `expires_at` over 1 day ago, and no action has it as `route_quote_id` | An expired quote can't be used. The extra check covers an action recorded just before its quote was marked used. |
 | `command_idempotency` | `expires_at` is over 30 days ago | An expired claim can be taken again, so a missing row behaves the same. |

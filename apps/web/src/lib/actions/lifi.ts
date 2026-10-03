@@ -1,6 +1,7 @@
 import { encodeFunctionData, erc20Abi, getAddress, isAddress, isHex, parseUnits } from "viem";
 import { z } from "zod";
 import { readBoundedJson } from "@/lib/http/bounded";
+import { errorResponse } from "@/lib/http/route";
 import type { CatalogAsset } from "@/lib/swap/assets";
 import type { Call, Effect } from "./types";
 import { localEdgeUrl } from "@/lib/testing/local-edge";
@@ -39,6 +40,12 @@ export type ValidatedRoute = {
   calls: Call[]; effects: Effect[];
   economics: { fromAmountUsd: string | null; toAmountUsd: string | null; networkFeeUsd: number | null; providerFeeUsd: number | null; priceImpactPercent: number | null };
 };
+
+/** A route's `onError` for quote failures: no route or price impact is the request's problem (422), an outage is 503. */
+export function quoteRouteErrorResponse(error: unknown, context: { traceId: string }): Response | undefined {
+  if (!(error instanceof RouteQuoteError)) return undefined;
+  return errorResponse(error.code === "provider_unavailable" ? 503 : 422, error.code, context, { message: error.message });
+}
 
 export class RouteQuoteError extends Error {
   readonly code: "invalid_request" | "no_route" | "price_impact" | "provider_unavailable";

@@ -41,7 +41,8 @@ Set these in the top-level `vars` of `apps/web/wrangler.jsonc`, in a reviewed pu
 - `APP_ORIGIN` (step 2);
 - `VAPID_PUBLIC_KEY`, from a key pair made for production;
 - `INTERCOM_APP_ID`, for the production Intercom workspace;
-- `CF_ACCESS_TEAM_DOMAIN` and `CF_ACCESS_AUD` (step 7).
+- `CF_ACCESS_TEAM_DOMAIN` and `CF_ACCESS_AUD` (step 7);
+- `POLYMARKET_BUILDER_CODE`, Aura's Polymarket builder code, only when predictions go on (orders carry it so Polymarket attributes them; Aura charges no fee).
 
 `LIFI_INTEGRATOR` and `LIFI_INTEGRATOR_FEE` are already set, as on dev.
 
@@ -59,6 +60,8 @@ Set each with `pnpm --filter @aurel/web exec wrangler secret put <NAME>` (no `--
 | `LIFI_API_KEY` | Swap and cross-chain quotes |
 | `BRIDGE_API_KEY` | Bank transfers, once Bridge approves the program |
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Cards, once the card program exists |
+| `MARKETS_CREDENTIAL_KEY` | Encrypts each customer's Polymarket order-book key in D1 (32 random bytes, base64) |
+| `POLYMARKET_BUILDER_API_KEY`, `POLYMARKET_BUILDER_SECRET`, `POLYMARKET_BUILDER_PASSPHRASE` | Predictions: Aura's Polymarket builder key, which pays gas for customers' deposit wallets (from polymarket.com builder settings) |
 
 Bank transfers and cards also need variables: `BRIDGE_WEBHOOK_PUBLIC_KEY`, `STRIPE_PUBLISHABLE_KEY`, and `BRIDGE_CARDS_SPENDER`. Set a partner's secrets and variables only once its production program is approved; until then its feature switch stays off.
 
