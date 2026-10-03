@@ -43,7 +43,8 @@
       "name": "aura-dev",
       // Names only: the values are set with `wrangler secret put --env dev`, never here. A deploy fails if one is missing.
       "secrets": {
-        "required": ["PRIVY_APP_SECRET", "RESEND_API_KEY", "RESEND_WEBHOOK_SECRET", "VAPID_PRIVATE_KEY", "LIFI_API_KEY", "INTERCOM_IDENTITY_SECRET", "FIN_CONNECTOR_TOKEN"]
+        "required": ["PRIVY_APP_SECRET", "RESEND_API_KEY", "RESEND_WEBHOOK_SECRET", "VAPID_PRIVATE_KEY", "LIFI_API_KEY", "INTERCOM_IDENTITY_SECRET", "FIN_CONNECTOR_TOKEN",
+          "MARKETS_CREDENTIAL_KEY", "POLYMARKET_BUILDER_API_KEY", "POLYMARKET_BUILDER_SECRET", "POLYMARKET_BUILDER_PASSPHRASE"]
       },
       "vars": {
         "PRODUCT_ENVIRONMENT": "development",
@@ -60,7 +61,9 @@
         "APP_ORIGIN": "https://aura-dev.aurel-events.workers.dev",
         "VAPID_PUBLIC_KEY": "BKy2yu17XoDp4trj5IYoWspZslphAaCT4v7wrfVdHj9DdNh46tispIXt2YHqt5VRw263I6zHh7C8hQWZWLCJUhI",
         // Support chat. The identity-verification secret is the INTERCOM_IDENTITY_SECRET secret.
-        "INTERCOM_APP_ID": "rn8vf9xv"
+        "INTERCOM_APP_ID": "rn8vf9xv",
+        // Not a secret: Polymarket attaches it to every order Aura places, publicly.
+        "POLYMARKET_BUILDER_CODE": "0x4be5ac607b12fe17ffe01acc0c3c73e09c3acd5ea099b6a3dce3e33f299ead16"
       },
       "d1_databases": [{
         "binding": "PROJECTION_DB",

@@ -46,5 +46,5 @@ Markets include Hyperliquid's own and the HIP-3 dexes margined in USDC (stock pe
 ## Not done yet
 
 - Polymarket session keys, so an order needs no passkey. They need Polymarket to approve the builder key.
-- Live checks on dev with real funds, once the migration and secrets are on dev. Signing was checked against Hyperliquid's live API with throwaway keys (its errors named exactly the signing address), and the CCTP burn was simulated on Base; fills, margin moves, and a real deposit are not yet checked.
+- Live checks on dev with real funds. The migration and secrets are on dev (3 October 2026); the code reaches dev when this merges. Signing was checked against Hyperliquid's live API with throwaway keys (its errors named exactly the signing address), and the CCTP burn was simulated on Base; fills, margin moves, and a real deposit are not yet checked.
 - HIP-3 dexes may charge higher trading fees than the main dex; the order sheet doesn't show them yet.
