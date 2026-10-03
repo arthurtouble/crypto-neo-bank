@@ -3,6 +3,7 @@ import type { PrivyClient } from "@privy-io/node";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { listOperations, readMarketAccount } from "@/lib/markets/accounts";
 import { buildPerpsDeposit } from "@/lib/markets/deposits";
+import { crossLiquidationPrice } from "@/lib/markets/hyperliquid/orders";
 import { cancelPerpsOrder, completePerpsSignature, perpBook, perpCandles, placePerpsOrder, placePerpsTrade, previewPerpsTrade, setPerpsLeverage, startPerpsSetup, startPerpsWithdrawal } from "@/lib/markets/perps";
 import { d1 } from "../support/d1";
 import { schemaDatabase } from "../support/schema";
@@ -124,6 +125,18 @@ describe("withdrawing to Base", () => {
 });
 
 describe("trading from a dollar amount", () => {
+  it("prices a cross position's liquidation on the money in the account, adding only what has to come in first", async () => {
+    const cross = { coin: "BTC", side: "long" as const, leverage: 10, isCross: true, type: "market" as const };
+    // $100 in the account and none in use: a $40 position's margin is already there, so the account stays at $100.
+    const inside = await previewPerpsTrade(owner, { ...cross, marginUsd: "40" }, deps);
+    expect(inside.liquidationPrice).toBe(crossLiquidationPrice({ side: "long", size: inside.size, price: "60000", maxLeverage: 40,
+      accountValue: "100", maintenanceMarginUsed: "0" }));
+    // A $150 position needs $50 more, which a one-tap deposit adds before the order.
+    const over = await previewPerpsTrade(owner, { ...cross, marginUsd: "150" }, deps);
+    expect(over.liquidationPrice).toBe(crossLiquidationPrice({ side: "long", size: over.size, price: "60000", maxLeverage: 40,
+      accountValue: String(100 + Number(over.margin) - 100), maintenanceMarginUsed: "0" }));
+  });
+
   it("sizes from margin × leverage, sets leverage first, then orders with auto-close attached", async () => {
     const started = await startPerpsSetup(db, "alice", account, deps);
     if (started.status === "sign") await completePerpsSignature(db, "alice", account, started.requestId, "auth", deps);

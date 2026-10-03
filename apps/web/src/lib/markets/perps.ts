@@ -230,8 +230,12 @@ export async function previewPerpsTrade(owner: `0x${string}`, input: PerpsTradeI
   let liquidationPrice: string | null;
   if (input.isCross) {
     const state = await accountState(owner, { ...options(deps), dex: found.dex });
+    // Margin for a cross position comes out of money already in the account, so it adds no value;
+    // only what has to come in first (a one-tap deposit, or a move into a stock market's dex) does.
+    const free = Math.max(0, Number(state.accountValue) - Number(state.totalMarginUsed));
+    const added = Math.max(0, Number(sized.margin) - free);
     liquidationPrice = crossLiquidationPrice({ side, size: sized.size, price, maxLeverage: found.maxLeverage,
-      accountValue: String(Number(state.crossAccountValue) + Number(sized.margin)), maintenanceMarginUsed: state.crossMaintenanceMarginUsed });
+      accountValue: String(Number(state.crossAccountValue) + added), maintenanceMarginUsed: state.crossMaintenanceMarginUsed });
   } else {
     liquidationPrice = isolatedLiquidationPrice({ side, entryPx: price, leverage: input.leverage, maxLeverage: found.maxLeverage });
   }
