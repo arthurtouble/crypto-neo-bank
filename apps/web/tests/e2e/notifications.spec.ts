@@ -166,7 +166,6 @@ test("the customer's own transactions show in the bell without a second toast", 
   await expect(outcome(page, "Transfer complete")).toBeVisible({ timeout: 30_000 });
   await returnToTab(page);
   await expect(count(page)).toHaveText("1", { timeout: 15_000 });
-  await page.locator(".toastRegion").getByRole("button", { name: "Close" }).first().click();
   await bell(page).click();
   await expect(page.getByRole("dialog", { name: "Notifications" }).getByText(/10 USDC/)).toBeVisible();
   await expect(page.locator(".toastRegion").getByText(/10 USDC/)).toHaveCount(0);

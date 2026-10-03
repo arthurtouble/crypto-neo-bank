@@ -80,14 +80,12 @@ test("USDC goes into Aave and comes back out, in part or all of it, checked agai
   // The amount clears once the money has moved.
   await expect(form(page, "Aave USDC").getByLabel("Amount")).toHaveValue("");
 
-  await page.locator(".toastRegion").getByRole("button").first().click().catch(() => undefined);
   await act(page, "Aave USDC", "Withdraw", "4");
   await expect(outcome(page, "Withdraw complete")).toBeVisible({ timeout: 30_000 });
   expect(await held(page, customer, `aave:8453:${ASSETS.usdc}`)).toBe("6000000");
   expect(await held(page, customer, `8453:${ASSETS.usdc}`)).toBe("44000000");
 
   // Withdraw all takes out everything that's left, so nothing stays behind in Aave.
-  await page.locator(".toastRegion").getByRole("button").first().click().catch(() => undefined);
   await form(page, "Aave USDC").getByRole("button", { name: "Withdraw all" }).click();
   await expect(outcome(page, "Withdraw complete")).toBeVisible({ timeout: 30_000 });
   expect(await held(page, customer, `aave:8453:${ASSETS.usdc}`)).toBe("0");
@@ -102,7 +100,6 @@ test("USDC goes into a Morpho vault, and Withdraw all redeems every share", asyn
   expect(deposit.calls!.map((call) => call.to.toLowerCase())).toEqual([ASSETS.usdc, VAULTS.steakhouse]);
   await expect(page.getByTestId("position-steakhouse-prime-usdc")).toContainText(/19\.99\d* USDC/, { timeout: 20_000 });
 
-  await page.locator(".toastRegion").getByRole("button").first().click().catch(() => undefined);
   await form(page, "Steakhouse Prime USDC").getByRole("tab", { name: "Withdraw" }).click();
   await form(page, "Steakhouse Prime USDC").getByRole("button", { name: "Withdraw all" }).click();
   await expect(outcome(page, "Withdraw complete")).toBeVisible({ timeout: 30_000 });

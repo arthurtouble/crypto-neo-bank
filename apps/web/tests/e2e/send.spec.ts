@@ -126,7 +126,6 @@ test("ETH and cbBTC can be sent too", async ({ page }) => {
   await reviewAndConfirm(page);
   await expect(outcome(page, "Transfer complete")).toBeVisible({ timeout: 30_000 });
   expect(await balance(page, customer, `8453:${ASSETS.cbbtc}`)).toBe("75000000");
-  await page.locator(".toastRegion").getByRole("button", { name: "Close" }).click();
 
   await dialog(page).getByRole("button", { name: "New transfer" }).click();
   await dialog(page).getByLabel("Asset").selectOption("ETH");
@@ -450,7 +449,6 @@ test("a tokenized stock can be sent on Base, and Tether Gold on Ethereum, where 
   await reviewAndConfirm(page);
   await expect(outcome(page, "Transfer complete")).toBeVisible({ timeout: 30_000 });
   expect(await balance(page, customer, `8453:${ASSETS.apple}`)).toBe("175000000");
-  await page.locator(".toastRegion").getByRole("button").first().click().catch(() => undefined);
   await dialog(page).getByRole("button", { name: "New transfer" }).click();
 
   await fillSend(page, { asset: "XAUt", amount: "0.25", to: RECIPIENT });

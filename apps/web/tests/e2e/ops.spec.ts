@@ -1,6 +1,6 @@
 import type { BrowserContext, Page } from "@playwright/test";
 import { OPERATOR } from "./support/fake-edge.mjs";
-import { expect, test } from "./support/fixtures";
+import { expect, outcome, test } from "./support/fixtures";
 import { acceptTerms, asCustomer, ASSETS, edge, newCustomer, operatorHeaders, setBalances, setFeature, setIdentity } from "./support/session";
 
 // Feature 12 in docs/overview/feature-readiness.md: the operations console,
@@ -155,7 +155,7 @@ test("money movement lists every customer's transactions, filters them, and open
   // A first-time address is checked before the review (B2).
   await dialog.getByRole("button", { name: "It's correct" }).click();
   await dialog.getByRole("button", { name: "Confirm and send" }).click();
-  await expect(customerPage.locator(".toastRegion").getByText("Transfer complete", { exact: true })).toBeVisible({ timeout: 30_000 });
+  await expect(outcome(customerPage, "Transfer complete")).toBeVisible({ timeout: 30_000 });
   await customerContext.close();
 
   // Money that arrived from outside Aura: on chain, not an Aura action.
