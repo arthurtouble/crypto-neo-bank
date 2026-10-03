@@ -5,6 +5,7 @@ import { getAaveBaseActivity, type AaveBaseActivity } from "@/lib/defi/aave";
 import { readCardHistory, type CardHistory } from "@/lib/cards/service";
 import { actionEntry, cardEntry, incomingEntry, type ActivityEntry } from "./entries";
 import { readIncoming, type IncomingRead } from "./incoming";
+import { labelMarketWithdrawals, readMarketWithdrawals } from "./markets";
 import { recordIncoming } from "./observations";
 import { readBankDeposits, refreshBankPayouts } from "@/lib/money/bank-activity";
 import type { BankDeposit } from "@/lib/providers/bridge/transfers";
@@ -22,7 +23,8 @@ type Deps = { bankDeposits?: (subject: string) => Promise<Map<string, BankDeposi
   readIncoming?: typeof readIncoming; aave?: (wallet: string) => Promise<AaveBaseActivity>; check?: typeof checkAction;
   unitCents?: (assetId: string, decimals: number) => Promise<number | null>;
   cards?: (subject: string, window: { since?: Date; until?: Date }) => Promise<CardHistory>;
-  walletDeposits?: (subject: string) => Promise<WalletDeposit[]> };
+  walletDeposits?: (subject: string) => Promise<WalletDeposit[]>;
+  marketWithdrawals?: typeof readMarketWithdrawals };
 
 const cardReader = (db: D1Database, deps: Deps, now: Date) => deps.cards ?? ((subject: string, window: { since?: Date; until?: Date }) => readCardHistory(db, subject, window, now));
 
@@ -52,13 +54,14 @@ export async function readHistory(db: D1Database, subject: string, wallet: strin
   // Pick up a few bank payouts' latest state from Bridge first, in case a webhook is late.
   await (deps.refreshPayouts ?? ((who: string) => refreshBankPayouts(db, { subject: who, limit: 3, now })))(subject).catch(() => undefined);
   const [stored, hashes] = await Promise.all([listActions(db, subject, 100), listActionHashes(db, subject)]);
-  const [incoming, aave, bank, cards, deposits] = await Promise.all([
+  const [incoming, aave, bank, cards, deposits, withdrawals] = await Promise.all([
     (deps.readIncoming ?? readIncoming)(wallet, { exclude: hashes, now }),
     (deps.aave ?? getAaveBaseActivity)(wallet).catch((): AaveBaseActivity => ({ items: [], partial: false, sourceStatus: "unavailable" })),
     (deps.bankDeposits ?? ((who: string) => readBankDeposits(db, who)))(subject),
     cardReader(db, deps, now)(subject, {}),
     // Bridged deposits are a convenience while they travel; a failed read never hides the rest.
-    (deps.walletDeposits ?? ((who: string) => readWalletDeposits(db, who, now)))(subject).catch((): WalletDeposit[] => [])
+    (deps.walletDeposits ?? ((who: string) => readWalletDeposits(db, who, now)))(subject).catch((): WalletDeposit[] => []),
+    (deps.marketWithdrawals ?? readMarketWithdrawals)(db, subject)
   ]);
   await recordIncoming(db, subject, wallet, incoming.transfers, now);
   // Opening Transactions also advances a few open actions, so they settle even if the customer left the screen they started on.
@@ -76,7 +79,7 @@ export async function readHistory(db: D1Database, subject: string, wallet: strin
   }));
   // A bridged deposit shows until its transfer on Base does; then that transfer is the row, from the customer's wallet.
   const arrived = new Map(deposits.filter((deposit) => deposit.destinationHash).map((deposit) => [deposit.destinationHash!, deposit]));
-  const received = (await incomingEntries(incoming, deps, bank)).map((entry) => {
+  const received = labelMarketWithdrawals(await incomingEntries(incoming, deps, bank), withdrawals, wallet).map((entry) => {
     const deposit = entry.transactionHash ? arrived.get(entry.transactionHash.toLowerCase()) : undefined;
     return deposit ? { ...entry, counterparty: `Your wallet on ${networkName(deposit.sourceChainId)}`, source: `${entry.source} · LI.FI` } : entry;
   });
@@ -99,12 +102,14 @@ export async function readHistory(db: D1Database, subject: string, wallet: strin
  */
 export async function readPeriod(db: D1Database, subject: string, wallet: string, start: Date, end: Date, deps: Deps = {}) {
   const [actions, hashes] = await Promise.all([listActionsBetween(db, subject, start, end), listActionHashes(db, subject)]);
-  const [incoming, bank, cards] = await Promise.all([(deps.readIncoming ?? readIncoming)(wallet, { exclude: hashes, since: start, until: end }),
-    (deps.bankDeposits ?? ((who: string) => readBankDeposits(db, who)))(subject), cardReader(db, deps, end)(subject, { since: start, until: end })]);
+  const [incoming, bank, cards, withdrawals] = await Promise.all([(deps.readIncoming ?? readIncoming)(wallet, { exclude: hashes, since: start, until: end }),
+    (deps.bankDeposits ?? ((who: string) => readBankDeposits(db, who)))(subject), cardReader(db, deps, end)(subject, { since: start, until: end }),
+    (deps.marketWithdrawals ?? readMarketWithdrawals)(db, subject)]);
   const incomingComplete = incoming.status === "available" && !incoming.partial;
   const cardComplete = cards.status === "available" && !cards.partial;
   const inPeriod = (entry: ActivityEntry) => Date.parse(entry.createdAt) >= start.getTime() && Date.parse(entry.createdAt) < end.getTime();
-  const entries = [...actions.map(actionEntry), ...await incomingEntries(incoming, deps, bank), ...cards.items.map(cardEntry).filter(inPeriod)]
+  const entries = [...actions.map(actionEntry), ...labelMarketWithdrawals(await incomingEntries(incoming, deps, bank), withdrawals, wallet),
+    ...cards.items.map(cardEntry).filter(inPeriod)]
     .sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt));
   return { entries, complete: incomingComplete && cardComplete, incomingComplete, cardComplete };
 }

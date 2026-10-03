@@ -76,11 +76,23 @@ export type MarketOperation = { id: string; venue: Venue; kind: MarketOperationK
   status: MarketOperationStatus; reason: string | null; source: string; createdAt: string; observedAt: string };
 
 /** The customer's latest operations at a venue, newest first. */
+/** The customer's withdrawals from either venue, newest first, to label their arrival in Transactions. */
+export async function listWithdrawals(db: D1Database, subject: string, limit = 100): Promise<MarketOperation[]> {
+  const { results } = await db.prepare(`SELECT operation_id, venue, kind, summary_json, external_id, status, status_reason, source, created_at, observed_at
+    FROM market_operations WHERE subject_reference = ? AND kind = 'withdraw' ORDER BY created_at DESC LIMIT ?`).bind(subject, limit)
+    .all<OperationRow>();
+  return results.map(operationFromRow);
+}
+
 export async function listOperations(db: D1Database, subject: string, venue: Venue, limit = 50): Promise<MarketOperation[]> {
   const { results } = await db.prepare(`SELECT operation_id, venue, kind, summary_json, external_id, status, status_reason, source, created_at, observed_at
     FROM market_operations WHERE subject_reference = ? AND venue = ? ORDER BY created_at DESC LIMIT ?`).bind(subject, venue, limit)
-    .all<{ operation_id: string; venue: Venue; kind: MarketOperationKind; summary_json: string; external_id: string | null; status: MarketOperationStatus;
-      status_reason: string | null; source: string; created_at: string; observed_at: string }>();
-  return results.map((row) => ({ id: row.operation_id, venue: row.venue, kind: row.kind, summary: JSON.parse(row.summary_json) as Record<string, unknown>,
-    externalId: row.external_id, status: row.status, reason: row.status_reason, source: row.source, createdAt: row.created_at, observedAt: row.observed_at }));
+    .all<OperationRow>();
+  return results.map(operationFromRow);
 }
+
+type OperationRow = { operation_id: string; venue: Venue; kind: MarketOperationKind; summary_json: string; external_id: string | null; status: MarketOperationStatus;
+  status_reason: string | null; source: string; created_at: string; observed_at: string };
+const operationFromRow = (row: OperationRow): MarketOperation => ({ id: row.operation_id, venue: row.venue, kind: row.kind,
+  summary: JSON.parse(row.summary_json) as Record<string, unknown>, externalId: row.external_id, status: row.status, reason: row.status_reason,
+  source: row.source, createdAt: row.created_at, observedAt: row.observed_at });

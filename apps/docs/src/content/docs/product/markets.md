@@ -54,6 +54,10 @@ The first time, setup takes about a minute and two passkey confirmations, once. 
 
 Sports and esports markets aren't offered.
 
+## In Transactions
+
+Money you add to or withdraw from perps or predictions shows in **Transactions** under **Markets**, as Added to perps, Withdrawn from perps, Added to predictions, or Withdrawn from predictions. It's money moving between your own accounts, so Insights doesn't count it as money in or out.
+
 ## Prices and balances
 
 Prices, balances, and positions come straight from Hyperliquid and Polymarket, with the time they were read. If Aura can't read them, it says so instead of showing an old number.
