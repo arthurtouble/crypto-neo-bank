@@ -180,6 +180,35 @@ describe("verifying a deposit into Hyperliquid through Circle", () => {
   });
 });
 
+describe("verifying a deposit into Hyperliquid through Relay", () => {
+  const depository = "0x4cd00e387622c35bddb9b4c962c136462338bc31";
+  const approve = encodeFunctionData({ abi: erc20Abi, functionName: "approve", args: [depository, 8_000_000n] });
+  const action: VerifiableAction = { chainId: 8453, walletAddress: wallet, transactionHash: hash,
+    calls: [{ to: usdc, value: "0", data: approve }, { to: depository, value: "0", data: "0xe8017952" }],
+    effects: [{ type: "erc20_debit", token: usdc, amountRaw: "8000000" },
+      { type: "delivery", tool: "relay_direct", destinationChainId: 1337, token: arbUsdc, to: wallet, minimumRaw: "7939304" }] };
+  const sourceInputs = {
+    data: handleOpsV07([{ sender: wallet, callData: kernelBatch([{ to: usdc, value: 0n, data: approve }, { to: depository, value: 0n, data: "0xe8017952" }]) }]),
+    logs: [entryLog(ENTRY_POINT_V07, "before"), transferLog(usdc, wallet, depository, 8_000_000n), entryLog(ENTRY_POINT_V07, { sender: wallet, success: true })]
+  };
+  const noLifi = async () => { throw new Error("Relay deposits never ask LI.FI"); };
+  const coreHash = `0x${"cd".repeat(32)}`;
+  const delivered = async () => ({ state: "delivered" as const, hyperliquidHash: coreHash });
+  const credited = (creditedRaw: string) => async () => ({ status: "observed" as const, creditedRaw, hash: coreHash, time: 1 });
+
+  it("confirms, even before Base is final, once Relay filled it and Hyperliquid shows the credit", async () => {
+    expect(await verifyAction(action, { observe: observe(observed({ ...sourceInputs, finalized: 99n })), lifiStatus: noLifi,
+      relayDelivery: delivered, hyperliquidCredit: credited("7979200") })).toEqual({ status: "confirmed", destinationHash: coreHash });
+    expect(await verifyAction(action, { observe: observe(observed(sourceInputs)), lifiStatus: noLifi,
+      relayDelivery: delivered, hyperliquidCredit: async () => ({ status: "missing" as const }) }))
+      .toMatchObject({ status: "settling", reason: "awaiting_hyperliquid_credit" });
+    expect(await verifyAction(action, { observe: observe(observed(sourceInputs)), lifiStatus: noLifi,
+      relayDelivery: async () => ({ state: "failed" as const, reason: "refunded" as const }) })).toEqual({ status: "failed", reason: "refunded" });
+    expect(await verifyAction(action, { observe: observe(observed(sourceInputs)), lifiStatus: noLifi,
+      relayDelivery: delivered, hyperliquidCredit: credited("7000000") })).toEqual({ status: "failed", reason: "delivery_below_minimum" });
+  });
+});
+
 describe("verifying a card allowance", () => {
   const spender = "0x5555555555555555555555555555555555555555";
   const approve = encodeFunctionData({ abi: erc20Abi, functionName: "approve", args: [spender, 50_000_000n] });

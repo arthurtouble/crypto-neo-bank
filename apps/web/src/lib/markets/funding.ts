@@ -5,8 +5,8 @@ import { localEdgeUrl } from "@/lib/testing/local-edge";
 
 /**
  * Moving money between the Aura account on Base and a venue account the
- * customer's wallet owns. Into Hyperliquid, LI.FI routes Base USDC straight
- * to the customer's Hyperliquid account (LI.FI's chain 1337, HyperCore). Out
+ * customer's wallet owns. Into Hyperliquid, Relay (or Circle's CCTP when Relay
+ * can't quote) pays Base USDC into the perps balance (`deposits.ts`). Out
  * of Hyperliquid, the customer's wallet signs a withdrawal that Circle's CCTP
  * delivers to its own address on Base. Polymarket's bridge takes
  * Base USDC at an address it makes for the customer's deposit wallet, and pays
