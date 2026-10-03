@@ -35,7 +35,7 @@ Markets include Hyperliquid's own and the HIP-3 dexes margined in USDC (stock pe
 3. **Trade.** `POST /api/predictions/orders/buy` prices a dollar amount against the book and returns the order for the passkey, with the estimated shares and the payout if it wins. `/orders/sell` sells shares at the best bid less 2%. `POST /api/predictions/signatures` posts the signed order. `/orders/cancel` cancels a resting one.
 4. **Withdraw and collect.** `/withdraw` sends pUSD to a bridge address that pays out USDC on Base to the account. `/redeem` collects a resolved market's winnings. Both are wallet batches signed with the passkey.
 
-`/events`, `/up-or-down`, `/markets/[id]`, and `/history` read Polymarket's public data. Sports and esports are filtered twice: Gamma excludes the Sports tag, then every event and market is checked again for sports and esports tags, game IDs, and team IDs (`isSports`). A sports market answers as not found.
+`/events`, `/up-or-down`, `/markets/[id]`, and `/history` read Polymarket's public data. `/markets/[id]` takes a Gamma market id or a market slug, since Polymarket's positions name their market by slug. Sports and esports are filtered twice: Gamma excludes the Sports tag, then every event and market is checked again for sports and esports tags, game IDs, and team IDs (`isSports`). A sports market answers as not found.
 
 ## Configuration
 
