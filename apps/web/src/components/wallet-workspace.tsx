@@ -327,7 +327,7 @@ export function WalletWorkspace() {
                 </div>}
                 <div className="mxFieldGroup">
                   <label className="mxField">To<input className="mxMonoInput" autoComplete="off" autoCapitalize="none" spellCheck={false} placeholder="0x… or @tag" value={toText} disabled={inFlight} onChange={(event) => typeRecipient(event.target.value)} /></label>
-                  {validRecipient ? <p className="mxHint" data-testid="recipient-status">
+                  {validRecipient || tagged ? <p className="mxHint" data-testid="recipient-status">
                     {tagged ? `Aura tag @${tag} · ${shortAddress(recipient)}` : ownWallet ? "Your wallet" : saved ? `Saved recipient: ${saved.name}${waitingUntil ? `. In its waiting period until ${formatDateTime(waitingUntil)}.` : ""}` : "New address. Check it carefully."}</p>
                     : typedTag(toText) && <p className="mxHint" data-testid="recipient-status">Aura tag. We&apos;ll find it when you review.</p>}
                 </div>
