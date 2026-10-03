@@ -83,6 +83,19 @@ test("money received shows in the bell with a toast, and by email; opening the l
   await expect(page).toHaveURL(/\/app\/transactions\?open=/);
 });
 
+test("two notices arriving together both show as toasts, stacked; neither replaces the other", async ({ page }) => {
+  test.setTimeout(150_000);
+  const customer = await signIn(page);
+  await page.goto("/app");
+  await expect(bell(page)).toBeVisible({ timeout: 30_000 });
+
+  await edge("/__receive", { chainId: 8453, to: customer.wallet, token: ASSETS.usdc, amount: "5000000", from: FRIEND });
+  await edge("/__receive", { chainId: 8453, to: customer.wallet, token: ASSETS.usdc, amount: "8000000", from: FRIEND });
+  await waitForNotice(page, "2");
+  await expect(toast(page, "Received 5 USDC")).toBeVisible();
+  await expect(toast(page, "Received 8 USDC")).toBeVisible();
+});
+
 test("with transaction emails off, money received isn't emailed, but a security notice still is", async ({ page }) => {
   test.setTimeout(150_000);
   const customer = await signIn(page);

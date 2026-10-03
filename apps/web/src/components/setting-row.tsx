@@ -17,7 +17,7 @@ export function Toggle({ label, on, busy, onChange }: { label: string; on: boole
 
 const settingsToast = "settings";
 
-/** Toasts for Settings: each replaces the last, and they close when the customer opens another area. */
+/** Toasts for Settings: they stack like any other, and close when the customer opens another area. */
 export function useSettingsToast() {
   const toast = useToast();
   return useMemo(() => ({
