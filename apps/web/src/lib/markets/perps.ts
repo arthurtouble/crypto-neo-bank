@@ -7,7 +7,8 @@ import { markAccountReady, readMarketAccount, recordOperation, savePendingAccoun
 import {
   accountState, accountStates, approveAgentAction, buildAgentSendAssetAction, buildAgentSetAbstractionAction, buildCancelAction, buildCloseAction, buildOrderAction, buildPositionTpslAction, buildUpdateLeverageAction, crossLiquidationPrice, extraAgents,
   isolatedLiquidationPrice, sizeFromMargin,
-  l1ActionTypedData, openOrders, perpDexs, perpMarkets, sendToEvmWithDataAction, submitExchange, userFills,
+  candles, l1ActionTypedData, l2Book, openOrders, perpDexs, perpMarkets, sendToEvmWithDataAction, submitExchange, userFees, userFills,
+  type BookLevel, type Candle, type CandleRange,
   type ApproveAgentAction, type ExchangeResult, type L1Action, type OpenOrder, type PerpAccountState, type PerpMarket, type SendToEvmWithDataAction, type TriggerSpec
 } from "./hyperliquid";
 import { completeMarketSignature, createMarketSignature, type MarketSignatureRequest } from "./signing";
@@ -234,7 +235,54 @@ export async function previewPerpsTrade(owner: `0x${string}`, input: PerpsTradeI
   } else {
     liquidationPrice = isolatedLiquidationPrice({ side, entryPx: price, leverage: input.leverage, maxLeverage: found.maxLeverage });
   }
-  return { market: found, price, ...sized, liquidationPrice };
+  const feeRate = await estimatedTakerRate(owner, found, deps);
+  return { market: found, price, ...sized, liquidationPrice,
+    feeRate: feeRate === null ? null : feeRate.toFixed(6), fee: feeRate === null ? null : (Number(sized.notional) * feeRate).toFixed(4) };
+}
+
+/** A stock (HIP-3) market charges twice the main dex's rate; half goes to its deployer. */
+const HIP3_FEE_MULTIPLIER = 2;
+
+/** The rate a market order would pay, from the account's own fee tier; null if Hyperliquid didn't say. */
+async function estimatedTakerRate(owner: `0x${string}`, found: PerpMarket, deps: PerpsDependencies): Promise<number | null> {
+  try {
+    const { takerRate } = await userFees(owner, options(deps));
+    return takerRate * (found.dex ? HIP3_FEE_MULTIPLIER : 1);
+  } catch {
+    return null;
+  }
+}
+
+/** A market from the shared, briefly cached list, so charts and the book polling every few seconds cost one Hyperliquid read each. */
+async function listedMarket(coin: string, deps: PerpsDependencies): Promise<PerpMarket> {
+  const listed = await listPerpMarkets(deps);
+  if (listed.status !== "observed") return market(coin, deps);
+  const found = listed.data.find((item) => item.coin === coin);
+  if (!found) throw new HttpError(404, "market_not_found", "This market isn't available.");
+  return found;
+}
+
+/** Price candles for a chart range, read now. */
+export async function perpCandles(coin: string, range: CandleRange, deps: PerpsDependencies = {}): Promise<Observed<{ coin: string; interval: string; candles: Candle[] }>> {
+  const now = clock(deps);
+  const found = await listedMarket(coin, deps);
+  return observe(async () => ({ coin: found.coin, ...await candles(found.coin, range, now, options(deps)) }), now);
+}
+
+/** The order book now, with the spread between the best bid and ask. */
+export async function perpBook(coin: string, deps: PerpsDependencies = {}): Promise<Observed<{ coin: string; bids: BookLevel[]; asks: BookLevel[];
+  spread: string | null; spreadPercent: string | null }>> {
+  const now = clock(deps);
+  const found = await listedMarket(coin, deps);
+  return observe(async () => {
+    const book = await l2Book(found.coin, options(deps));
+    const bid = book.bids[0] ? Number(book.bids[0].price) : null;
+    const ask = book.asks[0] ? Number(book.asks[0].price) : null;
+    const spread = bid !== null && ask !== null ? ask - bid : null;
+    return { coin: found.coin, bids: book.bids, asks: book.asks,
+      spread: spread === null ? null : String(Number(spread.toPrecision(8))),
+      spreadPercent: spread === null || ask === null ? null : (spread / ((ask + bid!) / 2) * 100).toFixed(4) };
+  }, now);
 }
 
 /** Bring a stock market's dex up to `margin` from the main perps balance, with the trading key (it can only move funds within the account). */

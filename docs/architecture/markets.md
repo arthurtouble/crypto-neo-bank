@@ -26,7 +26,7 @@ D1 never owns money here either. `market_accounts` says which venue account the 
 
 Markets include Hyperliquid's own and the HIP-3 dexes margined in USDC (stock perps such as `xyz:SPCX`), with sports screened out by dex and market name. An order's asset ID for a HIP-3 market is `100000 + dex index × 10000 + index`. Estimated liquidation prices use Hyperliquid's documented formula with a maintenance rate of 1 / (2 × max leverage); margin tiers for very large positions aren't modelled.
 
-`GET /api/perps/markets` lists markets and prices (public; an isolate reuses the list for 5 seconds, since listing every dex spends Hyperliquid's per-IP budget). `GET /api/perps/account` reads margin per dex, positions, open orders, and fills.
+`GET /api/perps/markets` lists markets and prices (public; an isolate reuses the list for 5 seconds, since listing every dex spends Hyperliquid's per-IP budget). `GET /api/perps/account` reads margin per dex, positions, open orders, and fills. `GET /api/perps/candles?coin=&range=` returns chart candles for Live, 1H, 1D, 1W, 1M, 3M, 1Y, or All, and `GET /api/perps/book?coin=` returns the order book and spread; both are public, read Hyperliquid on each request, and check the coin against the cached market list so polling costs one read. The trade preview also estimates the fee from the account's own Hyperliquid rate (`userFees`, after its referral discount), doubled for stock markets, whose deployer takes half; it shows as unavailable if Hyperliquid doesn't answer. Aura adds no fee.
 
 ## Predictions on Polymarket
 
@@ -47,4 +47,4 @@ Markets include Hyperliquid's own and the HIP-3 dexes margined in USDC (stock pe
 
 - Polymarket session keys, so an order needs no passkey. They need Polymarket to approve the builder key.
 - Live checks on dev with real funds. The migration and secrets are on dev (3 October 2026); the code reaches dev when this merges. Signing was checked against Hyperliquid's live API with throwaway keys (its errors named exactly the signing address), and the CCTP burn was simulated on Base; fills, margin moves, and a real deposit are not yet checked.
-- HIP-3 dexes may charge higher trading fees than the main dex; the order sheet doesn't show them yet.
+- The fee estimate assumes a market order pays the taker rate and that stock markets charge double; a dex in Hyperliquid's growth mode charges less.

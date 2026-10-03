@@ -498,3 +498,47 @@ export async function cctpForwardFee(domain: number, options: InfoOptions = {}):
     throw new VenueError("hyperliquid", "invalid_response", "HyperEVM sent an unexpected answer.");
   }
 }
+
+// ---------------------------------------------------------------- charts and book
+
+export type CandleRange = "live" | "1h" | "1d" | "1w" | "1m" | "3m" | "1y" | "all";
+export type Candle = { t: number; o: string; h: string; l: string; c: string; v: string };
+
+const HOUR = 3_600_000;
+/** Candle size and span for each chart range, kept under a few hundred candles. */
+export const CANDLE_RANGES: Record<CandleRange, { interval: string; span: number | null }> = {
+  live: { interval: "1m", span: HOUR / 2 }, "1h": { interval: "1m", span: HOUR }, "1d": { interval: "15m", span: 24 * HOUR },
+  "1w": { interval: "1h", span: 7 * 24 * HOUR }, "1m": { interval: "4h", span: 30 * 24 * HOUR }, "3m": { interval: "12h", span: 90 * 24 * HOUR },
+  "1y": { interval: "1d", span: 365 * 24 * HOUR }, all: { interval: "1w", span: null }
+};
+
+const candlesSchema = z.array(z.object({ t: timeMs, o: decimal, h: decimal, l: decimal, c: decimal, v: decimal })).max(5_000);
+
+/** Price candles for one market over a chart range, oldest first. */
+export async function candles(coin: string, range: CandleRange, now: Date, options: InfoOptions = {}): Promise<{ interval: string; candles: Candle[] }> {
+  const { interval, span } = CANDLE_RANGES[range];
+  const endTime = now.getTime();
+  const startTime = span === null ? 0 : endTime - span;
+  const rows = await postInfo({ type: "candleSnapshot", req: { coin, interval, startTime, endTime } }, candlesSchema, 2_000_000, options);
+  return { interval, candles: rows.map(({ t, o, h, l, c, v }) => ({ t, o, h, l, c, v })) };
+}
+
+export type BookLevel = { price: string; size: string; orders: number };
+const levelSchema = z.object({ px: decimal, sz: decimal, n: z.number().int().nonnegative() });
+const bookSchema = z.object({ coin: z.string(), time: timeMs, levels: z.tuple([z.array(levelSchema).max(100), z.array(levelSchema).max(100)]) });
+
+/** The order book: bids best (highest) first, asks best (lowest) first. */
+export async function l2Book(coin: string, options: InfoOptions = {}): Promise<{ bids: BookLevel[]; asks: BookLevel[]; time: number }> {
+  const book = await postInfo({ type: "l2Book", coin }, bookSchema, 200_000, options);
+  const level = ({ px, sz, n }: z.output<typeof levelSchema>): BookLevel => ({ price: px, size: sz, orders: n });
+  return { bids: book.levels[0].map(level), asks: book.levels[1].map(level), time: book.time };
+}
+
+const userFeesSchema = z.object({ userCrossRate: decimal, userAddRate: decimal, activeReferralDiscount: decimal.optional() });
+
+/** The account's own taker (cross) and maker (add) rates on Hyperliquid's main dex, after any referral discount. */
+export async function userFees(user: string, options: InfoOptions = {}): Promise<{ takerRate: number; makerRate: number }> {
+  const fees = await postInfo({ type: "userFees", user: userAddress(user) }, userFeesSchema, 200_000, options);
+  const discount = 1 - Number(fees.activeReferralDiscount ?? "0");
+  return { takerRate: Number(fees.userCrossRate) * discount, makerRate: Number(fees.userAddRate) * discount };
+}

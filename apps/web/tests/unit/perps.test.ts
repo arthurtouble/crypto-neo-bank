@@ -3,7 +3,7 @@ import type { PrivyClient } from "@privy-io/node";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { listOperations, readMarketAccount } from "@/lib/markets/accounts";
 import { buildPerpsDeposit } from "@/lib/markets/deposits";
-import { cancelPerpsOrder, completePerpsSignature, placePerpsOrder, placePerpsTrade, previewPerpsTrade, setPerpsLeverage, startPerpsSetup, startPerpsWithdrawal } from "@/lib/markets/perps";
+import { cancelPerpsOrder, completePerpsSignature, perpBook, perpCandles, placePerpsOrder, placePerpsTrade, previewPerpsTrade, setPerpsLeverage, startPerpsSetup, startPerpsWithdrawal } from "@/lib/markets/perps";
 import { d1 } from "../support/d1";
 import { schemaDatabase } from "../support/schema";
 
@@ -29,6 +29,9 @@ const fetcher = vi.fn(async (url: string, init: RequestInit) => {
   if (body.type === "metaAndAssetCtxs") return Response.json(meta);
   if (body.type === "allPerpMetas") return Response.json([{ ...meta[0], collateralToken: 0 }]);
   if (body.type === "clearinghouseState") return Response.json(state);
+  if (body.type === "userFees") return Response.json({ userCrossRate: "0.00045", userAddRate: "0.00015", activeReferralDiscount: "0.04" });
+  if (body.type === "candleSnapshot") return Response.json([{ t: 1, T: 2, s: "BTC", i: "15m", o: "59900", c: "60000", h: "60100", l: "59800", v: "12.5", n: 40 }]);
+  if (body.type === "l2Book") return Response.json({ coin: "BTC", time: 5, levels: [[{ px: "59999", sz: "1.2", n: 3 }, { px: "59998", sz: "2", n: 1 }], [{ px: "60001", sz: "0.5", n: 2 }]] });
   return new Response("unknown", { status: 400 });
 }) as unknown as typeof fetch;
 
@@ -131,6 +134,9 @@ describe("trading from a dollar amount", () => {
     expect(preview).toMatchObject({ size: "0.01666", price: "60000" });
     expect(Number(preview.liquidationPrice)).toBeGreaterThan(54_000);
     expect(Number(preview.liquidationPrice)).toBeLessThan(60_000);
+    // The account's own taker rate, less its referral discount, on the order's notional.
+    expect(preview.feeRate).toBe("0.000432");
+    expect(preview.fee).toBe((Number(preview.notional) * 0.000432).toFixed(4));
     exchangeAnswer = { status: "ok", response: { type: "order", data: { statuses: [{ filled: { oid: 9, totalSz: "0.01666", avgPx: "60000" } }, "waitingForTrigger"] } } };
     const placed = await placePerpsTrade(db, "alice", owner, input, deps);
     expect(placed.size).toBe("0.01666");
@@ -150,5 +156,18 @@ describe("adding money through Circle", () => {
       summary: { market: "hyperliquid", tool: "cctp" } });
     expect(built.calls.map((call) => call.to)).toEqual(["0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", "0x28b5a0e9c621a5badaa536219b3a228c8168cf5d"]);
     await expect(buildPerpsDeposit(owner, "5", { fee, balance: async () => undefined })).rejects.toMatchObject({ code: "amount_too_small" });
+  });
+});
+
+describe("charts and the order book", () => {
+  it("reads candles for a range and the book with its spread, for listed markets only", async () => {
+    const chart = await perpCandles("BTC", "1d", deps);
+    expect(chart).toMatchObject({ status: "observed", data: { coin: "BTC", interval: "15m", candles: [{ t: 1, o: "59900", c: "60000", v: "12.5" }] } });
+    const request = (fetcher as unknown as { mock: { calls: [string, RequestInit][] } }).mock.calls
+      .map(([, init]) => JSON.parse(String(init.body)) as { type: string; req?: { startTime: number; endTime: number } }).findLast((body) => body.type === "candleSnapshot");
+    expect(request?.req).toEqual({ coin: "BTC", interval: "15m", startTime: now.getTime() - 86_400_000, endTime: now.getTime() });
+    const book = await perpBook("BTC", deps);
+    expect(book).toMatchObject({ status: "observed", data: { bids: [{ price: "59999", size: "1.2", orders: 3 }, { price: "59998" }], asks: [{ price: "60001" }], spread: "2" } });
+    await expect(perpBook("NOPE", deps)).rejects.toMatchObject({ code: "market_not_found" });
   });
 });
