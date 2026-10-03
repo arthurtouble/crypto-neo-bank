@@ -32,6 +32,7 @@ vi.mock("@/lib/cards/service", async (original) => ({ ...await original<object>(
 
 const { parseTransfer, readIncoming } = await vi.importActual<typeof import("@/lib/activity/incoming")>("@/lib/activity/incoming");
 const { actionEntry, cardEntry, entriesCsv, entryAmount, entryCategory, entryLabel, incomingEntry } = await import("@/lib/activity/entries");
+const { labelMarketWithdrawals } = await import("@/lib/activity/markets");
 const { buildInsights } = await import("@/lib/insights/presentation");
 const { GET: activity } = await import("@/app/api/activity/route");
 const { GET: statement } = await import("@/app/api/statements/route");
@@ -131,6 +132,30 @@ describe("one entry per transaction", () => {
     const off = actionEntry(action({ summary: { symbol: "USDC", amount: "0", cardAllowance: { spender: friend, off: true } } }));
     expect(off).toMatchObject({ type: "card_spending_off", counterparty: "Aura card" });
     expect([entryLabel(off.type), entryCategory(off.type)]).toEqual(["Card spending turned off", "Card"]);
+  });
+
+  it("says when money went to or came back from perps or predictions", () => {
+    const perps = actionEntry(action({ kind: "route", destinationChainId: 1337, summary: { from: { symbol: "USDC", decimals: 6 }, to: { symbol: "USDC", decimals: 6 },
+      fromAmountRaw: "8000000", toAmountRaw: "7980000", recipient: wallet, external: false, market: "hyperliquid" } }));
+    expect(perps).toMatchObject({ type: "perps_deposit", amount: "8", asset: "USDC", counterparty: "Hyperliquid" });
+    expect([entryLabel(perps.type), entryCategory(perps.type)]).toEqual(["Added to perps", "Markets"]);
+    const predictions = actionEntry(action({ summary: { symbol: "USDC", amount: "5", to: friend, market: "polymarket" } }));
+    expect(predictions).toMatchObject({ type: "predictions_deposit", amount: "5", counterparty: "Polymarket" });
+    expect(entryLabel(predictions.type)).toBe("Added to predictions");
+
+    const withdrawal = (venue: "hyperliquid" | "polymarket", amount: string, createdAt: string, destination = wallet) => ({ id: `${venue}-${amount}`, venue,
+      kind: "withdraw" as const, summary: { amount, destination, network: "Base" }, externalId: null, status: "accepted" as const, reason: null, source: "t",
+      createdAt, observedAt: createdAt });
+    const arrivals = [incomingEntry(transfer(40, "2026-09-10T12:01:00.000Z", "49000000")), incomingEntry(transfer(41, "2026-09-10T12:02:00.000Z", "20000000")),
+      incomingEntry(transfer(42, "2026-09-10T12:03:00.000Z", "19900000")), incomingEntry(transfer(43, "2026-09-12T12:03:00.000Z", "9900000"))];
+    const labelled = labelMarketWithdrawals(arrivals, [withdrawal("hyperliquid", "50", "2026-09-10T12:00:00.000Z"),
+      withdrawal("polymarket", "20", "2026-09-10T12:01:30.000Z"), withdrawal("polymarket", "10", "2026-09-10T12:00:00.000Z"),
+      withdrawal("hyperliquid", "30", "2026-09-10T12:00:00.000Z", friend)], wallet);
+    // $50 from perps arrives less Hyperliquid's $1 fee; the first $20 after the predictions withdrawal is it, the next is someone else's.
+    expect(labelled.map((entry) => [entry.type, entry.counterparty])).toEqual([["perps_withdraw", "Hyperliquid"], ["predictions_withdraw", "Polymarket"],
+      ["received", friend], ["received", friend]]);
+    expect(labelled[0]).toMatchObject({ amount: "49", source: "Alchemy, Base · Hyperliquid", status: "completed" });
+    expect(entryLabel(labelled[1]!.type)).toBe("Withdrawn from predictions");
   });
 
   it("values money received at today's price, when there is one", () => {

@@ -13,7 +13,8 @@ import type { IncomingTransfer } from "./incoming";
  * payments come from Stripe, which issues the card.
  */
 type EntryType = "sent" | "received" | "bank_deposit" | "bank_payout" | "card_payment" | "card_refund" | "card_allowance" | "card_spending_off" | "swap" | "bridge" | "earn_deposit" | "earn_withdraw"
-  | "borrow" | "repay" | "liquidation" | "collateral_enabled" | "collateral_disabled" | "defi_activity";
+  | "borrow" | "repay" | "liquidation" | "collateral_enabled" | "collateral_disabled" | "defi_activity"
+  | "perps_deposit" | "perps_withdraw" | "predictions_deposit" | "predictions_withdraw";
 type EntryStatus = "pending" | "completed" | "failed" | "not_confirmed";
 type EntryOrigin = "aura" | "incoming" | "aave" | "card" | "deposit";
 
@@ -51,6 +52,8 @@ type ActionLike = { id: string; kind: "transfer" | "earn" | "route"; chainId: nu
   usdCents: number | null; transactionHash: string | null; destinationChainId: number | null; destinationTransactionHash: string | null;
   failureReason: string | null; createdAt: string; bankState?: string | null };
 
+const MARKET_NAMES = { perps: "Hyperliquid", predictions: "Polymarket" } as const;
+
 type RouteSide = { symbol?: string; decimals?: number };
 const raw = (value: unknown, decimals: unknown) => typeof value === "string" && /^\d+$/.test(value) && typeof decimals === "number" ? formatUnits(BigInt(value), decimals) : undefined;
 
@@ -73,6 +76,14 @@ export function actionEntry(action: ActionLike): ActivityEntry {
   const base = { id: action.id, origin: "aura" as const, ...entryStatus(action.status, action.destinationChainId !== null), createdAt: action.createdAt, chainId: action.chainId,
     estimatedUsd: action.usdCents === null ? undefined : action.usdCents / 100, transactionHash: action.transactionHash ?? undefined,
     failureReason: action.failureReason ?? undefined, source: "Aura" };
+  // Money moved between the account and its own perps (Hyperliquid) or predictions (Polymarket) account.
+  const market = summary.market === "hyperliquid" ? "perps" : summary.market === "polymarket" ? "predictions" : null;
+  if (market) {
+    const from = summary.from as RouteSide | undefined;
+    const amount = action.kind === "route" ? raw(summary.fromAmountRaw, from?.decimals) : typeof summary.amount === "string" ? summary.amount : undefined;
+    return { ...base, type: `${market}_deposit`, asset: action.kind === "route" ? from?.symbol : typeof summary.symbol === "string" ? summary.symbol : undefined,
+      amount, counterparty: MARKET_NAMES[market] };
+  }
   if (action.kind === "route") {
     const from = summary.from as RouteSide | undefined;
     const to = summary.to as RouteSide | undefined;
@@ -124,6 +135,14 @@ export function cardEntry(item: CardActivity): ActivityEntry {
     cardDispute: item.dispute?.status, source: "Stripe" };
 }
 
+/**
+ * An incoming transfer that is the customer's own withdrawal from perps or
+ * predictions arriving (see `lib/activity/markets.ts`).
+ */
+export function marketWithdrawalEntry(entry: ActivityEntry, market: "perps" | "predictions"): ActivityEntry {
+  return { ...entry, type: `${market}_withdraw`, counterparty: MARKET_NAMES[market], source: `${entry.source} · ${MARKET_NAMES[market]}` };
+}
+
 export function incomingEntry(transfer: IncomingTransfer, usdCentsPerUnit?: number | null, bank?: { senderName: string | null; bankName: string | null }): ActivityEntry {
   const value = usdCentsPerUnit === undefined || usdCentsPerUnit === null ? undefined
     : Math.round(Number(BigInt(transfer.amountRaw) * BigInt(usdCentsPerUnit) / 10n ** BigInt(transfer.decimals))) / 100;
@@ -137,11 +156,12 @@ export function incomingEntry(transfer: IncomingTransfer, usdCentsPerUnit?: numb
 const LABELS: Record<EntryType, string> = {
   sent: "Sent", received: "Received", bank_deposit: "Bank deposit", bank_payout: "Sent to bank", card_payment: "Card payment", card_refund: "Card refund", card_allowance: "Card allowance set", card_spending_off: "Card spending turned off", swap: "Swapped", bridge: "Moved between networks", earn_deposit: "Added to Earn",
   earn_withdraw: "Withdrawn from Earn", borrow: "Borrowed", repay: "Repaid", liquidation: "Collateral liquidated",
-  collateral_enabled: "Enabled collateral", collateral_disabled: "Disabled collateral", defi_activity: "Aave activity"
+  collateral_enabled: "Enabled collateral", collateral_disabled: "Disabled collateral", defi_activity: "Aave activity",
+  perps_deposit: "Added to perps", perps_withdraw: "Withdrawn from perps", predictions_deposit: "Added to predictions", predictions_withdraw: "Withdrawn from predictions"
 };
 export const entryLabel = (type: EntryType) => LABELS[type];
 
-export const CATEGORIES = ["All", "Sent", "Received", "Card", "Swaps", "Earn", "Other"] as const;
+export const CATEGORIES = ["All", "Sent", "Received", "Card", "Swaps", "Earn", "Markets", "Other"] as const;
 type EntryCategory = Exclude<(typeof CATEGORIES)[number], "All">;
 export function entryCategory(type: EntryType): EntryCategory {
   if (type === "card_payment" || type === "card_refund" || type === "card_allowance" || type === "card_spending_off") return "Card";
@@ -149,6 +169,7 @@ export function entryCategory(type: EntryType): EntryCategory {
   if (type === "received" || type === "bank_deposit") return "Received";
   if (type === "swap" || type === "bridge") return "Swaps";
   if (type === "earn_deposit" || type === "earn_withdraw" || type.startsWith("collateral_")) return "Earn";
+  if (type.startsWith("perps_") || type.startsWith("predictions_")) return "Markets";
   return "Other";
 }
 
@@ -168,7 +189,8 @@ export function entryDirection(type: EntryType): "in" | "out" | "earn" | "moved"
   if (type === "received" || type === "bank_deposit" || type === "card_refund") return "in";
   if (type === "sent" || type === "bank_payout" || type === "card_payment") return "out";
   if (type === "earn_deposit") return "earn";
-  if (type === "swap" || type === "bridge") return "moved";
+  // Moving money to or from the account's own perps or predictions account is neither income nor spending.
+  if (type === "swap" || type === "bridge" || type.startsWith("perps_") || type.startsWith("predictions_")) return "moved";
   return "other";
 }
 

@@ -3,7 +3,7 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { useAuth } from "@/lib/client/auth";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowDownToLine, ArrowDownUp, ArrowLeft, ArrowUpFromLine, CreditCard, Download, ExternalLink, FileSpreadsheet, FileText, LoaderCircle, Search, TrendingUp, X } from "lucide-react";
+import { ArrowDownToLine, ArrowDownUp, ArrowLeft, ArrowUpFromLine, CandlestickChart, CirclePercent, CreditCard, Download, ExternalLink, FileSpreadsheet, FileText, LoaderCircle, Search, TrendingUp, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -36,7 +36,8 @@ function ReceiptJourney({ id }: { id: string }) {
 const incoming = (entry: ActivityEntry) => entry.type === "received" || entry.type === "bank_deposit" || entry.type === "card_refund";
 
 function EntryIcon({ entry }: { entry: ActivityEntry }) {
-  const Icon = incoming(entry) ? ArrowDownToLine : entry.origin === "card" ? CreditCard : entry.type === "swap" || entry.type === "bridge" ? ArrowDownUp
+  const Icon = entry.type.startsWith("perps_") ? CandlestickChart : entry.type.startsWith("predictions_") ? CirclePercent
+    : incoming(entry) ? ArrowDownToLine : entry.origin === "card" ? CreditCard : entry.type === "swap" || entry.type === "bridge" ? ArrowDownUp
     : entry.type.startsWith("earn") ? TrendingUp : ArrowUpFromLine;
   return <span className="appIconDisc" aria-hidden="true"><Icon /></span>;
 }
