@@ -42,6 +42,7 @@ function gammaMarket(id, question, yes, extra = {}) {
 
 const TAGS = { politics: { id: "2", slug: "politics", label: "Politics" }, economy: { id: "100328", slug: "economy", label: "Economy" },
   crypto: { id: "21", slug: "crypto", label: "Crypto" }, upOrDown: { id: "102127", slug: "up-or-down", label: "Up or Down" }, window: { id: "102467", slug: "15M", label: "15M" },
+  bitcoin: { id: "235", slug: "bitcoin", label: "Bitcoin" },
   sports: { id: "1", slug: "sports", label: "Sports" } };
 
 function gammaEvent(id, title, markets, tags, extra = {}) {
@@ -57,9 +58,17 @@ export function initialMarkets() {
     // Sports is never listed: Aura filters it out even when Polymarket returns it.
     gammaEvent(5005, "Who wins the cup final?", [gammaMarket(5005, "Will the home team win the cup final?", 0.5)], [TAGS.sports])
   ];
+  events.push(
+    // Resolved: No won. Closed events aren't listed, but the market still opens by id, for collecting winnings.
+    gammaEvent(5006, "Will the bridge reopen by June?", [gammaMarket(5006, "Will the bridge reopen by June?", 0,
+      { market: { closed: true, acceptingOrders: false, outcomePrices: JSON.stringify(["0", "1"]), endDate: "2026-06-01T00:00:00Z" } })], [TAGS.politics], { closed: true })
+  );
+  // A 15-minute Bitcoin window that started five minutes ago and settles on Chainlink's BTC/USD stream, as Polymarket's do.
+  const start = new Date(Math.floor(Date.now() / 1000) * 1000 - 300_000).toISOString(), end = new Date(Date.parse(start) + 900_000).toISOString();
   const upOrDown = [gammaEvent(6001, "Bitcoin Up or Down - 3:00PM-3:15PM ET", [gammaMarket(6001, "Bitcoin Up or Down - 3:00PM-3:15PM ET", 0.54,
-    { names: ["Up", "Down"], market: { endDate: new Date(Date.now() + 900_000).toISOString() } })], [TAGS.upOrDown, TAGS.window, TAGS.crypto],
-    { endDate: new Date(Date.now() + 900_000).toISOString(), eventMetadata: { priceToBeat: 64210.5 } })];
+    { names: ["Up", "Down"], market: { endDate: end, eventStartTime: start, resolutionSource: "https://data.chain.link/streams/btc-usd-twap-60s-streams" } })],
+  [TAGS.upOrDown, TAGS.window, TAGS.crypto, TAGS.bitcoin],
+  { startTime: start, endDate: end, resolutionSource: "https://data.chain.link/streams/btc-usd-twap-60s-streams", eventMetadata: { priceToBeat: 64210.5 } })];
   return { hyperliquid: { accounts: {} }, polymarket: { events, upOrDown, positions: [] } };
 }
 

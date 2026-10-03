@@ -64,8 +64,8 @@ export const features = {
   earn: ["earn", "defi"],
   insights: ["insights"],
   // Perps and predictions share the markets parts (markets-*.ts(x), markets.css, lib/markets/), so those run both.
-  markets: ["markets", "prediction"],
-  perps: ["perps", "markets"],
+  perps: ["perps", "markets", "hyperliquid"],
+  predictions: ["prediction", "polymarket", "markets"],
   landing: ["app/page.tsx", "public.css", "landing", "waitlist", "unavailable", "robots", "sitemap", "llms.txt", "app/docs/", "guest-banner", "lib/legal/"],
   notifications: ["notification"],
   ops: ["api/ops/", "lib/ops/"],

@@ -6,6 +6,7 @@ import "../cards.css";
 import "../records.css";
 import "../settings.css";
 import "../markets.css";
+import "../predictions.css";
 import { AppShell } from "@/components/app-shell";
 import { AuthProvider } from "@/components/auth-provider";
 import { ProductAnalytics } from "@/components/product-analytics";

@@ -43,13 +43,16 @@ If your perps balance is short, Aura adds the difference from your USDC on Base 
 
 Each market asks a question, such as whether a bill passes by a date. You buy shares in an outcome. Each share pays $1 if that outcome happens, and nothing if it doesn't.
 
-- **Price.** A share's price, in cents, is roughly the market's chance of that outcome. At 64¢, $10 pays about $15.63 if it wins. The price can move before your order fills.
+- **Price.** A share's price, in cents, is roughly the market's chance of that outcome. At 64¢, $10 pays about $15.63 if it wins: the order shows this as "To win". The price can move before your order fills.
+- **Buying.** On a computer, the order panel sits beside the chart. Pick Yes or No, enter an amount or tap +$1, +$20, +$100, or Max, and confirm with your passkey. On a phone, tap Buy Yes or Buy No under the chart.
+- **Up or Down.** These short crypto markets ask whether a price ends a window, such as 15 minutes, at or above where it started. The page shows the price to beat, the live price from Chainlink, and the time left.
 - **Results.** Polymarket decides each result after the market ends, from the source named on the market's page.
-- **Selling and collecting.** You can sell shares before the market ends. Once it resolves, collect your winnings.
+- **Selling and collecting.** You can sell shares before the market ends, at the best price buyers offer. Once a market resolves and your outcome won, collect your winnings to your predictions cash.
+- **Cash.** Your predictions cash sits in your Polymarket account. Add money from your USDC on Base, or withdraw it back; Polymarket moves it in a few minutes.
 
-The first time, you confirm a few setup steps with your passkey. Aura then adds the money from your USDC on Base and places the order.
+The first time, setup takes about a minute and two passkey confirmations, once. If you have too little predictions cash for a buy, Aura adds the difference from your USDC on Base first.
 
-Sports markets aren't offered.
+Sports and esports markets aren't offered.
 
 ## Prices and balances
 

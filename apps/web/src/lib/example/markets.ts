@@ -95,13 +95,20 @@ export const examplePredictionEvents: PolymarketEvent[] = [
   event(105, "Will a phone maker ship a foldable under $500 this year? (example)", [market(105, "Will a phone maker ship a foldable under $500 this year? (example)", 0.28)], tech)
 ];
 
+/** Example Up or Down windows run now, so a guest sees the countdown and the live chart move: the current 15 minutes and the current hour. */
+const windowAt = (ms: number) => { const start = Math.floor(Date.now() / ms) * ms; return { startTime: new Date(start).toISOString(), endDate: new Date(start + ms).toISOString() }; };
+const quarter = windowAt(900_000), hour = windowAt(3_600_000);
+const upOrDownTags = (asset: string, window: string) => [{ slug: "up-or-down", label: "Up or Down" }, { slug: "crypto", label: "Crypto" }, { slug: asset, label: asset }, { slug: window, label: window }];
+
 export const exampleUpOrDownEvents: PolymarketEvent[] = [
-  event(201, "Bitcoin up or down, 3:00 to 3:15 PM (example)", [{ ...market(201, "Bitcoin up or down, 3:00 to 3:15 PM (example)", 0.54),
-    outcomes: [{ name: "Up", tokenId: token(402), price: 0.54 }, { name: "Down", tokenId: token(403), price: 0.46 }], endDate: "2026-01-15T15:15:00.000Z" }],
-  [{ slug: "up-or-down", label: "Up or Down" }, { slug: "15M", label: "15M" }], { upOrDown: { window: "15M", priceToBeat: 64210.5 }, endDate: "2026-01-15T15:15:00.000Z" }),
-  event(202, "Ethereum up or down, 3:00 to 4:00 PM (example)", [{ ...market(202, "Ethereum up or down, 3:00 to 4:00 PM (example)", 0.47),
-    outcomes: [{ name: "Up", tokenId: token(404), price: 0.47 }, { name: "Down", tokenId: token(405), price: 0.53 }], endDate: "2026-01-15T16:00:00.000Z" }],
-  [{ slug: "up-or-down", label: "Up or Down" }, { slug: "1H", label: "1H" }], { upOrDown: { window: "1H", priceToBeat: 3118.2 }, endDate: "2026-01-15T16:00:00.000Z" })
+  event(201, "Bitcoin up or down, next 15 minutes (example)", [{ ...market(201, "Bitcoin up or down, next 15 minutes (example)", 0.54),
+    outcomes: [{ name: "Up", tokenId: token(402), price: 0.54 }, { name: "Down", tokenId: token(403), price: 0.46 }], ...quarter,
+    resolutionSource: "https://data.chain.link/streams/btc-usd", tags: upOrDownTags("bitcoin", "15M") }],
+  upOrDownTags("bitcoin", "15M"), { upOrDown: { window: "15M", priceToBeat: 64210.5 }, ...quarter, resolutionSource: "https://data.chain.link/streams/btc-usd" }),
+  event(202, "Ethereum up or down, this hour (example)", [{ ...market(202, "Ethereum up or down, this hour (example)", 0.47),
+    outcomes: [{ name: "Up", tokenId: token(404), price: 0.47 }, { name: "Down", tokenId: token(405), price: 0.53 }], ...hour,
+    resolutionSource: "https://data.chain.link/streams/eth-usd", tags: upOrDownTags("ethereum", "1H") }],
+  upOrDownTags("ethereum", "1H"), { upOrDown: { window: "1H", priceToBeat: 3118.2 }, ...hour, resolutionSource: "https://data.chain.link/streams/eth-usd" })
 ];
 
 /** One example market by id: the matching example, or the first. */
@@ -161,7 +168,10 @@ export function examplePredictionHistory(interval: string) {
 const examplePositions: Position[] = [
   { tokenId: token(202), oppositeTokenId: token(203), conditionId: condition(101), title: "Will the city council pass the transit budget by March? (example)",
     slug: "example-101", eventSlug: "example-event-101", icon: null, outcome: "Yes", outcomeIndex: 0, size: 40, avgPrice: 0.55, currentPrice: 0.63, value: 25.2,
-    cost: 22, pnl: 3.2, percentPnl: 14.55, realizedPnl: null, redeemable: false, negRisk: false, endDate: "2026-12-31T23:59:00.000Z" }
+    cost: 22, pnl: 3.2, percentPnl: 14.55, realizedPnl: null, redeemable: false, negRisk: false, endDate: "2026-12-31T23:59:00.000Z" },
+  { tokenId: token(210), oppositeTokenId: token(211), conditionId: condition(105), title: "Will a phone maker ship a foldable under $500 this year? (example)",
+    slug: "example-105", eventSlug: "example-event-105", icon: null, outcome: "No", outcomeIndex: 1, size: 30, avgPrice: 0.7, currentPrice: 1, value: 30,
+    cost: 21, pnl: 9, percentPnl: 42.86, realizedPnl: null, redeemable: true, negRisk: false, endDate: "2026-01-10T23:59:00.000Z" }
 ];
 
 export const examplePredictionsAccount = {

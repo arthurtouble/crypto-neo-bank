@@ -1,6 +1,6 @@
 /*
  * Markets: perps on Hyperliquid and predictions on Polymarket, from the design tokens only. Classes are prefixed mk and
- * build on the mx parts in money.css. Desktop: cards and lists; a perp's page is a trading screen (chart and positions,
+ * build on the mx parts in money.css; predictions' own parts are in predictions.css (pd). Desktop: cards and lists; a perp's page is a trading screen (chart and positions,
  * order book, order panel); other order sheets are centred dialogs. Phone: one column, a keypad for amounts, and order
  * sheets as bottom sheets (mxDialog). Sheets render outside .appFrame, so the form parts they share with the order panel
  * are written for both (:is(.mkSheet, .mkOrderPanel)).
@@ -12,7 +12,6 @@
 .appFrame .mkCardHead { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; }
 .appFrame .mkCardHead h2 { font-size: var(--text-title-3-size); line-height: var(--text-title-3-line); font-weight: var(--weight-semibold); }
 .appFrame .mkSource, .mkSheet .mkSource { color: var(--color-text-tertiary); font-size: var(--text-caption-size); line-height: var(--text-caption-line); }
-.appFrame .mkSubhead { margin: var(--space-2) 0 0; font-size: var(--text-title-3-size); line-height: var(--text-title-3-line); font-weight: var(--weight-semibold); }
 .appFrame .mkUp, :is(.mkSheet, .mkOrderPanel) .mkUp { color: var(--color-positive); }
 .appFrame .mkFlat { color: var(--color-text-secondary); }
 
@@ -27,12 +26,11 @@
 .appFrame .mkListTabs [role="tab"][aria-selected="true"] { border-bottom-color: var(--color-accent); color: var(--color-text); }
 .appFrame .mkCount { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: var(--radius-pill); background: var(--color-muted); color: var(--color-text-secondary); font-size: var(--text-caption-size); }
 
-/* Chips: amount shortcuts and prediction categories */
+/* Chips: amount shortcuts and filters */
 .mkChip { display: inline-flex; align-items: center; height: 30px; padding: 0 var(--space-3); border: 1px solid var(--color-line); border-radius: var(--radius-pill); background: var(--color-surface); color: var(--color-text-secondary); font: var(--weight-medium) var(--text-small-size) / 1 var(--font-sans); white-space: nowrap; cursor: pointer; transition: background var(--duration-fast) var(--ease-enter); }
 .mkChip:hover { background: var(--color-hover); }
 .mkChip[aria-pressed="true"] { background: var(--color-text); border-color: var(--color-text); color: var(--color-canvas); }
 .mkChip:disabled { opacity: .45; cursor: not-allowed; }
-.appFrame .mkChips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .appFrame .mkBadge, :is(.mkSheet, .mkOrderPanel) .mkBadge { display: inline-flex; align-items: center; height: 20px; padding: 0 6px; border-radius: var(--radius-pill); background: var(--color-muted); color: var(--color-text-secondary); font-size: var(--text-caption-size); font-weight: var(--weight-medium); vertical-align: middle; }
 .appFrame .mkBadgeLong { background: var(--color-positive-soft); color: var(--color-positive); }
 
@@ -84,34 +82,14 @@
 .appFrame .mkSearch input { flex: 1; min-width: 0; height: 100%; border: 0; background: none; color: var(--color-text); font: var(--weight-regular) var(--text-body-size) / 1 var(--font-sans); outline: none; }
 
 /* A market's page */
-.appFrame .mkBack { justify-self: start; display: inline-flex; align-items: center; gap: var(--space-1); color: var(--color-accent); font-weight: var(--weight-medium); text-decoration: none; }
-.appFrame .mkMarketHead { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); }
 .appFrame .mkQuote { display: grid; gap: var(--space-1); }
 .appFrame .mkQuoteLine { color: var(--color-text-secondary); }
-.appFrame .mkColumns { display: grid; grid-template-columns: minmax(0, 1fr) var(--side-column); gap: var(--gap-section); align-items: start; }
 .appFrame .mkTradeBar { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); max-width: 560px; }
 .appFrame .mkEmpty { display: grid; gap: var(--space-2); justify-items: center; padding: var(--space-9) var(--space-4); border: 1px solid var(--color-line); border-radius: var(--radius-lg); background: var(--color-surface); text-align: center; }
 .appFrame .mkEmpty h2 { font-size: var(--text-title-3-size); line-height: var(--text-title-3-line); font-weight: var(--weight-semibold); }
 .appFrame .mkEmpty p { color: var(--color-text-secondary); }
 
-/* Predictions: events, outcomes, odds */
-.appFrame .mkEvents { display: grid; gap: var(--space-4); }
-.appFrame .mkEventGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--space-4); align-items: start; }
-.appFrame .mkEvent { gap: var(--space-3); }
-.appFrame .mkEventHead { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-2); }
-.appFrame .mkEventHead h3 { margin: 0; font-size: var(--text-title-3-size); line-height: var(--text-title-3-line); font-weight: var(--weight-semibold); }
-.appFrame .mkEventHead a { color: var(--color-text); text-decoration: none; }
-.appFrame .mkOutcomeButtons { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
-.appFrame .mkOutcome { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); min-height: var(--control-height-lg); padding: 0 var(--space-3); border: 1px solid var(--color-line-strong); border-radius: var(--radius-sm); color: var(--color-text); font-weight: var(--weight-medium); text-decoration: none; }
-.appFrame .mkOutcome:hover { background: var(--color-hover); }
-.appFrame .mkOutcome strong { font-weight: var(--weight-semibold); }
-.appFrame .mkEventMarkets { margin: 0; padding: 0; list-style: none; display: grid; }
-.appFrame .mkEventMarkets a { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); min-height: 40px; color: var(--color-text); text-decoration: none; }
-.appFrame .mkEventMarkets li + li { border-top: 1px solid var(--color-line); }
-.appFrame .mkEventMarkets a:hover { color: var(--color-accent); }
-.appFrame .mkEventMarkets strong { flex: none; font-weight: var(--weight-semibold); }
-.appFrame .mkEventFoot { color: var(--color-text-secondary); font-size: var(--text-small-size); }
-.appFrame .mkOdds .mkCardHead { align-items: center; }
+/* Line charts (the perp chart; predictions has its own in predictions.css) */
 .appFrame .mkChart { margin: 0; display: grid; gap: var(--space-1); }
 .appFrame .mkChart svg { width: 100%; height: 180px; touch-action: pan-y; }
 .appFrame .mkChartGrid { stroke: var(--color-line); stroke-width: 1; }
@@ -142,9 +120,7 @@
 :is(.mkSheet, .mkOrderPanel) .mkPayText { flex: 1; min-width: 0; display: grid; }
 :is(.mkSheet, .mkOrderPanel) .mkPayText strong, :is(.mkSheet, .mkOrderPanel) .mkPayAmount { font-weight: var(--weight-medium); }
 :is(.mkSheet, .mkOrderPanel) .mkChoices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
-:is(.mkSheet, .mkOrderPanel) .mkChoices .mkSegmented, :is(.mkSheet, .mkOrderPanel) .mkOutcomes { display: flex; }
-:is(.mkSheet, .mkOrderPanel) .mkOutcomes button { height: var(--control-height-lg); }
-:is(.mkSheet, .mkOrderPanel) .mkOutcomes button span { color: var(--color-text-secondary); }
+:is(.mkSheet, .mkOrderPanel) .mkChoices .mkSegmented { display: flex; }
 :is(.mkSheet, .mkOrderPanel) .mkLeverage { display: grid; gap: var(--space-1); }
 :is(.mkSheet, .mkOrderPanel) .mkLeverage input { width: 100%; accent-color: var(--color-accent); }
 :is(.mkSheet, .mkOrderPanel) .mkLeverageEnds { display: flex; justify-content: space-between; color: var(--color-text-tertiary); font-size: var(--text-caption-size); }
@@ -155,9 +131,6 @@
 :is(.mkSheet, .mkOrderPanel) .appSwitch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: var(--color-surface); box-shadow: var(--shadow-1); transition: transform var(--duration-fast) var(--ease-enter); }
 :is(.mkSheet, .mkOrderPanel) .appSwitch:checked { border-color: var(--color-accent); background: var(--color-accent); }
 :is(.mkSheet, .mkOrderPanel) .appSwitch:checked::after { transform: translateX(16px); }
-:is(.mkSheet, .mkOrderPanel) .mkPayout { padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); background: var(--color-positive-soft); margin: 0; }
-:is(.mkSheet, .mkOrderPanel) .mkPayout strong { color: var(--color-positive); font-weight: var(--weight-semibold); }
-:is(.mkSheet, .mkOrderPanel) .mkPayout span { color: var(--color-text-secondary); }
 :is(.mkSheet, .mkOrderPanel) .mxField { display: grid; gap: 6px; color: var(--color-text-secondary); font-size: var(--text-small-size); font-weight: var(--weight-medium); }
 :is(.mkSheet, .mkOrderPanel) .mxField input { width: 100%; height: var(--input-height); padding: 0 var(--space-3); border: 1px solid var(--color-line-strong); border-radius: var(--radius-sm); background: var(--color-surface); color: var(--color-text); font: var(--weight-regular) var(--text-body-size) / 1 var(--font-sans); font-variant-numeric: tabular-nums; }
 :is(.mkSheet, .mkOrderPanel) .mxField input:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; border-color: var(--color-focus); }
@@ -323,14 +296,8 @@
   .appFrame .mkOrderPanel { position: static; }
 }
 
-/* Tablet: the side column moves below */
-@media (max-width: 1023px) {
-  .appFrame .mkColumns { grid-template-columns: minmax(0, 1fr); }
-}
-
 /* Phone */
 @media (max-width: 767px) {
-  .appFrame .mkChips { flex-wrap: nowrap; overflow-x: auto; margin: 0 calc(-1 * var(--page-pad-x)); padding: 0 var(--page-pad-x); scrollbar-width: none; }
   .appFrame .mkTradeBar { max-width: none; }
   .appFrame .mkAvailableActions { width: 100%; }
   .appFrame .mkAvailableActions .appButton { flex: 1; height: var(--control-height-lg); }
@@ -342,7 +309,6 @@
   .appFrame .mkBookRow { min-height: 32px; }
   .mkSheet .mkPriceInput input { font-size: var(--text-input-phone); }
   .appFrame .mkSearch input { font-size: var(--text-input-phone); }
-  .appFrame .mkEventGrid { grid-template-columns: minmax(0, 1fr); }
   .appFrame .mkListTabs { gap: var(--space-3); overflow-x: auto; scrollbar-width: none; }
   .appFrame .mkListTabs [role="tab"] { flex: none; white-space: nowrap; }
   .mkSheet { width: 100%; }

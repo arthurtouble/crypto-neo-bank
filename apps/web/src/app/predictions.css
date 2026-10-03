@@ -1,0 +1,166 @@
+/*
+ * Predictions on Polymarket, from the design tokens only. Classes are prefixed pd and build on the mk parts in
+ * markets.css (rows, chips, segmented control, keypad, the order panel's form parts) and the mx parts in money.css.
+ * Desktop: a market's page is the question, the odds chart (or an Up or Down market's live price), the position, and
+ * the rules on the left, with the order panel on the right, always open. Phone: one column, Buy buttons under the
+ * chart, and the order form in a bottom sheet with a keypad. Sheets render outside .appFrame, so the form's parts are
+ * written for both the panel and the sheet (unprefixed pd classes).
+ */
+
+/* The home: filters, the event grid, and each event's outcomes */
+.appFrame .pdEvents { display: grid; gap: var(--space-4); }
+.appFrame .pdFilters { display: grid; gap: var(--space-3); }
+.appFrame .pdChips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.appFrame .pdSearch { max-width: 360px; }
+.appFrame .pdSearch svg { flex: none; }
+.appFrame .pdEventGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--space-4); align-items: start; }
+.appFrame .pdEvent { gap: var(--space-3); }
+.appFrame .pdEventHead { display: flex; align-items: flex-start; gap: var(--space-3); }
+.appFrame .pdEventHead h3 { flex: 1; min-width: 0; margin: 0; font-size: var(--text-title-3-size); line-height: var(--text-title-3-line); font-weight: var(--weight-semibold); }
+.appFrame .pdEventHead a { color: var(--color-text); text-decoration: none; }
+.appFrame .pdEventHead a:hover { color: var(--color-accent); }
+.appFrame .pdEventIcon, .appFrame .pdIcon { flex: none; border-radius: var(--radius-sm); background: var(--color-muted); object-fit: cover; }
+.appFrame .pdOutcomeLinks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
+.appFrame .pdOutcomeLink { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); min-height: var(--control-height-lg); padding: 0 var(--space-3); border-radius: var(--radius-sm); color: var(--color-text); font-weight: var(--weight-medium); text-decoration: none; transition: background var(--duration-fast) var(--ease-enter); }
+.appFrame .pdOutcomeLink strong { font-weight: var(--weight-semibold); font-variant-numeric: tabular-nums; }
+.appFrame .pdOutcomeLink.is-first { background: var(--color-positive-soft); color: var(--color-positive); }
+.appFrame .pdOutcomeLink.is-second { background: var(--color-muted); }
+.appFrame .pdOutcomeLink:hover { box-shadow: inset 0 0 0 1px currentColor; }
+.appFrame .pdOutcomeLink:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.appFrame .pdEventMarkets { margin: 0; padding: 0; list-style: none; display: grid; max-height: 168px; overflow-y: auto; overscroll-behavior: contain; }
+.appFrame .pdEventMarkets a { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); min-height: 40px; color: var(--color-text); text-decoration: none; }
+.appFrame .pdEventMarkets li + li { border-top: 1px solid var(--color-line); }
+.appFrame .pdEventMarkets a:hover { color: var(--color-accent); }
+.appFrame .pdEventMarkets strong { flex: none; font-weight: var(--weight-semibold); font-variant-numeric: tabular-nums; }
+.appFrame .pdEventFoot { color: var(--color-text-secondary); font-size: var(--text-small-size); font-variant-numeric: tabular-nums; }
+.appFrame .pdMore { justify-self: center; }
+.appFrame .pdPositionRow { display: flex; align-items: center; gap: var(--space-3); }
+.appFrame .pdPositionRow > .mkRow { flex: 1; min-width: 0; }
+.appFrame .pdPositionRow > .appButton { flex: none; height: 32px; padding: 0 var(--space-3); }
+
+/* A market's page: header, then the main column and the order panel side by side */
+.appFrame .pdPage { gap: var(--space-4); }
+.appFrame .pdBack { justify-self: start; display: inline-flex; align-items: center; gap: var(--space-1); color: var(--color-accent); font-weight: var(--weight-medium); text-decoration: none; }
+.appFrame .pdHead { display: flex; align-items: flex-start; gap: var(--space-3); }
+.appFrame .pdHeadText { display: grid; gap: var(--space-1); min-width: 0; }
+.appFrame .pdHead h1 { font-size: var(--text-title-1-size); line-height: var(--text-title-1-line); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-snug); overflow-wrap: anywhere; }
+.appFrame .pdEventTitle { color: var(--color-text-secondary); font-size: var(--text-small-size); }
+.appFrame .pdMeta { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-1) var(--space-4); color: var(--color-text-secondary); font-size: var(--text-small-size); }
+.appFrame .pdLayout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: var(--space-4); align-items: start; }
+.appFrame .pdMain { display: grid; gap: var(--space-4); min-width: 0; }
+.appFrame .mkOrderPanel.pdPanel { grid-area: auto; padding: var(--space-4); }
+.appFrame .pdRules { color: var(--color-text-secondary); }
+.appFrame .pdMuted { color: var(--color-text-secondary); font-weight: var(--weight-regular); }
+
+/* The odds: the chance now, what it was, the chart, and its ranges */
+.appFrame .pdOdds, .appFrame .pdLive { gap: var(--space-3); }
+.appFrame .pdOddsHead { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: var(--space-1) var(--space-3); }
+.appFrame .pdChance { display: flex; align-items: baseline; gap: var(--space-2); }
+.appFrame .pdChance strong { font-size: var(--text-amount-size); line-height: var(--text-amount-line); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-tight); color: var(--color-accent); }
+.appFrame .pdChance span, .appFrame .pdThen { color: var(--color-text-secondary); }
+.appFrame .pdThen { font-size: var(--text-small-size); }
+.appFrame .pdChartFoot { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-2); }
+.appFrame .pdRanges button { padding: 0 var(--space-2); }
+.appFrame .pdChart { margin: 0; display: grid; gap: var(--space-1); }
+.appFrame .pdChartPlot { position: relative; }
+.appFrame .pdChart svg { display: block; width: 100%; height: 200px; touch-action: pan-y; }
+.appFrame .pdLiveChart svg { height: 240px; }
+.appFrame .pdChartGrid { stroke: var(--color-line); stroke-width: 1; }
+.appFrame .pdChartLine { fill: none; stroke: var(--color-accent); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.appFrame .pdChartCursor { stroke: var(--color-line-strong); stroke-width: 1; }
+.appFrame .pdBeatLine { stroke: var(--color-text-tertiary); stroke-width: 1; stroke-dasharray: 4 4; }
+.appFrame .pdChartTicks span { position: absolute; right: 0; transform: translateY(-100%); padding-bottom: 2px; color: var(--color-text-tertiary); font-size: var(--text-caption-size); line-height: var(--text-caption-line); pointer-events: none; }
+.appFrame .pdChartDot { position: absolute; width: 8px; height: 8px; border: 2px solid var(--color-surface); border-radius: 50%; background: var(--color-accent); transform: translate(-50%, -50%); pointer-events: none; }
+.appFrame .pdBeatLabel { position: absolute; left: 0; transform: translateY(-100%); padding-bottom: 2px; color: var(--color-text-secondary); font-size: var(--text-caption-size); line-height: var(--text-caption-line); pointer-events: none; }
+.appFrame .pdLastLabel { position: absolute; right: 0; transform: translateY(-50%); padding: 2px 6px; border-radius: var(--radius-sm); background: var(--color-accent); color: var(--color-on-accent); font-size: var(--text-caption-size); line-height: var(--text-caption-line); font-weight: var(--weight-semibold); font-variant-numeric: tabular-nums; pointer-events: none; }
+.appFrame .pdChartCaption { color: var(--color-text-secondary); font-size: var(--text-small-size); font-variant-numeric: tabular-nums; }
+.appFrame .pdChartCaption strong { color: var(--color-text); font-weight: var(--weight-semibold); }
+.appFrame .pdChartEmpty { padding: var(--space-8) 0; text-align: center; }
+
+/* An Up or Down market: the price to beat, the price now, and the time left above the live chart */
+.appFrame .pdLiveStats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-3); margin: 0; }
+.appFrame .pdLiveStats > div { display: grid; gap: 2px; min-width: 0; }
+.appFrame .pdLiveStats dt { color: var(--color-text-secondary); font-size: var(--text-small-size); }
+.appFrame .pdLiveStats dd { margin: 0; font-size: var(--text-title-2-size); line-height: var(--text-title-2-line); font-weight: var(--weight-semibold); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.appFrame .pdLiveStats dd small { font-size: var(--text-small-size); font-weight: var(--weight-medium); color: var(--color-text-secondary); }
+.appFrame .pdLiveStats dd small.mkUp { color: var(--color-positive); }
+.appFrame .pdCountdown { justify-items: end; text-align: right; }
+.appFrame .pdCountdown dd { font-family: var(--font-mono); }
+
+/* Buy buttons under the chart (phone) */
+.appFrame .pdTradeBar .pdBuy { border: 0; }
+.appFrame .pdTradeBar .pdBuy.is-first { background: var(--color-positive); color: var(--color-on-accent); }
+.appFrame .pdTradeBar .pdBuy.is-second { background: var(--color-text); color: var(--color-canvas); }
+
+/* The order form, in the panel and the sheet: Buy or Sell, the outcome, the amount, and what it comes to */
+.pdTradeForm { display: grid; gap: var(--space-4); min-width: 0; }
+.pdSides { display: flex; }
+.pdPick { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
+.pdPick button { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); height: var(--control-height-lg); padding: 0 var(--space-3); border: 0; border-radius: var(--radius-sm); background: var(--color-muted); color: var(--color-text-secondary); font: var(--weight-semibold) var(--text-body-size) / 1 var(--font-sans); font-variant-numeric: tabular-nums; cursor: pointer; transition: background var(--duration-fast) var(--ease-enter); }
+.pdPick button:hover { background: var(--color-hover); }
+.pdPick button:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.pdPick button.is-first[aria-checked="true"] { background: var(--color-positive); color: var(--color-on-accent); }
+.pdPick button.is-second[aria-checked="true"] { background: var(--color-text); color: var(--color-canvas); }
+.pdAmount { display: grid; gap: var(--space-2); }
+.pdAmountField { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.pdAmountInput { display: flex; align-items: center; justify-content: flex-end; gap: 2px; min-width: 0; flex: 1; font-size: var(--text-amount-size); font-weight: var(--weight-semibold); color: var(--color-text); }
+.pdAmountInput input { min-width: 1ch; max-width: 100%; height: 48px; padding: 0; border: 0; background: none; color: var(--color-text); font: var(--weight-semibold) var(--text-amount-size) / var(--text-amount-line) var(--font-sans); letter-spacing: var(--tracking-tight); font-variant-numeric: tabular-nums; text-align: right; outline: none; }
+.pdAmountInput input::placeholder { color: var(--color-text-tertiary); }
+.pdAmountInput.is-empty > span { color: var(--color-text-tertiary); }
+.pdAmountInput input[aria-invalid="true"] { color: var(--color-negative); }
+.pdAmountField:focus-within .pdAmountInput { box-shadow: 0 2px 0 var(--color-focus); }
+.pdQuickAdds .mkChip { flex: 1; justify-content: center; padding: 0 var(--space-2); }
+.pdToWin { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); margin: 0; }
+.pdToWin span { color: var(--color-text-secondary); }
+.pdToWin strong { color: var(--color-positive); font-size: var(--text-title-1-size); line-height: var(--text-title-1-line); font-weight: var(--weight-semibold); font-variant-numeric: tabular-nums; }
+.pdTotal dd { font-weight: var(--weight-semibold); }
+.pdNone { margin: 0; padding: var(--space-2) 0; color: var(--color-text-secondary); }
+.pdEnded { display: grid; gap: var(--space-1); }
+.pdEnded strong { font-size: var(--text-title-3-size); line-height: var(--text-title-3-line); font-weight: var(--weight-semibold); }
+.pdSharesField { display: grid; gap: var(--space-2); }
+.pdSharesInput { width: 100%; height: var(--input-height); padding: 0 var(--space-3); border: 1px solid var(--color-line-strong); border-radius: var(--radius-sm); background: var(--color-surface); color: var(--color-text); font: var(--weight-medium) var(--text-body-size) / 1 var(--font-sans); font-variant-numeric: tabular-nums; }
+.pdSharesInput:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; border-color: var(--color-focus); }
+.pdSharesInput[aria-invalid="true"] { border-color: var(--color-negative); }
+.pdSharesField .mkChip { flex: 1; justify-content: center; }
+.pdSetupList { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--space-3); }
+.pdSetupList li { display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: var(--space-3); align-items: start; }
+.pdSetupList li > span:first-child { width: 24px; height: 24px; display: grid; place-items: center; border: 1px solid var(--color-line-strong); border-radius: 50%; color: var(--color-text-secondary); font-size: var(--text-caption-size); font-weight: var(--weight-semibold); }
+.pdSetupList li > span:last-child { display: grid; }
+.pdSetupList strong { font-weight: var(--weight-medium); }
+.pdSetupList small { color: var(--color-text-secondary); font-size: var(--text-small-size); }
+
+/* Narrower desktop and tablet: one column, the order panel after the market */
+@media (max-width: 1023px) {
+  .appFrame .pdLayout { grid-template-columns: minmax(0, 1fr); }
+  .appFrame .mkOrderPanel.pdPanel { position: static; }
+}
+
+/* Phone */
+@media (max-width: 767px) {
+  .appFrame .pdChips { flex-wrap: nowrap; overflow-x: auto; margin: 0 calc(-1 * var(--page-pad-x)); padding: 0 var(--page-pad-x); scrollbar-width: none; }
+  .appFrame .pdSearch { max-width: none; }
+  .appFrame .pdEventGrid { grid-template-columns: minmax(0, 1fr); }
+  .appFrame .pdHead h1 { font-size: var(--text-title-2-size); line-height: var(--text-title-2-line); }
+  .appFrame .pdLiveStats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .appFrame .pdLiveStats dd { font-size: var(--text-title-3-size); line-height: var(--text-title-3-line); }
+  .appFrame .pdCountdown { grid-column: 1 / -1; grid-row: 1; justify-items: start; text-align: left; }
+  .appFrame .pdLiveChart svg { height: 200px; }
+  .appFrame .pdPositionRow { flex-wrap: wrap; }
+  .appFrame .pdPositionRow > .appButton { width: 100%; height: var(--touch-min); }
+  .pdSheet .pdAmountField { flex-direction: column; align-items: center; gap: var(--space-1); }
+  .pdSheet .pdAmountInput { justify-content: center; font-size: var(--text-amount-hero-size); }
+  .pdSheet .pdAmountInput input { flex: 0 1 auto; max-width: none; height: 64px; font-size: var(--text-amount-hero-size); line-height: var(--text-amount-hero-line); text-align: left; }
+  .pdSheet .pdAmountField:focus-within .pdAmountInput { box-shadow: none; }
+  .pdSheet .mxSummary > div { min-height: 32px; padding: var(--space-1) 0; }
+  .pdSharesInput { font-size: var(--text-input-phone); }
+}
+
+/* Touch targets: at least 44 × 44px on the phone and other touch screens */
+@media (max-width: 767px), (pointer: coarse) {
+  .pdPick button { min-height: var(--touch-min); }
+  .appFrame .pdOutcomeLink, .appFrame .pdEventMarkets a { min-height: var(--touch-min); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pdPick button, .appFrame .pdOutcomeLink { transition: none; }
+}
