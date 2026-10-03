@@ -13,7 +13,8 @@ import { payoutStateText } from "@/lib/providers/bridge/transfers";
  */
 export type NotificationKind = "received" | "completed" | "failed" | "security";
 export type Notice = { kind: NotificationKind; dedupeKey: string; title: string; body: string; link?: string };
-export type NotificationView = { id: string; kind: NotificationKind; title: string; body: string; link: string | null; createdAt: string; read: boolean };
+/** `key` names what the notice is about (`security:recipient_saved:<entry>`), so a screen that just did it can skip the toast. */
+export type NotificationView = { id: string; key: string; kind: NotificationKind; title: string; body: string; link: string | null; createdAt: string; read: boolean };
 
 // Shorten addresses only; names like a vault's stay whole.
 const short = (value: string) => /^0x[0-9a-fA-F]{40}$/.test(value) ? shortAddress(value) : value;
@@ -29,12 +30,12 @@ export async function notify(db: D1Database, subject: string, notice: Notice, no
 
 export async function listNotifications(db: D1Database, subject: string, limit = 30): Promise<{ notifications: NotificationView[]; unread: number }> {
   const [rows, unread] = await db.batch([
-    db.prepare(`SELECT notification_id, kind, title, body, link, created_at, read_at FROM notifications WHERE subject_reference = ?
+    db.prepare(`SELECT notification_id, dedupe_key, kind, title, body, link, created_at, read_at FROM notifications WHERE subject_reference = ?
       ORDER BY created_at DESC LIMIT ?`).bind(subject, limit),
     db.prepare("SELECT COUNT(*) AS n FROM notifications WHERE subject_reference = ? AND read_at IS NULL").bind(subject)
   ]);
-  type Row = { notification_id: string; kind: NotificationKind; title: string; body: string; link: string | null; created_at: string; read_at: string | null };
-  return { notifications: (rows.results as Row[]).map((row) => ({ id: row.notification_id, kind: row.kind, title: row.title, body: row.body, link: row.link,
+  type Row = { notification_id: string; dedupe_key: string; kind: NotificationKind; title: string; body: string; link: string | null; created_at: string; read_at: string | null };
+  return { notifications: (rows.results as Row[]).map((row) => ({ id: row.notification_id, key: row.dedupe_key, kind: row.kind, title: row.title, body: row.body, link: row.link,
     createdAt: row.created_at, read: row.read_at !== null })), unread: (unread.results[0] as { n: number }).n };
 }
 
@@ -86,6 +87,13 @@ export function receivedNotice(transfer: IncomingTransfer, bank?: { senderName: 
   return { kind: "received", dedupeKey: `received:${transfer.id}`, title: bank ? `Bank deposit: ${entryAmount(entry)}` : `Received ${entryAmount(entry)}`,
     body: bank ? `From ${entry.counterparty}, through Bridge, on ${networkName(transfer.chainId)}.` : `From ${short(transfer.from)}, on ${networkName(transfer.chainId)}.`,
     link: `/app/transactions?open=${encodeURIComponent(entry.id)}` };
+}
+
+/** A time in a notice, the same in the app and in email: "2 Oct 2026, 15:24 UTC". */
+export function noticeTime(iso: string): string {
+  const date = new Date(iso);
+  const month = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][date.getUTCMonth()];
+  return `${date.getUTCDate()} ${month} ${date.getUTCFullYear()}, ${date.toISOString().slice(11, 16)} UTC`;
 }
 
 /** Changes to the account's security. Always delivered, whatever the customer's notification choices. */

@@ -25,8 +25,8 @@ export async function saveWalletAddress(database: D1Database, subjectReference: 
   if (!row) throw new Error("Saved wallet address could not be read.");
   // A new recipient is a security event (renaming one isn't).
   if (row.created_at === timestamp) {
-    const [{ securityNotice }, { announce }] = await Promise.all([import("@/lib/notifications/store"), import("@/lib/notifications/deliver")]);
-    const wait = row.available_at > timestamp ? ` It can receive from ${new Date(row.available_at).toUTCString()}.` : "";
+    const [{ securityNotice, noticeTime }, { announce }] = await Promise.all([import("@/lib/notifications/store"), import("@/lib/notifications/deliver")]);
+    const wait = row.available_at > timestamp ? ` With saved recipients only on, it can receive from ${noticeTime(row.available_at)}.` : "";
     await announce(database, subjectReference, securityNotice("recipient_saved", `${row.label} (${shortAddress(row.address)}) was saved as a recipient.${wait}`, row.entry_id), now);
   }
   return row;

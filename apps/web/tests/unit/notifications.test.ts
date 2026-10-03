@@ -93,7 +93,7 @@ describe("security notices", () => {
     await saveWalletAddress(db, "alice", "0x2222222222222222222222222222222222222222", "Bob B", new Date(now.getTime() + 1000));
     const list = (await listNotifications(db, "alice")).notifications;
     expect(list).toHaveLength(1);
-    expect(list[0]).toMatchObject({ kind: "security", title: "New saved recipient", body: expect.stringMatching(/^Bob \(0x2222…2222\) was saved as a recipient\. It can receive from /) });
+    expect(list[0]).toMatchObject({ kind: "security", title: "New saved recipient", body: expect.stringMatching(/^Bob \(0x2222…2222\) was saved as a recipient\. With saved recipients only on, it can receive from \d+ [A-Z][a-z]{2} \d{4}, \d{2}:\d{2} UTC\. If this wasn't you/) });
   });
 });
 
