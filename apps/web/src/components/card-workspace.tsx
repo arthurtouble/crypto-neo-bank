@@ -164,7 +164,7 @@ function Allowance({ data, onSignIn }: { data: Card; onSignIn: SignIn }) {
     await prepare("0");
   }
   return <section className="mxCard" aria-labelledby="allowance-heading"><h2 id="allowance-heading">Spending allowance</h2>
-    <p className="mxHint">Your card spends your USDC on Base. Nothing moves until you buy something: then Bridge takes exactly the purchase from your account, up to this allowance.</p>
+    <p className="mxHint">The most your card can take from the dollars (USDC) in your account. Nothing moves until you buy something, and then only the price of what you buy.</p>
     <dl className="mxSummary" data-testid="card-allowance">
       <div><dt>Card can spend</dt><dd className={allowance.status === "available" ? undefined : "appUnavailable"}>{allowance.status === "available" ? money(allowance.allowanceUsd) : "Unavailable"}</dd></div>
       <div><dt>Your USDC</dt><dd className={allowance.status === "available" ? undefined : "appUnavailable"}>{allowance.status === "available" ? money(allowance.balanceUsd) : "Unavailable"}</dd></div>
@@ -174,7 +174,7 @@ function Allowance({ data, onSignIn }: { data: Card; onSignIn: SignIn }) {
       <TransactionProgress label="Card allowance" phase={phase} action={action} outcomeUnknown={outcomeUnknown} />
       <button type="button" className="appButton" onClick={() => { reset(); setAmount(""); }}>Change it again</button>
     </> : <form className="mxForm" onSubmit={(event) => void submit(event)} aria-label="Set spending allowance">
-      <label className="mxField">New allowance in USD<input value={amount} inputMode="decimal" autoComplete="off" placeholder="500" disabled={busy}
+      <label className="mxField">New allowance in USD<input value={amount} inputMode="decimal" autoComplete="off" placeholder="100" disabled={busy}
         onChange={(event) => setAmount(event.target.value.replace(/[^\d.]/g, ""))} /></label>
       <TransactionProgress label="Card allowance" phase={phase} action={action} outcomeUnknown={outcomeUnknown} />
       <button type="submit" className="appButton appButtonPrimary" disabled={busy || (!onSignIn && !valid)}>{onSignIn ? "Sign in to set an allowance" : phase === "signing" ? "Confirm with your passkey" : "Set allowance"}</button>
@@ -296,12 +296,12 @@ function CardControls({ data, onSignIn }: { data: Card; onSignIn: SignIn }) {
   const limitValue = limit ?? String(data.card.dailyLimitUsd ?? "");
   return <section className="mxCard" aria-labelledby="card-controls-heading"><h2 id="card-controls-heading">Card controls</h2>
     <div className="cdSetting">
-      <div className="cdSettingText"><strong>{frozen ? "Card is frozen" : "Freeze card"}</strong><small>{frozen ? "Nothing can be paid with it. Unfreezing needs your passkey." : "Stop all payments straight away. You can unfreeze it later."}</small></div>
-      <button type="button" className="appToggle" aria-pressed={frozen} aria-label="Freeze card" disabled={busy}
-        onClick={() => void change({ frozen: !frozen }, frozen ? "Card unfrozen" : "Card frozen")}>{frozen ? "On" : "Off"}</button>
+      <div className="cdSettingText"><strong>{frozen ? "Card is frozen" : "Freeze your card"}</strong><small>{frozen ? "Nothing can be paid with it. Unfreezing needs your passkey." : "Stop all payments straight away. You can unfreeze it later."}</small></div>
+      <button type="button" className="appButton" disabled={busy}
+        onClick={() => void change({ frozen: !frozen }, frozen ? "Card unfrozen" : "Card frozen")}>{frozen ? "Unfreeze card" : "Freeze card"}</button>
     </div>
     <form className="cdSetting cdLimit" onSubmit={(event) => { event.preventDefault(); const value = Number(limitValue); if (value >= 1) void change({ dailyLimitUsd: value }, "Daily limit updated"); }}>
-      <div className="cdSettingText"><strong>Daily limit</strong><small>The most the card can spend in a day, in USD. Raising it needs your passkey.</small></div>
+      <div className="cdSettingText"><strong>Daily limit</strong><small>The most the card can spend in one day, even if your allowance is higher. Raising it needs your passkey.</small></div>
       <div className="cdLimitField">
         <label className="mxField"><span className="srOnly">Daily limit in USD</span><input inputMode="numeric" autoComplete="off" value={limitValue} disabled={busy} onChange={(event) => setLimit(event.target.value.replace(/\D/g, ""))} /></label>
         <button type="submit" className="appButton" disabled={busy || (!onSignIn && (limit === null || Number(limitValue) < 1))}>Save</button>
@@ -327,8 +327,8 @@ function IssuedCard({ data, onSignIn }: { data: Card; onSignIn: SignIn }) {
       </div>
     </div>
     <div className="cdSide">
-      <CardControls data={data} onSignIn={onSignIn} />
       <Allowance data={data} onSignIn={onSignIn} />
+      <CardControls data={data} onSignIn={onSignIn} />
     </div>
     <Activity data={data} onSignIn={onSignIn} />
     {details && <CardDetails data={data} onClose={() => setDetails(false)} />}
@@ -365,7 +365,7 @@ function UnavailableCard({ data, refetch, checking }: { data: Extract<CardState,
   </div>;
 }
 
-const setupSteps = ["Verify your identity with Bridge", "Apply for the card", "Create your card", "Set a spending allowance"];
+const setupSteps = ["Verify your identity", "Apply for the card", "Create your card", "Set a spending allowance"];
 
 /** Journey J9: what's left before there's a card, as a checklist with the one current step's button. */
 function Setup({ data, refetch, checking }: { data: Exclude<CardState, { state: "card" | "card_unavailable" }>; refetch: () => void; checking: boolean }) {
@@ -396,13 +396,13 @@ function Setup({ data, refetch, checking }: { data: Exclude<CardState, { state: 
   }
 
   const current = data.state === "verify_first" ? 0 : data.state === "apply" ? 1 : data.state === "ready_to_create" ? 2 : -1;
-  const step = data.state === "unavailable" ? { title: "Cards are coming soon", body: "A Visa card that spends the USDC in your Aura account, issued by Stripe with Bridge.", action: null }
-    : data.state === "verify_first" ? { title: "Verify your identity first", body: "Bridge verifies you once for your bank account and your card.",
+  const step = data.state === "unavailable" ? { title: "Cards are coming soon", body: "A Visa card that pays from the dollars (USDC) in your Aura account.", action: null }
+    : data.state === "verify_first" ? { title: "Verify your identity first", body: "Bridge, our card and banking partner, verifies you once for your bank account and your card.",
       action: <Link className="appButton appButtonPrimary" href="/app/deposit">Verify on Deposit</Link> }
       : data.state === "apply" ? { title: data.approval === "revoked" ? "Confirm your details again" : "Apply for an Aura card",
         body: data.approval === "revoked" ? "Your card approval expired before a card was made. Bridge will ask you to confirm your details."
-          : data.approval === "incomplete" ? `Bridge needs more before it can approve a card.${data.issues.length ? ` (${data.issues.join(", ")})` : ""}` : "Bridge checks you're eligible for a card. It usually takes a minute.",
-        action: <><button type="button" className="appButton appButtonPrimary" disabled={busy} onClick={() => void apply()}>Apply with Bridge</button>
+          : data.approval === "incomplete" ? `Bridge needs more before it can approve a card.${data.issues.length ? ` (${data.issues.join(", ")})` : ""}` : "Bridge, our card partner, checks you're eligible on its own page. It usually takes a minute.",
+        action: <><button type="button" className="appButton appButtonPrimary" disabled={busy} onClick={() => void apply()}>Apply for a card</button>
           <button type="button" className="appButton" disabled={checking} onClick={refetch}>{checking ? "Checking…" : "Check status"}</button></> }
         : { title: "You're approved", body: "Create your virtual Visa card now. Bridge's approval lasts 24 hours.",
           action: <button type="button" className="appButton appButtonPrimary" disabled={busy} onClick={() => void create()}>{busy ? <LoaderCircle className="spin" aria-hidden="true" /> : <ShieldCheck aria-hidden="true" />} Create my card</button> };

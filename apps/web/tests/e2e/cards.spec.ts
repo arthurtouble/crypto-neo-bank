@@ -76,7 +76,7 @@ test("a verified customer applies with Bridge and creates a virtual card", async
   await expect(page.getByRole("heading", { name: "Apply for an Aura card" })).toBeVisible({ timeout: 20_000 });
   // Bridge hosts the card application in a new tab.
   await context.route("https://bridge.aura-e2e.test/**", (route) => route.fulfill({ contentType: "text/html", body: "<h1>Apply for a card with Bridge</h1>" }));
-  const [bridgeTab] = await Promise.all([context.waitForEvent("page"), page.getByRole("button", { name: "Apply with Bridge" }).click()]);
+  const [bridgeTab] = await Promise.all([context.waitForEvent("page"), page.getByRole("button", { name: "Apply for a card" }).click()]);
   await expect.poll(() => bridgeTab.url()).toMatch(/^https:\/\/bridge\.aura-e2e\.test\/cards\/.+endorsement=cards$/);
   await bridgeTab.close();
 
@@ -212,11 +212,11 @@ test("freezing stops payments at once; unfreezing and a higher limit need the pa
 
   // Cancelling the passkey prompt leaves it frozen.
   await page.evaluate(() => localStorage.setItem("aura-e2e-passkey", "reject"));
-  await controls(page).getByRole("button", { name: "Freeze card" }).click();
+  await controls(page).getByRole("button", { name: "Unfreeze card" }).click();
   await expect(toast(page, "Card not changed")).toBeVisible({ timeout: 20_000 });
   await expect(controls(page).getByText("Card is frozen")).toBeVisible();
   await page.evaluate(() => localStorage.removeItem("aura-e2e-passkey"));
-  await controls(page).getByRole("button", { name: "Freeze card" }).click();
+  await controls(page).getByRole("button", { name: "Unfreeze card" }).click();
   await expect(toast(page, "Card unfrozen")).toBeVisible({ timeout: 20_000 });
   expect(await edge("/__stripe/authorize", { amount: "5" })).toMatchObject({ approved: true });
 
@@ -233,7 +233,7 @@ test("freezing stops payments at once; unfreezing and a higher limit need the pa
   await setControls(page, customer, { accountLocked: true });
   await page.reload();
   await expect(controls(page).getByText("Card is frozen")).toBeVisible({ timeout: 20_000 });
-  await controls(page).getByRole("button", { name: "Freeze card" }).click();
+  await controls(page).getByRole("button", { name: "Unfreeze card" }).click();
   await expect(page.locator(".toastRegion")).toContainText("Your account is locked", { timeout: 20_000 });
 });
 

@@ -8,7 +8,10 @@ import { useState, type FormEvent } from "react";
 import { useApi } from "@/lib/client/api";
 import { useAction, type ActionView } from "@/lib/client/use-action";
 import { bankStage, useBankAccount } from "@/lib/client/use-bank-account";
+import { BASE_CHAIN_ID, BASE_USDC } from "@/lib/assets/registry";
 import { formatDateTime, formatUsd } from "@/lib/format";
+import { formatUnits } from "@/lib/format/units";
+import { useTokenBalances } from "@/lib/client/wallet-context";
 import { useToast } from "./toast";
 import { TransactionProgress } from "./transaction-progress";
 import { LoadingState, Notice } from "./states";
@@ -78,14 +81,18 @@ function AddBankAccountForm({ onSaved, onCancel }: { onSaved: (name: string) => 
 
 const usd = (value: string) => formatUsd(value);
 
-function PayoutForm({ banks }: { banks: Recipient[] }) {
+function PayoutForm({ banks, onReviewing }: { banks: Recipient[]; onReviewing: (reviewing: boolean) => void }) {
   const api = useApi();
-  const { runPrepared, phase, action, outcomeUnknown, busy, reset } = useAction({ label: "Bank transfer" });
+  const { runPrepared, phase, action, outcomeUnknown, busy, reset, wallet } = useAction({ label: "Bank transfer" });
+  // Payouts are paid from USDC on Base, read from the chain; an unread balance is "unavailable", never zero.
+  const balance = useTokenBalances([{ token: BASE_USDC, chainId: BASE_CHAIN_ID }], wallet.address);
+  const usdc = balance.data?.[0];
   const [bankId, setBankId] = useState(banks[0]?.id ?? "");
   const [amount, setAmount] = useState("");
   const [wire, setWire] = useState(false);
   // Journey J6, change B1: the customer reviews the payout before the passkey, as with every other money action.
-  const [reviewing, setReviewing] = useState(false);
+  const [reviewing, setReviewingState] = useState(false);
+  const setReviewing = (value: boolean) => { setReviewingState(value); onReviewing(value); };
   const bank = banks.find((item) => item.id === bankId) ?? banks[0];
   const amountValid = amountPattern.test(amount) && Number(amount) > 0;
   const tracking = phase === "tracking";
@@ -110,9 +117,10 @@ function PayoutForm({ banks }: { banks: Recipient[] }) {
     <dl className="mxSummary" data-testid="bank-review">
       <div><dt>Send</dt><dd>{usd(amount)}</dd></div>
       <div><dt>From your USDC</dt><dd>{amount} USDC</dd></div>
+      {usdc !== undefined && <div><dt>Available</dt><dd>{formatUsd(formatUnits(usdc, 6))}</dd></div>}
       <div><dt>To</dt><dd>{bankLabel(bank)}</dd></div>
       <div><dt>Speed</dt><dd>{wire ? "Wire" : "Bank transfer"}</dd></div>
-      {!wire && <div><dt>Arrives</dt><dd>Usually 1 to 3 business days</dd></div>}
+      <div><dt>Arrives</dt><dd>{wire ? "Usually within 1 business day" : "Usually 1 to 3 business days"}</dd></div>
     </dl>
     <p className="mxHint">You sign a USDC transfer to Bridge. Bridge sends the dollars to your bank after it receives the USDC. Delivery times are estimates, and a bank or Bridge can still hold or return a transfer.</p>
     <TransactionProgress label="Bank transfer" phase={phase} action={action} outcomeUnknown={outcomeUnknown} />
@@ -130,6 +138,9 @@ function PayoutForm({ banks }: { banks: Recipient[] }) {
       </select>
     </label>
     <label className="mxField">Amount in USD<input value={amount} onChange={(event) => setAmount(event.target.value.replace(/[^\d.]/g, ""))} inputMode="decimal" autoComplete="off" placeholder="25.00" required /></label>
+    <p className="mxHint">{usdc === undefined ? "Balance unavailable" : `${formatUsd(formatUnits(usdc, 6))} available`}
+      {usdc !== undefined && usdc >= 10_000n && <> · <button type="button" className="appTextButton mxInlineButton"
+        onClick={() => setAmount((Number(usdc / 10_000n) / 100).toFixed(2))}>Max</button></>}</p>
     {amount && !amountValid && <p className="mxFieldError" role="alert">Enter an amount like 25 or 25.50.</p>}
     <div className="mxField">Speed
       <div className="appSegmented" role="radiogroup" aria-label="Transfer type">
@@ -154,6 +165,7 @@ function ActiveBankSend() {
   const banks = recipients.data ?? [];
   const ready = banks.filter((item) => item.verified);
   const [removing, setRemoving] = useState<string | null>(null);
+  const [reviewing, setReviewing] = useState(false);
   const [busy, setBusy] = useState(false);
 
   async function remove(bank: Recipient) {
@@ -171,7 +183,7 @@ function ActiveBankSend() {
   if (recipients.isError) return <Notice tone="error" role="alert" onRetry={() => void recipients.refetch()}>Your bank accounts are unavailable right now.</Notice>;
 
   return <>
-    {banks.length > 0 && <dl className="mxSummary" aria-label="Saved bank accounts">
+    {banks.length > 0 && !reviewing && <dl className="mxSummary" aria-label="Saved bank accounts">
       {banks.map((item) => <div key={item.id} data-testid="saved-bank"><dt>{item.name}{lastFour(item) ? ` •••• ${lastFour(item)}` : ""}</dt>
         <dd className="mxBankRow">{item.verified ? "" : item.availableAt ? `Ready from ${formatDateTime(item.availableAt)}` : "Not ready yet"}
           {removing === item.id ? <>
@@ -180,10 +192,10 @@ function ActiveBankSend() {
           </> : <button type="button" className="appTextButton mxInlineButton" aria-label={`Remove ${bankLabel(item)}`} onClick={() => setRemoving(item.id)}>Remove</button>}
         </dd></div>)}
     </dl>}
-    {adding
+    {reviewing ? null : adding
       ? <AddBankAccountForm onCancel={() => setAdding(false)} onSaved={(name) => { setAdding(false); toast.success("Bank account saved", name); void recipients.refetch(); }} />
       : <button type="button" className="appButton mxStart" onClick={() => setAdding(true)}><Plus aria-hidden="true" /> Add bank account</button>}
-    {ready.length > 0 ? <PayoutForm key={ready.map((item) => item.id).join(",")} banks={ready} />
+    {ready.length > 0 ? <PayoutForm key={ready.map((item) => item.id).join(",")} banks={ready} onReviewing={setReviewing} />
       : !adding && <p className="mxHint">{banks.length ? "Your bank account can receive money once its waiting period ends." : "Add a bank account to send money to it."}</p>}
   </>;
 }
@@ -194,7 +206,7 @@ export function BankSendPanel() {
   const stage = account.data ? bankStage(account.data) : null;
   return <section className="mxPanel" aria-labelledby="send-bank">
     <div className="mxPanelHead"><h2 id="send-bank">Send to a bank</h2>
-      {stage === "unavailable" ? <span className="mxBadge">Coming soon</span> : <span className="mxHint">Bank transfer · Bridge</span>}</div>
+      {stage === "unavailable" ? <span className="mxBadge">Coming soon</span> : <span className="mxHint">US bank transfer</span>}</div>
     {account.isPending && <LoadingState label="Loading…" />}
     {account.isError && <Notice tone="error" role="alert" onRetry={() => void account.refetch()}>Bank transfers are unavailable right now.</Notice>}
     {stage === "unavailable" && <p className="mxHint">Coming soon. You&apos;ll be able to send dollars from your Aura account to a US bank account.</p>}

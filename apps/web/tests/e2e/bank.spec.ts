@@ -48,7 +48,7 @@ test("a customer verifies with Bridge, gets US bank details, and a bank deposit 
   await depositPanel(page).getByLabel("Full legal name").fill("Jane Customer");
   await expect(depositPanel(page).getByLabel("Email")).toHaveValue(customer.email);
   // Bridge hosts identity verification in a new tab.
-  const [bridgeTab] = await Promise.all([context.waitForEvent("page"), depositPanel(page).getByRole("button", { name: "Verify with Bridge" }).click()]);
+  const [bridgeTab] = await Promise.all([context.waitForEvent("page"), depositPanel(page).getByRole("button", { name: "Verify your identity" }).click()]);
   await expect.poll(() => bridgeTab.url()).toMatch(/^https:\/\/bridge\.aura-e2e\.test\/kyc\//);
   await bridgeTab.close();
   await expect(depositPanel(page).getByRole("link", { name: "Continue verification" })).toBeVisible({ timeout: 20_000 });
@@ -78,7 +78,8 @@ test("verification Bridge rejects says so and offers no account", async ({ page 
   await asCustomer(page, customer, "POST", "/api/money/onboarding", { fullName: "Jane Customer", email: customer.email });
   await edge("/__bridge/kyc", { email: customer.email, status: "rejected" });
   await page.goto("/app/deposit#bank");
-  await expect(depositPanel(page).getByText("Bridge couldn't verify your identity. Contact support.")).toBeVisible({ timeout: 30_000 });
+  await expect(depositPanel(page).getByText("Bridge couldn't verify your identity.")).toBeVisible({ timeout: 30_000 });
+  await expect(depositPanel(page).getByRole("link", { name: "Contact support" })).toHaveAttribute("href", "/app/support");
   await page.goto("/app/send#bank");
   await expect(sendPanel(page).getByText(/Set up your bank account on/)).toBeVisible({ timeout: 30_000 });
 });
