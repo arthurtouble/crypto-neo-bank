@@ -3,7 +3,7 @@ title: Account controls
 description: The optional lock, daily limit, and recipient settings you can turn on, and what they cover.
 ---
 
-The controls are in **Settings → Security**. Making one stricter takes effect right away. Loosening one, such as unlocking or raising your limit, needs your passkey, so someone who gets into your session can't undo them. We keep a record of every change.
+The controls are in **Settings → Security**. Switches save as soon as you change them; for the daily limit and the wait, type the number and select **Save**. Making one stricter takes effect right away. Loosening one, such as unlocking or raising your limit, needs your passkey, so someone who gets into your session can't undo them. We keep a record of every change.
 
 | Control | Starts as | What it does |
 | --- | --- | --- |
@@ -56,7 +56,7 @@ A closed account can't move money, and we take down its Aura tag. You can still 
 
 ## What controls can't do
 
-Controls only apply when we prepare a money movement. They don't cover network fees, market moves, an exported key, or transactions you make in another app.
+Controls only apply when we prepare a money movement. They don't cover network fees, market moves, an exported key, or transactions you make in another app. That's why **Export** in **Settings → Security** asks you to confirm before it shows your account key.
 
 ## A simple routine
 

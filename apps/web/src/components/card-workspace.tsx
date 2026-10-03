@@ -39,7 +39,12 @@ function useCardErrors() {
 }
 
 /** The card itself: the brand, the last four digits, and its expiry or Frozen. No number is ever drawn here. */
-function CardFace({ card }: { card?: CardView }) {
+function CardFace({ card, lastFour }: { card?: CardView; lastFour?: string | null }) {
+  if (!card && lastFour !== undefined) return <section className="cdFace cdFaceFrozen" aria-label={lastFour ? `Aura card ending ${lastFour}` : "Aura card"}>
+    <div className="cdFaceTop"><strong>Aura</strong><span>Visa</span></div>
+    <span className="cdFaceNumber">{lastFour ? `•••• ${lastFour}` : "••••"}</span>
+    <div className="cdFaceBottom"><span>Unavailable</span><span>Virtual</span></div>
+  </section>;
   if (!card) return <section className="cdFace cdFaceUnissued" aria-label="Aura card preview">
     <div className="cdFaceTop"><strong>Aura</strong><span>Visa</span></div>
     <span className="cdFaceNumber">Not issued</span>
@@ -231,6 +236,43 @@ function Activity({ data, onSignIn }: { data: Card; onSignIn: SignIn }) {
   </section>;
 }
 
+/** A lost or stolen card: Stripe cancels it and issues a new number. Needs the passkey. */
+function ReplaceCard({ data, onSignIn }: { data: Card; onSignIn: SignIn }) {
+  const api = useApi();
+  const client = useQueryClient();
+  const toast = useToast();
+  const { user } = useAuth();
+  const { authorize } = useAuraWallet();
+  const fail = useCardErrors();
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState<"lost" | "stolen">("lost");
+  const [busy, setBusy] = useState(false);
+  async function replace() {
+    setBusy(true);
+    try {
+      const next = await withPasskey((confirmation) => api<CardState>("/api/cards/replace", { method: "POST", json: { cardId: data.card.id, reason, confirmation } }), authorize);
+      client.setQueryData(["card", user?.id], next);
+      toast.success("Your new card is ready", "The old card can't be used any more.");
+      setOpen(false);
+    } catch (error) { fail("Card not replaced", error); }
+    finally { setBusy(false); }
+  }
+  return <div className="cdSetting cdReplace">
+    <div className="cdSettingText"><strong>Replace card</strong><small>{open ? "Your card is canceled for good and you get a new number. Update it wherever you saved it. Needs your passkey."
+      : "If your card is lost or stolen, cancel it and get a new one."}</small>
+      {open && <div className="appSegmented" role="radiogroup" aria-label="Why are you replacing it?">
+        {(["lost", "stolen"] as const).map((value) => <button type="button" role="radio" aria-checked={reason === value} key={value} disabled={busy}
+          onClick={() => setReason(value)}>{value === "lost" ? "Lost" : "Stolen"}</button>)}
+      </div>}
+    </div>
+    {open ? <div className="cdReplaceActions">
+      <button type="button" className="appButton appButtonPrimary" disabled={busy} onClick={() => void replace()}>
+        {busy ? <LoaderCircle className="spin" aria-hidden="true" /> : null} Cancel card and get a new one</button>
+      <button type="button" className="appButton" disabled={busy} onClick={() => setOpen(false)}>Keep this card</button>
+    </div> : <button type="button" className="appButton" onClick={() => onSignIn ? onSignIn() : setOpen(true)}>Replace</button>}
+  </div>;
+}
+
 function CardControls({ data, onSignIn }: { data: Card; onSignIn: SignIn }) {
   const api = useApi();
   const client = useQueryClient();
@@ -266,6 +308,7 @@ function CardControls({ data, onSignIn }: { data: Card; onSignIn: SignIn }) {
       </div>
     </form>
     {data.walletsEnabled && <PhoneWallets data={data} />}
+    <ReplaceCard data={data} onSignIn={onSignIn} />
   </section>;
 }
 
@@ -292,10 +335,40 @@ function IssuedCard({ data, onSignIn }: { data: Card; onSignIn: SignIn }) {
   </div>;
 }
 
+/** Stripe couldn't be read: nothing about the card is shown as current, but Freeze still goes through. */
+function UnavailableCard({ data, refetch, checking }: { data: Extract<CardState, { state: "card_unavailable" }>; refetch: () => void; checking: boolean }) {
+  const api = useApi();
+  const client = useQueryClient();
+  const toast = useToast();
+  const { user } = useAuth();
+  const { authorize } = useAuraWallet();
+  const fail = useCardErrors();
+  const [busy, setBusy] = useState(false);
+  async function freeze() {
+    setBusy(true);
+    try {
+      client.setQueryData(["card", user?.id], await withPasskey((confirmation) => api<CardState>("/api/cards/controls", { method: "PATCH", json: { frozen: true, confirmation } }), authorize));
+      toast.success("Card frozen");
+    } catch (error) { fail("Card not frozen", error); }
+    finally { setBusy(false); }
+  }
+  return <div className="cdSetup">
+    <section className="mxPanel" aria-labelledby="card-unavailable-title">
+      <div className="mxPanelHead"><h2 id="card-unavailable-title">Your card is unavailable right now</h2>
+        <p>We can&apos;t reach Stripe, so your card&apos;s status, controls and payments can&apos;t be shown. You can still try to freeze it.</p></div>
+      <div className="mxActions">
+        <button type="button" className="appButton appButtonPrimary" disabled={busy} onClick={() => void freeze()}>{busy ? <LoaderCircle className="spin" aria-hidden="true" /> : null} Freeze card</button>
+        <button type="button" className="appButton" disabled={checking} onClick={refetch}>{checking ? "Checking…" : "Try again"}</button>
+      </div>
+    </section>
+    <CardFace lastFour={data.lastFour} />
+  </div>;
+}
+
 const setupSteps = ["Verify your identity with Bridge", "Apply for the card", "Create your card", "Set a spending allowance"];
 
 /** Journey J9: what's left before there's a card, as a checklist with the one current step's button. */
-function Setup({ data, refetch, checking }: { data: Exclude<CardState, { state: "card" }>; refetch: () => void; checking: boolean }) {
+function Setup({ data, refetch, checking }: { data: Exclude<CardState, { state: "card" | "card_unavailable" }>; refetch: () => void; checking: boolean }) {
   const api = useApi();
   const client = useQueryClient();
   const toast = useToast();
@@ -358,6 +431,7 @@ export function CardWorkspace() {
       : loading || query.isPending ? <LoadingState><strong>Loading your card</strong></LoadingState>
         : query.isError ? <Notice tone="error" role="alert" onRetry={() => void query.refetch()}>Your card couldn&apos;t be loaded.</Notice>
           : query.data.state === "card" ? <IssuedCard data={query.data} onSignIn={undefined} />
+            : query.data.state === "card_unavailable" ? <UnavailableCard data={query.data} refetch={() => void query.refetch()} checking={query.isFetching} />
             : <Setup data={query.data} refetch={() => void query.refetch()} checking={query.isFetching} />}
   </MoneyPage>;
 }

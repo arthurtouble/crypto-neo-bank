@@ -7,14 +7,15 @@ import type { IncomingTransfer } from "./incoming";
 /**
  * One row in Transactions, whatever it came from: an Aura action (verified
  * against the chain), money that arrived without one (Alchemy's transfer
- * index), or Aave history (Aave's data service). Shared by the list, the
+ * index), a deposit bridged from the customer's own wallet while it's on its
+ * way (LI.FI), or Aave history (Aave's data service). Shared by the list, the
  * receipt, exports, statements, and Insights, so they always agree. Card
  * payments come from Stripe, which issues the card.
  */
 type EntryType = "sent" | "received" | "bank_deposit" | "bank_payout" | "card_payment" | "card_refund" | "card_allowance" | "card_spending_off" | "swap" | "bridge" | "earn_deposit" | "earn_withdraw"
   | "borrow" | "repay" | "liquidation" | "collateral_enabled" | "collateral_disabled" | "defi_activity";
 type EntryStatus = "pending" | "completed" | "failed" | "not_confirmed";
-type EntryOrigin = "aura" | "incoming" | "aave" | "card";
+type EntryOrigin = "aura" | "incoming" | "aave" | "card" | "deposit";
 
 export type ActivityEntry = {
   id: string;

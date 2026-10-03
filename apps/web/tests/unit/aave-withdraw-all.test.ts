@@ -64,3 +64,27 @@ describe("withdrawing everything from Aave", () => {
     expect((await verify(withdrawLog("0x2222222222222222222222222222222222222222", 1_000_042n))).status).toBe("failed");
   });
 });
+
+describe("an exact Aave deposit or withdrawal", () => {
+  /** A Base client where the account holds `wallet` USDC and `supplied` in Aave. */
+  const funded = (walletRaw: bigint, supplied: bigint) => ({
+    readContract: async ({ functionName, address }: { functionName: string; address: string }) =>
+      functionName === "getReserveData" ? { aTokenAddress: aToken } : address.toLowerCase() === aToken ? supplied : walletRaw
+  }) as unknown as PublicClient;
+
+  it("refuses a deposit larger than the account holds, before anything is signed", async () => {
+    await expect(buildEarn(input("deposit", "10"), wallet, funded(9_999_999n, 0n))).rejects.toMatchObject({ code: "insufficient_balance", message: "You don't have enough USDC." });
+    expect((await buildEarn(input("deposit", "10"), wallet, funded(10_000_000n, 0n))).calls).toHaveLength(2);
+  });
+
+  it("refuses a withdrawal larger than the position", async () => {
+    await expect(buildEarn(input("withdraw", "5"), wallet, funded(0n, 4_999_999n))).rejects.toMatchObject({ code: "insufficient_balance", message: "You don't have that much USDC in Aave." });
+    expect((await buildEarn(input("withdraw", "5"), wallet, funded(0n, 5_000_000n))).calls).toHaveLength(1);
+  });
+
+  it("takes no new WETH deposits, but still lets WETH be withdrawn", async () => {
+    const weth = (direction: "deposit" | "withdraw") => earnInputSchema.parse({ kind: "earn", protocol: "aave", direction, asset: "WETH", amount: "1" });
+    await expect(buildEarn(weth("deposit"), wallet, funded(10n ** 24n, 0n))).rejects.toMatchObject({ code: "unsupported_asset" });
+    expect((await buildEarn(weth("withdraw"), wallet, funded(0n, 10n ** 18n))).calls).toHaveLength(1);
+  });
+});

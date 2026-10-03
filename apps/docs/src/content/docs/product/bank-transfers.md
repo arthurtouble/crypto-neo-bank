@@ -31,11 +31,13 @@ You can also use these details for your paycheck. When it arrives depends on you
 
 Confirming sends USDC to an address Bridge gives for that payout. You confirm with your passkey, and your account lock and daily limit apply.
 
-A saved bank account counts as a saved recipient. We tell you each time one is added. If you've turned on saved recipients only, a new bank account waits like any new recipient before you can send to it. See [account controls](/safety/account-controls/). Bridge then sends the dollars to your bank. If you ask for the same payout again within 10 minutes, Aura shows you the first one instead of starting a second.
+A saved bank account counts as a saved recipient. We tell you each time one is added or removed. If you've turned on saved recipients only, a new bank account waits like any new recipient before you can send to it, and the app shows when it will be ready. See [account controls](/safety/account-controls/). Bridge then sends the dollars to your bank. If you ask for the same payout again within 10 minutes, Aura shows you the first one instead of starting a second.
 
 In Transactions, the payout shows as **Sent to bank**. It stays pending until Bridge reports that your bank has it. Its steps are: waiting for your USDC, received by Bridge, sent to your bank, then arrived.
 
 A bank transfer usually takes 1 to 3 business days; that's an estimate. A bank or Bridge can still hold, return, or reject a transfer after you submit it. If your bank returns it, the payout shows as failed, with what Bridge is doing about it, and we tell you.
+
+To remove a saved bank account, select **Remove** next to it on **Send > To a bank account**. Bridge deletes it, so no new payout can reach it. Payouts already sent carry on. If you save it again later, it waits again.
 
 ## Where your balance comes from
 

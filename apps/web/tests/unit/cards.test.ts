@@ -32,6 +32,7 @@ const { PATCH: controls } = await import("@/app/api/cards/controls/route");
 const { POST: detailsKey } = await import("@/app/api/cards/details-key/route");
 const { POST: dispute } = await import("@/app/api/cards/disputes/route");
 const { POST: allowance } = await import("@/app/api/cards/allowance/route");
+const { POST: replace } = await import("@/app/api/cards/replace/route");
 const { freezeCardForLock, readCardActivity, readCardHistory, recordCard } = await import("@/lib/cards/service");
 const { StripeClient, stripeForm } = await import("@/lib/providers/stripe/client");
 
@@ -40,6 +41,9 @@ let sqlite: DatabaseSync;
 let calls: Call[];
 let endorsement: { status: string; cardholder: string | null };
 let stripeCard: Record<string, unknown> | null;
+/** The card a replacement canceled, and whether Stripe's card reads fail. */
+let replacedCard: Record<string, unknown> | null;
+let stripeCardsDown: boolean;
 let transactions: Array<Record<string, unknown>>;
 let disputes: Array<Record<string, unknown>>;
 const nowSeconds = Math.floor(Date.now() / 1000);
@@ -58,18 +62,24 @@ function fakeProviders(url: string, init: RequestInit = {}) {
     return new Response("not found", { status: 404 });
   }
   if (pathname === "/v1/issuing/cards" && method === "POST") {
-    stripeCard = { id: "ic_1", brand: "Visa", status: "active", type: "virtual", last4: "4242", exp_month: 9, exp_year: 2030, currency: "usd",
+    const replacing = form.get("replacement_for");
+    if (replacing) replacedCard = stripeCard;
+    stripeCard = { id: replacing ? "ic_2" : "ic_1", brand: "Visa", status: "active", type: "virtual", last4: replacing ? "5353" : "4242", exp_month: 9, exp_year: 2030, currency: "usd",
       spending_controls: { spending_limits: [{ amount: Number(form.get("spending_controls[spending_limits][0][amount]")), interval: "daily" }] },
       wallets: { apple_pay: { eligible: true }, google_pay: { eligible: false } } };
     return Response.json(stripeCard);
   }
-  if (pathname === "/v1/issuing/cards/ic_1" && stripeCard) {
+  const cardPath = /^\/v1\/issuing\/cards\/(ic_\w+)$/.exec(pathname);
+  const card = cardPath && [stripeCard, replacedCard].find((item) => item?.id === cardPath[1]);
+  if (card) {
+    if (method === "GET" && stripeCardsDown) return Response.json({ error: { message: "unavailable" } }, { status: 503 });
     if (method === "POST") {
-      if (form.get("status")) stripeCard.status = form.get("status");
+      if (form.get("status")) card.status = form.get("status");
+      if (form.get("cancellation_reason")) card.cancellation_reason = form.get("cancellation_reason");
       const amount = form.get("spending_controls[spending_limits][0][amount]");
-      if (amount) stripeCard.spending_controls = { spending_limits: [{ amount: Number(amount), interval: "daily" }] };
+      if (amount) card.spending_controls = { spending_limits: [{ amount: Number(amount), interval: "daily" }] };
     }
-    return Response.json(stripeCard);
+    return Response.json(card);
   }
   if (pathname === "/v1/issuing/authorizations") return Response.json({ data: [
     { id: "iauth_hold", amount: 1200, currency: "usd", approved: true, status: "pending", created: nowSeconds - 60, merchant_data: { name: "Cafe" } },
@@ -95,7 +105,7 @@ beforeEach(() => {
     INSERT INTO provider_customer_links (subject_reference, provider, external_customer_id, status, created_at, updated_at)
     VALUES ('alice', 'bridge', 'cust_1', 'active', 't', 't');`);
   state.db = d1(sqlite); state.mfa = true; state.allowance = 0n; state.chain = "ok";
-  calls = []; endorsement = { status: "approved", cardholder: "ich_1" }; stripeCard = null; disputes = [];
+  calls = []; endorsement = { status: "approved", cardholder: "ich_1" }; stripeCard = null; replacedCard = null; stripeCardsDown = false; disputes = [];
   transactions = [{ id: "ipi_1", type: "capture", amount: -2500, currency: "usd", created: nowSeconds - 3600, authorization: "iauth_settled", merchant_data: { name: "Books" } }];
   vi.stubEnv("BRIDGE_API_KEY", "bridge-key");
   vi.stubEnv("STRIPE_SECRET_KEY", "sk_test_1");
@@ -126,7 +136,7 @@ describe("Stripe form encoding", () => {
   it("sends the key, version, and an idempotency key, and never guesses at an error or unknown response", async () => {
     const stripe = new StripeClient("sk_test_1");
     await expect(stripe.request("/v1/nothing", (await import("zod")).z.object({}))).rejects.toMatchObject({ name: "StripeError", status: 404 });
-    stripeCard = { id: "not-a-card" };
+    stripeCard = { id: "ic_1", status: "not-a-status" };
     const { getCard } = await import("@/lib/providers/stripe/issuing");
     await expect(getCard(stripe, "ic_1")).rejects.toMatchObject({ status: 502 });
   });
@@ -251,6 +261,43 @@ describe("card controls", () => {
     expect(await (await patch({ frozen: false })()).json()).toMatchObject({ error: "account_locked" });
     expect((await patch({})()).status).toBe(400);
     expect((await patch({ dailyLimitUsd: 10_001 })()).status).toBe(400);
+  });
+
+  it("shows the card as unavailable when Stripe can't be read, and still freezes it", async () => {
+    stripeCardsDown = true;
+    expect(await read()).toMatchObject({ state: "card_unavailable", lastFour: "4242" });
+    const frozen = await patch({ frozen: true })();
+    expect(frozen.status).toBe(200);
+    expect(stripeCard).toMatchObject({ status: "inactive" });
+    expect(await frozen.json()).toMatchObject({ state: "card_unavailable" });
+    // Anything that needs the card's current state still waits for Stripe.
+    expect((await patch({ dailyLimitUsd: 100 })()).status).toBe(503);
+  });
+
+  it("replaces a lost or stolen card with a passkey: the old one is canceled, the new one keeps the limit", async () => {
+    await patch({ dailyLimitUsd: 200 })();
+    const send = (confirmation?: unknown) => replace(request("/api/cards/replace", "POST", { cardId: "ic_1", reason: "stolen", ...(confirmation ? { confirmation } : {}) }));
+    const asked = await send();
+    expect(await asked.json()).toMatchObject({ error: "confirmation_required", message: "Confirm with your passkey to cancel your card and get a new one." });
+    expect(stripeCard).toMatchObject({ id: "ic_1", status: "active" });
+    const response = await confirmed(send);
+    expect(response.status).toBe(201);
+    expect(replacedCard).toMatchObject({ id: "ic_1", status: "canceled", cancellation_reason: "stolen" });
+    const created = calls.filter((call) => call.path === "/v1/issuing/cards" && call.method === "POST").at(-1)!;
+    expect(Object.fromEntries(created.form)).toMatchObject({ cardholder: "ich_1", replacement_for: "ic_1", replacement_reason: "stolen",
+      "spending_controls[spending_limits][0][amount]": "20000" });
+    expect(await response.json()).toMatchObject({ state: "card", card: { id: "ic_2", lastFour: "5353", status: "active", dailyLimitUsd: 200 } });
+    expect(sqlite.prepare("SELECT card_reference, status FROM card_account_projections ORDER BY card_reference").all())
+      .toEqual([{ card_reference: "ic_1", status: "closed" }, { card_reference: "ic_2", status: "active" }]);
+    expect(sqlite.prepare("SELECT title FROM notifications WHERE title = 'Your card was replaced'").all()).toHaveLength(1);
+    // Asking again for the old card never replaces the new one.
+    expect(await (await send()).json()).toMatchObject({ error: "card_already_replaced" });
+  });
+
+  it("won't replace a card while the account is locked", async () => {
+    sqlite.exec("INSERT INTO security_profiles (subject_reference, account_locked, updated_at) VALUES ('alice', 1, 't')");
+    expect(await (await replace(request("/api/cards/replace", "POST", { cardId: "ic_1", reason: "lost" }))).json()).toMatchObject({ error: "account_locked" });
+    expect(replacedCard).toBeNull();
   });
 
   it("freezes the card when the account is locked", async () => {

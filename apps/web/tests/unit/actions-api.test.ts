@@ -15,6 +15,10 @@ vi.mock("@/lib/auth/server", () => ({ requireVerifiedSubject: async () => ({ sub
 vi.mock("@/lib/auth/wallet", () => ({ requireActionWallet: async () => wallet, requireMoneyMfa: async () => undefined,
   requireMoneyAccount: async () => ({ address: wallet, walletId: "wallet-1" }), WalletOwnershipError: httpErrors.WalletOwnershipError }));
 // The chain shows each reported hash as the wallet's own operation (checked in actions-hash-binding.test.ts).
+// The account holds plenty of every token on Base, so balance checks before an action pass without a network.
+vi.mock("@/lib/assets/prices", async (original) => ({ ...await original<typeof import("@/lib/assets/prices")>(),
+  baseClient: () => ({ readContract: async ({ functionName }: { functionName: string }) =>
+    functionName === "getReserveData" ? { aTokenAddress: "0x".padEnd(42, "a") } : 10n ** 24n }) }));
 vi.mock("@/lib/actions/verify", () => ({ verifyAction: vi.fn(async () => state.verification), checkReportedTransaction: vi.fn(async () => "own") }));
 
 const { POST: prepare } = await import("@/app/api/actions/route");

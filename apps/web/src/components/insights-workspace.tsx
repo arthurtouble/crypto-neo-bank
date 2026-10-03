@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useAuth } from "@/lib/client/auth";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
@@ -24,6 +25,7 @@ type Insights = {
 };
 
 const periods = [7, 30, 90, 365] as const;
+const periodName = (days: number) => days === 365 ? "1 year" : `${days} days`;
 const money = { format: (value: number) => formatUsd(value, { whole: true }) };
 const exact = { format: (value: number) => formatUsd(value) };
 
@@ -61,7 +63,7 @@ function InOutChart({ data }: { data: Insights }) {
           <line className="inBaseline" x1={0} x2={width} y1={top + plot} y2={top + plot} />
           {buckets.map((bucket, index) => {
             const x = left + index * slot + (slot - series.length * (barWidth + 2)) / 2;
-            return <g key={bucket.start} onMouseEnter={() => setActive(index)} onClick={() => setActive(index)} onFocus={() => setActive(index)} tabIndex={-1}>
+            return <g key={bucket.start} onMouseEnter={() => setActive(index)} onClick={() => setActive(index)}>
               <rect className="chartHit inHit" x={left + index * slot} y={top} width={slot} height={plot} />
               {series.map((item, position) => {
                 const value = bucket[item.key];
@@ -109,14 +111,6 @@ function BarRow({ name, note, value, peak, testId }: { name: string; note?: stri
   </li>;
 }
 
-function Categories({ data }: { data: Insights }) {
-  const peak = Math.max(...data.categories.map((item) => item.value), 1);
-  return <section className="mxCard" aria-labelledby="categories-heading"><h2 id="categories-heading">By category</h2>
-    {data.categories.length ? <ul className="inBars">{data.categories.map((item) => <BarRow key={item.name} name={item.name} value={item.value} peak={peak} />)}</ul>
-      : <div className="txEmpty"><strong>No completed activity in this period</strong><span>Your insights appear as actions are completed.</span></div>}
-  </section>;
-}
-
 function TopMerchants({ data }: { data: Insights }) {
   const peak = Math.max(...data.topMerchants.map((item) => item.total), 1);
   return <section className="mxCard" aria-labelledby="merchants-heading"><h2 id="merchants-heading">Top card merchants</h2>
@@ -127,7 +121,14 @@ function TopMerchants({ data }: { data: Insights }) {
   </section>;
 }
 
-/** Journey J14: money in and out over a period, a chart with a table view, categories, and top card merchants. */
+/** Shown instead of the numbers when nothing completed in the period and every source could be read. */
+function NoActivity() {
+  return <section className="mxCard" aria-label="No transactions in this period"><div className="txEmpty inEmpty">
+    <strong>No transactions in this period</strong><span>Choose a longer period, or add money to get started.</span>
+    <Link className="appButton appButtonPrimary" href="/app/deposit">Deposit</Link></div></section>;
+}
+
+/** Journey J14: money in and out over a period, a chart with a table view, and top card merchants. */
 export function InsightsWorkspace() {
   const { user, ready, authenticated, login } = useAuth();
   const api = useApi();
@@ -146,24 +147,25 @@ export function InsightsWorkspace() {
   const stats = data ? [
     { label: "Money in", value: data.incomingComplete ? money.format(data.totals.incoming) : "Unavailable", unavailable: !data.incomingComplete, testId: "money-in" },
     { label: "Money out", value: data.outgoingComplete ? money.format(data.totals.outgoing) : "Unavailable", unavailable: !data.outgoingComplete, testId: "money-out" },
-    { label: "Put to work", value: money.format(data.totals.allocation) },
-    { label: "Moved", value: money.format(data.totals.movement) }
+    { label: "Added to Earn", value: money.format(data.totals.allocation) },
+    { label: "Swapped", value: money.format(data.totals.movement) }
   ] : [];
 
   return <div className="mxPage txPage inPage">
     {(isExample || loading) && <GuestBanner onSignIn={login} ready={ready} />}
     <header className="txHead"><h1>Insights</h1>
       <div className="appSegmented" role="group" aria-label="Insight period">{periods.map((period) =>
-        <button key={period} type="button" aria-pressed={days === period} onClick={() => setDays(period)}>{period === 365 ? "1Y" : `${period}D`}</button>)}</div></header>
+        <button key={period} type="button" aria-label={periodName(period)} aria-pressed={days === period} onClick={() => setDays(period)}>{period === 365 ? "1Y" : `${period}D`}</button>)}</div></header>
     {loading || (!isExample && query.isPending) ? <LoadingState label="Loading insights" />
       : !data ? <Notice tone="error" role="alert" onRetry={() => void query.refetch()}>{query.error?.message ?? "Insights couldn't be loaded."}</Notice>
+        : !isExample && data.completedCount === 0 && data.incomingComplete && data.outgoingComplete ? <NoActivity />
         : <>
           <dl className="inStats">{stats.map((stat) => <div key={stat.label}><dt>{stat.label}</dt>
             <dd data-testid={stat.testId} className={stat.unavailable ? "appUnavailable" : undefined}>{stat.value}</dd></div>)}</dl>
           <InOutChart data={data} />
-          <div className="inCards"><Categories data={data} /><TopMerchants data={data} /></div>
+          <TopMerchants data={data} />
           {data.totals.unvalued > 0 && <p className="mxHint">{data.totals.unvalued} completed action{data.totals.unvalued === 1 ? "" : "s"} could not be valued in dollars and {data.totals.unvalued === 1 ? "is" : "are"} left out.</p>}
         </>}
-    <p className="mxHint">Insights use completed transactions: yours from Aura, card payments, and money you received. Received amounts are valued at today&apos;s price. Days, weeks, and months are in UTC. They aren&apos;t a bank statement or tax report.</p>
+    <p className="mxHint">Based on completed transactions. Money you received is valued at today&apos;s price. This isn&apos;t a bank statement or tax report.</p>
   </div>;
 }

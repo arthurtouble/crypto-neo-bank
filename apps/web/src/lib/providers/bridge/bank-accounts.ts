@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { BridgeClient } from "./client";
+import { BridgeError, type BridgeClient } from "./client";
 
 export const bankAccountInputSchema = z.strictObject({
   accountOwnerName: z.string().trim().min(2).max(120),
@@ -38,4 +38,13 @@ export async function addBankAccount(bridge: BridgeClient, customerId: string, i
   const lastFour = account.account?.last_4 ?? account.last_4;
   if (!lastFour) throw new Error("Bridge returned a bank account without its last four digits.");
   return { id: account.id, lastFour, displayName: account.bank_name ?? input.bankName };
+}
+
+/** Delete a saved bank account at Bridge, so no payout can reach it. One Bridge no longer has counts as deleted. */
+export async function removeBankAccount(bridge: BridgeClient, customerId: string, externalAccountId: string): Promise<void> {
+  try {
+    await bridge.request(`/customers/${encodeURIComponent(customerId)}/external_accounts/${encodeURIComponent(externalAccountId)}`, z.unknown(), { method: "DELETE" });
+  } catch (error) {
+    if (!(error instanceof BridgeError && error.status === 404)) throw error;
+  }
 }

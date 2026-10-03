@@ -2,6 +2,7 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowDownToLine, LoaderCircle, Wallet } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { erc20TransferData } from "@/lib/chain/erc20-transfer";
 import { formatUnits, parseUnits } from "@/lib/format/units";
@@ -12,7 +13,7 @@ import { DEPOSIT_NETWORKS, depositSource, depositSymbols, type DepositSymbol } f
 import { formatToken, formatUsd, shortAddress } from "@/lib/format";
 import { useToast } from "./toast";
 
-type Phase = "idle" | "quoting" | "review" | "confirm" | "pending" | "bridging" | "done";
+type Phase = "idle" | "quoting" | "review" | "confirm" | "pending" | "done";
 type Call = { to: `0x${string}`; value: string; data: `0x${string}` };
 type Quote = {
   chainId: number; symbol: DepositSymbol; tool: string; calls: Call[]; fromAmountRaw: string; toAmountRaw: string; toAmountMinRaw: string;
@@ -59,9 +60,10 @@ export function AddFromWallet({ account }: { account: `0x${string}` }) {
   const [phase, setPhase] = useState<Phase>("idle");
   const [error, setError] = useState<string | null>(null);
   const [quote, setQuote] = useState<Quote | null>(null);
-  const [bridge, setBridge] = useState<{ hash: `0x${string}`; chainId: number; tool: string } | null>(null);
+  const [bridge, setBridge] = useState<{ hash: `0x${string}`; chainId: number; tool: string; text: string; network: string } | null>(null);
 
-  // Follow a bridged deposit until it arrives on Base, or fails and is refunded.
+  // Follow a bridged deposit until it arrives on Base, or fails and is refunded. The form stays free for the next one,
+  // and Transactions keeps following it if the customer leaves.
   useEffect(() => {
     if (!bridge) return;
     let cancelled = false;
@@ -71,12 +73,12 @@ export function AddFromWallet({ account }: { account: `0x${string}` }) {
         const { status } = await api<{ status: string }>(`/api/deposits/status?chainId=${bridge.chainId}&hash=${bridge.hash}&tool=${bridge.tool}`);
         if (cancelled) return;
         if (status === "DONE" || status === "PARTIAL") {
-          setPhase("done"); setBridge(null);
+          setBridge(null);
           toast.success("Added", "It reached your Aura account.");
           await queryClient.invalidateQueries(); return;
         }
         if (status === "REFUNDED" || status === "FAILED") {
-          setPhase("idle"); setBridge(null);
+          setBridge(null);
           toast.error("Deposit didn't complete", status === "REFUNDED" ? "The bridge sent the funds back to your wallet." : "Check your wallet's activity.");
           return;
         }
@@ -91,7 +93,7 @@ export function AddFromWallet({ account }: { account: `0x${string}` }) {
     return <button type="button" className="appButton appButtonPrimary appButtonLarge" onClick={() => connectWallet()}><Wallet aria-hidden="true" /> Connect a wallet</button>;
   }
 
-  const busy = phase === "quoting" || phase === "confirm" || phase === "pending" || phase === "bridging";
+  const busy = phase === "quoting" || phase === "confirm" || phase === "pending";
   const networkName = DEPOSIT_NETWORKS.find((network) => network.chainId === chainId)!.name;
 
   function reset() {
@@ -163,14 +165,17 @@ export function AddFromWallet({ account }: { account: `0x${string}` }) {
     if (quoteExpired(current)) { reset(); return setError("That price expired. Review it again."); }
     try {
       const hash = await sendFromWallet(current.calls);
-      setPhase("bridging"); setAmount("");
+      setPhase("idle"); setQuote(null); setAmount("");
       toast.show({ tone: "info", title: "Sent", detail: "It usually arrives in a few minutes. You can leave this screen." });
-      setBridge({ hash, chainId: current.chainId, tool: current.tool });
+      setBridge({ hash, chainId: current.chainId, tool: current.tool, text: `${amountText(current.toAmountRaw, current.decimals)} ${current.symbol}`, network: networkName });
+      // Kept so Transactions follows it from here; if this fails, this screen still does while it's open.
+      void api("/api/deposits", { method: "POST", json: { chainId: current.chainId, hash, tool: current.tool, symbol: current.symbol,
+        expectedAmountRaw: current.toAmountRaw } }).catch(() => undefined);
     } catch (reason) { walletError(reason); }
   }
 
   const buttonText = phase === "quoting" ? "Getting a price" : phase === "confirm" ? "Confirm in your wallet" : phase === "pending" ? "Sending"
-    : phase === "bridging" ? "On its way" : phase === "review" ? "Confirm deposit" : home ? "Add from wallet" : "Review";
+    : phase === "review" ? "Confirm deposit" : home ? "Add from wallet" : "Review";
 
   return (
     <form className="mxForm" onSubmit={(event) => void submit(event)}>
@@ -207,6 +212,8 @@ export function AddFromWallet({ account }: { account: `0x${string}` }) {
         <div><dt>Network fee</dt><dd>{usdText(quote.networkFeeUsd)}</dd></div>
       </dl>}
       {error && <p className="mxFieldError" role="alert">{error}</p>}
+      {bridge && <p className="mxNote" role="status" data-testid="deposit-travelling">About {bridge.text} is on its way from {bridge.network}. It usually arrives in a few
+        minutes. You can add more now, or <Link href="/app/transactions">follow it in Transactions</Link>.</p>}
       <button type="submit" className="appButton appButtonPrimary appButtonLarge" disabled={busy}>
         {busy ? <LoaderCircle className="spin" aria-hidden="true" /> : <ArrowDownToLine aria-hidden="true" />}{buttonText}
       </button>

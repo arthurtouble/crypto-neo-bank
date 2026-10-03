@@ -87,10 +87,10 @@ test("with transaction emails off, money received isn't emailed, but a security 
   test.setTimeout(150_000);
   const customer = await signIn(page);
   await page.goto("/app/settings#notifications");
-  const emails = page.getByRole("button", { name: "Transaction emails" });
-  await expect(emails).toHaveText("On", { timeout: 30_000 });
+  const emails = page.getByRole("checkbox", { name: "Transaction emails" });
+  await expect(emails).toBeChecked({ timeout: 30_000 });
   await emails.click();
-  await expect(emails).toHaveText("Off");
+  await expect(emails).not.toBeChecked();
 
   await edge("/__receive", { chainId: 8453, to: customer.wallet, token: ASSETS.usdc, amount: "2000000", from: FRIEND });
   await waitForNotice(page, "1");
@@ -124,10 +124,10 @@ test("browser notifications can be turned on and off, and security notices are p
     PushManager.prototype.getSubscription = async () => current;
   }, `http://127.0.0.1:${edgePort}/push/${customer.userId.slice(-12)}`);
   await page.goto("/app/settings#notifications");
-  const push = page.getByRole("button", { name: "Browser notifications" });
-  await expect(push).toHaveText("Off", { timeout: 30_000 });
+  const push = page.getByRole("checkbox", { name: "Browser notifications" });
+  await expect(push).not.toBeChecked({ timeout: 30_000 });
   await push.click();
-  await expect(push).toHaveText("On", { timeout: 20_000 });
+  await expect(push).toBeChecked({ timeout: 20_000 });
 
   await area(page, "Security");
   await lock(page).click();
@@ -138,7 +138,7 @@ test("browser notifications can be turned on and off, and security notices are p
 
   await area(page, "Notifications");
   await push.click();
-  await expect(push).toHaveText("Off", { timeout: 20_000 });
+  await expect(push).not.toBeChecked({ timeout: 20_000 });
 });
 
 test("a browser that blocks notifications says so", async ({ page, context }) => {
@@ -147,7 +147,7 @@ test("a browser that blocks notifications says so", async ({ page, context }) =>
   await page.addInitScript(() => { Object.defineProperty(Notification, "permission", { get: () => "denied" }); });
   await page.goto("/app/settings#notifications");
   await expect(page.getByText(/Blocked for Aura in this browser's settings\./)).toBeVisible({ timeout: 30_000 });
-  await expect(page.getByRole("button", { name: "Browser notifications" })).toHaveCount(0);
+  await expect(page.getByRole("checkbox", { name: "Browser notifications" })).toHaveCount(0);
 });
 
 test("the customer's own transactions show in the bell without a second toast", async ({ page }) => {
@@ -191,8 +191,8 @@ test("a customer who signed up with a wallet adds an email, verified by Privy, b
   await page.getByRole("button", { name: "Continue" }).click();
 
   await expect(page.getByText("new-owner@example.com", { exact: false }).first()).toBeVisible({ timeout: 30_000 });
-  await expect(page.getByRole("button", { name: "Transaction emails" })).toHaveText("On");
-  await expect(page.getByRole("button", { name: "Product news" })).toHaveText("Off");
+  await expect(page.getByRole("checkbox", { name: "Transaction emails" })).toBeChecked();
+  await expect(page.getByRole("checkbox", { name: "Product news" })).not.toBeChecked();
   await area(page, "Security");
   await expect(page.getByText("new-owner@example.com. Used to sign in and for email notices.")).toBeVisible();
 

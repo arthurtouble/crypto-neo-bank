@@ -15,7 +15,8 @@ vi.mock("@/lib/auth/wallet", () => ({ requireActionWallet: async () => wallet, r
 
 const { POST: onboard } = await import("@/app/api/money/onboarding/route");
 const { GET: account } = await import("@/app/api/money/account/route");
-const { POST: addBank } = await import("@/app/api/money/bank-accounts/route");
+const { POST: addBank, DELETE: removeBank } = await import("@/app/api/money/bank-accounts/route");
+const { GET: recipients } = await import("@/app/api/recipients/route");
 const { POST: payout } = await import("@/app/api/money/payouts/route");
 
 type Call = { url: string; method: string; body: Record<string, unknown> | null; idempotencyKey: string | null };
@@ -38,6 +39,7 @@ function bridge(url: string, init: RequestInit = {}) {
     tos_link: "https://bridge.test/tos", kyc_status: kycCustomerId ? "approved" : "not_started", tos_status: kycCustomerId ? "approved" : "pending" });
   if (path.endsWith("/virtual_accounts") && method === "GET") return Response.json({ data: activated ? [activeAccount] : [] });
   if (path.endsWith("/virtual_accounts")) { activated = true; return Response.json(activeAccount); }
+  if (path === "/customers/cust_1/external_accounts/ea_1" && method === "DELETE") return Response.json({ id: "ea_1", active: false });
   if (path.endsWith("/external_accounts")) return Response.json({ id: "ea_1", bank_name: "Lead Bank", active: true, account: { last_4: "6789", routing_number: "876543210" } }, { status: 201 });
   if (path === "/transfers") return Response.json({ id: "tr_1", state: "awaiting_funds", source_deposit_instructions: {
     payment_rail: "base", currency: "usdc", to_address: depositAddress, amount: payoutAmount } });
@@ -161,6 +163,39 @@ describe("bank payouts", () => {
     expect(Date.parse(saved.available_at) - Date.parse(saved.observed_at)).toBe(4 * 3600_000);
     sqlite.exec("UPDATE bank_beneficiary_projections SET available_at = '2000-01-01T00:00:00.000Z'");
     expect((await payout(new Request("https://aura.test", json({ bankAccountId, amountUsd: "25.00" })))).status).toBe(201);
+  });
+
+  it("lists a bank account in its waiting period as not ready, with when it will be", async () => {
+    await savedBankId();
+    const banks = async () => (await (await recipients(new Request("https://aura.test"))).json() as { recipients: Array<{ kind: string; verified: boolean; availableAt: string }> })
+      .recipients.filter((item) => item.kind === "bank");
+    // Without saved-recipients-only, the payout route doesn't wait, so neither does the list.
+    expect(await banks()).toEqual([expect.objectContaining({ verified: true })]);
+    sqlite.exec("UPDATE security_profiles SET enforce_address_book = 1");
+    const [waiting] = await banks();
+    expect(waiting.verified).toBe(false);
+    expect(Date.parse(waiting.availableAt)).toBeGreaterThan(Date.now());
+    sqlite.exec("UPDATE bank_beneficiary_projections SET available_at = '2000-01-01T00:00:00.000Z'");
+    expect(await banks()).toEqual([expect.objectContaining({ verified: true })]);
+  });
+
+  it("removes a bank account at Bridge first, then from the list, and payouts can't reach it", async () => {
+    const bankAccountId = await savedBankId();
+    const remove = (id: string) => removeBank(new Request("https://aura.test", { method: "DELETE", body: JSON.stringify({ bankAccountId: id }) }));
+    expect((await remove(bankAccountId)).status).toBe(200);
+    expect(calls.at(-1)).toMatchObject({ url: "/customers/cust_1/external_accounts/ea_1", method: "DELETE" });
+    expect(sqlite.prepare("SELECT verification_status FROM bank_beneficiary_projections").get()).toEqual({ verification_status: "removed" });
+    expect(sqlite.prepare("SELECT title FROM notifications WHERE title = 'Bank account removed'").all()).toHaveLength(1);
+    expect(((await (await recipients(new Request("https://aura.test"))).json()) as { recipients: Array<{ kind: string }> }).recipients.filter((item) => item.kind === "bank")).toEqual([]);
+    expect(await (await payout(new Request("https://aura.test", json({ bankAccountId, amountUsd: "25.00" })))).json()).toMatchObject({ error: "bank_account_not_found" });
+    expect(await (await remove(bankAccountId)).json()).toMatchObject({ error: "bank_account_not_found" });
+    // Saving it again starts a new waiting period and is announced again.
+    sqlite.exec("UPDATE bank_beneficiary_projections SET available_at = '2000-01-01T00:00:00.000Z'");
+    await savedBankId();
+    const again = sqlite.prepare("SELECT verification_status, available_at FROM bank_beneficiary_projections").get() as { verification_status: string; available_at: string };
+    expect(again.verification_status).toBe("verified");
+    expect(Date.parse(again.available_at)).toBeGreaterThan(Date.now());
+    expect(sqlite.prepare("SELECT title FROM notifications WHERE title = 'New bank account'").all()).toHaveLength(2);
   });
 
   it("announces a new bank account as a security notice", async () => {

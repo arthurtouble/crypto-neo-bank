@@ -42,7 +42,7 @@ Kept on purpose, never deleted by the job:
 
 - `actions` and `action_events`: transaction evidence. The schema refuses deletes.
 - `consent_evidence`, `consent_events`, `audit_events`, `operational_issues`: legal, security and investigation records.
-- `subject_profiles`, `security_profiles`, `address_book_entries`, `user_preferences`, `onboarding_progress`, `aura_tags`, `provider_customer_links`, the provider projections, `incoming_observations`, `card_observations`: account and projection records, kept for the relationship as in the table above.
+- `subject_profiles`, `security_profiles`, `address_book_entries`, `user_preferences`, `onboarding_progress`, `aura_tags`, `provider_customer_links`, the provider projections, `incoming_observations`, `card_observations`, `wallet_deposits`: account and projection records, kept for the relationship as in the table above.
 - `incoming_watches`: one row per customer. Its `watched_since` is what stops past deposits being announced, and it stops being scanned 30 days after the customer was last active.
 - `push_subscriptions`: removed when the customer turns notifications off, when a newer browser replaces it (10 at most), or when the push service answers 404 or 410. Not deleted for repeated failures: the app shows push as on from the browser's own subscription, so deleting it on the server would silently stop notifications after a push-service outage.
 - `operational_checks`, `feature_flags`, `asset_pauses`: a few keyed rows, overwritten in place.
