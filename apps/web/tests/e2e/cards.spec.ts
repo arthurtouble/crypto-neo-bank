@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, test } from "./support/fixtures";
+import { expect, outcome, test } from "./support/fixtures";
 import { acceptTerms, asCustomer, ASSETS, edge, newCustomer, operatorHeaders, setBalances, setControls, setFeature, setIdentity, type Customer } from "./support/session";
 
 // Feature 10 in docs/overview/feature-readiness.md: Bank and cards, the card
@@ -39,7 +39,7 @@ async function withCard(page: Page, options: { usdc?: string } = {}) {
 async function setAllowance(page: Page, amount: string) {
   await allowance(page).getByLabel("New allowance in USD").fill(amount);
   await allowance(page).getByRole("button", { name: "Set allowance" }).click();
-  await expect(toast(page, "Card allowance complete")).toBeVisible({ timeout: 30_000 });
+  await expect(outcome(page, "Card allowance complete")).toBeVisible({ timeout: 30_000 });
 }
 
 test.beforeEach(async ({ page }) => {
@@ -189,7 +189,7 @@ test("turning off card spending sets the allowance to $0.00 on chain, with the p
   await page.evaluate(() => localStorage.removeItem("aura-e2e-passkey"));
 
   await allowance(page).getByRole("button", { name: "Turn off" }).click();
-  await expect(toast(page, "Card allowance complete")).toBeVisible({ timeout: 30_000 });
+  await expect(outcome(page, "Card allowance complete")).toBeVisible({ timeout: 30_000 });
   await expect(allowance(page).getByTestId("card-allowance")).toContainText("Card can spend$0.00", { timeout: 20_000 });
   await expect(allowance(page).getByText("Set an allowance to start using your card.")).toBeVisible();
   // With the allowance at 0, Bridge can't take anything for a purchase.

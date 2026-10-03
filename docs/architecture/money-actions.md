@@ -99,7 +99,7 @@ A failed identity or effect check marks the action `failed` with a reason. An ac
 | `failed` | Failed |
 | `expired` | Not confirmed (never failed) |
 
-The success toast and progress panel say "complete" at the same point. Base's stages: in a block in about 2 seconds (near-zero reorg probability), batch posted to Ethereum in about 2 minutes, final in about 20 minutes ([Base transaction finality](https://docs.base.org/base-chain/network-information/transaction-finality)).
+The progress panel says "complete" at that point. Base's stages: in a block in about 2 seconds (near-zero reorg probability), batch posted to Ethereum in about 2 minutes, final in about 20 minutes ([Base transaction finality](https://docs.base.org/base-chain/network-information/transaction-finality)).
 
 D1 records are projections. A `confirmed` row reflects chain evidence Aura observed; the chain stays the authority.
 

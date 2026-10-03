@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, test } from "./support/fixtures";
+import { expect, outcome, test } from "./support/fixtures";
 import { LIFI_DIAMOND } from "./support/fake-edge.mjs";
 import { acceptTerms, asCustomer, ASSETS, edge, newCustomer, setBalances, setFeature, setIdentity, type Customer, setControls, pauseAsset } from "./support/session";
 
@@ -78,7 +78,7 @@ test("a first-time address is checked in chunks before the review; once used, it
   await addressCheck(page).getByRole("button", { name: "It's correct" }).click();
   await expect(page.getByTestId("send-review")).toContainText(RECIPIENT);
   await dialog(page).getByRole("button", { name: "Confirm and send" }).click();
-  await expect(toast(page, "Transfer complete")).toBeVisible({ timeout: 30_000 });
+  await expect(outcome(page, "Transfer complete")).toBeVisible({ timeout: 30_000 });
 
   // Sent to once, it's no longer new: the next transfer goes straight to the review.
   await dialog(page).getByRole("button", { name: "New transfer" }).click();
@@ -102,7 +102,7 @@ test("USDC goes to an address after a review, with the fee paid by Aura, and the
   expect(await relayed()).toEqual([]);
 
   await dialog(page).getByRole("button", { name: "Confirm and send" }).click();
-  await expect(toast(page, "Transfer complete")).toBeVisible({ timeout: 30_000 });
+  await expect(outcome(page, "Transfer complete")).toBeVisible({ timeout: 30_000 });
   const [operation] = await relayed();
   expect(operation).toMatchObject({ from: customer.wallet.toLowerCase(), success: true });
   expect(operation.calls).toHaveLength(1);
@@ -115,7 +115,7 @@ test("a matched transfer is complete once in a block, before Base makes it final
   await openSend(page);
   await fillSend(page, { amount: "1", to: RECIPIENT });
   await reviewAndConfirm(page);
-  await expect(toast(page, "Transfer complete")).toBeVisible({ timeout: 30_000 });
+  await expect(outcome(page, "Transfer complete")).toBeVisible({ timeout: 30_000 });
   await expect(dialog(page).getByText("Transfer complete")).toBeVisible();
   await expect(dialog(page).getByText("Base makes it final in about 20 minutes.")).toBeVisible();
 });
@@ -124,7 +124,7 @@ test("ETH and cbBTC can be sent too", async ({ page }) => {
   const customer = await openSend(page, { balances: { native: "1000000000000000000", [ASSETS.cbbtc]: "100000000" } });
   await fillSend(page, { asset: "cbBTC", amount: "0.25", to: RECIPIENT });
   await reviewAndConfirm(page);
-  await expect(toast(page, "Transfer complete")).toBeVisible({ timeout: 30_000 });
+  await expect(outcome(page, "Transfer complete")).toBeVisible({ timeout: 30_000 });
   expect(await balance(page, customer, `8453:${ASSETS.cbbtc}`)).toBe("75000000");
   await page.locator(".toastRegion").getByRole("button", { name: "Close" }).click();
 
@@ -133,7 +133,7 @@ test("ETH and cbBTC can be sent too", async ({ page }) => {
   await dialog(page).getByLabel("Amount").fill("0.1");
   await dialog(page).getByLabel("To").fill(RECIPIENT);
   await reviewAndConfirm(page);
-  await expect(toast(page, "Transfer complete")).toBeVisible({ timeout: 30_000 });
+  await expect(outcome(page, "Transfer complete")).toBeVisible({ timeout: 30_000 });
   await expect.poll(() => balance(page, customer, "8453:native")).toBe("900000000000000000");
 });
 
@@ -181,7 +181,7 @@ test("the customer can send to their own connected wallet in one tap", async ({ 
   await reviewSend(page);
   await expect(page.getByTestId("send-review")).toContainText("Your wallet");
   await dialog(page).getByRole("button", { name: "Confirm and send" }).click();
-  await expect(toast(page, "Transfer complete")).toBeVisible({ timeout: 30_000 });
+  await expect(outcome(page, "Transfer complete")).toBeVisible({ timeout: 30_000 });
 });
 
 test("a saved recipient can be picked by name", async ({ page }) => {
@@ -197,7 +197,7 @@ test("a saved recipient can be picked by name", async ({ page }) => {
   await reviewSend(page);
   await expect(page.getByTestId("send-review")).toContainText("Sam");
   await dialog(page).getByRole("button", { name: "Confirm and send" }).click();
-  await expect(toast(page, "Transfer complete")).toBeVisible({ timeout: 30_000 });
+  await expect(outcome(page, "Transfer complete")).toBeVisible({ timeout: 30_000 });
 });
 
 test("an Aura tag is found, checked again before signing, and shown in the review", async ({ page }) => {
@@ -214,7 +214,7 @@ test("an Aura tag is found, checked again before signing, and shown in the revie
   await reviewSend(page);
   await expect(page.getByTestId("send-review")).toContainText(`@${tag}`);
   await dialog(page).getByRole("button", { name: "Confirm and send" }).click();
-  await expect(toast(page, "Transfer complete")).toBeVisible({ timeout: 30_000 });
+  await expect(outcome(page, "Transfer complete")).toBeVisible({ timeout: 30_000 });
   expect(await balance(page, payee, `8453:${ASSETS.usdc}`)).toBe("4000000");
 });
 
@@ -309,8 +309,8 @@ test("an operation that reverts on chain is reported as failed, and nothing move
   await edge("/__state", { relay: "revert" });
   await fillSend(page, { amount: "1", to: RECIPIENT });
   await reviewAndConfirm(page);
-  await expect(toast(page, "Transfer failed")).toBeVisible({ timeout: 30_000 });
-  await expect(page.locator(".toastRegion")).toContainText("The network rejected it. Nothing moved.");
+  await expect(outcome(page, "Transfer failed")).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator(".transactionProgress")).toContainText("The network rejected it. Nothing moved.");
   expect(await balance(page, customer, `8453:${ASSETS.usdc}`)).toBe("50000000");
 });
 
@@ -333,7 +333,7 @@ test("a new address can be saved as a recipient, with a name, as it's sent to", 
   await expect(page.getByTestId("send-review")).toContainText("Save asAlex");
   await dialog(page).getByRole("button", { name: "Confirm and send" }).click();
   await expect(toast(page, "Recipient saved")).toBeVisible({ timeout: 20_000 });
-  await expect(toast(page, "Transfer complete")).toBeVisible({ timeout: 30_000 });
+  await expect(outcome(page, "Transfer complete")).toBeVisible({ timeout: 30_000 });
 
   // Next time it's one tap. New recipients start with the waiting period, which only matters with saved-recipients-only on.
   await dialog(page).getByRole("button", { name: "New transfer" }).click();
@@ -372,7 +372,7 @@ test("USDC can be sent to another network: LI.FI's fees come out of the amount, 
   await expect(progress).toContainText("waiting for the bridge to deliver it on Arbitrum");
   await expect(progress.locator(".spin")).toHaveCount(0);
   await expect(dialog(page).getByRole("button", { name: "New transfer" })).toBeEnabled();
-  await expect(toast(page, "Transfer complete")).toHaveCount(0);
+  await expect(outcome(page, "Transfer complete")).toHaveCount(0);
 
   // Transactions shows the journey, with only the current step in progress, and completes once the payout is on Arbitrum.
   await progress.getByRole("link", { name: "Track in Transactions" }).click();
@@ -448,7 +448,7 @@ test("a tokenized stock can be sent on Base, and Tether Gold on Ethereum, where 
   await fillSend(page, { asset: "AAPLc", amount: "1.25", to: RECIPIENT });
   await expect(dialog(page).getByLabel("Network").locator("option")).toHaveText(["Base"]);
   await reviewAndConfirm(page);
-  await expect(toast(page, "Transfer complete")).toBeVisible({ timeout: 30_000 });
+  await expect(outcome(page, "Transfer complete")).toBeVisible({ timeout: 30_000 });
   expect(await balance(page, customer, `8453:${ASSETS.apple}`)).toBe("175000000");
   await page.locator(".toastRegion").getByRole("button").first().click().catch(() => undefined);
   await dialog(page).getByRole("button", { name: "New transfer" }).click();

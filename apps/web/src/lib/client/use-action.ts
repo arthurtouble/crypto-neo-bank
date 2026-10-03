@@ -6,7 +6,6 @@ import type { ActionInput } from "@/lib/actions/prepare";
 import type { AuthorizationRequest } from "@/lib/actions/privy-relay";
 import type { Call } from "@/lib/actions/types";
 import { useToast } from "@/components/toast";
-import { failureText } from "./action-copy";
 import { ApiError, useApi } from "./api";
 import { useAuraWallet } from "./use-aura-wallet";
 
@@ -30,8 +29,8 @@ export const actionSettled = (action: ActionView) => terminal.has(action.status)
 /**
  * Prepare an action on the server, approve the exact request the server
  * built, let the server relay it with gas paid, and track it until the chain
- * settles it. Errors and outcomes appear as toasts, named by `label`
- * ("Transfer", "Swap").
+ * settles it. Errors before anything is sent appear as toasts, named by `label`
+ * ("Transfer", "Swap"); the outcome shows once, on the screen's `TransactionProgress`.
  */
 export function useAction(options: { label?: string; onSettled?: (action: ActionView) => void } = {}) {
   const api = useApi();
@@ -108,28 +107,24 @@ export function useAction(options: { label?: string; onSettled?: (action: Action
     runPrepared(async () => (await api<{ action: ActionView }>("/api/actions", { method: "POST", json: input })).action), [api, runPrepared]);
 
   // The poll reads these through refs: a screen that re-renders often (a quote countdown) must not restart its timer.
-  const pollDeps = useRef({ api, queryClient, toast });
-  useEffect(() => { pollDeps.current = { api, queryClient, toast }; }, [api, queryClient, toast]);
+  const pollDeps = useRef({ api, queryClient });
+  useEffect(() => { pollDeps.current = { api, queryClient }; }, [api, queryClient]);
   const actionId = action?.id ?? null;
   useEffect(() => {
     if (phase !== "tracking" || !actionId) return;
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout>;
     const poll = async () => {
-      const { api, queryClient, toast } = pollDeps.current;
+      const { api, queryClient } = pollDeps.current;
       try {
         const current = (await api<{ action: ActionView }>(`/api/actions/${actionId}`)).action;
         if (cancelled) return;
         setAction(current);
         if (actionSettled(current)) {
+          // The outcome (complete, sent, failed, not confirmed) shows on the progress card where the customer started
+          // it, not again as a toast. Like mainstream wallets, a same-network action is complete once it is in a block
+          // and matches; finality follows in Transactions.
           setPhase("done");
-          const name = labelRef.current;
-          if (current.status === "failed") toast.error(`${name} failed`, failureText(current.failureReason));
-          else if (current.status === "expired") toast.error(`${name} not confirmed`, "We didn't receive it in time. If you confirmed it, check Transactions.");
-          // A bank payout is only on its way: Bridge still has to pay the bank.
-          else if (current.summary.bankPayout) toast.success(`${name} sent`, "Bridge sends the dollars to your bank. Track it in Transactions.");
-          // Like mainstream wallets, a same-network action is complete once it is in a block and matches; finality follows in Transactions.
-          else toast.success(`${name} complete`);
           await queryClient.invalidateQueries();
           settledRef.current?.(current);
           return;
