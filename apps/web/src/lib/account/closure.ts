@@ -20,7 +20,8 @@ type ClosureCheck = {
   eligible: boolean;
   /** Why the account can't be closed yet, in words an operator can pass on. */
   blockers: string[];
-  holdings: Array<{ label: string; symbol: string; amountRaw: string | null; status: string }>;
+  /** Each balance as the chain showed it, with its value when a price was read, so support can answer "where is my money". */
+  holdings: Array<{ label: string; symbol: string; decimals: number; amountRaw: string | null; usdCents: number | null; status: string }>;
   observedAt: string;
 };
 
@@ -58,7 +59,8 @@ export async function checkClosure(db: D1Database, subject: string, deps: Deps =
   return {
     subjectReference: subject, wallet, closedAt: profile?.closed_at ?? null, closedReason: profile?.closed_reason ?? null,
     eligible: blockers.length === 0, blockers,
-    holdings: overview.holdings.map((holding) => ({ label: holding.label, symbol: holding.symbol, amountRaw: holding.amountRaw, status: holding.status })),
+    holdings: overview.holdings.map((holding) => ({ label: holding.label, symbol: holding.symbol, decimals: holding.decimals, amountRaw: holding.amountRaw,
+      usdCents: holding.usdCents, status: holding.status })),
     observedAt: overview.observedAt
   };
 }

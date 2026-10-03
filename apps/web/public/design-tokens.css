@@ -50,6 +50,9 @@
   --color-warning-soft: #fdf5e8;
   --color-scrim: rgb(8 10 14 / 0.45);
   --color-focus: #3d3fe0;
+  /* QR codes: dark on light in both themes, since scanners read inverted codes badly. Not redefined for dark. */
+  --color-qr: #0f1115;
+  --color-qr-background: #ffffff;
 
   /* Type */
   --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;

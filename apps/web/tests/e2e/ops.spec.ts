@@ -51,7 +51,7 @@ test("only an operator Cloudflare Access signed in reaches operations", async ({
     await signedInToOps(other, options);
     const outsider = await other.newPage();
     await outsider.goto(`${OPS}/#customers`);
-    await expect(outsider.getByRole("alert")).toContainText("Your sign-in expired. Reload the page to sign in again.", { timeout: 30_000 });
+    await expect(outsider.getByRole("alert")).toContainText("You're signed out of operations. Reload the page to sign in.", { timeout: 30_000 });
     await expect(outsider.getByRole("region", { name: "Customers", exact: true })).toHaveCount(0);
     await other.close();
   }
@@ -77,6 +77,9 @@ test("an operator finds a customer, locks the account, and closes it only once i
   await expect(customerCard(page)).toContainText(customer.userId, { timeout: 30_000 });
   await expect(customerCard(page)).toContainText("Open");
   await expect(customerCard(page)).toContainText("It still holds USD Coin");
+  // The operator sees who it is and how much they hold.
+  await expect(customerCard(page).getByRole("heading", { name: customer.email })).toBeVisible();
+  await expect(customerCard(page)).toContainText("2.5 USDC");
   await expect(customerCard(page).getByRole("button", { name: "Close account" })).toBeDisabled();
   await expect(customerCard(page)).toContainText(`Intercom user ID${customer.userId}`);
 
@@ -125,7 +128,7 @@ test("the customer list shows everyone, newest first, and opens each customer", 
   const list = page.getByRole("region", { name: "All customers" });
   const row = list.getByTestId("ops-customer-row").first();
   // The newest sign-up is first.
-  await expect(row).toContainText(customer.userId.slice(-6), { timeout: 30_000 });
+  await expect(row).toContainText(customer.email, { timeout: 30_000 });
   await expect(row).toContainText("Open");
   await row.click();
   await expect(customerCard(page)).toContainText(customer.userId, { timeout: 30_000 });
@@ -213,7 +216,8 @@ test("stats show customers, activity, and the new-customer funnel", async ({ pag
   await expect(stats.getByTestId("funnel-step")).toHaveCount(4);
   await stats.getByRole("button", { name: "7 days" }).click();
   await expect(stats.getByRole("button", { name: "7 days" })).toHaveAttribute("aria-pressed", "true");
-  // A header and one row per day, today included.
+  // A header and one row per day, today included, once days with no activity are shown too.
+  await stats.getByLabel("Show days with no activity").check();
   await expect(stats.getByRole("table").last().getByRole("row")).toHaveCount(1 + 8, { timeout: 30_000 });
 });
 
@@ -224,10 +228,17 @@ test("controls: switches, asset pauses, and issues, each recorded with the opera
   const swap = switches.getByRole("switch", { name: "Swap", exact: true });
   await expect(swap).toBeVisible({ timeout: 30_000 });
   const before = await swap.getAttribute("aria-checked");
-  await swap.click();
+  // Every change asks to confirm, with a reason that's shown and audited.
+  const change = async (reason: string) => {
+    await switches.getByRole("switch", { name: "Swap", exact: true }).click();
+    const form = switches.getByRole("form", { name: /^Turn (on|off) Swap$/ });
+    await form.getByLabel("Reason").fill(reason);
+    await form.getByRole("button", { name: /for everyone$/ }).click();
+  };
+  await change("Launch gate drill");
   await expect(swap).toHaveAttribute("aria-checked", before === "true" ? "false" : "true", { timeout: 30_000 });
-  await expect(switches.getByText(`by ${OPERATOR.email}`).first()).toBeVisible();
-  await swap.click();
+  await expect(switches.getByText(`by ${OPERATOR.email}: Launch gate drill`).first()).toBeVisible();
+  await change("Drill over");
   await expect(swap).toHaveAttribute("aria-checked", before ?? "false", { timeout: 30_000 });
 
   const pauses = page.getByRole("region", { name: "Asset pauses" });
@@ -239,7 +250,9 @@ test("controls: switches, asset pauses, and issues, each recorded with the opera
   await usdc.getByRole("button", { name: "Resume" }).click();
   await expect(usdc.getByRole("button", { name: "Pause" })).toBeVisible({ timeout: 30_000 });
 
+  // Issues have their own page.
+  await page.getByRole("navigation", { name: "Operations" }).getByRole("link", { name: "Issues" }).click();
   const issues = page.getByRole("region", { name: "Issues" });
   await issues.getByRole("button", { name: "Look for stuck actions and failed events" }).click();
-  await expect(issues.getByRole("status")).toContainText("Checked", { timeout: 30_000 });
+  await expect(issues.getByRole("status")).toContainText("No stuck actions or failed events found.", { timeout: 30_000 });
 });

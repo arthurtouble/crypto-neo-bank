@@ -1,6 +1,8 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
-import { api, short, when } from "./api";
+import { ExternalLink } from "lucide-react";
+import { useEffect, useState } from "react";
+import { api, short, when, words } from "./api";
+import { ErrorNotice } from "./Notice";
 
 type Row = { id: string; origin: "aura" | "incoming" | "card"; label: string; amountText: string | null; statusText: string; status: string; subject: string;
   createdAt: string; counterparty: string | null; transactionHash: string | null; chainId: number; source: string };
@@ -24,17 +26,22 @@ function Journey({ id, onClose }: { id: string; onClose: () => void }) {
   const data = detail.data;
   const source = data && txLink(data.action.chainId, data.action.transactionHash);
   const delivery = data && txLink(data.action.destinationChainId, data.action.destinationTransactionHash);
-  return <aside className="drawer" role="dialog" aria-modal="false" aria-labelledby="journey-heading">
+  useEffect(() => {
+    const close = (event: KeyboardEvent) => { if (event.key === "Escape") onClose(); };
+    window.addEventListener("keydown", close);
+    return () => window.removeEventListener("keydown", close);
+  }, [onClose]);
+  return <><div className="scrim" aria-hidden="true" onClick={onClose} /><aside className="drawer" role="dialog" aria-modal="false" aria-labelledby="journey-heading">
     <header><h2 id="journey-heading">Action journey</h2><button type="button" className="button quiet" onClick={onClose}>Close</button></header>
-    {detail.isError && <div className="notice error" role="alert">{detail.error.message}</div>}
+    {detail.isError && <ErrorNotice error={detail.error} onRetry={() => void detail.refetch()} />}
     {data && <>
       <dl className="facts">
         <div><dt>What</dt><dd>{data.entry.label}{data.entry.amountText ? ` ${data.entry.amountText}` : ""}{data.entry.counterparty ? ` to ${data.entry.counterparty}` : ""}</dd></div>
-        <div><dt>Status</dt><dd>{data.entry.statusText} ({data.action.status}){data.action.failureReason ? `: ${data.action.failureReason}` : ""}</dd></div>
+        <div><dt>Status</dt><dd>{data.entry.statusText}{data.action.failureReason ? `: ${data.action.failureReason}` : ""}</dd></div>
         {data.entry.bankStatus && <div><dt>Bank</dt><dd>{data.entry.bankStatus}</dd></div>}
         <div><dt>Customer</dt><dd><code>{data.action.subject}</code></dd></div>
         <div><dt>Reference</dt><dd><code>{data.action.id}</code></dd></div>
-        <div><dt>Value when prepared</dt><dd>{data.action.usdCents === null ? "Unknown" : `$${(data.action.usdCents / 100).toFixed(2)}`}</dd></div>
+        <div><dt>Value at the time</dt><dd>{data.action.usdCents === null ? "Unknown" : `$${(data.action.usdCents / 100).toFixed(2)}`}</dd></div>
         <div><dt>Created</dt><dd>{when(data.action.createdAt)}</dd></div>
         <div><dt>Submitted</dt><dd>{when(data.action.submittedAt)}</dd></div>
         <div><dt>Settled</dt><dd>{when(data.action.settledAt)}</dd></div>
@@ -46,19 +53,21 @@ function Journey({ id, onClose }: { id: string; onClose: () => void }) {
         {(data.action.status === "submitted" || data.action.status === "settling") && <button type="button" className="button primary" disabled={check.isPending} onClick={() => check.mutate()}>
           {check.isPending ? "Checking…" : "Check the chain now"}</button>}
       </div>
-      {check.isError && <div className="notice error" role="alert">{check.error.message}</div>}
+      {check.isError && <ErrorNotice error={check.error} />}
       <h3>Events</h3>
-      <ol className="events">{data.events.map((event, index) => <li key={index}><strong>{event.type.replaceAll("_", " ")}</strong><span className="muted">{when(event.occurredAt)}</span>
-        <code>{JSON.stringify(event.evidence)}</code></li>)}</ol>
+      <ol className="events">{data.events.map((event, index) => <li key={index}><strong>{words(event.type)}</strong><span className="muted">{when(event.occurredAt)}</span>
+        {Object.keys(event.evidence).length > 0 && <dl className="evidence">{Object.entries(event.evidence).map(([key, value]) => <div key={key}>
+          <dt>{words(key.replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase())}</dt><dd><code>{typeof value === "string" ? value : JSON.stringify(value)}</code></dd></div>)}</dl>}</li>)}</ol>
       {!data.events.length && <p className="muted">No events recorded yet.</p>}
     </>}
-  </aside>;
+  </aside></>;
 }
 
 type Entry = { id: string; origin: "aura" | "incoming" | "aave" | "card"; label: string; amountText: string | null; statusText: string; status: string;
   createdAt: string; counterparty?: string; source: string; chainId: number; transactionHash?: string };
 type History = { wallet: string; entries: Entry[]; sources: Record<"aura" | "incoming" | "aave" | "card", { status: string; partial: boolean }> };
 
+const statusNames = { submitted: "Sent to the chain", settling: "Arriving on the other network", confirmed: "Completed", failed: "Failed", expired: "Expired" } as const;
 const sourceNames = { incoming: "Money received from outside Aura", card: "Card payments", aave: "Aave history", aura: "Aura actions" } as const;
 
 /** One customer's whole account history, as they see it in Transactions. Aura actions open their journey. */
@@ -68,10 +77,10 @@ function CustomerHistory({ subject, onOpen }: { subject: string; onOpen: (id: st
   return <>
     <p className="muted">Everything on this account, as the customer sees it in Transactions: Aura actions, money received from outside Aura (read from the chain), card payments, and Aave history.</p>
     {history.isFetching && !data && <p className="muted">Reading the chain…</p>}
-    {history.isError && <div className="notice error" role="alert">{history.error.message}</div>}
+    {history.isError && <ErrorNotice error={history.error} onRetry={() => void history.refetch()} />}
     {data && (Object.keys(sourceNames) as Array<keyof typeof sourceNames>).filter((key) => data.sources[key]?.status === "unavailable" || data.sources[key]?.partial).map((key) =>
       <div key={key} className="notice error" role="status">{sourceNames[key]} {data.sources[key].status === "unavailable" ? "can't be read right now, so some may be missing." : "shows only the most recent."}</div>)}
-    {data && <div className="tableWrap"><table>
+    {data && data.entries.length > 0 && <div className="tableWrap"><table>
       <thead><tr><th scope="col">When</th><th scope="col">What</th><th scope="col">Amount</th><th scope="col">Status</th><th scope="col">With</th><th scope="col">Source</th></tr></thead>
       <tbody>{data.entries.map((entry) => <tr key={`${entry.origin}:${entry.id}`} className={entry.origin === "aura" ? "clickable" : undefined} data-testid="ops-history-entry"
         onClick={entry.origin === "aura" ? () => onOpen(entry.id) : undefined}>
@@ -85,11 +94,11 @@ function CustomerHistory({ subject, onOpen }: { subject: string; onOpen: (id: st
   </>;
 }
 
-export function Movement({ subject, onClearSubject }: { subject: string | null; onClearSubject: () => void }) {
+export function Movement({ subject, action, onClearSubject }: { subject: string | null; action: string | null; onClearSubject: () => void }) {
   const [status, setStatus] = useState("");
   const [kind, setKind] = useState("");
   const [stuck, setStuck] = useState(false);
-  const [open, setOpen] = useState<string | null>(null);
+  const [open, setOpen] = useState<string | null>(action);
   const filter = new URLSearchParams({ ...(status ? { status } : {}), ...(kind ? { kind } : {}), ...(stuck ? { stuck: "1" } : {}), ...(subject ? { subject } : {}) });
   const list = useInfiniteQuery({
     queryKey: ["actions", filter.toString()], initialPageParam: null as string | null,
@@ -106,29 +115,29 @@ export function Movement({ subject, onClearSubject }: { subject: string | null; 
 
   return <section className="panel" aria-labelledby="movement-heading">
     <h1 id="movement-heading">Money movement</h1>
-    <p className="muted">Everything moving on Aura, newest first: Aura actions, money customers received from outside Aura as the chain showed it (recorded within a few minutes), and card payments as the card issuer reported them. Status and stuck filters show Aura actions only.</p>
+    <p className="muted">Everything moving on Aura, newest first: Aura actions, money received from outside Aura, and card payments. The status and stuck filters show Aura actions only.</p>
     <div className="filters">
       <label>Status<select value={status} onChange={(event) => setStatus(event.target.value)}>
-        <option value="">All</option>{["submitted", "settling", "confirmed", "failed", "expired"].map((value) => <option key={value}>{value}</option>)}</select></label>
+        <option value="">All</option>{Object.entries(statusNames).map(([value, name]) => <option key={value} value={value}>{name}</option>)}</select></label>
       <label>Kind<select value={kind} onChange={(event) => setKind(event.target.value)}>
         <option value="">All</option><option value="transfer">Send, bank, card</option><option value="route">Swap or move</option><option value="earn">Earn</option><option value="received">Received from outside Aura</option><option value="card">Card payments</option></select></label>
       <label className="check"><input type="checkbox" checked={stuck} onChange={(event) => setStuck(event.target.checked)} />Stuck only</label>
       {subject && <span className="chip">Customer <code>{short(subject)}</code><button type="button" className="button quiet" onClick={onClearSubject}>Show everyone</button></span>}
     </div>
-    {list.isError && <div className="notice error" role="alert">{list.error.message}</div>}
-    <div className="tableWrap"><table>
+    {list.isError && <ErrorNotice error={list.error} onRetry={() => void list.refetch()} />}
+    {rows.length > 0 && <div className="tableWrap"><table>
       <thead><tr><th scope="col">When</th><th scope="col">What</th><th scope="col">Amount</th><th scope="col">Status</th><th scope="col">Customer</th><th scope="col">Source</th></tr></thead>
       <tbody>{rows.map((row) => {
         const link = row.origin === "incoming" ? txLink(row.chainId, row.transactionHash) : null;
         return <tr key={`${row.origin}:${row.id}`} className={row.origin === "aura" ? "clickable" : undefined} onClick={row.origin === "aura" ? () => setOpen(row.id) : undefined} data-testid="ops-action">
           <td>{when(row.createdAt)}</td>
-          <td>{row.origin === "aura" ? <button type="button" className="link" onClick={(event) => { event.stopPropagation(); setOpen(row.id); }}>{row.label}</button>
-            : link ? <a className="link" href={link} target="_blank" rel="noreferrer">{row.label}</a> : row.label}</td>
+          <td>{row.origin === "aura" ? <button type="button" className="link" onClick={(event) => { event.stopPropagation(); setOpen(row.id); }}>{row.label}</button> : row.label}</td>
           <td>{row.amountText ?? "—"}</td>
           <td><span className={`badge ${row.status === "failed" ? "bad" : row.statusText === "Completed" ? "good" : "warn"}`}>{row.statusText}</span></td>
-          <td><code>{short(row.subject)}</code></td><td>{row.source}</td></tr>;
+          <td><a className="link" href={`#customers?subject=${encodeURIComponent(row.subject)}`} onClick={(event) => event.stopPropagation()}><code>{short(row.subject)}</code></a></td>
+          <td>{link ? <a className="link" href={link} target="_blank" rel="noreferrer" onClick={(event) => event.stopPropagation()}>{row.source} <ExternalLink size={12} aria-label="opens the block explorer" /></a> : row.source}</td></tr>;
       })}</tbody>
-    </table></div>
+    </table></div>}
     {list.isSuccess && !rows.length && <p className="muted">Nothing matches.</p>}
     {list.hasNextPage && <button type="button" className="button" disabled={list.isFetchingNextPage} onClick={() => void list.fetchNextPage()}>{list.isFetchingNextPage ? "Loading…" : "Load more"}</button>}
     {open && <Journey id={open} onClose={() => setOpen(null)} />}

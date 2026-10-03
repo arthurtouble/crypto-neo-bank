@@ -72,6 +72,8 @@ Components use semantic tokens only, never a literal colour. Dark is its own pal
 | `--color-warning-soft` | `#fdf5e8` | `#2a2114` | Warning background |
 | `--color-scrim` | 45% near-black | 55% black | Behind dialogs and sheets |
 | `--color-focus` | accent | accent | Focus ring |
+| `--color-qr` | `#0f1115` | `#0f1115` | QR code squares: dark in both themes, since many scanners can't read an inverted code |
+| `--color-qr-background` | `#ffffff` | `#ffffff` | Behind a QR code |
 
 **Pairings.** Every pairing below meets WCAG AA (4.5:1 for text) in both themes, checked on 29 September 2026:
 

@@ -118,16 +118,35 @@ test("an Aura tag can be saved and published", async ({ page }) => {
   await expect(toast(page, "Aura tag saved")).toBeVisible({ timeout: 20_000 });
   await page.goto(`/pay/${tag}`);
   await expect(page.getByText("Test Customer")).toBeVisible({ timeout: 30_000 });
+  // The tag leads; the name its owner typed comes second and says so.
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(`Pay @${tag}`);
+  await expect(page.getByText("(the name they chose)")).toBeVisible();
   // Only the ways that work (B6): crypto, no card payment, and no bank transfer unless its details were shared.
   await expect(page.getByRole("heading", { name: "Crypto" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Card payment" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Bank transfer" })).toHaveCount(0);
   // Someone with Aura pays in the app, with the tag filled in (B5).
   await page.getByRole("link", { name: "Send with Aura" }).click();
-  await expect(page).toHaveURL(new RegExp(`/app/send\\?sendTo=${customer.wallet}&tag=${tag}$`, "i"));
+  // `sign-in` only matters to a visitor who isn't signed in (the next test).
+  await expect(page).toHaveURL(new RegExp(`/app/send\\?sendTo=${customer.wallet}&tag=${tag}&sign-in$`, "i"));
   await expect(page.getByRole("region", { name: "Send crypto" }).getByLabel("To")).toHaveValue(new RegExp(`^${customer.wallet}$`, "i"), { timeout: 30_000 });
   // The summary beside the form names the tag (it's hidden on the phone, where the review does).
   if (page.viewportSize()!.width >= 768) await expect(page.getByRole("region", { name: "Summary" })).toContainText(`@${tag}`);
+});
+
+test("a visitor who isn't signed in signs in from Send with Aura and lands on the filled-in form", async ({ page }) => {
+  const owner = await newCustomer({ mfa: ["passkey"] });
+  await acceptTerms(page, owner);
+  const tag = `v${owner.userId.slice(-10)}`;
+  await asCustomer(page, owner, "PUT", "/api/aura-tags", { tag, address: owner.wallet, displayName: "Owner", publicEnabled: true });
+  // The payer has a Privy account but isn't signed in on this browser.
+  const payer = await newCustomer({ mfa: ["passkey"] });
+  await setBalances(payer.wallet, { 8453: { [ASSETS.usdc]: "0" } });
+  await acceptTerms(page, payer);
+  await setIdentity(page, payer);
+  await page.goto(`/pay/${tag}`);
+  await page.getByRole("link", { name: "Send with Aura" }).click();
+  await expect(page.getByRole("region", { name: "Send crypto" }).getByLabel("To")).toHaveValue(new RegExp(`^${owner.wallet}$`, "i"), { timeout: 30_000 });
 });
 
 test("the customer's data downloads straight away, and nothing offers to delete it", async ({ page }) => {
