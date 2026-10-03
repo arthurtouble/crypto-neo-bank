@@ -11,7 +11,7 @@ These are third-party markets, not Aura products. You can lose some or all of wh
 
 Your Aura wallet owns your account on each venue. Aura never holds your money there and can't withdraw it.
 
-- **Perps.** Your account on Hyperliquid belongs to your wallet's address. The first time you trade, you approve a trading key with your passkey. It places and cancels orders for you, but Hyperliquid never lets it withdraw or move money out of your account.
+- **Perps.** Your account on Hyperliquid belongs to your wallet's address. The first time you trade on a device, you approve a trading key with your passkey. The key stays on that device: Aura never has it, so only you can place, change, or close trades. Hyperliquid never lets it withdraw or move money out of your account. Each new device asks for your passkey once.
 - **Predictions.** Your account on Polymarket is a wallet that your Aura wallet owns. You confirm each order with your passkey.
 - Only your wallet can withdraw. Money you withdraw comes back to your Aura account as USDC on Base.
 

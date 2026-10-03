@@ -12,13 +12,12 @@ const schema = z.strictObject({
   limitPrice: decimal.optional(), reduceOnly: z.boolean().optional()
 });
 
-/** Place an order on Hyperliquid, signed by the customer's trading key. */
+/** Build an order for the customer's device to sign; `/api/perps/relay` sends it to Hyperliquid. */
 export const POST = route("perps.orders", { invalid: "invalid_order", unavailable: "perps_unavailable", onError: venueErrorResponse },
   async (request, { traceId }) => {
     const { subject, account } = await marketActor(env.PROJECTION_DB, request, "perps", 60);
     const input = schema.parse(await readJsonBody(request));
     // Closing is always allowed; opening or adding is refused where Hyperliquid doesn't serve.
     if (!input.reduceOnly) requireProviderPlace(request, "perps");
-    const result = await placePerpsOrder(env.PROJECTION_DB, subject, account.address, input);
-    return Response.json({ statuses: result.statuses, traceId }, { status: 201 });
+    return Response.json({ ...await placePerpsOrder(env.PROJECTION_DB, subject, account.address, input), traceId }, { status: 202 });
   });

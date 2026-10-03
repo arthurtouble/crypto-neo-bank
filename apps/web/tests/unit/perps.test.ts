@@ -1,22 +1,33 @@
 import type { DatabaseSync } from "node:sqlite";
 import type { PrivyClient } from "@privy-io/node";
+import { privateKeyToAccount } from "viem/accounts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { listOperations, readMarketAccount } from "@/lib/markets/accounts";
 import { buildPerpsDeposit } from "@/lib/markets/deposits";
 import { crossLiquidationPrice } from "@/lib/markets/hyperliquid/orders";
-import { cancelPerpsOrder, completePerpsSignature, perpBook, perpCandles, placePerpsOrder, placePerpsTrade, previewPerpsTrade, setPerpsLeverage, startPerpsSetup, startPerpsWithdrawal } from "@/lib/markets/perps";
+import {
+  cancelPerpsOrder, completePerpsSignature, perpBook, perpCandles, placePerpsOrder, placePerpsTrade, previewPerpsTrade, relayPerpsActions, setPerpsLeverage, startPerpsSetup,
+  startPerpsWithdrawal
+} from "@/lib/markets/perps";
+import type { DeviceSignRequest } from "@/lib/markets/signing";
+import type { TypedData } from "@/lib/markets/types";
 import { d1 } from "../support/d1";
 import { schemaDatabase } from "../support/schema";
 
 const now = new Date("2026-10-03T12:00:00.000Z");
 const owner = "0x1111111111111111111111111111111111111111" as const;
-const agent = "0x9999999999999999999999999999999999999999";
+// The trading key the customer's browser made; Aura's server never has it.
+const device = privateKeyToAccount(`0x${"42".repeat(32)}`);
+const agent = device.address.toLowerCase();
+const stranger = privateKeyToAccount(`0x${"43".repeat(32)}`);
+const later = now.getTime() + 86_400_000;
 const account = { address: owner, walletId: "owner-wallet" };
 const signature = `0x${"ab".repeat(64)}1b`;
 let sqlite: DatabaseSync;
 let db: D1Database;
 let exchange: Array<Record<string, unknown>>;
 let exchangeAnswer: unknown;
+let agents: Array<{ name: string; address: string; validUntil: number }>;
 
 const meta = [{ universe: [{ name: "BTC", szDecimals: 5, maxLeverage: 40 }, { name: "ETH", szDecimals: 4, maxLeverage: 25 }] },
   [{ markPx: "60000", midPx: "60000", oraclePx: "60000", prevDayPx: "59000", dayNtlVlm: "1", funding: "0.0001", openInterest: "1" },
@@ -27,6 +38,7 @@ const state = { marginSummary: { accountValue: "100", totalMarginUsed: "0" }, cr
 const fetcher = vi.fn(async (url: string, init: RequestInit) => {
   const body = JSON.parse(String(init.body)) as Record<string, unknown>;
   if (url.endsWith("/exchange")) { exchange.push(body); return Response.json(exchangeAnswer); }
+  if (body.type === "extraAgents") return Response.json(agents);
   if (body.type === "metaAndAssetCtxs") return Response.json(meta);
   if (body.type === "allPerpMetas") return Response.json([{ ...meta[0], collateralToken: 0 }]);
   if (body.type === "clearinghouseState") return Response.json(state);
@@ -37,13 +49,16 @@ const fetcher = vi.fn(async (url: string, init: RequestInit) => {
 }) as unknown as typeof fetch;
 
 const signTypedData = vi.fn(async () => ({ signature }));
+const create = vi.fn(async () => ({ id: "server-wallet", address: agent }));
 const privy = {
-  wallets: () => ({
-    create: vi.fn(async () => ({ id: "trading-wallet", address: agent })),
-    rpc: vi.fn(async () => ({ data: { signature } })),
-    ethereum: () => ({ signTypedData })
-  })
+  wallets: () => ({ create, rpc: vi.fn(async () => ({ data: { signature } })), ethereum: () => ({ signTypedData }) })
 } as unknown as PrivyClient;
+
+const sign = (key: typeof device, typedData: TypedData) => key.signTypedData(typedData as Parameters<typeof key.signTypedData>[0]);
+/** What the browser does with a request Aura built: sign each action with its own key and relay them. */
+async function relay(request: DeviceSignRequest, key = device) {
+  return relayPerpsActions(db, "alice", owner, request.requestId, await Promise.all(request.typedData.map((item) => sign(key, item))), deps);
+}
 const deps = { privy, fetcher, now: () => now };
 
 beforeEach(() => {
@@ -52,29 +67,63 @@ beforeEach(() => {
   db = d1(sqlite);
   exchange = [];
   exchangeAnswer = { status: "ok", response: { type: "default" } };
+  agents = [];
   vi.stubEnv("PRIVY_APP_SECRET", "test-secret");
 });
-afterEach(() => { sqlite.close(); vi.unstubAllEnvs(); signTypedData.mockClear(); });
+afterEach(() => { sqlite.close(); vi.unstubAllEnvs(); signTypedData.mockClear(); create.mockClear(); });
 
-describe("connecting a wallet to Hyperliquid", () => {
-  it("has the owner approve Aura's trading key, then marks the connection ready", async () => {
-    const started = await startPerpsSetup(db, "alice", account, deps);
+describe("connecting a device to Hyperliquid", () => {
+  it("has the owner approve the device's own trading key, then marks the connection ready", async () => {
+    const started = await startPerpsSetup(db, "alice", account, agent, deps);
     if (started.status !== "sign") throw new Error("expected a signature request");
     expect(started.request.body.params.typed_data).toMatchObject({ primary_type: "HyperliquidTransaction:ApproveAgent",
-      message: { agentAddress: agent, agentName: "Aura", nonce: now.getTime() } });
-    expect(await readMarketAccount(db, "alice", "hyperliquid", owner)).toMatchObject({ status: "pending", tradingWalletAddress: agent });
-    // Asking again reuses the waiting key rather than making another.
-    await startPerpsSetup(db, "alice", account, deps);
-    expect(await completePerpsSignature(db, "alice", account, started.requestId, "auth", deps)).toEqual({ status: "accepted", kind: "setup" });
+      message: { agentAddress: agent, agentName: "Aura 1", nonce: now.getTime() } });
+    expect(await readMarketAccount(db, "alice", "hyperliquid", owner)).toMatchObject({ status: "pending", tradingWalletId: null, tradingWalletAddress: agent });
+    const done = await completePerpsSignature(db, "alice", account, started.requestId, "auth", deps);
+    expect(done).toMatchObject({ status: "accepted", kind: "setup", next: { status: "sign", owner } });
     expect(exchange[0]).toMatchObject({ action: { type: "approveAgent", agentAddress: agent }, nonce: now.getTime() });
     expect(await readMarketAccount(db, "alice", "hyperliquid", owner)).toMatchObject({ status: "ready" });
-    expect(await startPerpsSetup(db, "alice", account, deps)).toEqual({ status: "ready" });
-    // Then the trading key puts the account in standard mode, one balance per dex.
+    // Then the device's key puts the account in standard mode, one balance per dex.
+    await relay(done.next!);
     expect(exchange[1]).toMatchObject({ action: { type: "agentSetAbstraction", abstraction: "i" } });
+    // Once Hyperliquid lists the key, the device is ready without another passkey.
+    agents = [{ name: "Aura 1", address: agent, validUntil: later }];
+    expect(await startPerpsSetup(db, "alice", account, agent, deps)).toEqual({ status: "ready" });
+    // Aura's server made no key and signed nothing.
+    expect(create).not.toHaveBeenCalled();
+    expect(signTypedData).not.toHaveBeenCalled();
+  });
+
+  it("gives each device its own slot, replaces Aura's oldest when all 3 are taken, and never another app's", async () => {
+    const name = async (key: string) => {
+      const started = await startPerpsSetup(db, "alice", account, key, deps);
+      if (started.status !== "sign") throw new Error("expected a signature request");
+      return (started.request.body.params.typed_data.message as { agentName: string }).agentName;
+    };
+    agents = [{ name: "Aura 1", address: stranger.address, validUntil: later }];
+    expect(await name(agent)).toBe("Aura 2");
+    agents = [{ name: "Aura 2", address: stranger.address, validUntil: later + 5 }, { name: "Aura 1", address: stranger.address, validUntil: later },
+      { name: "Other app", address: stranger.address, validUntil: later - 5 }];
+    expect(await name(agent)).toBe("Aura 1");
+    agents = ["One", "Two", "Three"].map((item) => ({ name: item, address: stranger.address, validUntil: later }));
+    await expect(name(agent)).rejects.toMatchObject({ code: "perps_keys_full" });
+    await expect(startPerpsSetup(db, "alice", account, owner, deps)).rejects.toMatchObject({ code: "invalid_agent" });
+  });
+
+  it("retires a key Aura's server used to hold by approving the device's key under its name", async () => {
+    const legacy = "0x9999999999999999999999999999999999999999";
+    sqlite.exec(`INSERT INTO market_accounts (subject_reference, venue, owner_address, trading_wallet_id, trading_wallet_address, status, created_at, updated_at,
+      approved_at) VALUES ('alice', 'hyperliquid', '${owner}', 'server-wallet', '${legacy}', 'ready', 't', 't', 't')`);
+    agents = [{ name: "Aura", address: legacy, validUntil: later }];
+    const started = await startPerpsSetup(db, "alice", account, agent, deps);
+    if (started.status !== "sign") throw new Error("expected a signature request");
+    expect(started.request.body.params.typed_data.message).toMatchObject({ agentAddress: agent, agentName: "Aura" });
+    await completePerpsSignature(db, "alice", account, started.requestId, "auth", deps);
+    expect(await readMarketAccount(db, "alice", "hyperliquid", owner)).toMatchObject({ status: "ready", tradingWalletId: null, tradingWalletAddress: agent });
   });
 
   it("keeps the connection pending and records Hyperliquid's refusal", async () => {
-    const started = await startPerpsSetup(db, "alice", account, deps);
+    const started = await startPerpsSetup(db, "alice", account, agent, deps);
     if (started.status !== "sign") throw new Error("expected a signature request");
     exchangeAnswer = { status: "err", response: `Must deposit before performing actions. User: ${owner}` };
     await expect(completePerpsSignature(db, "alice", account, started.requestId, "auth", deps)).rejects.toMatchObject({ code: "account_not_funded" });
@@ -83,33 +132,55 @@ describe("connecting a wallet to Hyperliquid", () => {
   });
 });
 
-describe("trading with the trading key", () => {
-  async function connect() {
-    const started = await startPerpsSetup(db, "alice", account, deps);
-    if (started.status === "sign") await completePerpsSignature(db, "alice", account, started.requestId, "auth", deps);
-    exchange = [];
-  }
+async function connect() {
+  const started = await startPerpsSetup(db, "alice", account, agent, deps);
+  if (started.status === "sign") await completePerpsSignature(db, "alice", account, started.requestId, "auth", deps);
+  exchange = [];
+}
+
+describe("trading with the device's trading key", () => {
 
   it("refuses before the wallet approved the key", async () => {
     await expect(placePerpsOrder(db, "alice", owner, { coin: "BTC", side: "buy", size: "0.001", type: "market" }, deps))
       .rejects.toMatchObject({ code: "perps_not_connected" });
   });
 
-  it("signs orders, cancels, and leverage with the trading key and keeps Hyperliquid's answer", async () => {
+  it("builds orders, cancels, and leverage for the device to sign, relays them, and keeps Hyperliquid's answer", async () => {
     await connect();
     exchangeAnswer = { status: "ok", response: { type: "order", data: { statuses: [{ filled: { oid: 77, totalSz: "0.001", avgPx: "60010" } }] } } };
-    const placed = await placePerpsOrder(db, "alice", owner, { coin: "BTC", side: "buy", size: "0.001", type: "market" }, deps);
+    const built = await placePerpsOrder(db, "alice", owner, { coin: "BTC", side: "buy", size: "0.001", type: "market" }, deps);
+    expect(built).toMatchObject({ status: "sign", owner, typedData: [{ primaryType: "Agent" }] });
+    // Nothing reaches Hyperliquid until the device signs.
+    expect(exchange).toEqual([]);
+    const placed = await relay(built);
     expect(placed.statuses).toEqual([{ kind: "filled", oid: 77, totalSz: "0.001", avgPx: "60010" }]);
-    expect(signTypedData).toHaveBeenCalledWith("trading-wallet", expect.objectContaining({ params: { typed_data: expect.objectContaining({ primary_type: "Agent" }) } }));
     expect(exchange[0]).toMatchObject({ action: { type: "order", orders: [{ a: 0, b: true, s: "0.001", r: false, t: { limit: { tif: "Ioc" } } }] } });
     exchangeAnswer = { status: "ok", response: { type: "cancel", data: { statuses: ["success"] } } };
-    await cancelPerpsOrder(db, "alice", owner, "ETH", 5, deps);
+    await relay(await cancelPerpsOrder(db, "alice", owner, "ETH", 5, deps));
     expect(exchange[1]).toMatchObject({ action: { type: "cancel", cancels: [{ a: 1, o: 5 }] } });
     exchangeAnswer = { status: "ok", response: { type: "default" } };
-    await setPerpsLeverage(db, "alice", owner, "BTC", true, 40, deps);
+    await relay(await setPerpsLeverage(db, "alice", owner, "BTC", true, 40, deps));
     await expect(setPerpsLeverage(db, "alice", owner, "BTC", true, 41, deps)).rejects.toThrow(/between 1 and 40/);
     expect((await listOperations(db, "alice", "hyperliquid")).map((item) => [item.kind, item.status, item.externalId]))
       .toEqual(expect.arrayContaining([["order", "accepted", "77"], ["cancel", "accepted", null], ["leverage", "accepted", null]]));
+    expect(signTypedData).not.toHaveBeenCalled();
+  });
+
+  it("relays a request once, only as Aura built it, and asks the device to connect again when Hyperliquid doesn't know its key", async () => {
+    await connect();
+    const built = await setPerpsLeverage(db, "alice", owner, "BTC", true, 10, deps);
+    const signatures = [await sign(device, built.typedData[0])];
+    // A signature over anything else recovers to another key, which Hyperliquid refuses; two keys in one request are refused here.
+    const two = await placePerpsTrade(db, "alice", owner, { coin: "BTC", side: "long", marginUsd: "20", leverage: 2, isCross: true, type: "market" }, deps);
+    await expect(relayPerpsActions(db, "alice", owner, two.requestId, [await sign(device, two.typedData[0]), await sign(stranger, two.typedData[1])], deps))
+      .rejects.toMatchObject({ code: "invalid_signature" });
+    await expect(relayPerpsActions(db, "alice", owner, built.requestId, [], deps)).rejects.toMatchObject({ code: "invalid_signature" });
+    exchangeAnswer = { status: "err", response: `User or API Wallet ${agent} does not exist.` };
+    const fresh = await setPerpsLeverage(db, "alice", owner, "BTC", true, 10, deps);
+    await expect(relay(fresh)).rejects.toMatchObject({ code: "perps_not_connected" });
+    // Each request is used once.
+    await expect(relayPerpsActions(db, "alice", owner, built.requestId, signatures, deps)).rejects.toMatchObject({ code: "signature_expired" });
+    await expect(relay(fresh)).rejects.toMatchObject({ code: "signature_expired" });
   });
 });
 
@@ -138,9 +209,7 @@ describe("trading from a dollar amount", () => {
   });
 
   it("sizes from margin × leverage, sets leverage first, then orders with auto-close attached", async () => {
-    const started = await startPerpsSetup(db, "alice", account, deps);
-    if (started.status === "sign") await completePerpsSignature(db, "alice", account, started.requestId, "auth", deps);
-    exchange = [];
+    await connect();
     const input = { coin: "BTC", side: "long" as const, marginUsd: "100", leverage: 10, isCross: false, type: "market" as const,
       stopLoss: { triggerPrice: "55000" } };
     const preview = await previewPerpsTrade(owner, input, deps);
@@ -151,8 +220,10 @@ describe("trading from a dollar amount", () => {
     expect(preview.feeRate).toBe("0.000432");
     expect(preview.fee).toBe((Number(preview.notional) * 0.000432).toFixed(4));
     exchangeAnswer = { status: "ok", response: { type: "order", data: { statuses: [{ filled: { oid: 9, totalSz: "0.01666", avgPx: "60000" } }, "waitingForTrigger"] } } };
-    const placed = await placePerpsTrade(db, "alice", owner, input, deps);
-    expect(placed.size).toBe("0.01666");
+    const built = await placePerpsTrade(db, "alice", owner, input, deps);
+    expect(built.typedData).toHaveLength(2);
+    const placed = await relay(built);
+    expect(placed).toMatchObject({ size: "0.01666", margin: preview.margin, statuses: [{ kind: "filled", oid: 9 }, { kind: "waiting", for: "trigger" }] });
     expect(exchange.map((item) => (item.action as { type: string }).type)).toEqual(["updateLeverage", "order"]);
     expect(exchange[0]).toMatchObject({ action: { asset: 0, isCross: false, leverage: 10 } });
     expect(exchange[1]).toMatchObject({ action: { grouping: "normalTpsl", orders: [{ b: true, s: "0.01666" }, { b: false, r: true }] } });

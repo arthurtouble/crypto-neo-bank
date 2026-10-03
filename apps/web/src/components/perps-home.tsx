@@ -5,13 +5,12 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Minus, Plus, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useAuth } from "@/lib/client/auth";
-import { useApi } from "@/lib/client/api";
 import { formatShortDateTime, formatToken, formatUsd } from "@/lib/format";
 import type { PerpPosition } from "@/lib/markets/hyperliquid/info";
 import { fillDirection, formatCompactUsd, formatPrice, formatSignedPercent, formatSignedUsd, orderKind, perpDex, perpName, positionSide } from "@/lib/markets/view";
 import { perpsPositions, perpsTotals, usePerpMarkets, usePerpsAccount, type PerpMarket, type PerpOrder, type PerpsAccount } from "./markets-data";
 import { Change, failureMessage, ListTabs, NotAvailableYet, SourceLine } from "./markets-parts";
-import { PerpsMoneySheet, PositionCloseSheet, PositionTpslSheet, positionTriggers } from "./perps-sheets";
+import { PerpsMoneySheet, PositionCloseSheet, PositionTpslSheet, positionTriggers, usePerpsAction } from "./perps-sheets";
 import { LoadingState, Notice } from "./states";
 
 /** A perp market's page. A stock perp's coin ("xyz:SPCX") is encoded. */
@@ -178,14 +177,14 @@ function PositionRow({ position, market, orders, readOnly }: { position: PerpPos
 
 function OrderRow({ order, readOnly }: { order: PerpOrder; readOnly: boolean }) {
   const { authenticated, login } = useAuth();
-  const api = useApi();
+  const perpsAction = usePerpsAction();
   const queryClient = useQueryClient();
   const [state, setState] = useState<{ busy: boolean; error: string | null }>({ busy: false, error: null });
   async function cancel() {
     if (!authenticated || readOnly) return login();
     setState({ busy: true, error: null });
     try {
-      await api("/api/perps/orders/cancel", { method: "POST", json: { coin: order.coin, oid: order.oid } });
+      await perpsAction("/api/perps/orders/cancel", { coin: order.coin, oid: order.oid });
       await queryClient.invalidateQueries({ queryKey: ["perps-account"] });
       setState({ busy: false, error: null });
     } catch (error) { setState({ busy: false, error: failureMessage(error) }); }

@@ -24,7 +24,7 @@ const routes = {
 const bodies: Record<keyof typeof routes, unknown> = {
   "perps.trade": { coin: "BTC", side: "long", marginUsd: "20", leverage: 2, isCross: true, type: "market" },
   "perps.order": { coin: "BTC", side: "buy", size: "0.001", type: "market" },
-  "perps.setup": undefined,
+  "perps.setup": { agent: `0x${"9".repeat(40)}` },
   "perps.deposit": { amount: "10" },
   "predictions.buy": { marketId: "123", outcome: 0, amountUsd: 5 },
   "predictions.setup": undefined,
@@ -74,11 +74,11 @@ describe("starting something new in Perps and Predictions", () => {
   });
 
   it("goes ahead elsewhere, and closing a perps position is allowed everywhere", async () => {
-    expect((await post("perps.trade", "FR")).status).toBe(201);
+    expect((await post("perps.trade", "FR")).status).toBe(202);
     expect((await post("perps.setup", "CA", "QC")).status).toBe(200);
     expect((await post("predictions.buy", "ES")).status).toBe(200);
     expect((await post("predictions.setup")).status).toBe(200);
-    expect((await post("perps.order", "US", undefined, { ...bodies["perps.order"] as object, side: "sell", reduceOnly: true })).status).toBe(201);
+    expect((await post("perps.order", "US", undefined, { ...bodies["perps.order"] as object, side: "sell", reduceOnly: true })).status).toBe(202);
     expect(calls).toEqual(["perps.trade", "perps.setup", "predictions.buy", "predictions.setup", "perps.order"]);
   });
 });

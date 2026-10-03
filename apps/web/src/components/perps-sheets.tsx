@@ -2,13 +2,15 @@
 
 import * as Dialog from "@radix-ui/react-dialog";
 import { useQueryClient } from "@tanstack/react-query";
-import { useId, useState } from "react";
+import { useCallback, useId, useState } from "react";
 import type { AuthorizationRequest } from "@/lib/actions/privy-relay";
 import { ApiError, useApi } from "@/lib/client/api";
+import { deviceKey, ensureDeviceKey, type DeviceKey } from "@/lib/client/perps-key";
 import { useAuraWallet } from "@/lib/client/use-aura-wallet";
 import type { ActionView } from "@/lib/client/use-action";
 import { formatToken, formatUsd } from "@/lib/format";
 import type { PerpPosition } from "@/lib/markets/hyperliquid/info";
+import type { TypedData } from "@/lib/markets/types";
 import {
   cleanDecimal, closeSize, formatPrice, formatSignedUsd, orderKind, parseDollars, parsePrice, perpName, pnlAt, positionSide, PERPS_MINIMUM_DEPOSIT,
   triggerProblem
@@ -26,12 +28,55 @@ export type ExchangeStatus = { kind: "resting"; oid: number } | { kind: "filled"
 export const orderError = (statuses: ExchangeStatus[]) =>
   statuses.find((status): status is Extract<ExchangeStatus, { kind: "error" }> => status.kind === "error")?.message ?? null;
 
-/** Connect the customer's wallet to Hyperliquid, once: approve Aura's trading key with the passkey. */
-export async function connectPerps(api: ReturnType<typeof useApi>, authorize: (request: AuthorizationRequest<unknown>) => Promise<string>) {
-  const setup = await api<{ status: "ready" } | ({ status: "sign" } & SignRequest)>("/api/perps/setup", { method: "POST" });
+/** Actions Aura built for this device's trading key to sign, then relay (`/api/perps/relay`). */
+type DeviceSignRequest = { status: "sign"; requestId: string; owner: string; typedData: TypedData[] };
+const isDeviceRequest = (value: unknown): value is DeviceSignRequest =>
+  typeof value === "object" && value !== null && (value as { status?: unknown }).status === "sign" && Array.isArray((value as { typedData?: unknown }).typedData);
+
+async function relaySigned<T>(api: ReturnType<typeof useApi>, key: DeviceKey, request: DeviceSignRequest): Promise<T> {
+  const signatures: string[] = [];
+  for (const typedData of request.typedData) signatures.push(await key.sign(typedData));
+  return api<T>("/api/perps/relay", { method: "POST", json: { requestId: request.requestId, signatures } });
+}
+
+/**
+ * Connect this device to the customer's Hyperliquid account: make its trading
+ * key here if it has none, and have the wallet approve it with the passkey.
+ * Once per device; a device already approved needs no passkey.
+ */
+export async function connectPerps(api: ReturnType<typeof useApi>, authorize: (request: AuthorizationRequest<unknown>) => Promise<string>, owner: string | undefined) {
+  if (!owner) throw new Error("Your wallet isn't ready yet. Try again in a moment.");
+  const key = await ensureDeviceKey(owner);
+  const setup = await api<{ status: "ready" } | ({ status: "sign" } & SignRequest)>("/api/perps/setup", { method: "POST", json: { agent: key.address } });
   if (setup.status === "ready") return;
   const authorization = await authorize(setup.request);
-  await api("/api/perps/signatures", { method: "POST", json: { requestId: setup.requestId, authorization } });
+  const done = await api<{ next?: unknown }>("/api/perps/signatures", { method: "POST", json: { requestId: setup.requestId, authorization } });
+  // Standard account mode, signed by the new key. A refusal leaves Hyperliquid's default mode; trading still works.
+  if (isDeviceRequest(done.next)) await relaySigned(api, key, done.next).catch(() => undefined);
+}
+
+/**
+ * Call a Perps route that builds an action for this device's trading key,
+ * sign what it built here, and relay it. A device with no key, or one
+ * Hyperliquid no longer knows, connects first (the passkey, once).
+ */
+export function usePerpsAction() {
+  const api = useApi();
+  const { authorize } = useAuraWallet();
+  return useCallback(async <T,>(path: string, json: unknown): Promise<T> => {
+    for (let attempt = 0; ; attempt += 1) {
+      const answer = await api<T | DeviceSignRequest>(path, { method: "POST", json });
+      if (!isDeviceRequest(answer)) return answer as T;
+      let key = await deviceKey(answer.owner);
+      if (!key) { await connectPerps(api, authorize, answer.owner); key = await deviceKey(answer.owner); }
+      if (!key) throw new Error("This browser can't keep a trading key.");
+      try { return await relaySigned<T>(api, key, answer); }
+      catch (error) {
+        if (attempt > 0 || !(error instanceof ApiError) || error.code !== "perps_not_connected") throw error;
+        await connectPerps(api, authorize, answer.owner);
+      }
+    }
+  }, [api, authorize]);
 }
 
 /** How long a deposit runs before the steps say it's slower than usual. It usually lands in seconds, a minute at most. */
@@ -198,11 +243,11 @@ const CLOSE_SHARES = [0.25, 0.5, 0.75, 1] as const;
 /**
  * Close a position, all or part of it, at the market price now or at a limit
  * price. All at market uses Hyperliquid's close; anything else is a
- * reduce-only order, which can only shrink the position. The trading key
- * signs it; no passkey.
+ * reduce-only order, which can only shrink the position. This device's
+ * trading key signs it; no passkey.
  */
 export function PositionCloseSheet({ position, market, onClose }: { position: PerpPosition; market: PerpMarket | undefined; onClose: () => void }) {
-  const api = useApi();
+  const perpsAction = usePerpsAction();
   const queryClient = useQueryClient();
   const [type, setType] = useState<"market" | "limit">("market");
   const [share, setShare] = useState<(typeof CLOSE_SHARES)[number]>(1);
@@ -226,9 +271,9 @@ export function PositionCloseSheet({ position, market, onClose }: { position: Pe
     setBusy(true); setResult(null);
     try {
       const response = type === "market" && share === 1
-        ? await api<{ statuses: ExchangeStatus[] }>("/api/perps/positions/close", { method: "POST", json: { coin: position.coin } })
-        : await api<{ statuses: ExchangeStatus[] }>("/api/perps/orders", { method: "POST", json: { coin: position.coin, side: side === "long" ? "sell" : "buy",
-          size, type, reduceOnly: true, ...(limit ? { limitPrice: limit } : {}) } });
+        ? await perpsAction<{ statuses: ExchangeStatus[] }>("/api/perps/positions/close", { coin: position.coin })
+        : await perpsAction<{ statuses: ExchangeStatus[] }>("/api/perps/orders", { coin: position.coin, side: side === "long" ? "sell" : "buy",
+          size, type, reduceOnly: true, ...(limit ? { limitPrice: limit } : {}) });
       const refused = orderError(response.statuses);
       if (refused) throw new Error(`Hyperliquid didn't accept it: ${refused}`);
       const filled = response.statuses.find((status) => status.kind === "filled");
@@ -275,10 +320,10 @@ export function PositionCloseSheet({ position, market, onClose }: { position: Pe
  * Set a take profit and stop loss on a whole open position: Hyperliquid
  * closes it at market when the price reaches either, resizes them when the
  * position changes, and cancels them when it closes. A new one replaces the
- * old one of the same kind. The trading key signs; no passkey.
+ * old one of the same kind. This device's trading key signs; no passkey.
  */
 export function PositionTpslSheet({ position, market, orders, onClose }: { position: PerpPosition; market: PerpMarket | undefined; orders: PerpOrder[] | null; onClose: () => void }) {
-  const api = useApi();
+  const perpsAction = usePerpsAction();
   const queryClient = useQueryClient();
   const existing = positionTriggers(orders, position.coin);
   const [takeProfit, setTakeProfit] = useState("");
@@ -299,15 +344,15 @@ export function PositionTpslSheet({ position, market, orders, onClose }: { posit
   };
 
   async function cancel(order: PerpOrder) {
-    await api("/api/perps/orders/cancel", { method: "POST", json: { coin: order.coin, oid: order.oid } });
+    await perpsAction("/api/perps/orders/cancel", { coin: order.coin, oid: order.oid });
   }
 
   async function submit() {
     if (!ready) return;
     setBusy(true); setResult(null);
     try {
-      const response = await api<{ statuses: ExchangeStatus[] }>("/api/perps/positions/tpsl", { method: "POST", json: { coin: position.coin,
-        ...(tp ? { takeProfit: { triggerPrice: tp } } : {}), ...(sl ? { stopLoss: { triggerPrice: sl } } : {}) } });
+      const response = await perpsAction<{ statuses: ExchangeStatus[] }>("/api/perps/positions/tpsl", { coin: position.coin,
+        ...(tp ? { takeProfit: { triggerPrice: tp } } : {}), ...(sl ? { stopLoss: { triggerPrice: sl } } : {}) });
       const refused = orderError(response.statuses);
       if (refused) throw new Error(`Hyperliquid didn't accept it: ${refused}`);
       // The new one is in place; remove the ones it replaces, so a position never has two of a kind.

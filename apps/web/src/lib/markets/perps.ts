@@ -1,29 +1,34 @@
 import type { PrivyClient } from "@privy-io/node";
-import { parseUnits } from "viem";
+import { isAddress, parseUnits, recoverTypedDataAddress } from "viem";
 import type { ActionAccount } from "@/lib/auth/wallet";
-import { privyClient } from "@/lib/auth/privy";
 import { HttpError } from "@/lib/http/errors";
-import { markAccountReady, readMarketAccount, recordOperation, savePendingAccount, type MarketAccount } from "./accounts";
+import { markAccountReady, readMarketAccount, recordOperation, savePendingAccount, saveTradingKey, type MarketAccount } from "./accounts";
 import {
   accountState, accountStates, approveAgentAction, buildAgentSendAssetAction, buildAgentSetAbstractionAction, buildCancelAction, buildCloseAction, buildOrderAction, buildPositionTpslAction, buildUpdateLeverageAction, crossLiquidationPrice, extraAgents,
   isolatedLiquidationPrice, sizeFromMargin,
   candles, l1ActionTypedData, l2Book, openOrders, perpDexs, perpMarkets, sendToEvmWithDataAction, submitExchange, userFees, userFills,
   type BookGrouping, type BookLevel, type Candle, type CandleRange,
-  type ApproveAgentAction, type ExchangeResult, type L1Action, type OpenOrder, type PerpAccountState, type PerpMarket, type SendToEvmWithDataAction, type TriggerSpec
+  type ApproveAgentAction, type ExchangeResult, type ExtraAgent, type L1Action, type OpenOrder, type PerpAccountState, type PerpMarket, type SendToEvmWithDataAction, type TriggerSpec
 } from "./hyperliquid";
-import { completeMarketSignature, createMarketSignature, type MarketSignatureRequest } from "./signing";
-import { createTradingKey, signWithTradingKey } from "./trading-key";
-import { VenueError, type Observed } from "./types";
+import {
+  claimDeviceSignature, completeMarketSignature, createDeviceSignature, createMarketSignature, type DeviceSignRequest, type MarketSignatureRequest
+} from "./signing";
+import { VenueError, type Observed, type TypedData } from "./types";
 
 /**
  * Perps on Hyperliquid, through the customer's own wallet. The wallet owns
- * the Hyperliquid account; it approves Aura's trading key for it once, with
- * its passkey, and signs every withdrawal. The trading key signs orders,
- * cancels, and leverage changes, and Hyperliquid never lets it move money.
+ * the Hyperliquid account and signs every withdrawal. Trading is signed by a
+ * trading key the customer's browser makes and keeps: their wallet approves
+ * it once per device, with the passkey. Aura never has that key, so Aura
+ * can't place, change, or close anything on its own. Aura builds each action
+ * (sizing, checks, place rules), the browser signs it, and Aura relays exactly
+ * what it built. Hyperliquid never lets a trading key move money out.
  */
 export type PerpsDependencies = { privy?: PrivyClient; fetcher?: typeof fetch; now?: () => Date };
 
-const AGENT_NAME = "Aura";
+/** Hyperliquid keeps 3 named trading keys per account; Aura names its own per device. */
+const AGENT_SLOTS = ["Aura 1", "Aura 2", "Aura 3"];
+const NAMED_AGENT_LIMIT = 3;
 let lastNonce = 0;
 /** Hyperliquid refuses a nonce a signer already used; several actions in one request get rising ones. */
 const nextNonce = (now: Date) => (lastNonce = Math.max(now.getTime(), lastNonce + 1));
@@ -83,21 +88,42 @@ type ApproveContext = { kind: "approve"; action: ApproveAgentAction };
 type WithdrawContext = { kind: "withdraw"; action: SendToEvmWithDataAction };
 
 /**
- * Start connecting the customer's wallet to Hyperliquid: create their trading
- * key (or reuse the one waiting for approval) and ask their wallet to approve
- * it. Hyperliquid only accepts this once the account has a deposit.
+ * The name to approve a device's trading key under. A key Aura's server used
+ * to hold gives up its name, so approving the device key retires it. Then a
+ * free Aura slot; with all 3 named slots taken, Aura's oldest key is replaced.
+ * Hyperliquid drops a key when another is approved under its name.
  */
-export async function startPerpsSetup(db: D1Database, subject: string, account: ActionAccount,
+function agentName(agents: ExtraAgent[], legacy: string | null): string {
+  const retired = legacy ? agents.find((item) => item.address.toLowerCase() === legacy) : undefined;
+  if (retired) return retired.name;
+  const free = AGENT_SLOTS.find((name) => !agents.some((item) => item.name === name));
+  if (free && agents.length < NAMED_AGENT_LIMIT) return free;
+  const oldest = agents.filter((item) => item.name.startsWith("Aura")).sort((a, b) => a.validUntil - b.validUntil)[0];
+  if (!oldest) throw new HttpError(409, "perps_keys_full", "Your Hyperliquid account already has 3 connected apps. Remove one on Hyperliquid, then try again.");
+  return oldest.name;
+}
+
+/**
+ * Connect this device to the customer's Hyperliquid account: if Hyperliquid
+ * already lists the device's trading key (`agent`), it's ready; otherwise ask
+ * the customer's wallet to approve it. Hyperliquid only accepts this once the
+ * account has a deposit.
+ */
+export async function startPerpsSetup(db: D1Database, subject: string, account: ActionAccount, agent: string,
   deps: PerpsDependencies = {}): Promise<{ status: "ready" } | ({ status: "sign" } & MarketSignatureRequest)> {
   const now = clock(deps);
+  if (!isAddress(agent) || agent.toLowerCase() === account.address.toLowerCase()) throw new HttpError(400, "invalid_agent", "This device's trading key isn't valid.");
+  const key = agent.toLowerCase() as `0x${string}`;
   const existing = await readMarketAccount(db, subject, "hyperliquid", account.address);
-  if (existing?.status === "ready") return { status: "ready" };
-  let key = existing?.tradingWalletId && existing.tradingWalletAddress ? { walletId: existing.tradingWalletId, address: existing.tradingWalletAddress } : null;
-  if (!key) {
-    key = await createTradingKey(deps.privy ?? privyClient(), "hyperliquid", subject);
-    await savePendingAccount(db, subject, { venue: "hyperliquid", owner: account.address, tradingWalletId: key.walletId, tradingWalletAddress: key.address }, now);
+  const agents = (await extraAgents(account.address, options(deps))).filter((item) => item.validUntil > now.getTime());
+  if (!existing) await savePendingAccount(db, subject, { venue: "hyperliquid", owner: account.address, tradingWalletAddress: key }, now);
+  if (agents.some((item) => item.address.toLowerCase() === key)) {
+    await saveTradingKey(db, subject, "hyperliquid", account.address, key, now);
+    if (existing?.status !== "ready") await markAccountReady(db, subject, "hyperliquid", account.address, {}, now);
+    return { status: "ready" };
   }
-  const { action, typedData } = approveAgentAction({ agentAddress: key.address, agentName: AGENT_NAME, nonce: now.getTime() });
+  const legacy = existing?.tradingWalletId ? existing.tradingWalletAddress : null;
+  const { action, typedData } = approveAgentAction({ agentAddress: key, agentName: agentName(agents, legacy), nonce: now.getTime() });
   const context: ApproveContext = { kind: "approve", action };
   return { status: "sign", ...await createMarketSignature(db, subject, account, "hyperliquid", "hyperliquid_approve_agent", typedData, context, now) };
 }
@@ -120,7 +146,7 @@ export async function startPerpsWithdrawal(db: D1Database, subject: string, acco
  * its answer. An approval marks the connection ready.
  */
 export async function completePerpsSignature(db: D1Database, subject: string, account: ActionAccount, requestId: string, authorization: string,
-  deps: PerpsDependencies = {}): Promise<{ status: "accepted"; kind: "setup" | "withdraw" }> {
+  deps: PerpsDependencies = {}): Promise<{ status: "accepted"; kind: "setup" | "withdraw"; next?: DeviceSignRequest }> {
   const now = clock(deps);
   const signed = await completeMarketSignature<ApproveContext | WithdrawContext>(db, subject, account, "hyperliquid",
     ["hyperliquid_approve_agent", "hyperliquid_withdraw"], requestId, authorization, now, undefined, deps.privy);
@@ -134,20 +160,23 @@ export async function completePerpsSignature(db: D1Database, subject: string, ac
       reason: error instanceof VenueError ? error.code : "unknown" }, now);
     throw error;
   }
-  if (kind === "setup") await markAccountReady(db, subject, "hyperliquid", account.address, {}, now);
+  if (signed.context.kind === "approve") {
+    await saveTradingKey(db, subject, "hyperliquid", account.address, signed.context.action.agentAddress, now);
+    await markAccountReady(db, subject, "hyperliquid", account.address, {}, now);
+  }
   await recordOperation(db, subject, { venue: "hyperliquid", kind, summary, status: "accepted" }, now);
+  if (kind === "withdraw") return { status: "accepted", kind };
   // Standard account mode: each dex keeps its own balance, which Aura moves into a stock market's dex before an order there.
-  // A refusal here is recorded and doesn't undo the connection; the account keeps Hyperliquid's default mode.
-  if (kind === "setup") await sendWithTradingKey(db, subject, account.address, "setup", buildAgentSetAbstractionAction("i") as unknown as L1Action,
-    { step: "account_mode", mode: "standard" }, deps).catch(() => undefined);
-  return { status: "accepted", kind };
+  // The device signs it next; a refusal is recorded and doesn't undo the connection (the account keeps Hyperliquid's default mode).
+  const next = await prepareDeviceActions(db, subject, account.address,
+    [{ kind: "setup", action: buildAgentSetAbstractionAction("i") as unknown as L1Action, summary: { step: "account_mode", mode: "standard" } }], {}, deps);
+  return { status: "accepted", kind, next };
 }
 
-async function readyAccount(db: D1Database, subject: string, owner: string): Promise<MarketAccount & { tradingWalletId: string; tradingWalletAddress: `0x${string}` }> {
+async function readyAccount(db: D1Database, subject: string, owner: string): Promise<MarketAccount> {
   const account = await readMarketAccount(db, subject, "hyperliquid", owner);
-  if (account?.status !== "ready" || !account.tradingWalletId || !account.tradingWalletAddress)
-    throw new HttpError(409, "perps_not_connected", "Set up perps first.");
-  return account as MarketAccount & { tradingWalletId: string; tradingWalletAddress: `0x${string}` };
+  if (account?.status !== "ready") throw new HttpError(409, "perps_not_connected", "Set up perps first.");
+  return account;
 }
 
 /** Reads only the dex the coin belongs to: HIP-3 coins are named "dex:COIN". */
@@ -159,34 +188,67 @@ async function market(coin: string, deps: PerpsDependencies): Promise<PerpMarket
   return found;
 }
 
-/** Sign an L1 action with the customer's trading key, submit it, and keep Hyperliquid's answer. */
-async function sendWithTradingKey(db: D1Database, subject: string, owner: string, kind: "setup" | "order" | "cancel" | "leverage",
-  action: L1Action, summary: Record<string, unknown>, deps: PerpsDependencies): Promise<ExchangeResult> {
+type DeviceStep = { kind: "setup" | "order" | "cancel" | "leverage"; action: L1Action; summary: Record<string, unknown> };
+type DeviceContext = { steps: Array<DeviceStep & { nonce: number }>; result: Record<string, unknown> };
+
+/**
+ * Build the actions for the customer's device key to sign, in order, each
+ * with a rising nonce. `result` is returned with the venue's answer once
+ * they're relayed.
+ */
+async function prepareDeviceActions(db: D1Database, subject: string, owner: string, steps: DeviceStep[], result: Record<string, unknown>,
+  deps: PerpsDependencies): Promise<DeviceSignRequest> {
   const now = clock(deps);
-  const account = await readyAccount(db, subject, owner);
-  const nonce = nextNonce(now);
-  const signature = await signWithTradingKey(deps.privy ?? privyClient(), { walletId: account.tradingWalletId, address: account.tradingWalletAddress },
-    l1ActionTypedData(action, nonce));
-  let result: ExchangeResult;
-  try { result = await submitExchange({ action, nonce, signature }, options(deps)); }
-  catch (error) {
-    await recordOperation(db, subject, { venue: "hyperliquid", kind, summary, status: error instanceof VenueError && error.status < 500 ? "rejected" : "failed",
-      reason: error instanceof VenueError ? error.code : "unknown" }, now);
-    // An approval the customer revoked at Hyperliquid leaves the key unknown there: ask them to set up again.
-    if (error instanceof VenueError && error.code === "account_not_found") throw new HttpError(409, "perps_not_connected", "Set up perps again to keep trading.");
-    throw error;
+  await readyAccount(db, subject, owner);
+  const numbered = steps.map((step) => ({ ...step, nonce: nextNonce(now) }));
+  const context: DeviceContext = { steps: numbered, result };
+  return createDeviceSignature(db, subject, owner.toLowerCase() as `0x${string}`, "hyperliquid", "hyperliquid_agent_actions",
+    numbered.map((step) => l1ActionTypedData(step.action, step.nonce)), context, now);
+}
+
+/**
+ * Send what the customer's device signed to Hyperliquid, in order, and keep
+ * each answer. Only actions Aura built for this request are sent, all signed
+ * by one key; Hyperliquid checks that key is one the customer's wallet approved.
+ * Returns the last answer's statuses with what the request was built with.
+ */
+export async function relayPerpsActions(db: D1Database, subject: string, owner: string, requestId: string, signatures: string[],
+  deps: PerpsDependencies = {}): Promise<{ statuses: ExchangeResult["statuses"] } & Record<string, unknown>> {
+  const now = clock(deps);
+  await readyAccount(db, subject, owner);
+  const { typedData, context } = await claimDeviceSignature<DeviceContext>(db, subject, "hyperliquid", "hyperliquid_agent_actions", requestId, now);
+  const invalid = new HttpError(400, "invalid_signature", "This device's signature isn't valid. Try again.");
+  if (signatures.length !== typedData.length || !signatures.every((item) => /^0x[0-9a-fA-F]{130}$/.test(item))) throw invalid;
+  const signers = await Promise.all(typedData.map((data, index) => signer(data, signatures[index] as `0x${string}`)));
+  if (signers.some((item) => item !== signers[0])) throw invalid;
+  let result: ExchangeResult = { statuses: [] } as unknown as ExchangeResult;
+  for (const [index, step] of context.steps.entries()) {
+    try { result = await submitExchange({ action: step.action, nonce: step.nonce, signature: signatures[index] }, options(deps)); }
+    catch (error) {
+      await recordOperation(db, subject, { venue: "hyperliquid", kind: step.kind, summary: step.summary,
+        status: error instanceof VenueError && error.status < 500 ? "rejected" : "failed", reason: error instanceof VenueError ? error.code : "unknown" }, now);
+      // A key Hyperliquid doesn't know (replaced by another device, or revoked): this device sets up again.
+      if (error instanceof VenueError && error.code === "account_not_found") throw new HttpError(409, "perps_not_connected", "Connect this device to keep trading.");
+      throw error;
+    }
+    const first = result.statuses[0];
+    const externalId = first && "oid" in first ? String(first.oid) : null;
+    await recordOperation(db, subject, { venue: "hyperliquid", kind: step.kind, summary: { ...step.summary, signer: signers[0], statuses: result.statuses },
+      externalId, status: "accepted" }, now);
   }
-  const first = result.statuses[0];
-  const externalId = first && "oid" in first ? String(first.oid) : null;
-  await recordOperation(db, subject, { venue: "hyperliquid", kind, summary: { ...summary, statuses: result.statuses }, externalId, status: "accepted" }, now);
-  return result;
+  return { ...context.result, statuses: result.statuses };
+}
+
+async function signer(typedData: TypedData, signature: `0x${string}`): Promise<string> {
+  try { return (await recoverTypedDataAddress({ ...(typedData as Parameters<typeof recoverTypedDataAddress>[0]), signature })).toLowerCase(); }
+  catch { throw new HttpError(400, "invalid_signature", "This device's signature isn't valid. Try again."); }
 }
 
 export type PerpsOrderInput = { coin: string; side: "buy" | "sell"; size: string; type: "market" | "limit"; limitPrice?: string; reduceOnly?: boolean };
 
 export async function placePerpsOrder(db: D1Database, subject: string, owner: string, input: PerpsOrderInput, deps: PerpsDependencies = {}) {
   const action = buildOrderAction({ market: await market(input.coin, deps), ...input });
-  return sendWithTradingKey(db, subject, owner, "order", action as unknown as L1Action, { ...input }, deps);
+  return prepareDeviceActions(db, subject, owner, [{ kind: "order", action: action as unknown as L1Action, summary: { ...input } }], {}, deps);
 }
 
 /** Close a whole position at market. */
@@ -195,24 +257,25 @@ export async function closePerpsPosition(db: D1Database, subject: string, owner:
   const state = await accountState(owner, { ...options(deps), dex: found.dex });
   const position = state.positions.find((item) => item.coin === coin);
   if (!position) throw new HttpError(404, "position_not_found", "You don't have a position in this market.");
-  return sendWithTradingKey(db, subject, owner, "order", buildCloseAction(position, found) as unknown as L1Action,
-    { coin, close: true, size: position.size }, deps);
+  return prepareDeviceActions(db, subject, owner, [{ kind: "order", action: buildCloseAction(position, found) as unknown as L1Action,
+    summary: { coin, close: true, size: position.size } }], {}, deps);
 }
 
 export async function cancelPerpsOrder(db: D1Database, subject: string, owner: string, coin: string, oid: number, deps: PerpsDependencies = {}) {
   const found = await market(coin, deps);
-  return sendWithTradingKey(db, subject, owner, "cancel", buildCancelAction(found.assetIndex, oid) as unknown as L1Action, { coin, oid }, deps);
+  return prepareDeviceActions(db, subject, owner, [{ kind: "cancel", action: buildCancelAction(found.assetIndex, oid) as unknown as L1Action,
+    summary: { coin, oid } }], {}, deps);
 }
 
 /** Leverage up to the market's own maximum. Aura sets no cap of its own. */
 export async function setPerpsLeverage(db: D1Database, subject: string, owner: string, coin: string, isCross: boolean, leverage: number,
   deps: PerpsDependencies = {}) {
   const found = await market(coin, deps);
-  return sendWithTradingKey(db, subject, owner, "leverage", buildUpdateLeverageAction(found, isCross, leverage) as unknown as L1Action,
-    { coin, isCross, leverage }, deps);
+  return prepareDeviceActions(db, subject, owner, [{ kind: "leverage", action: buildUpdateLeverageAction(found, isCross, leverage) as unknown as L1Action,
+    summary: { coin, isCross, leverage } }], {}, deps);
 }
 
-/** Whether Hyperliquid still lists the customer's trading key as approved. */
+/** Whether Hyperliquid still lists a trading key as approved for the customer. */
 export async function tradingKeyApproved(owner: string, key: string, deps: PerpsDependencies = {}): Promise<boolean> {
   return (await extraAgents(owner, options(deps))).some((agent) => agent.address.toLowerCase() === key.toLowerCase() && agent.validUntil > clock(deps).getTime());
 }
@@ -289,34 +352,36 @@ export async function perpBook(coin: string, deps: PerpsDependencies & { groupin
   }, now);
 }
 
-/** Bring a stock market's dex up to `margin` from the main perps balance, with the trading key (it can only move funds within the account). */
-async function fundDex(db: D1Database, subject: string, owner: `0x${string}`, dex: string, margin: string, deps: PerpsDependencies) {
-  if (!dex) return;
+/** The move that brings a stock market's dex up to `margin` from the main perps balance, if one is needed (a trading key can only move funds within the account). */
+async function fundDex(owner: `0x${string}`, dex: string, margin: string, deps: PerpsDependencies): Promise<DeviceStep | null> {
+  if (!dex) return null;
   const [main, target] = await Promise.all([accountState(owner, options(deps)), accountState(owner, { ...options(deps), dex })]);
   const short = Math.ceil((Number(margin) * 1.01 - Number(target.withdrawable)) * 100) / 100;
-  if (short <= 0) return;
+  if (short <= 0) return null;
   if (short > Number(main.withdrawable)) throw new HttpError(422, "insufficient_margin", "You don't have enough in your perps balance for this order.");
   const action = buildAgentSendAssetAction({ owner, sourceDex: "", destinationDex: dex, amount: short.toFixed(2), nonce: nextNonce(clock(deps)) });
-  await sendWithTradingKey(db, subject, owner, "order", action as unknown as L1Action, { step: "move_margin", dex, amount: short.toFixed(2) }, deps);
+  return { kind: "order", action: action as unknown as L1Action, summary: { step: "move_margin", dex, amount: short.toFixed(2) } };
 }
 
 /**
  * Open or add to a position from a dollar margin: set the market's leverage
  * and margin mode, move margin into a stock market's dex if needed, then
- * place the order with any take-profit and stop-loss attached.
+ * place the order with any take-profit and stop-loss attached. All three are
+ * built now and signed together on the customer's device.
  */
 export async function placePerpsTrade(db: D1Database, subject: string, owner: `0x${string}`, input: PerpsTradeInput, deps: PerpsDependencies = {}) {
   await readyAccount(db, subject, owner);
   const preview = await previewPerpsTrade(owner, input, deps);
   const found = preview.market;
-  await sendWithTradingKey(db, subject, owner, "leverage", buildUpdateLeverageAction(found, input.isCross, input.leverage) as unknown as L1Action,
-    { coin: input.coin, isCross: input.isCross, leverage: input.leverage }, deps);
-  await fundDex(db, subject, owner, found.dex, preview.margin, deps);
+  const leverage: DeviceStep = { kind: "leverage", action: buildUpdateLeverageAction(found, input.isCross, input.leverage) as unknown as L1Action,
+    summary: { coin: input.coin, isCross: input.isCross, leverage: input.leverage } };
+  const move = await fundDex(owner, found.dex, preview.margin, deps);
   const action = buildOrderAction({ market: found, side: input.side === "long" ? "buy" : "sell", size: preview.size, type: input.type,
     limitPrice: input.limitPrice, takeProfit: input.takeProfit, stopLoss: input.stopLoss });
-  const result = await sendWithTradingKey(db, subject, owner, "order", action as unknown as L1Action,
-    { ...input, size: preview.size, margin: preview.margin, notional: preview.notional }, deps);
-  return { statuses: result.statuses, size: preview.size, margin: preview.margin, notional: preview.notional, liquidationPrice: preview.liquidationPrice };
+  const order: DeviceStep = { kind: "order", action: action as unknown as L1Action,
+    summary: { ...input, size: preview.size, margin: preview.margin, notional: preview.notional } };
+  return prepareDeviceActions(db, subject, owner, [leverage, ...(move ? [move] : []), order],
+    { size: preview.size, margin: preview.margin, notional: preview.notional, liquidationPrice: preview.liquidationPrice }, deps);
 }
 
 /** Set auto-close (take profit and/or stop loss) on a whole open position. */
@@ -327,5 +392,5 @@ export async function setPerpsPositionTpsl(db: D1Database, subject: string, owne
   const position = state.positions.find((item) => item.coin === input.coin);
   if (!position) throw new HttpError(404, "position_not_found", "You don't have a position in this market.");
   const action = buildPositionTpslAction({ position, market: found, takeProfit: input.takeProfit, stopLoss: input.stopLoss });
-  return sendWithTradingKey(db, subject, owner, "order", action as unknown as L1Action, { ...input, autoClose: true }, deps);
+  return prepareDeviceActions(db, subject, owner, [{ kind: "order", action: action as unknown as L1Action, summary: { ...input, autoClose: true } }], {}, deps);
 }
