@@ -5,7 +5,7 @@ import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { ApiError } from "@/lib/client/api";
 import { useAction, type ActionView } from "@/lib/client/use-action";
 import { formatTime, formatUsd } from "@/lib/format";
-import { dayChangePercent, formatSignedPercent, pressKey, shareOf } from "@/lib/markets/view";
+import { cleanDecimal, dayChangePercent, formatSignedPercent, pressKey, shareOf } from "@/lib/markets/view";
 import type { Observed } from "./markets-data";
 
 /** True below the phone breakpoint (768px), where amounts get a keypad and sheets come from the bottom. */
@@ -60,12 +60,14 @@ const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0", "delete"];
  * A dollar amount with 25%, 50%, and Max of what's available. On the phone the
  * amount is large and a keypad enters it, so the system keyboard stays closed.
  */
-export function DollarAmount({ label, value, onChange, available, maxLabel = "Max", shares = [0.25, 0.5], aside, error, describedBy }: {
+export function DollarAmount({ label, value, onChange, available, maxLabel = "Max", shares = [0.25, 0.5], aside, note, error, describedBy }: {
   label: string; value: string; onChange: (value: string) => void; available: number | null; maxLabel?: string;
   /** The shortcuts before Max, as fractions of what's available. */
   shares?: number[];
   /** A note beside the label, such as what's available. */
   aside?: React.ReactNode;
+  /** A line under the shortcuts, such as what else Max counts. */
+  note?: React.ReactNode;
   error?: string | null; describedBy?: string;
 }) {
   const phone = useIsPhone();
@@ -78,12 +80,13 @@ export function DollarAmount({ label, value, onChange, available, maxLabel = "Ma
       <span className="mkAmountInput"><span aria-hidden="true">$</span>
         <input id={id} value={value} inputMode={phone ? "none" : "decimal"} autoComplete="off" placeholder="0" aria-invalid={error ? true : undefined}
           aria-describedby={[error ? errorId : null, describedBy].filter(Boolean).join(" ") || undefined}
-          onChange={(event) => onChange(event.target.value.replace(/[^\d.]/g, ""))} /></span>
+          onChange={(event) => onChange(cleanDecimal(event.target.value, 2))} /></span>
     </label>
     <div className="mkShares" role="group" aria-label="Amount shortcuts">
       {shortcuts.map(([name, fraction]) =>
         <button type="button" key={name} className="mkChip" disabled={!available || available <= 0} onClick={() => onChange(shareOf(available ?? 0, fraction))}>{name}</button>)}
     </div>
+    {note && <p className="mxHint mkAmountNote">{note}</p>}
     {error && <p className="mxFieldError" id={errorId}>{error}</p>}
     {phone && <div className="mkKeypad" role="group" aria-label="Keypad">
       {KEYS.map((key) => <button type="button" key={key} aria-label={key === "delete" ? "Delete" : key} onClick={() => onChange(pressKey(value, key))}>

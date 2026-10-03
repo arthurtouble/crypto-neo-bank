@@ -4,7 +4,7 @@ import { customerSections, legacySectionDestination, navigation } from "@/lib/pr
 describe("Aura product map", () => {
   it("exposes only the approved customer sections", () => {
     expect(customerSections).toEqual([
-      "deposit", "send", "swap", "earn", "markets", "cards",
+      "deposit", "send", "swap", "earn", "perps", "predictions", "cards",
       "transactions", "insights", "settings", "support"
     ]);
     expect(navigation.flatMap((group) => group.items.map((item) => item.href))).toEqual([
@@ -19,8 +19,8 @@ describe("Aura product map", () => {
     expect(legacySectionDestination("borrow")).toBe("/app/earn");
     // Invest was cut: stocks, gold, and crypto are bought in Swap.
     expect(legacySectionDestination("invest")).toBe("/app/swap");
-    // Markets is its own section again (perps and predictions), not an old link.
-    expect(legacySectionDestination("markets")).toBeNull();
+    // Markets split into Perps and Predictions; its old links open Perps (predictions links keep their own place).
+    expect(legacySectionDestination("markets")).toBe("/app/perps");
     expect(legacySectionDestination("operations")).toBeNull();
   });
 });

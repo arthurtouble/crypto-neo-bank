@@ -12,6 +12,7 @@ import type { ClobQuote, PolymarketEvent, PolymarketMarket } from "@/lib/markets
 import type { OpenOrder as PredictionOrder } from "@/lib/markets/polymarket/orders";
 import type { Position as PredictionPosition } from "@/lib/markets/polymarket/positions";
 import type { Observed } from "@/lib/markets/types";
+import { availableToTrade, bookGroupingQuery, type BookGroupingOption } from "@/lib/markets/view";
 
 /**
  * What the Markets screens read, in the shapes `/api/perps/*` and
@@ -86,9 +87,14 @@ export const usePerpCandles = (coin: string, range: CandleRange) =>
   useMarketQuery<PerpCandles>(["perps-candles", coin, range], `/api/perps/candles?coin=${encodeURIComponent(coin)}&range=${range}`, examplePerpCandles(coin, range),
     { refetchInterval: range === "live" ? 3_000 : range === "1h" ? 15_000 : 60_000 });
 
-/** A market's order book, refreshed every 2.5 seconds while it shows. */
-export const usePerpBook = (coin: string, enabled = true) =>
-  useMarketQuery<PerpBook>(["perps-book", coin], enabled ? `/api/perps/book?coin=${encodeURIComponent(coin)}` : null, examplePerpBook(coin), { refetchInterval: 2_500 });
+/**
+ * A market's order book, refreshed every 2.5 seconds while it shows, grouped
+ * as Hyperliquid groups it when a grouping is picked (`bookGroupings`).
+ */
+export const usePerpBook = (coin: string, enabled = true, grouping: BookGroupingOption | null = null) =>
+  useMarketQuery<PerpBook>(["perps-book", coin, grouping?.sig ?? 0, grouping?.mantissa ?? 0],
+    enabled ? `/api/perps/book?coin=${encodeURIComponent(coin)}${bookGroupingQuery(grouping)}` : null, examplePerpBook(coin, grouping?.sig ? grouping.step : null),
+    { refetchInterval: 2_500 });
 
 export const usePredictionEvents = (category: string | null) =>
   useMarketQuery<{ events: PolymarketEvent[]; nextCursor: string | null }>(["prediction-events", category ?? "all"],
@@ -121,13 +127,19 @@ export function useBaseUsdc(): { amount: number | null; observedAt: string | nul
   return { amount: Number(holding.amountRaw) / 10 ** holding.decimals, observedAt: holding.observedAt ?? overview.data.observedAt, isPending: false };
 }
 
-/** What the perps account holds across every dex, or null while any of it can't be read. */
-export function perpsTotals(account: PerpsAccount | undefined): { value: number; available: number; observedAt: string } | null {
+/**
+ * What the perps account holds across every dex, or null while any of it
+ * can't be read: its value, what's available to trade (the value less the
+ * margin in use, as Hyperliquid's order form says it), and what can be
+ * withdrawn (less again while positions are open).
+ */
+export function perpsTotals(account: PerpsAccount | undefined): { value: number; tradable: number; withdrawable: number; observedAt: string } | null {
   const states = account?.dexStates;
   if (!states || states.status !== "observed") return null;
   return {
     value: states.data.reduce((sum, item) => sum + Number(item.accountValue), 0),
-    available: states.data.reduce((sum, item) => sum + Number(item.withdrawable), 0),
+    tradable: states.data.reduce((sum, item) => sum + availableToTrade(item), 0),
+    withdrawable: states.data.reduce((sum, item) => sum + Number(item.withdrawable), 0),
     observedAt: states.observedAt
   };
 }
