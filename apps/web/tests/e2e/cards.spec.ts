@@ -150,7 +150,7 @@ test("the card spends only up to the allowance, its payments are in Transactions
   await page.goto("/app/transactions");
   const payment = page.locator(".activityRow").filter({ hasText: "Card payment" }).filter({ hasText: "Corner Cafe" });
   await expect(payment).toBeVisible({ timeout: 30_000 });
-  await expect(payment).toContainText("12.50 USD");
+  await expect(payment).toContainText("$12.50");
   await expect(page.locator(".activityRow").filter({ hasText: "Card allowance set" })).toContainText("Aura card");
   await page.getByRole("group", { name: "Category" }).getByRole("button", { name: "Card", exact: true }).click();
   await expect(page.locator(".activityRow").filter({ hasText: "Card payment" })).toHaveCount(3);
