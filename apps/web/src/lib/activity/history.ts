@@ -3,7 +3,7 @@ import { listActions, listActionsBetween, listActionHashes, type StoredAction } 
 import { valueAsset } from "@/lib/actions/valuation";
 import { getAaveBaseActivity, type AaveBaseActivity } from "@/lib/defi/aave";
 import { readCardHistory, type CardHistory } from "@/lib/cards/service";
-import { actionEntry, cardEntry, incomingEntry, type ActivityEntry } from "./entries";
+import { actionEntry, cardEntry, HISTORY_LIMIT, incomingEntry, type ActivityEntry } from "./entries";
 import { readIncoming, type IncomingRead } from "./incoming";
 import { labelMarketWithdrawals, readMarketWithdrawals } from "./markets";
 import { recordIncoming } from "./observations";
@@ -14,7 +14,6 @@ import { networkName } from "@/lib/assets/registry";
 
 const RECHECK_MS = 30_000;
 const MAX_CHECKS = 3;
-const MAX_ENTRIES = 150;
 
 type SourceState = { status: "available" | "unavailable"; partial: boolean };
 export type History = { entries: ActivityEntry[]; sources: { aura: SourceState; incoming: SourceState; aave: SourceState; card: SourceState }; observedAt: string };
@@ -86,7 +85,7 @@ export async function readHistory(db: D1Database, subject: string, wallet: strin
   const seen = new Set(received.map((entry) => entry.transactionHash?.toLowerCase()));
   const travelling = deposits.filter((deposit) => !deposit.destinationHash || !seen.has(deposit.destinationHash)).map(walletDepositEntry);
   const entries = [...own, ...received, ...travelling, ...aaveEntries, ...cards.items.map(cardEntry)]
-    .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)).slice(0, MAX_ENTRIES);
+    .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)).slice(0, HISTORY_LIMIT);
   return { entries, observedAt: now.toISOString(), sources: {
     aura: { status: "available", partial: stored.length >= 100 },
     incoming: { status: incoming.status, partial: incoming.partial },

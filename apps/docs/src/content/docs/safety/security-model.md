@@ -42,7 +42,7 @@ On Base that's usually within seconds, as in mainstream wallets. We keep checkin
 
 For a move between networks, we also wait for LI.FI to report delivery, and check that at least the minimum amount reached your wallet on the other network.
 
-If we don't get a transaction hash in time, the action shows as **Not confirmed**, not failed. Check your activity before you try again. What each status means: [transactions and their status](/product/transaction-lifecycle/). Our database is never the final record of your balance.
+If we don't get a transaction hash in time, the action shows as **Not sent**, not failed. Check your activity before you try again. What each status means: [transactions and their status](/product/transaction-lifecycle/). Our database is never the final record of your balance.
 
 ## How we separate access
 
