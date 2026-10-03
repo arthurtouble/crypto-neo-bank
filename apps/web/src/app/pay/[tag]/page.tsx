@@ -66,7 +66,11 @@ export default async function AuraTagPage({ params }: { params: Promise<{ tag: s
           <div><dt>Accepts</dt><dd>{data.bank.instructions.rails.map((rail) => payerRailNames[rail]).join(", ")}</dd></div>
         </dl>
       </section>}
-    </> : <section className="pyCard pyUnavailable"><h1>Payment page unavailable</h1><p>This Aura tag is not available for public payments.</p></section>}</main>
+    </> : result.status === "rate_limited"
+      // The limit is per visitor, whatever the tag, so saying so tells nothing about the tag.
+      ? <section className="pyCard pyUnavailable"><h1>Too many requests</h1><p>You&apos;ve opened payment pages too often. Try again in a minute.</p>
+        <a className="appButton appButtonLarge" href={`/pay/${encodeURIComponent(tag)}`}>Try again</a></section>
+      : <section className="pyCard pyUnavailable"><h1>Payment page unavailable</h1><p>This Aura tag is not available for public payments.</p></section>}</main>
     <footer className="pyFooter">Aura is a wallet app. Crypto transfers may not be reversible, so check who you&apos;re paying before you send.</footer>
   </div>;
 }

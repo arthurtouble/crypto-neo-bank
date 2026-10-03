@@ -19,6 +19,8 @@ The page shows only the ways to pay that work:
 - Your bank details show only if your Bridge bank account is active and you've chosen to show them. They list the ways your account accepts dollars in the payer's bank's own terms, such as ACH and wire.
 - Card payment isn't offered.
 
+Someone who opens a lot of payment pages in a short time is asked to try again in a minute.
+
 Someone with Aura can select **Send with Aura** to pay in the app, with your tag filled in. If they aren't signed in, sign-in opens straight away. Aura checks the tag's address again before they confirm.
 
 ## Changing your tag
