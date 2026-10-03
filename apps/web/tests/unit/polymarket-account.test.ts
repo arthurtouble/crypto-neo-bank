@@ -12,7 +12,7 @@ import { MULTICALL3 } from "@/lib/markets/polymarket/chain";
 // Hardhat's public test key #1; never a real account.
 const owner = privateKeyToAccount("0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d");
 const wallet = "0x4Fe2CC4925607a473264FA89e7138075695A5F8e";
-const credentials = { key: "builder-key", secret: "c2VjcmV0LWtleS1mb3ItdGVzdHMtb25seQ==", passphrase: "builder-pass" };
+const credentials = { key: "builder-key", secret: btoa("secret-key-for-tests-only"), passphrase: "builder-pass" };
 
 const signable = (typedData: TypedData) => {
   const types = Object.fromEntries(Object.entries(typedData.types).filter(([name]) => name !== "EIP712Domain"));
