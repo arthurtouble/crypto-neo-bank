@@ -37,6 +37,8 @@ export type CardState =
   | { state: "verify_first" }
   | { state: "apply"; approval: "none" | "incomplete" | "revoked"; issues: string[] }
   | { state: "ready_to_create" }
+  /** The customer has a card but Stripe couldn't be read: nothing about it is shown as current, and Freeze still works. */
+  | { state: "card_unavailable"; lastFour: string | null; observedAt: string }
   | { state: "card"; card: CardView; allowance: Allowance; activity: CardActivity[]; activityStatus: "available" | "unavailable";
       publishableKey: string | null; walletsEnabled: boolean; observedAt: string };
 
@@ -168,7 +170,13 @@ export async function readCardState(db: D1Database, subject: string, wallet: `0x
   const [customer, cardId] = await Promise.all([activeBridgeCustomer(db, subject), storedCardId(db, subject)]);
   if (!customer) return { state: "verify_first" };
   if (cardId) {
-    const [card, allowance, activity] = await Promise.all([getCard(provider.stripe, cardId), readAllowance(wallet, provider.spender, now),
+    let card: IssuingCard;
+    try { card = await getCard(provider.stripe, cardId); }
+    catch {
+      const row = await db.prepare("SELECT last_four FROM card_account_projections WHERE card_reference = ?").bind(cardId).first<{ last_four: string | null }>();
+      return { state: "card_unavailable", lastFour: row?.last_four ?? null, observedAt: now.toISOString() };
+    }
+    const [allowance, activity] = await Promise.all([readAllowance(wallet, provider.spender, now),
       readCardActivity(provider.stripe, cardId, now).then((items) => ({ items, status: "available" as const }), () => ({ items: [], status: "unavailable" as const }))]);
     await refreshCardProjection(db, subject, card, now);
     if (card.status !== "canceled") return { state: "card", card: cardView(card), allowance, activity: activity.items, activityStatus: activity.status,

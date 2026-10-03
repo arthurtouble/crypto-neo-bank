@@ -76,7 +76,7 @@ test("a verified customer applies with Bridge and creates a virtual card", async
   await expect(page.getByRole("heading", { name: "Apply for an Aura card" })).toBeVisible({ timeout: 20_000 });
   // Bridge hosts the card application in a new tab.
   await context.route("https://bridge.aura-e2e.test/**", (route) => route.fulfill({ contentType: "text/html", body: "<h1>Apply for a card with Bridge</h1>" }));
-  const [bridgeTab] = await Promise.all([context.waitForEvent("page"), page.getByRole("button", { name: "Apply with Bridge" }).click()]);
+  const [bridgeTab] = await Promise.all([context.waitForEvent("page"), page.getByRole("button", { name: "Apply for a card" }).click()]);
   await expect.poll(() => bridgeTab.url()).toMatch(/^https:\/\/bridge\.aura-e2e\.test\/cards\/.+endorsement=cards$/);
   await bridgeTab.close();
 
@@ -212,11 +212,11 @@ test("freezing stops payments at once; unfreezing and a higher limit need the pa
 
   // Cancelling the passkey prompt leaves it frozen.
   await page.evaluate(() => localStorage.setItem("aura-e2e-passkey", "reject"));
-  await controls(page).getByRole("button", { name: "Freeze card" }).click();
+  await controls(page).getByRole("button", { name: "Unfreeze card" }).click();
   await expect(toast(page, "Card not changed")).toBeVisible({ timeout: 20_000 });
   await expect(controls(page).getByText("Card is frozen")).toBeVisible();
   await page.evaluate(() => localStorage.removeItem("aura-e2e-passkey"));
-  await controls(page).getByRole("button", { name: "Freeze card" }).click();
+  await controls(page).getByRole("button", { name: "Unfreeze card" }).click();
   await expect(toast(page, "Card unfrozen")).toBeVisible({ timeout: 20_000 });
   expect(await edge("/__stripe/authorize", { amount: "5" })).toMatchObject({ approved: true });
 
@@ -233,7 +233,7 @@ test("freezing stops payments at once; unfreezing and a higher limit need the pa
   await setControls(page, customer, { accountLocked: true });
   await page.reload();
   await expect(controls(page).getByText("Card is frozen")).toBeVisible({ timeout: 20_000 });
-  await controls(page).getByRole("button", { name: "Freeze card" }).click();
+  await controls(page).getByRole("button", { name: "Unfreeze card" }).click();
   await expect(page.locator(".toastRegion")).toContainText("Your account is locked", { timeout: 20_000 });
 });
 
@@ -265,4 +265,37 @@ test("with phone wallets on, the card can be added to Apple Pay or Google Pay", 
   await controls(page).getByRole("button", { name: "Add to phone" }).click();
   await expect(controls(page).getByRole("button", { name: "Add to Apple Wallet" })).toBeVisible({ timeout: 20_000 });
   await expect(controls(page).getByRole("button", { name: "Add to Google Pay" })).toBeVisible();
+});
+
+test("when Stripe can't read the card, the page says so and Freeze still works", async ({ page }) => {
+  await withCard(page);
+  await edge("/__state", { down: ["stripe:card-read"] });
+  await page.goto("/app/cards");
+  await expect(page.getByRole("heading", { name: "Your card is unavailable right now" })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("region", { name: /^Aura card ending \d{4}$/ })).toContainText("Unavailable");
+  await page.getByRole("button", { name: "Freeze card" }).click();
+  await expect(toast(page, "Card frozen")).toBeVisible({ timeout: 20_000 });
+  const { cards } = await edge("/__stripe/state") as unknown as { cards: Record<string, { status: string }> };
+  expect(Object.values(cards).map((card) => card.status)).toEqual(["inactive"]);
+  await edge("/__state", { down: [] });
+});
+
+test("a lost card is replaced with a new number after a passkey check; the old one stops working", async ({ page }) => {
+  test.setTimeout(120_000);
+  await withCard(page);
+  await page.goto("/app/cards");
+  const old = page.getByRole("region", { name: /^Aura card ending \d{4}$/ });
+  const oldName = await old.getAttribute("aria-label", { timeout: 20_000 });
+  await controls(page).getByRole("button", { name: "Replace" }).click();
+  await controls(page).getByRole("radio", { name: "Lost" }).click();
+  // Cancelling the passkey prompt keeps the card.
+  await page.evaluate(() => localStorage.setItem("aura-e2e-passkey", "reject"));
+  await controls(page).getByRole("button", { name: "Cancel card and get a new one" }).click();
+  await expect(toast(page, "Card not replaced")).toBeVisible({ timeout: 20_000 });
+  await page.evaluate(() => localStorage.removeItem("aura-e2e-passkey"));
+  await controls(page).getByRole("button", { name: "Cancel card and get a new one" }).click();
+  await expect(toast(page, "Your new card is ready")).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("region", { name: /^Aura card ending \d{4}$/ })).not.toHaveAttribute("aria-label", oldName!);
+  const { cards } = await edge("/__stripe/state") as unknown as { cards: Record<string, { status: string }> };
+  expect(Object.values(cards).map((card) => card.status)).toEqual(["canceled", "active"]);
 });

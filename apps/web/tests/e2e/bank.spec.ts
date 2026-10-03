@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 import { BRIDGE } from "./support/fake-edge.mjs";
 import { expect, test } from "./support/fixtures";
-import { acceptTerms, asCustomer, ASSETS, edge, newCustomer, setBalances, setFeature, setIdentity, type Customer } from "./support/session";
+import { acceptTerms, asCustomer, ASSETS, edge, newCustomer, setBalances, setControls, setFeature, setIdentity, type Customer } from "./support/session";
 
 // Feature 10 in docs/overview/feature-readiness.md: Bank and cards, the bank
 // half. Bridge (identity verification, the USD account, saved banks, and
@@ -48,7 +48,7 @@ test("a customer verifies with Bridge, gets US bank details, and a bank deposit 
   await depositPanel(page).getByLabel("Full legal name").fill("Jane Customer");
   await expect(depositPanel(page).getByLabel("Email")).toHaveValue(customer.email);
   // Bridge hosts identity verification in a new tab.
-  const [bridgeTab] = await Promise.all([context.waitForEvent("page"), depositPanel(page).getByRole("button", { name: "Verify with Bridge" }).click()]);
+  const [bridgeTab] = await Promise.all([context.waitForEvent("page"), depositPanel(page).getByRole("button", { name: "Verify your identity" }).click()]);
   await expect.poll(() => bridgeTab.url()).toMatch(/^https:\/\/bridge\.aura-e2e\.test\/kyc\//);
   await bridgeTab.close();
   await expect(depositPanel(page).getByRole("link", { name: "Continue verification" })).toBeVisible({ timeout: 20_000 });
@@ -78,7 +78,8 @@ test("verification Bridge rejects says so and offers no account", async ({ page 
   await asCustomer(page, customer, "POST", "/api/money/onboarding", { fullName: "Jane Customer", email: customer.email });
   await edge("/__bridge/kyc", { email: customer.email, status: "rejected" });
   await page.goto("/app/deposit#bank");
-  await expect(depositPanel(page).getByText("Bridge couldn't verify your identity. Contact support.")).toBeVisible({ timeout: 30_000 });
+  await expect(depositPanel(page).getByText("Bridge couldn't verify your identity.")).toBeVisible({ timeout: 30_000 });
+  await expect(depositPanel(page).getByRole("link", { name: "Contact support" })).toHaveAttribute("href", "/app/support");
   await page.goto("/app/send#bank");
   await expect(sendPanel(page).getByText(/Set up your bank account on/)).toBeVisible({ timeout: 30_000 });
 });
@@ -183,4 +184,25 @@ test("while bank accounts are switched off, Deposit and Send say they're coming 
   await acceptTerms(page, customer);
   const response = await page.request.post("/api/money/onboarding", { headers: { Authorization: `Bearer ${customer.token}` }, data: { fullName: "Jane Customer", email: customer.email } });
   expect(response.status()).toBe(503);
+});
+
+test("a new bank account says when it can receive, and a saved one can be removed", async ({ page }) => {
+  test.setTimeout(120_000);
+  const customer = await signIn(page, "100000000");
+  await verified(page, customer);
+  await setControls(page, customer, { enforceAddressBook: true });
+  await asCustomer(page, customer, "POST", "/api/money/bank-accounts", { accountOwnerName: "Jane Customer", bankName: "Chase", accountNumber: "123456789",
+    routingNumber: "021000021", checkingOrSavings: "checking", address: { streetLine1: "1 Test Street", city: "New York", state: "NY", postalCode: "10001", country: "USA" } });
+  await page.goto("/app/send#bank");
+  const saved = sendPanel(page).getByTestId("saved-bank");
+  // With saved recipients only on, it waits like a new recipient, and the payout form isn't offered yet.
+  await expect(saved).toContainText("Ready from", { timeout: 30_000 });
+  await expect(sendPanel(page).getByRole("form", { name: "Send to a bank" })).toHaveCount(0);
+
+  await saved.getByRole("button", { name: "Remove Chase •••• 6789" }).click();
+  await saved.getByRole("button", { name: "Remove", exact: true }).click();
+  await expect(toast(page, "Bank account removed")).toBeVisible({ timeout: 20_000 });
+  await expect(saved).toHaveCount(0);
+  const { recipients } = await asCustomer(page, customer, "GET", "/api/recipients") as { recipients: Array<{ kind: string }> };
+  expect(recipients.filter((item) => item.kind === "bank")).toEqual([]);
 });

@@ -43,9 +43,11 @@ test.beforeAll(async ({ request }) => {
 test("chat opens as the signed-in customer, identified by a token Aura signs", async ({ page }) => {
   const customer = await openSupport(page);
   await expectIdentified(page, customer);
+  const opened = page.waitForRequest((request) => request.url().endsWith("/api/analytics/events") && request.postDataJSON()?.eventName === "support_opened");
   await page.getByRole("button", { name: "Chat", exact: true }).click();
   await expect.poll(async () => (await calls(page)).some((call) => call[0] === "show")).toBe(true);
-  await expect(page.getByRole("link", { name: "Open" })).toHaveAttribute("href", /\/getting-started\/setup\/$/);
+  expect((await opened).postDataJSON()).toMatchObject({ surface: "/app/support", properties: { prefilled: false } });
+  await expect(page.getByRole("link", { name: "Open" })).toHaveAttribute("href", /\/$/);
   // What was retired is gone: no in-house case form.
   await expect(page.getByText("Open support case")).toHaveCount(0);
 });
@@ -81,4 +83,25 @@ test("closing an account starts from Settings and opens a chat asking for it", a
   await page.getByRole("button", { name: "Ask to close" }).click();
   await expect.poll(async () => (await calls(page)).find((call) => call[0] === "showNewMessage")?.[1])
     .toBe("Please close my Aura account. I've moved all my money out.");
+});
+
+test("chat that can't load says so, instead of buttons that do nothing", async ({ page }) => {
+  // An ad blocker, the network, or the Content Security Policy can stop Intercom's script.
+  await page.route("https://widget.intercom.io/**", (route) => route.abort("blockedbyclient"));
+  await openSupport(page);
+  await expect(page.getByText("Chat isn't available right now. Try again later, or read the help articles.")).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("button", { name: "Chat", exact: true })).toBeDisabled();
+  for (const button of await page.getByRole("button", { name: "Tell us" }).all()) await expect(button).toBeDisabled();
+});
+
+test("a closed account's Support page says the account is closed", async ({ page }) => {
+  const customer = await newCustomer({ mfa: ["passkey"] });
+  await acceptTerms(page, customer);
+  await setIdentity(page, customer, { signedIn: true });
+  // Any request the server refuses as closed shows the closed screen; Support stays open.
+  await page.route("**/api/overview**", (route) => route.fulfill({ status: 403, json: { error: "account_closed", message: "This account is closed." } }));
+  await page.goto("/app");
+  await page.getByTestId("account-closed").getByRole("link", { name: "Contact support" }).click({ timeout: 30_000 });
+  await expect(page.getByText("Your account is closed. Chat with us if you think this is a mistake.")).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole("button", { name: "Chat", exact: true })).toBeEnabled({ timeout: 20_000 });
 });

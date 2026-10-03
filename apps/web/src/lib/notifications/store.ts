@@ -89,13 +89,13 @@ export function receivedNotice(transfer: IncomingTransfer, bank?: { senderName: 
 }
 
 /** Changes to the account's security. Always delivered, whatever the customer's notification choices. */
-export function securityNotice(event: "locked" | "loosened" | "recipient_saved" | "bank_account_saved" | "tag_address_changed" | "closed" | "reopened"
-  | "card_created" | "card_unfrozen" | "card_limit_raised", detail: string, reference: string): Notice {
+export function securityNotice(event: "locked" | "loosened" | "recipient_saved" | "bank_account_saved" | "bank_account_removed" | "tag_address_changed" | "closed"
+  | "reopened" | "card_created" | "card_replaced" | "card_unfrozen" | "card_limit_raised", detail: string, reference: string): Notice {
   const titles = { locked: "Your account is locked", loosened: "Your controls changed", recipient_saved: "New saved recipient",
-    bank_account_saved: "New bank account", tag_address_changed: "Your Aura tag's address changed",
-    closed: "Your account is closed", reopened: "Your account is open again", card_created: "Your Aura card is ready",
+    bank_account_saved: "New bank account", bank_account_removed: "Bank account removed", tag_address_changed: "Your Aura tag's address changed",
+    closed: "Your account is closed", reopened: "Your account is open again", card_created: "Your Aura card is ready", card_replaced: "Your card was replaced",
     card_unfrozen: "Your card is unfrozen", card_limit_raised: "Your card limit went up" } as const;
-  const link = event === "closed" ? "/app/support" : event.startsWith("card_") ? "/app/cards" : event === "bank_account_saved" ? "/app/send#bank"
+  const link = event === "closed" ? "/app/support" : event.startsWith("card_") ? "/app/cards" : event.startsWith("bank_account_") ? "/app/send#bank"
     : event === "tag_address_changed" ? "/app/settings#tag" : "/app/settings";
   return { kind: "security", dedupeKey: `security:${event}:${reference}`, title: titles[event],
     body: `${detail} If this wasn't you, lock your account in Settings and contact support.`, link };

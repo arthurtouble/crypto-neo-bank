@@ -39,7 +39,12 @@ function useCardErrors() {
 }
 
 /** The card itself: the brand, the last four digits, and its expiry or Frozen. No number is ever drawn here. */
-function CardFace({ card }: { card?: CardView }) {
+function CardFace({ card, lastFour }: { card?: CardView; lastFour?: string | null }) {
+  if (!card && lastFour !== undefined) return <section className="cdFace cdFaceFrozen" aria-label={lastFour ? `Aura card ending ${lastFour}` : "Aura card"}>
+    <div className="cdFaceTop"><strong>Aura</strong><span>Visa</span></div>
+    <span className="cdFaceNumber">{lastFour ? `•••• ${lastFour}` : "••••"}</span>
+    <div className="cdFaceBottom"><span>Unavailable</span><span>Virtual</span></div>
+  </section>;
   if (!card) return <section className="cdFace cdFaceUnissued" aria-label="Aura card preview">
     <div className="cdFaceTop"><strong>Aura</strong><span>Visa</span></div>
     <span className="cdFaceNumber">Not issued</span>
@@ -159,7 +164,7 @@ function Allowance({ data, onSignIn }: { data: Card; onSignIn: SignIn }) {
     await prepare("0");
   }
   return <section className="mxCard" aria-labelledby="allowance-heading"><h2 id="allowance-heading">Spending allowance</h2>
-    <p className="mxHint">Your card spends your USDC on Base. Nothing moves until you buy something: then Bridge takes exactly the purchase from your account, up to this allowance.</p>
+    <p className="mxHint">The most your card can take from the dollars (USDC) in your account. Nothing moves until you buy something, and then only the price of what you buy.</p>
     <dl className="mxSummary" data-testid="card-allowance">
       <div><dt>Card can spend</dt><dd className={allowance.status === "available" ? undefined : "appUnavailable"}>{allowance.status === "available" ? money(allowance.allowanceUsd) : "Unavailable"}</dd></div>
       <div><dt>Your USDC</dt><dd className={allowance.status === "available" ? undefined : "appUnavailable"}>{allowance.status === "available" ? money(allowance.balanceUsd) : "Unavailable"}</dd></div>
@@ -169,7 +174,7 @@ function Allowance({ data, onSignIn }: { data: Card; onSignIn: SignIn }) {
       <TransactionProgress label="Card allowance" phase={phase} action={action} outcomeUnknown={outcomeUnknown} />
       <button type="button" className="appButton" onClick={() => { reset(); setAmount(""); }}>Change it again</button>
     </> : <form className="mxForm" onSubmit={(event) => void submit(event)} aria-label="Set spending allowance">
-      <label className="mxField">New allowance in USD<input value={amount} inputMode="decimal" autoComplete="off" placeholder="500" disabled={busy}
+      <label className="mxField">New allowance in USD<input value={amount} inputMode="decimal" autoComplete="off" placeholder="100" disabled={busy}
         onChange={(event) => setAmount(event.target.value.replace(/[^\d.]/g, ""))} /></label>
       <TransactionProgress label="Card allowance" phase={phase} action={action} outcomeUnknown={outcomeUnknown} />
       <button type="submit" className="appButton appButtonPrimary" disabled={busy || (!onSignIn && !valid)}>{onSignIn ? "Sign in to set an allowance" : phase === "signing" ? "Confirm with your passkey" : "Set allowance"}</button>
@@ -231,6 +236,43 @@ function Activity({ data, onSignIn }: { data: Card; onSignIn: SignIn }) {
   </section>;
 }
 
+/** A lost or stolen card: Stripe cancels it and issues a new number. Needs the passkey. */
+function ReplaceCard({ data, onSignIn }: { data: Card; onSignIn: SignIn }) {
+  const api = useApi();
+  const client = useQueryClient();
+  const toast = useToast();
+  const { user } = useAuth();
+  const { authorize } = useAuraWallet();
+  const fail = useCardErrors();
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState<"lost" | "stolen">("lost");
+  const [busy, setBusy] = useState(false);
+  async function replace() {
+    setBusy(true);
+    try {
+      const next = await withPasskey((confirmation) => api<CardState>("/api/cards/replace", { method: "POST", json: { cardId: data.card.id, reason, confirmation } }), authorize);
+      client.setQueryData(["card", user?.id], next);
+      toast.success("Your new card is ready", "The old card can't be used any more.");
+      setOpen(false);
+    } catch (error) { fail("Card not replaced", error); }
+    finally { setBusy(false); }
+  }
+  return <div className="cdSetting cdReplace">
+    <div className="cdSettingText"><strong>Replace card</strong><small>{open ? "Your card is canceled for good and you get a new number. Update it wherever you saved it. Needs your passkey."
+      : "If your card is lost or stolen, cancel it and get a new one."}</small>
+      {open && <div className="appSegmented" role="radiogroup" aria-label="Why are you replacing it?">
+        {(["lost", "stolen"] as const).map((value) => <button type="button" role="radio" aria-checked={reason === value} key={value} disabled={busy}
+          onClick={() => setReason(value)}>{value === "lost" ? "Lost" : "Stolen"}</button>)}
+      </div>}
+    </div>
+    {open ? <div className="cdReplaceActions">
+      <button type="button" className="appButton appButtonPrimary" disabled={busy} onClick={() => void replace()}>
+        {busy ? <LoaderCircle className="spin" aria-hidden="true" /> : null} Cancel card and get a new one</button>
+      <button type="button" className="appButton" disabled={busy} onClick={() => setOpen(false)}>Keep this card</button>
+    </div> : <button type="button" className="appButton" onClick={() => onSignIn ? onSignIn() : setOpen(true)}>Replace</button>}
+  </div>;
+}
+
 function CardControls({ data, onSignIn }: { data: Card; onSignIn: SignIn }) {
   const api = useApi();
   const client = useQueryClient();
@@ -254,18 +296,19 @@ function CardControls({ data, onSignIn }: { data: Card; onSignIn: SignIn }) {
   const limitValue = limit ?? String(data.card.dailyLimitUsd ?? "");
   return <section className="mxCard" aria-labelledby="card-controls-heading"><h2 id="card-controls-heading">Card controls</h2>
     <div className="cdSetting">
-      <div className="cdSettingText"><strong>{frozen ? "Card is frozen" : "Freeze card"}</strong><small>{frozen ? "Nothing can be paid with it. Unfreezing needs your passkey." : "Stop all payments straight away. You can unfreeze it later."}</small></div>
-      <button type="button" className="appToggle" aria-pressed={frozen} aria-label="Freeze card" disabled={busy}
-        onClick={() => void change({ frozen: !frozen }, frozen ? "Card unfrozen" : "Card frozen")}>{frozen ? "On" : "Off"}</button>
+      <div className="cdSettingText"><strong>{frozen ? "Card is frozen" : "Freeze your card"}</strong><small>{frozen ? "Nothing can be paid with it. Unfreezing needs your passkey." : "Stop all payments straight away. You can unfreeze it later."}</small></div>
+      <button type="button" className="appButton" disabled={busy}
+        onClick={() => void change({ frozen: !frozen }, frozen ? "Card unfrozen" : "Card frozen")}>{frozen ? "Unfreeze card" : "Freeze card"}</button>
     </div>
     <form className="cdSetting cdLimit" onSubmit={(event) => { event.preventDefault(); const value = Number(limitValue); if (value >= 1) void change({ dailyLimitUsd: value }, "Daily limit updated"); }}>
-      <div className="cdSettingText"><strong>Daily limit</strong><small>The most the card can spend in a day, in USD. Raising it needs your passkey.</small></div>
+      <div className="cdSettingText"><strong>Daily limit</strong><small>The most the card can spend in one day, even if your allowance is higher. Raising it needs your passkey.</small></div>
       <div className="cdLimitField">
         <label className="mxField"><span className="srOnly">Daily limit in USD</span><input inputMode="numeric" autoComplete="off" value={limitValue} disabled={busy} onChange={(event) => setLimit(event.target.value.replace(/\D/g, ""))} /></label>
         <button type="submit" className="appButton" disabled={busy || (!onSignIn && (limit === null || Number(limitValue) < 1))}>Save</button>
       </div>
     </form>
     {data.walletsEnabled && <PhoneWallets data={data} />}
+    <ReplaceCard data={data} onSignIn={onSignIn} />
   </section>;
 }
 
@@ -284,18 +327,48 @@ function IssuedCard({ data, onSignIn }: { data: Card; onSignIn: SignIn }) {
       </div>
     </div>
     <div className="cdSide">
-      <CardControls data={data} onSignIn={onSignIn} />
       <Allowance data={data} onSignIn={onSignIn} />
+      <CardControls data={data} onSignIn={onSignIn} />
     </div>
     <Activity data={data} onSignIn={onSignIn} />
     {details && <CardDetails data={data} onClose={() => setDetails(false)} />}
   </div>;
 }
 
-const setupSteps = ["Verify your identity with Bridge", "Apply for the card", "Create your card", "Set a spending allowance"];
+/** Stripe couldn't be read: nothing about the card is shown as current, but Freeze still goes through. */
+function UnavailableCard({ data, refetch, checking }: { data: Extract<CardState, { state: "card_unavailable" }>; refetch: () => void; checking: boolean }) {
+  const api = useApi();
+  const client = useQueryClient();
+  const toast = useToast();
+  const { user } = useAuth();
+  const { authorize } = useAuraWallet();
+  const fail = useCardErrors();
+  const [busy, setBusy] = useState(false);
+  async function freeze() {
+    setBusy(true);
+    try {
+      client.setQueryData(["card", user?.id], await withPasskey((confirmation) => api<CardState>("/api/cards/controls", { method: "PATCH", json: { frozen: true, confirmation } }), authorize));
+      toast.success("Card frozen");
+    } catch (error) { fail("Card not frozen", error); }
+    finally { setBusy(false); }
+  }
+  return <div className="cdSetup">
+    <section className="mxPanel" aria-labelledby="card-unavailable-title">
+      <div className="mxPanelHead"><h2 id="card-unavailable-title">Your card is unavailable right now</h2>
+        <p>We can&apos;t reach Stripe, so your card&apos;s status, controls and payments can&apos;t be shown. You can still try to freeze it.</p></div>
+      <div className="mxActions">
+        <button type="button" className="appButton appButtonPrimary" disabled={busy} onClick={() => void freeze()}>{busy ? <LoaderCircle className="spin" aria-hidden="true" /> : null} Freeze card</button>
+        <button type="button" className="appButton" disabled={checking} onClick={refetch}>{checking ? "Checking…" : "Try again"}</button>
+      </div>
+    </section>
+    <CardFace lastFour={data.lastFour} />
+  </div>;
+}
+
+const setupSteps = ["Verify your identity", "Apply for the card", "Create your card", "Set a spending allowance"];
 
 /** Journey J9: what's left before there's a card, as a checklist with the one current step's button. */
-function Setup({ data, refetch, checking }: { data: Exclude<CardState, { state: "card" }>; refetch: () => void; checking: boolean }) {
+function Setup({ data, refetch, checking }: { data: Exclude<CardState, { state: "card" | "card_unavailable" }>; refetch: () => void; checking: boolean }) {
   const api = useApi();
   const client = useQueryClient();
   const toast = useToast();
@@ -323,13 +396,13 @@ function Setup({ data, refetch, checking }: { data: Exclude<CardState, { state: 
   }
 
   const current = data.state === "verify_first" ? 0 : data.state === "apply" ? 1 : data.state === "ready_to_create" ? 2 : -1;
-  const step = data.state === "unavailable" ? { title: "Cards are coming soon", body: "A Visa card that spends the USDC in your Aura account, issued by Stripe with Bridge.", action: null }
-    : data.state === "verify_first" ? { title: "Verify your identity first", body: "Bridge verifies you once for your bank account and your card.",
+  const step = data.state === "unavailable" ? { title: "Cards are coming soon", body: "A Visa card that pays from the dollars (USDC) in your Aura account.", action: null }
+    : data.state === "verify_first" ? { title: "Verify your identity first", body: "Bridge, our card and banking partner, verifies you once for your bank account and your card.",
       action: <Link className="appButton appButtonPrimary" href="/app/deposit">Verify on Deposit</Link> }
       : data.state === "apply" ? { title: data.approval === "revoked" ? "Confirm your details again" : "Apply for an Aura card",
         body: data.approval === "revoked" ? "Your card approval expired before a card was made. Bridge will ask you to confirm your details."
-          : data.approval === "incomplete" ? `Bridge needs more before it can approve a card.${data.issues.length ? ` (${data.issues.join(", ")})` : ""}` : "Bridge checks you're eligible for a card. It usually takes a minute.",
-        action: <><button type="button" className="appButton appButtonPrimary" disabled={busy} onClick={() => void apply()}>Apply with Bridge</button>
+          : data.approval === "incomplete" ? `Bridge needs more before it can approve a card.${data.issues.length ? ` (${data.issues.join(", ")})` : ""}` : "Bridge, our card partner, checks you're eligible on its own page. It usually takes a minute.",
+        action: <><button type="button" className="appButton appButtonPrimary" disabled={busy} onClick={() => void apply()}>Apply for a card</button>
           <button type="button" className="appButton" disabled={checking} onClick={refetch}>{checking ? "Checking…" : "Check status"}</button></> }
         : { title: "You're approved", body: "Create your virtual Visa card now. Bridge's approval lasts 24 hours.",
           action: <button type="button" className="appButton appButtonPrimary" disabled={busy} onClick={() => void create()}>{busy ? <LoaderCircle className="spin" aria-hidden="true" /> : <ShieldCheck aria-hidden="true" />} Create my card</button> };
@@ -358,6 +431,7 @@ export function CardWorkspace() {
       : loading || query.isPending ? <LoadingState><strong>Loading your card</strong></LoadingState>
         : query.isError ? <Notice tone="error" role="alert" onRetry={() => void query.refetch()}>Your card couldn&apos;t be loaded.</Notice>
           : query.data.state === "card" ? <IssuedCard data={query.data} onSignIn={undefined} />
+            : query.data.state === "card_unavailable" ? <UnavailableCard data={query.data} refetch={() => void query.refetch()} checking={query.isFetching} />
             : <Setup data={query.data} refetch={() => void query.refetch()} checking={query.isFetching} />}
   </MoneyPage>;
 }

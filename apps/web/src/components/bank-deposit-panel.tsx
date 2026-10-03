@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from "@/lib/client/auth";
+import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { useApi } from "@/lib/client/api";
 import { bankStage, useBankAccount } from "@/lib/client/use-bank-account";
@@ -43,12 +44,12 @@ function VerificationForm({ onStarted }: { onStarted: () => void }) {
   }
 
   return <form className="mxForm" onSubmit={(event) => void submit(event)}>
-    <p className="mxHint">Bridge, our banking partner, verifies your identity before it opens a USD account for you.</p>
+    <p className="mxHint">Bridge, our banking partner, verifies your identity on its own page before it opens a USD account for you.</p>
     <label className="mxField">Full legal name<input value={fullName} onChange={(event) => setFullName(event.target.value)} autoComplete="name" required minLength={2} maxLength={120} /></label>
     <label className="mxField">Email<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} readOnly={Boolean(accountEmail)}
       autoComplete="email" required maxLength={254} aria-describedby={accountEmail ? "bank-email-hint" : undefined} /></label>
     {accountEmail && <p className="mxHint" id="bank-email-hint">Your Aura account email. Change it in Settings.</p>}
-    <button type="submit" className="appButton appButtonPrimary appButtonLarge" disabled={busy || fullName.trim().length < 2 || !email}>{busy ? "Starting…" : "Verify with Bridge"}</button>
+    <button type="submit" className="appButton appButtonPrimary appButtonLarge" disabled={busy || fullName.trim().length < 2 || !email}>{busy ? "Starting…" : "Verify your identity"}</button>
   </form>;
 }
 
@@ -60,13 +61,13 @@ export function BankDepositPanel() {
   const nextAction = account.data?.nextAction;
 
   const steps = [
-    { label: "Verify with Bridge", done: stage === "reviewing" || stage === "active", current: stage === "start" || stage === "continue" },
+    { label: "Verify your identity", done: stage === "reviewing" || stage === "active", current: stage === "start" || stage === "continue" },
     { label: "Bridge reviews your details", done: stage === "active", current: stage === "reviewing" },
     { label: "Get your US bank details", done: stage === "active", current: false }
   ];
   return <section className="mxPanel" aria-labelledby="deposit-bank">
     <div className="mxPanelHead"><h2 id="deposit-bank">Deposit from a bank</h2>
-      {stage === "unavailable" ? <span className="mxBadge">Coming soon</span> : <span className="mxHint">Bank transfer · Bridge</span>}</div>
+      {stage === "unavailable" ? <span className="mxBadge">Coming soon</span> : <span className="mxHint">US bank transfer</span>}</div>
     {account.isPending && <LoadingState label="Loading your bank details…" />}
     {account.isError && <Notice tone="error" role="alert" onRetry={() => void account.refetch()}>Bank details are unavailable right now.</Notice>}
     {stage === "unavailable" && <p className="mxHint">You&apos;ll get US bank details, and deposits will arrive as USDC in your Aura account.</p>}
@@ -75,7 +76,7 @@ export function BankDepositPanel() {
     </ol>}
     {stage === "start" && <VerificationForm onStarted={() => void account.refetch()} />}
     {stage === "continue" && nextAction?.type === "continue_verification" && httpsUrl(nextAction.url) && <>
-      <p className="mxHint">Finish identity verification with Bridge. After you finish, it can take a few minutes to confirm.</p>
+      <p className="mxHint">Finish verifying your identity on Bridge&apos;s page. After you finish, it can take a few minutes to confirm.</p>
       <div className="mxActions">
         <a className="appButton appButtonPrimary" href={httpsUrl(nextAction.url) ?? undefined} target="_blank" rel="noreferrer">Continue verification</a>
         <button type="button" className="appButton" disabled={account.isFetching} onClick={() => void account.refetch()}>{account.isFetching ? "Checking…" : "Check status"}</button>
@@ -85,7 +86,7 @@ export function BankDepositPanel() {
       <p className="mxHint">Bridge is reviewing your details. This can take a few minutes.</p>
       <div className="mxActions"><button type="button" className="appButton" disabled={account.isFetching} onClick={() => void account.refetch()}>{account.isFetching ? "Checking…" : "Check status"}</button></div>
     </>}
-    {stage === "rejected" && <Notice tone="error">Bridge couldn&apos;t verify your identity. Contact support.</Notice>}
+    {stage === "rejected" && <Notice tone="error">Bridge couldn&apos;t verify your identity. <Link className="appTextButton mxInlineButton" href="/app/support">Contact support</Link></Notice>}
     {stage === "active" && instructions && <>
       <p className="mxHint">Send USD from your bank to these details. Deposits arrive as USDC in your Aura account.</p>
       <dl className="mxSummary">
