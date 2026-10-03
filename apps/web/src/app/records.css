@@ -32,6 +32,7 @@
 .appFrame .txRow small { display: block; overflow: hidden; color: var(--color-text-secondary); font-size: var(--text-small-size); text-overflow: ellipsis; white-space: nowrap; }
 .appFrame .txAmount { justify-items: end; text-align: right; }
 .appFrame .txAmount strong { white-space: nowrap; }
+.appFrame .txMore { display: grid; justify-items: center; gap: var(--space-3); }
 .appFrame .txEmpty { display: grid; justify-items: center; gap: var(--space-1); padding: var(--space-8) var(--space-5); text-align: center; }
 .appFrame .txEmpty strong { font-size: var(--text-title-3-size); line-height: var(--text-title-3-line); font-weight: var(--weight-semibold); }
 .appFrame .txEmpty span { color: var(--color-text-secondary); font-size: var(--text-small-size); }

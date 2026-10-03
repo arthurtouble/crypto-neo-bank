@@ -128,6 +128,28 @@ test("a failed action says why in plain words, and a card allowance moves no mon
   await expect(dialog(page)).toContainText("Nothing was sent.");
 });
 
+test("Show more loads older activity, once each, until there's none left", async ({ page }) => {
+  await signIn(page);
+  const sources = Object.fromEntries(["aura", "incoming", "aave", "card"].map((name) => [name, { status: "available", partial: false }]));
+  const row = (id: string, createdAt: string) => ({ id, origin: "incoming", type: "received", status: "completed", final: true, createdAt, chainId: 8453,
+    asset: "USDC", amount: "1", counterparty: FRIEND, source: "Alchemy, Base" });
+  const asked: Array<string | null> = [];
+  // Only the list is stubbed: the fakes can't hold more than a page of history. The paging itself is covered by the unit tests.
+  await page.route("**/api/activity**", (route) => {
+    const before = new URL(route.request().url()).searchParams.get("before");
+    asked.push(before);
+    return route.fulfill({ json: before
+      ? { observedAt: "t", sources, more: false, entries: [row("older-1", "2026-09-01T10:00:00.000Z"), row("older-2", "2026-08-01T10:00:00.000Z")] }
+      : { observedAt: "t", sources, more: true, entries: [row("newer", "2026-09-20T10:00:00.000Z"), row("older-1", "2026-09-01T10:00:00.000Z")] } });
+  });
+  await page.goto("/app/transactions");
+  await expect(rows(page)).toHaveCount(2, { timeout: 30_000 });
+  await page.getByRole("button", { name: "Show more" }).click();
+  await expect(rows(page)).toHaveCount(3);
+  expect(asked.at(-1)).toBe("2026-09-01T10:00:00.000Z");
+  await expect(page.getByRole("button", { name: "Show more" })).toHaveCount(0);
+});
+
 test("a deposit is completed once in a block, and final when Base finalizes it", async ({ page }) => {
   await edge("/__state", { finalizeAll: false });
   const customer = await signIn(page);

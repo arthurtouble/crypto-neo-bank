@@ -93,6 +93,27 @@ describe("reading money that arrived without an action", () => {
       expect(await readIncoming(wallet, { fetcher: node({ base: [erc20(usdc, 5_000_000n)] }, "next") })).toMatchObject({ partial: true });
     });
 
+    it("reads an older page back through the index, up to a page from before the time asked", async () => {
+      // Each page holds one newer and one older transfer; the older page keeps reading until it has 100 from before `until`.
+      let calls = 0;
+      const fetcher = vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
+        const { method } = JSON.parse(String(init?.body)) as { method: string };
+        if (method === "eth_getBlockByNumber") return Response.json({ result: { number: "0x64" } });
+        if (!String(url).includes("base")) return Response.json({ result: { transfers: [] } });
+        calls++;
+        const transfers = Array.from({ length: 100 }, (_, index) => erc20(usdc, 5_000_000n, { hash: hash(1000 * calls + index), uniqueId: `${hash(1000 * calls + index)}:log:0`,
+          metadata: { blockTimestamp: new Date(Date.parse("2026-09-30T00:00:00.000Z") - (calls * 100 + index) * 60_000).toISOString() } }));
+        return Response.json({ result: { transfers, pageKey: "next" } });
+      }) as unknown as typeof fetch;
+      const until = new Date(Date.parse("2026-09-30T00:00:00.000Z") - 150 * 60_000);
+      const read = await readIncoming(wallet, { fetcher, until });
+      expect(read.transfers.every((transfer) => Date.parse(transfer.receivedAt) <= until.getTime())).toBe(true);
+      expect(read.transfers.length).toBeGreaterThanOrEqual(100);
+      // More pages remain, so the read says older transfers exist.
+      expect(read).toMatchObject({ status: "available", partial: true });
+      expect(calls).toBe(2);
+    });
+
     it("is unavailable without a transfer index, never empty", async () => {
       vi.stubEnv("RPC_URL_1", "https://ethereum-rpc.publicnode.com");
       expect(await readIncoming(wallet, { fetcher: node({ base: [] }) })).toMatchObject({ status: "unavailable" });
@@ -271,6 +292,26 @@ describe("the Transactions API", () => {
     expect(state.readWallets).toEqual([wallet]);
     expect(body.entries.map((entry) => [entry.type, entry.status])).toEqual([["sent", "completed"], ["received", "completed"], ["sent", "not_confirmed"], ["sent", "completed"]]);
     expect(body.sources.incoming).toEqual({ status: "available", partial: false });
+  });
+
+  it("pages back through older activity without skipping any, and refuses a malformed time", async () => {
+    // 120 more actions than one page reads: the first page stops at the oldest action it read, so the older
+    // transfer and actions wait for the next page instead of leaving a gap.
+    for (let index = 0; index < 120; index++) insert(`p${index}`, new Date(Date.parse("2026-09-20T00:00:00.000Z") + index * 60_000).toISOString(), "confirmed", hash(500 + index));
+    const first = await (await activity(new Request("https://aura.test/api/activity"))).json() as import("@/lib/activity/history").History;
+    expect(first.entries).toHaveLength(100);
+    expect(first.more).toBe(true);
+    expect(first.entries.some((entry) => entry.id === "a")).toBe(false);
+    const oldest = first.entries.at(-1)!.createdAt;
+    const second = await (await activity(new Request(`https://aura.test/api/activity?before=${encodeURIComponent(oldest)}`))).json() as import("@/lib/activity/history").History;
+    const seen = new Set(first.entries.map((entry) => entry.id));
+    const added = second.entries.filter((entry) => !seen.has(entry.id));
+    // The 21 actions cut off, a, the expired b, and the received transfer, once each.
+    expect(added.map((entry) => entry.id)).toEqual(expect.arrayContaining(["p20", "p0", "a", "b"]));
+    expect(added.filter((entry) => entry.type === "received")).toHaveLength(1);
+    expect(added).toHaveLength(24);
+    expect(second.more).toBe(false);
+    expect((await activity(new Request("https://aura.test/api/activity?before=yesterday"))).status).toBe(400);
   });
 
   it("gives a month's statement with money sent and received, oldest first", async () => {
