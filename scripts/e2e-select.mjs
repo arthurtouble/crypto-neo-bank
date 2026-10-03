@@ -63,6 +63,7 @@ export const features = {
   deposit: ["deposit", "add-from-wallet", "move-previous-account"],
   earn: ["earn", "defi"],
   insights: ["insights"],
+  markets: ["markets", "perps", "prediction"],
   landing: ["app/page.tsx", "public.css", "landing", "waitlist", "unavailable", "robots", "sitemap", "llms.txt", "app/docs/", "guest-banner", "lib/legal/"],
   notifications: ["notification"],
   ops: ["api/ops/", "lib/ops/"],

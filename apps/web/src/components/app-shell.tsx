@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/client/auth";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  ArrowDownToLine, ArrowDownUp, ArrowUpFromLine, ChartNoAxesColumn, CircleHelp, CreditCard,
+  ArrowDownToLine, ArrowDownUp, ArrowUpFromLine, CandlestickChart, ChartNoAxesColumn, CircleHelp, CreditCard,
   LayoutGrid, List, LogIn, Settings, TrendingUp, type LucideIcon
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -18,10 +18,10 @@ import { NotificationBell } from "./notification-bell";
 import { SupportChatProvider } from "./support-chat";
 import { ThemeChoice } from "./theme-choice";
 
-/** The ten sections, in order, not grouped (redesign-journeys.md, Navigation). */
+/** The eleven sections, in order, not grouped (redesign-journeys.md, Navigation). */
 const sections: { label: string; href: string }[] = navigation.flatMap((group) => [...group.items]);
 const iconFor: Record<string, LucideIcon> = {
-  Overview: LayoutGrid, Deposit: ArrowDownToLine, Send: ArrowUpFromLine, Swap: ArrowDownUp, Earn: TrendingUp,
+  Overview: LayoutGrid, Deposit: ArrowDownToLine, Send: ArrowUpFromLine, Swap: ArrowDownUp, Earn: TrendingUp, Markets: CandlestickChart,
   Cards: CreditCard, Transactions: List, Insights: ChartNoAxesColumn, Settings, Support: CircleHelp
 };
 
@@ -30,7 +30,7 @@ function isCurrent(pathname: string, href: string) {
 }
 
 /**
- * Desktop: a sidebar with the ten sections, and a top bar with search, the bell, and the account menu.
+ * Desktop: a sidebar with the eleven sections, and a top bar with search, the bell, and the account menu.
  * Phone: a header with the wordmark and the bell, and a floating menu button that opens the sections as tiles. Every page
  * leaves room at the bottom, so the customer can always scroll a button clear of it.
  */

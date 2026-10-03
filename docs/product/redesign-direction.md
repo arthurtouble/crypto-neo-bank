@@ -33,7 +33,7 @@ The owner hasn't answered these yet. Each has a proposed answer, marked as propo
 | Wireframes or high fidelity | Wireframes first, then high fidelity: the locked storyboards (phase 2), then the high-fidelity look below. |
 | Where design happens | Proposed: in code. The design system reference page (`apps/web/public/design-system.html`) is the source of truth, reviewed in pull requests with screenshots. |
 | Brand assets | Owner, 29 September: nothing final. Phase 3 designs a new wordmark and app icon; no illustrations. Asset and provider logos come from their owners. |
-| Primary navigation | Owner, 29 September: ten sections, not grouped. A sidebar on desktop; on the phone, a floating menu button that opens a sheet of ten tiles. See [redesign-journeys.md](redesign-journeys.md#navigation). |
+| Primary navigation | Owner, 29 September: ten sections, not grouped (eleven with Markets since 3 October 2026). A sidebar on desktop; on the phone, a floating menu button that opens a sheet of eleven tiles. See [redesign-journeys.md](redesign-journeys.md#navigation). |
 
 ## The look
 
