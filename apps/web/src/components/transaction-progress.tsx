@@ -28,7 +28,7 @@ function copy(label: string, phase: ActionPhase, action: ActionView | null) {
     detail: "Your USDC reached Bridge's address. Bridge sends the dollars to your bank, usually within 1 to 3 business days for a bank transfer. Track it in Transactions." };
   switch (action?.status) {
     case "settling": return action.destinationChainId
-      ? { step: 3, title: `${label} sent`, detail: `It's waiting for the bridge to deliver it on ${networkName(action.destinationChainId)}, usually within 30 minutes. You can close this and track it in Transactions.` }
+      ? { step: 3, title: `${label} sent`, detail: `It's on its way to ${networkName(action.destinationChainId)}, usually within 30 minutes. You can close this and track it in Transactions.` }
       : { step: 3, title: `${label} complete`, detail: `${networkName(action.chainId)} makes it final in about 20 minutes. You can close this.` };
     case "confirmed": return { step: 3, title: `${label} complete`, detail: "The network confirmed it." };
     case "failed": return { step: 3, title: `${label} failed`, detail: failureText(action.failureReason) };

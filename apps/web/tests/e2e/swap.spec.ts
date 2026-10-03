@@ -118,7 +118,7 @@ test("moving to another network is sent, then tracked: no spinner while the brid
   await quote(page).getByRole("button", { name: "Swap", exact: true }).click();
 
   const progress = page.getByRole("status").filter({ hasText: "Swap sent" });
-  await expect(progress).toContainText("waiting for the bridge to deliver it on Arbitrum", { timeout: 30_000 });
+  await expect(progress).toContainText("on its way to Arbitrum", { timeout: 30_000 });
   await expect(progress.locator(".spin")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "New swap" })).toBeVisible();
   await expect(outcome(page, "Swap complete")).toHaveCount(0);

@@ -23,7 +23,7 @@ The root layout loads `design-tokens.css` for the whole app, and every area is s
 | App shell: sidebar, top bar, phone header, menu button and sheet, account menu, notifications, toasts, terms and account screens | `apps/web/src/app/shell.css`, classes prefixed `app` | Rebuilt |
 | Overview: total, group chips, holdings table or list, holding detail, recent transactions, guest example, empty account | `apps/web/src/app/overview.css`, classes prefixed `ov`; the shared guest banner is in `shell.css` | Rebuilt |
 | Deposit: the four ways as tabs (desktop) or rows (phone), receive, from a wallet, card, bank checklist and details | `apps/web/src/app/money.css`, classes prefixed `mx`, shared with Send and Swap | Rebuilt |
-| Send: two tabs (to a person or wallet, to a bank account), amount and asset, recipient faces, a review step, progress in place, and a live summary column | `money.css` | Rebuilt |
+| Send: two tabs (to a person or wallet, to a bank account), amount and asset, recipient faces, one To field for an address or @tag, a review step, and progress in place, in one column | `money.css` | Rebuilt |
 | Swap: you pay and you receive, each with an asset dropdown (what you hold and its balance first on the side that pays), Max, reverse, how far the price can move, and the quote with its countdown, dollar values, rate, fees, and reference prices beside the form. Once it's sent, the quote gives way to the progress and New swap | `money.css` | Rebuilt |
 | Earn: your positions in dollars as last read, then markets and vaults, each opening to Deposit and Withdraw tabs | `money.css`, classes prefixed `er` | Rebuilt |
 | Cards: the setup checklist beside a "Not issued" card, then the card (filled with the text colour; muted when frozen), details in a dialog (a sheet on the phone), controls, the allowance, and card activity | `apps/web/src/app/cards.css`, classes prefixed `cd`, on the `mx` parts in `money.css` (including the shared `mxDialog`) | Rebuilt |
@@ -138,7 +138,7 @@ A 4px grid. Every gap, padding, and margin comes from the scale.
 | Top of page (`--page-pad-top`) | 28px under the top bar | 8px under the header |
 | Between sections (`--gap-section`) | 20px | 18px |
 | Content width | Up to 1120px, centred from 1440px | Full width |
-| Columns | Main column, plus a 340 to 360px side column (the live summary, recent transactions) | One column |
+| Columns | Main column, plus a 340 to 360px side column (the live summary, recent transactions). A page without a side column (Send) keeps the main column's width | One column |
 | Bottom clearance | 64px | 100px plus the safe area, so the menu button never covers content |
 
 ## Sizes
@@ -276,7 +276,7 @@ Caption-size secondary headers, numbers right-aligned, tabular figures. Rows ope
 
 ### Summary and review
 
-Label-value rows: the label secondary on the left, the value on the right. The total or "arrives" row last, in semibold. The primary action at the bottom. Fees that Aura pays say "Paid by Aura" in positive.
+Label-value rows: the label secondary on the left, the value on the right. The total or "arrives" row last, in semibold. The primary action at the bottom. Fees that Aura pays say "Paid by Aura" in positive. An address is shown in full in groups of four on desktop, and as its first and last four characters (`0x5555…5555`) on the phone. A refusal (a limit, a switch, a paused asset) shows in red above the button, not as a toast.
 
 ### Statuses
 

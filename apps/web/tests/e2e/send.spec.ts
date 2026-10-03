@@ -76,7 +76,7 @@ test("a first-time address is checked in chunks before the review; once used, it
   await expect(dialog(page).getByLabel("To")).toHaveValue(RECIPIENT);
   await dialog(page).getByRole("button", { name: "Review" }).click();
   await addressCheck(page).getByRole("button", { name: "It's correct" }).click();
-  await expect(page.getByTestId("send-review")).toContainText(RECIPIENT);
+  await expect(page.getByTestId("send-review").locator(`[title="${RECIPIENT}"]`)).toHaveCount(1);
   await dialog(page).getByRole("button", { name: "Confirm and send" }).click();
   await expect(outcome(page, "Transfer complete")).toBeVisible({ timeout: 30_000 });
 
@@ -85,7 +85,7 @@ test("a first-time address is checked in chunks before the review; once used, it
   await fillSend(page, { amount: "1", to: RECIPIENT });
   await expect(dialog(page).getByRole("list", { name: "Send steps" })).not.toContainText("Check", { timeout: 20_000 });
   await dialog(page).getByRole("button", { name: "Review" }).click();
-  await expect(page.getByTestId("send-review")).toContainText(RECIPIENT);
+  await expect(page.getByTestId("send-review").locator(`[title="${RECIPIENT}"]`)).toHaveCount(1);
   await expect(addressCheck(page)).toHaveCount(0);
 });
 
@@ -96,7 +96,7 @@ test("USDC goes to an address after a review, with the fee paid by Aura, and the
 
   const review = page.getByTestId("send-review");
   await expect(review).toContainText("12.5 USDC");
-  await expect(review).toContainText(RECIPIENT);
+  await expect(review.locator(`[title="${RECIPIENT}"]`)).toHaveCount(1);
   await expect(review).toContainText("Base");
   await expect(review).toContainText("Paid by Aura");
   expect(await relayed()).toEqual([]);
@@ -155,7 +155,7 @@ test("bad input is caught before anything is prepared", async ({ page }) => {
     await expect(dialog(page).getByText(message)).toBeVisible();
   };
   await fillSend(page, { amount: "1" });
-  await check("1", "0x123", "Enter a valid address.");
+  await check("1", "0x123", "Enter a valid address or Aura tag.");
   await check("1", customer.wallet, "This is your own Aura address.");
   await check("0", RECIPIENT, "Enter an amount greater than zero.");
   await check("1.1234567", RECIPIENT, "Use at most 6 decimal places.");
@@ -166,8 +166,8 @@ test("the server refuses a token contract as the recipient", async ({ page }) =>
   await openSend(page);
   await fillSend(page, { amount: "1", to: ASSETS.usdc });
   await reviewAndConfirm(page);
-  await expect(toast(page, "Transfer not sent")).toBeVisible({ timeout: 20_000 });
-  await expect(page.locator(".toastRegion")).toContainText("token contract");
+  await expect(dialog(page).getByRole("alert")).toContainText("Transfer not sent", { timeout: 20_000 });
+  await expect(dialog(page).getByRole("alert")).toContainText("token contract");
   expect(await relayed()).toEqual([]);
 });
 
@@ -205,12 +205,11 @@ test("an Aura tag is found, checked again before signing, and shown in the revie
   await acceptTerms(page, payee);
   await asCustomer(page, payee, "PUT", "/api/aura-tags", { tag, address: payee.wallet, displayName: "Sam", publicEnabled: true });
   await openSend(page);
-  await page.getByLabel("Aura tag").fill(`@${tag}`);
-  await page.getByRole("button", { name: "Find recipient" }).click();
-  await expect(dialog(page)).toBeVisible({ timeout: 20_000 });
-  await expect(dialog(page).getByLabel("To")).toHaveValue(payee.wallet);
+  // The To field takes an Aura tag as well as an address; Aura finds the tag on Review.
+  await dialog(page).getByLabel("To").fill(`@${tag}`);
   await dialog(page).getByLabel("Amount").fill("4");
   await reviewSend(page);
+  await expect(page.getByTestId("send-review")).toContainText(`${payee.wallet.slice(0, 6)}…${payee.wallet.slice(-4)}`);
   await expect(page.getByTestId("send-review")).toContainText(`@${tag}`);
   await dialog(page).getByRole("button", { name: "Confirm and send" }).click();
   await expect(outcome(page, "Transfer complete")).toBeVisible({ timeout: 30_000 });
@@ -219,9 +218,10 @@ test("an Aura tag is found, checked again before signing, and shown in the revie
 
 test("an unknown Aura tag isn't found", async ({ page }) => {
   await openSend(page);
-  await page.getByLabel("Aura tag").fill("@nobody-here");
-  await page.getByRole("button", { name: "Find recipient" }).click();
-  await expect(page.getByText("This Aura tag is unavailable.")).toBeVisible();
+  await fillSend(page, { amount: "1", to: "@nobody-here" });
+  await reviewSend(page);
+  await expect(dialog(page).getByText("We couldn't find @nobody-here.")).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByTestId("send-review")).toHaveCount(0);
 });
 
 test("the customer's controls are enforced on the server: daily limit, saved recipients only, waiting period, and lock", async ({ page }) => {
@@ -231,7 +231,7 @@ test("the customer's controls are enforced on the server: daily limit, saved rec
   const attempt = async (message: string) => {
     await fillSend(page, { amount: "12.5", to: RECIPIENT });
     await reviewAndConfirm(page);
-    await expect(page.locator(".toastRegion")).toContainText(message, { timeout: 20_000 });
+    await expect(dialog(page).getByRole("alert")).toContainText(message, { timeout: 20_000 });
     await page.keyboard.press("Escape");
     await page.reload();
   };
@@ -260,7 +260,7 @@ test("cancelling the passkey prompt sends nothing", async ({ page }) => {
   await openSend(page);
   await fillSend(page, { amount: "1", to: RECIPIENT });
   await reviewAndConfirm(page);
-  await expect(toast(page, "Cancelled")).toBeVisible({ timeout: 20_000 });
+  await expect(dialog(page).getByRole("alert")).toContainText("You cancelled. Nothing was sent.", { timeout: 20_000 });
   expect(await relayed()).toEqual([]);
 });
 
@@ -269,8 +269,8 @@ test("while sending is switched off, the customer is told and nothing is sent", 
   await openSend(page);
   await fillSend(page, { amount: "1", to: RECIPIENT });
   await reviewAndConfirm(page);
-  await expect(toast(page, "Transfer not sent")).toBeVisible({ timeout: 20_000 });
-  await expect(page.locator(".toastRegion")).toContainText("temporarily unavailable");
+  await expect(dialog(page).getByRole("alert")).toContainText("Transfer not sent", { timeout: 20_000 });
+  await expect(dialog(page).getByRole("alert")).toContainText("temporarily unavailable");
   expect(await relayed()).toEqual([]);
 });
 
@@ -279,7 +279,7 @@ test("a paused asset can't be sent", async ({ page }) => {
   await pauseAsset(page, `8453:${ASSETS.usdc}`, true);
   await fillSend(page, { amount: "1", to: RECIPIENT });
   await reviewAndConfirm(page);
-  await expect(page.locator(".toastRegion")).toContainText("USDC is paused right now", { timeout: 20_000 });
+  await expect(dialog(page).getByRole("alert")).toContainText("USDC is paused right now", { timeout: 20_000 });
   await pauseAsset(page, `8453:${ASSETS.usdc}`, false);
   expect(await relayed()).toEqual([]);
 });
@@ -289,8 +289,7 @@ test("when Privy refuses the request, nothing is sent", async ({ page }) => {
   await openSend(page);
   await fillSend(page, { amount: "1", to: RECIPIENT });
   await reviewAndConfirm(page);
-  await expect(toast(page, "Transfer not sent")).toBeVisible({ timeout: 20_000 });
-  await expect(page.locator(".toastRegion")).toContainText("Nothing was sent");
+  await expect(dialog(page).getByRole("alert")).toContainText("Nothing was sent", { timeout: 20_000 });
   expect(await relayed()).toEqual([]);
 });
 
@@ -337,7 +336,7 @@ test("a new address can be saved as a recipient, with a name, as it's sent to", 
   // Next time it's one tap. New recipients start with the waiting period, which only matters with saved-recipients-only on.
   await dialog(page).getByRole("button", { name: "New transfer" }).click();
   await fillSend(page, { amount: "1" });
-  await dialog(page).getByRole("group", { name: "Recipients" }).getByRole("button", { name: /^Alex.*waiting period/ }).click();
+  await dialog(page).getByRole("group", { name: "Recipients" }).getByRole("button", { name: /^Alex/ }).click();
   await expect(page.getByTestId("recipient-status")).toContainText("Saved recipient: Alex. In its waiting period until");
 });
 
@@ -347,7 +346,7 @@ test("USDC can be sent to another network: LI.FI's fees come out of the amount, 
   await fillSend(page, { amount: "10", to: RECIPIENT });
   await expect(dialog(page).getByLabel("Network").locator("option")).toHaveText(["Base", "Ethereum", "Arbitrum", "Optimism", "Polygon"]);
   await dialog(page).getByLabel("Network").selectOption("Arbitrum");
-  await expect(dialog(page)).toContainText("Its fees come out of the amount");
+  await expect(dialog(page)).toContainText("a small fee, taken from the amount");
   await reviewSend(page);
 
   const review = page.getByTestId("send-review");
@@ -356,7 +355,7 @@ test("USDC can be sent to another network: LI.FI's fees come out of the amount, 
   await expect(review).toContainText("They receiveAbout 9.95 USDC");
   await expect(review).toContainText("At least9.9 USDC");
   await expect(review).toContainText("About $0.50, taken from the amount");
-  await expect(review).toContainText("Network fee on BasePaid by Aura");
+  await expect(review).toContainText("Network feePaid by Aura");
   expect(await relayed()).toEqual([]);
 
   await dialog(page).getByRole("button", { name: "Confirm and send" }).click();
@@ -368,7 +367,7 @@ test("USDC can be sent to another network: LI.FI's fees come out of the amount, 
   // Once it has left Base, the Send screen is done with it: sent, no spinner, and a way to track it.
   const progress = dialog(page).getByRole("status");
   await expect(progress).toContainText("Transfer sent", { timeout: 30_000 });
-  await expect(progress).toContainText("waiting for the bridge to deliver it on Arbitrum");
+  await expect(progress).toContainText("on its way to Arbitrum");
   await expect(progress.locator(".spin")).toHaveCount(0);
   await expect(dialog(page).getByRole("button", { name: "New transfer" })).toBeEnabled();
   await expect(outcome(page, "Transfer complete")).toHaveCount(0);
@@ -393,7 +392,7 @@ test("ETH sent to someone on another network completes only once the ETH is seen
   await reviewAndConfirm(page);
   await expect.poll(async () => (await relayed()).length, { timeout: 30_000 }).toBe(1);
   const progress = dialog(page).getByRole("status");
-  await expect(progress).toContainText("waiting for the bridge to deliver it on Arbitrum", { timeout: 30_000 });
+  await expect(progress).toContainText("on its way to Arbitrum", { timeout: 30_000 });
 
   // ETH leaves no token log; the verifier reads the recipient's ETH on Arbitrum across the payout's block.
   await progress.getByRole("link", { name: "Track in Transactions" }).click();
@@ -411,15 +410,13 @@ test("sending to another network needs both the send and cross-network switches,
   await dialog(page).getByLabel("Asset").selectOption("USDC");
   await dialog(page).getByLabel("Network").selectOption("Polygon");
   await reviewSend(page);
-  await expect(toast(page, "No quote")).toBeVisible({ timeout: 20_000 });
-  await expect(page.locator(".toastRegion")).toContainText("Sending to other networks isn't available right now.");
+  await expect(dialog(page).getByRole("alert")).toContainText("Sending to other networks isn't available right now.", { timeout: 20_000 });
   await expect(page.getByTestId("send-review")).toHaveCount(0);
 
   await setFeature(page, "cross_chain", true);
   await setFeature(page, "direct_transfers", false);
-  await page.locator(".toastRegion").getByRole("button", { name: /close|dismiss/i }).first().click().catch(() => undefined);
   await reviewSend(page);
-  await expect(page.locator(".toastRegion")).toContainText("isn't available right now", { timeout: 20_000 });
+  await expect(dialog(page).getByRole("alert")).toContainText("isn't available right now", { timeout: 20_000 });
   await expect(page.getByTestId("send-review")).toHaveCount(0);
   await setFeature(page, "cross_chain", false);
   expect(await relayed()).toEqual([]);
@@ -431,8 +428,7 @@ test("a token contract is refused as the recipient on another network too", asyn
   await fillSend(page, { amount: "1", to: ASSETS.usdc });
   await dialog(page).getByLabel("Network").selectOption("Optimism");
   await reviewSend(page);
-  await expect(toast(page, "No quote")).toBeVisible({ timeout: 20_000 });
-  await expect(page.locator(".toastRegion")).toContainText("token contract");
+  await expect(dialog(page).getByRole("alert")).toContainText("token contract", { timeout: 20_000 });
   await setFeature(page, "cross_chain", false);
 });
 
