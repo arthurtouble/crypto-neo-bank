@@ -5,9 +5,9 @@ import { useAuth } from "@/lib/client/auth";
 import { ApiError, useApi } from "@/lib/client/api";
 import { useOverview } from "@/lib/client/queries";
 import { BASE_CHAIN_ID, BASE_USDC } from "@/lib/assets/registry";
-import { examplePerpsAccount, examplePerpMarkets, examplePredictionEvents, examplePredictionHistory, examplePredictionsAccount,
+import { examplePerpBook, examplePerpCandles, examplePerpsAccount, examplePerpMarkets, examplePredictionEvents, examplePredictionHistory, examplePredictionsAccount,
   exampleUpOrDownEvents, examplePredictionMarket } from "@/lib/example/markets";
-import type { Fill, OpenOrder as PerpOrder, PerpAccountState, PerpMarket } from "@/lib/markets/hyperliquid/info";
+import type { BookLevel, Candle, CandleRange, Fill, OpenOrder as PerpOrder, PerpAccountState, PerpMarket } from "@/lib/markets/hyperliquid/info";
 import type { ClobQuote, PolymarketEvent, PolymarketMarket } from "@/lib/markets/polymarket/markets";
 import type { OpenOrder as PredictionOrder } from "@/lib/markets/polymarket/orders";
 import type { Position as PredictionPosition } from "@/lib/markets/polymarket/positions";
@@ -20,7 +20,7 @@ import type { Observed } from "@/lib/markets/types";
  * value carries where it came from and when; a failed read is unavailable.
  */
 
-export type { Fill, PerpAccountState, PerpMarket, PerpOrder, PolymarketEvent, PolymarketMarket, PredictionOrder, PredictionPosition, ClobQuote, Observed };
+export type { BookLevel, Candle, CandleRange, Fill, PerpAccountState, PerpMarket, PerpOrder, PolymarketEvent, PolymarketMarket, PredictionOrder, PredictionPosition, ClobQuote, Observed };
 
 export type PerpsAccount = {
   owner: string;
@@ -38,6 +38,12 @@ export type PredictionsAccount = {
   positions: Observed<PredictionPosition[]>;
   orders: Observed<PredictionOrder[]> | null;
 };
+
+/** A venue read flattened into the reply: its fields when observed, or why it's unavailable. */
+type FlatObserved<T> = ({ status: "observed"; source: "hyperliquid"; observedAt: string } & T) | { status: "unavailable"; source: "hyperliquid"; observedAt: string; reason: string };
+
+export type PerpCandles = FlatObserved<{ coin: string; interval: string; candles: Candle[] }>;
+export type PerpBook = FlatObserved<{ coin: string; bids: BookLevel[]; asks: BookLevel[]; spread: string | null; spreadPercent: string | null }>;
 
 export type PredictionMarketView = { market: PolymarketMarket; quotes: ClobQuote[] | null; observedAt: string };
 
@@ -74,6 +80,15 @@ export const usePerpMarkets = () =>
 
 export const usePerpsAccount = (enabled = true) =>
   useMarketQuery<PerpsAccount>(["perps-account"], enabled ? "/api/perps/account" : null, examplePerpsAccount, { refetchInterval: 20_000 });
+
+/** A market's chart candles for a range. Live polls every 3 seconds, the hour every 15, longer ranges every minute. */
+export const usePerpCandles = (coin: string, range: CandleRange) =>
+  useMarketQuery<PerpCandles>(["perps-candles", coin, range], `/api/perps/candles?coin=${encodeURIComponent(coin)}&range=${range}`, examplePerpCandles(coin, range),
+    { refetchInterval: range === "live" ? 3_000 : range === "1h" ? 15_000 : 60_000 });
+
+/** A market's order book, refreshed every 2.5 seconds while it shows. */
+export const usePerpBook = (coin: string, enabled = true) =>
+  useMarketQuery<PerpBook>(["perps-book", coin], enabled ? `/api/perps/book?coin=${encodeURIComponent(coin)}` : null, examplePerpBook(coin), { refetchInterval: 2_500 });
 
 export const usePredictionEvents = (category: string | null) =>
   useMarketQuery<{ events: PolymarketEvent[]; nextCursor: string | null }>(["prediction-events", category ?? "all"],

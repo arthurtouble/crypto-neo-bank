@@ -85,19 +85,23 @@ function PerpsAccountCard({ account, isExample, isPending, failed, onRetry }: { 
   </section>;
 }
 
-type ActivityTab = "positions" | "orders" | "history";
+type ActivityTab = "positions" | "orders" | "history" | "extra";
 
 /** Positions, open orders, and fills, for every market or one. */
-export function PerpsActivity({ account, isPending, isExample, coin }: { account: PerpsAccount | undefined; isPending: boolean; isExample: boolean; coin?: string }) {
+export function PerpsActivity({ account, isPending, isExample, coin, extra }: { account: PerpsAccount | undefined; isPending: boolean; isExample: boolean; coin?: string;
+  /** One more tab after History, such as the order book on a market's page on the phone. */
+  extra?: { label: string; render: () => React.ReactNode } }) {
   const [tab, setTab] = useState<ActivityTab>("positions");
   const positions = perpsPositions(account)?.filter((item) => !coin || item.coin === coin) ?? null;
   const orders = account?.orders.status === "observed" ? account.orders.data.filter((item) => !coin || item.coin === coin) : null;
   const fills = account?.fills.status === "observed" ? account.fills.data.filter((item) => !coin || item.coin === coin) : null;
   return <section className="mxCard mkActivity" aria-label={coin ? `Your ${perpName(coin)} activity` : "Your perps activity"}>
     <ListTabs label="Your perps" value={tab} onChange={setTab} options={[
-      { value: "positions", label: "Positions", count: positions?.length }, { value: "orders", label: "Orders", count: orders?.length }, { value: "history", label: "History" }]} />
+      { value: "positions", label: "Positions", count: positions?.length }, { value: "orders", label: "Open orders", count: orders?.length }, { value: "history", label: "History" },
+      ...(extra ? [{ value: "extra" as const, label: extra.label }] : [])]} />
     <div role="tabpanel">
-      {isPending ? <LoadingState label="Reading your perps account" />
+      {tab === "extra" && extra ? extra.render()
+        : isPending ? <LoadingState label="Reading your perps account" />
         : tab === "positions" ? positions === null ? <UnavailableList what="positions" />
           : positions.length === 0 ? <p className="mxHint mkEmptyLine">No open positions.</p>
             : <ul className="mkRows">{positions.map((position) => <PositionRow key={position.coin} position={position} readOnly={isExample} />)}</ul>

@@ -1,6 +1,6 @@
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
-import type { Page, Route, TestInfo } from "@playwright/test";
+import type { Locator, Page, Route, TestInfo } from "@playwright/test";
 import { perpPosition, predictionPosition } from "./support/fake-markets.mjs";
 import { expect, test } from "./support/fixtures";
 import { acceptTerms, ASSETS, edge, newCustomer, setBalances, setFeature, setIdentity, type Customer } from "./support/session";
@@ -17,12 +17,14 @@ const sheet = (page: Page) => page.getByRole("dialog");
 const isPhone = (info: TestInfo) => info.project.name.startsWith("mobile");
 
 /** Screenshots for design review, when MARKETS_SCREENSHOTS names a folder. */
-async function shot(page: Page, info: TestInfo, name: string) {
+async function shot(page: Page, info: TestInfo, name: string, suffix = "") {
   const dir = process.env.MARKETS_SCREENSHOTS;
   if (!dir) return;
   mkdirSync(dir, { recursive: true });
+  // A full-page capture of a scrolled page draws the sticky bar mid-page; start from the top.
+  await page.evaluate(() => window.scrollTo(0, 0));
   await page.waitForTimeout(300);
-  await page.screenshot({ path: join(dir, `${name}-${isPhone(info) ? "phone" : "desktop"}.png`), fullPage: !(await sheet(page).isVisible()) });
+  await page.screenshot({ path: join(dir, `${name}-${isPhone(info) ? "phone" : "desktop"}${suffix}.png`), fullPage: !(await sheet(page).isVisible()) });
 }
 
 async function signIn(page: Page, usdc = "250000000"): Promise<Customer> {
@@ -34,13 +36,26 @@ async function signIn(page: Page, usdc = "250000000"): Promise<Customer> {
 }
 
 /** Type a dollar amount: the keypad on the phone, the field on desktop. */
-async function enterAmount(page: Page, info: TestInfo, amount: string) {
+async function enterAmount(scope: Locator, info: TestInfo, amount: string) {
   if (isPhone(info)) {
-    const keypad = sheet(page).getByRole("group", { name: "Keypad" });
+    const keypad = scope.getByRole("group", { name: "Keypad" });
     for (const key of amount) await keypad.getByRole("button", { name: key, exact: true }).click();
   } else {
-    await sheet(page).getByRole("textbox", { name: "Amount" }).fill(amount);
+    await scope.getByRole("textbox", { name: /^Amount/ }).fill(amount);
   }
+}
+
+/** A perp's order form: the panel beside the book on desktop, with its side picked; the sheet that Long or Short opens on the phone. */
+async function openOrder(page: Page, info: TestInfo, side: "long" | "short"): Promise<Locator> {
+  const label = side === "long" ? "Long" : "Short";
+  if (isPhone(info)) {
+    await page.getByRole("button", { name: label, exact: true }).click({ timeout: 30_000 });
+    await expect(sheet(page).getByRole("heading", { name: new RegExp(`^${label} `) })).toBeVisible();
+    return sheet(page);
+  }
+  const panel = page.getByRole("complementary", { name: "Place an order" });
+  await panel.getByRole("radio", { name: label, exact: true }).click({ timeout: 30_000 });
+  return panel;
 }
 
 const observed = <T>(source: "hyperliquid" | "polymarket", data: T) => ({ status: "observed", source, observedAt: new Date().toISOString(), data });
@@ -112,7 +127,7 @@ test("perps home: the account, positions, orders, and history from Hyperliquid, 
   const position = page.getByRole("listitem", { name: "BTC long" });
   await expect(position).toContainText("Long 10x");
   await expect(position).toContainText("+$67.50");
-  await page.getByRole("tab", { name: /Orders/ }).click();
+  await page.getByRole("tab", { name: /Open orders/ }).click();
   await expect(page.getByText("Buy ETH")).toBeVisible();
   await page.getByRole("tab", { name: "History" }).click();
   await expect(page.getByText("Open Long BTC")).toBeVisible();
@@ -131,34 +146,124 @@ test("perps home: the account, positions, orders, and history from Hyperliquid, 
   await expect(markets.getByRole("link")).toContainText("NVDA");
 });
 
-test("a perps market page: price, about, your position, and an order sheet priced by the server", async ({ page }, info) => {
+test("a perps market page: price and stats, chart ranges, the order book, and an order priced by the server", async ({ page }, info) => {
   const customer = await signIn(page);
   await edge("/__markets", { hyperliquid: { [customer.wallet]: { accountValue: "500", withdrawable: "500" } } });
+  const candleRanges: string[] = [];
+  let bookReads = 0;
+  page.on("request", (request) => {
+    const url = new URL(request.url());
+    if (url.pathname === "/api/perps/candles") candleRanges.push(url.searchParams.get("range") ?? "");
+    if (url.pathname === "/api/perps/book") bookReads += 1;
+  });
   await page.goto("/app/markets/perps/BTC");
   await expect(page.getByTestId("perps-market-price")).toHaveText("$64,250.00", { timeout: 30_000 });
-  const about = page.getByRole("region", { name: "About" });
-  await expect(about).toContainText("Open interest");
-  await expect(about).toContainText(/Funding, hourly\+0\.001\d%/);
-  await expect(about).toContainText("Max leverage40x");
+  // The breadcrumb, the day's change in dollars and percent, and the stats in one line.
+  const crumbs = page.getByRole("navigation", { name: "Breadcrumb" });
+  await expect(crumbs).toContainText("Perps");
+  await expect(crumbs).toContainText("Crypto");
+  await expect(crumbs).toContainText("40x");
+  await expect(page.getByTestId("perps-market-change")).toHaveText("+$1,140.00 (+1.81%) today");
+  const stats = page.getByTestId("perps-market-stats");
+  await expect(stats).toContainText("24h volume$2.1B");
+  await expect(stats).toContainText("Open interest");
+  await expect(stats).toContainText(/Funding, hourly\+0\.001\d%/);
   await expect(page.getByText("No open positions.")).toBeVisible();
+
+  // The chart: 1D first, each range reads its own candles, and Live keeps reading.
+  const chart = page.getByRole("region", { name: "BTC price chart" });
+  await expect(chart.getByTestId("perps-chart")).toBeVisible({ timeout: 20_000 });
+  const ranges = chart.getByRole("radiogroup", { name: "Chart range" });
+  await expect(ranges.getByRole("radio")).toHaveText(["Live", "1H", "1D", "1W", "1M", "3M", "1Y", "All"]);
+  await expect(ranges.getByRole("radio", { name: "1D" })).toHaveAttribute("aria-checked", "true");
+  await ranges.getByRole("radio", { name: "1W" }).click();
+  await expect.poll(() => candleRanges.includes("1w")).toBe(true);
+  await chart.getByRole("radio", { name: "Candles" }).click();
+  await expect(chart.locator(".mkCandleUp, .mkCandleDown").first()).toBeVisible();
+  await ranges.getByRole("radio", { name: "Live" }).click();
+  await expect.poll(() => candleRanges.filter((range) => range === "live").length, { timeout: 15_000 }).toBeGreaterThanOrEqual(2);
+  await chart.getByRole("radio", { name: "Line" }).click();
+
+  // The order book: asks above the spread, bids below, with totals in dollars, and it keeps refreshing.
+  if (isPhone(info)) await page.getByRole("tab", { name: "Order book" }).click();
+  const book = page.getByTestId("perps-book");
+  await expect(book.getByRole("columnheader")).toHaveText(["Price (USD)", "Amount (BTC)", "Total (USD)"], { timeout: 20_000 });
+  await expect(page.getByTestId("perps-spread")).toHaveText(/^Spread\s*\$1\.00\s*0\.002%$/);
+  const asks = book.getByRole("rowgroup", { name: "Asks" }).getByRole("row");
+  const bids = book.getByRole("rowgroup", { name: "Bids" }).getByRole("row");
+  await expect(asks).toHaveCount(isPhone(info) ? 8 : 10);
+  // The best ask sits next to the spread, the best bid just below it.
+  await expect(asks.last().getByRole("cell").first()).toHaveText("64,251.00");
+  await expect(bids.first().getByRole("cell").first()).toHaveText("64,250.00");
+  await expect(bids.first().getByRole("cell").last()).toHaveText(/^\$[\d,]+$/);
+  const reads = bookReads;
+  await expect.poll(() => bookReads, { timeout: 10_000 }).toBeGreaterThan(reads + 1);
+  if (isPhone(info)) await page.getByRole("tab", { name: /Positions/ }).click();
   await shot(page, info, "perps-market");
+  if (!isPhone(info)) {
+    // Dark mode, as the theme setting or the device chooses it.
+    await page.evaluate(() => { document.documentElement.dataset.theme = "dark"; });
+    await shot(page, info, "perps-market", "-dark");
+    await page.evaluate(() => { document.documentElement.dataset.theme = "light"; });
+  }
 
-  await page.getByRole("button", { name: "Long", exact: true }).click();
-  await expect(sheet(page).getByRole("heading", { name: "Long BTC" })).toBeVisible();
-  await enterAmount(page, info, "20");
-  await sheet(page).getByRole("radio", { name: "Isolated" }).click();
-  // Isolated at 5x: the server's estimate, 64,250 × (1 − 1/5 × …).
-  await expect(sheet(page).getByTestId("perps-liquidation")).toHaveText(/^\$5\d,\d{3}\.\d{2}$/, { timeout: 20_000 });
-  await expect(sheet(page)).toContainText("Position size$");
+  // The order form: the panel on desktop, the sheet on the phone.
+  const form = await openOrder(page, info, "long");
+  await expect(form.getByRole("group", { name: "Amount shortcuts" }).getByRole("button")).toHaveText(["25%", "50%", "75%", "Max"]);
+  await expect(form.getByTestId("perps-order-available")).toHaveText("$749.00 available");
+  await enterAmount(form, info, "20");
+  await form.getByLabel("Margin mode").selectOption("isolated");
+  await form.getByRole("spinbutton", { name: "Leverage, times" }).fill("4");
+  await expect(form.getByRole("slider")).toHaveValue("4");
+  await form.getByRole("spinbutton", { name: "Leverage, times" }).fill("5");
+  // Isolated at 5x: the server's estimate, 64,250 × (1 − 1/5 × …), and its fee at the account's rate.
+  await expect(form.getByTestId("perps-liquidation")).toHaveText(/^\$5\d,\d{3}\.\d{2}$/, { timeout: 20_000 });
+  await expect(form).toContainText("Position size$");
+  // The server rounds the size to what Hyperliquid takes, so the margin is a little under $20.
+  await expect(form).toContainText(/Margin\$(19\.\d{2}|20\.00)/);
+  await expect(form.getByTestId("perps-fee")).toHaveText(/^\$0\.0[45]$/);
+  await expect(form.getByRole("button", { name: "Long BTC" })).toBeEnabled();
   await shot(page, info, "perps-order-sheet");
-  await sheet(page).getByText("Auto-close").click();
-  await expect(sheet(page).getByLabel("Take profit at")).toBeVisible();
-  await sheet(page).getByRole("button", { name: "Close" }).first().click();
+  await form.getByText("Take profit / Stop loss").click();
+  await expect(form.getByLabel("Take profit at")).toBeVisible();
+  if (!isPhone(info)) {
+    await form.getByRole("radio", { name: "Short" }).click();
+    await expect(form.getByRole("button", { name: "Short BTC" })).toBeVisible();
+  } else {
+    await sheet(page).getByRole("button", { name: "Close" }).first().click();
+  }
 
-  // A stock perp: its page uses the name without the dex.
-  await page.goto(`/app/markets/perps/${encodeURIComponent("xyz:SPCX")}`);
+  // Switching market from the name: stocks are listed under Stocks, without the dex.
+  await page.getByRole("heading", { level: 1 }).getByRole("button", { name: "BTC" }).click();
+  const switcher = page.getByRole("dialog", { name: "Switch market" });
+  await expect(switcher.getByRole("heading")).toHaveText(["Crypto", "Stocks"]);
+  await switcher.getByRole("link", { name: /^SPCX/ }).click();
+  await expect(page).toHaveURL(/perps\/xyz%3ASPCX$/);
   await expect(page.getByRole("heading", { name: "SPCX", exact: true })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole("navigation", { name: "Breadcrumb" })).toContainText("Stocks");
   await expect(page.getByText("A stock perp on the xyz market")).toBeVisible();
+});
+
+test("a chart, book, or fee Hyperliquid didn't answer shows as unavailable", async ({ page }, info) => {
+  const customer = await signIn(page);
+  await edge("/__markets", { hyperliquid: { [customer.wallet]: { accountValue: "500", withdrawable: "500" } } });
+  const unavailable = { status: "unavailable", source: "hyperliquid", observedAt: new Date().toISOString(), reason: "Hyperliquid didn't answer.", traceId: "t" };
+  await page.route(/\/api\/perps\/candles\?/, (route) => json(route, unavailable));
+  await page.route(/\/api\/perps\/book\?/, (route) => json(route, unavailable));
+  await page.route("**/api/perps/trade/preview", async (route) => {
+    const response = await route.fetch();
+    await json(route, { ...await response.json(), fee: null, feeRate: null }, response.status());
+  });
+  await page.goto("/app/markets/perps/BTC");
+  await expect(page.getByTestId("perps-chart-unavailable")).toBeVisible({ timeout: 30_000 });
+  if (isPhone(info)) await page.getByRole("tab", { name: "Order book" }).click();
+  await expect(page.getByTestId("perps-book-unavailable")).toBeVisible();
+  await expect(page.getByTestId("perps-book")).toHaveCount(0);
+  if (isPhone(info)) await page.getByRole("tab", { name: /Positions/ }).click();
+  const form = await openOrder(page, info, "long");
+  await enterAmount(form, info, "20");
+  await expect(form).toContainText("Position size$", { timeout: 20_000 });
+  await expect(form.getByTestId("perps-fee")).toHaveText("Unavailable");
 });
 
 test("one tap opens a long: adds money through the action flow, connects with the passkey, then places the order", async ({ page }, info) => {
@@ -180,10 +285,11 @@ test("one tap opens a long: adds money through the action flow, connects with th
   });
 
   await page.goto("/app/markets/perps/BTC");
-  await page.getByRole("button", { name: "Long", exact: true }).click({ timeout: 30_000 });
-  await enterAmount(page, info, "15");
-  await expect(sheet(page)).toContainText("Added from USDC first$16.00", { timeout: 20_000 });
-  await sheet(page).getByRole("button", { name: "Open long" }).click();
+  const form = await openOrder(page, info, "long");
+  await enterAmount(form, info, "15");
+  await expect(form).toContainText("Added from USDC first$16.00", { timeout: 20_000 });
+  // The button says what the tap does: add money first, then go long.
+  await form.getByRole("button", { name: "Add money and long" }).click();
   await expect(flow(page)).toContainText("Order placed. 0.0015 BTC at $64,250.00.", { timeout: 30_000 });
   await shot(page, info, "perps-order-placed");
   expect(calls).toEqual(["deposit 16.00", "setup", "signatures",
@@ -201,9 +307,9 @@ test("a cancelled passkey stops the trade and says so", async ({ page }, info) =
     await json(route, { owner: "0x1", connection: null, state: observed("hyperliquid", state), dexStates: observed("hyperliquid", [state]), orders: observed("hyperliquid", []), fills: observed("hyperliquid", []) });
   });
   await page.goto("/app/markets/perps/ETH");
-  await page.getByRole("button", { name: "Short", exact: true }).click({ timeout: 30_000 });
-  await enterAmount(page, info, "10");
-  await sheet(page).getByRole("button", { name: "Open short" }).click();
+  const form = await openOrder(page, info, "short");
+  await enterAmount(form, info, "10");
+  await form.getByRole("button", { name: "Short ETH" }).click();
   await expect(flow(page)).toContainText("You cancelled. Nothing more was sent.", { timeout: 20_000 });
   expect(traded).toBe(false);
 });
@@ -275,7 +381,7 @@ test("a prediction market page: the odds chart, what decides it, and a buy that 
   await shot(page, info, "prediction-market");
 
   await page.getByRole("button", { name: /^Buy Yes 64¢$/ }).click();
-  await enterAmount(page, info, "10");
+  await enterAmount(sheet(page), info, "10");
   await expect(sheet(page).getByTestId("prediction-payout")).toContainText("$10.00 → $15.63 if Yes wins");
   // No fee line: Aura takes no fee.
   await expect(sheet(page)).not.toContainText("Fee");

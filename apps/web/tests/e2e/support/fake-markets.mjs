@@ -91,8 +91,49 @@ function hyperliquidInfo(markets, body) {
     case "frontendOpenOrders": return account.orders;
     case "userFills": return account.fills;
     case "allMids": return Object.fromEntries(DEXES[dex === "xyz" ? 1 : 0].universe.map((asset, index) => [asset.name, DEXES[dex === "xyz" ? 1 : 0].ctxs[index].midPx]));
+    case "candleSnapshot": return candleSnapshot(body.req ?? {});
+    case "l2Book": markets.hyperliquid.bookReads = (markets.hyperliquid.bookReads ?? 0) + 1; return l2Book(String(body.coin ?? ""), markets.hyperliquid.bookReads);
+    case "userFees": return { userCrossRate: "0.00045", userAddRate: "0.00015", activeReferralDiscount: "0.0" };
     default: return null;
   }
+}
+
+const INTERVAL_MS = { "1m": 60_000, "15m": 900_000, "1h": 3_600_000, "4h": 14_400_000, "12h": 43_200_000, "1d": 86_400_000, "1w": 604_800_000 };
+
+/** A market's mid price in the fake, or null for a coin Hyperliquid doesn't list. */
+function midOf(coin) {
+  for (const item of DEXES) {
+    const index = item.universe.findIndex((asset) => asset.name === coin);
+    if (index !== -1) return Number(item.ctxs[index].midPx);
+  }
+  return null;
+}
+
+const px = (value) => value.toFixed(value >= 1_000 ? 1 : value >= 10 ? 2 : 4);
+
+/** Hyperliquid's candleSnapshot: a wave of candles over the requested span that ends at the mid price. At most 400. */
+function candleSnapshot({ coin, interval, startTime, endTime }) {
+  const mid = midOf(coin);
+  const step = INTERVAL_MS[interval];
+  if (mid === null || !step) return [];
+  const end = Math.floor(Number(endTime ?? Date.now()) / step) * step;
+  const count = Math.max(2, Math.min(400, Math.floor((end - Math.max(Number(startTime ?? 0), end - 400 * step)) / step) + 1));
+  const swing = mid * 0.001 * Math.sqrt(step / 60_000);
+  const level = (index) => mid + swing * (Math.sin(index / 9) - Math.sin((count - 1) / 9) + 0.5 * (Math.sin(index / 3.3) - Math.sin((count - 1) / 3.3)));
+  return Array.from({ length: count }, (_, index) => {
+    const open = level(index - 1), close = level(index), wick = swing * 0.4;
+    const t = end - (count - 1 - index) * step;
+    return { t, T: t + step - 1, s: coin, i: interval, o: px(open), c: px(close), h: px(Math.max(open, close) + wick), l: px(Math.min(open, close) - wick), v: "12.5", n: 40 };
+  });
+}
+
+/** Hyperliquid's l2Book: 20 levels a side around the mid price, one tick apart; `ticks` shifts the sizes so each read differs. */
+function l2Book(coin, ticks) {
+  const mid = midOf(coin);
+  if (mid === null) return null;
+  const tick = mid >= 10_000 ? 1 : mid >= 1_000 ? 0.1 : 0.01;
+  const level = (side) => (_, index) => ({ px: px(mid + side * tick * (index + 0.5)), sz: ((1 + index * 0.35 + ((index + ticks) % 3) * 0.2) * 1_000 / mid).toPrecision(4), n: 1 + (index % 4) });
+  return { coin, time: Date.now(), levels: [Array.from({ length: 20 }, level(-1)), Array.from({ length: 20 }, level(1))] };
 }
 
 const allMarkets = (markets) => [...markets.polymarket.events, ...markets.polymarket.upOrDown].flatMap((event) =>

@@ -2,6 +2,7 @@ import type { Fill, OpenOrder, PerpAccountState, PerpMarket } from "@/lib/market
 import type { PolymarketEvent, PolymarketMarket } from "@/lib/markets/polymarket/markets";
 import type { Position } from "@/lib/markets/polymarket/positions";
 import type { Observed } from "@/lib/markets/types";
+import { PERP_RANGES, type PerpRange } from "@/lib/markets/view";
 
 /**
  * Fictional Markets data for guests, in the shapes `/api/perps/*` and
@@ -108,6 +109,39 @@ export function examplePredictionMarket(id: string) {
   const all = [...examplePredictionEvents, ...exampleUpOrDownEvents].flatMap((item) => item.markets);
   const found = all.find((item) => item.id === id) ?? all[0];
   return { market: found, quotes: null, observedAt: at };
+}
+
+const exampleMark = (coin: string) => {
+  const found = examplePerpMarkets.status === "observed" ? examplePerpMarkets.data.find((item) => item.coin === coin) : undefined;
+  return Number(found?.markPx ?? "100");
+};
+const priceText = (value: number) => value.toFixed(value >= 1_000 ? 1 : value >= 10 ? 2 : 4);
+
+/** Example candles for a perp's chart: a wave that ends at the example price. */
+export function examplePerpCandles(coin: string, range: PerpRange) {
+  const { intervalMs, count } = PERP_RANGES.find((item) => item.value === range) ?? PERP_RANGES[2];
+  const mark = exampleMark(coin);
+  const swing = mark * 0.004 * Math.sqrt(intervalMs / 60_000) / 4;
+  const level = (index: number) => mark + swing * (6 * Math.sin(index / 9) + 3 * Math.sin(index / 3.7) - 6 * Math.sin((count - 1) / 9) - 3 * Math.sin((count - 1) / 3.7));
+  const candles = Array.from({ length: count }, (_, index) => {
+    const open = level(index - 1), close = level(index);
+    const wick = swing * (0.6 + 0.4 * Math.abs(Math.sin(index * 1.7)));
+    return { t: time - (count - 1 - index) * intervalMs, o: priceText(open), c: priceText(close), h: priceText(Math.max(open, close) + wick),
+      l: priceText(Math.min(open, close) - wick), v: (1_000 + 400 * Math.abs(Math.sin(index))).toFixed(2) };
+  });
+  return { status: "observed" as const, source: "hyperliquid" as const, observedAt: at, coin, interval: "1m", candles };
+}
+
+/** An example order book around the example price, 20 levels a side. */
+export function examplePerpBook(coin: string) {
+  const mark = exampleMark(coin);
+  const tick = mark >= 10_000 ? 1 : mark >= 1_000 ? 0.1 : mark >= 10 ? 0.01 : 0.001;
+  const size = (index: number) => ((2 + 3 * Math.abs(Math.sin(index * 2.3)) + index * 0.4) * 1_000 / mark).toPrecision(4);
+  const level = (side: 1 | -1) => (_: unknown, index: number) => ({ price: priceText(mark + side * tick * (index + 1)), size: size(index + (side > 0 ? 7 : 0)), orders: 1 + (index % 4) });
+  const bids = Array.from({ length: 20 }, level(-1)), asks = Array.from({ length: 20 }, level(1));
+  const spread = Number(asks[0].price) - Number(bids[0].price);
+  return { status: "observed" as const, source: "hyperliquid" as const, observedAt: at, coin, bids, asks,
+    spread: String(Number(spread.toPrecision(8))), spreadPercent: (spread / mark * 100).toFixed(4) };
 }
 
 /** A gently moving example line for the odds chart. */

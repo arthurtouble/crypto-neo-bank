@@ -23,11 +23,14 @@ Aura charges no fee on Markets. Each venue charges its own trading fees. Circle'
 
 A perp follows the price of an asset, such as bitcoin or a stock. You don't own the asset. You choose long, if you think the price will rise, or short, if you think it will fall.
 
+Each market's page shows its price chart, from the last few minutes to all time, and its order book: the prices people are offering to sell at above, and to buy at below.
+
 - **Amount and leverage.** You put in a dollar amount and choose leverage, up to each market's maximum. At 5x, $20 controls a $100 position.
 - **Liquidation.** If the price moves against you far enough, Hyperliquid closes your position and you lose the money behind it. The order sheet shows an estimated liquidation price before you confirm. With leverage, a small price move can wipe out what you put in.
 - **Isolated or cross.** Isolated risks only the money behind this position. Cross can use your whole perps balance to keep positions open.
 - **Market or limit.** A market order fills now, near the current price. A limit order waits for your price.
-- **Auto-close.** You can set a take profit price and a stop loss price, when you place the order or later.
+- **Take profit and stop loss.** You can set a price to close at a profit and one to close at a loss, when you place the order or later.
+- **Fees.** Before you confirm, the order shows Hyperliquid's estimated fee for your account. Stock perps cost more to trade than crypto ones.
 - **Funding.** Every hour, longs and shorts pay each other a small funding rate. Each market's page shows it.
 
 If your perps balance is short, Aura adds the difference from your USDC on Base first. The first deposit is at least $6, because Hyperliquid needs at least $5 to arrive. It usually takes seconds.

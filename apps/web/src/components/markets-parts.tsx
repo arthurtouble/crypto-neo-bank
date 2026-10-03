@@ -60,23 +60,29 @@ const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0", "delete"];
  * A dollar amount with 25%, 50%, and Max of what's available. On the phone the
  * amount is large and a keypad enters it, so the system keyboard stays closed.
  */
-export function DollarAmount({ label, value, onChange, available, maxLabel = "Max", error, describedBy }: {
-  label: string; value: string; onChange: (value: string) => void; available: number | null; maxLabel?: string; error?: string | null; describedBy?: string;
+export function DollarAmount({ label, value, onChange, available, maxLabel = "Max", shares = [0.25, 0.5], aside, error, describedBy }: {
+  label: string; value: string; onChange: (value: string) => void; available: number | null; maxLabel?: string;
+  /** The shortcuts before Max, as fractions of what's available. */
+  shares?: number[];
+  /** A note beside the label, such as what's available. */
+  aside?: React.ReactNode;
+  error?: string | null; describedBy?: string;
 }) {
   const phone = useIsPhone();
   const id = useId();
   const errorId = `${id}-error`;
+  const shortcuts: Array<[string, number]> = [...shares.map((share): [string, number] => [`${Math.round(share * 100)}%`, share]), [maxLabel, 1]];
   return <div className="mkAmount">
     <label className="mkAmountField" htmlFor={id}>
-      <span className="mkLabel">{label}</span>
+      <span className="mkLabelRow"><span className="mkLabel">{label}</span>{aside ? <small>{aside}</small> : null}</span>
       <span className="mkAmountInput"><span aria-hidden="true">$</span>
         <input id={id} value={value} inputMode={phone ? "none" : "decimal"} autoComplete="off" placeholder="0" aria-invalid={error ? true : undefined}
           aria-describedby={[error ? errorId : null, describedBy].filter(Boolean).join(" ") || undefined}
           onChange={(event) => onChange(event.target.value.replace(/[^\d.]/g, ""))} /></span>
     </label>
     <div className="mkShares" role="group" aria-label="Amount shortcuts">
-      {[["25%", 0.25], ["50%", 0.5], [maxLabel, 1]].map(([name, fraction]) =>
-        <button type="button" key={name as string} className="mkChip" disabled={!available || available <= 0} onClick={() => onChange(shareOf(available ?? 0, fraction as number))}>{name}</button>)}
+      {shortcuts.map(([name, fraction]) =>
+        <button type="button" key={name} className="mkChip" disabled={!available || available <= 0} onClick={() => onChange(shareOf(available ?? 0, fraction))}>{name}</button>)}
     </div>
     {error && <p className="mxFieldError" id={errorId}>{error}</p>}
     {phone && <div className="mkKeypad" role="group" aria-label="Keypad">

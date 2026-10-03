@@ -2,14 +2,16 @@
 
 import * as Dialog from "@radix-ui/react-dialog";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { ChevronDown } from "lucide-react";
+import { useEffect, useState } from "react";
 import type { AuthorizationRequest } from "@/lib/actions/privy-relay";
 import { ApiError, useApi } from "@/lib/client/api";
+import { useAuth } from "@/lib/client/auth";
 import { useAuraWallet } from "@/lib/client/use-aura-wallet";
 import type { ActionView } from "@/lib/client/use-action";
 import { formatToken, formatUsd } from "@/lib/format";
 import type { PerpPosition } from "@/lib/markets/hyperliquid/info";
-import { formatPrice, parseDollars, parsePrice, perpName, perpsTopUp, PERPS_MINIMUM_DEPOSIT, positionSide } from "@/lib/markets/view";
+import { clampLeverage, formatFee, formatPrice, parseDollars, parsePrice, perpName, perpsTopUp, PERPS_MINIMUM_DEPOSIT, positionSide } from "@/lib/markets/view";
 import { useBaseUsdc, type PerpMarket, type PerpsAccount } from "./markets-data";
 import { DollarAmount, failureMessage, FlowTimeline, PayWith, Segmented, useFlow, useSettledAction, type FlowStep } from "./markets-parts";
 import { Sheet } from "./sheet";
@@ -18,7 +20,9 @@ import { TransactionProgress } from "./transaction-progress";
 type SignRequest = { requestId: string; request: AuthorizationRequest<unknown> };
 type ExchangeStatus = { kind: "resting"; oid: number } | { kind: "filled"; oid: number; totalSz: string; avgPx: string } | { kind: "success" }
   | { kind: "waiting"; for: "fill" | "trigger" } | { kind: "error"; message: string };
-type Preview = { price: string; size: string; notional: string; margin: string; liquidationPrice: string | null; coin: string; maxLeverage: number };
+type Preview = { price: string; size: string; notional: string; margin: string; liquidationPrice: string | null; coin: string; maxLeverage: number;
+  /** Estimated taker fee in dollars, and its rate; null when Hyperliquid didn't answer the fee read. */
+  fee?: string | null; feeRate?: string | null };
 
 /** Hyperliquid's answer to an order: the first error, or nothing. */
 const orderError = (statuses: ExchangeStatus[]) => statuses.find((status): status is Extract<ExchangeStatus, { kind: "error" }> => status.kind === "error")?.message ?? null;
@@ -40,26 +44,37 @@ async function connectPerps(api: ReturnType<typeof useApi>, authorize: (request:
 }
 
 /**
- * Open a long or a short with a dollar amount. If the perps balance is short,
- * the USDC comes from the Aura account first (the app's own action flow),
- * then the wallet is connected once with the passkey, then the order is placed.
+ * The order form: what to trade and how, the server's estimate of size, fee,
+ * and liquidation, and one button that does everything still needed. If the
+ * perps balance is short, the USDC comes from the Aura account first (the
+ * app's own action flow), then the wallet is connected once with the
+ * passkey, then the order is placed. The steps show in place.
+ *
+ * On desktop it's the market page's order panel, with a Long/Short toggle;
+ * on the phone it's inside the order sheet, whose title names the side.
  */
-export function PerpsOrderSheet({ market, side, account, onClose }: { market: PerpMarket; side: "long" | "short"; account: PerpsAccount | undefined; onClose: () => void }) {
+export function PerpsOrderForm({ market, side, onSide, account, variant, onDone, onRunning }: {
+  market: PerpMarket; side: "long" | "short"; onSide?: (side: "long" | "short") => void; account: PerpsAccount | undefined;
+  variant: "panel" | "sheet"; onDone: () => void; onRunning?: (running: boolean) => void;
+}) {
   const api = useApi();
   const wallet = useAuraWallet();
+  const { ready: authReady, authenticated, login } = useAuth();
   const queryClient = useQueryClient();
   const usdc = useBaseUsdc();
   const deposit = useSettledAction("Deposit");
-  const { flow, start, at, finish, fail, running } = useFlow();
+  const { flow, start, at, finish, fail, reset, running } = useFlow();
   const [amount, setAmount] = useState("");
   const [isCross, setIsCross] = useState(!market.onlyIsolated);
   const [type, setType] = useState<"market" | "limit">("market");
   const [limitPrice, setLimitPrice] = useState("");
   const [leverage, setLeverage] = useState(Math.min(5, market.maxLeverage));
+  const [leverageText, setLeverageText] = useState(String(Math.min(5, market.maxLeverage)));
   const [autoClose, setAutoClose] = useState(false);
   const [takeProfit, setTakeProfit] = useState("");
   const [stopLoss, setStopLoss] = useState("");
   const name = perpName(market.coin);
+  const guest = !authReady || !authenticated;
 
   const margin = parseDollars(amount);
   const perpsAvailable = perpsAvailableFor(account, market.dex);
@@ -74,7 +89,7 @@ export function PerpsOrderSheet({ market, side, account, onClose }: { market: Pe
     ...(autoClose && trigger(takeProfit) ? { takeProfit: trigger(takeProfit) } : {}), ...(autoClose && trigger(stopLoss) ? { stopLoss: trigger(stopLoss) } : {})
   };
 
-  const problem = margin === null ? null
+  const problem = margin === null || guest ? null
     : perpsAvailable === null ? "Your perps balance can't be read right now."
       : margin * leverage < 10 ? "Orders must be worth at least $10. Add more or raise the leverage."
         : short > 0 && base === null ? "Your USDC balance can't be read right now."
@@ -85,7 +100,7 @@ export function PerpsOrderSheet({ market, side, account, onClose }: { market: Pe
   const preview = useQuery({
     queryKey: ["perps-preview", previewKey],
     queryFn: () => api<Preview>("/api/perps/trade/preview", { method: "POST", json: body }),
-    enabled: body !== null && problem === null && !flow,
+    enabled: body !== null && problem === null && !flow && !guest,
     retry: false,
     staleTime: 5_000
   });
@@ -113,6 +128,7 @@ export function PerpsOrderSheet({ market, side, account, onClose }: { market: Pe
       const filled = result.statuses.find((status) => status.kind === "filled");
       finish(filled && filled.kind === "filled" ? `Order placed. ${formatToken(filled.totalSz, name)} at ${formatPrice(filled.avgPx)}.`
         : "Order placed. It waits on Hyperliquid until the price is reached.");
+      setAmount("");
     } catch (error) {
       if (error instanceof ApiError && error.code === "mfa_required") wallet.enrollPasskey();
       fail(failureMessage(error));
@@ -121,42 +137,69 @@ export function PerpsOrderSheet({ market, side, account, onClose }: { market: Pe
     }
   }
 
-  const title = `${side === "long" ? "Long" : "Short"} ${name}`;
-  return <Sheet onOpenChange={(open) => { if (!open && !running) onClose(); }} className="mkSheet" describedBy="perps-order-note">
-    <div className="mxDialogHead"><Dialog.Title>{title}</Dialog.Title><Dialog.Close className="appTextButton" disabled={running}>Close</Dialog.Close></div>
-    {flow ? <>
-      <FlowTimeline flow={flow} title={`${title} progress`} />
-      {deposit.phase !== "idle" && <TransactionProgress label="Deposit" phase={deposit.phase} action={deposit.action} outcomeUnknown={deposit.outcomeUnknown} />}
-      {!running && <button type="button" className="appButton appButtonPrimary appButtonLarge" onClick={onClose}>Done</button>}
-    </> : <form className="mkSheetBody" aria-label={`${title} order`} onSubmit={(event) => { event.preventDefault(); void place(); }}>
-      <p className="mxDialogNote" id="perps-order-note">{side === "long" ? `Gains if ${name} rises.` : `Gains if ${name} falls.`} Up to {market.maxLeverage}x leverage.</p>
-      <DollarAmount label="Amount" value={amount} onChange={setAmount} available={available} error={problem} />
-      <PayWith amount={base} note={perpsAvailable !== null ? `${formatUsd(perpsAvailable)} already in perps` : undefined} />
-      <div className="mkChoices">
-        <Segmented label="Margin" value={isCross ? "cross" : "isolated"} onChange={(value) => setIsCross(value === "cross")}
-          options={[{ value: "isolated", label: "Isolated" }, { value: "cross", label: "Cross", disabled: market.onlyIsolated }]} />
-        <Segmented label="Order type" value={type} onChange={setType} options={[{ value: "market", label: "Market" }, { value: "limit", label: "Limit" }]} />
-      </div>
-      {type === "limit" && <label className="mxField">Limit price<input inputMode="decimal" value={limitPrice} onChange={(event) => setLimitPrice(event.target.value)} placeholder={formatPrice(market.markPx) ?? ""} /></label>}
-      <label className="mkLeverage"><span className="mkLabel">Leverage <strong>{leverage}x</strong></span>
-        <input type="range" min={1} max={market.maxLeverage} step={1} value={leverage} onChange={(event) => setLeverage(Number(event.target.value))} aria-valuetext={`${leverage}x`} />
-        <span className="mkLeverageEnds" aria-hidden="true"><span>1x</span><span>{market.maxLeverage}x</span></span>
-      </label>
-      <dl className="mxSummary">
-        <div><dt>Position size</dt><dd>{preview.data ? `${formatUsd(preview.data.notional)} · ${formatToken(preview.data.size, name)}` : "—"}</dd></div>
-        <div><dt>Liquidation price</dt><dd data-testid="perps-liquidation">{preview.isError ? <span className="appUnavailable">Unavailable</span>
-          : preview.data ? formatPrice(preview.data.liquidationPrice) ?? "None at this leverage" : "—"}</dd></div>
-        {topUp > 0 && <div><dt>Added from USDC first</dt><dd>{formatUsd(topUp)}</dd></div>}
-      </dl>
-      <label className="mkSwitchRow"><span><strong>Auto-close</strong><small>Close at a profit or a loss you choose.</small></span>
-        <input type="checkbox" className="appSwitch" checked={autoClose} onChange={(event) => setAutoClose(event.target.checked)} /></label>
-      {autoClose && <div className="mxFieldRow">
-        <label className="mxField">Take profit at<input inputMode="decimal" value={takeProfit} onChange={(event) => setTakeProfit(event.target.value)} /></label>
-        <label className="mxField">Stop loss at<input inputMode="decimal" value={stopLoss} onChange={(event) => setStopLoss(event.target.value)} /></label>
-      </div>}
-      <button type="submit" className="appButton appButtonPrimary appButtonLarge" disabled={margin === null || problem !== null}>{side === "long" ? "Open long" : "Open short"}</button>
-      <p className="mxHint">Prices move fast and you can lose all of it. Hyperliquid charges its own trading fee; Aura charges none.</p>
-    </form>}
+  useEffect(() => { onRunning?.(running); }, [running, onRunning]);
+
+  const sideLabel = side === "long" ? "Long" : "Short";
+  if (flow) return <div className="mkOrderFlow">
+    <FlowTimeline flow={flow} title={`${sideLabel} ${name} progress`} />
+    {deposit.phase !== "idle" && <TransactionProgress label="Deposit" phase={deposit.phase} action={deposit.action} outcomeUnknown={deposit.outcomeUnknown} />}
+    {!running && <button type="button" className="appButton appButtonPrimary appButtonLarge" onClick={() => { reset(); if (variant === "sheet") onDone(); }}>Done</button>}
+  </div>;
+
+  const fee = preview.data ? preview.data.fee === null || preview.data.fee === undefined ? <span className="appUnavailable">Unavailable</span> : formatFee(preview.data.fee) : "—";
+  const action = guest ? "Sign in to trade" : topUp > 0 ? `Add money and ${side}` : `${sideLabel} ${name}`;
+  return <form className="mkOrderForm" aria-label={`${sideLabel} ${name} order`} onSubmit={(event) => { event.preventDefault(); if (guest) login(); else void place(); }}>
+    <div className="mkOrderTop">
+      <Segmented label="Order type" value={type} onChange={setType} options={[{ value: "market", label: "Market" }, { value: "limit", label: "Limit" }]} />
+      <label className="mkSelect"><span className="srOnly">Margin mode</span>
+        <select value={isCross ? "cross" : "isolated"} onChange={(event) => setIsCross(event.target.value === "cross")}>
+          <option value="cross" disabled={market.onlyIsolated}>Cross</option>
+          <option value="isolated">Isolated</option>
+        </select><ChevronDown aria-hidden="true" /></label>
+    </div>
+    {variant === "panel" && onSide && <Segmented label="Side" value={side} onChange={onSide} className="mkSides"
+      options={[{ value: "long", label: "Long" }, { value: "short", label: "Short" }]} />}
+    {variant === "sheet" && <p className="mxDialogNote" id="perps-order-note">{side === "long" ? `Gains if ${name} rises.` : `Gains if ${name} falls.`} Up to {market.maxLeverage}x leverage.</p>}
+    <DollarAmount label="Amount (USD)" value={amount} onChange={setAmount} available={available} error={problem} shares={[0.25, 0.5, 0.75]}
+      aside={available === null ? undefined : <span data-testid="perps-order-available">{formatUsd(available)} available</span>} />
+    {variant === "sheet" && <PayWith amount={base} note={perpsAvailable !== null ? `${formatUsd(perpsAvailable)} already in perps` : undefined} />}
+    {type === "limit" && <label className="mxField">Limit price<input inputMode="decimal" value={limitPrice} onChange={(event) => setLimitPrice(event.target.value)} placeholder={formatPrice(market.markPx) ?? ""} /></label>}
+    <div className="mkLeverage">
+      <span className="mkLabelRow"><span className="mkLabel" id={`leverage-${market.assetIndex}`}>Leverage</span>
+        <label className="mkLeverageBox"><span className="srOnly">Leverage, times</span>
+          <input type="number" inputMode="numeric" min={1} max={market.maxLeverage} step={1} value={leverageText}
+            onChange={(event) => { setLeverageText(event.target.value); if (event.target.value !== "") setLeverage(clampLeverage(Number(event.target.value), market.maxLeverage)); }}
+            onBlur={() => setLeverageText(String(leverage))} /><span aria-hidden="true">x</span></label></span>
+      <input type="range" min={1} max={market.maxLeverage} step={1} value={leverage} aria-labelledby={`leverage-${market.assetIndex}`} aria-valuetext={`${leverage}x`}
+        onChange={(event) => { setLeverage(Number(event.target.value)); setLeverageText(event.target.value); }} />
+      <span className="mkLeverageEnds" aria-hidden="true"><span>1x</span><span>{market.maxLeverage}x</span></span>
+    </div>
+    <label className="mkSwitchRow"><span><strong>Take profit / Stop loss</strong><small>Close at a profit or a loss you choose.</small></span>
+      <input type="checkbox" className="appSwitch" checked={autoClose} onChange={(event) => setAutoClose(event.target.checked)} /></label>
+    {autoClose && <div className="mxFieldRow">
+      <label className="mxField">Take profit at<input inputMode="decimal" value={takeProfit} onChange={(event) => setTakeProfit(event.target.value)} /></label>
+      <label className="mxField">Stop loss at<input inputMode="decimal" value={stopLoss} onChange={(event) => setStopLoss(event.target.value)} /></label>
+    </div>}
+    <dl className="mxSummary">
+      <div><dt>Position size</dt><dd>{preview.data ? `${formatUsd(preview.data.notional)} · ${formatToken(preview.data.size, name)}` : "—"}</dd></div>
+      <div><dt>Margin</dt><dd>{preview.data ? formatUsd(preview.data.margin) : margin !== null ? formatUsd(margin) : "—"}</dd></div>
+      <div><dt>Est. fees</dt><dd data-testid="perps-fee">{preview.isError ? <span className="appUnavailable">Unavailable</span> : fee}</dd></div>
+      <div><dt>Liquidation price</dt><dd data-testid="perps-liquidation">{preview.isError ? <span className="appUnavailable">Unavailable</span>
+        : preview.data ? formatPrice(preview.data.liquidationPrice) ?? "None at this leverage" : "—"}</dd></div>
+      {topUp > 0 && <div><dt>Added from USDC first</dt><dd>{formatUsd(topUp)}</dd></div>}
+    </dl>
+    <button type="submit" className="appButton appButtonPrimary appButtonLarge" disabled={!guest && (margin === null || problem !== null)}>{action}</button>
+    <p className="mxHint">Trades happen on Hyperliquid, from an account your wallet owns. Hyperliquid charges its own trading fee; Aura charges none. You can lose all of it.</p>
+  </form>;
+}
+
+/** The order form in a sheet, for the phone: Long or Short opens it. */
+export function PerpsOrderSheet({ market, side, account, onClose }: { market: PerpMarket; side: "long" | "short"; account: PerpsAccount | undefined; onClose: () => void }) {
+  const [busy, setBusy] = useState(false);
+  const title = `${side === "long" ? "Long" : "Short"} ${perpName(market.coin)}`;
+  return <Sheet onOpenChange={(open) => { if (!open && !busy) onClose(); }} className="mkSheet" describedBy="perps-order-note">
+    <div className="mxDialogHead"><Dialog.Title>{title}</Dialog.Title><Dialog.Close className="appTextButton" disabled={busy}>Close</Dialog.Close></div>
+    <PerpsOrderForm market={market} side={side} account={account} variant="sheet" onDone={onClose} onRunning={setBusy} />
   </Sheet>;
 }
 

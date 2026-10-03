@@ -1,8 +1,9 @@
 /*
  * Markets: perps on Hyperliquid and predictions on Polymarket, from the design tokens only. Classes are prefixed mk and
- * build on the mx parts in money.css. Desktop: cards and lists, the order sheet as a centred dialog. Phone: one column,
- * a keypad for amounts, and the order sheet as a bottom sheet (mxDialog). Sheets render outside .appFrame, so the form
- * parts they use are restated under .mkSheet.
+ * build on the mx parts in money.css. Desktop: cards and lists; a perp's page is a trading screen (chart and positions,
+ * order book, order panel); other order sheets are centred dialogs. Phone: one column, a keypad for amounts, and order
+ * sheets as bottom sheets (mxDialog). Sheets render outside .appFrame, so the form parts they share with the order panel
+ * are written for both (:is(.mkSheet, .mkOrderPanel)).
  */
 
 .appFrame .mkPage { gap: var(--gap-section); }
@@ -13,7 +14,7 @@
 .appFrame .mkCardHead h2 { font-size: var(--text-title-3-size); line-height: var(--text-title-3-line); font-weight: var(--weight-semibold); }
 .appFrame .mkSource, .mkSheet .mkSource { color: var(--color-text-tertiary); font-size: var(--text-caption-size); line-height: var(--text-caption-line); }
 .appFrame .mkSubhead { margin: var(--space-2) 0 0; font-size: var(--text-title-3-size); line-height: var(--text-title-3-line); font-weight: var(--weight-semibold); }
-.appFrame .mkUp, .mkSheet .mkUp { color: var(--color-positive); }
+.appFrame .mkUp, :is(.mkSheet, .mkOrderPanel) .mkUp { color: var(--color-positive); }
 .appFrame .mkFlat { color: var(--color-text-secondary); }
 
 /* Segmented control and list tabs */
@@ -33,7 +34,7 @@
 .mkChip[aria-pressed="true"] { background: var(--color-text); border-color: var(--color-text); color: var(--color-canvas); }
 .mkChip:disabled { opacity: .45; cursor: not-allowed; }
 .appFrame .mkChips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
-.appFrame .mkBadge, .mkSheet .mkBadge { display: inline-flex; align-items: center; height: 20px; padding: 0 6px; border-radius: var(--radius-pill); background: var(--color-muted); color: var(--color-text-secondary); font-size: var(--text-caption-size); font-weight: var(--weight-medium); vertical-align: middle; }
+.appFrame .mkBadge, :is(.mkSheet, .mkOrderPanel) .mkBadge { display: inline-flex; align-items: center; height: 20px; padding: 0 6px; border-radius: var(--radius-pill); background: var(--color-muted); color: var(--color-text-secondary); font-size: var(--text-caption-size); font-weight: var(--weight-medium); vertical-align: middle; }
 .appFrame .mkBadgeLong { background: var(--color-positive-soft); color: var(--color-positive); }
 
 /* Accounts: the value, what's available, Add money and Withdraw */
@@ -103,55 +104,55 @@
 
 /* The order and money sheets */
 .mkSheet { width: min(460px, calc(100vw - 2 * var(--space-4))); overflow-y: auto; }
-.mkSheet .mkSheetBody { display: grid; gap: var(--space-4); }
-.mkSheet .mxHint, .mkSheet small { color: var(--color-text-secondary); font-size: var(--text-small-size); line-height: var(--text-small-line); margin: 0; }
-.mkSheet .mkLabel { color: var(--color-text-secondary); font-size: var(--text-small-size); font-weight: var(--weight-medium); }
-.mkSheet .mkLabel strong { color: var(--color-text); }
-.mkSheet .mkAmount { display: grid; gap: var(--space-2); }
-.mkSheet .mkAmountField { display: grid; gap: var(--space-1); }
-.mkSheet .mkAmountInput { display: flex; align-items: center; gap: var(--space-1); height: 56px; padding: 0 var(--space-3); border: 1px solid var(--color-line-strong); border-radius: var(--radius-md); background: var(--color-surface); font-size: var(--text-amount-size); font-weight: var(--weight-semibold); }
-.mkSheet .mkAmountInput:focus-within { border-color: var(--color-focus); box-shadow: 0 0 0 1px var(--color-focus); }
-.mkSheet .mkAmountInput input { flex: 1; min-width: 0; height: 100%; padding: 0; border: 0; background: none; color: var(--color-text); font: var(--weight-semibold) var(--text-amount-size) / var(--text-amount-line) var(--font-sans); letter-spacing: var(--tracking-tight); font-variant-numeric: tabular-nums; outline: none; }
-.mkSheet .mkAmountInput input[aria-invalid="true"] { color: var(--color-negative); }
-.mkSheet .mkShares { display: flex; gap: var(--space-2); }
-.mkSheet .mkKeypad { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-1); }
-.mkSheet .mkKeypad button { height: 48px; display: grid; place-items: center; border: 0; border-radius: var(--radius-md); background: none; color: var(--color-text); font: var(--weight-medium) var(--text-title-2-size) / 1 var(--font-sans); cursor: pointer; }
-.mkSheet .mkKeypad button:active { background: var(--color-hover); }
-.mkSheet .mkKeypad svg { width: 20px; height: 20px; }
-.mkSheet .mkPayWith { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3); border: 1px solid var(--color-line); border-radius: var(--radius-md); }
-.mkSheet .mkPayToken { width: 32px; height: 32px; flex: none; display: grid; place-items: center; border-radius: var(--radius-pill); background: var(--color-muted); color: var(--color-text-secondary); font-weight: var(--weight-semibold); }
-.mkSheet .mkPayText { flex: 1; min-width: 0; display: grid; }
-.mkSheet .mkPayText strong, .mkSheet .mkPayAmount { font-weight: var(--weight-medium); }
-.mkSheet .mkChoices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
-.mkSheet .mkChoices .mkSegmented, .mkSheet .mkOutcomes { display: flex; }
-.mkSheet .mkOutcomes button { height: var(--control-height-lg); }
-.mkSheet .mkOutcomes button span { color: var(--color-text-secondary); }
-.mkSheet .mkLeverage { display: grid; gap: var(--space-1); }
-.mkSheet .mkLeverage input { width: 100%; accent-color: var(--color-accent); }
-.mkSheet .mkLeverageEnds { display: flex; justify-content: space-between; color: var(--color-text-tertiary); font-size: var(--text-caption-size); }
-.mkSheet .mkSwitchRow { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); cursor: pointer; }
-.mkSheet .mkSwitchRow > span { display: grid; }
-.mkSheet .mkSwitchRow strong { font-weight: var(--weight-medium); }
-.mkSheet .appSwitch { appearance: none; flex: none; position: relative; width: 40px; height: 24px; margin: 0; border: 1px solid var(--color-line-strong); border-radius: var(--radius-pill); background: var(--color-muted); cursor: pointer; transition: background var(--duration-fast) var(--ease-enter); }
-.mkSheet .appSwitch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: var(--color-surface); box-shadow: var(--shadow-1); transition: transform var(--duration-fast) var(--ease-enter); }
-.mkSheet .appSwitch:checked { border-color: var(--color-accent); background: var(--color-accent); }
-.mkSheet .appSwitch:checked::after { transform: translateX(16px); }
-.mkSheet .mkPayout { padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); background: var(--color-positive-soft); margin: 0; }
-.mkSheet .mkPayout strong { color: var(--color-positive); font-weight: var(--weight-semibold); }
-.mkSheet .mkPayout span { color: var(--color-text-secondary); }
-.mkSheet .mxField { display: grid; gap: 6px; color: var(--color-text-secondary); font-size: var(--text-small-size); font-weight: var(--weight-medium); }
-.mkSheet .mxField input { width: 100%; height: var(--input-height); padding: 0 var(--space-3); border: 1px solid var(--color-line-strong); border-radius: var(--radius-sm); background: var(--color-surface); color: var(--color-text); font: var(--weight-regular) var(--text-body-size) / 1 var(--font-sans); font-variant-numeric: tabular-nums; }
-.mkSheet .mxField input:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; border-color: var(--color-focus); }
-.mkSheet .mxFieldRow { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
-.mkSheet .mxAmountWithMax { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-2); align-items: end; }
-.mkSheet .mxMaxButton { height: var(--input-height); }
-.mkSheet .mxFieldError { margin: 0; color: var(--color-negative); font-size: var(--text-small-size); }
-.mkSheet .mxSummary { margin: 0; display: grid; border-top: 1px solid var(--color-line); }
-.mkSheet .mxSummary > div { display: flex; justify-content: space-between; align-items: center; gap: var(--space-4); min-height: 40px; padding: var(--space-2) 0; border-bottom: 1px solid var(--color-line); }
-.mkSheet .mxSummary dt { color: var(--color-text-secondary); }
-.mkSheet .mxSummary dd { margin: 0; text-align: right; font-weight: var(--weight-medium); overflow-wrap: anywhere; }
-.mkSheet .appUnavailable { color: var(--color-warning); }
-.mkSheet .appButton svg { width: 16px; height: 16px; }
+:is(.mkSheet, .mkOrderPanel) .mkSheetBody { display: grid; gap: var(--space-4); }
+:is(.mkSheet, .mkOrderPanel) .mxHint, .mkSheet small { color: var(--color-text-secondary); font-size: var(--text-small-size); line-height: var(--text-small-line); margin: 0; }
+:is(.mkSheet, .mkOrderPanel) .mkLabel { color: var(--color-text-secondary); font-size: var(--text-small-size); font-weight: var(--weight-medium); }
+:is(.mkSheet, .mkOrderPanel) .mkLabel strong { color: var(--color-text); }
+:is(.mkSheet, .mkOrderPanel) .mkAmount { display: grid; gap: var(--space-2); }
+:is(.mkSheet, .mkOrderPanel) .mkAmountField { display: grid; gap: var(--space-1); }
+:is(.mkSheet, .mkOrderPanel) .mkAmountInput { display: flex; align-items: center; gap: var(--space-1); height: 56px; padding: 0 var(--space-3); border: 1px solid var(--color-line-strong); border-radius: var(--radius-md); background: var(--color-surface); font-size: var(--text-amount-size); font-weight: var(--weight-semibold); }
+:is(.mkSheet, .mkOrderPanel) .mkAmountInput:focus-within { border-color: var(--color-focus); box-shadow: 0 0 0 1px var(--color-focus); }
+:is(.mkSheet, .mkOrderPanel) .mkAmountInput input { flex: 1; min-width: 0; width: 0; height: 100%; padding: 0; border: 0; background: none; color: var(--color-text); font: var(--weight-semibold) var(--text-amount-size) / var(--text-amount-line) var(--font-sans); letter-spacing: var(--tracking-tight); font-variant-numeric: tabular-nums; outline: none; }
+:is(.mkSheet, .mkOrderPanel) .mkAmountInput input[aria-invalid="true"] { color: var(--color-negative); }
+:is(.mkSheet, .mkOrderPanel) .mkShares { display: flex; gap: var(--space-2); }
+:is(.mkSheet, .mkOrderPanel) .mkKeypad { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-1); }
+:is(.mkSheet, .mkOrderPanel) .mkKeypad button { height: 48px; display: grid; place-items: center; border: 0; border-radius: var(--radius-md); background: none; color: var(--color-text); font: var(--weight-medium) var(--text-title-2-size) / 1 var(--font-sans); cursor: pointer; }
+:is(.mkSheet, .mkOrderPanel) .mkKeypad button:active { background: var(--color-hover); }
+:is(.mkSheet, .mkOrderPanel) .mkKeypad svg { width: 20px; height: 20px; }
+:is(.mkSheet, .mkOrderPanel) .mkPayWith { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3); border: 1px solid var(--color-line); border-radius: var(--radius-md); }
+:is(.mkSheet, .mkOrderPanel) .mkPayToken { width: 32px; height: 32px; flex: none; display: grid; place-items: center; border-radius: var(--radius-pill); background: var(--color-muted); color: var(--color-text-secondary); font-weight: var(--weight-semibold); }
+:is(.mkSheet, .mkOrderPanel) .mkPayText { flex: 1; min-width: 0; display: grid; }
+:is(.mkSheet, .mkOrderPanel) .mkPayText strong, :is(.mkSheet, .mkOrderPanel) .mkPayAmount { font-weight: var(--weight-medium); }
+:is(.mkSheet, .mkOrderPanel) .mkChoices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
+:is(.mkSheet, .mkOrderPanel) .mkChoices .mkSegmented, :is(.mkSheet, .mkOrderPanel) .mkOutcomes { display: flex; }
+:is(.mkSheet, .mkOrderPanel) .mkOutcomes button { height: var(--control-height-lg); }
+:is(.mkSheet, .mkOrderPanel) .mkOutcomes button span { color: var(--color-text-secondary); }
+:is(.mkSheet, .mkOrderPanel) .mkLeverage { display: grid; gap: var(--space-1); }
+:is(.mkSheet, .mkOrderPanel) .mkLeverage input { width: 100%; accent-color: var(--color-accent); }
+:is(.mkSheet, .mkOrderPanel) .mkLeverageEnds { display: flex; justify-content: space-between; color: var(--color-text-tertiary); font-size: var(--text-caption-size); }
+:is(.mkSheet, .mkOrderPanel) .mkSwitchRow { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); cursor: pointer; }
+:is(.mkSheet, .mkOrderPanel) .mkSwitchRow > span { display: grid; }
+:is(.mkSheet, .mkOrderPanel) .mkSwitchRow strong { font-weight: var(--weight-medium); }
+:is(.mkSheet, .mkOrderPanel) .appSwitch { appearance: none; flex: none; position: relative; width: 40px; height: 24px; margin: 0; border: 1px solid var(--color-line-strong); border-radius: var(--radius-pill); background: var(--color-muted); cursor: pointer; transition: background var(--duration-fast) var(--ease-enter); }
+:is(.mkSheet, .mkOrderPanel) .appSwitch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: var(--color-surface); box-shadow: var(--shadow-1); transition: transform var(--duration-fast) var(--ease-enter); }
+:is(.mkSheet, .mkOrderPanel) .appSwitch:checked { border-color: var(--color-accent); background: var(--color-accent); }
+:is(.mkSheet, .mkOrderPanel) .appSwitch:checked::after { transform: translateX(16px); }
+:is(.mkSheet, .mkOrderPanel) .mkPayout { padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); background: var(--color-positive-soft); margin: 0; }
+:is(.mkSheet, .mkOrderPanel) .mkPayout strong { color: var(--color-positive); font-weight: var(--weight-semibold); }
+:is(.mkSheet, .mkOrderPanel) .mkPayout span { color: var(--color-text-secondary); }
+:is(.mkSheet, .mkOrderPanel) .mxField { display: grid; gap: 6px; color: var(--color-text-secondary); font-size: var(--text-small-size); font-weight: var(--weight-medium); }
+:is(.mkSheet, .mkOrderPanel) .mxField input { width: 100%; height: var(--input-height); padding: 0 var(--space-3); border: 1px solid var(--color-line-strong); border-radius: var(--radius-sm); background: var(--color-surface); color: var(--color-text); font: var(--weight-regular) var(--text-body-size) / 1 var(--font-sans); font-variant-numeric: tabular-nums; }
+:is(.mkSheet, .mkOrderPanel) .mxField input:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; border-color: var(--color-focus); }
+:is(.mkSheet, .mkOrderPanel) .mxFieldRow { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
+:is(.mkSheet, .mkOrderPanel) .mxAmountWithMax { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-2); align-items: end; }
+:is(.mkSheet, .mkOrderPanel) .mxMaxButton { height: var(--input-height); }
+:is(.mkSheet, .mkOrderPanel) .mxFieldError { margin: 0; color: var(--color-negative); font-size: var(--text-small-size); }
+:is(.mkSheet, .mkOrderPanel) .mxSummary { margin: 0; display: grid; border-top: 1px solid var(--color-line); }
+:is(.mkSheet, .mkOrderPanel) .mxSummary > div { display: flex; justify-content: space-between; align-items: center; gap: var(--space-4); min-height: 40px; padding: var(--space-2) 0; border-bottom: 1px solid var(--color-line); }
+:is(.mkSheet, .mkOrderPanel) .mxSummary dt { color: var(--color-text-secondary); }
+:is(.mkSheet, .mkOrderPanel) .mxSummary dd { margin: 0; text-align: right; font-weight: var(--weight-medium); overflow-wrap: anywhere; }
+:is(.mkSheet, .mkOrderPanel) .appUnavailable { color: var(--color-warning); }
+:is(.mkSheet, .mkOrderPanel) .appButton svg { width: 16px; height: 16px; }
 
 /* A trade's steps, in place: done in positive, the current one in the accent, a failure in words */
 .mkFlow { display: grid; gap: var(--space-3); }
@@ -171,17 +172,112 @@
 .mkFlowDone { background: var(--color-positive-soft); }
 .mkFlowDone strong { font-weight: var(--weight-semibold); }
 .mkFlowFailed { background: var(--color-negative-soft); color: var(--color-text); }
-.mkSheet .transactionProgress { display: grid; gap: var(--space-2); padding: var(--space-3); border: 1px solid var(--color-line); border-radius: var(--radius-md); background: var(--color-surface); font-size: var(--text-small-size); }
-.mkSheet .transactionProgress.complete { border-color: var(--color-positive); background: var(--color-positive-soft); }
-.mkSheet .transactionProgress.failed { border-color: var(--color-negative); background: var(--color-negative-soft); }
-.mkSheet .transactionProgressHeadline { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: var(--space-2); align-items: start; }
-.mkSheet .transactionProgressHeadline strong { display: block; font-weight: var(--weight-semibold); }
-.mkSheet .transactionProgressHeadline svg { width: 14px; height: 14px; }
-.mkSheet .transactionSteps { display: none; }
-.mkSheet .transactionLinks { display: flex; flex-wrap: wrap; gap: var(--space-3); }
-.mkSheet .transactionLinks a { color: var(--color-accent); font-weight: var(--weight-medium); text-decoration: none; }
-.mkSheet .transactionLinks svg { width: 12px; height: 12px; }
-.mkSheet .transactionFailureHint { display: flex; align-items: center; gap: 6px; color: var(--color-negative); }
+:is(.mkSheet, .mkOrderPanel) .transactionProgress { display: grid; gap: var(--space-2); padding: var(--space-3); border: 1px solid var(--color-line); border-radius: var(--radius-md); background: var(--color-surface); font-size: var(--text-small-size); }
+:is(.mkSheet, .mkOrderPanel) .transactionProgress.complete { border-color: var(--color-positive); background: var(--color-positive-soft); }
+:is(.mkSheet, .mkOrderPanel) .transactionProgress.failed { border-color: var(--color-negative); background: var(--color-negative-soft); }
+:is(.mkSheet, .mkOrderPanel) .transactionProgressHeadline { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: var(--space-2); align-items: start; }
+:is(.mkSheet, .mkOrderPanel) .transactionProgressHeadline strong { display: block; font-weight: var(--weight-semibold); }
+:is(.mkSheet, .mkOrderPanel) .transactionProgressHeadline svg { width: 14px; height: 14px; }
+:is(.mkSheet, .mkOrderPanel) .transactionSteps { display: none; }
+:is(.mkSheet, .mkOrderPanel) .transactionLinks { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+:is(.mkSheet, .mkOrderPanel) .transactionLinks a { color: var(--color-accent); font-weight: var(--weight-medium); text-decoration: none; }
+:is(.mkSheet, .mkOrderPanel) .transactionLinks svg { width: 12px; height: 12px; }
+:is(.mkSheet, .mkOrderPanel) .transactionFailureHint { display: flex; align-items: center; gap: 6px; color: var(--color-negative); }
+
+
+/* A perp's page: breadcrumb with the market switcher, quote and stats, chart, order book, order panel */
+.appFrame .mkPerpPage { gap: var(--space-4); }
+.appFrame .mkCrumbs ol { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); margin: 0; padding: 0; list-style: none; color: var(--color-text-secondary); }
+.appFrame .mkCrumbs li { display: inline-flex; align-items: center; gap: var(--space-2); }
+.appFrame .mkCrumbs li + li::before { content: "/"; color: var(--color-text-tertiary); }
+.appFrame .mkCrumbs a { color: var(--color-text-secondary); text-decoration: none; }
+.appFrame .mkCrumbs a:hover { color: var(--color-text); }
+.appFrame .mkCrumbMarket h1 { font-size: var(--text-title-1-size); line-height: var(--text-title-1-line); font-weight: var(--weight-semibold); color: var(--color-text); }
+.appFrame .mkSwitch { position: relative; display: inline-flex; }
+.appFrame .mkSwitchButton { display: inline-flex; align-items: center; gap: var(--space-1); padding: 0 var(--space-1); margin: 0 calc(-1 * var(--space-1)); border: 0; border-radius: var(--radius-sm); background: none; color: inherit; font: inherit; cursor: pointer; }
+.appFrame .mkSwitchButton:hover { background: var(--color-hover); }
+.appFrame .mkSwitchButton:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.appFrame .mkSwitchButton svg.lucide { width: 20px; height: 20px; color: var(--color-text-secondary); }
+.appFrame .mkSwitcher { position: absolute; z-index: 40; top: calc(100% + var(--space-2)); left: 0; width: 320px; max-width: calc(100vw - 2 * var(--page-pad-x)); max-height: 420px; overflow-y: auto; display: grid; gap: var(--space-3); padding: var(--space-3); border: 1px solid var(--color-line); border-radius: var(--radius-md); background: var(--color-raised); box-shadow: var(--shadow-2); font-size: var(--text-body-size); line-height: var(--text-body-line); font-weight: var(--weight-regular); }
+.appFrame .mkSwitchGroup { display: grid; gap: var(--space-1); }
+.appFrame .mkSwitchGroup h2 { color: var(--color-text-tertiary); font-size: var(--text-caption-size); line-height: var(--text-caption-line); font-weight: var(--weight-medium); }
+.appFrame .mkSwitchGroup ul { margin: 0; padding: 0; list-style: none; display: grid; }
+.appFrame .mkSwitchGroup a { display: flex; align-items: center; gap: var(--space-2); min-height: 36px; padding: 0 var(--space-2); border-radius: var(--radius-sm); color: var(--color-text); text-decoration: none; }
+.appFrame .mkSwitchGroup a:hover, .appFrame .mkSwitchGroup a[aria-current="page"] { background: var(--color-hover); }
+.appFrame .mkSwitchGroup a strong { font-weight: var(--weight-medium); }
+.appFrame .mkSwitchGroup a > span:last-child { margin-left: auto; color: var(--color-text-secondary); }
+
+.appFrame .mkTrade { display: grid; grid-template-columns: minmax(0, 1fr) 248px 296px; grid-template-areas: "main book order"; gap: var(--space-3); align-items: start; }
+.appFrame .mkTradeMain { grid-area: main; display: grid; gap: var(--space-3); min-width: 0; }
+.appFrame .mkTradeMain > .mxCard, .appFrame .mkBookCard, .appFrame .mkOrderPanel { padding: var(--space-4); }
+.appFrame .mkBookCard { grid-area: book; }
+.appFrame .mkOrderPanel { grid-area: order; grid-template-columns: minmax(0, 1fr); position: sticky; top: calc(var(--topbar-height) + var(--space-4)); }
+.appFrame .mkQuote { display: grid; gap: var(--space-2); }
+.appFrame .mkQuotePrice { display: flex; align-items: baseline; flex-wrap: wrap; gap: var(--space-1) var(--space-3); }
+.appFrame .mkQuotePrice > span:last-child { font-weight: var(--weight-medium); }
+.appFrame .mkStats { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-5); margin: 0; }
+.appFrame .mkStats > div { display: flex; gap: var(--space-2); }
+.appFrame .mkStats dt { color: var(--color-text-secondary); }
+.appFrame .mkStats dd { margin: 0; font-weight: var(--weight-medium); }
+.appFrame .mkQuoteNote { max-width: 72ch; }
+
+/* The price chart: ranges and line or candles above, price labels at the right edge */
+.appFrame .mkChartTools { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-2); }
+.appFrame .mkRanges { overflow-x: auto; scrollbar-width: none; max-width: 100%; }
+.appFrame .mkRanges button { padding: 0 var(--space-2); }
+.appFrame .mkStyles button { padding: 0 var(--space-2); }
+.appFrame .mkChartPlot { position: relative; }
+.appFrame .mkPerpChart svg { height: 240px; display: block; }
+.appFrame .mkChartTicks span { position: absolute; right: 0; transform: translateY(-100%); padding: 0 0 2px; color: var(--color-text-tertiary); font-size: var(--text-caption-size); line-height: var(--text-caption-line); pointer-events: none; }
+.appFrame .mkCandleUp line { stroke: var(--color-positive); stroke-width: 1; }
+.appFrame .mkCandleUp rect { fill: var(--color-positive); }
+.appFrame .mkCandleDown line { stroke: var(--color-text-secondary); stroke-width: 1; }
+.appFrame .mkCandleDown rect { fill: var(--color-text-secondary); }
+
+/* The order book: asks over the spread, bids under it, a bar for each row's depth */
+.appFrame .mkBookCard h2 { font-size: var(--text-title-3-size); line-height: var(--text-title-3-line); font-weight: var(--weight-semibold); }
+.appFrame .mkBookWrap { display: grid; gap: var(--space-2); padding-top: var(--space-2); }
+.appFrame .mkBook { display: grid; font-size: var(--text-small-size); line-height: var(--text-small-line); font-variant-numeric: tabular-nums; }
+.appFrame .mkBookRow { position: relative; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-1); align-items: center; min-height: 24px; padding: 0 var(--space-1); }
+.appFrame .mkBookRow > [role="cell"], .appFrame .mkBookRow > [role="columnheader"] { position: relative; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.appFrame .mkBookRow > .mkBookPrice, .appFrame .mkBookHead > :first-child, .appFrame .mkSpread > :first-child { text-align: left; }
+.appFrame .mkBookHead { align-items: end; padding-bottom: var(--space-1); color: var(--color-text-tertiary); font-size: var(--text-caption-size); line-height: var(--text-caption-line); }
+.appFrame .mkBookHead > [role="columnheader"] { white-space: normal; }
+.appFrame .mkDepth { position: absolute; inset-block: 1px; right: 0; border-radius: var(--radius-sm); }
+.appFrame .is-ask .mkDepth { background: var(--color-muted); }
+.appFrame .is-bid .mkDepth { background: var(--color-positive-soft); }
+.appFrame .is-bid .mkBookPrice { color: var(--color-positive); }
+.appFrame .mkSpread { margin: var(--space-1) 0; border-block: 1px solid var(--color-line); color: var(--color-text-secondary); }
+
+/* The order form, in the order panel and the order sheet */
+:is(.mkSheet, .mkOrderPanel) .mkOrderForm, :is(.mkSheet, .mkOrderPanel) .mkOrderFlow { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); }
+:is(.mkSheet, .mkOrderPanel) .mkOrderTop { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+:is(.mkSheet, .mkOrderPanel) .mkSides { display: flex; }
+:is(.mkSheet, .mkOrderPanel) .mkSides button { height: var(--control-height-lg); }
+:is(.mkSheet, .mkOrderPanel) .mkLabelRow { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+:is(.mkSheet, .mkOrderPanel) .mkSelect { position: relative; display: inline-flex; align-items: center; }
+:is(.mkSheet, .mkOrderPanel) .mkSelect select { appearance: none; height: 36px; padding: 0 var(--space-7) 0 var(--space-3); border: 1px solid var(--color-line-strong); border-radius: var(--radius-sm); background: var(--color-surface); color: var(--color-text); font: var(--weight-medium) var(--text-body-size) / 1 var(--font-sans); cursor: pointer; }
+:is(.mkSheet, .mkOrderPanel) .mkSelect select:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; }
+:is(.mkSheet, .mkOrderPanel) .mkSelect svg { position: absolute; right: var(--space-2); width: 16px; height: 16px; color: var(--color-text-secondary); pointer-events: none; }
+:is(.mkSheet, .mkOrderPanel) .mkLeverageBox { display: inline-flex; align-items: center; gap: 2px; height: 32px; padding: 0 var(--space-2); border: 1px solid var(--color-line-strong); border-radius: var(--radius-sm); background: var(--color-surface); color: var(--color-text-secondary); }
+:is(.mkSheet, .mkOrderPanel) .mkLeverageBox:focus-within { outline: 2px solid var(--color-focus); outline-offset: 1px; }
+:is(.mkSheet, .mkOrderPanel) .mkLeverageBox input { width: 3ch; border: 0; background: none; color: var(--color-text); font: var(--weight-medium) var(--text-body-size) / 1 var(--font-sans); font-variant-numeric: tabular-nums; text-align: right; outline: none; -moz-appearance: textfield; }
+:is(.mkSheet, .mkOrderPanel) .mkLeverageBox input::-webkit-inner-spin-button, :is(.mkSheet, .mkOrderPanel) .mkLeverageBox input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.appFrame .mkOrderPanel .mkAmountInput { height: 52px; }
+.appFrame .mkOrderPanel .mkShares .mkChip { flex: 1; justify-content: center; padding: 0 var(--space-2); }
+.appFrame .mkOrderPanel .mxFieldRow { grid-template-columns: minmax(0, 1fr); }
+.appFrame .mkOrderPanel .transactionSteps { display: none; }
+
+/* Narrower desktop: the order book moves under the chart */
+@media (max-width: 1279px) {
+  .appFrame .mkTrade { grid-template-columns: minmax(0, 1fr) 320px; grid-template-areas: "main order" "book order"; }
+}
+
+/* Tablet and phone: one column */
+@media (max-width: 1023px) {
+  .appFrame .mkTrade { grid-template-columns: minmax(0, 1fr); grid-template-areas: "main" "book" "order"; }
+  .appFrame .mkOrderPanel { position: static; }
+}
 
 /* Tablet: the side column moves below */
 @media (max-width: 1023px) {
@@ -200,8 +296,13 @@
   .appFrame .mkRowActions .appButton { flex: 1; height: var(--touch-min); }
   .appFrame .mkSearch input { font-size: var(--text-input-phone); }
   .appFrame .mkEventGrid { grid-template-columns: minmax(0, 1fr); }
+  .appFrame .mkListTabs { gap: var(--space-3); overflow-x: auto; scrollbar-width: none; }
+  .appFrame .mkListTabs [role="tab"] { flex: none; white-space: nowrap; }
   .mkSheet { width: 100%; }
   .mkSheet .mxField input { font-size: var(--text-input-phone); height: var(--input-height); }
+  .mkSheet .mkLeverageBox { height: var(--touch-min); }
+  .mkSheet .mkLeverageBox input, .mkSheet .mkSelect select { font-size: var(--text-input-phone); }
+  .mkSheet .mkSelect select { height: var(--touch-min); }
   .mkSheet .mkAmountInput { height: 64px; justify-content: center; border: 0; font-size: var(--text-amount-hero-size); }
   .mkSheet .mkAmountInput:focus-within { box-shadow: none; }
   .mkSheet .mkAmountInput input { flex: 0 1 auto; width: 6ch; font-size: var(--text-amount-hero-size); line-height: var(--text-amount-hero-line); text-align: left; }

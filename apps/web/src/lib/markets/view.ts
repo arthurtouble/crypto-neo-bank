@@ -162,3 +162,82 @@ export function sourceLink(source: string | null | undefined): { href: string; h
     return url.protocol === "https:" ? { href: url.toString(), host: url.hostname.replace(/^www\./, "") } : null;
   } catch { return null; }
 }
+
+// ---------------------------------------------------------------- a perp's chart, book, and order
+
+/** The chart's ranges, as the buttons show them, and the candle size each uses (as `/api/perps/candles` reads them). */
+export const PERP_RANGES = [
+  { value: "live", label: "Live", intervalMs: 60_000, count: 30 },
+  { value: "1h", label: "1H", intervalMs: 60_000, count: 60 },
+  { value: "1d", label: "1D", intervalMs: 900_000, count: 96 },
+  { value: "1w", label: "1W", intervalMs: 3_600_000, count: 168 },
+  { value: "1m", label: "1M", intervalMs: 14_400_000, count: 180 },
+  { value: "3m", label: "3M", intervalMs: 43_200_000, count: 180 },
+  { value: "1y", label: "1Y", intervalMs: 86_400_000, count: 365 },
+  { value: "all", label: "All", intervalMs: 604_800_000, count: 120 }
+] as const;
+
+export type PerpRange = (typeof PERP_RANGES)[number]["value"];
+
+/** A signed change in price, with the precision the price needs: "+$1,140.00", "−$0.0123". */
+export function formatSignedPrice(value: number): string | null {
+  const text = formatPrice(Math.abs(value));
+  if (text === null) return null;
+  return value > 0 ? `+${text}` : value < 0 ? `−${text}` : text;
+}
+
+/** A price without the dollar sign, for the order book's narrow price column: "64,250.00". */
+export function formatBookPrice(value: string | number | null | undefined): string | null {
+  return formatPrice(value)?.replace("$", "") ?? null;
+}
+
+/** A size in the market's coin, trimmed: "0.0015", "12.5", "1,250". */
+export function formatSize(value: string | number | null | undefined): string | null {
+  const numeric = finite(value);
+  if (numeric === null) return null;
+  const magnitude = Math.abs(numeric);
+  return numeric.toLocaleString(LOCALE, { maximumFractionDigits: magnitude >= 1_000 ? 0 : magnitude >= 1 ? 2 : 5 });
+}
+
+export type BookRow = { price: string; size: string; total: number; depth: number };
+
+/**
+ * Both sides of the order book as rows, best price first: each row's running
+ * total in dollars, and its depth as a share of the deeper side's total (0–1),
+ * which the row's bar shows.
+ */
+export function bookRows(bids: Array<{ price: string; size: string }>, asks: Array<{ price: string; size: string }>, depth: number): { bids: BookRow[]; asks: BookRow[] } {
+  const side = (levels: Array<{ price: string; size: string }>) => {
+    let total = 0;
+    return levels.slice(0, depth).map((level) => {
+      total += (finite(level.price) ?? 0) * (finite(level.size) ?? 0);
+      return { price: level.price, size: level.size, total, depth: 0 };
+    });
+  };
+  const rows = { bids: side(bids), asks: side(asks) };
+  const deepest = Math.max(rows.bids.at(-1)?.total ?? 0, rows.asks.at(-1)?.total ?? 0);
+  for (const row of [...rows.bids, ...rows.asks]) row.depth = deepest > 0 ? row.total / deepest : 0;
+  return rows;
+}
+
+/** The spread as a percent of the mid price, as the API gives it ("0.0016" is "0.002%"). */
+export function formatSpreadPercent(value: string | null | undefined): string | null {
+  const numeric = finite(value);
+  if (numeric === null) return null;
+  const decimals = numeric >= 1 ? 2 : 3;
+  return `${numeric.toLocaleString(LOCALE, { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}%`;
+}
+
+/** An estimated fee in dollars: cents, or "<$0.01" when it rounds to nothing. */
+export function formatFee(value: string | number | null | undefined): string | null {
+  const numeric = finite(value);
+  if (numeric === null) return null;
+  if (numeric > 0 && numeric < 0.01) return "<$0.01";
+  return numeric.toLocaleString(LOCALE, { style: "currency", currency: "USD" });
+}
+
+/** The leverage typed in the number box, held between 1 and the market's maximum. */
+export function clampLeverage(value: number, max: number): number {
+  if (!Number.isFinite(value)) return 1;
+  return Math.min(max, Math.max(1, Math.round(value)));
+}

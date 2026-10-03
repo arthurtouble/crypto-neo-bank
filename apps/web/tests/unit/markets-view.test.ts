@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  dayChangePercent, formatCents, formatChance, formatCompactUsd, formatFunding, formatPrice, formatSignedPercent, formatSignedUsd, parseDollars, parsePrice,
+  bookRows, clampLeverage, dayChangePercent, formatBookPrice, formatFee, formatSignedPrice, formatSize, formatSpreadPercent, PERP_RANGES, formatCents, formatChance, formatCompactUsd, formatFunding, formatPrice, formatSignedPercent, formatSignedUsd, parseDollars, parsePrice,
   payoutIfWins, perpDex, perpName, perpsTopUp, positionSide, PREDICTION_CATEGORIES, pressKey, shareOf, sourceLink
 } from "@/lib/markets/view";
 
@@ -66,6 +66,32 @@ describe("Markets view helpers", () => {
     expect(pressKey("12", "delete")).toBe("1");
     expect(shareOf(100.555, 0.5)).toBe("50.27");
     expect(shareOf(0, 1)).toBe("");
+  });
+
+  it("builds the order book's rows: running totals in dollars and depth against the deeper side", () => {
+    const rows = bookRows([{ price: "100", size: "1" }, { price: "99", size: "2" }], [{ price: "101", size: "1" }, { price: "102", size: "5" }, { price: "103", size: "9" }], 2);
+    expect(rows.bids.map((row) => row.total)).toEqual([100, 298]);
+    expect(rows.asks.map((row) => row.total)).toEqual([101, 611]);
+    expect(rows.asks[1].depth).toBe(1);
+    expect(rows.bids[1].depth).toBeCloseTo(298 / 611);
+    expect(bookRows([], [], 10)).toEqual({ bids: [], asks: [] });
+  });
+
+  it("writes the chart, book, and order numbers", () => {
+    expect(PERP_RANGES.map((item) => item.label)).toEqual(["Live", "1H", "1D", "1W", "1M", "3M", "1Y", "All"]);
+    expect(formatSignedPrice(1140)).toBe("+$1,140.00");
+    expect(formatSignedPrice(-0.0123)).toBe("−$0.0123");
+    expect(formatBookPrice("64250")).toBe("64,250.00");
+    expect(formatSize("0.0015")).toBe("0.0015");
+    expect(formatSize("1250.4")).toBe("1,250");
+    expect(formatSpreadPercent("0.0016")).toBe("0.002%");
+    expect(formatSpreadPercent(null)).toBeNull();
+    expect(formatFee("0.0450")).toMatch(/^\$0\.0[45]$/);
+    expect(formatFee("0.004")).toBe("<$0.01");
+    expect(formatFee(null)).toBeNull();
+    expect(clampLeverage(55, 40)).toBe(40);
+    expect(clampLeverage(0, 40)).toBe(1);
+    expect(clampLeverage(Number.NaN, 40)).toBe(1);
   });
 
   it("knows long from short, offers no sports category, and links only https sources", () => {

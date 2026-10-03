@@ -7,7 +7,7 @@
    - a JSON-RPC node for Base (8453) and Ethereum (1);
    - the Kraken price feed;
    - Cloudflare Access for the operations app: its published keys at `/access/cdn-cgi/access/certs`, and operator tokens from `/__access`;
-   - Hyperliquid's `/info` API and Polymarket's Gamma, order-book, and data APIs (`support/fake-markets.mjs`), with a few markets, prices, and an empty account;
+   - Hyperliquid's `/info` API (markets, accounts, candles, the order book, fee rates) and Polymarket's Gamma, order-book, and data APIs (`support/fake-markets.mjs`), with a few markets, prices, and an empty account;
 2. resets a separate local D1 (`.wrangler/e2e-state`) and applies the baseline schema;
 3. starts `vinext dev` with `AURA_E2E=1`, which:
    - swaps Privy's browser SDK for `support/privy-react-fake.tsx`, and the saved-session check (`lib/client/privy-session.ts`) for `support/privy-session-fake.ts`, so a signed-in test loads the Privy runtime and a guest test doesn't until it signs in (see `vite.config.ts`);
