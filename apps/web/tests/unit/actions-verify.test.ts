@@ -146,10 +146,11 @@ describe("verifying a deposit into Hyperliquid through Circle", () => {
     calls: [{ to: usdc, value: "0", data: approve }, { to: messenger, value: "0", data: "0x12345678" }],
     effects: [{ type: "erc20_debit", token: usdc, amountRaw: "25000000" },
       { type: "delivery", tool: "cctp", destinationChainId: 1337, token: arbUsdc, to: wallet, minimumRaw: "24734783" }] };
-  const source = observed({
+  const sourceInputs = {
     data: handleOpsV07([{ sender: wallet, callData: kernelBatch([{ to: usdc, value: 0n, data: approve }, { to: messenger, value: 0n, data: "0x12345678" }]) }]),
     logs: [entryLog(ENTRY_POINT_V07, "before"), transferLog(usdc, wallet, messenger, 25_000_000n), entryLog(ENTRY_POINT_V07, { sender: wallet, success: true })]
-  });
+  };
+  const source = observed(sourceInputs);
   const noLifi = async () => { throw new Error("CCTP deposits never ask LI.FI"); };
   type Verdict = Awaited<ReturnType<NonNullable<NonNullable<Parameters<typeof verifyAction>[1]>["cctpDeposit"]>>>;
   const cctp = (verdict: Verdict) => async () => verdict;
@@ -167,6 +168,15 @@ describe("verifying a deposit into Hyperliquid through Circle", () => {
     expect(await verifyAction(action, { observe: observe(source), lifiStatus: noLifi,
       cctpDeposit: cctp({ state: "credited", credit, amountRaw: "25000000", feeRaw: "1000000", forwardTxHash: destinationHash }) }))
       .toEqual({ status: "failed", reason: "delivery_below_minimum" });
+  });
+
+  it("confirms a fast transfer before Base is final, but leaves a failure to wait for finality", async () => {
+    const unfinal = observed({ ...sourceInputs, finalized: 99n });
+    expect(await verifyAction(action, { observe: observe(unfinal), lifiStatus: noLifi,
+      cctpDeposit: cctp({ state: "credited", credit, amountRaw: "25000000", feeRaw: "250000", forwardTxHash: destinationHash }) }))
+      .toEqual({ status: "confirmed", destinationHash });
+    expect(await verifyAction(action, { observe: observe(unfinal), lifiStatus: noLifi, cctpDeposit: cctp({ state: "mismatch" }) }))
+      .toEqual({ status: "settling", reason: "finality" });
   });
 });
 
