@@ -1,6 +1,7 @@
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import type { Locator, Page, Route, TestInfo } from "@playwright/test";
+import { recoverTypedDataAddress } from "viem";
 import { perpPosition } from "./support/fake-markets.mjs";
 import { expect, test } from "./support/fixtures";
 import { acceptTerms, ASSETS, edge, newCustomer, setBalances, setFeature, setIdentity, type Customer } from "./support/session";
@@ -8,7 +9,8 @@ import { acceptTerms, ASSETS, edge, newCustomer, setBalances, setFeature, setIde
 // Perps on Hyperliquid. Hyperliquid's read API is the local fake (support/fake-markets.mjs), so every screen reads
 // through Aura's real routes, switches, and D1. Placing a trade needs signatures Hyperliquid verifies, so the trade
 // specs stub Aura's own write routes in the browser and check the screen drives them in order: add money through the
-// action flow, connect with the passkey, then place. Predictions are in markets.spec.ts.
+// action flow, connect this device's trading key with the passkey, then sign the trade on the device and relay it.
+// Predictions are in markets.spec.ts.
 
 const flow = (page: Page) => page.locator(".mkFlow");
 const sheet = (page: Page) => page.getByRole("dialog");
@@ -370,17 +372,31 @@ test("a chart, book, or fee Hyperliquid didn't answer shows as unavailable", asy
   await expect(form.getByTestId("perps-fee")).toHaveText("Unavailable");
 });
 
-test("one tap opens a long: adds money through the action flow, connects with the passkey, then places the order", async ({ page }, info) => {
+test("one tap opens a long: adds money through the action flow, connects this device with the passkey, then signs the order here", async ({ page }, info) => {
   await signIn(page);
-  let connected = false, funded = false;
+  let connected = false, funded = false, agent = "";
   const calls: string[] = [];
+  // What Aura's trade route builds for the device to sign: one Hyperliquid L1 action.
+  const typedData = { domain: { name: "Exchange", version: "1", chainId: 1337, verifyingContract: "0x0000000000000000000000000000000000000000" },
+    types: { Agent: [{ name: "source", type: "string" }, { name: "connectionId", type: "bytes32" }] }, primaryType: "Agent",
+    message: { source: "a", connectionId: `0x${"12".repeat(32)}` } } as const;
   await page.route("**/api/perps/account", (route) => json(route, accountReply({ accountValue: funded ? "20" : "0", withdrawable: funded ? "20" : "0" }, connected)));
   const deposit = await stubDepositAction(page, "perps-deposit-1", { status: "confirmed", destinationChainId: 1337 });
   await page.route("**/api/perps/deposit", async (route) => { calls.push(`deposit ${route.request().postDataJSON().amount}`); funded = true; await json(route, { action: deposit }, 201); });
-  await page.route("**/api/perps/setup", async (route) => { calls.push("setup"); await json(route, { status: "sign", requestId, request: signRequest }); });
+  await page.route("**/api/perps/setup", async (route) => {
+    agent = route.request().postDataJSON().agent;
+    calls.push("setup"); await json(route, { status: "sign", requestId, request: signRequest });
+  });
   await page.route("**/api/perps/signatures", async (route) => { calls.push("signatures"); connected = true; await json(route, { status: "accepted", kind: "setup" }); });
   await page.route("**/api/perps/trade", async (route) => {
     calls.push(`trade ${JSON.stringify(route.request().postDataJSON())}`);
+    await json(route, { status: "sign", requestId, owner: "0x1", typedData: [typedData] }, 202);
+  });
+  let signature = "";
+  await page.route("**/api/perps/relay", async (route) => {
+    const body = route.request().postDataJSON() as { requestId: string; signatures: string[] };
+    calls.push(`relay ${body.requestId}`);
+    signature = body.signatures[0];
     await json(route, { statuses: [{ kind: "filled", oid: 9, totalSz: "0.0015", avgPx: "64250.0" }], size: "0.0015", margin: "20", notional: "96.37", liquidationPrice: null }, 201);
   });
 
@@ -394,7 +410,10 @@ test("one tap opens a long: adds money through the action flow, connects with th
   await shot(page, info, "perps-order-placed");
   // Leverage defaults to the market's maximum, 40x for BTC.
   expect(calls).toEqual(["deposit 16.00", "setup", "signatures",
-    `trade ${JSON.stringify({ coin: "BTC", side: "long", marginUsd: "15.00", leverage: 40, isCross: true, type: "market" })}`]);
+    `trade ${JSON.stringify({ coin: "BTC", side: "long", marginUsd: "15.00", leverage: 40, isCross: true, type: "market" })}`, `relay ${requestId}`]);
+  // The order was signed in the browser by the key this device made and had approved, not by Aura's server.
+  expect(agent).toMatch(/^0x[0-9a-f]{40}$/);
+  expect((await recoverTypedDataAddress({ ...typedData, signature: signature as `0x${string}` })).toLowerCase()).toBe(agent);
 });
 
 test("adding money finishes when the perps account shows it, and the sheet closes at any point", async ({ page }, info) => {

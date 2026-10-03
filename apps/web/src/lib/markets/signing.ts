@@ -16,7 +16,7 @@ import type { TypedData, Venue } from "./types";
  * can only ever be for the data the customer saw.
  */
 export type MarketSignaturePurpose =
-  | "hyperliquid_approve_agent" | "hyperliquid_withdraw"
+  | "hyperliquid_approve_agent" | "hyperliquid_withdraw" | "hyperliquid_agent_actions"
   | "polymarket_approvals" | "polymarket_clob_auth" | "polymarket_order" | "polymarket_withdraw" | "polymarket_redeem";
 
 export type SignTypedDataBody = {
@@ -72,13 +72,9 @@ export async function createMarketSignature(db: D1Database, subject: string, acc
 
 type RequestRow = { venue: string; purpose: string; typed_data_json: string; context_json: string; expires_at: string; used_at: string | null };
 
-/**
- * Use a signature request once: check it is this customer's, for this venue and purpose, and live; claim it; then
- * have Privy sign with the customer's authorization signature. Privy refusing it means nothing was signed.
- */
-export async function completeMarketSignature<Context>(db: D1Database, subject: string, account: ActionAccount, venue: Venue,
-  purposes: readonly MarketSignaturePurpose[], requestId: string, authorization: string, now = new Date(),
-  relay: typeof relaySignTypedData = relaySignTypedData, privy?: PrivyClient): Promise<SignedMarketRequest<Context>> {
+/** Use a stored request once: check it is this customer's, for this venue and purpose, and live; then claim it. */
+async function claimRequest(db: D1Database, subject: string, venue: Venue, purposes: readonly MarketSignaturePurpose[], requestId: string,
+  now: Date): Promise<RequestRow> {
   const row = await db.prepare(`SELECT venue, purpose, typed_data_json, context_json, expires_at, used_at FROM market_signature_requests
     WHERE request_id = ? AND subject_reference = ?`).bind(requestId, subject).first<RequestRow>();
   const expired = new HttpError(409, "signature_expired", "This request expired. Try again.");
@@ -88,6 +84,41 @@ export async function completeMarketSignature<Context>(db: D1Database, subject: 
   const claimed = await db.prepare("UPDATE market_signature_requests SET used_at = ? WHERE request_id = ? AND used_at IS NULL")
     .bind(now.toISOString(), requestId).run();
   if ((claimed.meta.changes ?? 0) !== 1) throw expired;
+  return row;
+}
+
+/**
+ * Venue actions for the customer's device key to sign: on Hyperliquid, the
+ * trading key their browser made and their wallet approved. Aura never holds
+ * that key; it builds the actions, the browser signs them, and Aura relays
+ * exactly what it built. Kept 5 minutes and used once, like a passkey request.
+ */
+export type DeviceSignRequest = { status: "sign"; requestId: string; owner: `0x${string}`; typedData: TypedData[] };
+
+export async function createDeviceSignature(db: D1Database, subject: string, owner: `0x${string}`, venue: Venue, purpose: MarketSignaturePurpose,
+  typedData: TypedData[], context: unknown, now = new Date()): Promise<DeviceSignRequest> {
+  const requestId = crypto.randomUUID();
+  await db.prepare(`INSERT INTO market_signature_requests (request_id, subject_reference, venue, purpose, typed_data_json, context_json, created_at, expires_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)`).bind(requestId, subject, venue, purpose, JSON.stringify(typedData), JSON.stringify(context ?? null),
+    now.toISOString(), new Date(now.getTime() + TTL_MS).toISOString()).run();
+  return { status: "sign", requestId, owner, typedData };
+}
+
+/** Claim a device request once, with the typed data it was for. The caller checks the signatures. */
+export async function claimDeviceSignature<Context>(db: D1Database, subject: string, venue: Venue, purpose: MarketSignaturePurpose, requestId: string,
+  now = new Date()): Promise<{ typedData: TypedData[]; context: Context }> {
+  const row = await claimRequest(db, subject, venue, [purpose], requestId, now);
+  return { typedData: JSON.parse(row.typed_data_json) as TypedData[], context: JSON.parse(row.context_json) as Context };
+}
+
+/**
+ * Use a signature request once: check it is this customer's, for this venue and purpose, and live; claim it; then
+ * have Privy sign with the customer's authorization signature. Privy refusing it means nothing was signed.
+ */
+export async function completeMarketSignature<Context>(db: D1Database, subject: string, account: ActionAccount, venue: Venue,
+  purposes: readonly MarketSignaturePurpose[], requestId: string, authorization: string, now = new Date(),
+  relay: typeof relaySignTypedData = relaySignTypedData, privy?: PrivyClient): Promise<SignedMarketRequest<Context>> {
+  const row = await claimRequest(db, subject, venue, purposes, requestId, now);
   const typedData = JSON.parse(row.typed_data_json) as TypedData;
   let signature: `0x${string}`;
   try { signature = await relay(privy ?? privyClient(), account.walletId, requestFor(account, requestId, typedData, new Date(row.expires_at)), authorization); }

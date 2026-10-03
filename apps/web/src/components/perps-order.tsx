@@ -14,7 +14,7 @@ import {
 } from "@/lib/markets/view";
 import { perpsPositions, perpsTotals, useBaseUsdc, type PerpMarket, type PerpsAccount } from "./markets-data";
 import { DollarAmount, failureMessage, FlowTimeline, PayWith, Segmented, useFlow, useSettledAction, type FlowStep } from "./markets-parts";
-import { ADD_MONEY_DETAIL, addToPerps, connectPerps, depositFee, feeText, orderError, PriceField, type ExchangeStatus } from "./perps-sheets";
+import { ADD_MONEY_DETAIL, addToPerps, connectPerps, depositFee, feeText, orderError, PriceField, usePerpsAction, type ExchangeStatus } from "./perps-sheets";
 import { Sheet } from "./sheet";
 import { TransactionProgress } from "./transaction-progress";
 
@@ -61,6 +61,7 @@ export function PerpsOrderForm({ market, side, onSide, account, variant, onDone,
 }) {
   const api = useApi();
   const wallet = useAuraWallet();
+  const perpsAction = usePerpsAction();
   const { ready: authReady, authenticated, login } = useAuth();
   const queryClient = useQueryClient();
   const usdc = useBaseUsdc();
@@ -150,9 +151,9 @@ export function PerpsOrderForm({ market, side, onSide, account, variant, onDone,
           onSlow: () => at("add", "This is taking longer than usual. The money is on its way; your order is placed as soon as it lands.") });
         await queryClient.invalidateQueries({ queryKey: ["perps-account"] });
       }
-      if (!ready) { at("setup"); await connectPerps(api, wallet.authorize); }
+      if (!ready) { at("setup"); await connectPerps(api, wallet.authorize, account?.owner ?? wallet.address); }
       at("order");
-      const result = await api<{ statuses: ExchangeStatus[]; size: string; notional: string }>("/api/perps/trade", { method: "POST", json: body });
+      const result = await perpsAction<{ statuses: ExchangeStatus[]; size: string; notional: string }>("/api/perps/trade", body);
       const refused = orderError(result.statuses);
       if (refused) throw new Error(`Hyperliquid didn't place it: ${refused}`);
       const filled = result.statuses.find((status) => status.kind === "filled");

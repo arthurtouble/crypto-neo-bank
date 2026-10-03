@@ -57,6 +57,13 @@ export async function markAccountReady(db: D1Database, subject: string, venue: V
     .bind(at, at, update.credentialsCiphertext ?? null, update.venueWalletAddress?.toLowerCase() ?? null, subject, venue, owner.toLowerCase()).run();
 }
 
+/** Record the trading key the customer's wallet approved last. A key on their device has no Privy wallet, so its ID is cleared. */
+export async function saveTradingKey(db: D1Database, subject: string, venue: Venue, owner: string, address: string, now = new Date()): Promise<void> {
+  await db.prepare(`UPDATE market_accounts SET trading_wallet_id = NULL, trading_wallet_address = ?, updated_at = ?
+    WHERE subject_reference = ? AND venue = ? AND owner_address = ?`)
+    .bind(address.toLowerCase(), now.toISOString(), subject, venue, owner.toLowerCase()).run();
+}
+
 export type MarketOperationKind = "setup" | "order" | "cancel" | "leverage" | "withdraw" | "redeem";
 export type MarketOperationStatus = "submitted" | "accepted" | "rejected" | "failed";
 
