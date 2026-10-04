@@ -7,7 +7,7 @@ import { verifyAction, type Verification } from "./verify";
 /**
  * Notify the customer once when their action finishes: complete (a
  * same-network action in a block and matching, or a move that arrived) or
- * failed. Notices are recorded with the check and delivered in the background.
+ * failed. A bank transfer is complete when the bank has it, so only its failure is announced here. Notices are recorded with the check and delivered in the background.
  */
 async function announce(db: D1Database, before: StoredAction, after: StoredAction, now: Date): Promise<StoredAction> {
   if (before.status === after.status) return after;
@@ -15,7 +15,9 @@ async function announce(db: D1Database, before: StoredAction, after: StoredActio
     : after.status === "confirmed" || (after.status === "settling" && !after.destinationChainId) ? "completed" : null;
   if (!outcome) return after;
   const [{ actionNotice }, notices] = await Promise.all([import("@/lib/notifications/store"), import("@/lib/notifications/deliver")]);
-  await notices.announce(db, after.subject, actionNotice(after, outcome), now);
+  // A bank transfer has no notice when it's funded on Base: the bank's answer is its notice (lib/money/bank-activity.ts).
+  const notice = actionNotice(after, outcome);
+  if (notice) await notices.announce(db, after.subject, notice, now);
   return after;
 }
 

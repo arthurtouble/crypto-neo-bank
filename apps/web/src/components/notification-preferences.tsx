@@ -122,9 +122,9 @@ export function NotificationPreferences() {
     <p className="mxHint">Everything shows in the app. Security notices, like a lock or a new recipient, are always sent.</p>
     {(preferences.isError || consent.isError) && <Notice tone="error" role="alert"
       onRetry={() => { void preferences.refetch(); void consent.refetch(); }}>Your email choices can&apos;t be loaded right now.</Notice>}
-    <SettingRow title="Transaction emails" detail={`Money you receive, card payments, and when a send, swap, bank transfer, or Earn move completes or fails. Sent to ${email ?? "your email"}.`}>
+    <SettingRow label title="Transaction emails" detail={`Money you receive, card payments, and when a send, swap, bank transfer, or Earn move completes or fails. Sent to ${email ?? "your email"}.`}>
       {toggle("Transaction emails", transactionEmail, saveEmail.isPending, () => saveEmail.mutate(!transactionEmail))}</SettingRow>
-    <SettingRow title="Browser notifications" detail={push.state ? pushNotes[push.state] : "Checking this browser…"}>
+    <SettingRow label title="Browser notifications" detail={push.state ? pushNotes[push.state] : "Checking this browser…"}>
       {push.state === "on" || push.state === "off"
         ? <Toggle label="Browser notifications" on={push.state === "on"} busy={push.busy}
           onChange={() => void (push.state === "on" ? push.turnOff() : push.turnOn()).catch((error: unknown) => {
@@ -132,7 +132,7 @@ export function NotificationPreferences() {
             toast.error("Notifications not turned on", pushFailure(error));
           })} />
         : null}</SettingRow>
-    <SettingRow title="Product news" detail="Occasional emails about what's new in Aura. Off unless you turn it on.">
+    <SettingRow label title="Product news" detail="Occasional emails about what's new in Aura. Off unless you turn it on.">
       {toggle("Product news", marketing, saveMarketing.isPending || !consent.data, () => saveMarketing.mutate(!marketing))}</SettingRow>
   </section>;
 }

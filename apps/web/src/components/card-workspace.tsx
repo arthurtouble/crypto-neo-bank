@@ -34,7 +34,9 @@ function useCardErrors() {
   const { enrollPasskey } = useAuraWallet();
   return (title: string, error: unknown) => {
     if (error instanceof ApiError && error.code === "mfa_required") { toast.error("Add a passkey first", "Your card needs a passkey on your account."); enrollPasskey(); return; }
-    toast.error(title, error instanceof ApiError ? error.message : "You cancelled the passkey check, so nothing changed.");
+    // Only a passkey prompt the customer closed is "you cancelled"; Stripe.js not loading, or the network, is not.
+    const cancelled = error instanceof Error && /reject|denied|cancel|exited/i.test(error.message);
+    toast.error(title, error instanceof ApiError ? error.message : cancelled ? "You cancelled the passkey check, so nothing changed." : "Nothing changed. Try again.");
   };
 }
 
@@ -212,21 +214,27 @@ function Dispute({ item, onDone }: { item: CardActivity; onDone: () => void }) {
   </form>;
 }
 
-const statusOf = (item: CardActivity): { label: string; tone: StatusTone } => item.status === "declined" ? { label: "Declined", tone: "negative" } : item.status === "reversed" ? { label: "Reversed", tone: "neutral" }
+/** A pending payment is a hold the merchant can still change; a released hold took nothing. Words match the receipt in Transactions. */
+const statusOf = (item: CardActivity): { label: string; tone: StatusTone } => item.status === "declined" ? { label: "Declined", tone: "negative" } : item.status === "reversed" ? { label: "Hold released", tone: "neutral" }
   : item.status === "pending" ? { label: "Pending", tone: "warning" } : item.kind === "refund" ? { label: "Refunded", tone: "positive" } : { label: "Paid", tone: "positive" };
+
+const statusNote = (item: CardActivity) => item.status === "pending" ? "Not final yet, the amount can change" : item.status === "reversed" ? "Nothing was taken" : null;
+/** Stripe Issuing dispute states, in the receipt's words. */
+const disputeText: Record<string, string> = { submitted: "Dispute under review", won: "Dispute won", lost: "Dispute lost", expired: "Dispute closed" };
 
 function Activity({ data, onSignIn }: { data: Card; onSignIn: SignIn }) {
   const client = useQueryClient();
   const [disputing, setDisputing] = useState<string | null>(null);
   return <section className="mxCard cdActivity" aria-labelledby="card-activity-heading"><h2 id="card-activity-heading">Card activity</h2>
-    {data.activityStatus === "unavailable" && <Notice tone="warning" role="status">Card activity couldn&apos;t be loaded from Stripe. Try again.</Notice>}
+    {data.activityStatus === "unavailable" && <Notice tone="warning" role="status" onRetry={onSignIn ? undefined : () => void client.invalidateQueries({ queryKey: ["card"] })}>
+      Card payments can&apos;t be loaded from Stripe right now.</Notice>}
     {data.activity.length === 0 && data.activityStatus === "available" && <p className="mxHint">No card payments yet.</p>}
     {data.activity.length > 0 && <ul className="cdRows">{data.activity.map((item) => {
       const status = statusOf(item);
       return <li key={item.id} className="cardActivityRow cdRow" data-testid={`card-activity-${item.id}`}>
         <span className="appIconDisc" aria-hidden="true"><CreditCard /></span>
         <div className="cdRowText"><strong>{item.merchant ?? "Card payment"}</strong>
-          <small>{formatDateTime(item.createdAt)}{item.dispute ? ` · Dispute ${item.dispute.status}` : ""}</small></div>
+          <small>{[formatDateTime(item.createdAt), statusNote(item), item.dispute ? disputeText[item.dispute.status] ?? "Dispute sent" : null].filter(Boolean).join(" · ")}</small></div>
         <div className="cdRowAmount"><strong>{item.kind === "refund" ? "+" : ""}{money(item.amountUsd)}</strong>
           <StatusDot tone={status.tone} label={status.label} size="small" />
           {item.disputable && disputing !== item.id && <button type="button" className="appTextButton cdRowAction" onClick={() => onSignIn ? onSignIn() : setDisputing(item.id)}>Dispute</button>}</div>
@@ -355,7 +363,7 @@ function UnavailableCard({ data, refetch, checking }: { data: Extract<CardState,
   return <div className="cdSetup">
     <section className="mxPanel" aria-labelledby="card-unavailable-title">
       <div className="mxPanelHead"><h2 id="card-unavailable-title">Your card is unavailable right now</h2>
-        <p>We can&apos;t reach Stripe, so your card&apos;s status, controls and payments can&apos;t be shown. You can still try to freeze it.</p></div>
+        <p>Stripe can&apos;t be reached right now, so your card&apos;s status, controls and payments can&apos;t be shown. You can still try to freeze it.</p></div>
       <div className="mxActions">
         <button type="button" className="appButton appButtonPrimary" disabled={busy} onClick={() => void freeze()}>{busy ? <LoaderCircle className="spin" aria-hidden="true" /> : null} Freeze card</button>
         <button type="button" className="appButton" disabled={checking} onClick={refetch}>{checking ? "Checking…" : "Try again"}</button>
@@ -383,7 +391,7 @@ function Setup({ data, refetch, checking }: { data: Exclude<CardState, { state: 
     try {
       const { url } = await api<{ url: string }>("/api/cards/apply", { method: "POST" });
       const link = httpsUrl(url);
-      if (!link) throw new ApiError(502, "bad_link", "The link we got back isn't safe to open. Try again.");
+      if (!link) throw new ApiError(502, "bad_link", "Bridge's link can't be opened safely. Try again.");
       if (tab) { tab.opener = null; tab.location.href = link; }
     } catch (error) { tab?.close(); toast.error("Application didn't start", error instanceof ApiError ? error.message : "Try again."); }
     finally { setBusy(false); }
@@ -397,8 +405,8 @@ function Setup({ data, refetch, checking }: { data: Exclude<CardState, { state: 
 
   const current = data.state === "verify_first" ? 0 : data.state === "apply" ? 1 : data.state === "ready_to_create" ? 2 : -1;
   const step = data.state === "unavailable" ? { title: "Cards are coming soon", body: "A Visa card that pays from the dollars (USDC) in your Aura account.", action: null }
-    : data.state === "verify_first" ? { title: "Verify your identity first", body: "Bridge, our card and banking partner, verifies you once for your bank account and your card.",
-      action: <Link className="appButton appButtonPrimary" href="/app/deposit">Verify on Deposit</Link> }
+    : data.state === "verify_first" ? { title: "Verify your identity first", body: "Bridge, our card and banking partner, verifies you once, under Add money, for your bank account and your card.",
+      action: <Link className="appButton appButtonPrimary" href="/app/deposit#bank">Verify your identity</Link> }
       : data.state === "apply" ? { title: data.approval === "revoked" ? "Confirm your details again" : "Apply for an Aura card",
         body: data.approval === "revoked" ? "Your card approval expired before a card was made. Bridge will ask you to confirm your details."
           : data.approval === "incomplete" ? `Bridge needs more before it can approve a card.${data.issues.length ? ` (${data.issues.join(", ")})` : ""}` : "Bridge, our card partner, checks you're eligible on its own page. It usually takes a minute.",
@@ -429,7 +437,7 @@ export function CardWorkspace() {
   return <MoneyPage title="Cards" guest={isExample || loading} onSignIn={login} ready={ready} className="cdPage">
     {isExample ? <IssuedCard data={exampleCard} onSignIn={login} />
       : loading || query.isPending ? <LoadingState><strong>Loading your card</strong></LoadingState>
-        : query.isError ? <Notice tone="error" role="alert" onRetry={() => void query.refetch()}>Your card couldn&apos;t be loaded.</Notice>
+        : query.isError ? <Notice tone="error" role="alert" onRetry={() => void query.refetch()}>Your card can&apos;t be loaded right now.</Notice>
           : query.data.state === "card" ? <IssuedCard data={query.data} onSignIn={undefined} />
             : query.data.state === "card_unavailable" ? <UnavailableCard data={query.data} refetch={() => void query.refetch()} checking={query.isFetching} />
             : <Setup data={query.data} refetch={() => void query.refetch()} checking={query.isFetching} />}

@@ -12,7 +12,7 @@ vi.mock("@/lib/auth/wallet", () => ({ requireActionWallet: async () => wallet })
 vi.mock("@/lib/auth/privy", () => ({ privyClient: () => { throw new Error("Privy isn't reachable in unit tests"); }, privyEmail: async () => { throw new Error("Privy isn't reachable in unit tests"); } }));
 vi.mock("@/lib/activity/incoming", async (original) => ({ ...await original<object>(), readIncoming: async () => ({ transfers: [], status: "available", partial: false, observedAt: "t" }) }));
 
-const { notify, listNotifications, markAllRead, securityNotice, receivedNotice, actionNotice } = await import("@/lib/notifications/store");
+const { notify, listNotifications, markAllRead, securityNotice, receivedNotice, actionNotice, cardSpendNotice } = await import("@/lib/notifications/store");
 const { deliverPending } = await import("@/lib/notifications/deliver");
 const { scanIncoming, watchAccount } = await import("@/lib/notifications/incoming");
 const { GET: inbox } = await import("@/app/api/notifications/route");
@@ -63,25 +63,67 @@ describe("recording notices", () => {
     const list = await listNotifications(db, "alice");
     expect(list.unread).toBe(2);
     expect(list.notifications.map((item) => [item.kind, item.title])).toEqual([["received", "Received 1 USDC"], ["security", "Your account is locked"]]);
-    expect(list.notifications[1]).toMatchObject({ link: "/app/settings", read: false, body: expect.stringContaining("If this wasn't you, lock your account") });
+    expect(list.notifications[1]).toMatchObject({ link: "/app/settings", read: false, body: "Your Aura account was locked. If you didn't lock it, contact support." });
     await markAllRead(db, "alice", now);
     expect((await listNotifications(db, "alice")).unread).toBe(0);
   });
 
-  it("words a failed action with its reason and links to the transaction", () => {
-    const action = { id: "a1", kind: "transfer", chainId: 8453, failureReason: "reverted", summary: { amount: "5", symbol: "USDC", recipient: "0x2222222222222222222222222222222222222222" } };
-    const notice = actionNotice(action as never, "failed");
-    expect(notice).toMatchObject({ kind: "failed", dedupeKey: "action:a1:failed", link: "/app/transactions?open=a1" });
-    expect(notice.title).toMatch(/didn't go through$/);
+  it("words a failed action like its progress card, with the receipt's reason, and links to the transaction", () => {
+    const action = { id: "a1", kind: "transfer", chainId: 8453, failureReason: "operation_reverted", summary: { amount: "5", symbol: "USDC", to: "0x2222222222222222222222222222222222222222" } };
+    expect(actionNotice(action as never, "failed")).toEqual({ kind: "failed", dedupeKey: "action:a1:failed", link: "/app/transactions?open=a1",
+      title: "Send failed: 5 USDC", body: "The network rejected it. Nothing moved." });
+  });
+
+  it("words each finished action like its receipt: amounts formatted, the network only when it isn't Base", () => {
+    const base = { chainId: 8453, failureReason: null, destinationChainId: null, transactionHash: null, usdCents: null, createdAt: "t", status: "settling", bankState: null };
+    const notice = (kind: string, summary: Record<string, unknown>, extra: Record<string, unknown> = {}) =>
+      actionNotice({ ...base, id: "x", kind, summary, ...extra } as never, "completed");
+    const usdc = { symbol: "USDC", decimals: 6 };
+    const route = (from: object, fromAmountRaw: string, to: object, toAmountRaw: string, extra: Record<string, unknown> = {}) => ({ from, to, fromAmountRaw, toAmountRaw, ...extra });
+    const pick = (value: ReturnType<typeof actionNotice>) => value && [value.title, value.body];
+    expect(pick(notice("transfer", { amount: "1000", symbol: "USDC", to: "0x2222222222222222222222222222222222222222" }))).toEqual(["Sent 1,000 USDC", "To 0x2222…2222."]);
+    expect(pick(notice("route", route(usdc, "25000000", usdc, "24910000", { external: true, recipient: "0x2222222222222222222222222222222222222222" }), { destinationChainId: 42161 })))
+      .toEqual(["Sent 25 USDC", "To 0x2222…2222, from Base to Arbitrum."]);
+    expect(pick(notice("route", route({ symbol: "ETH", decimals: 18 }, "123456789012345678", usdc, "456789012"))))
+      .toEqual(["Swapped 0.123457 ETH for 456.789 USDC", "It's in your account."]);
+    expect(pick(notice("route", route(usdc, "25000000", usdc, "24910000"), { destinationChainId: 42161 })))
+      .toEqual(["Moved 25 USDC between networks", "From Base to Arbitrum. 24.91 USDC arrived."]);
+    expect(pick(notice("transfer", { market: "hyperliquid", amount: "100", symbol: "USDC" }))).toEqual(["Added 100 USDC to perps", "To Hyperliquid."]);
+    expect(pick(notice("transfer", { amount: "500", symbol: "USDC", cardAllowance: { off: false } })))
+      .toEqual(["Card allowance set to 500 USDC", "Your card can spend up to 500 USDC from your account."]);
+    expect(pick(notice("transfer", { amount: "0", symbol: "USDC", cardAllowance: { off: true } })))
+      .toEqual(["Card spending turned off", "Your card can't spend until you set an allowance again."]);
+    // A bank transfer is complete when the bank has it (bankPayoutNotice), not when it leaves the account.
+    expect(notice("transfer", { amount: "200", symbol: "USDC", bankPayout: { bankName: "Chase", lastFour: "4321" } })).toBeNull();
+    expect(actionNotice({ ...base, id: "x", kind: "transfer", summary: { amount: "200", symbol: "USDC", bankPayout: { bankName: "Chase" } } } as never, "failed"))
+      .toMatchObject({ title: "Bank transfer failed: 200 USDC" });
+  });
+
+  it("words card payments, bank deposits, and money received like their receipts", () => {
+    expect(cardSpendNotice({ authorizationId: "i", amountCents: 1200, approved: true, merchant: "Corner Cafe" }))
+      .toMatchObject({ title: "Card payment: $12.00 at Corner Cafe", body: "Paid with your card from your USDC." });
+    expect(cardSpendNotice({ authorizationId: "i", amountCents: -40000, approved: false, merchant: null }))
+      .toMatchObject({ title: "Card payment declined: $400.00", body: "No money moved. Check your card allowance, daily limit, and USDC balance." });
+    expect(receivedNotice({ ...transfer("t", "x"), amount: "1000", amountRaw: "1000000000" }, { senderName: "ALEX EXAMPLE", bankName: "Chase" }))
+      .toMatchObject({ title: "Bank deposit: 1,000 USDC", body: "From ALEX EXAMPLE." });
+    expect(receivedNotice({ ...transfer("t", "x"), chainId: 1, symbol: "XAUt", amount: "0.25" })).toMatchObject({ title: "Received 0.25 XAUt", body: "From 0xabe0…6b54, on Ethereum." });
+    expect(receivedNotice(transfer("t", "x"), undefined, "predictions")).toMatchObject({ title: "1 USDC is back in your account", body: "Withdrawn from predictions at Polymarket." });
+  });
+
+  it("gives each security notice the advice that fits it", () => {
+    expect(securityNotice("recipient_saved", "Bob was saved.", "1").body).toBe("Bob was saved. If this wasn't you, lock your account in Settings and contact support.");
+    expect(securityNotice("closed", "Your account was closed.", "2").body).toBe("Your account was closed. If you didn't ask for this, contact support.");
+    expect(securityNotice("reopened", "Your account was reopened.", "3").body).toBe("Your account was reopened. If you didn't ask for this, contact support.");
+    expect(securityNotice("locked", "Our team locked it.", "4", { advice: "Contact support to find out why." }).body).toBe("Our team locked it. Contact support to find out why.");
   });
 
   it("says Earn money went to the protocol, or came back from it, with vault names whole", () => {
     const earn = (direction: "deposit" | "withdraw", extra: Record<string, unknown> = {}) => actionNotice({ id: "e1", kind: "earn", chainId: 8453,
       summary: { protocol: "aave", direction, symbol: "USDC", decimals: 6, amount: "1", amountRaw: "1000000", ...extra } } as never, "completed");
-    expect(earn("deposit")).toMatchObject({ title: "Added to Earn 1 USDC", body: "To Aave, on Base." });
-    expect(earn("withdraw")).toMatchObject({ title: "1 USDC is back in your account", body: "It came out of Aave and is in your account on Base." });
-    expect(earn("withdraw", { protocol: "morpho", vaultName: "Steakhouse Prime USDC" }).body).toBe("It came out of Steakhouse Prime USDC and is in your account on Base.");
-    expect(earn("deposit", { protocol: "morpho", vaultName: "Steakhouse Prime USDC" }).body).toBe("To Steakhouse Prime USDC, on Base.");
+    expect(earn("deposit")).toMatchObject({ title: "Added 1 USDC to Earn", body: "To Aave." });
+    expect(earn("withdraw")).toMatchObject({ title: "1 USDC is back in your account", body: "From Aave." });
+    expect(earn("withdraw", { protocol: "morpho", vaultName: "Steakhouse Prime USDC" })?.body).toBe("From Steakhouse Prime USDC.");
+    expect(earn("deposit", { protocol: "morpho", vaultName: "Steakhouse Prime USDC" })?.body).toBe("To Steakhouse Prime USDC.");
   });
 });
 
@@ -244,6 +286,18 @@ describe("noticing money received", () => {
       transfer("recent", new Date(now.getTime() - 89 * day).toISOString())], status: "available", partial: false, observedAt: "t" });
     expect(await scanIncoming(db, { now, read })).toEqual(["alice"]);
     expect(sqlite.prepare("SELECT dedupe_key FROM notifications").all()).toEqual([{ dedupe_key: "received:recent" }]);
+  });
+
+  it("announces a withdrawal from perps arriving as money back from Hyperliquid, matched the way Transactions matches it", async () => {
+    await watchAccount(db, "alice", wallet, now);
+    const later = new Date(now.getTime() + 60_000);
+    const read: Read = async () => ({ transfers: [{ ...transfer("w", later.toISOString()), amount: "99", amountRaw: "99000000" }, transfer("gift", later.toISOString())],
+      status: "available", partial: false, observedAt: "t" });
+    const marketWithdrawals = async () => [{ id: "op", venue: "hyperliquid", kind: "withdraw", status: "submitted", createdAt: now.toISOString(),
+      summary: { destination: wallet, amount: "100" } }] as never;
+    await scanIncoming(db, { now: later, read, marketWithdrawals });
+    expect((await listNotifications(db, "alice")).notifications.map((item) => [item.title, item.body]).sort())
+      .toEqual([["99 USDC is back in your account", "Withdrawn from perps at Hyperliquid."], ["Received 1 USDC", "From 0xabe0…6b54."]]);
   });
 
   it("stops watching accounts not used for 30 days, and never watches an unknown customer", async () => {
