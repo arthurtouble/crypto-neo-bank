@@ -5,7 +5,7 @@ description: "Swap between crypto, stablecoins, stocks, and gold on Base or to a
 
 Swap exchanges one supported asset for another, on the same network or between networks: crypto, the euro stablecoin, [stocks](/product/tokenized-stocks-and-gold/), and Tether Gold.
 
-You pay with an asset on Base, or Tether Gold on Ethereum. You can receive any supported asset, on Base or another supported network. Aura gets the price from LI.FI, an independent service that chooses among third-party exchanges and transfer services.
+You pay with an asset on Base, or Tether Gold on Ethereum. You can receive any supported asset, on Base or another supported network. Aura finds the price across independent exchanges and transfer services.
 
 ## Before you confirm
 
@@ -20,7 +20,7 @@ The quote shows what you pay and get in dollars, the rate, and what the swap cos
 - **Price can move up to** sits in the quote, next to the least you get. It's 0.5% unless you pick 0.1% or 1%, and picking another value refreshes the quote. On the same network, if the price moves further before the swap goes through, the swap stops and what you paid with stays in your account.
 - You can only swap assets on Aura's reviewed list. If your amount would cost more than 3% because the market can't take it at a fair price, Aura tells you and suggests a smaller amount.
 - For stocks and gold, the quote also shows the market price and when it was published. Stock markets close at night, at weekends, and on holidays, but the tokens still trade. If the quote is more than 2% away from the market price, Aura tells you.
-- Aura keeps the quote on its server. Your account approves only a transaction to LI.FI's contract.
+- Aura keeps the quote on its server. Your account approves only a transaction to the contract of LI.FI, the service that carries out the swap.
 
 If the swap needs a token approval, the approval and the swap are sent together, as one operation. The approval covers this swap only.
 
