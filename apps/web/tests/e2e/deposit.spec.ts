@@ -171,6 +171,8 @@ test("USDC from Arbitrum is bridged to USDC on Base, with fees shown first", asy
   await expect(review).toContainText("39.6 USDC");
   await expect(review).toContainText("$0.50");
   await expect(review).toContainText("$0.10");
+  // One Fees row with the total, its parts underneath.
+  await expect(review.locator("div").filter({ has: page.getByText("Fees", { exact: true }) })).toContainText("$0.60");
   await wallet(page).getByRole("button", { name: "Add from wallet" }).click();
 
   await expect(toast(page, "Sent")).toBeVisible({ timeout: 30_000 });

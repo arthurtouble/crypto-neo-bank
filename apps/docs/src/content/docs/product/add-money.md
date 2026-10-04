@@ -20,7 +20,7 @@ Pick what you're sending from the list, then copy your address or scan the QR co
 
 Connect your wallet, pick the network and asset, and enter an amount, or select **Max** to add all of a token. From Base, you can add ETH, USDC, or EURC. From Ethereum, Arbitrum, or Optimism, you can add ETH or USDC, and from Polygon, USDC. From another network, Aura moves it to the same asset on Base.
 
-The review shows about how much you'll get, the least you'll get, the moving fee, and the network fee. Your wallet pays the network fee on the network you send from, and the moving fee comes out of the amount. Select **Add from wallet** to confirm, then confirm in your wallet. A move from another network usually arrives in a few minutes. You can add more while it travels, and **Transactions** shows it as pending until it arrives, even if you leave Add money. If it can't reach Base, the money goes back to your wallet, and Transactions shows it as failed.
+The review shows about how much you'll get, the least you'll get, and the fees: their total, with the moving fee and the network fee underneath. Your wallet pays the network fee on the network you send from, and the moving fee comes out of the amount. Select **Add from wallet** to confirm, then confirm in your wallet. A move from another network usually arrives in a few minutes. You can add more while it travels, and **Transactions** shows it as pending until it arrives, even if you leave Add money. If it can't reach Base, the money goes back to your wallet, and Transactions shows it as failed.
 
 ## Card
 

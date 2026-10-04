@@ -32,7 +32,7 @@ function quoteExpired(quote: Quote) {
 }
 
 function usdText(value: number | null) {
-  return value === null ? "unavailable" : formatUsd(value);
+  return value === null ? "Unavailable" : formatUsd(value);
 }
 
 /**
@@ -208,8 +208,10 @@ export function AddFromWallet({ account }: { account: `0x${string}` }) {
       {quote && phase === "review" && <dl className="mxSummary" aria-label="Review">
         <div><dt>You get about</dt><dd>{amountText(quote.toAmountRaw, quote.decimals)} {quote.symbol}</dd></div>
         <div><dt>At least</dt><dd>{amountText(quote.toAmountMinRaw, quote.decimals)} {quote.symbol}</dd></div>
-        <div><dt>Moving fee</dt><dd>{usdText(quote.providerFeeUsd)}</dd></div>
-        <div><dt>Network fee</dt><dd>{usdText(quote.networkFeeUsd)}</dd></div>
+        {/* One Fees total, its parts underneath (content style guide). Either part unread leaves the total unknown. */}
+        <div><dt>Fees</dt><dd>{usdText(quote.providerFeeUsd === null || quote.networkFeeUsd === null ? null : quote.providerFeeUsd + quote.networkFeeUsd)}</dd></div>
+        <div className="mxSummaryPart"><dt>Moving fee</dt><dd>{usdText(quote.providerFeeUsd)}</dd></div>
+        <div className="mxSummaryPart"><dt>Network fee</dt><dd>{usdText(quote.networkFeeUsd)}</dd></div>
       </dl>}
       {error && <p className="mxFieldError" role="alert">{error}</p>}
       {bridge && <p className="mxNote" role="status" data-testid="deposit-travelling">About {bridge.text} is on its way from {bridge.network}. It usually arrives in a few
