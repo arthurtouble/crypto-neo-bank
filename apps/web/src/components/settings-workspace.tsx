@@ -45,21 +45,21 @@ function DeviceArea() {
     document.documentElement.dataset.balancePrivacy = value ? "hidden" : "visible";
   }
   return <section className="mxCard stCard" aria-labelledby="device-heading"><h2 id="device-heading">This device</h2>
-    <SettingRow title="Hide balances" detail="Blur amounts on this device, for when others can see your screen."><Toggle label="Hide balances" on={hidden} onChange={() => privacy(!hidden)} /></SettingRow>
+    <SettingRow label title="Hide balances" detail="Blur amounts on this device, for when others can see your screen."><Toggle label="Hide balances" on={hidden} onChange={() => privacy(!hidden)} /></SettingRow>
     <SettingRow title="Theme" detail="Follow this device, or always use light or dark."><ThemeChoice /></SettingRow>
   </section>;
 }
 
 /** What each area holds, for guests: the same rows, described, with one way to sign in. */
 const guestRows: Record<Exclude<Area, "device">, Array<[string, string]>> = {
-  security: [["Passkey", "Needed to move money and to loosen your controls."], ["Email", "Used to sign in and for email notices."],
+  security: [["Passkey", "Confirms it's you with your face, fingerprint, or screen lock when you move money or loosen a control."], ["Email", "Used to sign in and for email notices."],
     ["Emergency lock", "Stop all sends, swaps, and Earn moves. Unlocking needs your passkey."], ["Daily transfer limit", "The most you can send in a day."],
     ["Saved recipients only", "Only send to people you've saved, once their wait is over."], ["Account key", "Export your account's key to use it in another wallet."]],
   recipients: exampleRecipients.map((item) => [item.name, `${item.detail} · Ready`]),
   tag: [["Aura tag", "A public name for receiving crypto, with a payment page you can show or hide."]],
   notifications: [["Transaction emails", "Money you receive, and when a send, swap, or Earn move completes or fails."], ["Browser notifications", "On in the browsers where you turn them on."],
     ["Product news", "Occasional emails about what's new in Aura. Off unless you turn it on."]],
-  data: [["Download my data", "A copy of everything Aura holds about you, as a file."], ["Terms and privacy", "The terms of use and privacy notice you accept."],
+  data: [["Download my data", "A copy of everything Aura holds about you, as a file."], ["Terms and privacy", "The terms of use and privacy notice you accept when you sign up."],
     ["Close your account", "Move your money out first, then contact support."]]
 };
 
