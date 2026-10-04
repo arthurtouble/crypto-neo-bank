@@ -162,7 +162,7 @@ export async function quoteRoute(request: RouteQuoteRequest, dependencies: { fet
     await response.body?.cancel().catch(() => undefined);
     // LI.FI answers 404 when no route exists; an outage or rate limit isn't a statement about the route.
     if (response.status === 429 || response.status >= 500) throw new RouteQuoteError("provider_unavailable", "Prices can't be loaded right now. Try again in a few minutes.");
-    throw new RouteQuoteError("no_route", "We can't find a way to do this for that amount right now.");
+    throw new RouteQuoteError("no_route", "There's no way to do this for that amount right now. Try a different amount.");
   }
   let body: unknown;
   try { body = await readBoundedJson(response, MAX_RESPONSE_BYTES); }
@@ -172,8 +172,8 @@ export async function quoteRoute(request: RouteQuoteRequest, dependencies: { fet
     const estimate = (body as { estimate?: { fromAmountUSD?: string; toAmountUSD?: string } } | null)?.estimate;
     const impact = priceImpact(estimate?.fromAmountUSD, estimate?.toAmountUSD);
     if (impact !== null && impact > MAX_PRICE_IMPACT_PERCENT)
-      throw new RouteQuoteError("price_impact", `This would lose about ${impact.toFixed(1)}% to price impact. Try a smaller amount.`);
-    throw new RouteQuoteError("no_route", "We can't find a safe way to do this for that amount right now.");
+      throw new RouteQuoteError("price_impact", `You would lose about ${impact.toFixed(1)}%, because the market can't take this amount at a fair price. Try a smaller amount.`);
+    throw new RouteQuoteError("no_route", "There's no safe way to do this for that amount right now. Try a different amount.");
   }
   return route;
 }

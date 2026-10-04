@@ -176,7 +176,6 @@
 .appFrame .mxSwapEstimate { display: block; overflow: hidden; text-overflow: ellipsis; }
 .appFrame .mxSwapReverse { justify-self: center; width: 36px; height: 36px; margin: calc(-1 * var(--space-5)) 0; position: relative; z-index: 1; display: grid; place-items: center; border: 1px solid var(--color-line-strong); border-radius: var(--radius-pill); background: var(--color-surface); color: var(--color-text-secondary); box-shadow: var(--shadow-1); cursor: pointer; }
 .appFrame .mxSwapReverse:hover { color: var(--color-text); background: var(--color-hover); }
-.appFrame .mxSwapSettings { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
 .appFrame .mxQuoteHead { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
 .appFrame .mxBadgeWarning { background: var(--color-warning-soft); color: var(--color-warning); }
 .appFrame .mxQuote .appButton, .appFrame .mxQuoteEmpty .appButton { justify-self: stretch; }
@@ -282,3 +281,6 @@
   .appFrame .mxTabs [role="tab"] { min-height: var(--touch-min); }
   .appFrame .mxSwapReverse { width: var(--touch-min); height: var(--touch-min); }
 }
+/* The quote's "Price can move up to" choices: 44px touch targets on the phone. */
+.appFrame .mxQuote .appSegmented button { min-width: 44px; min-height: 44px; white-space: nowrap; }
+.appFrame .mxQuote .mxSwapPriceMove { flex-wrap: wrap; }

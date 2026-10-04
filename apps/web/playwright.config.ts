@@ -16,9 +16,8 @@ export default defineConfig({
   expect: { timeout: process.env.CI ? 15_000 : 5_000 },
   reporter: [["list"], ["html", { outputFolder: "../../output/playwright-report", open: "never" }]],
   // Cloudflare's local runtime places requests where the machine is (GitHub's runners are in the US), and some
-  // features follow a provider's list of places (lib/legal/places.ts). Tests run from a place every provider serves
-  // (Switzerland; the UAE stopped being one when Predictions blocked it in #161); a test that checks a refusal sends its
-  // own CF-IPCountry.
+  // features follow a provider's list of places (lib/legal/places.ts). Tests run from a place every provider serves (Switzerland; Aura refuses new Predictions buys from the UAE);
+  // a test that checks a refusal sends its own CF-IPCountry.
   use: { baseURL: serverURL, trace: "retain-on-failure", screenshot: "only-on-failure", extraHTTPHeaders: { "CF-IPCountry": "CH" } },
   webServer: {
     // The app, a fresh local database, and a fake of Privy, the chains, and prices (tests/e2e/support).

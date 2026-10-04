@@ -121,7 +121,7 @@ Swap, cross-chain deposit, and cross-chain withdrawal are all `route` actions; t
 - **Balance.** Before asking LI.FI, `GET /api/routes/quote` reads the paying asset's balance from its chain (`requireSwapBalance` in `lib/swap/balance.ts`) and refuses more than the account holds with `insufficient_balance`, or `balance_unavailable` (503) when the read fails. Without it, an over-balance route would fail on the chain with Aura paying the network fee. The whole balance can be swapped, ETH included, since Aura pays the fee. This covers Swap and Send to another network.
 - **Switches.** `GET /api/swap/assets` answers carry `switches: { sameNetwork, otherNetwork }` (`swaps`, `cross_chain`) so Swap can say it's off before a quote is asked for. The quote and the action check the switches again.
 - **Price impact.** Above `MAX_PRICE_IMPACT_PERCENT` (3%), the quote is refused with `price_impact` and the lost percentage, so the customer can try less. Other failed checks are `no_route`; a LI.FI outage or rate limit is `provider_unavailable`.
-- **Reference prices.** For feed-priced assets (stocks, gold, the euro), the quote includes each Chainlink reference price and its time. The review warns when the quoted price is more than 2% away.
+- **Reference prices.** For feed-priced assets (stocks, gold, the euro), the quote includes each Chainlink reference price and its time. The review shows each as "Market price" and warns when the quoted price is more than 2% away.
 - **Handoff.** Once a route is `settling`, the screen shows it as sent and stops holding the customer. Transactions tracks the rest.
 
 ## Routes (LI.FI)
