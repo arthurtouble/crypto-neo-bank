@@ -5,18 +5,21 @@ import { useMemo } from "react";
 import { useApi } from "@/lib/client/api";
 import { useOverview } from "@/lib/client/queries";
 import type { AssetId, CatalogAsset } from "@/lib/swap/assets";
-import { heldFirst, optionLabel } from "@/lib/swap/picker-model";
+import { groupAssets, heldFirst, isStock, optionLabel } from "@/lib/swap/picker-model";
 
 type Props = { value: AssetId; label: string; held?: boolean; disabled?: boolean; onSelect(id: AssetId): void };
 
 /**
- * Choose an asset from Aura's reviewed list, as a dropdown. The side that pays (`held`) lists what the account can
- * hold, with its balance, what it holds first; the side that receives lists every swappable asset.
+ * Choose an asset from Aura's reviewed list, as a dropdown grouped like the Overview. The side that pays (`held`) lists
+ * what the account can hold, with its balance, what it holds first in each group; the side that receives lists every
+ * swappable asset.
  */
 export function SwapAssetSelect({ value, label, held = false, disabled, onSelect }: Props) {
   const api = useApi();
   const catalog = useQuery({ queryKey: ["swap-assets", held], staleTime: 30_000,
-    queryFn: () => api<{ assets: CatalogAsset[] }>(`/api/swap/assets${held ? "?held=1" : ""}`) });
+    queryFn: () => api<{ assets: CatalogAsset[]; places?: { stocks: string | null } }>(`/api/swap/assets${held ? "?held=1" : ""}`) });
+  // On the side that receives, a stock can't be bought from some places; selling one stays open, so the paying side is unchanged.
+  const notHere = (asset: CatalogAsset) => !held && Boolean(catalog.data?.places?.stocks) && isStock(asset);
   const overview = useOverview();
   const balances = useMemo(() => new Map((overview.data?.holdings ?? []).map((item) => [item.id, item.amountRaw])), [overview.data]);
   const assets = useMemo(() => {
@@ -29,6 +32,8 @@ export function SwapAssetSelect({ value, label, held = false, disabled, onSelect
     onChange={(event) => onSelect(event.target.value)}>
     {/* The chosen asset stays listed while the list loads or if it's missing from it, so the select never shows blank. */}
     {!assets.some((asset) => asset.id === value) && <option value={value}>{catalog.isError ? "Assets are unavailable" : "Loading assets"}</option>}
-    {assets.map((asset) => <option key={asset.id} value={asset.id} disabled={asset.eligibility !== "eligible"}>{optionLabel(asset, balance(asset))}</option>)}
+    {groupAssets(assets).map((group) => <optgroup key={group.label} label={group.label}>
+      {group.assets.map((asset) => <option key={asset.id} value={asset.id} disabled={asset.eligibility !== "eligible" || notHere(asset)}>{optionLabel(asset, balance(asset), notHere(asset))}</option>)}
+    </optgroup>)}
   </select>;
 }

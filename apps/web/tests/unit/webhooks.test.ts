@@ -223,7 +223,7 @@ describe("POST /api/webhooks/:provider", () => {
       { params: Promise.resolve({ provider: "stripe" }) });
     expect(response.status).toBe(202);
     expect(sqlite.prepare("SELECT subject_reference, kind, title FROM notifications").all())
-      .toEqual([{ subject_reference: "alice", kind: "failed", title: "Card declined: $12.50 at Coffee" }]);
+      .toEqual([{ subject_reference: "alice", kind: "failed", title: "Card payment declined: $12.50 at Coffee" }]);
     expect(state.sent[0]).toMatchObject({ event: { provider: "stripe", type: "card.authorization.created", subjectReference: "alice" } });
   });
 

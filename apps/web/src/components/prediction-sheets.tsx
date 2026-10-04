@@ -2,6 +2,7 @@
 
 import * as Dialog from "@radix-ui/react-dialog";
 import { useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { AuthorizationRequest } from "@/lib/actions/privy-relay";
 import { ApiError, useApi } from "@/lib/client/api";
@@ -41,20 +42,29 @@ export const SETUP_STEPS: FlowStep[] = [
   { key: "connect", label: "Connect it to Polymarket", detail: "Confirm with your passkey." }
 ];
 
-const CONFIRMING = "Polygon is confirming it. This usually takes under a minute.";
+const CONFIRMING = "Confirming. This usually takes under a minute.";
+const SETUP_ORDER = ["create", "approve", "connect"] as const;
+type SetupStage = (typeof SETUP_ORDER)[number];
+/** What a finished setup step says, so a done step never keeps its "confirming" line. */
+export const SETUP_DONE: Record<SetupStage, string> = { create: "Created.", approve: "Allowed.", connect: "Connected." };
 
 /**
  * Set up the predictions account one server step at a time, until ready:
  * wait while Polygon confirms, and confirm each approval or sign-in with the
  * passkey. `onStep` moves the timeline.
  */
-export async function setupPredictions(api: Api, authorize: Authorize, onStep: (key: "create" | "approve" | "connect", detail: string) => void) {
-  let stage: "create" | "approve" | "connect" = "create";
+export async function setupPredictions(api: Api, authorize: Authorize, onStep: (key: SetupStage, detail: string) => void) {
+  let stage: SetupStage = "create";
+  // Every step before `next` is done: say so, in order, before the timeline moves on.
+  const doneUpTo = (next: SetupStage | null) => {
+    for (const key of SETUP_ORDER) { if (key === next) return; onStep(key, SETUP_DONE[key]); }
+  };
   for (let step = 0; step < SETUP_MAX_STEPS; step += 1) {
     const setup = await api<Setup>("/api/predictions/setup", { method: "POST" });
-    if (setup.status === "ready") return;
+    if (setup.status === "ready") { doneUpTo(null); return; }
     if (setup.status === "waiting") { onStep(stage, CONFIRMING); await sleep(SETUP_POLL_MS); continue; }
     stage = setupStepOf(setup.request);
+    doneUpTo(stage);
     onStep(stage, "Confirm with your passkey.");
     const authorization = await authorize(setup.request);
     await api("/api/predictions/signatures", { method: "POST", json: { requestId: setup.requestId, authorization } });
@@ -74,7 +84,7 @@ export async function prepareDeposit(api: Api, amount: number, usdc: number | nu
   }
 }
 
-/** Polymarket credits a deposit from Base after it arrives; wait until the cash covers `needed`. */
+/** A deposit from Base reaches predictions cash a little after it's sent; wait until the cash covers `needed`. */
 export async function waitForCredit(api: Api, needed: number) {
   const until = Date.now() + CREDIT_WAIT_MS;
   while (Date.now() < until) {
@@ -82,7 +92,15 @@ export async function waitForCredit(api: Api, needed: number) {
     if (account?.balance.status === "observed" && Number(account.balance.data.amount) >= needed) return;
     await sleep(SETUP_POLL_MS);
   }
-  throw new Error("Your money is on its way, but Polymarket hasn't credited it yet. Nothing was bought. Try again in a few minutes.");
+  throw new Error("Your deposit is on its way but hasn't reached your predictions cash yet. Nothing was bought. Try again in a few minutes.");
+}
+
+/**
+ * No USDC on Base to deposit or buy with: say so before the customer types,
+ * with the one place that fixes it.
+ */
+export function NoUsdc() {
+  return <p className="mxHint pdNoUsdc" data-testid="predictions-no-usdc">You have no USDC in your Aura account to use here yet. <Link href="/app/deposit">Add money</Link></p>;
 }
 
 export const cashOf = (account: PredictionsAccount | undefined) => account?.balance.status === "observed" ? Number(account.balance.data.amount) : null;
@@ -119,7 +137,7 @@ export function SellForm({ market, quotes, outcome, position, onDone, onBusy, id
 
   async function sell() {
     if (shares === null || problem) return;
-    start([{ key: "sign", label: "Confirm with your passkey" }, { key: "send", label: "Selling…" }]);
+    start([{ key: "sign", label: "Confirm with your passkey" }, { key: "send", label: "Sell your shares" }]);
     try {
       const request = await api<SignRequest>("/api/predictions/orders/sell", { method: "POST", json: { marketId: market.id, outcome, shares } });
       const authorization = await wallet.authorize(request.request);
@@ -172,7 +190,7 @@ export function CollectForm({ market, position, onDone, onBusy }: { market: Poly
   useEffect(() => onBusy?.(running), [onBusy, running]);
 
   async function collect() {
-    start([{ key: "sign", label: "Confirm with your passkey" }, { key: "send", label: "Collecting…" }]);
+    start([{ key: "sign", label: "Confirm with your passkey" }, { key: "send", label: "Collect your winnings" }]);
     try {
       const request = await api<SignRequest>("/api/predictions/redeem", { method: "POST", json: { marketId: market.id } });
       const authorization = await wallet.authorize(request.request);
@@ -224,8 +242,8 @@ export function PredictionPositionSheet({ position, market, quotes, mode, onClos
 function MarketBySlug({ slug, children }: { slug: string; children: (market: PolymarketMarket, quotes: ClobQuote[] | null | undefined) => React.ReactNode }) {
   const view = usePredictionMarket(slug);
   if (view.data) return <>{children(view.data.market, view.data.quotes)}</>;
-  return view.isPending ? <LoadingState label="Reading this market" />
-    : <Notice tone="warning" role="alert"><span className="appUnavailable">Unavailable.</span> We couldn&apos;t read this market from Polymarket.</Notice>;
+  return view.isPending ? <LoadingState label="Loading this market" />
+    : <Notice tone="warning" role="alert" onRetry={() => void view.refetch()}>This market can&apos;t be loaded from Polymarket right now.</Notice>;
 }
 
 /** Finish setting up a predictions account that was started and left: each remaining step, in place. */
@@ -261,7 +279,7 @@ export function PredictionsSetupSheet({ onClose }: { onClose: () => void }) {
   </Sheet>;
 }
 
-/** Add money to predictions cash from USDC on Base, or withdraw cash back there. */
+/** Deposit USDC on Base into predictions cash, or withdraw cash back there. */
 export function PredictionsMoneySheet({ mode, account, onClose }: { mode: "add" | "withdraw"; account: PredictionsAccount | undefined; onClose: () => void }) {
   const api = useApi();
   const wallet = useAuraWallet();
@@ -274,19 +292,20 @@ export function PredictionsMoneySheet({ mode, account, onClose }: { mode: "add" 
   const cash = cashOf(account);
   const ready = account?.connection?.status === "ready";
   const available = mode === "add" ? usdc.amount : cash;
-  const problem = value === null ? null : available === null ? "Your balance can't be read right now." : value > available ? "That's more than you have." : null;
+  const problem = value === null ? null : available === null ? "Your balance can't be loaded right now."
+    : value > available ? `Not enough ${mode === "add" ? "USDC" : "predictions cash"}. You have ${formatUsd(available)}.` : null;
 
   async function submit() {
     if (value === null || problem) return;
     try {
       if (mode === "add") {
-        start([...(!ready ? SETUP_STEPS : []), { key: "add", label: `Add ${formatUsd(value)}`, detail: "Polymarket credits it in a few minutes." }]);
+        start([...(!ready ? SETUP_STEPS : []), { key: "add", label: `Deposit ${formatUsd(value)}`, detail: "It reaches your predictions cash in a few minutes." }]);
         if (!ready) { at("create"); await setupPredictions(api, wallet.authorize, (key, detail) => at(key, detail)); }
         at("add");
         await deposit.runAndWait(() => prepareDeposit(api, value, usdc.amount));
         finish(`${formatUsd(value)} is on its way to your predictions cash. It shows in a few minutes.`);
       } else {
-        start([{ key: "sign", label: "Confirm with your passkey" }, { key: "send", label: "Sending to your Aura account…" }]);
+        start([{ key: "sign", label: "Confirm with your passkey" }, { key: "send", label: "Send it to your Aura account" }]);
         const request = await api<SignRequest>("/api/predictions/withdraw", { method: "POST", json: { amount: value.toFixed(2) } });
         const authorization = await wallet.authorize(request.request);
         at("send");
@@ -301,22 +320,26 @@ export function PredictionsMoneySheet({ mode, account, onClose }: { mode: "add" 
     }
   }
 
-  const title = mode === "add" ? "Add money to predictions" : "Withdraw from predictions";
+  const title = mode === "add" ? "Deposit to predictions" : "Withdraw from predictions";
+  const depositFailed = deposit.action?.status === "failed" || deposit.action?.status === "expired" || deposit.outcomeUnknown;
+  const noUsdc = mode === "add" && usdc.amount === 0;
   return <Sheet onOpenChange={(open) => { if (!open && !running) onClose(); }} className="mkSheet">
     <div className="mxDialogHead"><Dialog.Title>{title}</Dialog.Title><Dialog.Close className="appTextButton" disabled={running}>Close</Dialog.Close></div>
     {flow ? <>
       <FlowTimeline flow={flow} title={`${title} progress`} />
-      {deposit.phase !== "idle" && <TransactionProgress label="Deposit" phase={deposit.phase} action={deposit.action} outcomeUnknown={deposit.outcomeUnknown} />}
+      {/* The deposit's own card shows while it runs, or if it failed; once it's done, the timeline's result says so, once. */}
+      {deposit.phase !== "idle" && (running || depositFailed) && <TransactionProgress label="Deposit" phase={deposit.phase} action={deposit.action} outcomeUnknown={deposit.outcomeUnknown} />}
       {!running && <button type="button" className="appButton appButtonPrimary appButtonLarge" onClick={onClose}>Done</button>}
     </> : mode === "withdraw" && !ready ? <>
-      <p className="mxHint pdNone">There&apos;s nothing to withdraw yet. Add money or buy a prediction first.</p>
+      <p className="mxHint pdNone">There&apos;s nothing to withdraw yet. Deposit or buy first.</p>
       <button type="button" className="appButton appButtonLarge" onClick={onClose}>Close</button>
     </> : <form className="mkSheetBody" aria-label={title} onSubmit={(event) => { event.preventDefault(); void submit(); }}>
       <DollarAmount label="Amount" value={amount} onChange={(next) => setAmount(typedDecimal(next))} available={available} error={problem} />
-      {mode === "add" ? <PayWith amount={usdc.amount} note={!ready ? "first sets up predictions" : undefined} />
-        : <dl className="mxSummary"><div><dt>Predictions cash</dt><dd>{cash === null ? <span className="appUnavailable">Unavailable</span> : formatUsd(cash)}</dd></div>
+      {mode === "add" && <PayWith amount={usdc.amount} note={!ready ? "first sets up predictions" : undefined} />}
+      {noUsdc && <NoUsdc />}
+      {mode === "withdraw" && <dl className="mxSummary"><div><dt>Predictions cash</dt><dd>{cash === null ? <span className="appUnavailable">Unavailable</span> : formatUsd(cash)}</dd></div>
           <div><dt>Arrives in</dt><dd>Your Aura account on Base</dd></div></dl>}
-      <button type="submit" className="appButton appButtonPrimary appButtonLarge" disabled={value === null || problem !== null}>{mode === "add" ? "Add money" : "Withdraw"}</button>
+      <button type="submit" className="appButton appButtonPrimary appButtonLarge" disabled={value === null || problem !== null}>{mode === "add" ? "Deposit" : "Withdraw"}</button>
       <p className="mxHint">Polymarket moves your USDC between Base and your predictions cash in a few minutes. Aura charges no fee.</p>
     </form>}
   </Sheet>;

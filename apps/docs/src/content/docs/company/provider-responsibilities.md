@@ -1,6 +1,6 @@
 ---
 title: Who does what
-description: Who does what in Aura, from Privy and LI.FI to the blockchains, protocols, and future partners.
+description: Who does what in Aura, from Privy and LI.FI to the blockchains, Aave and Morpho, Hyperliquid and Polymarket, and future partners.
 ---
 
 | Who | What they do | What they don't replace |
@@ -8,10 +8,12 @@ description: Who does what in Aura, from Privy and LI.FI to the blockchains, pro
 | Aura | The app, checks before you confirm, records, and choosing and overseeing partners | Your own judgment, or a partner's regulated duties |
 | Privy | Sign-in and your wallet | Aura's duties for its product, security, and disclosures |
 | Base, Ethereum, and other networks | Running and recording transactions | Aura's support or legal review |
-| Aave, Morpho, and the vault curators (Steakhouse Financial, Gauntlet) | Running Earn positions under their own rules | Aura's explanation of the risks |
-| LI.FI | Finding routes through third-party bridges and exchanges | Aura's own checks, including confirming delivery |
+| Aave, Morpho, and the vault managers (Steakhouse Financial, Gauntlet) | Running Earn positions under their own rules | Aura's explanation of the risks |
+| Hyperliquid and Polymarket | Running the perps and predictions accounts your wallet owns, under their own rules | Aura's explanation of the risks |
+| LI.FI | Finding a way to swap, or to move money between networks, through third-party exchanges and transfer services | Aura's own checks, including confirming delivery |
 | Kraken and Chainlink | Market prices Aura uses for your balances and your daily limit | Aura's decision on what to allow |
 | Cloudflare | Hosting and security | Aura's responsibility for your data |
+| Intercom | The support chat | Aura's responsibility for support and complaints |
 | Future partners (Bridge, Stripe) | Their own accounts, cards, identity checks, and regulated records | Aura's marketing, access controls, security, complaints handling, and oversight |
 
 Exact duties will be set in contracts before any regulated feature launches.
@@ -24,12 +26,12 @@ Connecting to a bank partner doesn't make Aura a bank. A partner doing identity 
 
 ## Privy
 
-Privy runs the key that signs for your wallet, recovery, and export, as set out in its contract and settings. Aura checks your Privy sign-in before showing your records, and asks your wallet to show you each transaction to sign. Privy doesn't decide which assets or protocols Aura supports, whether Aura's explanations are accurate, or whether a regulated service can be offered in a country.
+Privy runs the key that signs for your wallet, recovery, and export, as set out in its contract and settings. Aura checks your Privy sign-in before showing your records, and asks your wallet to show you each transaction to sign. Privy doesn't decide which assets or services Aura supports, whether Aura's explanations are accurate, or whether a regulated service can be offered in a country.
 
-## Blockchains, protocols, and routes
+## Networks and the services Aura connects to
 
-- Networks order and record transactions. Aave and Morpho run positions and interest under their own code and governance. Morpho vault curators choose where each vault lends. Aura chooses which to offer, checks supported actions, and explains the main risks. It can't reverse a settled transaction or change a protocol's rules.
-- LI.FI finds routes and prepares the transactions. A route can pass through independent bridges, exchanges, relayers, and contracts that LI.FI chooses. Aura checks each route against what you asked for and tracks it until delivery. Neither LI.FI nor Aura guarantees every part of a route.
+- Networks order and record transactions. Aave and Morpho run positions and interest under their own code and governance. Morpho vault managers choose where each vault lends. Hyperliquid and Polymarket run their markets and hold your perps and predictions money in accounts your wallet owns. Aura chooses which to offer, checks supported actions, and explains the main risks. It can't reverse a completed transaction or change Aave's, Morpho's, Hyperliquid's, or Polymarket's rules.
+- LI.FI finds a way to carry out a swap or a move between networks and prepares the transactions. The way it finds can pass through independent exchanges, transfer services, and contracts that LI.FI chooses. Aura checks each one against what you asked for and tracks it until delivery. Neither LI.FI nor Aura guarantees every step.
 
 ## Future partners
 

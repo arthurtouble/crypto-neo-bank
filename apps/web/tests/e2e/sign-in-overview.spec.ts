@@ -82,10 +82,10 @@ test("the Overview values every holding in dollars and totals cash, crypto, and 
 
   // Where each holding is kept shows in its detail.
   await row(page, `morpho:8453:${VAULTS.gauntlet}`).click();
-  await expect(page.getByRole("dialog")).toContainText("Morpho on Base");
+  await expect(page.getByRole("dialog").getByRole("definition").nth(2)).toHaveText("Morpho");
   await page.keyboard.press("Escape");
   await row(page, `aave:8453:${ASSETS.usdc}`).click();
-  await expect(page.getByRole("dialog")).toContainText("Aave on Base");
+  await expect(page.getByRole("dialog").getByRole("definition").nth(2)).toHaveText("Aave");
 });
 
 test("stocks, the euro, and Tether Gold on Ethereum are valued from their feeds, with the price time shown", async ({ page }) => {
@@ -132,7 +132,7 @@ test("a returning customer goes straight to the Overview", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Review Aura’s terms" })).toHaveCount(0);
 });
 
-test("an empty account says so and points to Deposit", async ({ page }) => {
+test("an empty account says so and points to Add money", async ({ page }) => {
   const customer = await newCustomer();
   await openOverview(page, customer);
   await expect(page.getByText("Your account is empty")).toBeVisible({ timeout: 30_000 });
@@ -140,12 +140,40 @@ test("an empty account says so and points to Deposit", async ({ page }) => {
   // Recent transactions show on the phone as well as on desktop.
   await expect(page.getByRole("region", { name: "Recent transactions" })).toContainText("No transactions yet");
   // Each way to add money opens that way on Deposit.
-  await page.getByRole("link", { name: /^Card Buy with/ }).click();
+  const empty = page.getByRole("region", { name: "Your account is empty" });
+  // A way that can't be used yet says so before it's tapped (bank transfers are switched off here).
+  await expect(empty.getByRole("link", { name: /^Bank/ })).toContainText("Coming soon");
+  await empty.getByRole("link", { name: /^Card Buy/ }).click();
   await expect(page).toHaveURL(/\/app\/deposit#card$/);
   await expect(page.getByRole("tab", { name: "Card", exact: true })).toHaveAttribute("aria-selected", "true");
   await page.goto("/app");
-  await page.getByRole("link", { name: "Deposit" }).last().click();
+  await page.getByRole("link", { name: "Add money", exact: true }).last().click();
   await expect(page).toHaveURL(/\/app\/deposit$/);
+});
+
+test("each holding offers what can be done with it, set up for that asset", async ({ page }) => {
+  const customer = await newCustomer();
+  await setBalances(customer.wallet, { 8453: { [ASSETS.usdc]: "10000000", [ASSETS.apple]: "250000000", [ASSETS.aaveUsdc]: "50000000" } });
+  await openOverview(page, customer);
+  const panel = page.getByRole("dialog");
+  const buttons = () => panel.locator(".ovPanelActions a");
+
+  // A stock is bought with, or sold for, USDC, and Swap opens set up for it.
+  await row(page, `8453:${ASSETS.apple}`).click({ timeout: 30_000 });
+  await expect(buttons()).toHaveText(["Buy", "Sell", "Send"]);
+  await panel.getByRole("link", { name: "Sell", exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(`/app/swap\\?from=8453%3A${ASSETS.apple}&to=8453%3A${ASSETS.usdc}$`));
+
+  await page.goto("/app");
+  await row(page, `8453:${ASSETS.usdc}`).click({ timeout: 30_000 });
+  await expect(buttons()).toHaveText(["Send", "Add money", "Swap"]);
+  await page.keyboard.press("Escape");
+
+  // An Earn position opens on Earn, to withdraw or deposit.
+  await row(page, `aave:8453:${ASSETS.usdc}`).click();
+  await expect(buttons()).toHaveText(["Withdraw", "Deposit"]);
+  await panel.getByRole("link", { name: "Withdraw", exact: true }).click();
+  await expect(page).toHaveURL(/\/app\/earn\?position=aave%3A8453%3A0x[0-9a-f]{40}&action=withdraw$/);
 });
 
 test("a balance that can't be read shows as unavailable, never as a number", async ({ page }) => {

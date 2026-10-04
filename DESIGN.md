@@ -248,7 +248,7 @@ Soft and subtle: 6px for buttons and inputs, 8px for notes, segmented controls, 
 - **Toasts:** raised, one line, close button; bottom right on desktop, top on the phone. A new one stacks under those still showing, never replaces them.
 - **Navigation:** desktop sidebar with ten sections, each an icon and a name, current item muted with an accent icon. Phone: no tab bar; the menu button opens a sheet of ten tiles, three per row, with Log out at the bottom.
 - **Overlays:** details in a side panel on desktop, a pushed screen on the phone; short choices in a popover or bottom sheet; confirmations in a dialog or bottom sheet. All trap focus and close with Escape.
-- **Money flows:** amount, then who, then a review with "Confirm and send" and the passkey; progress as a timeline in place.
+- **Money flows:** who (in Send, the people paid most recently first), then amount, then a review whose button is the action's own verb ("Send", "Swap") and the passkey; progress as a timeline in place.
 
 ## Do's and Don'ts
 

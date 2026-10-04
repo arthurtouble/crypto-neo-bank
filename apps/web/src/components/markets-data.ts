@@ -30,6 +30,8 @@ export type PerpsAccount = {
   dexStates: Observed<PerpAccountState[]>;
   orders: Observed<PerpOrder[]>;
   fills: Observed<Fill[]>;
+  /** What stops the customer before they start: a locked account (every trade, add, and withdrawal) or a place Hyperliquid doesn't serve (anything new). */
+  blocked?: { reason: "locked" | "place"; message: string } | null;
 };
 
 export type PredictionsAccount = {

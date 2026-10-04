@@ -7,17 +7,17 @@ import { useEffect, useId, useState } from "react";
 import { ApiError, useApi } from "@/lib/client/api";
 import { useAuraWallet } from "@/lib/client/use-aura-wallet";
 import { formatToken, formatUsd } from "@/lib/format";
-import { formatCents, parseDollars, payoutIfWins, pressKey } from "@/lib/markets/view";
-import { addDollars, QUICK_ADDS, typedDecimal, winningOutcome } from "@/lib/markets/predictions-view";
+import { formatCents, parseDollars, pressKey } from "@/lib/markets/view";
+import { addDollars, buyEstimate, QUICK_ADDS, typedDecimal, winningOutcome } from "@/lib/markets/predictions-view";
 import { buyPrice, useBaseUsdc, type ClobQuote, type PolymarketMarket, type PredictionPosition, type PredictionsAccount } from "./markets-data";
 import { FlowTimeline, Segmented, useFlow, useIsPhone, useSettledAction, type FlowStep } from "./markets-parts";
 import { predictionErrorMessage } from "./predictions-data";
-import { cashOf, prepareDeposit, SellForm, SETUP_STEPS, setupPredictions, waitForCredit, type SignedOrder, type SignRequest } from "./prediction-sheets";
+import { cashOf, NoUsdc, prepareDeposit, SellForm, SETUP_STEPS, setupPredictions, waitForCredit, type SignedOrder, type SignRequest } from "./prediction-sheets";
 import { Sheet } from "./sheet";
 import { TransactionProgress } from "./transaction-progress";
 
 export type TradeSide = "buy" | "sell";
-type Quote = { amount: number; estimatedShares: number; payoutIfWins: number };
+type Quote = { amount: number; estimatedShares: number };
 
 const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0", "delete"];
 
@@ -41,7 +41,7 @@ function OutcomePick({ market, quotes, outcome, onOutcome, side }: { market: Pol
  * of $1, $20, and $100 and Max. On the phone the amount is large and centred,
  * and a keypad enters it so the system keyboard stays closed.
  */
-function BuyAmount({ value, onChange, max, error }: { value: string; onChange: (value: string) => void; max: number | null; error: string | null }) {
+function BuyAmount({ value, onChange, max, error, children }: { value: string; onChange: (value: string) => void; max: number | null; error: string | null; children?: React.ReactNode }) {
   const phone = useIsPhone();
   const id = useId();
   return <div className="pdAmount">
@@ -56,6 +56,7 @@ function BuyAmount({ value, onChange, max, error }: { value: string; onChange: (
       <button type="button" className="mkChip" disabled={!max || max < 1} onClick={() => onChange(String(Math.floor((max ?? 0) * 100) / 100))}>Max</button>
     </div>
     {error && <p className="mxFieldError" id={`${id}-error`}>{error}</p>}
+    {children}
     {phone && <div className="mkKeypad" role="group" aria-label="Keypad">
       {KEYS.map((key) => <button type="button" key={key} aria-label={key === "delete" ? "Delete" : key} onClick={() => onChange(pressKey(value, key))}>
         {key === "delete" ? <Delete aria-hidden="true" /> : key}</button>)}
@@ -80,7 +81,6 @@ function BuyForm({ market, quotes, outcome, account, guest, onSignIn, onDone, on
   const deposit = useSettledAction("Deposit");
   const { flow, start, at, finish, fail, reset, running } = useFlow();
   const [amount, setAmount] = useState("");
-  const [quote, setQuote] = useState<Quote | null>(null);
   useEffect(() => onBusy?.(running), [onBusy, running]);
   const value = parseDollars(amount);
   const price = buyPrice(market, quotes, outcome);
@@ -88,27 +88,31 @@ function BuyForm({ market, quotes, outcome, account, guest, onSignIn, onDone, on
   const ready = account?.connection?.status === "ready";
   const short = value !== null ? Math.max(0, Math.round((value - (cash ?? 0)) * 100) / 100) : 0;
   const max = guest ? null : (cash ?? 0) + (usdc.amount ?? 0);
-  const toWin = value !== null ? payoutIfWins(value, price) : null;
-  // What the buy can spend: predictions cash, plus USDC on Base, which is added first when cash is short.
+  const estimate = buyEstimate(value, price);
+  // What the buy can spend: predictions cash, plus USDC on Base, which is deposited first when cash is short.
   const funds = [ready ? cash === null ? "Cash unavailable" : `${formatUsd(cash)} cash` : null, usdc.amount === null ? null : `${formatUsd(usdc.amount)} USDC on Base`]
     .filter((part): part is string => part !== null);
   const available = funds.length === 0 ? "Balance unavailable" : `${funds.join(" + ")} available`;
+  const fromCash = value !== null ? Math.round((value - short) * 100) / 100 : 0;
+  // Where this buy's money comes from: cash, your USDC, or some of each.
+  const payFrom = short <= 0 ? "Predictions cash" : fromCash > 0 ? `${formatUsd(fromCash)} cash + ${formatUsd(short)} from your USDC` : "Your USDC on Base";
+  const nothingToSpend = !guest && max === 0 && usdc.amount !== null && (!ready || cash !== null);
   const name = market.outcomes[outcome].name;
   const problem = value === null ? null : value < 1 ? "The smallest buy is $1."
     : price === null ? "There's no price for this outcome right now."
       : guest ? null
-        : account && account.balance.status !== "observed" && ready ? "Your predictions cash can't be read right now."
-          : short > 0 && usdc.amount === null ? "Your USDC balance can't be read right now."
-            : short > 0 && short > (usdc.amount ?? 0) ? `That's more than you have. You can spend up to ${formatUsd(max ?? 0)}.` : null;
+        : account && account.balance.status !== "observed" && ready ? "Your predictions cash can't be loaded right now."
+          : short > 0 && usdc.amount === null ? "Your USDC balance can't be loaded right now."
+            : short > 0 && short > (usdc.amount ?? 0) ? `Not enough USDC. You can spend up to ${formatUsd(max ?? 0)}.` : null;
 
   async function buy() {
     if (guest) { onSignIn(); return; }
     if (value === null || problem) return;
     const steps: FlowStep[] = [
       ...(!ready ? SETUP_STEPS : []),
-      ...(short > 0 ? [{ key: "add", label: `Add ${formatUsd(short)} from your USDC` }] : []),
+      ...(short > 0 ? [{ key: "add", label: `Deposit ${formatUsd(short)} from your USDC` }] : []),
       { key: "buy", label: "Confirm with your passkey" },
-      { key: "send", label: "Placing your order…" }
+      { key: "send", label: "Place your order" }
     ];
     start(steps);
     try {
@@ -116,21 +120,20 @@ function BuyForm({ market, quotes, outcome, account, guest, onSignIn, onDone, on
       if (short > 0) {
         at("add");
         await deposit.runAndWait(() => prepareDeposit(api, short, usdc.amount));
-        at("add", "Waiting for Polymarket to credit it…");
+        at("add", "Waiting for it to reach your predictions cash…");
         await waitForCredit(api, value);
+        at("add", "In your predictions cash.");
       }
       at("buy");
       const order = await api<SignRequest & { quote: Quote }>("/api/predictions/orders/buy", { method: "POST", json: { marketId: market.id, outcome, amountUsd: value } });
-      setQuote(order.quote);
       at("buy", `${formatUsd(order.quote.amount)} for about ${formatToken(order.quote.estimatedShares)} ${name} shares.`);
       const authorization = await wallet.authorize(order.request);
       at("send");
       const result = await api<SignedOrder>("/api/predictions/signatures", { method: "POST", json: { requestId: order.requestId, authorization } });
       const spent = Number(result.order?.makingAmount), got = Number(result.order?.takingAmount);
-      if (result.order?.status === "matched" && spent > 0 && got > 0) setQuote({ amount: spent, estimatedShares: got, payoutIfWins: got });
-      finish(result.order?.status === "delayed" ? "Order sent. Polymarket is matching it; it shows in your positions in a few seconds."
-        : result.order?.status === "live" ? "Order placed. It waits on Polymarket until someone sells at your price."
-          : spent > 0 && got > 0 ? `Order placed. You bought ${formatToken(got)} ${name} shares for ${formatUsd(spent)}.` : `Order placed. You bought ${name}.`);
+      // Buys fill now or not at all, so a "live" answer is Polymarket still matching it, like "delayed".
+      finish(result.order?.status === "delayed" || result.order?.status === "live" ? "Order sent. Polymarket is matching it; it shows in your positions in a few seconds."
+        : spent > 0 && got > 0 ? `You bought ${formatToken(got)} ${name} shares for ${formatUsd(spent)}. If ${name} wins, they pay ${formatUsd(got)}.` : `You bought ${name} shares.`);
     } catch (error) {
       if (error instanceof ApiError && error.code === "mfa_required") wallet.enrollPasskey();
       fail(predictionErrorMessage(error));
@@ -139,27 +142,30 @@ function BuyForm({ market, quotes, outcome, account, guest, onSignIn, onDone, on
     }
   }
 
+  const depositFailed = deposit.action?.status === "failed" || deposit.action?.status === "expired" || deposit.outcomeUnknown;
   if (flow) return <div className="mkOrderFlow">
     <FlowTimeline flow={flow} title="Buy progress" />
-    {deposit.phase !== "idle" && <TransactionProgress label="Deposit" phase={deposit.phase} action={deposit.action} outcomeUnknown={deposit.outcomeUnknown} />}
-    {quote && flow.done && <dl className="mxSummary"><div><dt>Shares</dt><dd>{formatToken(quote.estimatedShares)}</dd></div>
-      <div><dt>If {name} wins</dt><dd>{formatUsd(quote.payoutIfWins)}</dd></div></dl>}
-    {!running && <button type="button" className="appButton appButtonPrimary appButtonLarge" onClick={() => { reset(); setAmount(""); setQuote(null); onDone?.(); }}>Done</button>}
+    {/* The deposit's card shows while the buy runs, or if the deposit failed; the result is said once, above. */}
+    {deposit.phase !== "idle" && (running || depositFailed) && <TransactionProgress label="Deposit" phase={deposit.phase} action={deposit.action} outcomeUnknown={deposit.outcomeUnknown} />}
+    {!running && <button type="button" className="appButton appButtonPrimary appButtonLarge" onClick={() => { reset(); setAmount(""); onDone?.(); }}>Done</button>}
   </div>;
 
   return <form className="mkSheetBody" aria-label={`Buy ${name}`} onSubmit={(event) => { event.preventDefault(); void buy(); }}>
-    <BuyAmount value={amount} onChange={setAmount} max={max} error={problem} />
+    {/* To win sits right under the amount, so it's in view with the keypad and the Buy button on the phone. */}
+    <BuyAmount value={amount} onChange={setAmount} max={max} error={problem}>
+      <p className="pdToWin" data-testid="prediction-payout"><span>To win</span><strong>{estimate ? formatUsd(estimate.toWin) : "$0.00"}</strong></p>
+    </BuyAmount>
+    {nothingToSpend && <NoUsdc />}
     <dl className="mxSummary">
       <div><dt>Price</dt><dd>{formatCents(price) ?? <span className="appUnavailable">Unavailable</span>}</dd></div>
-      <div><dt>Shares</dt><dd>{toWin !== null ? `About ${formatToken(Math.floor(toWin * 100) / 100)}` : "—"}</dd></div>
+      <div><dt>Shares</dt><dd>{estimate ? `About ${formatToken(estimate.shares)}` : "—"}</dd></div>
       {!guest && <div className="pdPayFrom"><dt>Pay from</dt><dd>
-        <span>{short > 0 ? `${formatUsd(short)} from your USDC, then cash` : "Predictions cash"}</span>
+        <span>{payFrom}</span>
         <span className="pdAvailable" data-testid="prediction-available">{available}</span>
       </dd></div>}
     </dl>
-    <p className="pdToWin" data-testid="prediction-payout"><span>To win</span><strong>{toWin !== null ? formatUsd(toWin) : "$0.00"}</strong></p>
     {!guest && !ready && <p className="mxHint">Your first buy sets up your predictions account: about a minute and two passkey confirmations, once.</p>}
-    <button type="submit" className="appButton appButtonPrimary appButtonLarge" disabled={!guest && (value === null || problem !== null)}>{guest ? "Sign in to trade" : `Buy ${name}`}</button>
+    <button type="submit" className="appButton appButtonPrimary appButtonLarge pdSubmit" disabled={!guest && (value === null || problem !== null)}>{guest ? "Sign in to trade" : `Buy ${name}`}</button>
     <p className="mxHint">If {name} wins, each share pays $1. The price can move before your order fills. Aura charges no fee.</p>
   </form>;
 }
@@ -191,7 +197,7 @@ export function PredictionTradeForm({ market, quotes, account, outcome, onOutcom
     {side === "buy"
       ? <BuyForm key={`${market.id}-${outcome}`} market={market} quotes={quotes} outcome={outcome} account={account} guest={guest} onSignIn={onSignIn} onDone={onDone} onBusy={onBusy} />
       : guest ? <><p className="mxHint pdNone">Sign in to sell shares you hold.</p><button type="button" className="appButton appButtonPrimary appButtonLarge" onClick={onSignIn}>Sign in to trade</button></>
-        : held === null ? <p className="mxHint pdNone"><span className="appUnavailable">Unavailable.</span> We couldn&apos;t read your positions from Polymarket.</p>
+        : held === null ? <p className="mxHint pdNone"><span className="appUnavailable">Unavailable.</span> Your positions can&apos;t be loaded from Polymarket right now.</p>
           : <SellForm key={`${market.id}-${outcome}`} market={market} quotes={quotes} outcome={outcome} position={position} onDone={onDone} onBusy={onBusy} idPrefix="panel-sell" />}
   </div>;
 }

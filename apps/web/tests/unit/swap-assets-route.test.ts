@@ -60,6 +60,14 @@ describe("Swap asset catalog API", () => {
     expect(await (await request("?q=usdc")).json()).toMatchObject({ switches: { sameNetwork: false, otherNetwork: true } });
   });
 
+  it("says up front where stocks can't be bought, from the request's place", async () => {
+    const from = (country: string, query: string) => GET(new Request(`https://aurel.test/api/swap/assets${query}`, { headers: { "CF-IPCountry": country } }));
+    expect(await (await from("GB", `?import=${baseUsdc}`)).json()).toMatchObject({ places: { stocks: "Stocks aren't available where you are. You can still sell or send the ones you hold." } });
+    expect(await (await from("US", "?q=apple")).json()).toMatchObject({ places: { stocks: expect.stringContaining("Stocks aren't available") } });
+    expect(await (await from("CH", "?q=apple")).json()).toMatchObject({ places: { stocks: null } });
+    expect(await (await request("?q=apple")).json()).toMatchObject({ places: { stocks: null } });
+  });
+
   it("lists a paused asset as unavailable", async () => {
     sqlite.exec(`INSERT INTO asset_pauses (asset_id, reason, paused_at, paused_by) VALUES ('${baseUsdc}', 'Depeg', '2026-09-26T00:00:00Z', 'op')`);
     const body = await (await request(`?import=${baseUsdc}`)).json() as { asset: { eligibility: string; unavailableReason: string } };

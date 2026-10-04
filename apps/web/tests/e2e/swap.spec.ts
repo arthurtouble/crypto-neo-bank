@@ -57,7 +57,7 @@ test("USDC buys a tokenized stock on Base, with the reference price shown, and t
   await expect(quote(page)).toContainText("You receive about1.99 AAPLc");
   await expect(quote(page)).toContainText("You get at least1.98 AAPLc");
   await expect(quote(page)).toContainText("Network feePaid by Aura");
-  await expect(quote(page).getByTestId("swap-reference")).toContainText("AAPLc reference price $341.51, as of");
+  await expect(quote(page).getByTestId("swap-reference")).toContainText("Market price: 1 AAPLc = $341.51, as of");
   expect(await relayed()).toEqual([]);
 
   await quote(page).getByRole("button", { name: "Swap", exact: true }).click();
@@ -89,30 +89,43 @@ test("a stock sells back to USDC, the other way round", async ({ page }) => {
   expect(await balance(page, customer, `8453:${ASSETS.usdc}`)).toBe("1492500");
 });
 
+test("how far the price can move is chosen on the quote, which refreshes in place with the new minimum", async ({ page }) => {
+  await openSwap(page, { from: `8453:${ASSETS.usdc}`, to: `8453:${ASSETS.apple}` });
+  await getQuote(page, "2");
+  await expect(quote(page).getByTestId("swap-price-move")).toHaveText("Fees and the price difference are already taken out of what you receive. If the price moves more than 0.5% before it goes through, the swap stops and your USDC stays in your account.", { timeout: 20_000 });
+  const requested = page.waitForRequest((request) => request.url().includes("/api/routes/quote") && request.url().includes("slippageBps=100"));
+  await quote(page).getByRole("button", { name: "1%", exact: true }).click();
+  await requested;
+  await expect(quote(page).getByRole("button", { name: "1%", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(quote(page).getByTestId("swap-price-move")).toContainText("more than 1% before", { timeout: 20_000 });
+  await expect(quote(page).getByRole("button", { name: "Swap", exact: true })).toBeEnabled();
+  expect(await relayed()).toEqual([]);
+});
+
 test("a quote far from the reference price says so, in case the market is closed or thin", async ({ page }) => {
   await edge("/__state", { lifiUsd: { fromAmountUSD: "2.00", toAmountUSD: "1.99" } });
   await openSwap(page, { from: `8453:${ASSETS.usdc}`, to: `8453:${ASSETS.apple}` });
   // $2 for 1.99 AAPLc is about $1 each, far below the $341.51 reference.
   await getQuote(page, "2");
-  await expect(quote(page).getByTestId("swap-reference")).toContainText("away from it. Markets may be closed or thin", { timeout: 20_000 });
+  await expect(quote(page).getByTestId("swap-reference")).toContainText("away from it. The market may be closed or quiet", { timeout: 20_000 });
 });
 
 test("the side that pays offers only what the account holds; the side that receives offers every network", async ({ page }) => {
   await openSwap(page);
-  const options = (side: string, symbol: string) => page.getByRole("combobox", { name: side }).locator("option").filter({ hasText: new RegExp(`^${symbol} · `) });
+  const options = (side: string, symbol: string) => page.getByRole("combobox", { name: side }).locator("option").filter({ hasText: new RegExp(` · ${symbol}(?: |$)`) });
   await expect(options("You pay", "USDC")).toHaveCount(1);
-  await expect(options("You pay", "USDC")).toHaveText("USDC · USD Coin · 50 available", { timeout: 20_000 });
-  await expect(options("You pay", "XAUt")).toHaveText(/^XAUt · Tether Gold on Ethereum/);
+  await expect(options("You pay", "USDC")).toHaveText("USD Coin · USDC · 50 available", { timeout: 20_000 });
+  await expect(options("You pay", "XAUt")).toHaveText(/^Tether Gold · XAUt on Ethereum/);
   await expect(options("You receive", "USDC")).toHaveCount(5);
   // What the account holds comes first on the side that pays.
-  await expect(page.getByRole("combobox", { name: "You pay" }).locator("option").first()).toHaveText(/^USDC · /);
+  await expect(page.getByRole("combobox", { name: "You pay" }).locator("option").first()).toHaveText(/^USD Coin · USDC · /);
 });
 
 test("moving to another network is sent, then tracked: no spinner while the bridge delivers", async ({ page }) => {
   await setFeature(page, "cross_chain", true);
   await openSwap(page, { from: `8453:${ASSETS.usdc}`, to: ARBITRUM_USDC });
   await getQuote(page, "10");
-  await expect(quote(page)).toContainText("Exchange and transfer fees", { timeout: 20_000 });
+  await expect(quote(page)).toContainText("Fees", { timeout: 20_000 });
   await expect(quote(page)).toContainText("usually takes up to 30 minutes");
   await expect(quote(page).getByTestId("swap-leaves-aura")).toContainText("Aura doesn't show balances there");
   await quote(page).getByRole("button", { name: "Swap", exact: true }).click();
@@ -134,7 +147,7 @@ test("Tether Gold sells from Ethereum back to USDC on Base, with Ethereum's fee 
   await expect(quote(page)).toContainText("You pay0.5 XAUt on Ethereum", { timeout: 20_000 });
   await expect(quote(page).getByTestId("swap-leaves-aura")).toHaveCount(0);
   await expect(quote(page)).toContainText("Network feePaid by Aura");
-  await expect(quote(page).getByTestId("swap-reference")).toContainText("XAUt reference price $4,285.62");
+  await expect(quote(page).getByTestId("swap-reference")).toContainText("Market price: 1 XAUt = $4,285.62");
   await quote(page).getByRole("button", { name: "Swap", exact: true }).click();
 
   await expect(page.getByRole("status").filter({ hasText: "Swap sent" })).toContainText("on its way to Base", { timeout: 30_000 });
@@ -150,15 +163,15 @@ test("when LI.FI has no route, is unavailable, or the price impact is too high, 
   await openSwap(page);
   await edge("/__state", { lifiQuote: "no_route" });
   await getQuote(page, "5");
-  await expect(toasts(page)).toContainText("We can't find a way to do this for that amount right now.", { timeout: 20_000 });
+  await expect(toasts(page)).toContainText("There's no way to do this for that amount right now.", { timeout: 20_000 });
 
   await edge("/__state", { lifiQuote: "ok", down: ["lifi"] });
   await page.getByRole("button", { name: "Get quote" }).click();
-  await expect(toasts(page)).toContainText("We can't get a price right now.", { timeout: 20_000 });
+  await expect(toasts(page)).toContainText("Prices can't be loaded right now.", { timeout: 20_000 });
 
   await edge("/__state", { down: [], lifiQuote: "impact" });
   await page.getByRole("button", { name: "Get quote" }).click();
-  await expect(toasts(page)).toContainText("lose about 10.0% to price impact. Try a smaller amount.", { timeout: 20_000 });
+  await expect(toasts(page)).toContainText("lose about 10.0%, because the market can't take this amount at a fair price. Try a smaller amount.", { timeout: 20_000 });
   await expect(quote(page)).toHaveCount(0);
   expect(await relayed()).toEqual([]);
 });
@@ -185,6 +198,22 @@ test("more than the account holds gets no quote, in the form or from the server,
   await expect(page.getByRole("alert")).toHaveText("You have 50 USDC. Enter that or less.");
   await expect(quote(page)).toHaveCount(0);
   await expect(asCustomer(page, customer, "GET", `/api/routes/quote?from=8453:${ASSETS.usdc}&to=8453:${ASSETS.apple}&amount=500`)).rejects.toThrow(/422.*insufficient_balance/);
+  expect(await relayed()).toEqual([]);
+});
+
+test("where stocks can't be bought, the form says so before a quote, and selling one stays open", async ({ page }) => {
+  await page.setExtraHTTPHeaders({ "CF-IPCountry": "GB" });
+  await openSwap(page, { balances: { 8453: { [ASSETS.usdc]: "50000000", [ASSETS.apple]: "300000000" } }, from: `8453:${ASSETS.usdc}`, to: `8453:${ASSETS.apple}` });
+  await expect(page.getByTestId("swap-place-blocked")).toHaveText("Stocks aren't available where you are. You can still sell or send the ones you hold.", { timeout: 20_000 });
+  await expect(page.getByRole("button", { name: "Get quote" })).toBeDisabled();
+  const apple = page.getByRole("combobox", { name: "You receive" }).locator("option").filter({ hasText: /^Apple · AAPLc/ });
+  await expect(apple).toHaveText("Apple · AAPLc · not available where you are");
+  await expect(apple).toBeDisabled();
+
+  await page.getByRole("button", { name: "Reverse assets" }).click();
+  await expect(page.getByTestId("swap-place-blocked")).toHaveCount(0);
+  await getQuote(page, "1.5");
+  await expect(quote(page)).toContainText("You pay1.5 AAPLc", { timeout: 20_000 });
   expect(await relayed()).toEqual([]);
 });
 

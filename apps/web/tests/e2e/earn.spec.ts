@@ -61,7 +61,7 @@ test("Earn shows Aave USDC and both Morpho vaults with their rates", async ({ pa
   // Aave WETH takes no deposits, so it doesn't show to an account without a WETH position.
   await expect(card(page, "Aave WETH")).toHaveCount(0);
   await expect(card(page, "Steakhouse Prime USDC")).toContainText("4.41%");
-  await expect(card(page, "Steakhouse Prime USDC")).toContainText("curated by Steakhouse Financial");
+  await expect(card(page, "Steakhouse Prime USDC")).toContainText("managed by Steakhouse Financial");
   // Market-wide totals were cut: each option shows its rate and your position.
   await expect(page.getByText("Total deposits")).toHaveCount(0);
   await expect(card(page, "Gauntlet USDC Prime")).toContainText("4.38%");
@@ -123,8 +123,35 @@ test("rates that can't be read show as unavailable, never as a number", async ({
   await expect(page.getByTestId("apy-steakhouse-prime-usdc")).toHaveText("Unavailable");
   await expect(page.getByTestId("apy-aave-USDC")).toHaveText("Unavailable", { timeout: 20_000 });
   // Aave's data service failing is said once, after its retries; Morpho's vault list still shows, without numbers.
-  await expect(page.getByText("Aave rates are unavailable right now.")).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByTestId("earn-rates-unavailable")).toContainText("Aave and Morpho rates can't be loaded right now.", { timeout: 30_000 });
   await expect(card(page, "Gauntlet USDC Prime")).toContainText("Unavailable");
+});
+
+test("a rate whose refresh fails shows as unavailable, not as the last number, until it reads again", async ({ page }) => {
+  await page.clock.install();
+  await openEarn(page);
+  await expect(page.getByTestId("apy-aave-USDC")).toHaveText("3.85%", { timeout: 20_000 });
+  await page.route("**/api/defi/aave/markets", (route) => route.fulfill({ status: 503, body: "{}" }));
+  // The page refreshes rates every minute, and retries a failed read before saying so.
+  for (let step = 0; step < 6; step += 1) await page.clock.fastForward(30_000);
+  await expect(page.getByTestId("apy-aave-USDC")).toHaveText("Unavailable", { timeout: 20_000 });
+  await expect(page.getByTestId("earn-rates-unavailable")).toContainText("Aave rates can't be loaded right now.");
+  await page.unroute("**/api/defi/aave/markets");
+  await page.getByTestId("earn-rates-unavailable").getByRole("button", { name: "Try again" }).click();
+  await expect(page.getByTestId("apy-aave-USDC")).toHaveText("3.85%", { timeout: 20_000 });
+  await expect(page.getByTestId("earn-rates-unavailable")).toHaveCount(0);
+});
+
+test("the vaults and their positions still show when Morpho's rates can't be loaded at all", async ({ page }) => {
+  await page.route("**/api/defi/morpho/vaults", (route) => route.fulfill({ status: 503, body: "{}" }));
+  await openEarn(page, { [VAULTS.steakhouse]: "100000000000000000000" });
+  await expect(page.getByTestId("apy-steakhouse-prime-usdc")).toHaveText("Unavailable", { timeout: 30_000 });
+  await expect(page.getByTestId("position-steakhouse-prime-usdc")).toContainText("$105.00", { timeout: 20_000 });
+  await expect(page.locator(".erPositions")).toContainText("Rate unavailable");
+  await expect(page.getByTestId("apy-aave-USDC")).toHaveText("3.85%");
+  await expect(page.getByTestId("earn-rates-unavailable")).toContainText("Morpho rates can't be loaded right now.");
+  // An option you don't hold has no position row.
+  await expect(page.getByTestId("position-gauntlet-usdc-prime")).toHaveCount(0);
 });
 
 test("the server refuses: switched off, account locked, not enough USDC, or USDC paused", async ({ page }) => {
@@ -194,6 +221,19 @@ test("a position shows in plain dollars as last read, with its rate, here and on
   await page.goto("/app");
   await expect(page.getByTestId(`holding-morpho:8453:${VAULTS.steakhouse}`)).toContainText("Earning 4.41% a year", { timeout: 30_000 });
   await expect(page.getByTestId(`holding-morpho:8453:${VAULTS.steakhouse}`)).toContainText("$105.00");
+});
+
+test("a link from the Overview opens that position on the tab it names", async ({ page }) => {
+  await openEarn(page, { [VAULTS.gauntlet]: "100000000000000000000" });
+  await page.goto(`/app/earn?position=morpho:8453:${VAULTS.gauntlet}&action=withdraw`);
+  await expect(form(page, "Gauntlet USDC Prime").getByRole("tab", { name: "Withdraw" })).toHaveAttribute("aria-selected", "true", { timeout: 30_000 });
+  await expect(form(page, "Gauntlet USDC Prime")).toContainText("In Gauntlet USDC Prime: 105 USDC", { timeout: 20_000 });
+  await expect(card(page, "Gauntlet USDC Prime")).toBeInViewport();
+  await expect(card(page, "Aave USDC").getByRole("button", { name: "Deposit or withdraw" })).toHaveAttribute("aria-expanded", "false");
+
+  await page.goto(`/app/earn?position=aave:8453:${ASSETS.usdc}&action=deposit`);
+  await expect(form(page, "Aave USDC").getByRole("tab", { name: "Deposit" })).toHaveAttribute("aria-selected", "true", { timeout: 30_000 });
+  await expect(form(page, "Aave USDC")).toBeVisible();
 });
 
 test("Max fills in everything the account holds", async ({ page }) => {

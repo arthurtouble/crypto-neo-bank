@@ -31,12 +31,12 @@ describe("notice emails", () => {
     for (const [, style] of email.html.matchAll(/style="([^"]*)"/g)) expect(style).not.toMatch(/(^|;)\s*[a-z-]+:\s*$/);
     expect(email.html).toContain("'Segoe UI'");
     expect(email.text).toContain("Open in Aura: https://aura.test/app/transactions?open=a&b");
-    expect(email.text).toContain("choose which transaction notices");
+    expect(email.text).toContain("turn off transaction emails");
   });
 
   it("say security notices are always sent", () => {
     const email = renderNoticeEmail({ kind: "security", title: "Account locked", body: "Your account is locked." }, "https://aura.test/app/settings");
     expect(email.html).toContain("Security notices are always sent");
-    expect(email.text).not.toContain("choose which transaction notices");
+    expect(email.text).not.toContain("turn off transaction emails");
   });
 });
