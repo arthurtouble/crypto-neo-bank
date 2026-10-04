@@ -42,6 +42,8 @@
 .appFrame .stNumber { width: 120px; height: var(--input-height); padding: 0 var(--space-3); border: 1px solid var(--color-line-strong); border-radius: var(--radius-sm); background: var(--color-surface); color: var(--color-text); font: var(--weight-regular) var(--text-body-size) / 1 var(--font-sans); font-variant-numeric: tabular-nums; text-align: right; }
 .appFrame .stNumber:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; border-color: var(--color-focus); }
 .appFrame .stInline { display: flex; align-items: center; gap: var(--space-2); }
+.appFrame .stUnit { color: var(--color-text-secondary); font-variant-numeric: tabular-nums; }
+.appFrame .stUnit[data-empty] { visibility: hidden; }
 .appFrame .stNumber:disabled { background: var(--color-muted); color: var(--color-text-secondary); }
 
 /* Saved recipients */
@@ -75,6 +77,8 @@
   .appFrame .stRow .stRowText { flex: 1 1 200px; }
   /* Support's rows all put their buttons under the text, so a row with two buttons matches a row with one. */
   .appFrame .suPage .stRowControl { flex-basis: 100%; }
+  /* Keep and Remove go under the recipient, so the name and address keep the row's full width. */
+  .appFrame .stListRow > .stRowControl { grid-column: 2 / -1; justify-content: flex-end; }
   .appFrame .stNumber { font-size: var(--text-input-phone); }
   .appFrame .stCard .appButton { height: var(--control-height-lg); }
 }

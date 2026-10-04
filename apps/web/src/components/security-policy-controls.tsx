@@ -7,7 +7,7 @@ import { useState } from "react";
 import type { AuthorizationRequest } from "@/lib/actions/privy-relay";
 import { ApiError, useApi } from "@/lib/client/api";
 import { useAuraWallet } from "@/lib/client/use-aura-wallet";
-import { formatDateTime, shortAddress } from "@/lib/format";
+import { formatShortDateTime, shortAddress } from "@/lib/format";
 import { SettingRow, useSettingsToast } from "./setting-row";
 import { LoadingState, Notice } from "./states";
 import { StatusDot } from "./status-dot";
@@ -76,7 +76,8 @@ export function TransactionControls() {
   }
 
   if (policy.isPending) return <Loading label="Loading transaction controls…" />;
-  if (policy.isError || !policy.data) return <section className="mxCard stCard"><Notice tone="error" role="alert" onRetry={() => void policy.refetch()}>We couldn&apos;t load your controls. Your limits still apply.</Notice></section>;
+  if (policy.isError || !policy.data) return <section className="mxCard stCard" aria-labelledby="controls-heading"><h2 id="controls-heading">Transaction controls</h2>
+    <Notice tone="error" role="alert" onRetry={() => void policy.refetch()}>Your controls can&apos;t be loaded right now. Your lock and limits still apply.</Notice></section>;
   const current = policy.data.policy;
   return <section className="mxCard stCard" id="emergency-lock" aria-labelledby="controls-heading">
     <div className="stCardHead"><h2 id="controls-heading">Transaction controls</h2>
@@ -85,6 +86,8 @@ export function TransactionControls() {
       <input type="checkbox" className="appSwitch" checked={current.accountLocked} disabled={update.isPending} onChange={(event) => update.mutate({ accountLocked: event.target.checked })} /></SettingRow>
     <SettingRow title={<label htmlFor="daily-limit">Daily transfer limit</label>} detail="In US dollars. Leave empty for no limit.">
       <form className="stInline" onSubmit={(event) => { event.preventDefault(); saveDailyLimit(current.dailyLimitUsd); }}>
+        {/* "$" stands by the amount; with no limit the placeholder says so, and the "$" keeps its place so the field doesn't jump. */}
+        <span className="stUnit" aria-hidden="true" data-empty={(dailyDraft ?? current.dailyLimitUsd ?? "") === "" || undefined}>$</span>
         <input id="daily-limit" type="number" inputMode="numeric" autoComplete="off" className="stNumber" min="1" step="1" placeholder="No limit" disabled={update.isPending}
           value={dailyDraft ?? (current.dailyLimitUsd === null ? "" : String(current.dailyLimitUsd))} onChange={(event) => setDailyDraft(event.target.value)} />
         {dailyDraft !== null && <button type="submit" className="appButton appButtonPrimary" aria-label="Save daily limit" disabled={update.isPending}>Save</button>}
@@ -95,6 +98,7 @@ export function TransactionControls() {
       <form className="stInline" onSubmit={(event) => { event.preventDefault(); saveDelay(current.newAddressDelayHours); }}>
         <input id="recipient-wait" type="number" inputMode="numeric" autoComplete="off" className="stNumber" min="0" max="168" step="1" disabled={update.isPending}
           value={delayDraft ?? String(current.newAddressDelayHours)} onChange={(event) => setDelayDraft(event.target.value)} />
+        <span className="stUnit" aria-hidden="true">hours</span>
         {delayDraft !== null && <button type="submit" className="appButton appButtonPrimary" aria-label="Save wait" disabled={update.isPending}>Save</button>}
       </form></SettingRow>}
     <p className="mxHint">Making a control stricter applies right away. Loosening one needs your passkey.</p>
@@ -131,7 +135,8 @@ export function SavedRecipients() {
   }
 
   if (addresses.isPending || policy.isPending) return <Loading label="Loading saved recipients…" />;
-  if (addresses.isError || policy.isError) return <section className="mxCard stCard"><Notice tone="error" role="alert" onRetry={() => { void addresses.refetch(); void policy.refetch(); }}>We couldn&apos;t load your saved recipients.</Notice></section>;
+  if (addresses.isError || policy.isError) return <section className="mxCard stCard" aria-labelledby="recipients-heading"><h2 id="recipients-heading">Saved recipients</h2>
+    <Notice tone="error" role="alert" onRetry={() => { void addresses.refetch(); void policy.refetch(); }}>Your saved recipients can&apos;t be loaded right now.</Notice></section>;
   const current = policy.data?.policy;
   return <section className="mxCard stCard" id="recipients" aria-labelledby="recipients-heading"><h2 id="recipients-heading">Saved recipients</h2>
     <p className="mxHint">{!current?.enforceAddressBook || current.newAddressDelayHours === 0 ? "Pick them by name when you send." : `New recipients are ready after ${current.newAddressDelayHours} hours.`}</p>
@@ -139,7 +144,7 @@ export function SavedRecipients() {
       const cooling = new Date(entry.availableAt) > new Date();
       return <li key={entry.entryId} className="stListRow">
         <span className="appIconDisc stFace" aria-hidden="true">{entry.label.slice(0, 1).toUpperCase()}</span>
-        <span className="stRowText"><strong>{entry.label}</strong><small>{shortAddress(entry.address)}{cooling ? ` · ready ${formatDateTime(entry.availableAt)}` : ""}</small></span>
+        <span className="stRowText"><strong>{entry.label}</strong><small>{shortAddress(entry.address)}{cooling ? ` · ready ${formatShortDateTime(entry.availableAt)}` : ""}</small></span>
         {removing === entry.entryId
           ? <span className="stRowControl"><button type="button" className="appButton" onClick={() => setRemoving(null)}>Keep</button>
             <button type="button" className="appButton" onClick={() => void removeAddress(entry.entryId)}>Remove</button></span>

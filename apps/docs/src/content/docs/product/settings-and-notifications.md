@@ -12,7 +12,7 @@ Settings has six sections.
 | **Aura tag** | Choose your public name and show or hide its payment page. See [Aura tag](/product/aura-tag/) |
 | **Notifications** | Choose transaction emails, browser notifications, and product news |
 | **This device** | Hide balances on this screen, and choose light, dark, or your device's theme |
-| **Your data** | Download your data, open the terms of use and privacy notice, and ask to close your account |
+| **Your data** | Download your data, open the terms of use and privacy notice you accepted (with the date of each version), and ask to close your account |
 
 ## Notifications
 
