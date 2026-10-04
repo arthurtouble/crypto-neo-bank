@@ -218,6 +218,38 @@ test("a customer who signs in with a wallet adds an email before the terms", asy
   await expect(page.getByText("Your account is empty")).toBeVisible({ timeout: 30_000 });
 });
 
+test("when sign-in can't load, Try again loads it afresh and opens it", async ({ page }) => {
+  const customer = await newCustomer();
+  await setIdentity(page, customer);
+  await page.goto("/app");
+  await expect(page.getByText("Example data", { exact: true })).toBeVisible({ timeout: 30_000 });
+  // The connection drops while sign-in downloads; the browser then remembers that failure for this page load.
+  await page.route(/web3-runtime-provider/, (route) => route.abort(), { times: 1 });
+  await page.getByRole("button", { name: "Create account or sign in" }).click();
+  await expect(page.getByRole("alert")).toContainText("Sign-in couldn't load. Check your connection, then try again.");
+  await page.getByRole("button", { name: "Try again" }).click();
+  await expect(page.getByRole("heading", { name: "Review Aura’s terms" })).toBeVisible({ timeout: 30_000 });
+});
+
+test("terms updated while the customer reads them: Reload brings the new version", async ({ page }) => {
+  const customer = await newCustomer();
+  await setIdentity(page, customer, { signedIn: true });
+  // The server's answer when the version accepted isn't the current one (a new version since the page loaded).
+  let updated = false;
+  await page.route("**/api/terms", (route) => {
+    if (route.request().method() !== "POST" || updated) return route.fallback();
+    updated = true;
+    return route.fulfill({ status: 409, contentType: "application/json", body: JSON.stringify({ error: "terms_changed" }) });
+  });
+  await page.goto("/app");
+  await page.getByRole("checkbox").check({ timeout: 30_000 });
+  await page.getByRole("button", { name: "Continue" }).click();
+  await expect(page.getByRole("alert")).toHaveText("The terms were just updated. Reload to read the new version.");
+  await page.getByRole("button", { name: "Reload" }).click();
+  await expect(page.getByRole("button", { name: "Continue" })).toBeDisabled();
+  await expect(page.getByRole("alert")).toHaveCount(0);
+});
+
 test("the server refuses the account until the current terms are accepted, and refuses them without an email", async ({ page }) => {
   const customer = await newCustomer();
   const headers = { Authorization: `Bearer ${customer.token}` };
