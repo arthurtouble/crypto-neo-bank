@@ -21,7 +21,7 @@ function nearest(points: Array<{ time: number }>, time: number): number {
  */
 export function OddsChart({ points, label }: { points: Array<{ time: number; price: number }>; label: string }) {
   const [hover, setHover] = useState<number | null>(null);
-  if (points.length < 2) return <p className="mxHint mkEmptyLine">Not enough trading yet to draw the odds.</p>;
+  if (points.length < 2) return <p className="mxHint mkEmptyLine">Not enough trading yet to draw a chart.</p>;
   const height = 200, pad = 8;
   const t0 = points[0].time, t1 = points[points.length - 1].time;
   const x = (time: number) => pad + ((time - t0) / Math.max(1, t1 - t0)) * (WIDTH - 2 * pad);
@@ -80,7 +80,7 @@ export function LivePriceChart({ ticks, priceToBeat, asset }: { ticks: Tick[]; p
   return <figure className="pdChart pdLiveChart" data-testid="prediction-live-chart">
     <div className="pdChartPlot">
       <svg viewBox={`0 0 ${WIDTH} ${height}`} preserveAspectRatio="none" role="img"
-        aria-label={`${asset} price, live: ${formatAssetPrice(last.price)}${priceToBeat === null ? "" : `, ${above ? "at or above" : "below"} the price to beat of ${formatAssetPrice(priceToBeat)}`}`}
+        aria-label={`${asset} price, live: ${formatAssetPrice(last.price)}${priceToBeat === null ? "" : `, ${above ? "at or above" : "below"} the starting price of ${formatAssetPrice(priceToBeat)}`}`}
         onPointerMove={(event) => {
           const box = event.currentTarget.getBoundingClientRect();
           const time = t0 + (((event.clientX - box.left) / box.width) * WIDTH / right) * (t1 - t0);
@@ -90,7 +90,7 @@ export function LivePriceChart({ ticks, priceToBeat, asset }: { ticks: Tick[]; p
         <path className="pdChartLine" d={path} vectorEffect="non-scaling-stroke" />
         {shown && <line className="pdChartCursor" x1={x(shown.time)} x2={x(shown.time)} y1={padTop} y2={height - padBottom} vectorEffect="non-scaling-stroke" />}
       </svg>
-      {priceToBeat !== null && <span className="pdBeatLabel" aria-hidden="true" style={{ top: percent(y(priceToBeat), height) }}>Price to beat</span>}
+      {priceToBeat !== null && <span className="pdBeatLabel" aria-hidden="true" style={{ top: percent(y(priceToBeat), height) }}>Starting price</span>}
       <span className="pdChartDot" aria-hidden="true" style={{ left: percent(x(last.time), WIDTH), top: percent(y(last.price), height) }} />
       <span className={`pdLastLabel${above === null ? "" : above ? " is-above" : " is-below"}`} aria-hidden="true" style={{ top: percent(y(last.price), height) }}>
         {formatAssetPrice(last.price)}</span>

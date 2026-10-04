@@ -34,6 +34,8 @@
 .appFrame .pdEventMarkets strong { flex: none; font-weight: var(--weight-semibold); font-variant-numeric: tabular-nums; }
 .appFrame .pdEventFoot { color: var(--color-text-secondary); font-size: var(--text-small-size); font-variant-numeric: tabular-nums; }
 .appFrame .pdMore { justify-self: center; }
+.appFrame .pdFresh { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-3); }
+.appFrame .pdFresh .mxHint { flex: 1 1 260px; margin: 0; }
 .appFrame .pdPositionRow { display: flex; align-items: center; gap: var(--space-3); }
 .appFrame .pdPositionRow > .mkRow { flex: 1; min-width: 0; }
 .appFrame .pdPositionRow > .appButton { flex: none; height: 32px; padding: 0 var(--space-3); }
@@ -125,6 +127,8 @@
 .pdSharesInput:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; border-color: var(--color-focus); }
 .pdSharesInput[aria-invalid="true"] { border-color: var(--color-negative); }
 .pdSharesField .mkChip { flex: 1; justify-content: center; }
+.pdNoUsdc { margin: 0; }
+.pdNoUsdc a { color: var(--color-accent); font-weight: var(--weight-medium); }
 .pdSetupList { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--space-3); }
 .pdSetupList li { display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: var(--space-3); align-items: start; }
 .pdSetupList li > span:first-child { width: 24px; height: 24px; display: grid; place-items: center; border: 1px solid var(--color-line-strong); border-radius: 50%; color: var(--color-text-secondary); font-size: var(--text-caption-size); font-weight: var(--weight-semibold); }
@@ -156,12 +160,22 @@
   .pdSheet .pdAmountField:focus-within .pdAmountInput { box-shadow: none; }
   .pdSheet .mxSummary > div { min-height: 32px; padding: var(--space-1) 0; }
   .pdSharesInput { font-size: var(--text-input-phone); }
+  /* The buy button stays in view at the bottom of the sheet, under the keypad and the summary, so it never needs a scroll to find. */
+  .pdSheet .pdSubmit { position: sticky; bottom: 0; z-index: 1; box-shadow: 0 0 0 var(--space-3) var(--color-raised), 0 var(--space-8) 0 var(--space-3) var(--color-raised); }
+  .appFrame .pdFresh .appButton { flex: 1 1 100%; height: var(--touch-min); }
 }
 
 /* Touch targets: at least 44 × 44px on the phone and other touch screens */
 @media (max-width: 767px), (pointer: coarse) {
   .pdPick button { min-height: var(--touch-min); }
   .appFrame .pdOutcomeLink, .appFrame .pdEventMarkets a { min-height: var(--touch-min); }
+  /* Chips, the back link, the chart's periods, a market's title, and the source link are each at least 44 × 44px to tap. */
+  .appFrame .pdChips .mkChip { flex: none; min-width: var(--touch-min); justify-content: center; }
+  .appFrame .pdEventHead h3 a { display: flex; align-items: center; min-height: var(--touch-min); }
+  .appFrame .pdBack { min-height: var(--touch-min); }
+  .appFrame .pdRanges button { min-width: var(--touch-min); }
+  .appFrame .pdSource a { display: inline-flex; align-items: center; min-height: var(--touch-min); }
+  .pdNoUsdc a { display: inline-flex; align-items: center; min-height: var(--touch-min); }
 }
 
 @media (prefers-reduced-motion: reduce) {

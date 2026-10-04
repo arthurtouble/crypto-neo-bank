@@ -175,7 +175,7 @@ test("the customer's own transactions show in the bell without a second toast", 
   await dialog.getByRole("button", { name: "Review" }).click();
   // A first-time address is checked before the review (B2).
   await dialog.getByRole("button", { name: "It's correct" }).click();
-  await dialog.getByRole("button", { name: "Confirm and send" }).click();
+  await dialog.getByRole("button", { name: "Send", exact: true }).click();
   await expect(outcome(page, "Transfer complete")).toBeVisible({ timeout: 30_000 });
   await returnToTab(page);
   await expect(count(page)).toHaveText("1", { timeout: 15_000 });
