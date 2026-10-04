@@ -5,7 +5,7 @@ import { useMemo } from "react";
 import { useApi } from "@/lib/client/api";
 import { useOverview } from "@/lib/client/queries";
 import type { AssetId, CatalogAsset } from "@/lib/swap/assets";
-import { groupAssets, heldFirst, optionLabel } from "@/lib/swap/picker-model";
+import { groupAssets, heldFirst, isStock, optionLabel } from "@/lib/swap/picker-model";
 
 type Props = { value: AssetId; label: string; held?: boolean; disabled?: boolean; onSelect(id: AssetId): void };
 
@@ -17,7 +17,9 @@ type Props = { value: AssetId; label: string; held?: boolean; disabled?: boolean
 export function SwapAssetSelect({ value, label, held = false, disabled, onSelect }: Props) {
   const api = useApi();
   const catalog = useQuery({ queryKey: ["swap-assets", held], staleTime: 30_000,
-    queryFn: () => api<{ assets: CatalogAsset[] }>(`/api/swap/assets${held ? "?held=1" : ""}`) });
+    queryFn: () => api<{ assets: CatalogAsset[]; places?: { stocks: string | null } }>(`/api/swap/assets${held ? "?held=1" : ""}`) });
+  // On the side that receives, a stock can't be bought from some places; selling one stays open, so the paying side is unchanged.
+  const notHere = (asset: CatalogAsset) => !held && Boolean(catalog.data?.places?.stocks) && isStock(asset);
   const overview = useOverview();
   const balances = useMemo(() => new Map((overview.data?.holdings ?? []).map((item) => [item.id, item.amountRaw])), [overview.data]);
   const assets = useMemo(() => {
@@ -31,7 +33,7 @@ export function SwapAssetSelect({ value, label, held = false, disabled, onSelect
     {/* The chosen asset stays listed while the list loads or if it's missing from it, so the select never shows blank. */}
     {!assets.some((asset) => asset.id === value) && <option value={value}>{catalog.isError ? "Assets are unavailable" : "Loading assets"}</option>}
     {groupAssets(assets).map((group) => <optgroup key={group.label} label={group.label}>
-      {group.assets.map((asset) => <option key={asset.id} value={asset.id} disabled={asset.eligibility !== "eligible"}>{optionLabel(asset, balance(asset))}</option>)}
+      {group.assets.map((asset) => <option key={asset.id} value={asset.id} disabled={asset.eligibility !== "eligible" || notHere(asset)}>{optionLabel(asset, balance(asset), notHere(asset))}</option>)}
     </optgroup>)}
   </select>;
 }
