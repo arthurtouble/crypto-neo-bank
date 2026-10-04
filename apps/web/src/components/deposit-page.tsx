@@ -51,7 +51,7 @@ function AddressGroups({ address }: { address: string }) {
 
 /** A link for a step that isn't this page's: the payment page in Settings, or sign-in for a guest. */
 function TagLink({ isExample, onSignIn }: { isExample: boolean; onSignIn: () => void }) {
-  return <p className="mxHint">Want people to pay you? {isExample
+  return <p className="mxHint mxTagLink">Want people to pay you? {isExample
     ? <button type="button" className="mxInlineLink" onClick={onSignIn}>Sign in to share your payment page</button>
     : <Link className="mxInlineLink" href="/app/settings#tag">Share your payment page</Link>}</p>;
 }

@@ -51,10 +51,13 @@
 .appFrame .mxActions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 
 /* Receive */
-.appFrame .mxReceive { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--space-6); align-items: center; }
+/* The address sits beside the QR code while there's room for it, and moves under it in a narrow panel (desktop at 1024px) */
+.appFrame .mxReceive { display: flex; flex-wrap: wrap; gap: var(--space-6); align-items: center; }
 /* Dark on light in both themes, like the payment page: many wallets can't scan an inverted code */
-.appFrame .mxQr { padding: var(--space-3); border: 1px solid var(--color-line); border-radius: var(--radius-lg); background: var(--color-qr-background); color: var(--color-qr); line-height: 0; }
-.appFrame .mxReceiveAddress { display: grid; gap: var(--space-2); justify-items: start; min-width: 0; }
+.appFrame .mxQr { flex: none; padding: var(--space-3); border: 1px solid var(--color-line); border-radius: var(--radius-lg); background: var(--color-qr-background); color: var(--color-qr); line-height: 0; }
+.appFrame .mxReceiveAddress { flex: 1 1 14rem; display: grid; gap: var(--space-2); justify-items: start; min-width: 0; }
+/* "Share your payment page" is a link inside a sentence; on touch screens it gets a full-size target */
+.appFrame .mxTagLink .mxInlineLink { display: inline-flex; align-items: center; }
 .appFrame .mxAddress { max-width: 100%; font-family: var(--font-mono); font-size: var(--text-body-size); line-height: var(--text-body-line); color: var(--color-text); }
 /* Desktop: the whole address in groups of four. Phone: the first and last four, which is what people compare. */
 .appFrame .mxAddressFull { display: flex; flex-wrap: wrap; column-gap: var(--space-2); }
@@ -248,8 +251,8 @@
   .appFrame .mxTabText small { display: block; font-weight: var(--weight-regular); }
   .appFrame .mxTabChevron { display: block; color: var(--color-text-tertiary); }
   .appFrame .mxPanel { padding: var(--space-5) var(--space-4); }
-  .appFrame .mxReceive { grid-template-columns: minmax(0, 1fr); justify-items: center; text-align: center; }
-  .appFrame .mxReceiveAddress { justify-items: center; }
+  .appFrame .mxReceive { flex-direction: column; text-align: center; }
+  .appFrame .mxReceiveAddress { flex: none; width: 100%; justify-items: center; }
   .appFrame .mxAddressFull { display: none; }
   .appFrame .mxAddressShort { display: inline; font-size: var(--text-title-3-size); }
   .appFrame .mxReceiveAddress .appButton { width: 100%; height: var(--control-height-lg); }
@@ -269,7 +272,7 @@
 
 /* Touch targets: at least 44 × 44px on the phone and other touch screens; desktop keeps its density */
 @media (max-width: 767px), (pointer: coarse) {
-  .appFrame .mxCopyButton, .appFrame .mxSwapSelect { min-height: var(--touch-min); }
+  .appFrame .mxCopyButton, .appFrame .mxSwapSelect, .appFrame .mxTagLink .mxInlineLink { min-height: var(--touch-min); }
 }
 /* Tablets are touch screens too: Deposit's tabs get the full target there */
 @media (max-width: 1023px) {
