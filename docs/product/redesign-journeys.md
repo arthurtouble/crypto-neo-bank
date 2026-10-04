@@ -72,8 +72,9 @@ Each journey is drawn step by step in the storyboards. The frame numbers (J5.3 a
 - **J3 Check my money.** Total value, with when it was read and what it leaves out. Then:
   - Group filters with their totals, and one holdings table (desktop) or list (phone).
   - Recent transactions: beside the table on desktop, the last three below the list on the phone.
-  - Deposit, Send, Swap, and Earn in that order: buttons in the header on desktop, round quick buttons on the phone.
-  - A holding opens its detail, with Send, Swap, and Deposit for that asset.
+  - Add money, Send, Swap, and Earn in that order: buttons in the header on desktop, round quick buttons on the phone. Send is the main button, or Add money while the account is empty.
+  - A holding opens its detail, with buttons for what that asset can do: Buy, Sell, and Send for stocks, gold, and crypto (Swap opens set up from or to USDC); Send, Add money, and Swap for cash; Withdraw and Deposit for an Earn position (Earn opens at that position).
+  - An empty account lists the four ways to add money, each opening its tab on Add money, with Coming soon or Not available right now on a way that can't be used yet.
 
 ### Money
 
