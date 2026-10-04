@@ -373,13 +373,13 @@ Every screen meets this on desktop and phone, in light and dark, before it ships
 - Empty has one button that fills it.
 - A value that can't be read says Unavailable, never an old number.
 - An error sits next to the part that failed and says what to do.
-- Paused, locked, blocked, and over-limit show before the customer starts, not after Confirm.
+- Paused, locked, blocked, and over-limit show before the customer starts, not on the review screen.
 - The guest view shows labelled example data, and the same example appears the same way in every feature.
 
 **Money**
 
 - Every amount shows its currency or asset, in tabular figures.
-- Fees, minimums, and what the customer gets are on the review screen before Confirm.
+- Fees, minimums, and what the customer gets are on the review screen, above its button.
 - Every payment that can't be undone keeps its review screen.
 - The result is shown once, on the progress card.
 

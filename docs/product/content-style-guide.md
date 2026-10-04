@@ -65,7 +65,8 @@ A customer who learns a word in one place should find it everywhere. Use these, 
 | Move money to someone | Send | Transfer, Pay (except the payment page) |
 | Exchange one asset for another | Swap | Convert, Trade, Exchange |
 | Look before paying | Review | Preview, Check |
-| Approve with a passkey or wallet | Confirm | Sign, Approve, Submit |
+| Pay on the review screen | The action's own verb: Send, Swap, Deposit, Withdraw. The passkey or wallet prompt follows | Confirm and send, Submit, Sign |
+| The step where the passkey or wallet approves | Confirmed (on the progress card) | Signed, Approved |
 | Load again after a failure | Try again | Retry, Reload, Refresh |
 | Leave a sheet or dialog without acting | Cancel (before a choice), Close (after one) | Dismiss, Exit |
 | Finish a flow | Done | OK, Finish |
@@ -80,14 +81,14 @@ Buttons are verbs, and one primary button leads each screen or panel. A disabled
 
 - **Error:** what failed, then what to do. "Polymarket's markets can't be loaded right now." with a Try again button. Don't repeat "Try again" in the sentence when the button is there. Put it next to the part that failed.
 - **Unavailable:** a value that can't be read says "Unavailable", never an old number or zero, and names what's missing nearby.
-- **Blocked before starting:** say why, and the one thing to do: "Add a passkey to send money." Show it before the customer fills a form, not after Confirm.
+- **Blocked before starting:** say why, and the one thing to do: "Add a passkey to send money." Show it before the customer fills a form, not after they pay.
 - **Empty:** what will appear here, and the one button that fills it: "Your transactions will show here." Add money.
 - **Guest:** example data is labelled "Example" and is the same across features (the $12.00 card payment at Corner Cafe appears in Cards and Transactions alike).
 
 ## Amounts and addresses
 
 - Every amount shows its currency or asset: "$25.00", "0.01 ETH". Dollar amounts have two decimals.
-- Fees, minimums, and what the customer gets appear on the review screen before Confirm.
+- Fees, minimums, and what the customer gets appear on the review screen before the customer pays.
 - On the phone, addresses show "0x", the next 4 characters, and the last 4 ("0x12ab…cdef", from `shortAddress` in `apps/web/src/lib/format`), with a Copy button that copies the full address.
 
 ## Rewrite prompt
