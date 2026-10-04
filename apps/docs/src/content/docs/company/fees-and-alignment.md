@@ -10,7 +10,7 @@ Aura doesn't charge a fee today, including on perps and predictions. Aura could 
 | Cost | Where it comes from |
 | --- | --- |
 | Network fee | The blockchain. Aura pays it for actions from your account, except a deposit to perps, where a few cents come out of the amount. When you add money from your own wallet, that wallet pays it |
-| Swap and transfer fees | The exchanges and transfer services that carry out a swap or a move to another network. They come out of the amount, and the review shows them before you confirm |
+| Exchange and moving fees | The exchanges and transfer services that carry out a swap or a move to another network. They come out of the amount, and the review shows them under **Fees** before you confirm |
 | Card fee | Privy's card partner, when you add money by card. Its checkout shows the fee before you pay |
 | Price changes | The price can move before a swap goes through, and a large amount can get a worse price. You choose how far it can move, and the quote shows the least you'll get |
 | Trading fees and funding | Hyperliquid and Polymarket charge their own trading fees. An open perps position also pays or receives funding every hour. A perps order shows Hyperliquid's estimated fee before you confirm |

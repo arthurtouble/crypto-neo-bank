@@ -36,7 +36,7 @@ You can name and save a new address as you send, and remove saved recipients in 
 
 ## Sending to another network
 
-Choose the network in Send. Aura gets a quote from third-party transfer services. The **Transfer fee** comes out of the amount, so the recipient gets a little less than you send. The review shows about how much they'll receive, the least they'll receive, and the fee. Aura still pays the network fee on Base.
+Choose the network in Send. Aura gets a quote from third-party transfer services. A moving fee comes out of the amount, so the recipient gets a little less than you send. The review shows about how much they'll receive, the least they'll receive, and **Fees**, with the moving fee underneath. Aura still pays the network fee on Base.
 
 If the quote runs out before you confirm, Aura gets a new one and shows it to you first.
 

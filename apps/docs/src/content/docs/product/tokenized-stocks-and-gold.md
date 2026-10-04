@@ -32,7 +32,7 @@ A Coinbase tokenized stock is a token on Base that tracks a US company's shares.
 
 ## What Tether Gold is
 
-One XAUt is backed by one troy ounce of physical gold held for Tether. It's issued on Ethereum, so your account holds it there, at the same address as on Base. Buying it moves your money from Base to Ethereum, and the fee for that move comes out of the amount. Aura pays the Ethereum network fee when you send or sell it.
+One XAUt is backed by one troy ounce of physical gold held for Tether. It's issued on Ethereum, so your account holds it there, at the same address as on Base. Buying it moves your money from Base to Ethereum, and the moving fee comes out of the amount. Aura pays the Ethereum network fee when you send or sell it.
 
 ## Prices
 
