@@ -62,7 +62,7 @@ Adding the card to your phone's wallet is built but switched off. It needs Strip
 
 ## Card activity
 
-The Cards page lists pending holds, declines, payments, refunds, and disputes. Transactions lists them too; filter by **Card** to see only card activity. A payment's receipt links to the Base transaction in which Bridge took your USDC.
+The Cards page lists pending holds, declines, payments, refunds, and disputes. A pending hold isn't final yet, and the merchant can still change the amount. When a merchant releases a hold, nothing is taken. Transactions lists them too; filter by **Card** to see only card activity. A payment's receipt links to the Base transaction in which Bridge took your USDC.
 
 ## Disputes
 

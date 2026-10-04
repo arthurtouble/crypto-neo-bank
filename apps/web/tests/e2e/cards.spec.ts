@@ -67,9 +67,9 @@ test("a verified customer applies with Bridge and creates a virtual card", async
   test.setTimeout(120_000);
   const customer = await signIn(page);
   await page.goto("/app/cards");
-  // Identity comes first, once, on Deposit.
+  // Identity comes first, once, under Add money.
   await expect(page.getByRole("heading", { name: "Verify your identity first" })).toBeVisible({ timeout: 20_000 });
-  await expect(page.getByRole("link", { name: "Verify on Deposit" })).toHaveAttribute("href", "/app/deposit");
+  await expect(page.getByRole("link", { name: "Verify your identity" })).toHaveAttribute("href", "/app/deposit#bank");
 
   await verified(page, customer);
   await page.reload();
@@ -143,7 +143,7 @@ test("the card spends only up to the allowance, its payments are in Transactions
   await form.getByLabel("Tell us more").fill("The order never arrived and the cafe doesn't answer.");
   await form.getByRole("button", { name: "Send dispute" }).click();
   await expect(toast(page, "Dispute sent")).toBeVisible({ timeout: 20_000 });
-  await expect(paid).toContainText("Dispute submitted", { timeout: 20_000 });
+  await expect(paid).toContainText("Dispute under review", { timeout: 20_000 });
   await expect(paid.getByRole("button", { name: "Dispute" })).toHaveCount(0);
 
   // Card payments are in Transactions with every other money movement, under Card; setting the allowance is too, not as money sent.
@@ -169,6 +169,27 @@ test("the card spends only up to the allowance, its payments are in Transactions
   expect(rows.map((row) => [row.counterparty, row.amountText, row.statusText]).sort()).toEqual([
     ["Bookshop", "12.50 USD", "Declined"], ["Corner Cafe", "12.50 USD", "Completed, dispute submitted"], ["Electronics", "40.00 USD", "Declined"]]);
   expect(rows.every((row) => row.label === "Card payment" && row.source === "Stripe")).toBe(true);
+});
+
+test("card holds and disputes read in plain words", async ({ page }) => {
+  await withCard(page);
+  const at = new Date().toISOString();
+  const row = (id: string, status: string, merchant: string, dispute: { id: string; status: string } | null = null) =>
+    ({ id, kind: "payment", status, amountUsd: "10.00", merchant, createdAt: at, transactionId: null, disputable: false, dispute, transactionHash: null, authorizationId: null });
+  // Stripe's own states, from the card read; the fake doesn't release holds or rule on disputes, so this one is answered here.
+  await page.route("**/api/cards", async (route) => {
+    if (route.request().method() !== "GET") return route.continue();
+    const live = await (await route.fetch()).json() as Record<string, unknown>;
+    await route.fulfill({ json: { ...live, activity: [row("hold", "pending", "Hotel"), row("released", "reversed", "Car rental"),
+      row("won", "completed", "Shoe shop", { id: "du_1", status: "won" })] } });
+  });
+  await page.goto("/app/cards");
+  const rowFor = (merchant: string) => activity(page).locator(".cardActivityRow").filter({ hasText: merchant });
+  await expect(rowFor("Hotel")).toContainText("Pending", { timeout: 20_000 });
+  await expect(rowFor("Hotel")).toContainText("Not final yet, the amount can change");
+  await expect(rowFor("Car rental")).toContainText("Hold released");
+  await expect(rowFor("Car rental")).toContainText("Nothing was taken");
+  await expect(rowFor("Shoe shop")).toContainText("Dispute won");
 });
 
 test("turning off card spending sets the allowance to $0.00 on chain, with the passkey", async ({ page }) => {
