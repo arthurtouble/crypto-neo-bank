@@ -72,7 +72,7 @@ test("money received shows in the bell with a toast, and by email; opening the l
   await bell(page).click();
   const panel = page.getByRole("dialog", { name: "Notifications" });
   await expect(panel.getByText("Received 5 USDC")).toBeVisible();
-  await expect(panel.getByText(/^From 0x5555…5555, on Base\.$/)).toBeVisible();
+  await expect(panel.getByText(/^From 0x5555…5555\.$/)).toBeVisible();
   await expect(count(page)).toHaveCount(0);
   // It stays read after a reload, and the notice links to the transaction.
   await page.reload();
