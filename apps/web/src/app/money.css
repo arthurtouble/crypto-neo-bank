@@ -85,6 +85,10 @@
 .appFrame .mxSummary dd { margin: 0; text-align: right; font-weight: var(--weight-medium); overflow-wrap: anywhere; }
 .appFrame .mxSummary .mxAddressFull { justify-content: flex-end; }
 .appFrame .mxSummary .mxAddressShort { font-size: inherit; }
+/* A part of the row above it (the fees that make up "Fees"): indented, smaller, no rule between them */
+.appFrame .mxSummary > .mxSummaryPart { min-height: 32px; padding: 0 0 var(--space-2) var(--space-4); margin-top: calc(-1 * var(--space-2)); border-bottom: 0; font-size: var(--text-small-size); }
+.appFrame .mxSummary > div:has(+ .mxSummaryPart) { border-bottom: 0; }
+.appFrame .mxSummary > .mxSummaryPart:not(:has(+ .mxSummaryPart)) { border-bottom: 1px solid var(--color-line); }
 .appFrame .mxCopy { display: inline-flex; align-items: center; gap: var(--space-2); }
 .appFrame .mxCopyButton { height: 28px; padding: 0 var(--space-2); font-size: var(--text-small-size); }
 
@@ -257,6 +261,8 @@
   .appFrame .mxField input, .appFrame .mxField select, .appFrame .mxField textarea { font-size: var(--text-input-phone); }
   .appFrame .mxCard .appButton { justify-self: stretch; height: var(--control-height-lg); }
   .appFrame .mxAmountRow { grid-template-columns: minmax(0, 1fr) 110px; }
+  /* Send's people row: a part of the next person always shows past the edge, so the row reads as one that scrolls */
+  .appFrame .mxFaces button { width: max(88px, calc((100% - 3 * var(--space-2)) / 3.4)); }
   /* Send's tabs stay a two-part switch, full width; only Deposit's ways are rows */
   .appFrame .mxTabs:not(.mxWays) { grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); padding: 2px; gap: 2px; border: 0; border-radius: var(--radius-md); background: var(--color-muted); }
   .appFrame .mxTabs:not(.mxWays) [role="tab"] { justify-content: center; padding: var(--space-2); border-radius: var(--radius-sm); text-align: center; }
@@ -270,6 +276,8 @@
 /* Touch targets: at least 44 × 44px on the phone and other touch screens; desktop keeps its density */
 @media (max-width: 767px), (pointer: coarse) {
   .appFrame .mxCopyButton, .appFrame .mxSwapSelect { min-height: var(--touch-min); }
+  /* Send's Max sits in the balance line; its target grows to 44px without moving the line */
+  .appFrame .mxBalanceHint .mxInlineButton { display: inline-flex; align-items: center; justify-content: center; min-width: var(--touch-min); min-height: var(--touch-min); margin-block: calc((var(--touch-min) - 1lh) / -2); }
 }
 /* Tablets are touch screens too: Deposit's tabs get the full target there */
 @media (max-width: 1023px) {
