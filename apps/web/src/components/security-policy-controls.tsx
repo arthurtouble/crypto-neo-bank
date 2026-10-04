@@ -86,7 +86,7 @@ export function TransactionControls() {
       <input type="checkbox" className="appSwitch" checked={current.accountLocked} disabled={update.isPending} onChange={(event) => update.mutate({ accountLocked: event.target.checked })} /></SettingRow>
     <SettingRow title={<label htmlFor="daily-limit">Daily transfer limit</label>} detail="In US dollars. Leave empty for no limit.">
       <form className="stInline" onSubmit={(event) => { event.preventDefault(); saveDailyLimit(current.dailyLimitUsd); }}>
-        <span className="stNumberField"><span aria-hidden="true">$</span><input id="daily-limit" type="number" inputMode="numeric" autoComplete="off" className="stNumber" min="1" step="1" placeholder="No limit" disabled={update.isPending}
+        <span className="stNumberField">{(dailyDraft ?? current.dailyLimitUsd ?? "") !== "" && <span aria-hidden="true">$</span>}<input id="daily-limit" type="number" inputMode="numeric" autoComplete="off" className="stNumber" min="1" step="1" placeholder="No limit" disabled={update.isPending}
           value={dailyDraft ?? (current.dailyLimitUsd === null ? "" : String(current.dailyLimitUsd))} onChange={(event) => setDailyDraft(event.target.value)} /></span>
         {dailyDraft !== null && <button type="submit" className="appButton appButtonPrimary" aria-label="Save daily limit" disabled={update.isPending}>Save</button>}
       </form></SettingRow>
