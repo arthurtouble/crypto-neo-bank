@@ -66,7 +66,7 @@ The Cards page lists pending holds, declines, payments, refunds, and disputes. A
 
 ## Disputes
 
-You can dispute a settled card payment within 110 days. Select **Dispute** next to it in card activity, then choose a reason:
+You can dispute a completed card payment within 110 days. Select **Dispute** next to it in card activity, then choose a reason:
 
 - I didn't make this payment;
 - I didn't get what I paid for;
@@ -78,4 +78,4 @@ You can send a dispute only once, so include everything. If you think someone el
 
 ## Where card records come from
 
-Stripe owns the card itself: its controls, approving and settling payments, and disputes. Bridge owns your approval and takes payments from your USDC. Aura keeps only which card is yours and reads everything else from Stripe and Base each time. If Aura can't read Stripe, it says so. It never makes up a status.
+Stripe owns the card itself: its controls, approving and completing payments, and disputes. Bridge owns your approval and takes payments from your USDC. Aura keeps only which card is yours and reads everything else from Stripe and Base each time. If Aura can't read Stripe, it says so. It never makes up a status.
