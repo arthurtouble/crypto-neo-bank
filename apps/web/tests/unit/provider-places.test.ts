@@ -39,11 +39,12 @@ beforeEach(() => { calls.length = 0; });
 
 describe("provider place rules", () => {
   it("keeps each provider's own list", () => {
-    for (const country of ["US", "PR", "GB", "FR", "DE", "AU", "SG", "JP", "IE", "NL", "KR"]) expect(providerRestrictedPlace("predictions", country, undefined), country).toBeTruthy();
+    for (const country of ["US", "PR", "GB", "FR", "DE", "AU", "SG", "JP", "IE", "NL", "KR", "AE"]) expect(providerRestrictedPlace("predictions", country, undefined), country).toBeTruthy();
     for (const region of ["ON", "QC", "BC", "AB"]) expect(providerRestrictedPlace("predictions", "CA", region), region).toBeTruthy();
-    for (const country of ["ES", "PT", "AE", "MX", "MT", "CA"]) expect(providerRestrictedPlace("predictions", country, undefined), country).toBeUndefined();
+    for (const country of ["ES", "PT", "MX", "MT", "CA"]) expect(providerRestrictedPlace("predictions", country, undefined), country).toBeUndefined();
     expect(providerRestrictedPlace("perps", "us", undefined)).toBe("the United States");
     expect(providerRestrictedPlace("perps", "CA", "ON")).toBe("Ontario");
+    expect(providerRestrictedPlace("perps", "AE", undefined)).toBeUndefined();
     for (const [country, region] of [["CA", "QC"], ["GB", undefined], ["FR", undefined]]) expect(providerRestrictedPlace("perps", country, region)).toBeUndefined();
     expect(providerRestrictedPlace("stocks", "GB", undefined)).toBe("the United Kingdom");
     expect(providerRestrictedPlace("stocks", "VI", undefined)).toBe("the US Virgin Islands");

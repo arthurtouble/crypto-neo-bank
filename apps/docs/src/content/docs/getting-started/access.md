@@ -8,7 +8,7 @@ Anyone can browse Aura with example data and sign in, except from sanctioned pla
 Some features follow the rules of the service behind them:
 
 - **Perps** aren't available in the United States or Ontario, following Hyperliquid's terms.
-- **Predictions** aren't available in places where Polymarket doesn't take new orders, including the United States, the United Kingdom, France, Germany, Italy, Australia, Singapore, and Ontario, Quebec, British Columbia, and Alberta.
+- **Predictions** aren't available in places where Polymarket doesn't take new orders, including the United States, the United Kingdom, France, Germany, Italy, Australia, Singapore, and Ontario, Quebec, British Columbia, and Alberta. They also aren't available in the United Arab Emirates.
 - **Buying tokenized stocks** isn't available in the United States or the United Kingdom, following Coinbase's rules.
 
 From those places you can't start anything new in that feature. You can always sell, close a position, and withdraw.
