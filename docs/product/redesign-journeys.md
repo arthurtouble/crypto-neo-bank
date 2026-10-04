@@ -88,7 +88,7 @@ Each journey is drawn step by step in the storyboards. The frame numbers (J5.3 a
   - **Another network:** the summary shows what arrives after fees.
   - **Review:** always its own step, then the passkey, then the result.
 - **J6 Send to a bank.** The second tab of Send. Choose or add a bank, then amount in USD and speed, then a review (B1) and the passkey. The result is a timeline of Bridge's steps.
-- **J7 Swap.** A page. You pay (what you hold, from a dropdown with balances, and Max) and You receive (every supported asset, from a dropdown), with how far the price can move as a small setting. The quote has a countdown, dollar values, the rate, the fees, and reference-price warnings. When there's no quote, or Swap is switched off, or the account is empty, the page says why.
+- **J7 Swap.** A page. You pay (what you hold, from a dropdown with balances, and Max) and You receive (every supported asset, from a dropdown), both dropdowns grouped like the Overview (Cash, Crypto, Stocks, Metals) and named as it names them ("Apple · AAPLc"). The quote has a countdown, dollar values, the rate (priced in cash when one side is cash), the fees, any price difference on its own line, how far the price can move (0.5% unless changed there; changing it re-quotes in place), and market-price warnings. When there's no quote, or Swap is switched off, or the account is empty, the page says why.
 - **J8 Earn.** Positions first, in dollars as last read, then every vault. A vault opens with Deposit and Withdraw tabs, the balance for each, and Max. Review and passkey work as in Send.
 
 ### Cards
