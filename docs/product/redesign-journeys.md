@@ -89,7 +89,7 @@ Each journey is drawn step by step in the storyboards. The frame numbers (J5.3 a
   - **Review:** always its own step, then the passkey, then the result.
 - **J6 Send to a bank.** The second tab of Send. Choose or add a bank, then amount in USD and speed, then a review (B1) and the passkey. The result is a timeline of Bridge's steps.
 - **J7 Swap.** A page. You pay (what you hold, from a dropdown with balances, and Max) and You receive (every supported asset, from a dropdown), with how far the price can move as a small setting. The quote has a countdown, dollar values, the rate, the fees, and reference-price warnings. When there's no quote, or Swap is switched off, or the account is empty, the page says why.
-- **J8 Earn.** Positions first, in dollars as last read, then every vault. A vault opens with Deposit and Withdraw tabs, the balance for each, and Max. Review and passkey work as in Send.
+- **J8 Earn.** Positions first, in dollars as last read, then every way to earn ("Ways to earn"), a position row only on what you hold. A vault opens with Deposit and Withdraw tabs, the balance for each, and Max. Review and passkey work as in Send.
 
 ### Cards
 
