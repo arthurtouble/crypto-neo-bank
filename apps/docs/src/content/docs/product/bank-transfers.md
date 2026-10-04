@@ -21,7 +21,7 @@ Money that arrives is converted to USDC and delivered to your Aura account on Ba
 
 Never send money to example or preview details. Aura shows real details only after Bridge activates your account.
 
-You can also use these details for your paycheck. When it arrives depends on your employer, their payroll provider, and Bridge. Aura doesn't promise early pay.
+You can also use these details for your paycheck. When it arrives depends on your employer, their payroll service, and Bridge. Aura doesn't promise early pay.
 
 ## Sending to a bank
 

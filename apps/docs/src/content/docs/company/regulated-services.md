@@ -42,7 +42,7 @@ A partner decides whether to work with Aura, not only with each customer. A test
 - fraud controls and transaction limits;
 - finances, insurance, and business continuity;
 - marketing and disclosures;
-- subcontractors, wallet providers, and the blockchain services we use.
+- subcontractors, the wallet and blockchain services we use.
 
 A small team isn't ruled out, but partners may require cover for key roles, separation of critical duties, clear escalation, and named people responsible for compliance, security, operations, and customers. Contractors and specialist firms can do some of this work, but accountability can't be handed to an AI system.
 
