@@ -38,5 +38,5 @@ Agreed on 26 September 2026 and closed. What each feature does now is in [build 
 | 8 | Settings and security | Done ([#37](https://github.com/arthurtouble/crypto-neo-bank/pull/37), [#38](https://github.com/arthurtouble/crypto-neo-bank/pull/38), [#39](https://github.com/arthurtouble/crypto-neo-bank/pull/39)) |
 | 9 | Support | Done ([#40](https://github.com/arthurtouble/crypto-neo-bank/pull/40), [#41](https://github.com/arthurtouble/crypto-neo-bank/pull/41), [#42](https://github.com/arthurtouble/crypto-neo-bank/pull/42)) |
 | 10 | Bank and cards | Done ([#43](https://github.com/arthurtouble/crypto-neo-bank/pull/43), [#44](https://github.com/arthurtouble/crypto-neo-bank/pull/44)); live check waits on a Bridge card program and a Stripe account |
-| 11 | Rewards and Insights | Done ([#45](https://github.com/arthurtouble/crypto-neo-bank/pull/45)); Rewards cut |
+| 11 | Rewards and Insights | Done ([#45](https://github.com/arthurtouble/crypto-neo-bank/pull/45)); Rewards cut; since 4 October 2026 Insights is the summary at the top of Transactions |
 | 12 | Operations console | Done ([#46](https://github.com/arthurtouble/crypto-neo-bank/pull/46)) |
