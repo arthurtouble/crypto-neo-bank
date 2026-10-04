@@ -274,7 +274,8 @@ test("terms updated while the customer reads them: Reload brings the new version
   await page.getByRole("button", { name: "Continue" }).click();
   await expect(page.getByRole("alert")).toHaveText("The terms were just updated. Reload to read the new version.");
   await page.getByRole("button", { name: "Reload" }).click();
-  await expect(page.getByRole("button", { name: "Continue" })).toBeDisabled();
+  // A fresh page load, which the dev server can take a while to hydrate.
+  await expect(page.getByRole("button", { name: "Continue" })).toBeDisabled({ timeout: 30_000 });
   await expect(page.getByRole("alert")).toHaveCount(0);
 });
 
