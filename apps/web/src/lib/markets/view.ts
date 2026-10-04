@@ -379,3 +379,19 @@ export function orderKind(orderType: string): { kind: "tp" | "sl" | "limit" | "o
   if (/^limit/i.test(orderType)) return { kind: "limit", label: "Limit" };
   return { kind: "other", label: orderType };
 }
+
+/**
+ * Hyperliquid's refusal of an order, in plain words with what to do. Its own text ("Order could not immediately match
+ * against any resting orders. asset=0") names its internals; anything not listed here keeps Hyperliquid's words, without
+ * the asset number.
+ */
+export function orderRefusal(message: string): string {
+  const text = message.replace(/\s*asset=\d+\.?\s*$/i, "").trim();
+  if (/could not immediately match/i.test(text)) return "The price moved more than 1% before the order reached Hyperliquid, so nothing was traded. Try again.";
+  if (/insufficient margin/i.test(text)) return "Your perps balance isn't enough for this order. Add money or lower the amount.";
+  if (/minimum value/i.test(text)) return "Orders must be worth at least $10. Add more or raise the leverage.";
+  if (/reduce only order would increase/i.test(text)) return "This would grow the position instead of closing it. The position may have changed; check it and try again.";
+  if (/price.*(too far|away from|invalid)|invalid price/i.test(text)) return "That price is too far from the price now. Pick one closer to it.";
+  if (/too many/i.test(text)) return "Hyperliquid is limiting how many orders this account sends. Wait a minute and try again.";
+  return `Hyperliquid didn't accept it: ${text}`;
+}

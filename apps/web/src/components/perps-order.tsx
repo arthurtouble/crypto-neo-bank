@@ -10,7 +10,7 @@ import { useAuraWallet } from "@/lib/client/use-aura-wallet";
 import { formatToken, formatUsd } from "@/lib/format";
 import {
   addableFromBase, availableToTrade, cleanDecimal, cleanWhole, clampLeverage, formatFee, formatPrice, formatSignedUsd, maxOrderMargin, parseDollars, parsePrice,
-  perpName, perpsTopUp, pnlAt, PERPS_MINIMUM_DEPOSIT, triggerProblem
+  orderRefusal, perpName, perpsTopUp, pnlAt, PERPS_MINIMUM_DEPOSIT, triggerProblem
 } from "@/lib/markets/view";
 import { perpsPositions, perpsTotals, useBaseUsdc, type PerpMarket, type PerpsAccount } from "./markets-data";
 import { DollarAmount, failureMessage, FlowTimeline, PayWith, Segmented, useFlow, useSettledAction, type FlowStep } from "./markets-parts";
@@ -155,7 +155,7 @@ export function PerpsOrderForm({ market, side, onSide, account, variant, onDone,
       at("order");
       const result = await perpsAction<{ statuses: ExchangeStatus[]; size: string; notional: string }>("/api/perps/trade", body);
       const refused = orderError(result.statuses);
-      if (refused) throw new Error(`Hyperliquid didn't place it: ${refused}`);
+      if (refused) throw new Error(orderRefusal(refused));
       const filled = result.statuses.find((status) => status.kind === "filled");
       finish(filled && filled.kind === "filled" ? `Order placed. ${formatToken(filled.totalSz, name)} at ${formatPrice(filled.avgPx)}.`
         : `Limit order placed. It waits on Hyperliquid until ${name} reaches ${formatPrice(limit)}.`);
@@ -186,7 +186,7 @@ export function PerpsOrderForm({ market, side, onSide, account, variant, onDone,
     return pnl === null ? undefined : `${pnl >= 0 ? "Profit" : "Loss"} of about ${formatSignedUsd(pnl).replace(/^[+−]/, "")}`;
   };
   const fee = preview.data ? preview.data.fee === null || preview.data.fee === undefined ? <span className="appUnavailable">Unavailable</span> : formatFee(preview.data.fee) : "—";
-  const action = guest ? "Sign in to trade" : topUp > 0 ? `Add money and ${side}` : `${sideLabel} ${name}`;
+  const action = guest ? "Sign in to trade" : topUp > 0 ? `Add money and ${side} ${name}` : `${sideLabel} ${name}`;
   return <form className="mkOrderForm" aria-label={`${sideLabel} ${name} order`} onSubmit={(event) => { event.preventDefault(); if (guest) login(); else void place(); }}>
     <div className="mkOrderTop">
       <Segmented label="Order type" value={type} onChange={setType} options={[{ value: "market", label: "Market" }, { value: "limit", label: "Limit" }]} />
@@ -197,10 +197,10 @@ export function PerpsOrderForm({ market, side, onSide, account, variant, onDone,
         </select><ChevronDown aria-hidden="true" /></label>
     </div>
     {variant === "panel" && onSide && <Segmented label="Side" value={side} onChange={onSide} className="mkSides"
-      options={[{ value: "long", label: "Long" }, { value: "short", label: "Short" }]} />}
-    {variant === "sheet" && <p className="mxDialogNote" id="perps-order-note">{side === "long" ? `Gains if ${name} rises.` : `Gains if ${name} falls.`} Up to {market.maxLeverage}x leverage.</p>}
+      options={[{ value: "long", label: <SideLabel side="long" /> }, { value: "short", label: <SideLabel side="short" /> }]} />}
+    {variant === "sheet" && <p className="mxDialogNote" id="perps-order-note">{side === "long" ? `Gains if ${name}'s price goes up.` : `Gains if ${name}'s price goes down.`} Up to {market.maxLeverage}x leverage.</p>}
     {type === "limit" && <PriceField label="Limit price" value={limitPrice} onChange={setLimitPrice} placeholder={formatPrice(market.midPx ?? market.markPx)?.replace("$", "") ?? ""}
-      action={market.midPx ? { label: "Mid", onClick: () => setLimitPrice(cleanDecimal(market.midPx!)) } : undefined}
+      action={market.midPx ? { label: "Price now", onClick: () => setLimitPrice(cleanDecimal(market.midPx!)) } : undefined}
       hint={side === "long" ? "Buys only at this price or lower." : "Sells only at this price or higher."} />}
     <DollarAmount label="Amount (USD)" value={amount} onChange={setAmount} available={max} error={problem} shares={[0.25, 0.5, 0.75]}
       aside={tradable === null ? undefined : <span data-testid="perps-order-available">{formatUsd(tradable)} to trade</span>}
@@ -220,6 +220,8 @@ export function PerpsOrderForm({ market, side, onSide, account, variant, onDone,
       <input type="range" min={1} max={market.maxLeverage} step={1} value={leverage} aria-labelledby={`leverage-${market.assetIndex}`} aria-valuetext={`${leverage}x`}
         onChange={(event) => chooseLeverage(Number(event.target.value))} />
       <span className="mkLeverageEnds" aria-hidden="true"><span>1x</span><span>{market.maxLeverage}x</span></span>
+      <small className="mkFieldHint" data-testid="perps-leverage-note">{leverage > 1 ? `Leverage multiplies what you trade: at ${leverage}x, $10 trades like ${formatUsd(10 * leverage, { whole: true })}, and gains and losses grow ${leverage} times as fast.`
+        : "At 1x, $10 trades like $10: no leverage."}</small>
       <small className="mkFieldHint">{position ? `Your open ${name} position uses ${position.leverage.value}x ${position.leverage.type}. A change applies to it too. `
         : ""}{isCross ? "Cross: your whole perps balance backs the position." : "Isolated: only this position's margin is at risk."}</small>
     </div>
@@ -239,8 +241,14 @@ export function PerpsOrderForm({ market, side, onSide, account, variant, onDone,
     </dl>
     {preview.isError && <p className="mxFieldError" role="alert">{failureMessage(preview.error)}</p>}
     <button type="submit" className="appButton appButtonPrimary appButtonLarge" disabled={!guest && (margin === null || blocked)}>{action}</button>
-    <p className="mxHint">If the price reaches the liquidation price, Hyperliquid closes the position and the margin is lost. Hyperliquid charges the fee; Aura charges none.</p>
+    <p className="mxHint">{type === "market" ? "Trades now at the best price on Hyperliquid, up to 1% from the price shown. " : ""}Margin is the money you put in.
+      If {name} reaches the liquidation price, Hyperliquid closes the position and you lose that margin. Hyperliquid charges the fee; Aura charges none.</p>
   </form>;
+}
+
+/** "Long" or "Short", with what each means under it. */
+export function SideLabel({ side }: { side: Side }) {
+  return <span className="mkSideLabel">{side === "long" ? "Long" : "Short"}{" "}<small>{side === "long" ? "Price goes up" : "Price goes down"}</small></span>;
 }
 
 /** The order form in a sheet, for the phone: Long, Short, or a price in the book opens it. It can always be closed. */

@@ -7,7 +7,7 @@ import { useMemo, useState } from "react";
 import { useAuth } from "@/lib/client/auth";
 import { formatShortDateTime, formatToken, formatUsd } from "@/lib/format";
 import type { PerpPosition } from "@/lib/markets/hyperliquid/info";
-import { fillDirection, formatCompactUsd, formatPrice, formatSignedPercent, formatSignedUsd, orderKind, perpDex, perpName, positionSide } from "@/lib/markets/view";
+import { fillDirection, formatCompactUsd, formatPrice, formatSignedPercent, formatSignedUsd, orderKind, perpDex, perpName, PERPS_MINIMUM_DEPOSIT, positionSide } from "@/lib/markets/view";
 import { perpsPositions, perpsTotals, usePerpMarkets, usePerpsAccount, type PerpMarket, type PerpOrder, type PerpsAccount } from "./markets-data";
 import { Change, failureMessage, ListTabs, NotAvailableYet, SourceLine } from "./markets-parts";
 import { PerpsMoneySheet, PositionCloseSheet, PositionTpslSheet, positionTriggers, usePerpsAction } from "./perps-sheets";
@@ -45,7 +45,7 @@ export function PerpsHome() {
         <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search markets" /></label>
       {markets.isPending ? <LoadingState label="Reading Hyperliquid's markets" />
         : !list || list.status !== "observed" ? <Notice tone="warning" role="alert" onRetry={() => void markets.refetch()} data-testid="perps-markets-unavailable">
-          <span className="appUnavailable">Unavailable.</span> We couldn&apos;t read Hyperliquid&apos;s markets just now.</Notice>
+          <span className="appUnavailable">Unavailable.</span> Hyperliquid&apos;s markets can&apos;t be loaded right now. Try again.</Notice>
           : shown.length === 0 ? <p className="mxHint">No market matches “{query}”.</p>
             : <ul className="mkRows" aria-label="Perp markets">{shown.map((market) => <MarketRow key={market.coin} market={market} />)}</ul>}
     </section>
@@ -57,7 +57,7 @@ function MarketRow({ market }: { market: PerpMarket }) {
   return <li><Link className="mkRow" href={perpHref(market.coin)}>
     <span className="appIconDisc mkTicker" aria-hidden="true">{perpName(market.coin).slice(0, 4)}</span>
     <span className="mkRowMain"><strong>{perpName(market.coin)} <span className="mkBadge">{market.maxLeverage}x</span></strong>
-      <small>{dex ? "Stock perp · " : ""}{formatCompactUsd(market.dayNtlVlm) ?? "—"} traded today</small></span>
+      <small>{dex ? "Stock perp · " : ""}{formatCompactUsd(market.dayNtlVlm) ?? "—"} traded in 24h</small></span>
     <span className="mkRowEnd"><strong>{formatPrice(market.markPx) ?? <span className="appUnavailable">Unavailable</span>}</strong>
       <small><Change price={market.markPx} prevDayPrice={market.prevDayPx} /></small></span>
   </Link></li>;
@@ -69,11 +69,13 @@ function PerpsAccountCard({ account, isExample, isPending, failed, onRetry }: { 
   const totals = perpsTotals(account);
   const open = (mode: "add" | "withdraw") => isExample ? login() : setSheet(mode);
   const unavailable = <span className="appUnavailable">Unavailable</span>;
+  // A new or emptied account: nothing to withdraw, so Add money is the one thing to do.
+  const empty = !isExample && totals !== null && totals.value === 0 && totals.withdrawable === 0;
   return <section className="mxCard mkAccount" aria-labelledby="perps-account">
     <div className="mkCardHead"><h2 id="perps-account">Perps account</h2>
       {account && <SourceLine source="hyperliquid" observedAt={account.dexStates.observedAt} example={isExample} />}</div>
     {isPending ? <LoadingState label="Reading your perps account" />
-      : failed && !account ? <Notice tone="warning" role="alert" onRetry={onRetry}><span className="appUnavailable">Unavailable.</span> We couldn&apos;t read your perps account.</Notice>
+      : failed && !account ? <Notice tone="warning" role="alert" onRetry={onRetry}><span className="appUnavailable">Unavailable.</span> Your perps account can&apos;t be loaded from Hyperliquid right now. Try again.</Notice>
         : <>
           <p className="mkHero" data-testid="perps-account-value">{totals ? formatUsd(totals.value) : unavailable}</p>
           <div className="mkAvailable">
@@ -82,11 +84,11 @@ function PerpsAccountCard({ account, isExample, isPending, failed, onRetry }: { 
               <div><dt>You can withdraw</dt><dd data-testid="perps-withdrawable">{totals ? formatUsd(totals.withdrawable) : unavailable}</dd></div>
             </dl>
             <span className="mkAvailableActions">
-              <button type="button" className="appButton" onClick={() => open("withdraw")}><Minus aria-hidden="true" />Withdraw</button>
-              <button type="button" className="appButton" onClick={() => open("add")}><Plus aria-hidden="true" />Add money</button>
+              {!empty && <button type="button" className="appButton" onClick={() => open("withdraw")}><Minus aria-hidden="true" />Withdraw</button>}
+              <button type="button" className={`appButton${empty ? " appButtonPrimary" : ""}`} onClick={() => open("add")}><Plus aria-hidden="true" />Add money</button>
             </span>
           </div>
-          {!isExample && !account?.connection && totals?.value === 0 && <p className="mxHint">Add USDC from your Aura account to start. You need at least $6.</p>}
+          {empty && <p className="mxHint" data-testid="perps-empty">Add USDC from your Aura account to start trading. At least ${PERPS_MINIMUM_DEPOSIT}.</p>}
         </>}
     {sheet && <PerpsMoneySheet mode={sheet} account={account} onClose={() => setSheet(null)} />}
   </section>;
@@ -131,7 +133,7 @@ export function PerpsActivity({ account, isPending, isExample, coin, extra }: { 
   </section>;
 }
 
-const UnavailableList = ({ what }: { what: string }) => <p className="mxHint mkEmptyLine"><span className="appUnavailable">Unavailable.</span> We couldn&apos;t read your {what} from Hyperliquid.</p>;
+const UnavailableList = ({ what }: { what: string }) => <p className="mxHint mkEmptyLine"><span className="appUnavailable">Unavailable.</span> Your {what} can&apos;t be loaded from Hyperliquid right now.</p>;
 
 /**
  * One open position, as Hyperliquid and Polymarket show it: market, side and
@@ -167,7 +169,7 @@ function PositionRow({ position, market, orders, readOnly }: { position: PerpPos
       <div><dt>Stop loss</dt><dd>{orders === null ? <span className="appUnavailable">Unavailable</span> : trigger(triggers.stopLoss)}</dd></div>
     </dl>
     <span className="mkRowActions">
-      <button type="button" className="appButton" onClick={() => act("tpsl")}>TP/SL</button>
+      <button type="button" className="appButton" onClick={() => act("tpsl")}>Take profit / Stop loss</button>
       <button type="button" className="appButton" onClick={() => act("close")}>Close</button>
     </span>
     {sheet === "close" && <PositionCloseSheet position={position} market={market} onClose={() => setSheet(null)} />}

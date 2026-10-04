@@ -30,7 +30,7 @@ export function PerpsChart({ coin, name }: { coin: string; name: string }) {
     </div>
     {query.isPending ? <LoadingState label={`Reading ${name}'s price history`} />
       : !data || data.status !== "observed" ? <Notice tone="warning" role="alert" onRetry={() => void query.refetch()} data-testid="perps-chart-unavailable">
-        <span className="appUnavailable">Unavailable.</span> We couldn&apos;t read {name}&apos;s price history from Hyperliquid.</Notice>
+        <span className="appUnavailable">Unavailable.</span> {name}&apos;s price history can&apos;t be loaded from Hyperliquid right now. Try again.</Notice>
         : <PriceChart candles={data.candles} style={style} name={name} />}
     {data && <SourceLine source="hyperliquid" observedAt={data.observedAt} example={query.isExample} />}
   </section>;

@@ -50,12 +50,12 @@ async function enterAmount(scope: Locator, info: TestInfo, amount: string) {
 async function openOrder(page: Page, info: TestInfo, side: "long" | "short"): Promise<Locator> {
   const label = side === "long" ? "Long" : "Short";
   if (isPhone(info)) {
-    await page.getByRole("button", { name: label, exact: true }).click({ timeout: 30_000 });
+    await page.getByRole("button", { name: new RegExp(`^${label} Price goes`) }).click({ timeout: 30_000 });
     await expect(sheet(page).getByRole("heading", { name: new RegExp(`^${label} `) })).toBeVisible();
     return sheet(page);
   }
   const panel = page.getByRole("complementary", { name: "Place an order" });
-  await panel.getByRole("radio", { name: label, exact: true }).click({ timeout: 30_000 });
+  await panel.getByRole("radio", { name: new RegExp(`^${label} Price goes`) }).click({ timeout: 30_000 });
   return panel;
 }
 
@@ -108,7 +108,7 @@ test("guests see labelled example perps, and trading asks them to sign in", asyn
   await expect(page.getByRole("list", { name: "Perp markets" }).getByRole("link", { name: /^SPCX/ })).toBeVisible();
   await expect(page.getByText("Example data, shaped like Hyperliquid's").first()).toBeVisible();
   // The example position shows what a real one does: TP/SL and Close, which ask a guest to sign in.
-  await expect(page.getByRole("listitem", { name: "BTC long" }).getByRole("button")).toHaveText(["TP/SL", "Close"]);
+  await expect(page.getByRole("listitem", { name: "BTC long" }).getByRole("button")).toHaveText(["Take profit / Stop loss", "Close"]);
   await shot(page, info, "guest-perps");
 });
 
@@ -142,6 +142,22 @@ test("with the switch off, Perps says it isn't available yet", async ({ page }) 
   await expect(page.getByTestId("perps-account-value")).toHaveCount(0);
 });
 
+test("a new customer, switch on: an empty perps account with Add money as the one action, not an error", async ({ page }, info) => {
+  const failed: string[] = [];
+  page.on("response", (response) => { if (response.url().includes("/api/perps/") && response.status() >= 500) failed.push(`${response.status()} ${response.url()}`); });
+  await signIn(page);
+  await page.goto("/app/perps");
+  await expect(page.getByTestId("perps-account-value")).toHaveText("$0.00", { timeout: 30_000 });
+  await expect(page.getByTestId("perps-empty")).toHaveText("Add USDC from your Aura account to start trading. At least $6.");
+  const account = page.getByRole("region", { name: "Perps account" });
+  await expect(account.getByRole("button")).toHaveText(["Add money"]);
+  await expect(account.getByRole("button", { name: "Add money" })).toHaveClass(/appButtonPrimary/);
+  await expect(page.getByText("No open positions.")).toBeVisible();
+  await expect(page.getByRole("list", { name: "Perp markets" }).getByRole("link")).toHaveCount(5);
+  await shot(page, info, "perps-new-customer");
+  expect(failed).toEqual([]);
+});
+
 test("perps home: the account, positions with TP/SL, orders, and history from Hyperliquid, and markets with search", async ({ page }, info) => {
   const customer = await signIn(page);
   await edge("/__markets", { hyperliquid: { [customer.wallet]: {
@@ -168,7 +184,7 @@ test("perps home: the account, positions with TP/SL, orders, and history from Hy
   await expect(position).toContainText("Liquidation price$50,820.00");
   await expect(position).toContainText("Take profit$70,000.00");
   await expect(position).toContainText("Stop loss—");
-  await expect(position.getByRole("button")).toHaveText(["TP/SL", "Close"]);
+  await expect(position.getByRole("button")).toHaveText(["Take profit / Stop loss", "Close"]);
   await shot(page, info, "perps-home");
   await page.getByRole("tab", { name: /Open orders/ }).click();
   await expect(page.getByText("Limit buy ETH")).toBeVisible();
@@ -211,7 +227,7 @@ test("a perps market page: price and stats, chart ranges, the order book with gr
   await expect(crumbs.getByRole("link", { name: "Perps" })).toHaveAttribute("href", "/app/perps");
   await expect(page.getByTestId("perps-market-change")).toHaveText("+$1,140.00 (+1.81%) today");
   const stats = page.getByTestId("perps-market-stats");
-  await expect(stats).toContainText("24h volume$2.1B");
+  await expect(stats).toContainText("Traded in 24h$2.1B");
   await expect(stats).toContainText("Open interest");
   await expect(stats).toContainText(/Funding, hourly\+0\.001\d%/);
   await expect(page.getByText("Funding: longs pay shorts")).toBeVisible();
@@ -310,7 +326,7 @@ test("a perps market page: price and stats, chart ranges, the order book with gr
   await expect(form.getByRole("button", { name: "Long BTC" })).toBeEnabled();
   await shot(page, info, "perps-order-tpsl");
   if (!isPhone(info)) {
-    await form.getByRole("radio", { name: "Short" }).click();
+    await form.getByRole("radio", { name: /^Short Price goes/ }).click();
     await expect(form.getByRole("button", { name: "Short BTC" })).toBeVisible();
   } else {
     await sheet(page).getByRole("button", { name: "Close" }).first().click();
@@ -322,7 +338,7 @@ test("a perps market page: price and stats, chart ranges, the order book with gr
   await asks.last().click();
   const picked = isPhone(info) ? sheet(page) : page.getByRole("complementary", { name: "Place an order" });
   if (isPhone(info)) await expect(picked.getByRole("heading", { name: "Long BTC" })).toBeVisible();
-  else await expect(picked.getByRole("radio", { name: "Long", exact: true })).toHaveAttribute("aria-checked", "true");
+  else await expect(picked.getByRole("radio", { name: /^Long Price goes/ })).toHaveAttribute("aria-checked", "true");
   await expect(picked.getByRole("radio", { name: "Limit" })).toHaveAttribute("aria-checked", "true");
   await expect(picked.getByLabel("Limit price")).toHaveValue("64255");
   await picked.getByLabel("Limit price").fill("64,2a50.5");
@@ -335,7 +351,7 @@ test("a perps market page: price and stats, chart ranges, the order book with gr
     await page.getByRole("tab", { name: /Positions/ }).click();
   } else {
     await bids.first().click();
-    await expect(picked.getByRole("radio", { name: "Short", exact: true })).toHaveAttribute("aria-checked", "true");
+    await expect(picked.getByRole("radio", { name: /^Short Price goes/ })).toHaveAttribute("aria-checked", "true");
     await expect(picked.getByLabel("Limit price")).toHaveValue("64250");
   }
 
@@ -405,7 +421,7 @@ test("one tap opens a long: adds money through the action flow, connects this de
   await enterAmount(form, info, "15");
   await expect(form).toContainText("Added from USDC first$16.00", { timeout: 20_000 });
   // The button says what the tap does: add money first, then go long.
-  await form.getByRole("button", { name: "Add money and long" }).click();
+  await form.getByRole("button", { name: "Add money and long BTC" }).click();
   await expect(flow(page)).toContainText("Order placed. 0.0015 BTC at $64,250.00.", { timeout: 30_000 });
   await shot(page, info, "perps-order-placed");
   // Leverage defaults to the market's maximum, 40x for BTC.
@@ -469,15 +485,15 @@ test("a position: TP/SL replaces the old one, and Close takes part of it at a li
   await expect(row).toBeVisible({ timeout: 30_000 });
   await shot(page, info, "perps-position");
 
-  await row.getByRole("button", { name: "TP/SL" }).click({ timeout: 30_000 });
-  const tpsl = page.getByRole("dialog", { name: "TP/SL for BTC long" });
+  await row.getByRole("button", { name: "Take profit / Stop loss" }).click({ timeout: 30_000 });
+  const tpsl = page.getByRole("dialog", { name: "Take profit and stop loss, BTC long" });
   await expect(tpsl).toContainText("Take profit at $70,000.00");
   await tpsl.getByLabel("Take profit at").fill("72000");
   await expect(tpsl.getByText(/^Profit of about \$455\.00 on the whole position$/)).toBeVisible();
   await tpsl.getByLabel("Stop loss at").fill("66000");
   await expect(tpsl.getByText("Stop loss must be below the price.")).toBeVisible();
   await tpsl.getByLabel("Stop loss at").fill("60000");
-  await tpsl.getByRole("button", { name: "Set TP/SL" }).click();
+  await tpsl.getByRole("button", { name: "Set", exact: true }).click();
   await expect(tpsl).toContainText("Take profit and stop loss set.");
   await tpsl.getByRole("button", { name: "Done" }).click();
 
