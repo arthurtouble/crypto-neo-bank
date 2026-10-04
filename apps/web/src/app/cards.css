@@ -10,7 +10,8 @@
 .appFrame .cdFaceTop strong { font-size: var(--text-title-3-size); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-snug); }
 .appFrame .cdFaceNumber { font-family: var(--font-mono); font-size: var(--text-title-2-size); line-height: var(--text-title-2-line); }
 .appFrame .cdFaceFrozen { background: var(--color-muted); color: var(--color-text-secondary); box-shadow: none; border: 1px solid var(--color-line-strong); }
-.appFrame .cdFaceUnissued { background: var(--color-muted); color: var(--color-text-tertiary); box-shadow: none; border: 1px dashed var(--color-line-strong); }
+/* Secondary, not tertiary, text: tertiary on the muted fill is under 4.5:1 in both themes */
+.appFrame .cdFaceUnissued { background: var(--color-muted); color: var(--color-text-secondary); box-shadow: none; border: 1px dashed var(--color-line-strong); }
 .appFrame .cdFaceUnissued .cdFaceNumber { font-family: var(--font-sans); font-size: var(--text-title-3-size); font-weight: var(--weight-medium); }
 
 /* Layout */
