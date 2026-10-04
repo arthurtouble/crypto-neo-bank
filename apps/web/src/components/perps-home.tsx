@@ -71,6 +71,7 @@ function PerpsAccountCard({ account, isExample, isPending, failed, onRetry }: { 
   const unavailable = <span className="appUnavailable">Unavailable</span>;
   // A new or emptied account: nothing to withdraw, so Add money is the one thing to do.
   const empty = !isExample && totals !== null && totals.value === 0 && totals.withdrawable === 0;
+  const locked = account?.blocked?.reason === "locked";
   return <section className="mxCard mkAccount" aria-labelledby="perps-account">
     <div className="mkCardHead"><h2 id="perps-account">Perps account</h2>
       {account && <SourceLine source="hyperliquid" observedAt={account.dexStates.observedAt} example={isExample} />}</div>
@@ -84,11 +85,12 @@ function PerpsAccountCard({ account, isExample, isPending, failed, onRetry }: { 
               <div><dt>You can withdraw</dt><dd data-testid="perps-withdrawable">{totals ? formatUsd(totals.withdrawable) : unavailable}</dd></div>
             </dl>
             <span className="mkAvailableActions">
-              {!empty && <button type="button" className="appButton" onClick={() => open("withdraw")}><Minus aria-hidden="true" />Withdraw</button>}
-              <button type="button" className={`appButton${empty ? " appButtonPrimary" : ""}`} onClick={() => open("add")}><Plus aria-hidden="true" />Add money</button>
+              {!empty && <button type="button" className="appButton" disabled={locked} onClick={() => open("withdraw")}><Minus aria-hidden="true" />Withdraw</button>}
+              <button type="button" className={`appButton${empty ? " appButtonPrimary" : ""}`} disabled={Boolean(account?.blocked)} onClick={() => open("add")}><Plus aria-hidden="true" />Add money</button>
             </span>
           </div>
-          {empty && <p className="mxHint" data-testid="perps-empty">Add USDC from your Aura account to start trading. At least ${PERPS_MINIMUM_DEPOSIT}.</p>}
+          {account?.blocked && <Notice tone="warning" data-testid="perps-blocked">{account.blocked.message}</Notice>}
+          {empty && !account?.blocked && <p className="mxHint" data-testid="perps-empty">Add USDC from your Aura account to start trading. At least ${PERPS_MINIMUM_DEPOSIT}.</p>}
         </>}
     {sheet && <PerpsMoneySheet mode={sheet} account={account} onClose={() => setSheet(null)} />}
   </section>;
@@ -116,11 +118,11 @@ export function PerpsActivity({ account, isPending, isExample, coin, extra }: { 
         : isPending ? <LoadingState label="Reading your perps account" />
         : tab === "positions" ? positions === null ? <UnavailableList what="positions" />
           : positions.length === 0 ? <p className="mxHint mkEmptyLine">No open positions.</p>
-            : <ul className="mkRows">{positions.map((position) => <PositionRow key={position.coin} position={position} readOnly={isExample}
+            : <ul className="mkRows">{positions.map((position) => <PositionRow key={position.coin} position={position} readOnly={isExample} locked={account?.blocked?.reason === "locked"}
               market={list.find((item) => item.coin === position.coin)} orders={allOrders} />)}</ul>
           : tab === "orders" ? orders === null ? <UnavailableList what="orders" />
             : orders.length === 0 ? <p className="mxHint mkEmptyLine">No open orders.</p>
-              : <ul className="mkRows">{orders.map((order) => <OrderRow key={order.oid} order={order} readOnly={isExample} />)}</ul>
+              : <ul className="mkRows">{orders.map((order) => <OrderRow key={order.oid} order={order} readOnly={isExample} locked={account?.blocked?.reason === "locked"} />)}</ul>
             : fills === null ? <UnavailableList what="history" />
               : fills.length === 0 ? <p className="mxHint mkEmptyLine">No trades yet.</p>
                 : <ul className="mkRows">{fills.map((fill) => <li key={fill.tid} className="mkRow mkStatic">
@@ -141,7 +143,9 @@ const UnavailableList = ({ what }: { what: string }) => <p className="mxHint mkE
  * on margin; liquidation price; margin; the take profit and stop loss set on
  * it. TP/SL and Close open their sheets.
  */
-function PositionRow({ position, market, orders, readOnly }: { position: PerpPosition; market: PerpMarket | undefined; orders: PerpOrder[] | null; readOnly: boolean }) {
+function PositionRow({ position, market, orders, readOnly, locked = false }: { position: PerpPosition; market: PerpMarket | undefined; orders: PerpOrder[] | null; readOnly: boolean;
+  /** A locked account can't change a position; the account card says why. */
+  locked?: boolean }) {
   const { authenticated, login } = useAuth();
   const [sheet, setSheet] = useState<"close" | "tpsl" | null>(null);
   const name = perpName(position.coin);
@@ -169,15 +173,15 @@ function PositionRow({ position, market, orders, readOnly }: { position: PerpPos
       <div><dt>Stop loss</dt><dd>{orders === null ? <span className="appUnavailable">Unavailable</span> : trigger(triggers.stopLoss)}</dd></div>
     </dl>
     <span className="mkRowActions">
-      <button type="button" className="appButton" onClick={() => act("tpsl")}>Take profit / Stop loss</button>
-      <button type="button" className="appButton" onClick={() => act("close")}>Close</button>
+      <button type="button" className="appButton" disabled={locked} onClick={() => act("tpsl")}>Take profit / Stop loss</button>
+      <button type="button" className="appButton" disabled={locked} onClick={() => act("close")}>Close</button>
     </span>
     {sheet === "close" && <PositionCloseSheet position={position} market={market} onClose={() => setSheet(null)} />}
     {sheet === "tpsl" && <PositionTpslSheet position={position} market={market} orders={orders} onClose={() => setSheet(null)} />}
   </li>;
 }
 
-function OrderRow({ order, readOnly }: { order: PerpOrder; readOnly: boolean }) {
+function OrderRow({ order, readOnly, locked = false }: { order: PerpOrder; readOnly: boolean; locked?: boolean }) {
   const { authenticated, login } = useAuth();
   const perpsAction = usePerpsAction();
   const queryClient = useQueryClient();
@@ -202,6 +206,6 @@ function OrderRow({ order, readOnly }: { order: PerpOrder; readOnly: boolean }) 
     <span className="mkRowMain"><strong>{title}</strong>
       <small>{detail} · {formatShortDateTime(order.timestamp)}</small>
       {state.error && <small className="mxFieldError" role="alert">{state.error}</small>}</span>
-    <span className="mkRowActions"><button type="button" className="appButton" disabled={state.busy} onClick={() => void cancel()}>{state.busy ? "Cancelling…" : "Cancel"}</button></span>
+    <span className="mkRowActions"><button type="button" className="appButton" disabled={state.busy || locked} onClick={() => void cancel()}>{state.busy ? "Cancelling…" : "Cancel"}</button></span>
   </li>;
 }

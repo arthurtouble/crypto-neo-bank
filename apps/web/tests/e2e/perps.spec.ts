@@ -4,7 +4,7 @@ import type { Locator, Page, Route, TestInfo } from "@playwright/test";
 import { recoverTypedDataAddress } from "viem";
 import { perpPosition } from "./support/fake-markets.mjs";
 import { expect, test } from "./support/fixtures";
-import { acceptTerms, ASSETS, edge, newCustomer, setBalances, setFeature, setIdentity, type Customer } from "./support/session";
+import { acceptTerms, ASSETS, edge, newCustomer, setBalances, setControls, setFeature, setIdentity, type Customer } from "./support/session";
 
 // Perps on Hyperliquid. Hyperliquid's read API is the local fake (support/fake-markets.mjs), so every screen reads
 // through Aura's real routes, switches, and D1. Placing a trade needs signatures Hyperliquid verifies, so the trade
@@ -156,6 +156,43 @@ test("a new customer, switch on: an empty perps account with Add money as the on
   await expect(page.getByRole("list", { name: "Perp markets" }).getByRole("link")).toHaveCount(5);
   await shot(page, info, "perps-new-customer");
   expect(failed).toEqual([]);
+});
+
+test("where Hyperliquid doesn't serve, Perps says so before anything is filled in, and closing still works", async ({ page }, info) => {
+  const customer = await signIn(page);
+  await edge("/__markets", { hyperliquid: { [customer.wallet]: { accountValue: "400.00", withdrawable: "100.00",
+    positions: [perpPosition({ coin: "BTC", size: "0.05", entryPx: "62900.0", positionValue: "3212.50", unrealizedPnl: "67.50", marginUsed: "321.25" })] } } });
+  await page.setExtraHTTPHeaders({ "CF-IPCountry": "US" });
+  await page.goto("/app/perps");
+  const notice = "Perps aren't available where you are. You can still close positions and withdraw.";
+  await expect(page.getByTestId("perps-blocked")).toHaveText(notice, { timeout: 30_000 });
+  const account = page.getByRole("region", { name: "Perps account" });
+  await expect(account.getByRole("button", { name: "Add money" })).toBeDisabled();
+  await expect(account.getByRole("button", { name: "Withdraw" })).toBeEnabled();
+  await expect(page.getByRole("listitem", { name: "BTC long" }).getByRole("button", { name: "Close" })).toBeEnabled();
+  await page.goto("/app/perps/BTC");
+  if (isPhone(info)) {
+    await expect(page.getByTestId("perps-trade-blocked")).toHaveText(notice, { timeout: 30_000 });
+    await expect(page.getByRole("button", { name: /^Long Price goes/ })).toBeDisabled();
+  } else {
+    const panel = page.getByRole("complementary", { name: "Place an order" });
+    await expect(panel.getByTestId("perps-order-blocked")).toHaveText(notice, { timeout: 30_000 });
+    await expect(panel.getByRole("button", { name: "Long BTC" })).toBeDisabled();
+  }
+  await shot(page, info, "perps-place-blocked");
+});
+
+test("a locked account says so on Perps, and every trade, add, and withdrawal waits", async ({ page }) => {
+  const customer = await signIn(page);
+  await edge("/__markets", { hyperliquid: { [customer.wallet]: { accountValue: "400.00", withdrawable: "100.00",
+    positions: [perpPosition({ coin: "BTC", size: "0.05", entryPx: "62900.0", positionValue: "3212.50", unrealizedPnl: "67.50", marginUsed: "321.25" })] } } });
+  await setControls(page, customer, { accountLocked: true });
+  await page.goto("/app/perps");
+  await expect(page.getByTestId("perps-blocked")).toHaveText("Your account is locked. Unlock it in Settings to trade, add money, or withdraw.", { timeout: 30_000 });
+  const account = page.getByRole("region", { name: "Perps account" });
+  await expect(account.getByRole("button", { name: "Add money" })).toBeDisabled();
+  await expect(account.getByRole("button", { name: "Withdraw" })).toBeDisabled();
+  await expect(page.getByRole("listitem", { name: "BTC long" }).getByRole("button", { name: "Close" })).toBeDisabled();
 });
 
 test("perps home: the account, positions with TP/SL, orders, and history from Hyperliquid, and markets with search", async ({ page }, info) => {

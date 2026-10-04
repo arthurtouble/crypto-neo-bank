@@ -16,6 +16,7 @@ import { perpsPositions, perpsTotals, useBaseUsdc, type PerpMarket, type PerpsAc
 import { DollarAmount, failureMessage, FlowTimeline, PayWith, Segmented, useFlow, useSettledAction, type FlowStep } from "./markets-parts";
 import { ADD_MONEY_DETAIL, addToPerps, connectPerps, depositFee, feeText, orderError, PriceField, usePerpsAction, type ExchangeStatus } from "./perps-sheets";
 import { Sheet } from "./sheet";
+import { Notice } from "./states";
 import { TransactionProgress } from "./transaction-progress";
 
 type Side = "long" | "short";
@@ -117,6 +118,8 @@ export function PerpsOrderForm({ market, side, onSide, account, variant, onDone,
     ...(tp ? { takeProfit: { triggerPrice: tp } } : {}), ...(sl ? { stopLoss: { triggerPrice: sl } } : {})
   };
 
+  // A locked account, or a place Hyperliquid doesn't serve, stops the order before anything is filled in; the server checks again.
+  const stop = guest ? null : account?.blocked?.message ?? null;
   const problem = margin === null || guest ? null
     : tradable === null ? "Your perps balance can't be read right now."
       : margin * leverage < 10 ? "Orders must be worth at least $10. Add more or raise the leverage."
@@ -124,7 +127,7 @@ export function PerpsOrderForm({ market, side, onSide, account, variant, onDone,
           : max !== null && margin > max ? `That's more than you have. You can put in up to ${formatUsd(max)}.`
             : short > 0 && (topUp < short || topUp < PERPS_MINIMUM_DEPOSIT) ? `You don't have enough USDC. Adding money to perps takes at least $${PERPS_MINIMUM_DEPOSIT}.`
               : type === "limit" && !limit ? "Enter the limit price." : null;
-  const blocked = problem !== null || tpProblem !== null || slProblem !== null;
+  const blocked = stop !== null || problem !== null || tpProblem !== null || slProblem !== null;
 
   const preview = useQuery({
     queryKey: ["perps-preview", JSON.stringify(body)],
@@ -188,6 +191,7 @@ export function PerpsOrderForm({ market, side, onSide, account, variant, onDone,
   const fee = preview.data ? preview.data.fee === null || preview.data.fee === undefined ? <span className="appUnavailable">Unavailable</span> : formatFee(preview.data.fee) : "—";
   const action = guest ? "Sign in to trade" : topUp > 0 ? `Add money and ${side} ${name}` : `${sideLabel} ${name}`;
   return <form className="mkOrderForm" aria-label={`${sideLabel} ${name} order`} onSubmit={(event) => { event.preventDefault(); if (guest) login(); else void place(); }}>
+    {stop && <Notice tone="warning" data-testid="perps-order-blocked">{stop}</Notice>}
     <div className="mkOrderTop">
       <Segmented label="Order type" value={type} onChange={setType} options={[{ value: "market", label: "Market" }, { value: "limit", label: "Limit" }]} />
       <label className="mkSelect"><span className="srOnly">Margin mode</span>

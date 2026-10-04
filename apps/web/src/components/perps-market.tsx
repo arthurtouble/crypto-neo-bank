@@ -62,9 +62,10 @@ export function PerpsMarketPage({ coin }: { coin: string }) {
                 <PerpsOrderForm key={market.coin} market={market} side={side} onSide={setSide} account={account.data} variant="panel" onDone={() => undefined} preset={preset} />
               </aside>}
             </div>
+            {phone && !guest && account.data?.blocked && <Notice tone="warning" data-testid="perps-trade-blocked">{account.data.blocked.message}</Notice>}
             {phone && <div className="mkTradeBar">
-              <button type="button" className="appButton appButtonPrimary appButtonLarge" onClick={() => openSheet("long")}><SideLabel side="long" /></button>
-              <button type="button" className="appButton appButtonLarge" onClick={() => openSheet("short")}><SideLabel side="short" /></button>
+              <button type="button" className="appButton appButtonPrimary appButtonLarge" disabled={!guest && Boolean(account.data?.blocked)} onClick={() => openSheet("long")}><SideLabel side="long" /></button>
+              <button type="button" className="appButton appButtonLarge" disabled={!guest && Boolean(account.data?.blocked)} onClick={() => openSheet("short")}><SideLabel side="short" /></button>
             </div>}
             {phone && sheet && <PerpsOrderSheet market={market} side={side} account={account.data} preset={preset} onClose={() => setSheet(false)} />}
           </>;
