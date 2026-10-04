@@ -5,7 +5,7 @@ description: Look around Aura with example data, sign in with email, Google, Tel
 
 ## Look around
 
-You don't need an account to look around. Browse Overview, Deposit, Send, Swap, Earn, Cards, Transactions, Insights, Settings, and Support. Signed out, every value is a labeled example.
+You don't need an account to look around. Browse Overview, Add money, Send, Swap, Earn, Cards, Transactions, Insights, Settings, and Support. Signed out, every value is a labeled example.
 
 **Get started** opens the app with example data. It doesn't sign you in. If you already have an account, select **Sign in** at the top of the home page.
 
@@ -25,7 +25,7 @@ Money only leaves your account after you add a passkey or an authenticator app i
 
 ## Add money and send
 
-Aura uses real networks and real assets. **Deposit** shows your address and QR code on Base, and lets you add money from a connected wallet or by card. Start with a small amount. See [add money](/product/add-money/).
+Aura uses real networks and real assets. **Add money** shows your address and QR code on Base, and lets you add money from a connected wallet or by card. Start with a small amount. See [add money](/product/add-money/).
 
 **Send** pays an address, a saved recipient, an Aura tag, or one of your linked wallets, on Base or another network. You can name and save a new address as you send.
 

@@ -9,7 +9,7 @@ import { acceptTerms, asCustomer, ASSETS, edge, newCustomer, setBalances, setCon
 // actions, and D1 run for real.
 
 const toast = (page: Page, title: string) => page.locator(".toastRegion").getByText(title, { exact: true });
-const depositPanel = (page: Page) => page.getByRole("region", { name: "Deposit from a bank" });
+const depositPanel = (page: Page) => page.getByRole("region", { name: "From your bank" });
 const sendPanel = (page: Page) => page.getByRole("region", { name: "Send to a bank" });
 
 async function signIn(page: Page, usdc = "0") {

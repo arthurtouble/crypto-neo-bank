@@ -79,7 +79,7 @@ export function AddFromWallet({ account }: { account: `0x${string}` }) {
         }
         if (status === "REFUNDED" || status === "FAILED") {
           setBridge(null);
-          toast.error("Deposit didn't complete", status === "REFUNDED" ? "The bridge sent the funds back to your wallet." : "Check your wallet's activity.");
+          toast.error("Not added", status === "REFUNDED" ? "It couldn't reach Base, so it went back to your wallet." : "Check your wallet's activity, then try again.");
           return;
         }
       } catch { /* A failed status read is retried. */ }
@@ -130,7 +130,7 @@ export function AddFromWallet({ account }: { account: `0x${string}` }) {
     setPhase("idle");
     const rejected = reason instanceof Error && /reject|denied|cancel/i.test(reason.message);
     if (rejected) toast.show({ tone: "info", title: "Cancelled", detail: "Nothing was sent." });
-    else toast.error("Deposit didn't go through", "Check your wallet's activity before you try again.");
+    else toast.error("Not added", "Check your wallet's activity before you try again.");
   }
 
   async function submit(event: React.FormEvent) {
@@ -157,7 +157,7 @@ export function AddFromWallet({ account }: { account: `0x${string}` }) {
     } catch (reason) {
       setPhase("idle");
       const unavailable = reason instanceof ApiError && ["provider_unavailable", "feature_unavailable"].includes(reason.code);
-      toast.error(unavailable ? "Not available right now" : "Can't move this amount", reason instanceof ApiError ? reason.message : "We couldn't find a route right now. Try again.");
+      toast.error(unavailable ? "Not available right now" : "Can't move this amount", reason instanceof ApiError ? reason.message : `This can't be moved from ${networkName} right now. Try again.`);
     }
   }
 
@@ -175,7 +175,7 @@ export function AddFromWallet({ account }: { account: `0x${string}` }) {
   }
 
   const buttonText = phase === "quoting" ? "Getting a price" : phase === "confirm" ? "Confirm in your wallet" : phase === "pending" ? "Sending"
-    : phase === "review" ? "Confirm deposit" : home ? "Add from wallet" : "Review";
+    : phase === "review" || home ? "Add from wallet" : "Review";
 
   return (
     <form className="mxForm" onSubmit={(event) => void submit(event)}>
@@ -205,10 +205,10 @@ export function AddFromWallet({ account }: { account: `0x${string}` }) {
           From {shortAddress(sourceAddress)} on {networkName} · {available === undefined ? "balance unavailable" : `${amountText(available, asset.decimals)} ${asset.symbol} available`}
         </span>
       </div>
-      {quote && phase === "review" && <dl className="mxSummary" aria-label="Deposit summary">
+      {quote && phase === "review" && <dl className="mxSummary" aria-label="Review">
         <div><dt>You get about</dt><dd>{amountText(quote.toAmountRaw, quote.decimals)} {quote.symbol}</dd></div>
         <div><dt>At least</dt><dd>{amountText(quote.toAmountMinRaw, quote.decimals)} {quote.symbol}</dd></div>
-        <div><dt>Bridge fee</dt><dd>{usdText(quote.providerFeeUsd)}</dd></div>
+        <div><dt>Moving fee</dt><dd>{usdText(quote.providerFeeUsd)}</dd></div>
         <div><dt>Network fee</dt><dd>{usdText(quote.networkFeeUsd)}</dd></div>
       </dl>}
       {error && <p className="mxFieldError" role="alert">{error}</p>}
@@ -218,8 +218,8 @@ export function AddFromWallet({ account }: { account: `0x${string}` }) {
         {busy ? <LoaderCircle className="spin" aria-hidden="true" /> : <ArrowDownToLine aria-hidden="true" />}{buttonText}
       </button>
       <p className="mxHint">
-        {home ? "Your wallet pays a small Base network fee in ETH."
-          : `It arrives in your Aura account as ${asset.symbol}. The bridge fee comes out of the amount, and your wallet pays the ${networkName} network fee.`}
+        {home ? "Your wallet pays a small network fee in ETH."
+          : `It arrives in your Aura account as ${asset.symbol}. The moving fee comes out of the amount, and your wallet pays the ${networkName} network fee.`}
       </p>
     </form>
   );

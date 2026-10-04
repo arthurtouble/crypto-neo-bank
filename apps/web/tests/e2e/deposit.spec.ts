@@ -41,14 +41,14 @@ test.beforeAll(async ({ request }) => {
   await request.get("/api/money/account", { headers: { Authorization: `Bearer ${customer.token}` }, timeout: 120_000 });
 });
 
-test("the Deposit page shows all four ways to add money", async ({ page }) => {
+test("the Add money page shows all four ways to add money", async ({ page }) => {
   const customer = await newCustomer();
   await setFeature(page, "card_deposits", true);
   await openDeposit(page, customer);
 
   await expect(page.getByTestId("account-address")).toHaveText(customer.wallet);
   await expect(page.getByRole("img", { name: "QR code of your Aura account address" })).toBeVisible();
-  await expect(page.getByText(/Only send USDC on the Base network/)).toBeVisible();
+  await expect(page.getByText(/Choose Base as the network when you send USDC/)).toBeVisible();
   // Receive names every asset that shows in Aura when it arrives on Base, straight from the registry (B3).
   const receivable = page.getByLabel("What you're sending").locator("option");
   await expect(receivable).toHaveCount(assetsFor("hold", 8453).length);
@@ -59,9 +59,9 @@ test("the Deposit page shows all four ways to add money", async ({ page }) => {
   await showWay(page, "Card");
   await expect(page.getByRole("button", { name: "Pay by card" })).toBeVisible();
   await showWay(page, "Bank");
-  const bank = page.getByRole("region", { name: "Deposit from a bank" });
+  const bank = page.getByRole("region", { name: "From your bank" });
   await expect(bank.getByText("Coming soon", { exact: true })).toBeVisible();
-  await expect(bank.getByText(/deposits will arrive as USDC/)).toBeVisible();
+  await expect(bank.getByText(/will arrive as USDC/)).toBeVisible();
 });
 
 test("the customer copies their account address", async ({ page, context }) => {
@@ -150,7 +150,7 @@ test("a transfer the network rejects is reported, and nothing arrives", async ({
   await expect(wallet(page).getByText(/10 USDC available/)).toBeVisible({ timeout: 20_000 });
   await wallet(page).getByLabel("Amount in USDC").fill("5");
   await wallet(page).getByRole("button", { name: "Add from wallet" }).click();
-  await expect(toast(page, "Deposit didn't go through")).toBeVisible({ timeout: 30_000 });
+  await expect(toast(page, "Not added")).toBeVisible({ timeout: 30_000 });
   expect(await balanceOf(page, customer, `8453:${ASSETS.usdc}`)).toBe("0");
 });
 
@@ -171,7 +171,7 @@ test("USDC from Arbitrum is bridged to USDC on Base, with fees shown first", asy
   await expect(review).toContainText("39.6 USDC");
   await expect(review).toContainText("$0.50");
   await expect(review).toContainText("$0.10");
-  await wallet(page).getByRole("button", { name: "Confirm deposit" }).click();
+  await wallet(page).getByRole("button", { name: "Add from wallet" }).click();
 
   await expect(toast(page, "Sent")).toBeVisible({ timeout: 30_000 });
   // The form is free again, and says the deposit is on its way.
@@ -196,7 +196,7 @@ test("a bridged deposit shows in Transactions while it's on its way, and says wh
   await expect(wallet(page).getByText(/100 USDC available/)).toBeVisible({ timeout: 20_000 });
   await wallet(page).getByLabel("Amount in USDC").fill("40");
   await wallet(page).getByRole("button", { name: "Review" }).click();
-  await wallet(page).getByRole("button", { name: "Confirm deposit" }).click();
+  await wallet(page).getByRole("button", { name: "Add from wallet" }).click();
   await expect(wallet(page).getByTestId("deposit-travelling")).toBeVisible({ timeout: 30_000 });
   const bridge = (await sent()).at(-1)!;
 
@@ -229,7 +229,7 @@ test("ETH from Ethereum is bridged in one transaction", async ({ page }) => {
   await wallet(page).getByLabel("Amount in ETH").fill("1");
   await wallet(page).getByRole("button", { name: "Review" }).click();
   await expect(wallet(page).locator(".mxSummary")).toContainText("0.995 ETH", { timeout: 20_000 });
-  await wallet(page).getByRole("button", { name: "Confirm deposit" }).click();
+  await wallet(page).getByRole("button", { name: "Add from wallet" }).click();
   await expect(toast(page, "Sent")).toBeVisible({ timeout: 30_000 });
   const transactions = await sent();
   expect(transactions).toHaveLength(1);
@@ -246,11 +246,11 @@ test("a refunded bridge tells the customer the funds went back to their wallet",
   await expect(wallet(page).getByText(/100 USDC available/)).toBeVisible({ timeout: 20_000 });
   await wallet(page).getByLabel("Amount in USDC").fill("10");
   await wallet(page).getByRole("button", { name: "Review" }).click();
-  await wallet(page).getByRole("button", { name: "Confirm deposit" }).click();
+  await wallet(page).getByRole("button", { name: "Add from wallet" }).click();
   await expect(toast(page, "Sent")).toBeVisible({ timeout: 30_000 });
   await edge("/__state", { bridge: { status: "DONE", substatus: "REFUNDED" } });
-  await expect(toast(page, "Deposit didn't complete")).toBeVisible({ timeout: 30_000 });
-  await expect(page.locator(".toastRegion")).toContainText("sent the funds back to your wallet");
+  await expect(toast(page, "Not added")).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator(".toastRegion")).toContainText("went back to your wallet");
   await setFeature(page, "cross_chain", false);
 });
 
@@ -294,9 +294,9 @@ test("an expired price must be reviewed again before anything is sent", async ({
   await expect(wallet(page).getByText(/100 USDC available/)).toBeVisible({ timeout: 20_000 });
   await wallet(page).getByLabel("Amount in USDC").fill("10");
   await wallet(page).getByRole("button", { name: "Review" }).click();
-  await expect(wallet(page).getByRole("button", { name: "Confirm deposit" })).toBeVisible({ timeout: 20_000 });
+  await expect(wallet(page).getByRole("button", { name: "Add from wallet" })).toBeVisible({ timeout: 20_000 });
   await page.clock.fastForward(60_000);
-  await wallet(page).getByRole("button", { name: "Confirm deposit" }).click();
+  await wallet(page).getByRole("button", { name: "Add from wallet" }).click();
   await expect(wallet(page).getByText("That price expired. Review it again.")).toBeVisible();
   expect(await sent()).toEqual([]);
   await setFeature(page, "cross_chain", false);
@@ -314,6 +314,9 @@ test("paying by card opens Privy's card flow for USDC on Base", async ({ page })
   const customer = await newCustomer();
   await setFeature(page, "card_deposits", true);
   await openDeposit(page, customer, "Card");
+  // Before paying, the customer knows who charges the card and that the fee shows first.
+  await expect(page.getByTestId("card-processor")).toContainText("Privy opens a checkout where its card partner charges your card");
+  await expect(page.getByTestId("card-processor")).toContainText("Before you pay, you see the partner's name, its fee");
   await page.getByRole("button", { name: "Pay by card" }).click();
   const calls = await page.evaluate(() => (window as unknown as { __auraE2E?: { fundWallet: unknown[] } }).__auraE2E?.fundWallet ?? []);
   expect(calls).toEqual([{ address: customer.wallet.toLowerCase(),

@@ -15,7 +15,7 @@ The account is the customer's Privy embedded wallet, with gas paid by Privy; sig
 
 ### Deposit
 
-The Deposit screen (`deposit-page.tsx`) lists four ways to add money, each opening in place (`#receive`, `#wallet`, `#card`, `#bank` open one directly): **Receive** shows the account address and QR code, with a dropdown of the assets that show in Aura on Base (the registry's `hold` use) and the warning to send only on Base; **From a wallet**; **Card**; and **Bank** (`bank-deposit-panel.tsx`, coming soon until Bridge is connected).
+The Add money screen (`deposit-page.tsx`, at `/app/deposit`; it was called Deposit until October 2026, and Earn keeps "Deposit" for putting money into a market or vault) lists four ways to add money, each opening in place (`#receive`, `#wallet`, `#card`, `#bank` open one directly): **Receive** shows the account address and QR code, with a dropdown of the assets that show in Aura on Base (the registry's `hold` use) and the warning to choose Base as the network; **From a wallet**; **Card**; and **Bank** (`bank-deposit-panel.tsx`, coming soon until Bridge is connected).
 
 - **From a wallet** (`add-from-wallet.tsx`): the customer's connected wallet, such as MetaMask, with a network and asset: Base, Ethereum, Arbitrum, Optimism, or Polygon, and ETH or USDC, or EURC on Base (`lib/deposits/networks.ts`).
   - From Base it is a plain transfer.
@@ -23,7 +23,7 @@ The Deposit screen (`deposit-page.tsx`) lists four ways to add money, each openi
   - `GET /api/deposits/status` reports LI.FI's progress (delivered, pending, refunded, or `UNKNOWN` when LI.FI can't be read or reports another transfer). The balance is read from Base.
   - Once the source transaction lands, the page sends it to `POST /api/deposits`, which keeps it in `wallet_deposits` (`lib/deposits/tracking.ts`) only if the source network shows it succeeded, went to the LI.FI Diamond, and came from a wallet Privy shows is the customer's. Transactions shows it as pending, with the quoted amount as "about", and asks LI.FI about up to three open ones per read (every 30 seconds at most); the status check above updates it too. When it arrives, the transfer on Base takes its place, labelled as from the customer's wallet. A refund or failure shows as Failed with the reason. The form is free for the next deposit while one travels.
   - A LI.FI outage or rate limit is `provider_unavailable`, never "no route". With `cross_chain` off, a quote is refused with a message and nothing is sent.
-- **Card:** Privy's funding flow (`useFundWallet`), shown only while the `card_deposits` switch is on (`GET /api/deposits/methods`). Aura can only hide the way in: Privy's funding setting in its dashboard is what stops a purchase.
+- **Card:** Privy's funding flow (`useFundWallet`). Privy picks the card partner that charges the card (its SDK supports MoonPay, Coinbase Onramp, and Stripe; which ones are on is set in the Privy dashboard, and Aura passes no preferred one) and names it in its window, with the fee and limits, before the customer pays; the panel says so. Shown only while the `card_deposits` switch is on (`GET /api/deposits/methods`). Aura can only hide the way in: Privy's funding setting in its dashboard is what stops a purchase.
 - Deposits are not actions: the Aura account signs nothing. The only D1 record is the `wallet_deposits` projection for bridged deposits, which never counts as a balance.
 
 ### Send
