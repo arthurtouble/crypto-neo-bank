@@ -107,7 +107,7 @@ Each journey is drawn step by step in the storyboards. The frame numbers (J5.3 a
 
 - **J15 Keep my account safe.** Settings › Security: the passkey first, then email, emergency lock, daily limit, saved-recipients-only, and the account key (export asks once more and warns that the controls stop applying). Saved recipients are their own area. Tightening is instant; loosening needs the passkey.
 - **J16 My profile and preferences.** Settings › Aura tag and payment page, notifications, this device, and your data (download, terms, close the account).
-- **J17 Get help.** The Support page: chat, articles, and report a problem.
+- **J17 Get help.** The Support page: chat, articles, and report a problem. Support is in the same place on every page (last in the sidebar and the phone menu). When chat can't load, it offers Try again. The account screen that blocks the app when the account can't load has its own Chat with support.
 - **J18 Notifications.** An inbox that marks itself read. Each notice opens where it happened. Toasts only for money received and security changes.
 
 ### Public

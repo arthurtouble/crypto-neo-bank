@@ -11,6 +11,7 @@ import { useWallet } from "@/lib/client/wallet-context";
 import { legalDocuments } from "@/lib/legal/documents";
 import { AppBrand } from "./brand";
 import { LoadingScreen } from "./states";
+import { useSupportChat } from "./support-chat";
 
 const docs = process.env.NEXT_PUBLIC_DOCS_URL ?? "https://aurel-docs.aurel-events.workers.dev";
 type TermsResponse = { accepted: boolean };
@@ -20,10 +21,13 @@ const refusals: Record<number, string> = {
   409: "The terms were just updated. Reload to review the current version."
 };
 
-/** A full screen with no app behind it: the terms, an expired session, or an account that can't load. It can't be dismissed. */
-function AccountScreen({ title, children }: { title: string; children: React.ReactNode }) {
+/**
+ * A full screen with no app behind it: the terms, an expired session, or an account that can't load. It can't be
+ * dismissed. While support chat is open over it, it stops being modal, so the chat window can be used.
+ */
+function AccountScreen({ title, children, modal = true }: { title: string; children: React.ReactNode; modal?: boolean }) {
   const keep = (event: Event) => event.preventDefault();
-  return <Dialog.Root open>
+  return <Dialog.Root open modal={modal}>
     <Dialog.Portal>
       <Dialog.Content className="appScreen" onEscapeKeyDown={keep} onPointerDownOutside={keep} onInteractOutside={keep} aria-describedby={undefined}>
         <div className="appScreenBody"><AppBrand /><Dialog.Title asChild><h1>{title}</h1></Dialog.Title>{children}</div>
@@ -47,6 +51,8 @@ export function TermsGate({ children }: { children: React.ReactNode }) {
   const [submitting, setSubmitting] = useState(false);
   const [linking, setLinking] = useState(false);
   const [linkError, setLinkError] = useState("");
+  const chat = useSupportChat();
+  const [chatting, setChatting] = useState(false);
   const termsKey = ["terms", user?.id];
   // The server asked for the terms (a new version since this page loaded): check again, which shows them.
   useEffect(() => {
@@ -71,8 +77,12 @@ export function TermsGate({ children }: { children: React.ReactNode }) {
   if (query.error instanceof SessionExpired) return <AccountScreen title="Your session expired"><p>Sign in again to keep using your account.</p>
     <div className="appScreenActions"><button type="button" className="appButton appButtonPrimary appButtonLarge" onClick={() => void logout().then(() => login())}>Sign in again</button>
       {leave("Not now")}</div></AccountScreen>;
-  if (query.isError) return <AccountScreen title="We couldn’t load your account"><p>Check your connection, then try again. If it keeps happening, contact support.</p>
+  // Support is a page behind this screen, so the screen offers the chat itself (it works before the account loads).
+  if (query.isError) return <AccountScreen title="Your account can’t be loaded right now" modal={!chatting}>
+    <p>Check your connection, then try again. If it keeps happening, chat with support.</p>
     <div className="appScreenActions"><button type="button" className="appButton appButtonPrimary appButtonLarge" onClick={() => void query.refetch()}>Try again</button>
+      {chat.status !== "unavailable" && <button type="button" className="appButton appButtonLarge" disabled={chat.status !== "ready"}
+        onClick={() => { setChatting(true); chat.open("My Aura account won't load."); }}>Chat with support</button>}
       {leave("Log out")}</div></AccountScreen>;
   if (!hasEmail && !query.isError) {
     const addEmail = () => {
