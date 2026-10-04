@@ -60,7 +60,7 @@ Sports and esports markets aren't offered.
 
 ## In Transactions
 
-Money you add to or withdraw from perps or predictions shows in **Transactions** under **Markets**, as Added to perps, Withdrawn from perps, Added to predictions, or Withdrawn from predictions. It's money moving between your own accounts, so Insights doesn't count it as money in or out.
+Money you add to or withdraw from perps or predictions shows in **Transactions** under **Markets**, as Added to perps, Withdrawn from perps, Added to predictions, or Withdrawn from predictions. It's money moving between your own accounts, so the summary in Transactions doesn't count it as money in or out.
 
 ## Prices and balances
 

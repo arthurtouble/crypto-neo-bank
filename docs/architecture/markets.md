@@ -65,7 +65,7 @@ Perps and Predictions are two sections in the app's menu (since 3 October 2026; 
 
 ## In Transactions
 
-Money moved between the account and its own perps or predictions account shows in Transactions under **Markets**, with the venue as the counterparty, and counts as moved, not income or spending, in Insights (`lib/activity/entries.ts`):
+Money moved between the account and its own perps or predictions account shows in Transactions under **Markets**, with the venue as the counterparty, and counts as moved, not income or spending, in the Transactions summary (`lib/activity/entries.ts`):
 
 - **Added to perps** and **Added to predictions** are the deposit actions (their summary's `market` is `hyperliquid` or `polymarket`).
 - **Withdrawn from perps** and **Withdrawn from predictions** are the USDC transfers on Base that the withdrawals pay out. Neither comes from an Aura action or from an address that names the venue, so `lib/activity/markets.ts` labels the transfer that fits a recorded withdrawal (`market_operations`, kind `withdraw`): USDC on Base to the address withdrawn to, within a day after it, for the amount less at most $2 of fees, the earliest unlabelled one first. The transfer itself is what the chain shows; a missed match only shows as Received.
