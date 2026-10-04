@@ -28,16 +28,16 @@ export function rateText(from: Side, to: Side, fromAmountRaw: string, toAmountRa
 }
 
 /**
- * What the swap costs, as one line: the dollar value paid less the dollar value received, which holds the exchange's
- * fees, any transfer fee, and the price difference this amount causes. Without both dollar values, the exchange fee.
- * Either way it is already taken out of what the quote says you receive.
+ * The price difference: the dollar value paid, less the dollar value received, less the fees charged. It's what the
+ * amount loses to the market, which nobody charges, so it has its own line apart from Fees. Null without both dollar
+ * values, or when it rounds to nothing.
  */
-export function costText(quote: { fromAmountUsd: string | null; toAmountUsd: string | null; providerFeeUsd: number | null }): string {
+export function priceDifferenceText(quote: { fromAmountUsd: string | null; toAmountUsd: string | null; providerFeeUsd: number | null }): string | null {
   const paid = Number(quote.fromAmountUsd); const received = Number(quote.toAmountUsd);
-  if (quote.fromAmountUsd === null || quote.toAmountUsd === null || !Number.isFinite(paid) || !Number.isFinite(received) || paid <= 0)
-    return formatEstimatedFeeUsd(quote.providerFeeUsd);
-  const cost = Math.max(0, paid - received);
-  return `About ${formatEstimatedFeeUsd(cost)} (${(cost / paid * 100).toFixed(2)}%)`;
+  if (quote.fromAmountUsd === null || quote.toAmountUsd === null || !Number.isFinite(paid) || !Number.isFinite(received) || paid <= 0) return null;
+  const difference = paid - received - (quote.providerFeeUsd ?? 0);
+  if (difference < 0.005) return null;
+  return `About ${formatEstimatedFeeUsd(difference)} (${(difference / paid * 100).toFixed(2)}%)`;
 }
 
 /** The market price line for a stock, gold, or the euro: "Market price: 1 AAPLc = $341.51, as of Sun 7:59 AM." */

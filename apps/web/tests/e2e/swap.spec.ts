@@ -92,7 +92,7 @@ test("a stock sells back to USDC, the other way round", async ({ page }) => {
 test("how far the price can move is chosen on the quote, which refreshes in place with the new minimum", async ({ page }) => {
   await openSwap(page, { from: `8453:${ASSETS.usdc}`, to: `8453:${ASSETS.apple}` });
   await getQuote(page, "2");
-  await expect(quote(page).getByTestId("swap-price-move")).toHaveText("The cost is already taken out of what you receive. If the price moves more than 0.5% before it goes through, the swap stops and your USDC stays in your account.", { timeout: 20_000 });
+  await expect(quote(page).getByTestId("swap-price-move")).toHaveText("Fees and the price difference are already taken out of what you receive. If the price moves more than 0.5% before it goes through, the swap stops and your USDC stays in your account.", { timeout: 20_000 });
   const requested = page.waitForRequest((request) => request.url().includes("/api/routes/quote") && request.url().includes("slippageBps=100"));
   await quote(page).getByRole("button", { name: "1%", exact: true }).click();
   await requested;
@@ -125,7 +125,7 @@ test("moving to another network is sent, then tracked: no spinner while the brid
   await setFeature(page, "cross_chain", true);
   await openSwap(page, { from: `8453:${ASSETS.usdc}`, to: ARBITRUM_USDC });
   await getQuote(page, "10");
-  await expect(quote(page)).toContainText("Cost of this swap", { timeout: 20_000 });
+  await expect(quote(page)).toContainText("Fees", { timeout: 20_000 });
   await expect(quote(page)).toContainText("usually takes up to 30 minutes");
   await expect(quote(page).getByTestId("swap-leaves-aura")).toContainText("Aura doesn't show balances there");
   await quote(page).getByRole("button", { name: "Swap", exact: true }).click();

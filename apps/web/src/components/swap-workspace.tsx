@@ -15,7 +15,7 @@ import { useOverview } from "@/lib/client/queries";
 import Link from "next/link";
 import type { AssetId, CatalogAsset } from "@/lib/swap/assets";
 import { assetNetwork } from "@/lib/swap/picker-model";
-import { costText, displayRawAmount, marketPriceText, rateText } from "@/lib/swap/review-model";
+import { displayRawAmount, formatEstimatedFeeUsd, marketPriceText, priceDifferenceText, rateText } from "@/lib/swap/review-model";
 import { parseSwapDeepLink } from "@/lib/swap/links";
 import { SwapAssetSelect } from "./swap-asset-select";
 import { useToast } from "./toast";
@@ -156,6 +156,7 @@ export function SwapWorkspace() {
   }
 
   const quoteUsed = Boolean(quote && usedQuoteId === quote.id);
+  const priceDifference = quote ? priceDifferenceText(quote) : null;
   const done = swap.phase === "done" || handedOff;
   const failed = swap.action?.status === "failed" || swap.action?.status === "expired";
   // An empty account has nothing to swap yet: point to Deposit rather than a form that can only say "you don't have any".
@@ -210,10 +211,12 @@ export function SwapWorkspace() {
               onClick={() => { if (value !== slippageBps) void getQuote(undefined, value); }}>{value / 100}%</button>)}</div></dd></div>
           <div><dt>Rate</dt><dd>{rateText(quote.from, quote.to, quote.fromAmountRaw, quote.toAmountRaw)}</dd></div>
           <div><dt>Network fee</dt><dd className="mxPositive">Paid by Aura</dd></div>
-          <div><dt>Cost of this swap</dt><dd>{costText(quote)}</dd></div>
+          {/* Fees are only what is charged; the price difference is what the amount loses to the market, on its own line. */}
+          <div><dt>Fees</dt><dd>{formatEstimatedFeeUsd(quote.providerFeeUsd)}</dd></div>
+          {priceDifference && <div><dt>Price difference</dt><dd>{priceDifference}</dd></div>}
         </dl>
         {/* A same-network swap is one transaction: below the minimum, the chain undoes it. */}
-        <p className="mxHint" data-testid="swap-price-move">The cost is already taken out of what you receive.
+        <p className="mxHint" data-testid="swap-price-move">Fees and the price difference are already taken out of what you receive.
           {!crossChain && ` If the price moves more than ${slippageBps / 100}% before it goes through, the swap stops and your ${quote.from.symbol} stays in your account.`}</p>
         {(quote.references ?? []).map((reference) => {
           const asset = reference.assetId === quote.to.id ? quote.to : quote.from;

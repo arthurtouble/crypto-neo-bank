@@ -9,13 +9,13 @@ You pay with an asset on Base, or Tether Gold on Ethereum. You can receive any s
 
 ## Before you confirm
 
-The quote shows what you pay and get in dollars, the rate, and what the swap costs.
+The quote shows what you pay and get in dollars, the rate, the fees, and any price difference.
 
 - You can swap up to your balance. Aura checks it before it gets a quote.
 - A quote lasts 45 seconds. After that, get a new one.
 - The asset lists are grouped like your Overview: Cash, Crypto, Stocks, and Metals. Stocks are listed by company name, such as Apple (AAPLc).
 - The rate is priced in cash when one side is cash, so buying and selling Apple both show "1 AAPLc = … USDC".
-- **Cost of this swap** is the dollar value you pay minus the dollar value you get. It covers the exchange's fees, any transfer fee to another network, and the price difference your amount causes. It is already taken out of what the quote says you receive.
+- **Fees** are what the exchange, and any transfer to another network, charge. **Price difference** is what your amount loses to the market: the dollar value you pay, minus the dollar value you get, minus the fees. Nobody charges it, so it has its own line, and it's left out when there is none. Both are already taken out of what the quote says you receive.
 - Aura pays the network fee on the network you pay from.
 - **Price can move up to** sits in the quote, next to the least you get. It's 0.5% unless you pick 0.1% or 1%, and picking another value refreshes the quote. On the same network, if the price moves further before the swap goes through, the swap stops and what you paid with stays in your account.
 - You can only swap assets on Aura's reviewed list. If your amount would cost more than 3% because the market can't take it at a fair price, Aura tells you and suggests a smaller amount.
