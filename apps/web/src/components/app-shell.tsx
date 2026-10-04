@@ -21,7 +21,7 @@ import { ThemeChoice } from "./theme-choice";
 /** The twelve sections, in order, not grouped (redesign-journeys.md, Navigation). */
 const sections: { label: string; href: string }[] = navigation.flatMap((group) => [...group.items]);
 const iconFor: Record<string, LucideIcon> = {
-  Overview: LayoutGrid, Deposit: ArrowDownToLine, Send: ArrowUpFromLine, Swap: ArrowDownUp, Earn: TrendingUp, Perps: CandlestickChart, Predictions: CirclePercent,
+  Overview: LayoutGrid, "Add money": ArrowDownToLine, Send: ArrowUpFromLine, Swap: ArrowDownUp, Earn: TrendingUp, Perps: CandlestickChart, Predictions: CirclePercent,
   Cards: CreditCard, Transactions: List, Insights: ChartNoAxesColumn, Settings, Support: CircleHelp
 };
 

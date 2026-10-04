@@ -264,7 +264,7 @@ test("while deposits from other networks are switched off, the customer is told 
   await wallet(page).getByLabel("Amount in USDC").fill("10");
   await wallet(page).getByRole("button", { name: "Review" }).click();
   await expect(toast(page, "Not available right now")).toBeVisible({ timeout: 20_000 });
-  await expect(page.locator(".toastRegion")).toContainText("aren't available right now");
+  await expect(page.locator(".toastRegion")).toContainText("isn't available right now");
   expect(await sent()).toEqual([]);
 });
 

@@ -22,7 +22,7 @@ The root layout loads `design-tokens.css` for the whole app, and every area is s
 | --- | --- | --- |
 | App shell: sidebar, top bar, phone header, menu button and sheet, account menu, notifications, toasts, terms and account screens | `apps/web/src/app/shell.css`, classes prefixed `app` | Rebuilt |
 | Overview: total, group chips, holdings table or list, holding detail, recent transactions, guest example, empty account | `apps/web/src/app/overview.css`, classes prefixed `ov`; the shared guest banner is in `shell.css` | Rebuilt |
-| Deposit: the four ways as tabs (desktop) or rows (phone), receive, from a wallet, card, bank checklist and details | `apps/web/src/app/money.css`, classes prefixed `mx`, shared with Send and Swap | Rebuilt |
+| Add money: the four ways as tabs (desktop) or rows (phone), receive, from a wallet, card, bank checklist and details | `apps/web/src/app/money.css`, classes prefixed `mx`, shared with Send and Swap | Rebuilt |
 | Send: two tabs (to a person or wallet, to a bank account), amount and asset, recipient faces, one To field for an address or @tag, a review step, and progress in place, in one column | `money.css` | Rebuilt |
 | Swap: you pay and you receive, each with an asset dropdown (what you hold and its balance first on the side that pays), Max, reverse, how far the price can move, and the quote with its countdown, dollar values, rate, fees, and reference prices beside the form. Once it's sent, the quote gives way to the progress and New swap | `money.css` | Rebuilt |
 | Earn: your positions in dollars as last read, then markets and vaults, each opening to Deposit and Withdraw tabs | `money.css`, classes prefixed `er` | Rebuilt |
@@ -227,7 +227,7 @@ In the app, the shared parts are React components in `apps/web/src/components`, 
 - Desktop: 36px high, sized to the label, 14px medium. Primary actions in a side column or review are full width at 44px.
 - Phone: 44px, and the step's main action is full width at the bottom of the screen, above the safe area.
 - Disabled: 45% opacity, not clickable, and the reason is shown next to it. Busy: the label stays, a small spinner replaces the icon, and the button ignores taps.
-- An icon only when it helps recognition (Send, Deposit). Never an arrow at the end.
+- An icon only when it helps recognition (Send, Add money). Never an arrow at the end.
 
 ### Inputs
 
@@ -268,7 +268,7 @@ A surface with a line border, `--radius-lg`, and shadow 1. A card groups things 
 - A row: a 32px icon or logo circle, a title and a small secondary line, and on the right the amount and, below it, a status or time.
 - 56px minimum on desktop, 60px on the phone. Hover fills with `--color-hover` on desktop. The whole row is the tap target.
 - Rows are separated by a line, inside a card or directly on the page.
-- A list of choices that open in place uses rows too: Deposit's four ways, each with what it's for, sit beside the open one on desktop and above it on tablet and phone. The selected row has the accent-soft fill.
+- A list of choices that open in place uses rows too: Add money's four ways, each with what it's for, sit beside the open one on desktop and above it on tablet and phone. The selected row has the accent-soft fill.
 
 ### Tables (desktop)
 
