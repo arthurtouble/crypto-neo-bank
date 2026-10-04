@@ -72,8 +72,9 @@ Each journey is drawn step by step in the storyboards. The frame numbers (J5.3 a
 - **J3 Check my money.** Total value, with when it was read and what it leaves out. Then:
   - Group filters with their totals, and one holdings table (desktop) or list (phone).
   - Recent transactions: beside the table on desktop, the last three below the list on the phone.
-  - Deposit, Send, Swap, and Earn in that order: buttons in the header on desktop, round quick buttons on the phone.
-  - A holding opens its detail, with Send, Swap, and Deposit for that asset.
+  - Add money, Send, Swap, and Earn in that order: buttons in the header on desktop, round quick buttons on the phone. Send is the main button, or Add money while the account is empty.
+  - A holding opens its detail, with buttons for what that asset can do: Buy, Sell, and Send for stocks, gold, and crypto (Swap opens set up from or to USDC); Send, Add money, and Swap for cash; Withdraw and Deposit for an Earn position (Earn opens at that position).
+  - An empty account lists the four ways to add money, each opening its tab on Add money, with Coming soon or Not available right now on a way that can't be used yet.
 
 ### Money
 
@@ -88,7 +89,7 @@ Each journey is drawn step by step in the storyboards. The frame numbers (J5.3 a
   - **Another network:** the summary shows what arrives after fees.
   - **Review:** always its own step, then the passkey, then the result.
 - **J6 Send to a bank.** The second tab of Send. Choose or add a bank, then amount in USD and speed, then a review (B1) and the passkey. The result is a timeline of Bridge's steps.
-- **J7 Swap.** A page. You pay (what you hold, from a dropdown with balances, and Max) and You receive (every supported asset, from a dropdown), with how far the price can move as a small setting. The quote has a countdown, dollar values, the rate, the fees, and reference-price warnings. When there's no quote, or Swap is switched off, or the account is empty, the page says why.
+- **J7 Swap.** A page. You pay (what you hold, from a dropdown with balances, and Max) and You receive (every supported asset, from a dropdown), both dropdowns grouped like the Overview (Cash, Crypto, Stocks, Metals) and named as it names them ("Apple · AAPLc"). The quote has a countdown, dollar values, the rate (priced in cash when one side is cash), the fees, any price difference on its own line, how far the price can move (0.5% unless changed there; changing it re-quotes in place), and market-price warnings. When there's no quote, or Swap is switched off, or the account is empty, the page says why.
 - **J8 Earn.** Positions first, in dollars as last read, then every vault. A vault opens with Deposit and Withdraw tabs, the balance for each, and Max. Review and passkey work as in Send.
 
 ### Cards

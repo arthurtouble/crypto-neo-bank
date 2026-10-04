@@ -7,7 +7,7 @@ Transactions lists the money you send, swap, move, and put in Earn with Aura, yo
 
 At the top, a [summary](#summary) adds up money in and out for a period. Below it, the list is grouped by day, newest first. You can search, pick a type (**All**, **Sent**, **Received**, **Card**, **Swaps**, **Earn**, **Markets**, or **Other**), or filter by status. If part of your history can't be read, one note above the list names what's missing, and the rest still shows. **Show more**, under the list, loads older activity.
 
-For the steps from asking to settling, see [how Aura works](/concepts/architecture/). You can cancel any time before you confirm.
+For the steps from asking to completed, see [how Aura works](/concepts/architecture/). You can cancel any time before you confirm.
 
 ## What each status means
 
@@ -15,17 +15,17 @@ For the steps from asking to settling, see [how Aura works](/concepts/architectu
 | --- | --- |
 | **Pending** | You confirmed it, and Aura is waiting for it to be included on the network. A move between networks stays pending until it arrives. |
 | **Completed** | It's in a block and matches what you reviewed: the expected transfer or deposit appeared. A move between networks must also arrive. Your balance already includes it. |
-| **Failed** | The network rejected it, the route failed, or the result didn't match what you reviewed. The receipt shows the reason. |
+| **Failed** | The network rejected it, the move to another network failed, or the result didn't match what you reviewed. The receipt shows the reason. |
 | **Not sent** | You didn't confirm it in time, so nothing was sent. Check your activity before you try again. This isn't the same as failed. |
 
-A transaction on Base is usually completed within seconds and **final** about 20 minutes later, once it's settled on Ethereum. Until then, a block could very rarely be rewritten, so Aura keeps checking. The receipt and exports show when it's final. What Aura checks: [after you submit](/safety/security-model/#after-you-submit).
+A transaction on Base is usually completed within seconds and **final** about 20 minutes later, once Base has recorded it on Ethereum. Until then, a block could very rarely be rewritten, so Aura keeps checking. The receipt and exports show when it's final. What Aura checks: [after you submit](/safety/security-model/#after-you-submit).
 
 ## Receipts
 
 Open any item to see its receipt: beside the list on a computer, on its own screen on a phone. For something you did in Aura, the receipt shows each step with its time, and updates while you watch:
 
 - A send on Base goes from sent, to complete on Base, to final on Base.
-- A send to another network goes from sent from Base, to confirmed on Base, to delivered on the other network, to complete.
+- A send to another network goes from sent from Base, to confirmed on Base, to delivered on the other network, to completed.
 
 A bank payout also lists Bridge's updates, up to delivery to your bank. If something failed, the receipt says why in plain words. Setting your card's spending allowance moves no money, so it shows without an amount.
 
@@ -46,7 +46,7 @@ A deposit is **Completed** as soon as it's in a block. The receipt shows who sen
 
 Card payments come from Stripe, which issues the card.
 
-- A purchase is **Pending** while the merchant holds the amount, and **Completed** once the merchant settles it.
+- A purchase is **Pending** while the merchant holds the amount, and **Completed** once the merchant takes the final amount.
 - A declined purchase shows as **Failed**. No money moved.
 - Refunds show as money in.
 
@@ -92,4 +92,4 @@ Our operations team is alerted if a transaction is still waiting for the network
 
 Check Transactions and a block explorer before retrying anything uncertain. Repeating a transfer can mean paying twice.
 
-Blockchain transactions generally can't be reversed once settled. Aura can't recall funds sent to the wrong address, or cancel a confirmed move between networks.
+Blockchain transactions generally can't be reversed once completed. Aura can't recall funds sent to the wrong address, or cancel a confirmed move between networks.
