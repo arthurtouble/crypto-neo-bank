@@ -3,7 +3,7 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { useAuth } from "@/lib/client/auth";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowDownToLine, ArrowDownUp, ArrowLeft, ArrowUpFromLine, Building2, CreditCard, QrCode, TrendingUp, Wallet, X } from "lucide-react";
+import { ArrowDownToLine, ArrowDownUp, ArrowLeft, ArrowUpFromLine, Building2, ChevronRight, CreditCard, QrCode, TrendingUp, Wallet, X } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { entryAmount, entryLabel, statusLabel, type ActivityEntry } from "@/lib/activity/entries";
@@ -11,8 +11,11 @@ import type { History } from "@/lib/activity/history";
 import { registeredAsset } from "@/lib/assets/registry";
 import { ApiError, useApi } from "@/lib/client/api";
 import { useOverview } from "@/lib/client/queries";
+import { useBankAccount } from "@/lib/client/use-bank-account";
+import { ADD_MONEY_WAYS, addMoneyHref, type AddMoneyWay } from "@/lib/deposits/ways";
 import { exampleActivity } from "@/lib/example/data";
 import { formatCents, formatShortDateTime, formatTime, formatToken, formatWeekdayTime, fromRaw } from "@/lib/format";
+import { holdingActions } from "@/lib/overview/actions";
 import type { Holding, HoldingGroup, Overview } from "@/lib/overview/read";
 import { GuestBanner } from "./guest-banner";
 import { Sheet } from "./sheet";
@@ -25,7 +28,7 @@ const groups: Array<{ key: HoldingGroup; title: string }> = [
   { key: "metals", title: "Metals" },
   { key: "earn", title: "Earn" }
 ];
-const sources: Record<string, string> = { base: "Base", ethereum: "Ethereum", "aave:base": "Aave on Base", "morpho:base": "Morpho on Base", example: "Example" };
+const sources: Record<string, string> = { base: "Base", ethereum: "Ethereum", "aave:base": "Aave", "morpho:base": "Morpho", example: "Example" };
 
 function usdText(cents: number | null) {
   return cents === null ? "Unavailable" : formatCents(cents);
@@ -73,13 +76,7 @@ function HoldingRow({ holding, onOpen }: { holding: Holding; onOpen: () => void 
 /** A holding's detail, with what can be done with it: a side panel on desktop, a pushed screen on the phone. */
 function HoldingDetail({ holding, isExample, onSignIn, onClose }: { holding: Holding; isExample: boolean; onSignIn: () => void; onClose: () => void }) {
   const asset = registeredAsset(holding.id);
-  const actions: Array<{ label: string; href: string; primary?: boolean }> = holding.group === "earn"
-    ? [{ label: "Open Earn", href: "/app/earn", primary: true }]
-    : [
-      ...(asset?.uses.includes("send") ? [{ label: "Send", href: `/app/send?asset=${encodeURIComponent(asset.symbol)}`, primary: true }] : []),
-      ...(asset?.uses.includes("swap") ? [{ label: "Swap", href: `/app/swap?from=${encodeURIComponent(asset.id)}` }] : []),
-      ...(asset?.uses.includes("deposit") ? [{ label: "Deposit", href: "/app/deposit" }] : [])
-    ];
+  const actions = holdingActions(holding);
   const facts: Array<[string, React.ReactNode]> = [
     ["Amount", <span className="sensitiveAmount" key="amount">{amountText(holding)}</span>],
     ["Value", <HoldingValue holding={holding} key="value" />],
@@ -101,25 +98,42 @@ function HoldingDetail({ holding, isExample, onSignIn, onClose }: { holding: Hol
   </Sheet>;
 }
 
-/** Each way opens its own tab on Deposit. */
-const depositWays = [
-  { id: "receive", icon: QrCode, title: "Receive", detail: "From an exchange or another wallet" },
-  { id: "wallet", icon: Wallet, title: "From a wallet", detail: "Connect a wallet you already use" },
-  { id: "card", icon: CreditCard, title: "Card", detail: "Buy with a debit or credit card" },
-  { id: "bank", icon: Building2, title: "Bank", detail: "A US bank transfer, once you're verified" }
-];
+const wayIcons = { receive: QrCode, wallet: Wallet, card: CreditCard, bank: Building2 } satisfies Record<AddMoneyWay, unknown>;
+
+/** Every balance read, and every one is zero: nothing to send, swap, or earn with yet. */
+function isEmpty(overview: Overview) {
+  return overview.holdings.every((item) => item.status === "observed" && item.amountRaw === "0");
+}
+
+/** The ways to add money, each opening its tab on Add money. A way that can't be used yet says so before it's tapped. */
+function EmptyAccount() {
+  const api = useApi();
+  const { user } = useAuth();
+  const bank = useBankAccount();
+  // The same query, and so the same answer, as the card tab on Add money.
+  const card = useQuery({ queryKey: ["deposit-methods"], queryFn: () => api<{ card: boolean }>("/api/deposits/methods"), enabled: Boolean(user) });
+  const unavailable: Partial<Record<AddMoneyWay, string>> = {
+    ...(card.data && !card.data.card ? { card: "Not available right now" } : {}),
+    ...(bank.data && !bank.data.available ? { bank: "Coming soon" } : {})
+  };
+  return <section className="ovCard ovEmpty" aria-labelledby="overview-empty">
+    <div><h2 id="overview-empty">Your account is empty</h2><p>Choose how to add money.</p></div>
+    <ul className="ovWays">{ADD_MONEY_WAYS.map(({ id, label, detail }) => {
+      const Icon = wayIcons[id];
+      return <li key={id}><Link className="ovWay" href={addMoneyHref(id)}>
+      <span className="ovWayIcon"><Icon aria-hidden="true" /></span>
+      <span className="ovWayText"><strong>{label}</strong><small>{detail}</small>
+        {unavailable[id] && <span className="ovWayBadge">{unavailable[id]}</span>}</span>
+      <ChevronRight className="ovWayChevron" aria-hidden="true" /></Link></li>;
+    })}</ul>
+  </section>;
+}
 
 function Holdings({ overview, isExample, onSignIn }: { overview: Overview; isExample: boolean; onSignIn: () => void }) {
   const [filter, setFilter] = useState<HoldingGroup | "all">("all");
   const [open, setOpen] = useState<Holding | null>(null);
   const present = groups.filter((group) => overview.holdings.some((item) => item.group === group.key));
-  const empty = overview.holdings.every((item) => item.status === "observed" && item.amountRaw === "0");
-  if (empty) return <section className="ovCard ovEmpty" aria-label="Your account is empty">
-    <div><h2>Your account is empty</h2><p>Add money to get started.</p></div>
-    <ul className="ovWays">{depositWays.map(({ id, icon: Icon, title, detail }) => <li key={id}><Link className="ovWay" href={`/app/deposit#${id}`}>
-      <span className="ovWayIcon"><Icon aria-hidden="true" /></span><span><strong>{title}</strong><small>{detail}</small></span></Link></li>)}</ul>
-    <Link className="appButton appButtonPrimary" href="/app/deposit">Deposit</Link>
-  </section>;
+  if (isEmpty(overview)) return <EmptyAccount />;
   const shown = filter === "all" ? present : present.filter((group) => group.key === filter);
   return <>
     <div className="ovChips" role="group" aria-label="Show">
@@ -153,7 +167,8 @@ function Recent({ isExample }: { isExample: boolean }) {
   return <section className="ovCard ovRecent" aria-label="Recent transactions">
     <div className="ovCardHead"><h2>Recent</h2><Link className="appTextButton" href="/app/transactions">View all</Link></div>
     {!isExample && query.isPending ? <div className="ovRecentList" role="status" aria-label="Loading transactions">{[0, 1, 2].map((key) => <div className="ovSkelRow" key={key}><span className="ovSkel" /><span className="ovSkel" /></div>)}</div>
-      : !isExample && query.isError ? <p className="ovRecentNote">Transactions can&apos;t be read right now.</p>
+      : !isExample && query.isError ? <div className="ovNotice ovNoticeError ovRecentError" role="alert"><span>Transactions can&apos;t be loaded right now.</span>
+        <button type="button" className="appTextButton" onClick={() => void query.refetch()}>Try again</button></div>
         : !entries?.length ? <p className="ovRecentNote">No transactions yet. Money you send, receive, swap, or earn shows up here.</p>
           : <ul className="ovRecentList">{entries.map((entry) => <RecentRow key={entry.id} entry={entry} isExample={isExample} />)}</ul>}
   </section>;
@@ -174,7 +189,7 @@ function RecentRow({ entry, isExample }: { entry: ActivityEntry; isExample: bool
 
 /** The same four actions, in the same order, as buttons on desktop and round buttons on the phone. */
 const quickActions = [
-  { href: "/app/deposit", label: "Deposit", icon: ArrowDownToLine },
+  { href: "/app/deposit", label: "Add money", icon: ArrowDownToLine },
   { href: "/app/send", label: "Send", icon: ArrowUpFromLine },
   { href: "/app/swap", label: "Swap", icon: ArrowDownUp },
   { href: "/app/earn", label: "Earn", icon: TrendingUp }
@@ -194,12 +209,14 @@ export function Dashboard() {
   const expired = overview.error instanceof ApiError && overview.error.status === 401;
   const isExample = overview.isExample;
   const data = overview.data;
+  // With nothing in the account, the one thing that works is adding money, so that's the main button.
+  const primaryAction = data && !isExample && isEmpty(data) ? "Add money" : "Send";
   return <div className="ovPage">
     {isExample && <GuestBanner onSignIn={login} ready={ready} />}
     <header className="ovHead">
       <h1>Overview</h1>
       <div className="ovHeadActions">
-        {quickActions.map(({ href, label, icon: Icon }) => <Link key={label} className={`appButton${label === "Send" ? " appButtonPrimary" : ""}`} href={href}><Icon aria-hidden="true" />{label}</Link>)}
+        {quickActions.map(({ href, label, icon: Icon }) => <Link key={label} className={`appButton${label === primaryAction ? " appButtonPrimary" : ""}`} href={href}><Icon aria-hidden="true" />{label}</Link>)}
       </div>
     </header>
     {overview.isPending ? <Loading />

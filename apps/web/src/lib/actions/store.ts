@@ -49,7 +49,11 @@ export async function getActionForOperator(db: D1Database, id: string): Promise<
   return row ? fromRow(row) : null;
 }
 
-type ActionFilter = { status?: StoredAction["status"]; kind?: ActionKind; subject?: string; stuck?: boolean; before?: string; limit?: number };
+/**
+ * `before` is a time; `beforeId` also takes actions created at that same instant with a smaller ID ("all" takes every
+ * one), so a page that ends inside a group of same-instant actions continues where it stopped.
+ */
+type ActionFilter = { status?: StoredAction["status"]; kind?: ActionKind; subject?: string; stuck?: boolean; before?: string; beforeId?: string; limit?: number };
 
 /** Every customer's actions, newest first, for operators. Prepared actions nobody signed are left out. */
 export async function listActionsForOperator(db: D1Database, filter: ActionFilter, now = new Date()): Promise<StoredAction[]> {
@@ -58,12 +62,14 @@ export async function listActionsForOperator(db: D1Database, filter: ActionFilte
   if (filter.status) { where.push("status = ?"); values.push(filter.status); }
   if (filter.kind) { where.push("kind = ?"); values.push(filter.kind); }
   if (filter.subject) { where.push("subject_reference = ?"); values.push(filter.subject); }
-  if (filter.before) { where.push("created_at < ?"); values.push(filter.before); }
+  if (filter.before && filter.beforeId === "all") { where.push("created_at <= ?"); values.push(filter.before); }
+  else if (filter.before && filter.beforeId) { where.push("(created_at < ? OR (created_at = ? AND action_id < ?))"); values.push(filter.before, filter.before, filter.beforeId); }
+  else if (filter.before) { where.push("created_at < ?"); values.push(filter.before); }
   if (filter.stuck) {
     where.push("((status = 'submitted' AND submitted_at < ?) OR (status = 'settling' AND submitted_at < ?))");
     values.push(new Date(now.getTime() - STUCK_SUBMITTED_MS).toISOString(), new Date(now.getTime() - STUCK_SETTLING_MS).toISOString());
   }
-  const rows = await db.prepare(`${ACTIONS} WHERE ${where.join(" AND ")} ORDER BY created_at DESC LIMIT ?`)
+  const rows = await db.prepare(`${ACTIONS} WHERE ${where.join(" AND ")} ORDER BY created_at DESC, action_id DESC LIMIT ?`)
     .bind(...values, Math.min(filter.limit ?? 50, 100)).all<ActionRow>();
   return rows.results.map(fromRow);
 }

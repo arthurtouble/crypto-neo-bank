@@ -59,12 +59,12 @@ export default defineConfig({
           { label: "Bank transfers", slug: "product/bank-transfers" },
           { label: "Cards and controls", slug: "product/cards-and-controls" }
         ] },
-        { label: "Swap and earn", items: [
+        { label: "Swap, earn, and trade", items: [
           { label: "Swap", slug: "product/swaps" },
           { label: "Earn", slug: "product/earn" },
           { label: "Perps and predictions", slug: "product/markets" },
           { label: "Networks and assets", slug: "product/networks-and-assets" },
-          { label: "Tokenized stocks and gold", slug: "product/tokenized-stocks-and-gold" }
+          { label: "Stocks and gold", slug: "product/tokenized-stocks-and-gold" }
         ] },
         { label: "Safety", items: [
           { label: "Security model", slug: "safety/security-model" },

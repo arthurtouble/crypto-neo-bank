@@ -14,8 +14,8 @@ import { BASE_CHAIN_ID, registeredAsset } from "@/lib/assets/registry";
 import { useOverview } from "@/lib/client/queries";
 import Link from "next/link";
 import type { AssetId, CatalogAsset } from "@/lib/swap/assets";
-import { assetNetwork } from "@/lib/swap/picker-model";
-import { displayRawAmount, formatEstimatedFeeUsd } from "@/lib/swap/review-model";
+import { assetNetwork, isStock } from "@/lib/swap/picker-model";
+import { displayRawAmount, formatEstimatedFeeUsd, marketPriceText, priceDifferenceText, rateText } from "@/lib/swap/review-model";
 import { parseSwapDeepLink } from "@/lib/swap/links";
 import { SwapAssetSelect } from "./swap-asset-select";
 import { useToast } from "./toast";
@@ -33,7 +33,7 @@ export type RouteQuote = {
   references?: Array<{ assetId: string; usd: string; observedAt: string }>;
 };
 
-/** A quote's price this far from the reference is worth a second look (thin markets, closed exchanges). */
+/** A quote's price this far from the market price is worth a second look (closed or quiet markets). */
 const REFERENCE_WARNING_PERCENT = 2;
 
 function referenceTime(iso: string) {
@@ -51,20 +51,13 @@ function quotedPrice(quote: RouteQuote, assetId: string): number | null {
 function quoteErrorText(error: unknown): string {
   if (error instanceof ApiError && error.code === "feature_unavailable") return "Swaps aren't available right now.";
   if (error instanceof ApiError && error.code === "rate_limited") return "Too many quotes. Wait a minute and try again.";
-  if (error instanceof ApiError && error.code === "provider_unavailable") return "We can't get a price right now. Try again in a few minutes.";
-  if (error instanceof ApiError && error.code === "balance_unavailable") return "We can't read your balance right now. Try again in a minute.";
-  return error instanceof Error ? error.message : "We couldn't get a quote. Try again.";
+  if (error instanceof ApiError && error.code === "provider_unavailable") return "Prices can't be loaded right now. Try again in a few minutes.";
+  if (error instanceof ApiError && error.code === "balance_unavailable") return "Your balance can't be read right now. Try again in a minute.";
+  return error instanceof Error ? error.message : "The quote can't be loaded right now. Try again.";
 }
 
 /** " on Ethereum" for an asset off the account's own network; nothing on Base. */
 function onNetwork(chainId: number) { return chainId === BASE_CHAIN_ID ? "" : ` on ${assetNetwork(chainId)}`; }
-
-/** "1 USDC = 0.995 AAPLc", from the quote's own amounts. */
-function rateText(quote: RouteQuote) {
-  const paid = fromRaw(quote.fromAmountRaw, quote.from.decimals);
-  const received = fromRaw(quote.toAmountRaw, quote.to.decimals);
-  return paid > 0 ? `1 ${quote.from.symbol} = ${formatToken(received / paid)} ${quote.to.symbol}` : "Unavailable";
-}
 
 /** Delivered somewhere the account doesn't hold (USDC on Arbitrum, say), so it won't show in Aura. Gold on Ethereum is held. */
 function leavesAura(quote: RouteQuote) { return !registeredAsset(quote.to.id)?.uses.includes("hold"); }
@@ -97,7 +90,7 @@ export function SwapWorkspace() {
     return () => window.clearInterval(timer);
   }, [quote]);
 
-  const readAsset = (id: AssetId) => api<{ asset: CatalogAsset; switches?: SwapSwitches }>(`/api/swap/assets?import=${encodeURIComponent(id)}`)
+  const readAsset = (id: AssetId) => api<{ asset: CatalogAsset; switches?: SwapSwitches; places?: { stocks: string | null } }>(`/api/swap/assets?import=${encodeURIComponent(id)}`)
     .catch((reason) => { if (reason instanceof ApiError && reason.status === 404) return null; throw reason; });
   const fromAsset = useQuery({ queryKey: ["swap-asset", fromAssetId], queryFn: () => readAsset(fromAssetId), staleTime: 30_000 });
   const toAsset = useQuery({ queryKey: ["swap-asset", toAssetId], queryFn: () => readAsset(toAssetId), staleTime: 30_000 });
@@ -107,6 +100,9 @@ export function SwapWorkspace() {
   const switches = fromAsset.data?.switches ?? toAsset.data?.switches;
   const otherNetwork = Boolean(source && destination && source.chainId !== destination.chainId);
   const switchedOff = switches ? !(otherNetwork ? switches.otherNetwork : switches.sameNetwork) : false;
+  // Buying a stock is refused where the customer is (the quote checks again); say so before an amount is typed.
+  const stocksNotHere = fromAsset.data?.places?.stocks ?? toAsset.data?.places?.stocks ?? null;
+  const placeBlocked = Boolean(stocksNotHere && destination && isStock(destination));
   const sourceChainId = SUPPORTED_CHAINS.find((chain) => chain.id === source?.chainId)?.id;
   const nativeBalance = useNativeBalance(address, sourceChainId, Boolean(source && source.address === null));
   const tokenBalance = useTokenBalance(source?.address as `0x${string}` | undefined, address, sourceChainId, Boolean(source?.address));
@@ -127,9 +123,11 @@ export function SwapWorkspace() {
     setFromAssetId(toAssetId); setToAssetId(fromAssetId); setAmount(""); clearQuote();
   }
 
-  async function getQuote(event?: React.FormEvent) {
+  /** A new quote. Changing how far the price can move re-quotes in place: the old quote stays until the new one is in. */
+  async function getQuote(event?: React.FormEvent, nextSlippageBps?: number) {
     event?.preventDefault();
-    clearQuote();
+    const requote = nextSlippageBps !== undefined;
+    if (requote) setSlippageBps(nextSlippageBps); else clearQuote();
     let requested = false;
     try {
       if (!source || !destination || !address) throw new Error("Choose two available assets.");
@@ -139,13 +137,14 @@ export function SwapWorkspace() {
         throw new Error(availableRaw === 0n ? `You don't have any ${source.symbol}.` : `You have ${formatUnits(availableRaw, source.decimals)} ${source.symbol}. Enter that or less.`);
       setQuoting(true);
       requested = true;
-      const query = new URLSearchParams({ from: source.id, to: destination.id, amount, slippageBps: String(slippageBps) });
+      const query = new URLSearchParams({ from: source.id, to: destination.id, amount, slippageBps: String(nextSlippageBps ?? slippageBps) });
       const body = await api<{ quote: RouteQuote }>(`/api/routes/quote?${query}`);
       setNow(Date.now());
       setQuote(body.quote);
     } catch (caught) {
       // Input problems stay next to the form; a failed quote request is an outcome.
       // Except not holding enough, which the customer fixes in the form.
+      if (requote) setQuote(null);
       if (requested && !(caught instanceof ApiError && caught.code === "insufficient_balance")) toast.error("No quote", quoteErrorText(caught));
       else setError(quoteErrorText(caught));
     }
@@ -160,6 +159,7 @@ export function SwapWorkspace() {
   }
 
   const quoteUsed = Boolean(quote && usedQuoteId === quote.id);
+  const priceDifference = quote ? priceDifferenceText(quote) : null;
   const done = swap.phase === "done" || handedOff;
   const failed = swap.action?.status === "failed" || swap.action?.status === "expired";
   // An empty account has nothing to swap yet: point to Deposit rather than a form that can only say "you don't have any".
@@ -174,7 +174,7 @@ export function SwapWorkspace() {
     <div className="mxMain">
       <section className="mxPanel" aria-label="Swap form">
         <form className="mxForm mxSwapForm" onSubmit={(event) => void getQuote(event)}>
-          {empty && <Notice>Your account is empty. <Link className="mxInlineLink" href="/app/deposit">Deposit</Link> first, then swap.</Notice>}
+          {empty && <Notice>Your account is empty. <Link className="mxInlineLink" href="/app/deposit">Add money</Link> first, then swap.</Notice>}
           <div className="mxSwapSide">
             <div className="mxSwapSideHead"><span className="mxLabel">You pay</span><SwapAssetSelect value={fromAssetId} label="You pay" held disabled={inFlight} onSelect={chooseFrom} /></div>
             <div className="mxSwapAmountRow">
@@ -192,12 +192,11 @@ export function SwapWorkspace() {
             <strong className="mxSwapAmount mxSwapEstimate">{showQuote ? displayRawAmount(quote.toAmountRaw, quote.to.decimals) : "—"}</strong>
             <span className="mxHint">{showQuote ? quote.toAmountUsd ? `About ${formatUsd(quote.toAmountUsd)}` : "Estimated" : "Enter an amount"}</span>
           </div>
-          <div className="mxSwapSettings"><span className="mxLabel" id="swap-slippage">Price can move up to</span>
-            <div className="appSegmented" role="group" aria-labelledby="swap-slippage">{[10, 50, 100].map((value) => <button type="button" key={value} disabled={inFlight} aria-pressed={slippageBps === value} onClick={() => { setSlippageBps(value); clearQuote(); }}>{value / 100}%</button>)}</div></div>
+          {placeBlocked && <Notice tone="warning" data-testid="swap-place-blocked">{stocksNotHere}</Notice>}
           {switchedOff && <Notice tone="warning">{otherNetwork ? "Swaps to or from another network aren't available right now." : "Swaps aren't available right now."}</Notice>}
           {error && <p className="mxFieldError" role="alert">{error}</p>}
           {/* One primary action at a time: once there's a quote, its Swap button is it. */}
-          {!showQuote && !done && <button className="appButton appButtonPrimary appButtonLarge" type="submit" disabled={quoting || inFlight || switchedOff || !address || !source || !destination}>
+          {!showQuote && !done && <button className="appButton appButtonPrimary appButtonLarge" type="submit" disabled={quoting || inFlight || switchedOff || placeBlocked || !address || !source || !destination}>
             {quoting ? <><LoaderCircle className="spin" aria-hidden="true" /> Getting quote</> : !address ? "Preparing your wallet" : "Get quote"}
           </button>}
         </form>
@@ -210,20 +209,27 @@ export function SwapWorkspace() {
           <div><dt>You pay</dt><dd>{displayRawAmount(quote.fromAmountRaw, quote.from.decimals)} {quote.from.symbol}{onNetwork(quote.from.chainId)}</dd></div>
           <div><dt>You receive about</dt><dd>{displayRawAmount(quote.toAmountRaw, quote.to.decimals)} {quote.to.symbol}{onNetwork(quote.to.chainId)}</dd></div>
           <div><dt>You get at least</dt><dd>{displayRawAmount(quote.toAmountMinRaw, quote.to.decimals)} {quote.to.symbol}</dd></div>
-          <div><dt>Rate</dt><dd>{rateText(quote)}</dd></div>
+          <div className="mxSwapPriceMove"><dt id="swap-slippage">Price can move up to</dt>
+            <dd><div className="appSegmented" role="group" aria-labelledby="swap-slippage">{[10, 50, 100].map((value) => <button type="button" key={value}
+              disabled={quoting || swap.phase !== "idle" || quoteUsed} aria-pressed={slippageBps === value}
+              onClick={() => { if (value !== slippageBps) void getQuote(undefined, value); }}>{value / 100}%</button>)}</div></dd></div>
+          <div><dt>Rate</dt><dd>{rateText(quote.from, quote.to, quote.fromAmountRaw, quote.toAmountRaw)}</dd></div>
           <div><dt>Network fee</dt><dd className="mxPositive">Paid by Aura</dd></div>
-          <div><dt>{crossChain ? "Exchange and transfer fees" : "Exchange fee"}</dt><dd>{crossChain && quote.fromAmountUsd && quote.toAmountUsd
-            ? `About ${formatEstimatedFeeUsd(Math.max(0, Number(quote.fromAmountUsd) - Number(quote.toAmountUsd)))}, taken from the amount` : formatEstimatedFeeUsd(quote.providerFeeUsd)}</dd></div>
-          {quote.priceImpactPercent !== null && <div><dt>Price effect of this swap</dt><dd>{quote.priceImpactPercent.toFixed(2)}%</dd></div>}
+          {/* Fees are only what is charged; the price difference is what the amount loses to the market, on its own line. */}
+          <div><dt>Fees</dt><dd>{formatEstimatedFeeUsd(quote.providerFeeUsd)}</dd></div>
+          {priceDifference && <div><dt>Price difference</dt><dd>{priceDifference}</dd></div>}
         </dl>
+        {/* A same-network swap is one transaction: below the minimum, the chain undoes it. */}
+        <p className="mxHint" data-testid="swap-price-move">Fees and the price difference are already taken out of what you receive.
+          {!crossChain && ` If the price moves more than ${slippageBps / 100}% before it goes through, the swap stops and your ${quote.from.symbol} stays in your account.`}</p>
         {(quote.references ?? []).map((reference) => {
           const asset = reference.assetId === quote.to.id ? quote.to : quote.from;
           const quoted = quotedPrice(quote, reference.assetId);
           const gap = quoted === null ? null : Math.abs(quoted - Number(reference.usd)) / Number(reference.usd) * 100;
           const far = gap !== null && gap > REFERENCE_WARNING_PERCENT;
           return <p className={`mxNote${far ? " mxNoteWarning" : ""}`} key={reference.assetId} data-testid="swap-reference">
-            {asset.symbol} reference price ${Number(reference.usd).toLocaleString("en-US", { maximumFractionDigits: 2 })}, as of {referenceTime(reference.observedAt)}.
-            {far ? ` This quote is about ${gap.toFixed(1)}% away from it. Markets may be closed or thin, so check the amount.` : ""}
+            {marketPriceText(asset.symbol, reference.usd, referenceTime(reference.observedAt))}
+            {far ? ` This quote is about ${gap.toFixed(1)}% away from it. The market may be closed or quiet, so check the amount.` : ""}
             {crossChain ? ` Arrival on ${assetNetwork(quote.to.chainId)} usually takes up to 30 minutes.` : ""}
           </p>;
         })}
@@ -234,10 +240,11 @@ export function SwapWorkspace() {
           ? <button className="appButton appButtonPrimary appButtonLarge" type="button" disabled><LoaderCircle className="spin" aria-hidden="true" /> {swap.phase === "preparing" ? "Checking" : swap.phase === "signing" ? "Confirm with your passkey" : "Swapping"}</button>
           : remaining === 0 || quoteUsed
             ? <button className="appButton appButtonLarge" type="button" disabled={quoting || swap.outcomeUnknown} onClick={() => void getQuote()}><RefreshCw aria-hidden="true" /> {remaining === 0 ? "Quote expired. Refresh" : "Get a new quote"}</button>
-            : <button className="appButton appButtonPrimary appButtonLarge" type="button" onClick={() => void confirm()}>Swap</button>}
+            : quoting ? <button className="appButton appButtonPrimary appButtonLarge" type="button" disabled><LoaderCircle className="spin" aria-hidden="true" /> Getting quote</button>
+              : <button className="appButton appButtonPrimary appButtonLarge" type="button" onClick={() => void confirm()}>Swap</button>}
       </section> : !done && <section className="mxCard mxQuoteEmpty">
         <h2>Quote</h2>
-        <p className="mxHint">Choose what you pay and receive, and an amount. The quote shows what you get and the fees before you swap.</p>
+        <p className="mxHint">Choose what you pay and receive, and an amount. The quote shows what you get and what it costs before you swap.</p>
       </section>}
       <TransactionProgress label="Swap" phase={swap.phase} action={swap.action} outcomeUnknown={swap.outcomeUnknown} />
       {done && <button className="appButton appButtonPrimary appButtonLarge" type="button" onClick={startOver}>{failed ? "Try again" : "New swap"}</button>}

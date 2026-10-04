@@ -1,6 +1,6 @@
 ---
 title: FAQ
-description: "Short answers about Aura: trying it without an account, who holds your keys, fees, supported assets and networks, bank transfers and cards, and reversing a payment."
+description: "Short answers about Aura: trying it without an account, who holds your keys, fees, supported assets and networks, bank transfers and cards, perps and predictions, and reversing a payment."
 ---
 
 ## Can I try Aura without an account?
@@ -17,11 +17,15 @@ No. Aura pays the network fee for actions from your Aura account. When you add m
 
 ## What can I hold and send?
 
-ETH, USDC, EURC, WETH, cbBTC, ten tokenized stocks, and Tether Gold. See [networks and assets](/product/networks-and-assets/).
+ETH, USDC, EURC, WETH, cbBTC, ten stocks, and Tether Gold. See [networks and assets](/product/networks-and-assets/).
 
 ## Can I use bank transfers and cards?
 
-Not yet. Both are built and waiting for our partners' approval. See [product status](/getting-started/status/).
+Not yet. Both are built and waiting for Bridge's approval. See [product status](/getting-started/status/).
+
+## Can I trade perps and predictions?
+
+They're built and not switched on yet. Perps run on Hyperliquid and predictions on Polymarket, from accounts your wallet owns, and Aura charges no fee. See [perps and predictions](/product/markets/).
 
 ## Can Aura reverse a payment?
 
@@ -29,8 +33,8 @@ No. A confirmed blockchain transaction can't be reversed by Aura or anyone else.
 
 ## Is my money insured?
 
-No. Assets in your wallet and Earn positions aren't bank deposits and aren't insured. See the [risk disclosure](/legal/risk-disclosure/).
+No. Assets in your wallet, Earn positions, and money in your perps and predictions accounts aren't bank deposits and aren't insured. See the [risk disclosure](/legal/risk-disclosure/).
 
 ## Where is Aura available?
 
-Anyone can browse and sign in, except from sanctioned places. Partner features, like bank transfers and cards, will depend on where you live. See [access and availability](/getting-started/access/).
+Anyone can browse and sign in, except from sanctioned places. Perps, predictions, and buying stocks aren't available in some countries, and partner features, like bank transfers and cards, will depend on where you live. See [access and availability](/getting-started/access/).

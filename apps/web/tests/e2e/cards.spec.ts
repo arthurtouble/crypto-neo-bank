@@ -158,7 +158,7 @@ test("the card spends only up to the allowance, its payments are in Transactions
   const receipt = page.getByRole("dialog");
   await expect(receipt).toContainText("Completed");
   await expect(receipt).toContainText("Under review");
-  await expect(receipt.getByTestId("card-payment-note")).toContainText("Paid with your card from your USDC on Base");
+  await expect(receipt.getByTestId("card-payment-note")).toHaveText("Paid with your card from your USDC.");
   await expect(receipt.getByRole("link", { name: /View on the network/ })).toHaveAttribute("href", /basescan\.org\/tx\/0x[0-9a-f]{64}$/);
   await expect(receipt.getByRole("link", { name: "Open Cards" })).toHaveAttribute("href", "/app/cards");
 
