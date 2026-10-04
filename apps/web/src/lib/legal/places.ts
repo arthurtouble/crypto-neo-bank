@@ -124,10 +124,10 @@ const restrictedMessages: Record<ProviderPlaceRule, string> = {
   stocks: "Stocks aren't available where you are. You can still sell or send the ones you hold."
 };
 
-/** What a page says, before anything is filled in, when the request's place can't start something new under this rule; undefined when it can. */
-export function providerPlaceNotice(request: Request, rule: ProviderPlaceRule): string | undefined {
+/** What a page shows up front when this rule keeps the request's place from starting something new, or null. */
+export function providerPlaceNotice(request: Request, rule: ProviderPlaceRule): string | null {
   const { country, region } = requestPlace(request);
-  return providerRestrictedPlace(rule, country, region) ? restrictedMessages[rule] : undefined;
+  return providerRestrictedPlace(rule, country, region) ? restrictedMessages[rule] : null;
 }
 
 /** Refuse a request that would start something new under this rule from a place its provider doesn't serve. */

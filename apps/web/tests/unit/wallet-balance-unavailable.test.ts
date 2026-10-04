@@ -39,7 +39,8 @@ describe("wallet balance authority", () => {
     search.params = "";
     const html = renderToStaticMarkup(createElement(WalletWorkspace)).replaceAll("<!-- -->", "");
     // The Asset field offers the registry's sendable assets, and nothing else.
-    const offered = [...html.matchAll(/<option(?: selected="")?>([^<]+)<\/option>/g)].map((match) => match[1]);
+    // (Network options carry a chain ID as their value; asset options carry the symbol.)
+    const offered = [...html.matchAll(/<option value="([^"]+)"(?: selected="")?>[^<]+<\/option>/g)].map((match) => match[1]).filter((value) => !/^\d+$/.test(value));
     expect(offered).toEqual(assetsFor("send").map((item) => item.symbol));
     for (const symbol of ["ETH", "USDC", "WETH", "cbBTC"]) expect(offered).toContain(symbol);
   });

@@ -70,6 +70,7 @@
 .appFrame .ovRecentAmount { justify-items: end; text-align: right; }
 .appFrame .ovRecentAmount strong { font-weight: var(--weight-medium); white-space: nowrap; }
 .appFrame .ovIn { color: var(--color-positive); }
+.appFrame .ovRecentError { margin: 0 var(--space-3) var(--space-3); }
 .appFrame .ovRecentNote { padding: var(--space-2) var(--space-5) var(--space-5); color: var(--color-text-secondary); font-size: var(--text-small-size); }
 
 /* Empty account */
@@ -79,7 +80,9 @@
 .appFrame .ovWays { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4) var(--space-6); width: 100%; }
 .appFrame .ovWay { display: flex; gap: var(--space-3); align-items: center; margin: calc(-1 * var(--space-2)); padding: var(--space-2); border-radius: var(--radius-md); color: var(--color-text); text-decoration: none; transition: background var(--duration-fast) var(--ease-enter); }
 .appFrame .ovWay:hover { background: var(--color-hover); }
-.appFrame .ovWay > span:last-child { display: grid; }
+.appFrame .ovWayText { display: grid; flex: 1; min-width: 0; }
+.appFrame .ovWayChevron { flex: none; color: var(--color-text-tertiary); }
+.appFrame .ovWayBadge { justify-self: start; margin-top: var(--space-1); display: inline-flex; align-items: center; height: 22px; padding: 0 var(--space-2); border-radius: var(--radius-pill); background: var(--color-muted); color: var(--color-text-secondary); font-size: var(--text-caption-size); font-weight: var(--weight-medium); white-space: nowrap; }
 .appFrame .ovWays strong { font-weight: var(--weight-medium); }
 .appFrame .ovWayIcon { width: 36px; height: 36px; flex: none; display: grid; place-items: center; border-radius: var(--radius-md); background: var(--color-accent-soft); color: var(--color-accent); }
 
@@ -128,7 +131,7 @@
   .appFrame .ovHeadActions, .appFrame .ovTableHead { display: none; }
   .appFrame .ovRecentList li:nth-child(n + 4) { display: none; }
   .appFrame .ovQuick { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-2); }
-  .appFrame .ovQuick a { display: grid; justify-items: center; gap: 6px; color: var(--color-text); font-size: var(--text-small-size); font-weight: var(--weight-medium); text-decoration: none; }
+  .appFrame .ovQuick a { display: grid; justify-items: center; align-content: start; gap: 6px; text-align: center; color: var(--color-text); font-size: var(--text-small-size); font-weight: var(--weight-medium); text-decoration: none; }
   .appFrame .ovQuick a > span { width: 48px; height: 48px; display: grid; place-items: center; border-radius: var(--radius-pill); background: var(--color-accent-soft); color: var(--color-accent); }
   .appFrame .ovQuick svg.lucide { width: 20px; height: 20px; }
   /* Seven figures still fit a 320px phone */
@@ -141,7 +144,6 @@
   .appFrame .ovGroupTitle { padding-inline: var(--space-4); }
   .appFrame .ovWays { grid-template-columns: minmax(0, 1fr); }
   .appFrame .ovEmpty { padding: var(--space-5) var(--space-4); }
-  .appFrame .ovEmpty .appButton { width: 100%; height: var(--control-height-lg); }
   .appFrame .ovNotice { flex-direction: column; align-items: stretch; }
   .ovPanel { width: 100vw; padding-top: calc(var(--space-2) + env(safe-area-inset-top)); box-shadow: none; }
   .ovScrim { display: none; }
@@ -152,5 +154,5 @@
 
 /* Touch targets: filter chips are at least 44px high on the phone and other touch screens */
 @media (max-width: 767px), (pointer: coarse) {
-  .appFrame .ovChip { height: var(--touch-min); }
+  .appFrame .ovChip { height: var(--touch-min); min-width: var(--touch-min); justify-content: center; }
 }

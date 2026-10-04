@@ -19,7 +19,7 @@ Your money lives on the blockchain, not with us, so we keep as little financial 
 | Consent and documents you accepted | Aura | Record which version you saw or accepted, and when |
 | Notification choices | Your choices | Keep them until you change them |
 | Notices sent to you | Aura | Keep each notice and whether it was delivered, for 180 days. Keep where to send browser notifications until you turn them off |
-| Card and wallet-rule records, once live | The card issuer (Stripe) or wallet provider | Keep the status the partner reports, and a copy of your card payments with their source and time. We can always rebuild these |
+| Card and wallet-rule records, once live | The card issuer (Stripe), or Privy for wallet rules | Keep the status the partner reports, and a copy of your card payments with their source and time. We can always rebuild these |
 | Product analytics | Aura | Accept only a fixed list of events. Never used for balances |
 | Partner updates | The partner and Aura | Keep them so we can retry, reconcile, and investigate |
 
@@ -43,7 +43,7 @@ Short-lived records are deleted automatically every hour: product events and del
 
 Logs help us keep Aura reliable and investigate incidents. They should never contain secrets, signing material, identity documents, or transaction details we don't need.
 
-Analytics answer narrow questions, like whether people finish setup or hit an error. The event list is fixed and rate-limited. Analytics never decide balances or settlement.
+Analytics answer narrow questions, like whether people finish setup or hit an error. The event list is fixed and rate-limited. Analytics never decide balances or whether a payment went through.
 
 ## Your choices
 

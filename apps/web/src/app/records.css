@@ -1,13 +1,40 @@
 /*
- * Transactions and Insights (redesign area 10, journeys J12 to J14), from the design tokens only, on the money parts in
- * money.css. Classes prefixed tx (Transactions, receipt, export) and in (Insights). The receipt uses the
- * side panel from overview.css; filter chips are the Overview's.
+ * Transactions (redesign area 10, journeys J12 to J14), from the design tokens only, on the money parts in money.css.
+ * Classes prefixed tx (Transactions, summary, receipt, export) and in (the summary's chart and merchants, once
+ * Insights). The receipt uses the side panel from overview.css; filter chips are the Overview's.
  */
 
 .appFrame .txHead { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); flex-wrap: wrap; }
 .appFrame .txHead h1 { margin: 0; font-size: var(--text-title-1-size); line-height: var(--text-title-1-line); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-tight); }
 .appFrame .txIn, .ovPanel .txIn { color: var(--color-positive); }
 
+
+/* The summary: four totals that narrow the list, and the chart and merchants on request */
+.appFrame .txSummaryHead { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; }
+.appFrame .txSummary h2 { margin: 0; font-size: var(--text-title-3-size); line-height: var(--text-title-3-line); font-weight: var(--weight-semibold); }
+.appFrame .txSummary h3 { margin: 0; font-size: var(--text-body-size); line-height: var(--text-body-line); font-weight: var(--weight-semibold); }
+.appFrame .txStat { width: 100%; min-height: 64px; display: grid; align-content: center; gap: 2px; padding: var(--space-2) var(--space-3); border: 1px solid transparent; border-radius: var(--radius-md); background: none; color: var(--color-text); font: inherit; text-align: left; }
+.appFrame button.txStat { cursor: pointer; }
+.appFrame button.txStat:hover { background: var(--color-hover); }
+.appFrame button.txStat:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; }
+.appFrame button.txStat[aria-pressed="true"] { border-color: var(--color-accent); background: var(--color-accent-soft); }
+.appFrame .txStatLabel { color: var(--color-text-secondary); font-size: var(--text-small-size); font-weight: var(--weight-medium); }
+.appFrame .txStat strong { font-size: var(--text-title-1-size); line-height: var(--text-title-1-line); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-tight); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.appFrame .txStat strong.appUnavailable { color: var(--color-warning); }
+.appFrame .txSkel { display: block; width: 72px; height: var(--text-title-1-line); border-radius: var(--radius-sm); background: var(--color-muted); }
+@media (prefers-reduced-motion: no-preference) { .appFrame .txSkel { animation: txPulse 1.4s ease-in-out infinite; } }
+@keyframes txPulse { 50% { opacity: .5; } }
+.appFrame .txSummaryToggle { justify-self: start; gap: var(--space-1); min-height: 44px; padding: 0; }
+.appFrame .txSummaryToggle svg { width: 16px; height: 16px; transition: transform var(--duration-fast) var(--ease-enter); }
+.appFrame .txSummaryToggle[aria-expanded="true"] svg { transform: rotate(180deg); }
+.appFrame .txSummaryDetails { display: grid; gap: var(--space-5); padding-top: var(--space-3); border-top: 1px solid var(--color-line); }
+.appFrame .txSummaryDetails[hidden] { display: none; }
+.appFrame .txSummaryDetails section { display: grid; gap: var(--space-3); }
+/* Shown above the list while a total narrows it */
+.appFrame .txFocus { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4); border-radius: var(--radius-md); background: var(--color-accent-soft); font-size: var(--text-small-size); }
+.appFrame .txFocus .appButton svg { width: 16px; height: 16px; }
+.appFrame .txList:focus { outline: none; }
+.appFrame .txList:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
 
 /* Search, type chips, status */
 .appFrame .txFilters { display: grid; grid-template-columns: minmax(180px, 260px) minmax(0, 1fr) 160px; gap: var(--space-3); align-items: center; }
@@ -36,6 +63,7 @@
 .appFrame .txEmpty { display: grid; justify-items: center; gap: var(--space-1); padding: var(--space-8) var(--space-5); text-align: center; }
 .appFrame .txEmpty strong { font-size: var(--text-title-3-size); line-height: var(--text-title-3-line); font-weight: var(--weight-semibold); }
 .appFrame .txEmpty span { color: var(--color-text-secondary); font-size: var(--text-small-size); }
+.appFrame .txEmpty .appButton { margin-top: var(--space-3); }
 
 /* The receipt, in the side panel */
 .ovPanel .ovFacts dd { min-width: 0; }
@@ -44,7 +72,10 @@
 .ovPanel .ovPanelActions svg { width: 16px; height: 16px; }
 .ovPanel .txBankUpdates { display: grid; gap: var(--space-3); }
 .ovPanel .txBankUpdates h3 { margin: 0; font-size: var(--text-body-size); font-weight: var(--weight-semibold); }
-.ovPanel .txReceiptRef { margin: 0; color: var(--color-text-tertiary); font-size: var(--text-caption-size); line-height: var(--text-caption-line); }
+.ovPanel .txReceiptRef { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); color: var(--color-text-tertiary); font-size: var(--text-caption-size); line-height: var(--text-caption-line); }
+.ovPanel .txReceiptRef > span { min-width: 0; }
+.ovPanel .txReceiptRef .appTextButton { flex: none; gap: var(--space-1); height: 44px; font-size: var(--text-small-size); }
+.ovPanel .txReceiptRef .appTextButton svg { width: 14px; height: 14px; }
 
 /* Export, in the dialog */
 .mxDialog .txExport { display: grid; border-top: 1px solid var(--color-line); }
@@ -75,12 +106,8 @@
 .actionJourney li.waiting strong { color: var(--color-text-tertiary); }
 .actionJourney small { margin-top: 2px; color: var(--color-text-secondary); font-size: var(--text-small-size); }
 
-/* Insights: the four numbers, the chart, then categories and merchants */
-.appFrame .inStats { margin: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-4); }
-.appFrame .inStats div { display: grid; gap: var(--space-1); }
-.appFrame .inStats dt { color: var(--color-text-secondary); font-size: var(--text-small-size); font-weight: var(--weight-medium); }
-.appFrame .inStats dd { margin: 0; font-size: var(--text-amount-size); line-height: var(--text-amount-line); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-tight); }
-.appFrame .inStats dd.appUnavailable { color: var(--color-warning); }
+/* The summary's totals, chart, and merchants (once the Insights page) */
+.appFrame .inStats { margin: 0 calc(-1 * var(--space-3)); padding: 0; list-style: none; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-2); }
 .appFrame .inChartHead { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; }
 .appFrame .inLegend { display: flex; gap: var(--space-4); color: var(--color-text-secondary); font-size: var(--text-small-size); }
 .appFrame .inLegend span, .appFrame .inTooltip span { display: inline-flex; align-items: center; gap: 6px; }
@@ -99,14 +126,17 @@
 .appFrame .inTooltip strong { font-weight: var(--weight-semibold); }
 .appFrame .inTooltip b { margin-left: auto; padding-left: var(--space-3); font-weight: var(--weight-medium); }
 .appFrame .inTable { color: var(--color-text-secondary); font-size: var(--text-small-size); }
-.appFrame .inTable summary { justify-self: start; color: var(--color-accent); font-weight: var(--weight-medium); cursor: pointer; }
+.appFrame .inTable summary { width: fit-content; padding-block: var(--space-3); justify-self: start; color: var(--color-accent); font-weight: var(--weight-medium); cursor: pointer; }
 .appFrame .inTable table { width: 100%; margin-top: var(--space-2); border-collapse: collapse; color: var(--color-text); }
 .appFrame .inTable th, .appFrame .inTable td { padding: var(--space-2) var(--space-1); border-bottom: 1px solid var(--color-line); text-align: left; font-weight: var(--weight-regular); }
 .appFrame .inTable thead th { color: var(--color-text-secondary); font-size: var(--text-caption-size); font-weight: var(--weight-medium); }
 .appFrame .inTable td, .appFrame .inTable thead th:not(:first-child) { text-align: right; }
-.appFrame .mxCard .inEmpty .appButton { justify-self: center; margin-top: var(--space-3); }
 .appFrame .inBars { margin: 0; padding: 0; list-style: none; display: grid; }
-.appFrame .inBarRow { display: grid; grid-template-columns: minmax(0, 140px) minmax(40px, 1fr) auto; gap: var(--space-3); align-items: center; min-height: 48px; border-top: 1px solid var(--color-line); }
+.appFrame .inBars li { border-top: 1px solid var(--color-line); }
+.appFrame .inBarRow { width: 100%; display: grid; grid-template-columns: minmax(0, 140px) minmax(40px, 1fr) auto; gap: var(--space-3); align-items: center; min-height: 48px; padding: 0; border: 0; background: none; color: var(--color-text); font: inherit; text-align: left; cursor: pointer; }
+.appFrame .inBarRow:hover { background: var(--color-hover); }
+.appFrame .inBarRow:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; }
+.appFrame .inBarName small { color: var(--color-text-secondary); font-size: var(--text-small-size); }
 .appFrame .inBarName { display: grid; min-width: 0; }
 .appFrame .inBarName strong { overflow: hidden; font-weight: var(--weight-medium); text-overflow: ellipsis; white-space: nowrap; }
 .appFrame .inBar { height: 6px; overflow: hidden; border-radius: var(--radius-pill); background: var(--color-muted); }
@@ -127,12 +157,12 @@
   .appFrame .txRow { padding-inline: var(--space-4); }
   .appFrame .txDay h2 { padding-inline: var(--space-4); }
   .appFrame .txChips { flex-wrap: wrap; overflow: visible; margin: 0; padding: 0; }
-  .appFrame .txHead .appSegmented { width: 100%; }
-  .appFrame .txHead .appSegmented button { flex: 1; height: 36px; }
-  .appFrame .inStats dd { font-size: var(--text-title-1-size); line-height: var(--text-title-1-line); }
+  .appFrame .txSummaryHead .appSegmented { width: 100%; }
+  .appFrame .txSummaryHead .appSegmented button { flex: 1; height: 44px; }
+  .appFrame .txStat strong { font-size: var(--text-title-2-size); line-height: var(--text-title-2-line); }
   .appFrame .inBarRow { grid-template-columns: minmax(0, 1fr) auto; row-gap: var(--space-1); padding: var(--space-2) 0; }
   .appFrame .inBar { grid-column: 1 / -1; grid-row: 2; }
-  .appFrame .mxCard .inEmpty .appButton { justify-self: stretch; height: var(--control-height-lg); }
+  .appFrame .txEmpty .appButton { justify-self: stretch; height: var(--control-height-lg); }
   .mxDialog .txExportMonth { flex-wrap: wrap; }
   .mxDialog .txExportMonth .appButton { width: 100%; }
 }
