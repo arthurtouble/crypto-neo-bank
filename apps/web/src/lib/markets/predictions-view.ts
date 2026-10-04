@@ -43,6 +43,18 @@ export function addDollars(current: string, add: number): string {
   return String(Math.round(total * 100) / 100);
 }
 
+/**
+ * What a dollar buy at `price` comes to: about how many shares, and what they
+ * pay if the outcome wins ($1 a share). Both are rounded down to the cent, so
+ * the form never promises more than the shares pay: $10 at 64¢ is 15.62
+ * shares and $15.62, not $15.63.
+ */
+export function buyEstimate(amount: number | null, price: number | null | undefined): { shares: number; toWin: number } | null {
+  if (amount === null || !(amount > 0) || price === null || price === undefined || !(price > 0) || price >= 1) return null;
+  const shares = Math.floor((amount / price) * 100 + 1e-9) / 100;
+  return { shares, toWin: shares };
+}
+
 /** The quick adds above the amount, as Polymarket offers them. */
 export const QUICK_ADDS = [1, 20, 100] as const;
 
@@ -179,7 +191,7 @@ export function formatAssetPrice(value: number | null | undefined): string | nul
   return value.toLocaleString(LOCALE, { style: "currency", currency: "USD", ...options });
 }
 
-/** The chance a range began at, in words for the odds chart: "Was 58% a week ago". */
+/** The chance a range began at, in words for the chance chart: "Was 58% a week ago". */
 export function chanceThen(points: Array<{ price: number }>, range: string): string | null {
   if (points.length < 2) return null;
   const ago: Record<string, string> = { "1h": "an hour ago", "6h": "6 hours ago", "1d": "a day ago", "1w": "a week ago", "1m": "a month ago", max: "at the start" };
@@ -217,13 +229,13 @@ export function setupStepOf(request: unknown): "approve" | "connect" {
  * anything else keeps the server's own sentence.
  */
 const ERROR_COPY: Record<string, string> = {
-  chain_unavailable: "We couldn't reach Polygon, where your predictions account is, just now. Nothing was sent. Try again in a minute.",
+  chain_unavailable: "Your predictions account can't be reached right now. Nothing was sent. Try again in a minute.",
   unavailable: "Polymarket isn't answering right now. Nothing was sent. Try again in a minute.",
   markets_unavailable: "Polymarket isn't answering right now. Try again in a minute.",
   rate_limited: "Polymarket is busy. Wait a moment and try again.",
-  invalid_response: "Polymarket sent an answer we couldn't read. Nothing was sent. Try again in a minute.",
-  not_configured: "Predictions aren't fully set up on our side yet. Nothing was sent. Try again later.",
-  predictions_not_connected: "Your predictions account isn't set up yet. Buy or add money to set it up.",
+  invalid_response: "Polymarket's answer couldn't be read. Nothing was sent. Try again in a minute.",
+  not_configured: "Predictions aren't ready yet. Nothing was sent. Try again later.",
+  predictions_not_connected: "Your predictions account isn't set up yet. Deposit or buy to set it up.",
   market_closed: "This market has stopped taking orders.",
   not_found: "This market isn't available.",
   no_buyers: "No one is buying this outcome right now. Try again later.",
