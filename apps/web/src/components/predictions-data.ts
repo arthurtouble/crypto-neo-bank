@@ -182,8 +182,8 @@ export function predictionErrorMessage(error: unknown): string {
   return failureMessage(error);
 }
 
-/** Why a read of the predictions account is unavailable, in words. */
-export function unavailableReason(reason: string | undefined, what: "cash" | "positions" | "orders"): string {
-  if (reason === "chain_unavailable") return what === "cash" ? "We couldn't read your cash from Polygon just now." : "We couldn't reach Polygon just now.";
-  return what === "cash" ? "We couldn't read your cash just now." : what === "positions" ? "We couldn't read your positions from Polymarket." : "We couldn't read your open orders from Polymarket.";
+/** What can't be loaded on the predictions account, in words, said next to it. */
+export function unavailableReason(what: "cash" | "positions" | "orders"): string {
+  return what === "cash" ? "Your predictions cash can't be loaded right now."
+    : what === "positions" ? "Your positions can't be loaded from Polymarket right now." : "Your open orders can't be loaded from Polymarket right now.";
 }
