@@ -246,7 +246,7 @@ Soft and subtle: 6px for buttons and inputs, 8px for notes, segmented controls, 
 - **Statuses:** a dot and a literal word.
 - **Notes** (soft status background, icon, short text) and **banners** (page-wide: guest example data, expired session, missing source).
 - **Toasts:** raised, one line, close button; bottom right on desktop, top on the phone. A new one stacks under those still showing, never replaces them.
-- **Navigation:** desktop sidebar with ten sections, each an icon and a name, current item muted with an accent icon. Phone: no tab bar; the menu button opens a sheet of ten tiles, three per row, with Log out at the bottom.
+- **Navigation:** desktop sidebar with twelve sections, each an icon and a name, current item muted with an accent icon. Phone: no tab bar; the menu button opens a sheet of twelve tiles, three per row, with Log out at the bottom.
 - **Overlays:** details in a side panel on desktop, a pushed screen on the phone; short choices in a popover or bottom sheet; confirmations in a dialog or bottom sheet. All trap focus and close with Escape.
 - **Money flows:** amount, then who, then a review with "Confirm and send" and the passkey; progress as a timeline in place.
 
@@ -260,3 +260,4 @@ Soft and subtle: 6px for buttons and inputs, 8px for notes, segmented controls, 
 - Don't nest cards or build rows of identical feature cards.
 - Don't hide actions behind hover, and don't put arrow icons inside buttons.
 - Don't animate for decoration; honour reduced motion.
+- Do check every screen against the quality bar in `docs/product/design-system.md#quality-bar` (widths 320 to 1440px, both themes, 200% zoom, every state) and every string against the glossary in `docs/product/content-style-guide.md#glossary`.

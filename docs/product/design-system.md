@@ -353,6 +353,52 @@ Notice emails (`apps/web/src/lib/notifications/email.ts`) follow the same system
 - Respect `prefers-reduced-motion` and `prefers-color-scheme`. The theme choice (`aurel-theme` in local storage, `data-theme` on `<html>`) overrides the device.
 - `axe` finds no serious or critical issues on the reference page (`tests/e2e/product.spec.ts`), and each rebuilt screen keeps its e2e checks.
 
+## Quality bar
+
+Every screen meets this on desktop and phone, in light and dark, before it ships. Agreed on 4 October 2026 for the polish pass; the [review checklist](#review-checklist) below is the short version.
+
+**Layout and touch**
+
+- No sideways scrolling and no clipped text at 320, 375, 390, 430, 768, 1024, 1280, and 1440px wide.
+- Touch targets at least 44 × 44px on the phone (`--touch-min`), with space between neighbours.
+- Nothing under the notch, the home bar, or the floating menu button: pages use the safe-area insets and end 100px clear of the button.
+- At 200% browser zoom, text still reads and nothing overlaps.
+- Long values (large balances, long names, addresses) wrap or shorten on purpose, never by accident.
+
+**States**
+
+- Loading is a skeleton of the real layout.
+- Empty has one button that fills it.
+- A value that can't be read says Unavailable, never an old number.
+- An error sits next to the part that failed and says what to do.
+- Paused, locked, blocked, and over-limit show before the customer starts, not after Confirm.
+- The guest view shows labelled example data, and the same example appears the same way in every feature.
+
+**Money**
+
+- Every amount shows its currency or asset, in tabular figures.
+- Fees, minimums, and what the customer gets are on the review screen before Confirm.
+- Every payment that can't be undone keeps its review screen.
+- The result is shown once, on the progress card.
+
+**Controls and copy**
+
+- One primary button per screen or panel; a disabled button says why.
+- Every string follows the [content guide](content-style-guide.md) and its [glossary](content-style-guide.md#glossary); buttons are verbs.
+- The same action uses [the same word](content-style-guide.md#the-same-word-for-the-same-action) in every feature.
+
+**Accessibility**
+
+- axe finds no issues; text contrast is 4.5:1 in both themes.
+- Everything works by keyboard with a visible focus ring, and focus is never hidden under the floating menu button (WCAG 2.4.11). Dialogs and sheets keep focus inside and close with Escape.
+- Icon buttons, statuses, and amounts have names a screen reader reads.
+- Reduced motion is honoured.
+
+**Design system**
+
+- Tokens only, and styles in the area stylesheet. Nothing new in `globals.css`, `identity.css`, or `product-system.css`.
+- No console errors and no failed requests on any screen.
+
 ## Don'ts
 
 From the owner's brief and the [Impeccable](https://impeccable.style) anti-pattern list:
@@ -375,5 +421,6 @@ From the owner's brief and the [Impeccable](https://impeccable.style) anti-patte
 - Is every number tabular, with its currency or asset, and does unread data say Unavailable?
 - Does it follow its journey in [redesign-journeys.md](redesign-journeys.md) on both devices?
 - Are loading, empty, error, unavailable, disabled, and blocked designed?
-- Does it work at 390px and 1440px, in light and dark, with a keyboard and a screen reader?
+- Does it meet the [quality bar](#quality-bar) at every width from 320px to 1440px, in light and dark, at 200% zoom, with a keyboard and a screen reader?
+- Does every string pass the [glossary](content-style-guide.md#glossary)?
 - Are only tokens used, and do the reference page, `DESIGN.md`, and this document still agree?
