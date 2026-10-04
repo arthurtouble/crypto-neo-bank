@@ -19,8 +19,8 @@ export const docsOrigin = () => process.env.NEXT_PUBLIC_DOCS_URL ?? "https://aur
 /** The browser's theme colour: `--color-canvas` in public/design-tokens.css, light and dark (tests/unit/seo.test.ts). */
 export const themeColors = { light: "#f7f8fa", dark: "#0b0d11" } as const;
 
-export const landingTitle = "Aura: stablecoins, crypto, tokenized stocks, and gold in one app";
-export const landingDescription = "Money you control, in one simple app. Hold stablecoins, crypto, tokenized stocks, and gold, then send, swap, and earn. What you can use depends on where you live.";
+export const landingTitle = "Aura: stablecoins, crypto, stocks, and gold in one app";
+export const landingDescription = "Money you control, in one simple app. Hold stablecoins, crypto, stocks, and gold, then send, swap, and earn. What you can use depends on where you live.";
 
 /** The preview image for shared links: the Overview with fictional example data. */
 export const shareImage = { url: "/images/aura-og.png", width: 1200, height: 630, alt: "Aura's Overview with example balances" };

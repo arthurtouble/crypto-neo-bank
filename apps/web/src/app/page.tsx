@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 
 const docs = process.env.NEXT_PUBLIC_DOCS_URL ?? "https://aurel-docs.aurel-events.workers.dev";
 const features = [
-  { icon: ArrowDownToLine, title: "Deposit", text: "Add crypto from an exchange or another wallet. Everything you hold shows in dollars." },
+  { icon: ArrowDownToLine, title: "Add money", text: "Receive crypto from an exchange or another wallet, or buy USDC with a card. Everything you hold shows in dollars." },
   { icon: Send, title: "Send", text: "Pay an address, a saved contact, or an Aura tag. New addresses get a second check." },
   { icon: ArrowLeftRight, title: "Swap", text: "Move between crypto, stocks, and gold. See the price and fees before you confirm." },
   { icon: Sprout, title: "Earn", text: "Lend your USDC to earn interest, with the risks next to the rate." },
@@ -25,22 +25,26 @@ const features = [
 const safeguards = ["We never hold your keys or your money", "Your passkey confirms every payment", "Daily limits, saved contacts, and an emergency lock"];
 const faqs = [
   { question: "Can I try it without an account?", answer: "Yes. Every screen works with example data, clearly labelled. Sign in when you want to use your own money." },
-  { question: "Where do my balances come from?", answer: "From the blockchains and protocols that hold your money, read each time you open the app. Aura doesn't keep a ledger of its own." },
+  { question: "Where do my balances come from?", answer: "From the blockchains and partners that hold your money, read each time you open the app. Aura doesn't keep a ledger of its own." },
   { question: "Can I use bank transfers and cards?", answer: "Bank transfers work once our banking partner approves Aura. The card is coming soon. Both depend on where you live." },
   { question: "Do I approve every transaction?", answer: "Yes. Every send, swap, and Earn move waits for you to review it and confirm it with your passkey." }
 ];
 const links = [{ label: "Features", href: "#features" }, { label: "Security", href: "#security" }, { label: "Questions", href: "#faq" }, { label: "Docs", href: docs }];
 
 /**
- * A screen from the app, with fictional example data: WebP at twice its display size. A plain image, since there is
- * nothing for an image optimiser to do; the first one loads eagerly because it's the largest thing above the fold.
+ * A screen from the app, with fictional example data, in WebP drawn larger than it shows (tests/inventory/landing-screens.spec.ts
+ * makes them). A plain image, since there is nothing for an image optimiser to do; the first one loads eagerly because it's
+ * the largest thing above the fold. `phone` is a phone's screen; `phoneBelow` swaps a computer's screen for the phone's on
+ * screens narrower than 768px, where a computer's screen would be too small to read.
  */
-function Screen({ name, alt, priority = false }: { name: string; alt: string; priority?: boolean }) {
+function Screen({ name, alt, phone = false, phoneBelow = false, priority = false }: { name: string; alt: string; phone?: boolean; phoneBelow?: boolean; priority?: boolean }) {
+  const src = (file: string, theme: "light" | "dark") => `/images/aura-${file}${theme === "dark" ? "-dark" : ""}.webp`;
+  const size = (isPhone: boolean) => isPhone ? { width: 780, height: 1520 } : { width: 1920, height: 1200 };
   // One shot per theme; public.css shows the one that matches the page.
-  return <div className="ldScreen">{(["light", "dark"] as const).map((theme) => (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img key={theme} className={`ldScreen-${theme}`} src={`/images/aura-${name}${theme === "dark" ? "-dark" : ""}.webp`} alt={alt} width={1920} height={1200}
-      decoding="async" loading={priority ? "eager" : "lazy"} fetchPriority={priority ? "high" : "auto"} />))}</div>;
+  return <div className={phone ? "ldScreen ldScreenPhone" : "ldScreen"}>{(["light", "dark"] as const).map((theme) => <picture key={theme} className={`ldScreen-${theme}`}>
+    {phoneBelow && <source media="(max-width: 767px)" srcSet={src(`${name}-phone`, theme)} {...size(true)} />}
+    <img src={src(phone ? `${name}-phone` : name, theme)} alt={alt} {...size(phone)} decoding="async" loading={priority ? "eager" : "lazy"} fetchPriority={priority ? "high" : "auto"} />
+  </picture>)}</div>;
 }
 
 /** The public landing page: what Aura is, what it does, how it keeps money safe, and where to start. */
@@ -60,13 +64,13 @@ export default function MarketingPage() {
     <main>
       <section className="ldHero">
         <h1>Money you control, in one simple app</h1>
-        <p>Hold stablecoins, crypto, tokenized stocks, and gold. Send, swap, and earn from one wallet, and confirm every move with your passkey.</p>
+        <p>Hold stablecoins, crypto, stocks, and gold. Send, swap, and earn from one wallet, and confirm every payment with your passkey.</p>
         <div className="ldActions">
           <Link className="appButton appButtonPrimary appButtonLarge" href="/app">Get started</Link>
         </div>
         <small>Try it with example data first. No account needed.</small>
       </section>
-      <div className="ldShowcase"><Screen name="overview" alt="Aura's Overview with example balances" priority /></div>
+      <div className="ldShowcase"><Screen name="overview" alt="Aura's Overview with example balances" phoneBelow priority /></div>
 
       <section className="ldSection" id="features" aria-labelledby="features-heading">
         <div className="ldIntro"><h2 id="features-heading">Everything in one place</h2><p>One wallet for what you hold and what you do with it.</p></div>
@@ -84,7 +88,7 @@ export default function MarketingPage() {
           <ul className="ldChecks">{safeguards.map((item) => <li key={item}><Check aria-hidden="true" />{item}</li>)}</ul>
           <a className="appTextButton ldMore" href={`${docs}/safety/security-model/`}>How security works</a>
         </div>
-        <Screen name="settings" alt="Aura's security settings with example data" />
+        <Screen name="settings" alt="Aura's security settings on a phone, with example data" phone />
       </section>
 
       <section className="ldSection ldFaq" id="faq" aria-labelledby="faq-heading"><h2 id="faq-heading">Questions</h2>
@@ -96,8 +100,8 @@ export default function MarketingPage() {
     <footer className="ldFooter">
       <div className="ldFooterTop">
         <AppBrand href="/" />
-        <div><p className="ldFooterLabel">Product</p><a href="#features">Features</a><Link href="/app">Try Aura</Link><a href={`${docs}/getting-started/status/`}>Availability</a></div>
-        <div><p className="ldFooterLabel">Help</p><a href={`${docs}/help/faq/`}>Questions</a><a href={`${docs}/safety/account-controls/`}>Security</a><a href={`${docs}/help/contact-and-support/`}>Contact</a></div>
+        <div><p className="ldFooterLabel">Product</p><a href="#features">Features</a><Link href="/app">Get started</Link><a href={`${docs}/getting-started/status/`}>Availability</a></div>
+        <div><p className="ldFooterLabel">Help</p><a href={`${docs}/help/faq/`}>Questions</a><a href={`${docs}/safety/account-controls/`}>Security</a><Link href="/app/support">Contact</Link></div>
         <div><p className="ldFooterLabel">Legal</p><a href={`${docs}/legal/privacy-notice/`}>Privacy</a><a href={`${docs}/legal/terms-of-use/`}>Terms</a><a href={`${docs}/legal/risk-disclosure/`}>Risk disclosure</a></div>
       </div>
       <p className="ldDisclosure">Screens show example data, not real accounts. What you can use depends on where you live. Bank transfers and cards need approved partners. <a href={`${docs}/getting-started/status/`}>See what&apos;s available now</a>.</p>

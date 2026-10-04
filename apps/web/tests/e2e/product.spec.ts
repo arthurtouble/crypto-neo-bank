@@ -126,6 +126,7 @@ test("Rewards was cut: old links open Cards", async ({ page }) => {
 test("unknown Aura tags do not expose recipient information", async ({ page }) => {
   await page.goto("/pay/unknown_aura_tag");
   await expect(page.getByRole("heading", { name: "Payment page unavailable" })).toBeVisible();
+  await expect(page.getByText("Check the tag with the person who gave it to you.")).toBeVisible();
   await expect(page.getByText("Bank transfer", { exact: true })).toHaveCount(0);
 });
 

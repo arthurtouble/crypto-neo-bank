@@ -17,10 +17,10 @@ export const metadata: Metadata = { title: { absolute: "Pay with Aura" }, descri
 /** What a payer's own bank calls each way to send; the app's customer words are in lib/format/bank.ts. */
 const payerRailNames: Record<BankRail, string> = { ach: "ACH", wire: "Wire", fednow: "FedNow" };
 
-/** What shows in Aura when it arrives at the address: every asset held on Base, from the registry. */
+/** What shows in Aura when it arrives at the address: every asset held on Base, from the registry, with one stock as an example. */
 const baseAssets = assetsFor("hold", BASE_CHAIN_ID);
-const receivable = [...baseAssets.filter((asset) => asset.category !== "stock").map((asset) => asset.symbol),
-  ...(baseAssets.some((asset) => asset.category === "stock") ? ["tokenized stocks"] : [])];
+const exampleStock = baseAssets.find((asset) => asset.category === "stock");
+const receivable = [...baseAssets.filter((asset) => asset.category !== "stock").map((asset) => asset.symbol), ...(exampleStock ? [`a stock like ${exampleStock.symbol}`] : [])];
 const receivableList = `${receivable.slice(0, -1).join(", ")}, or ${receivable.at(-1)}`;
 
 /** The address in groups of four after 0x, which is easier to check against a wallet's screen. */
@@ -39,7 +39,7 @@ export default async function AuraTagPage({ params }: { params: Promise<{ tag: s
       <div className="pyWho"><span>Aura tag</span><h1>Pay @{data.tag}</h1><p>{data.displayName} <span>(the name they chose)</span></p></div>
       <section className="pyCard" aria-labelledby="pay-crypto">
         <div className="pyCardHead"><h2 id="pay-crypto">Crypto</h2></div>
-        <p>Send {receivableList} on the {data.crypto.network} network. Other tokens, or any token on another network, won&apos;t show in their Aura account.</p>
+        <p>Send {receivableList}, on {data.crypto.network}. Anything else, or anything sent on another network, won&apos;t show in their Aura account.</p>
         {/* EIP-681 with Base's chain ID, so a wallet that reads it sends on Base, not Ethereum. Always dark on light: wallets read that best. */}
         <div className="pyQr"><QRCodeSVG value={`ethereum:${data.crypto.address}@${BASE_CHAIN_ID}`} size={168} bgColor="transparent" fgColor="currentColor" role="img" aria-label={`QR code of @${data.tag}'s address on ${data.crypto.network}`} /></div>
         <code className="pyAddress">{grouped(data.crypto.address).map((part, index) => <span key={index}>{part}</span>)}</code>
@@ -70,7 +70,7 @@ export default async function AuraTagPage({ params }: { params: Promise<{ tag: s
       // The limit is per visitor, whatever the tag, so saying so tells nothing about the tag.
       ? <section className="pyCard pyUnavailable"><h1>Too many requests</h1><p>You&apos;ve opened payment pages too often. Try again in a minute.</p>
         <a className="appButton appButtonLarge" href={`/pay/${encodeURIComponent(tag)}`}>Try again</a></section>
-      : <section className="pyCard pyUnavailable"><h1>Payment page unavailable</h1><p>This Aura tag is not available for public payments.</p></section>}</main>
-    <footer className="pyFooter">Aura is a wallet app. Crypto transfers may not be reversible, so check who you&apos;re paying before you send.</footer>
+      : <section className="pyCard pyUnavailable"><h1>Payment page unavailable</h1><p>This Aura tag can&apos;t be paid here. Check the tag with the person who gave it to you.</p></section>}</main>
+    <footer className="pyFooter">Aura is a wallet app. Crypto payments can&apos;t be undone, so check who you&apos;re paying before you send.</footer>
   </div>;
 }

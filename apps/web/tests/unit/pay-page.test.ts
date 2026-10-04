@@ -38,3 +38,13 @@ describe("public payment page rate limit (security review B4)", () => {
     expect(html).not.toContain("0x000000000000000000000000000000000000dEaD");
   });
 });
+
+describe("public payment page copy", () => {
+  it("names what shows in Aura on Base, with a stock by its symbol, and says payments can't be undone", async () => {
+    const html = renderToStaticMarkup(await AuraTagPage({ params: Promise.resolve({ tag: "alice" }) }));
+    expect(html).toContain("Pay @alice");
+    expect(html).toMatch(/Send ETH, USDC, .*, or a stock like AAPLc, on Base\. Anything else, or anything sent on another network, won(&#x27;|')t show/);
+    expect(html).not.toContain("tokenized");
+    expect(html).toMatch(/Crypto payments can(&#x27;|')t be undone/);
+  });
+});
