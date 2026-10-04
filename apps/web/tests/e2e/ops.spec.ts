@@ -45,6 +45,8 @@ test("only an operator Cloudflare Access signed in reaches operations", async ({
   await signedInToOps(context);
   await openOps(page);
   await expect(page.locator(".who")).toHaveText(OPERATOR.email, { timeout: 30_000 });
+  // The top bar fits any window: the page never scrolls sideways.
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
 
   for (const options of [{ none: true }, { forged: true }]) {
     const other = await browser.newContext();
@@ -133,7 +135,12 @@ test("the customer list shows everyone, newest first, and opens each customer", 
   await row.click();
   await expect(customerCard(page)).toContainText(customer.userId, { timeout: 30_000 });
   await expect(list).toHaveCount(0);
+  // The open customer is in the address, so a reload (or a copied link) comes back to them.
+  await expect(page).toHaveURL(`${OPS}/#customers?subject=${encodeURIComponent(customer.userId)}`);
+  await page.reload();
+  await expect(customerCard(page)).toContainText(customer.userId, { timeout: 30_000 });
   await customers(page).getByRole("button", { name: "All customers" }).click();
+  await expect(page).toHaveURL(`${OPS}/#customers`);
   await expect(page.getByRole("region", { name: "All customers" }).getByTestId("ops-customer-row").first()).toBeVisible({ timeout: 30_000 });
   await expect(customerCard(page)).toHaveCount(0);
 });
@@ -183,6 +190,16 @@ test("money movement lists every customer's transactions, filters them, and open
   await expect(journey.locator(".events li").first()).toBeVisible();
   await expect(journey.getByRole("link", { name: "Transaction" })).toHaveAttribute("href", /basescan\.org\/tx\/0x[0-9a-f]{64}$/);
   await expect(journey.getByRole("button", { name: "Check the chain now" })).toHaveCount(0);
+  // Keyboard users land in the journey, Tab stays in it, and Escape takes them back to the row they opened it from.
+  await expect(journey).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(journey.getByRole("button", { name: "Close" })).toBeFocused();
+  await page.keyboard.press("Shift+Tab");
+  await expect(journey.getByRole("link", { name: "Transaction" })).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(journey).toHaveCount(0);
+  await expect(sent.getByRole("button", { name: "Sent" })).toBeFocused();
+  await sent.getByRole("button", { name: "Sent" }).click();
   await journey.getByRole("button", { name: "Close" }).click();
 
   // Everyone's Aura actions, filtered.

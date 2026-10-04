@@ -25,6 +25,7 @@ export function Stats() {
     <div className="headingRow"><h1 id="stats-heading">Stats</h1>
       <div className="segmented" role="group" aria-label="Period">{[7, 30, 90].map((value) => <button type="button" key={value} aria-pressed={days === value} onClick={() => setDays(value)}>{value} days</button>)}</div></div>
     {stats.isError && <ErrorNotice error={stats.error} onRetry={() => void stats.refetch()} />}
+    {stats.isPending && <p className="muted">Loading…</p>}
     {data && <>
       <div className="tiles">
         <article><span>Customers</span><strong data-testid="stat-customers">{data.customers.total}</strong><small>{data.customers.new} new, {data.customers.closed} closed</small></article>
@@ -37,8 +38,8 @@ export function Stats() {
         <span>{step.step}</span><div className="bar"><i style={{ width: `${Math.max(step.customers ? 2 : 0, (step.customers / top) * 100)}%` }} /></div>
         <strong>{step.customers}</strong><span className="muted">{Math.round((step.customers / top) * 100)}%</span></div>)}</div>
       <h2>Volume by kind</h2>
-      <div className="tableWrap"><table><thead><tr><th scope="col">Kind</th><th scope="col">Completed</th><th scope="col">Volume</th></tr></thead>
-        <tbody>{data.volumeByKind.map((row) => <tr key={row.kind}><td>{words(row.kind)}</td><td>{row.count}</td><td>{money(row.volumeUsd)}</td></tr>)}</tbody></table></div>
+      {data.volumeByKind.length > 0 && <div className="tableWrap"><table><thead><tr><th scope="col">Kind</th><th scope="col">Completed</th><th scope="col">Volume</th></tr></thead>
+        <tbody>{data.volumeByKind.map((row) => <tr key={row.kind}><td>{words(row.kind)}</td><td>{row.count}</td><td>{money(row.volumeUsd)}</td></tr>)}</tbody></table></div>}
       {!data.volumeByKind.length && <p className="muted">No completed transactions in this period.</p>}
       <div className="headingRow"><h2>By day</h2>
         <label className="check"><input type="checkbox" checked={quiet} onChange={(event) => setQuiet(event.target.checked)} />Show days with no activity</label></div>

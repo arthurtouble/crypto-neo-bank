@@ -21,10 +21,11 @@ h1 { margin: 0 0 16px; font-size: var(--text-title-1-size); line-height: var(--t
 .muted { color: var(--muted); font-size: var(--text-small-size); }
 
 .shell { min-height: 100vh; display: grid; grid-template-columns: 220px minmax(0, 1fr); grid-template-rows: auto 1fr; }
-.top { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; height: var(--topbar-height); padding: 0 20px; border-bottom: 1px solid var(--border); background: var(--surface); }
-.top strong { display: inline-flex; align-items: center; gap: var(--space-2); font-weight: var(--weight-semibold); }
+.top { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; gap: 12px; height: var(--topbar-height); padding: 0 20px; border-bottom: 1px solid var(--border); background: var(--surface); }
+.top strong { flex: none; display: inline-flex; align-items: center; gap: var(--space-2); font-weight: var(--weight-semibold); }
 .top strong::before { content: ""; width: 18px; height: 18px; border: 2.4px solid var(--accent); border-radius: 50%; box-sizing: border-box; }
-.who { color: var(--muted); font-size: var(--text-small-size); }
+/* A long operator email shortens instead of pushing the page sideways on a narrow window. */
+.who { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: var(--text-small-size); }
 .nav { padding: 16px 10px; display: grid; align-content: start; gap: 2px; border-right: 1px solid var(--border); background: var(--surface); }
 .nav a { display: flex; align-items: center; gap: 10px; min-height: 36px; padding: 0 10px; border-radius: var(--r-card); color: var(--muted); font-weight: var(--weight-medium); text-decoration: none; }
 .nav a:hover { background: var(--color-hover); color: var(--text); }
@@ -76,9 +77,9 @@ input, select { min-height: var(--input-height); padding: 6px 10px; border: 1px 
 .customer > header { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; }
 .customer h2 { margin: 0 0 4px; }
 .facts { margin: 16px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px 20px; }
-.facts dt { color: var(--muted); font-size: var(--text-small-size); } .facts dd { margin: 2px 0 0; }
+.facts dt { color: var(--muted); font-size: var(--text-small-size); } .facts dd { margin: 2px 0 0; min-width: 0; overflow-wrap: anywhere; }
 .holdings { margin: 0; padding: 0; list-style: none; border: 1px solid var(--border); border-radius: var(--r-card); }
-.holdings li { display: flex; justify-content: space-between; gap: 10px; padding: 8px 12px; border-top: 1px solid var(--border); }
+.holdings li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 10px; padding: 8px 12px; border-top: 1px solid var(--border); }
 .holdings li:first-child { border-top: 0; }
 
 .rows { margin: 0; padding: 0; list-style: none; }
@@ -87,6 +88,8 @@ input, select { min-height: var(--input-height); padding: 6px 10px; border: 1px 
 .toggle { min-width: 52px; min-height: 28px; border: 1px solid var(--color-line-strong); border-radius: var(--radius-pill); background: var(--color-muted); color: var(--muted); font: inherit; font-size: var(--text-small-size); font-weight: var(--weight-medium); cursor: pointer; }
 .toggle.on { border-color: var(--accent); background: var(--accent); color: var(--color-on-accent); }
 
+/* Load more sits under its table, not against its edge. */
+.tableWrap + .button { margin-top: 12px; }
 .tableWrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--r-card); }
 table { width: 100%; border-collapse: collapse; }
 th, td { padding: 8px 12px; border-bottom: 1px solid var(--border); text-align: left; white-space: nowrap; font-variant-numeric: tabular-nums; }
@@ -99,7 +102,7 @@ tr.clickable { cursor: pointer; } tr.clickable:hover { background: var(--color-h
 .drawer h2 { margin: 0; }
 .events { margin: 0; padding-left: 18px; display: grid; gap: 10px; } .events li { display: grid; gap: 2px; }
 .evidence { margin: 4px 0 0; display: grid; gap: 2px; } .evidence div { display: flex; flex-wrap: wrap; gap: 6px; }
-.evidence dt { color: var(--muted); font-size: var(--text-small-size); } .evidence dd { margin: 0; }
+.evidence dt { color: var(--muted); font-size: var(--text-small-size); } .evidence dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
 
 .segmented { display: inline-flex; gap: 2px; padding: 2px; border-radius: var(--r-card); background: var(--color-muted); }
 .segmented button { height: 28px; padding: 0 12px; border: 0; border-radius: var(--r-control); background: none; color: var(--muted); font: inherit; font-size: var(--text-small-size); font-weight: var(--weight-medium); cursor: pointer; }
@@ -111,10 +114,13 @@ tr.clickable { cursor: pointer; } tr.clickable:hover { background: var(--color-h
 .funnelRow { display: grid; grid-template-columns: 170px minmax(80px, 1fr) 50px 44px; gap: 12px; align-items: center; }
 .bar { height: 6px; border-radius: var(--radius-pill); background: var(--color-muted); overflow: hidden; } .bar i { display: block; height: 100%; background: var(--accent); }
 
-@media (max-width: 760px) {
+@media (max-width: 767px) {
   .shell { grid-template-columns: 1fr; grid-template-rows: auto auto 1fr; }
-  .nav { grid-auto-flow: column; grid-auto-columns: max-content; overflow-x: auto; padding: 8px 12px; border-right: 0; border-bottom: 1px solid var(--border); }
-  .nav { grid-auto-flow: row; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); overflow-x: visible; }
+  .nav { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); padding: 8px 12px; border-right: 0; border-bottom: 1px solid var(--border); }
+  /* Phone touch targets: at least 44px tall, and the icon-only copy button 44px square. */
+  .nav a, .toggle, .segmented button, .check { min-height: var(--control-height); }
+  .icon { min-width: var(--control-height); min-height: var(--control-height); margin-left: 0; }
+  .links a { display: inline-flex; align-items: center; min-height: var(--control-height); }
   .search label { flex-basis: 200px; }
   .main { padding: 16px; }
   .panel { padding: 16px; }

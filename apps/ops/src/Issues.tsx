@@ -34,6 +34,7 @@ export function Issues() {
     {found && <div className="notice" role="status">{found.openedCandidates ? `Found ${found.openedCandidates} new ${found.openedCandidates === 1 ? "issue" : "issues"}.`
       : found.checked ? "Nothing new. Everything found is already listed." : "No stuck actions or failed events found."}</div>}
     {summary.isError && <ErrorNotice error={summary.error} onRetry={() => void summary.refetch()} />}
+    {summary.isPending && <p className="muted">Loading…</p>}
     {update.isError && <ErrorNotice error={update.error} />}
     {reconcile.isError && <ErrorNotice error={reconcile.error} />}
     <ul className="rows">{data?.issues.map((issue) => <li key={issue.issue_id} data-testid="ops-issue">

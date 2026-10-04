@@ -20,7 +20,7 @@ export async function api<T>(path: string, init: { method?: "GET" | "POST" | "PA
   if (response.ok) return body as T;
   if (response.status === 401) throw new ApiError(401, body.error ?? "unauthorized", "You're signed out of operations. Reload the page to sign in.");
   if (response.status === 403) throw new ApiError(403, body.error ?? "forbidden", body.message ?? "You don't have access to operations.");
-  throw new ApiError(response.status, body.error ?? "error", body.message ?? `Something went wrong on our side (${response.status}).`);
+  throw new ApiError(response.status, body.error ?? "error", body.message ?? `Something went wrong (${response.status}). Try again.`);
 }
 
 export const money = (usd: number) => formatUsd(usd);

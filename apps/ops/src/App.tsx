@@ -18,7 +18,7 @@ const pages = [
 type Page = (typeof pages)[number]["key"];
 
 /**
- * Where we are: `#customers?subject=did:privy:…` opens one customer, `#movement?subject=…` Money movement for one
+ * Where we are: `#customers?subject=did:privy:…` opens one customer (or any search: an email, wallet, or Aura tag), `#movement?subject=…` Money movement for one
  * customer, and `&action=<id>` that action's journey.
  */
 function readHash(): { page: Page; subject: string | null; action: string | null } {
