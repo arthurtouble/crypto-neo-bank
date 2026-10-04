@@ -233,6 +233,31 @@ describe("money movement", () => {
     expect(await ids(`?kind=card&before=${encodeURIComponent("2026-09-28T00:00:00.000Z")}`)).toEqual(["iauth_2"]);
   });
 
+  it("pages through rows that share an instant without skipping or repeating any", async () => {
+    // Transfers in one block share a time: 60 received and 60 Aura actions at the same instant, plus the four signed ones above.
+    const at = "2026-09-28T09:00:00.000Z";
+    for (let index = 0; index < 60; index += 1) {
+      const n = String(index).padStart(2, "0");
+      insert(`t${n}`, "did:privy:alice", "confirmed", at);
+      sqlite.exec(`INSERT INTO incoming_observations (transfer_id, subject_reference, wallet_address, chain_id, transaction_hash, from_address, asset_id, symbol, decimals,
+        amount_raw, amount, final, source, received_at, observed_at) VALUES ('incoming:8453:0x${n}:log:0', 'did:privy:bob', '0x1111111111111111111111111111111111111111', 8453,
+        '0x${n}', '0x5555555555555555555555555555555555555555', '8453:usdc', 'USDC', 6, '1000000', '1', 1, 'Alchemy, Base', '${at}', 't')`);
+    }
+    const seen: string[] = [];
+    let cursor: string | null = null;
+    for (let page = 0; page < 10; page += 1) {
+      const body = await (await listMovement(await asOperator(`/api/ops/movement${cursor ? `?before=${encodeURIComponent(cursor)}` : ""}`))).json() as { rows: Array<{ id: string }>; next: string | null };
+      seen.push(...body.rows.map((row) => row.id));
+      cursor = body.next;
+      if (!cursor) break;
+    }
+    expect(seen).toHaveLength(124);
+    expect(new Set(seen).size).toBe(124);
+    expect(seen.slice(0, 3)).toEqual(["a5", "a3", "incoming:8453:0x59:log:0"]);
+    // A cursor that isn't one is refused.
+    expect((await listMovement(await asOperator("/api/ops/movement?before=nope"))).status).toBe(400);
+  });
+
   it("shows an action's journey, and checks an open one against the chain on request", async () => {
     sqlite.exec(`INSERT INTO action_events (event_id, action_id, event_type, evidence_json, occurred_at) VALUES ('e1', 'a3', 'submitted', '{"hash":"0xabc"}', '2026-09-28T11:00:01.000Z')`);
     const params = (id: string) => ({ params: Promise.resolve({ id }) });

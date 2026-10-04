@@ -35,7 +35,7 @@ async function send(page: Page) {
   await form.getByRole("button", { name: "Review" }).click();
   // A first-time address is checked before the review (B2).
   await form.getByRole("button", { name: "It's correct" }).click();
-  await form.getByRole("button", { name: "Confirm and send" }).click();
+  await form.getByRole("button", { name: "Send", exact: true }).click();
   await expect(outcome(page, "Transfer complete")).toBeVisible({ timeout: 30_000 });
 }
 

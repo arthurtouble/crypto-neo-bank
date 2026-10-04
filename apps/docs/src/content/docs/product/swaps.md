@@ -18,6 +18,7 @@ The quote shows what you pay and get in dollars, the rate, the fees, and any pri
 - **Fees** are what the exchange, and any transfer to another network, charge. **Price difference** is what your amount loses to the market: the dollar value you pay, minus the dollar value you get, minus the fees. Nobody charges it, so it has its own line, and it's left out when there is none. Both are already taken out of what the quote says you receive.
 - Aura pays the network fee on the network you pay from.
 - **Price can move up to** sits in the quote, next to the least you get. It's 0.5% unless you pick 0.1% or 1%, and picking another value refreshes the quote. On the same network, if the price moves further before the swap goes through, the swap stops and what you paid with stays in your account.
+- If you're somewhere stocks can't be bought, such as the United States or the United Kingdom, Swap says so before you get a quote. You can still sell or send the stocks you hold.
 - You can only swap assets on Aura's reviewed list. If your amount would cost more than 3% because the market can't take it at a fair price, Aura tells you and suggests a smaller amount.
 - For stocks and gold, the quote also shows the market price and when it was published. Stock markets close at night, at weekends, and on holidays, but the tokens still trade. If the quote is more than 2% away from the market price, Aura tells you.
 - Aura keeps the quote on its server. Your account approves only a transaction to the contract of LI.FI, the service that carries out the swap.

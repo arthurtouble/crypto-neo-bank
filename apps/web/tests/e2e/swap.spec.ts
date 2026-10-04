@@ -201,6 +201,22 @@ test("more than the account holds gets no quote, in the form or from the server,
   expect(await relayed()).toEqual([]);
 });
 
+test("where stocks can't be bought, the form says so before a quote, and selling one stays open", async ({ page }) => {
+  await page.setExtraHTTPHeaders({ "CF-IPCountry": "GB" });
+  await openSwap(page, { balances: { 8453: { [ASSETS.usdc]: "50000000", [ASSETS.apple]: "300000000" } }, from: `8453:${ASSETS.usdc}`, to: `8453:${ASSETS.apple}` });
+  await expect(page.getByTestId("swap-place-blocked")).toHaveText("Stocks aren't available where you are. You can still sell or send the ones you hold.", { timeout: 20_000 });
+  await expect(page.getByRole("button", { name: "Get quote" })).toBeDisabled();
+  const apple = page.getByRole("combobox", { name: "You receive" }).locator("option").filter({ hasText: /^Apple · AAPLc/ });
+  await expect(apple).toHaveText("Apple · AAPLc · not available where you are");
+  await expect(apple).toBeDisabled();
+
+  await page.getByRole("button", { name: "Reverse assets" }).click();
+  await expect(page.getByTestId("swap-place-blocked")).toHaveCount(0);
+  await getQuote(page, "1.5");
+  await expect(quote(page)).toContainText("You pay1.5 AAPLc", { timeout: 20_000 });
+  expect(await relayed()).toEqual([]);
+});
+
 test("switched off, the form says so before anything is typed", async ({ page }) => {
   await setFeature(page, "swaps", false);
   await openSwap(page);
