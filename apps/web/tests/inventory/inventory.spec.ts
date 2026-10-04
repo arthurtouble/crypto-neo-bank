@@ -11,7 +11,7 @@ import { acceptTerms, asCustomer, ASSETS, edge, newCustomer, operatorHeaders, se
 
 const OPS = `http://127.0.0.1:${process.env.AUREL_E2E_OPS_PORT ?? "43175"}`;
 const FRIEND = "0x5555555555555555555555555555555555555555";
-const SECTIONS = ["overview", "deposit", "send", "swap", "earn", "cards", "transactions", "insights", "settings", "support"] as const;
+const SECTIONS = ["overview", "deposit", "send", "swap", "earn", "cards", "transactions", "settings", "support"] as const;
 const path = (section: string) => section === "overview" ? "/app" : `/app/${section}`;
 const FEATURES = ["direct_transfers", "swaps", "cross_chain", "defi_actions", "fiat_accounts", "payment_cards", "card_wallets", "card_deposits", "perps", "predictions"];
 
@@ -188,7 +188,7 @@ test("errors: the account, chains, prices, and providers can't be read", async (
     await shot(page, info, `${10 + SECTIONS.indexOf(section)}-${section}--error-account`);
   }
   await edge("/__state", { down: ["rpc:1", "kraken", "transfers", "aave", "morpho", "stripe", "lifi"] });
-  for (const section of ["overview", "earn", "transactions", "insights", "swap"] as const) {
+  for (const section of ["overview", "earn", "transactions", "swap"] as const) {
     await page.goto(path(section));
     await settleError(page);
     await shot(page, info, `${10 + SECTIONS.indexOf(section)}-${section}--error-partial`);
@@ -329,10 +329,12 @@ test("funded: every section, dialog, and flow step", async ({ page }, info) => {
     await shot(page, info, "16-transactions--receipt-sent", { full: false });
   });
 
-  // Insights as a table.
+  // The summary's chart as a table.
   await optional(async () => {
-    await page.goto("/app/insights");
-    await settle(page, "Insights");
+    await page.goto("/app/transactions");
+    await settle(page, "Transactions");
+    const toggle = page.getByRole("button", { name: "Show chart and merchants" });
+    if (await toggle.count()) await toggle.click();
     await page.getByText("Show as a table").first().click();
     await shot(page, info, "17-insights--table");
   });

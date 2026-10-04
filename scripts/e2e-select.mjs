@@ -62,7 +62,7 @@ export const features = {
   cards: ["card"],
   deposit: ["deposit", "add-from-wallet", "move-previous-account"],
   earn: ["earn", "defi"],
-  insights: ["insights"],
+  insights: ["insights", "transactions-summary"],
   // Perps and predictions share the markets parts (markets-*.ts(x), markets.css, lib/markets/), so those run both.
   perps: ["perps", "markets", "hyperliquid"],
   predictions: ["prediction", "polymarket", "markets"],

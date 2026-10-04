@@ -5,7 +5,7 @@ description: Look around Aura with example data, sign in with email, Google, Tel
 
 ## Look around
 
-You don't need an account to look around. Browse Overview, Deposit, Send, Swap, Earn, Cards, Transactions, Insights, Settings, and Support. Signed out, every value is a labeled example.
+You don't need an account to look around. Browse Overview, Add money, Send, Swap, Earn, Perps, Predictions, Cards, Transactions, Settings, and Support. Signed out, every value is a labeled example.
 
 **Get started** opens the app with example data. It doesn't sign you in. If you already have an account, select **Sign in** at the top of the home page.
 

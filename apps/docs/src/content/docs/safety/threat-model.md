@@ -19,7 +19,7 @@ If you've turned them on, your emergency lock, daily limit, and saved-recipients
 
 ## Someone tampers with a transaction
 
-A compromised web page, software library, route response (the quote for a swap or a move between networks), or partner could try to change a recipient, amount, or contract.
+A compromised web page, software library, quote for a swap or a move between networks, or partner could try to change a recipient, amount, or contract.
 
 We build each transaction on our server and keep swap quotes there, so the browser can't swap in something else. After you confirm, we check that what reached the blockchain matches what we prepared. If the review doesn't match what you meant to do, stop.
 
@@ -27,19 +27,19 @@ We build each transaction on our server and keep swap quotes there, so the brows
 
 A valid address can belong to a scammer, be copied wrongly, or be swapped by malware on your clipboard. Saved recipients, saved-only mode, the wait before new recipients, clear names, and a daily limit slow down risky first payments. None of them can tell you whether the person on the other end is honest.
 
-## A protocol fails
+## A service Aura connects to fails
 
-A contract can have a bug, be upgraded, get a bad price feed, run short of liquidity, or change through governance. A vault curator, who chooses where a vault lends, can lend to riskier markets. Building exact transactions on the server cuts the chance of touching an unknown contract, but can't make a protocol safe.
+Aave's or Morpho's contracts can have a bug, be upgraded, get a bad price feed, run short of money to withdraw, or change through governance. A vault manager, who chooses where a vault lends, can lend to riskier markets. Hyperliquid or Polymarket can have an outage, change their rules, or close a market. Building exact transactions on the server cuts the chance of touching an unknown contract, but can't make any of these services safe.
 
-We keep our integrations narrow, watch for important changes, and stop preparing affected actions when we can't operate or review them safely.
+We keep our integrations narrow, watch for important changes, and stop preparing affected actions when they can't be run or reviewed safely.
 
 ## A stablecoin fails
 
 Stablecoins can lose their peg, freeze addresses, change how redemption works, or run into issuer, reserve, banking, or regulatory problems. A balance shown in dollars isn't a promise you can redeem it for a dollar.
 
-## A bridge or route fails
+## A move between networks fails
 
-A move between networks can depend on several contracts, liquidity sources, validators, messages, and relayers, which LI.FI chooses from third-party bridges and exchanges. Confirmation on the first network doesn't prove delivery. We mark a move complete only after we see at least the minimum amount arrive.
+A move between networks can depend on several contracts, exchanges, validators, messages, and relayers, which LI.FI chooses from third-party exchanges and transfer services. Confirmation on the first network doesn't prove delivery. We mark a move complete only after we see at least the minimum amount arrive.
 
 ## Someone on our team makes a mistake or misuses access
 
@@ -53,8 +53,8 @@ Losing our database wouldn't change what you own, because blockchains and partne
 
 ## A service we depend on goes down
 
-Cloudflare, Privy, blockchain data services, LI.FI, Aave, Morpho, or a future partner could be unavailable. We then show the affected feature as unavailable, and never treat a timeout as a completed action.
+Cloudflare, Privy, blockchain data services, LI.FI, Aave, Morpho, Hyperliquid, Polymarket, Intercom, or a future partner could be unavailable. We then show the affected feature as unavailable, and never treat a timeout as a completed action.
 
 ## Outside what Aura can do
 
-We can't apply our controls after you export your key or use another app. We can't reverse a confirmed blockchain transaction, stop every phishing attack, guarantee a protocol, or recover a secret we never had.
+Aura's controls don't apply after you export your key or use another app. Aura can't reverse a confirmed blockchain transaction, stop every phishing attack, guarantee Aave, Morpho, Hyperliquid, or Polymarket, or recover a secret it never had.

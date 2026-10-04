@@ -12,7 +12,13 @@ describe("section routes", () => {
     for (const section of customerSections) {
       const file = `${app}${section}/page.tsx`;
       expect(existsSync(file), section).toBe(true);
-      expect(readFileSync(file, "utf8").match(/from "@\/components\//g), section).toHaveLength(1);
+      const source = readFileSync(file, "utf8");
+      // A section folded into another (Insights, into Transactions) only redirects there, and imports no screen.
+      if (/^import \{ redirect \} from "next\/navigation";$/m.test(source)) {
+        expect(source, section).not.toMatch(/@\/components\//);
+        continue;
+      }
+      expect(source.match(/from "@\/components\//g), section).toHaveLength(1);
     }
   });
 
