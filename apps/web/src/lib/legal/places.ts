@@ -132,6 +132,6 @@ export function providerPlaceNotice(request: Request, rule: ProviderPlaceRule): 
 
 /** Refuse a request that would start something new under this rule from a place its provider doesn't serve. */
 export function requireProviderPlace(request: Request, rule: ProviderPlaceRule): void {
-  const { country, region } = requestPlace(request);
-  if (providerRestrictedPlace(rule, country, region)) throw new HttpError(451, "place_restricted", restrictedMessages[rule]);
+  const notice = providerPlaceNotice(request, rule);
+  if (notice) throw new HttpError(451, "place_restricted", notice);
 }
