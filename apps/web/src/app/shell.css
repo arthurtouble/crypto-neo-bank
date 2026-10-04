@@ -210,6 +210,8 @@ html[data-balance-privacy="hidden"] .sensitiveAmount { filter: blur(7px); opacit
   .appFrame .appTopbar .appBrand { padding: 0; }
   /* 100px clear at the end of every page, plus the safe area, so the last button can always scroll above the menu button (78px) */
   .appFrame .appContent { padding-bottom: calc(100px + env(safe-area-inset-bottom)); }
+  /* Moving focus with the keyboard, or to a link's target, scrolls the item clear of the menu button rather than under it (WCAG 2.4.11) */
+  html:has(.appMenuButton) { scroll-padding-bottom: calc(100px + env(safe-area-inset-bottom)); }
   .appMenuButton { position: fixed; z-index: 50; left: 50%; bottom: calc(22px + env(safe-area-inset-bottom)); transform: translateX(-50%); width: var(--menu-button); height: var(--menu-button); display: grid; place-items: center; padding: 0; border: 0; border-radius: var(--radius-pill); background: var(--color-text); color: var(--color-canvas); box-shadow: var(--shadow-2); cursor: pointer; }
   .appMenuButton svg { width: 22px; height: 22px; stroke-width: var(--icon-stroke); }
   .appInbox { position: fixed; z-index: 65; inset: 0; width: auto; max-width: none; max-height: none; border: 0; border-radius: 0; box-shadow: none; align-content: start; padding: var(--space-2) var(--page-pad-x) var(--space-8); }

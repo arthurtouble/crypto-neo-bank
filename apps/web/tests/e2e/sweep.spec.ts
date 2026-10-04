@@ -127,7 +127,10 @@ function layoutFindings(page: Page, phone: boolean) {
       if (!visible(element)) continue;
       if (element.matches("a") && element.closest("p, li > span, small") && !element.matches("[class*=Button], [class*=button]")) continue;
       if (element.matches("input[type=checkbox], input[type=radio]") && element.closest("label")) continue;
-      const box = element.getBoundingClientRect();
+      // A field's tappable area is its bordered box when it sits alone inside one (a search box with an icon).
+      const parent = element.parentElement;
+      const field = element.matches("input, select, textarea") && parent && parent.querySelectorAll("input, select, textarea, button").length === 1;
+      const box = field && parent.getBoundingClientRect().height > element.getBoundingClientRect().height ? parent.getBoundingClientRect() : element.getBoundingClientRect();
       if (box.width < 43.5 || box.height < 43.5) out.push({ check: "small touch target", detail: `${label(element)} is ${Math.round(box.width)} × ${Math.round(box.height)}` });
     }
 
@@ -140,6 +143,19 @@ function layoutFindings(page: Page, phone: boolean) {
       const last = [...main.querySelectorAll("*")].filter((element) => visible(element) && element.children.length === 0)
         .reduce<Element | null>((lowest, element) => !lowest || element.getBoundingClientRect().bottom > lowest.getBoundingClientRect().bottom ? element : lowest, null);
       if (last && last.getBoundingClientRect().bottom > top) out.push({ check: "under the menu button", detail: `${label(last)} ends ${Math.round(last.getBoundingClientRect().bottom - top)}px below the button's top` });
+      // Focus moved with the keyboard must never land under the button (WCAG 2.4.11).
+      const hidden: string[] = [];
+      root.style.scrollBehavior = "auto";
+      for (const element of targets) {
+        if (!visible(element) || element === menu) continue;
+        (element as HTMLElement).focus({ preventScroll: false });
+        if (document.activeElement !== element) continue;
+        const box = element.getBoundingClientRect(); const button = menu.getBoundingClientRect();
+        if (box.bottom > button.top && box.top < button.bottom && box.right > button.left && box.left < button.right) hidden.push(label(element));
+      }
+      (document.activeElement as HTMLElement | null)?.blur();
+      root.style.scrollBehavior = "";
+      for (const name of hidden.slice(0, 5)) out.push({ check: "focus under the menu button", detail: name });
       window.scrollTo({ top: 0, behavior: "instant" });
     }
     return out;
