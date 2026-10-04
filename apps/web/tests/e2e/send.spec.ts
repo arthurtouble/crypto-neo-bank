@@ -440,7 +440,8 @@ test("USDC can be sent to another network: LI.FI's fees come out of the amount, 
   await expect(review).toContainText("NetworkArbitrum");
   await expect(review).toContainText("They receive about9.95 USDC");
   await expect(review).toContainText("They get at least9.9 USDC");
-  await expect(review).toContainText("About $0.50, taken from the amount");
+  await expect(review).toContainText("FeesAbout $0.50, taken from the amount");
+  await expect(review).toContainText("Moving feeAbout $0.50");
   await expect(review).toContainText("Network feePaid by Aura");
   expect(await relayed()).toEqual([]);
 
@@ -547,7 +548,7 @@ test("a tokenized stock can be sent on Base, and Tether Gold on Ethereum, where 
   await expect(dialog(page)).toContainText("1 XAUt available");
   await reviewSend(page);
   await expect(page.getByTestId("send-review")).toContainText("NetworkEthereum");
-  await expect(page.getByTestId("send-review")).toContainText("Network feePaid by Aura");
+  await expect(page.getByTestId("send-review")).toContainText("FeesPaid by Aura");
   await dialog(page).getByRole("button", { name: "Send", exact: true }).click();
   await expect.poll(async () => (await relayed()).find((item) => item.chainId === 1)?.success, { timeout: 30_000 }).toBe(true);
   await expect.poll(async () => balance(page, customer, `1:${ASSETS.xaut}`), { timeout: 30_000 }).toBe("750000");

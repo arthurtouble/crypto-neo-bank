@@ -417,8 +417,12 @@ export function WalletWorkspace() {
                     <div><dt>They receive about</dt><dd>{displayRawAmount(quote.toAmountRaw, quote.to.decimals)} {quote.to.symbol}</dd></div>
                     <div><dt>They get at least</dt><dd>{displayRawAmount(quote.toAmountMinRaw, quote.to.decimals)} {quote.to.symbol}</dd></div>
                   </>}
-                  <div><dt>Network fee</dt><dd className="mxPositive">Paid by Aura</dd></div>
-                  {crossChain && quote && <div><dt>Transfer fee</dt><dd>{feesUsd(quote) ? `About ${feesUsd(quote)}, taken from the amount` : "Taken from the amount"}</dd></div>}
+                  {/* One Fees row with the total; when it has more than one part, the parts follow underneath. */}
+                  {crossChain && quote ? <>
+                    <div><dt>Fees</dt><dd>{feesUsd(quote) ? `About ${feesUsd(quote)}, taken from the amount` : "Taken from the amount"}</dd></div>
+                    <div className="mxSummaryPart"><dt>Network fee</dt><dd className="mxPositive">Paid by Aura</dd></div>
+                    <div className="mxSummaryPart"><dt>Moving fee</dt><dd>{feesUsd(quote) ? `About ${feesUsd(quote)}` : "Taken from the amount"}</dd></div>
+                  </> : <div><dt>Fees</dt><dd className="mxPositive">Paid by Aura</dd></div>}
                   {canSave && saveRecipient && <div><dt>Save as</dt><dd>{nickname.trim()}</dd></div>}
                 </dl>
                 <Notice tone="warning">{crossChain ? `Transfers can't be reversed. Check that the recipient can receive ${asset} on ${destination.name}.` : "Transfers can't be reversed. Check the address before you send."}</Notice>
