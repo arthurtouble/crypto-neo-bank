@@ -28,7 +28,7 @@ A payment sent to the wrong but valid address usually can't be reversed.
 
 ## Saved recipients
 
-The people you've paid show at the top of Send, the most recent first, with your saved recipients and your own wallets. An address you haven't saved shows the date you last paid it. When you tap someone you've paid before, Send also picks the asset and network you used last time, and says so. You can change them. When you enter an address, Aura tells you whether it's a saved recipient, one of your own wallets, or a new address.
+The people you've paid show at the top of Send, the most recent first, with your saved recipients and your own wallets. An address you haven't saved shows the date you last paid it, with the start and end of the address. When you tap someone you've paid before, Send also picks the asset and network you used last time, and says so. You can change them. When you enter an address, Aura tells you whether it's a saved recipient, one of your own wallets, or a new address.
 
 If your settings only allow saved recipients, Send offers only those, and a new address must be saved in Settings first. A newly saved recipient can receive once its waiting period ends, and Send shows when that is.
 

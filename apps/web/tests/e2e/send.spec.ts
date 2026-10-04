@@ -300,8 +300,7 @@ test("the people row puts whoever was paid last first, and picking them brings b
   await expect(dialog(page).getByRole("group", { name: "Recipients" })).toBeVisible({ timeout: 30_000 });
   const people = dialog(page).getByRole("group", { name: "Recipients" }).getByRole("button");
   // Last paid first; an unnamed address says when it was paid; Mum, saved but never paid, comes after.
-  await expect(people.nth(0)).toContainText("0x6666…6666");
-  await expect(people.nth(0)).toContainText(/Sent \w{3} \d{1,2}/);
+    await expect(people.nth(0)).toContainText(/^Sent \w{3} \d{1,2}0x6666…6666$/);
   await expect(people.nth(1)).toContainText("Sam");
   await expect(people.nth(2)).toContainText("Mum");
   // Sam was last sent ETH, so picking Sam picks ETH again, and says so.

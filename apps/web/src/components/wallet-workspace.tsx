@@ -2,7 +2,7 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/client/auth";
-import { LoaderCircle, Send } from "lucide-react";
+import { History, LoaderCircle, Send } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
@@ -39,7 +39,7 @@ type Recipient = { id: string; kind: "wallet" | "bank"; name: string; destinatio
   /** The latest send to this address, and the asset and network it used; null when never sent to. */
   lastUsedAt?: string | null; lastAssetId?: string | null; lastChainId?: number | null };
 /** Someone in the people row: a saved recipient, the customer's own linked wallet, or an address they sent to before. */
-type Person = { key: string; address: string; name: string; detail: string; face: string; saved: boolean; lastAssetId: string | null; lastChainId: number | null };
+type Person = { key: string; address: string; name: string; detail: string; face: string | null; saved: boolean; lastAssetId: string | null; lastChainId: number | null };
 type SendMethods = { sending: boolean; otherNetworks: boolean; accountLocked: boolean; savedRecipientsOnly: boolean;
   dailyLimitUsd: number | null; leftTodayUsd: number | null; pausedAssets: string[] };
 
@@ -152,7 +152,7 @@ export function WalletWorkspace() {
     if (savedOnly && item.recent) continue;
     people.push({ key: item.id, address, saved: !item.recent, lastAssetId: item.lastAssetId ?? null, lastChainId: item.lastChainId ?? null,
       ...(item.recent ? own ? { name: "My wallet", detail: shortAddress(address), face: "W" }
-        : { name: shortAddress(address), detail: item.lastUsedAt ? `Sent ${sentOn(item.lastUsedAt)}` : "Sent before", face: "0x" }
+        : { name: item.lastUsedAt ? `Sent ${sentOn(item.lastUsedAt)}` : "Sent before", detail: shortAddress(address), face: null }
         : { name: item.name, detail: shortAddress(address), face: item.name.slice(0, 1).toUpperCase() }) });
   }
   if (!savedOnly) for (const wallet of ownWallets) {
@@ -218,7 +218,8 @@ export function WalletWorkspace() {
   const usedBefore = recipients.data?.recipients.some((item) => item.kind === "wallet" && item.destination.toLowerCase() === recipient.toLowerCase()) ?? false;
   const firstTime = validRecipient && !usedBefore && !ownWallet && !tagged;
   // Once checked, the Check step stays in the steps, even after the recipient is saved and so no longer new.
-  const showCheck = firstTime || (validRecipient && checkedAddress === recipient.toLowerCase());
+  // An address that can't receive here never reaches the Check step, so it isn't shown.
+  const showCheck = !recipientBlocked && (firstTime || (validRecipient && checkedAddress === recipient.toLowerCase()));
 
   /**
    * Pick someone from the people row. Someone paid before also brings back the asset and network of that payment, while
@@ -378,7 +379,7 @@ export function WalletWorkspace() {
                 {/* Who first: most sends repeat a payment, and picking someone you paid before brings back what you sent them. */}
                 {people.length > 0 && <div className="mxFaces" role="group" aria-label="Recipients">
                   {people.map((person) => <button type="button" key={person.key} aria-pressed={person.address === recipient.toLowerCase()} disabled={inFlight} onClick={() => choosePerson(person)}>
-                    <span className="mxFace" aria-hidden="true">{person.face}</span><strong>{person.name}</strong><small>{person.detail}</small></button>)}
+                    <span className="mxFace" aria-hidden="true">{person.face ?? <History />}</span><strong>{person.name}</strong><small>{person.detail}</small></button>)}
                 </div>}
                 <div className="mxFieldGroup">
                   <label className="mxField">To<input className="mxMonoInput" autoComplete="off" autoCapitalize="none" spellCheck={false} placeholder="0x… or @tag" value={toText} disabled={inFlight} onChange={(event) => typeRecipient(event.target.value)} /></label>
