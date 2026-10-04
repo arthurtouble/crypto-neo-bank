@@ -351,6 +351,8 @@ test("a setup that was left part way says so, and finishes in steps", async ({ p
 
 test("Polygon not answering: cash shows as unavailable and setup says why in plain words", async ({ page }, info) => {
   await signIn(page);
+  // Buying is refused from the UAE (the suite's default place) before Polygon is asked; buy from a place Predictions serves.
+  await page.setExtraHTTPHeaders({ "CF-IPCountry": "CH" });
   await edge("/__state", { down: ["rpc:137"] });
   await page.goto("/app/predictions");
   await expect(page.getByTestId("predictions-cash")).toHaveText("Unavailable", { timeout: 30_000 });
