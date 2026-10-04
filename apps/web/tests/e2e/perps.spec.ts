@@ -142,16 +142,16 @@ test("with the switch off, Perps says it isn't available yet", async ({ page }) 
   await expect(page.getByTestId("perps-account-value")).toHaveCount(0);
 });
 
-test("a new customer, switch on: an empty perps account with Add money as the one action, not an error", async ({ page }, info) => {
+test("a new customer, switch on: an empty perps account with Deposit as the one action, not an error", async ({ page }, info) => {
   const failed: string[] = [];
   page.on("response", (response) => { if (response.url().includes("/api/perps/") && response.status() >= 500) failed.push(`${response.status()} ${response.url()}`); });
   await signIn(page);
   await page.goto("/app/perps");
   await expect(page.getByTestId("perps-account-value")).toHaveText("$0.00", { timeout: 30_000 });
-  await expect(page.getByTestId("perps-empty")).toHaveText("Add USDC from your Aura account to start trading. At least $6.");
+  await expect(page.getByTestId("perps-empty")).toHaveText("Deposit USDC from your Aura account to start trading. At least $6.");
   const account = page.getByRole("region", { name: "Perps account" });
-  await expect(account.getByRole("button")).toHaveText(["Add money"]);
-  await expect(account.getByRole("button", { name: "Add money" })).toHaveClass(/appButtonPrimary/);
+  await expect(account.getByRole("button")).toHaveText(["Deposit"]);
+  await expect(account.getByRole("button", { name: "Deposit" })).toHaveClass(/appButtonPrimary/);
   await expect(page.getByText("No open positions.")).toBeVisible();
   await expect(page.getByRole("list", { name: "Perp markets" }).getByRole("link")).toHaveCount(5);
   await shot(page, info, "perps-new-customer");
@@ -167,7 +167,7 @@ test("where Hyperliquid doesn't serve, Perps says so before anything is filled i
   const notice = "Perps aren't available where you are. You can still close positions and withdraw.";
   await expect(page.getByTestId("perps-blocked")).toHaveText(notice, { timeout: 30_000 });
   const account = page.getByRole("region", { name: "Perps account" });
-  await expect(account.getByRole("button", { name: "Add money" })).toBeDisabled();
+  await expect(account.getByRole("button", { name: "Deposit" })).toBeDisabled();
   await expect(account.getByRole("button", { name: "Withdraw" })).toBeEnabled();
   await expect(page.getByRole("listitem", { name: "BTC long" }).getByRole("button", { name: "Close" })).toBeEnabled();
   await page.goto("/app/perps/BTC");
@@ -190,7 +190,7 @@ test("a locked account says so on Perps, and every trade, add, and withdrawal wa
   await page.goto("/app/perps");
   await expect(page.getByTestId("perps-blocked")).toHaveText("Your account is locked. Unlock it in Settings to trade, add money, or withdraw.", { timeout: 30_000 });
   const account = page.getByRole("region", { name: "Perps account" });
-  await expect(account.getByRole("button", { name: "Add money" })).toBeDisabled();
+  await expect(account.getByRole("button", { name: "Deposit" })).toBeDisabled();
   await expect(account.getByRole("button", { name: "Withdraw" })).toBeDisabled();
   await expect(page.getByRole("listitem", { name: "BTC long" }).getByRole("button", { name: "Close" })).toBeDisabled();
 });
@@ -456,9 +456,9 @@ test("one tap opens a long: adds money through the action flow, connects this de
   await page.goto("/app/perps/BTC");
   const form = await openOrder(page, info, "long");
   await enterAmount(form, info, "15");
-  await expect(form).toContainText("Added from USDC first$16.00", { timeout: 20_000 });
+  await expect(form).toContainText("Deposited from USDC first$16.00", { timeout: 20_000 });
   // The button says what the tap does: add money first, then go long.
-  await form.getByRole("button", { name: "Add money and long BTC" }).click();
+  await form.getByRole("button", { name: "Deposit and long BTC" }).click();
   await expect(flow(page)).toContainText("Order placed. 0.0015 BTC at $64,250.00.", { timeout: 30_000 });
   await shot(page, info, "perps-order-placed");
   // Leverage defaults to the market's maximum, 40x for BTC.
@@ -478,29 +478,29 @@ test("adding money finishes when the perps account shows it, and the sheet close
     { tool: "relay_direct", fromAmountRaw: "8000000", toAmountRaw: "7980000" });
   await page.route("**/api/perps/deposit", async (route) => { await json(route, { action: deposit }, 201); });
   await page.goto("/app/perps");
-  await page.getByRole("button", { name: "Add money" }).click({ timeout: 30_000 });
-  const add = page.getByRole("dialog", { name: "Add money to perps" });
+  await page.getByRole("button", { name: "Deposit" }).click({ timeout: 30_000 });
+  const add = page.getByRole("dialog", { name: "Deposit to perps" });
   // Closing before anything is sent.
   await add.getByRole("button", { name: "Close" }).first().click();
   await expect(add).toHaveCount(0);
-  await page.getByRole("button", { name: "Add money" }).click();
+  await page.getByRole("button", { name: "Deposit" }).click();
   await enterAmount(add, info, "8");
-  await add.getByRole("button", { name: "Add money", exact: true }).click();
-  await expect(add.locator(".mkFlow")).toContainText("Adding money", { timeout: 20_000 });
+  await add.getByRole("button", { name: "Deposit", exact: true }).click();
+  await expect(add.locator(".mkFlow")).toContainText("Depositing", { timeout: 20_000 });
   await shot(page, info, "perps-add-money");
   await expect(add.getByRole("button", { name: "Close" }).first()).toBeEnabled();
   funded = true;
   await expect(add.locator(".mkFlow")).toContainText("Network fee $0.02", { timeout: 20_000 });
-  await expect(add.locator(".mkFlow")).toContainText("$7.98 added to perps ($8.00 less a $0.02 network fee).", { timeout: 30_000 });
+  await expect(add.locator(".mkFlow")).toContainText("$7.98 deposited to perps ($8.00 less a $0.02 network fee).", { timeout: 30_000 });
   await add.getByRole("button", { name: "Done" }).click();
   await expect(add).toHaveCount(0);
   await expect(page.getByTestId("perps-account-value")).toHaveText("$7.94", { timeout: 30_000 });
 
   // While it's still moving, Close works and leaves it to finish.
   funded = false;
-  await page.getByRole("button", { name: "Add money" }).click();
+  await page.getByRole("button", { name: "Deposit" }).click();
   await enterAmount(add, info, "8");
-  await add.getByRole("button", { name: "Add money", exact: true }).click();
+  await add.getByRole("button", { name: "Deposit", exact: true }).click();
   await expect(add.getByText("You can close this. The money keeps moving")).toBeVisible({ timeout: 20_000 });
   await add.getByRole("button", { name: "Close" }).first().click();
   await expect(add).toHaveCount(0);

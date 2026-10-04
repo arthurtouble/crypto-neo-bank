@@ -79,7 +79,7 @@ describe("Perps view helpers", () => {
 
   it("says why Hyperliquid refused an order in plain words, and what to do", () => {
     expect(orderRefusal("Order could not immediately match against any resting orders. asset=0")).toBe("The price moved more than 1% before the order reached Hyperliquid, so nothing was traded. Try again.");
-    expect(orderRefusal("Insufficient margin to place order. asset=3")).toBe("Your perps balance isn't enough for this order. Add money or lower the amount.");
+    expect(orderRefusal("Insufficient margin to place order. asset=3")).toBe("Your perps balance isn't enough for this order. Deposit more or lower the amount.");
     expect(orderRefusal("Order must have minimum value of $10. asset=0")).toBe("Orders must be worth at least $10. Add more or raise the leverage.");
     expect(orderRefusal("Reduce only order would increase position. asset=0")).toMatch(/^This would grow the position/);
     expect(orderRefusal("Order price cannot be more than 80% away from the reference price")).toBe("That price is too far from the price now. Pick one closer to it.");

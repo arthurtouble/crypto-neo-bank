@@ -41,7 +41,7 @@ Each market's page shows its price chart, from the last few minutes to all time,
 - **Fees.** Before you confirm, the order shows Hyperliquid's estimated fee for your account. Stock perps cost more to trade than crypto ones.
 - **Funding.** Every hour, longs and shorts pay each other a small funding fee. When the rate is positive, longs pay shorts. Each market's page shows it.
 
-If your perps balance is short, Aura adds the difference from your USDC on Base first, then places the order, in one tap. Adding money takes at least $6, because Hyperliquid needs at least $5 to arrive. It usually arrives in a few seconds. You can close the window while it moves; your Transactions show when it lands.
+If your perps balance is short, Aura deposits the difference from your USDC on Base first, then places the order, in one tap. A deposit to perps is at least $6, because Hyperliquid needs at least $5 to arrive. It usually arrives in a few seconds. You can close the window while it moves; your Transactions show when it lands.
 
 ## Predictions
 

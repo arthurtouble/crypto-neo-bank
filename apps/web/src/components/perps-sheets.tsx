@@ -163,7 +163,7 @@ export function PriceField({ label, value, onChange, placeholder, hint, error, a
 }
 
 /**
- * Add money (USDC from the Aura account on Base) or withdraw (back to
+ * Deposit (USDC from the Aura account on Base) or withdraw (back to
  * USDC on Base, signed by the wallet with the passkey). The sheet can always
  * be closed: once sent, the money keeps moving and Transactions tracks it.
  */
@@ -186,13 +186,13 @@ export function PerpsMoneySheet({ mode, account, onClose }: { mode: "add" | "wit
     if (value === null || problem) return;
     try {
       if (mode === "add") {
-        start([{ key: "add", label: "Adding money…", detail: ADD_MONEY_DETAIL }]);
+        start([{ key: "add", label: "Depositing…", detail: ADD_MONEY_DETAIL }]);
         let fee: number | null = null;
         await addToPerps({ api, deposit, amount: value, baseline: totals?.value ?? null,
           onPrepared: (action) => { fee = depositFee(action); if (fee !== null) at("add", `${ADD_MONEY_DETAIL} ${feeText(fee)}.`); },
           onSlow: () => at("add", "This is taking longer than usual. The money is on its way; you can close this and follow it in Transactions.") });
         const arrived: number | null = fee;
-        finish(arrived === null ? `${formatUsd(value)} added to perps, less the network fee.` : `${formatUsd(value - arrived)} added to perps (${formatUsd(value)} less a ${formatUsd(arrived)} network fee).`);
+        finish(arrived === null ? `${formatUsd(value)} deposited to perps, less the network fee.` : `${formatUsd(value - arrived)} deposited to perps (${formatUsd(value)} less a ${formatUsd(arrived)} network fee).`);
       } else {
         start([{ key: "sign", label: "Confirm with your passkey" }, { key: "send", label: "Sending to your Aura account" }]);
         const request = await api<SignRequest>("/api/perps/withdraw", { method: "POST", json: { amount: value.toFixed(2) } });
@@ -209,7 +209,7 @@ export function PerpsMoneySheet({ mode, account, onClose }: { mode: "add" | "wit
     }
   }
 
-  const title = mode === "add" ? "Add money to perps" : "Withdraw from perps";
+  const title = mode === "add" ? "Deposit to perps" : "Withdraw from perps";
   const depositFailed = deposit.action?.status === "failed" || deposit.action?.status === "expired" || deposit.outcomeUnknown;
   return <Sheet onOpenChange={(open) => { if (!open) onClose(); }} className="mkSheet">
     <div className="mxDialogHead"><Dialog.Title>{title}</Dialog.Title><Dialog.Close className="appTextButton">Close</Dialog.Close></div>
@@ -225,7 +225,7 @@ export function PerpsMoneySheet({ mode, account, onClose }: { mode: "add" | "wit
         <div><dt>Arrives in</dt><dd>Your Aura account on Base</dd></div></dl>}
       {mode === "withdraw" && main !== null && totals && main < totals.value - 0.01 && <p className="mxHint">
         While positions are open, Hyperliquid keeps part of your balance back to support them. Close a position to withdraw more.</p>}
-      <button type="submit" className="appButton appButtonPrimary appButtonLarge" disabled={value === null || problem !== null}>{mode === "add" ? "Add money" : "Withdraw"}</button>
+      <button type="submit" className="appButton appButtonPrimary appButtonLarge" disabled={value === null || problem !== null}>{mode === "add" ? "Deposit" : "Withdraw"}</button>
       <p className="mxHint">{mode === "add" ? `Moves USDC from your Aura account on Base to your perps balance. The network fee is a few cents; Aura charges none. At least $${PERPS_MINIMUM_DEPOSIT}.`
         : "Your wallet signs the withdrawal with your passkey. A small network fee comes out of it; Aura charges none."}</p>
     </form>}

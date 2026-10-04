@@ -18,7 +18,7 @@ export const perpHref = (coin: string) => `/app/perps/${encodeURIComponent(coin)
 
 /**
  * Perps home: the perps account's value, what's available to trade and to
- * withdraw, with Add money and Withdraw; positions, open orders, and history;
+ * withdraw, with Deposit and Withdraw; positions, open orders, and history;
  * then every market with search. Read from Hyperliquid each time; a read that
  * fails says Unavailable.
  */
@@ -69,7 +69,7 @@ function PerpsAccountCard({ account, isExample, isPending, failed, onRetry }: { 
   const totals = perpsTotals(account);
   const open = (mode: "add" | "withdraw") => isExample ? login() : setSheet(mode);
   const unavailable = <span className="appUnavailable">Unavailable</span>;
-  // A new or emptied account: nothing to withdraw, so Add money is the one thing to do.
+  // A new or emptied account: nothing to withdraw, so Deposit is the one thing to do.
   const empty = !isExample && totals !== null && totals.value === 0 && totals.withdrawable === 0;
   const locked = account?.blocked?.reason === "locked";
   return <section className="mxCard mkAccount" aria-labelledby="perps-account">
@@ -86,11 +86,11 @@ function PerpsAccountCard({ account, isExample, isPending, failed, onRetry }: { 
             </dl>
             <span className="mkAvailableActions">
               {!empty && <button type="button" className="appButton" disabled={locked} onClick={() => open("withdraw")}><Minus aria-hidden="true" />Withdraw</button>}
-              <button type="button" className={`appButton${empty ? " appButtonPrimary" : ""}`} disabled={Boolean(account?.blocked)} onClick={() => open("add")}><Plus aria-hidden="true" />Add money</button>
+              <button type="button" className={`appButton${empty ? " appButtonPrimary" : ""}`} disabled={Boolean(account?.blocked)} onClick={() => open("add")}><Plus aria-hidden="true" />Deposit</button>
             </span>
           </div>
           {account?.blocked && <Notice tone="warning" data-testid="perps-blocked">{account.blocked.message}</Notice>}
-          {empty && !account?.blocked && <p className="mxHint" data-testid="perps-empty">Add USDC from your Aura account to start trading. At least ${PERPS_MINIMUM_DEPOSIT}.</p>}
+          {empty && !account?.blocked && <p className="mxHint" data-testid="perps-empty">Deposit USDC from your Aura account to start trading. At least ${PERPS_MINIMUM_DEPOSIT}.</p>}
         </>}
     {sheet && <PerpsMoneySheet mode={sheet} account={account} onClose={() => setSheet(null)} />}
   </section>;

@@ -125,7 +125,7 @@ export function PerpsOrderForm({ market, side, onSide, account, variant, onDone,
       : margin * leverage < 10 ? "Orders must be worth at least $10. Add more or raise the leverage."
         : short > 0 && base === null ? "Your USDC balance can't be read right now."
           : max !== null && margin > max ? `That's more than you have. You can put in up to ${formatUsd(max)}.`
-            : short > 0 && (topUp < short || topUp < PERPS_MINIMUM_DEPOSIT) ? `You don't have enough USDC. Adding money to perps takes at least $${PERPS_MINIMUM_DEPOSIT}.`
+            : short > 0 && (topUp < short || topUp < PERPS_MINIMUM_DEPOSIT) ? `You don't have enough USDC. A deposit to perps is at least $${PERPS_MINIMUM_DEPOSIT}.`
               : type === "limit" && !limit ? "Enter the limit price." : null;
   const blocked = stop !== null || problem !== null || tpProblem !== null || slProblem !== null;
 
@@ -141,7 +141,7 @@ export function PerpsOrderForm({ market, side, onSide, account, variant, onDone,
     if (!body || blocked) return;
     const ready = account?.connection?.status === "ready";
     const steps: FlowStep[] = [
-      ...(topUp > 0 ? [{ key: "add", label: "Adding money…", detail: `${formatUsd(topUp)} from your USDC on Base. ${ADD_MONEY_DETAIL}` }] : []),
+      ...(topUp > 0 ? [{ key: "add", label: "Depositing…", detail: `${formatUsd(topUp)} from your USDC on Base. ${ADD_MONEY_DETAIL}` }] : []),
       ...(!ready ? [{ key: "setup", label: "Connecting your wallet", detail: "Confirm with your passkey. You do this once." }] : []),
       { key: "order", label: "Placing your order" }
     ];
@@ -178,7 +178,7 @@ export function PerpsOrderForm({ market, side, onSide, account, variant, onDone,
   if (flow) return <div className="mkOrderFlow">
     <FlowTimeline flow={flow} title={`${sideLabel} ${name} progress`} />
     {deposit.phase !== "idle" && (running || depositFailed) && <TransactionProgress label="Deposit" phase={deposit.phase} action={deposit.action} outcomeUnknown={deposit.outcomeUnknown} />}
-    {running && variant === "sheet" && topUp > 0 && <p className="mxHint">If you close this now, money being added still arrives in perps, but the order isn&apos;t placed.</p>}
+    {running && variant === "sheet" && topUp > 0 && <p className="mxHint">If you close this now, the deposit still arrives in perps, but the order isn&apos;t placed.</p>}
     {!running && <button type="button" className="appButton appButtonPrimary appButtonLarge" onClick={() => { reset(); if (variant === "sheet") onDone(); }}>Done</button>}
   </div>;
 
@@ -189,7 +189,7 @@ export function PerpsOrderForm({ market, side, onSide, account, variant, onDone,
     return pnl === null ? undefined : `${pnl >= 0 ? "Profit" : "Loss"} of about ${formatSignedUsd(pnl).replace(/^[+−]/, "")}`;
   };
   const fee = preview.data ? preview.data.fee === null || preview.data.fee === undefined ? <span className="appUnavailable">Unavailable</span> : formatFee(preview.data.fee) : "—";
-  const action = guest ? "Sign in to trade" : topUp > 0 ? `Add money and ${side} ${name}` : `${sideLabel} ${name}`;
+  const action = guest ? "Sign in to trade" : topUp > 0 ? `Deposit and ${side} ${name}` : `${sideLabel} ${name}`;
   return <form className="mkOrderForm" aria-label={`${sideLabel} ${name} order`} onSubmit={(event) => { event.preventDefault(); if (guest) login(); else void place(); }}>
     {stop && <Notice tone="warning" data-testid="perps-order-blocked">{stop}</Notice>}
     <div className="mkOrderTop">
@@ -209,8 +209,8 @@ export function PerpsOrderForm({ market, side, onSide, account, variant, onDone,
     <DollarAmount label="Amount (USD)" value={amount} onChange={setAmount} available={max} error={problem} shares={[0.25, 0.5, 0.75]}
       aside={tradable === null ? undefined : <span data-testid="perps-order-available">{formatUsd(tradable)} to trade</span>}
       note={guest || tradable === null ? undefined : <span data-testid="perps-order-from-base">{fromBase > 0
-        ? `Plus ${formatUsd(fromBase)} of your USDC on Base, added first when you need it. Max counts both.`
-        : base !== null && base > 0 ? `Your ${formatUsd(base)} USDC on Base is under the $${PERPS_MINIMUM_DEPOSIT} needed to add money to perps.` : "Add USDC to your Aura account to trade more."}</span>} />
+        ? `Plus ${formatUsd(fromBase)} of your USDC on Base, deposited first when you need it. Max counts both.`
+        : base !== null && base > 0 ? `Your ${formatUsd(base)} USDC on Base is under the $${PERPS_MINIMUM_DEPOSIT} a deposit to perps needs.` : "Add money to your Aura account to trade more."}</span>} />
     {variant === "sheet" && <PayWith amount={base} note={tradable !== null ? `${formatUsd(tradable)} to trade in perps` : undefined} />}
     <div className="mkLeverage">
       <span className="mkLabelRow"><span className="mkLabel" id={`leverage-${market.assetIndex}`}>Leverage</span>
@@ -241,7 +241,7 @@ export function PerpsOrderForm({ market, side, onSide, account, variant, onDone,
       <div><dt>Estimated fee</dt><dd data-testid="perps-fee">{preview.isError ? <span className="appUnavailable">Unavailable</span> : fee}</dd></div>
       <div><dt>Liquidation price</dt><dd data-testid="perps-liquidation">{preview.isError ? <span className="appUnavailable">Unavailable</span>
         : preview.data ? formatPrice(preview.data.liquidationPrice) ?? "None at this leverage" : "—"}</dd></div>
-      {topUp > 0 && <div><dt>Added from USDC first</dt><dd>{formatUsd(topUp)}</dd></div>}
+      {topUp > 0 && <div><dt>Deposited from USDC first</dt><dd>{formatUsd(topUp)}</dd></div>}
     </dl>
     {preview.isError && <p className="mxFieldError" role="alert">{failureMessage(preview.error)}</p>}
     <button type="submit" className="appButton appButtonPrimary appButtonLarge" disabled={!guest && (margin === null || blocked)}>{action}</button>
