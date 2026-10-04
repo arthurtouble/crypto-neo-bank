@@ -1,4 +1,6 @@
 import { readIncoming } from "@/lib/activity/incoming";
+import { incomingEntry } from "@/lib/activity/entries";
+import { labelMarketWithdrawals, readMarketWithdrawals } from "@/lib/activity/markets";
 import { recordIncoming } from "@/lib/activity/observations";
 import { listActionHashes } from "@/lib/actions/store";
 import { readBankDeposits } from "@/lib/money/bank-activity";
@@ -28,7 +30,8 @@ export async function watchAccount(db: D1Database, subject: string, wallet: stri
 type Watch = { subject_reference: string; wallet_address: string; watched_since: string };
 
 /** Check watched accounts for new money received and record a notice for each. Returns the customers who got one. */
-export async function scanIncoming(db: D1Database, options: { subject?: string; limit?: number; now?: Date; read?: typeof readIncoming; bankDeposits?: typeof readBankDeposits } = {}): Promise<string[]> {
+export async function scanIncoming(db: D1Database, options: { subject?: string; limit?: number; now?: Date; read?: typeof readIncoming; bankDeposits?: typeof readBankDeposits;
+  marketWithdrawals?: typeof readMarketWithdrawals } = {}): Promise<string[]> {
   const now = options.now ?? new Date();
   const due = new Date(now.getTime() - RECHECK_MS).toISOString();
   const rows = await db.prepare(`SELECT w.subject_reference, w.wallet_address, w.watched_since FROM incoming_watches w
@@ -45,8 +48,13 @@ export async function scanIncoming(db: D1Database, options: { subject?: string; 
     const fresh = incoming.transfers.filter((transfer) => transfer.receivedAt >= watch.watched_since && transfer.receivedAt >= announceSince);
     // A bank deposit arrives from Bridge's address; say it's from the bank.
     const bank = fresh.length ? await (options.bankDeposits ?? readBankDeposits)(db, watch.subject_reference) : new Map();
+    // A withdrawal from perps or predictions arrives from an address that says nothing; match it the way Transactions does.
+    const withdrawals = fresh.length ? await (options.marketWithdrawals ?? readMarketWithdrawals)(db, watch.subject_reference) : [];
+    const markets = new Map<string, "perps" | "predictions">(labelMarketWithdrawals(incoming.transfers.map((transfer) => incomingEntry(transfer)), withdrawals, watch.wallet_address)
+      .flatMap((entry): Array<[string, "perps" | "predictions"]> => entry.type === "perps_withdraw" ? [[entry.id, "perps"]] : entry.type === "predictions_withdraw" ? [[entry.id, "predictions"]] : []));
     for (const transfer of fresh) {
-      if (await notify(db, watch.subject_reference, receivedNotice(transfer, bank.get(transfer.transactionHash.toLowerCase())), now)) notified.add(watch.subject_reference);
+      const notice = receivedNotice(transfer, bank.get(transfer.transactionHash.toLowerCase()), markets.get(transfer.id));
+      if (await notify(db, watch.subject_reference, notice, now)) notified.add(watch.subject_reference);
     }
   }
   return [...notified];

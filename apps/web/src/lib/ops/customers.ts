@@ -146,6 +146,7 @@ export async function lockAccount(db: D1Database, subject: string, operator: str
   ]);
   if ((locked.meta.changes ?? 0) !== 1) return false;
   await freezeCardForLock(db, subject, now);
-  await announce(db, subject, securityNotice("locked", "Our team locked your Aura account to protect it. Nothing can be sent until you unlock it in Settings with your passkey.", `operator:${at}`), now);
+  await announce(db, subject, securityNotice("locked", "Our team locked your Aura account to protect it. Nothing can be sent until you unlock it in Settings with your passkey.", `operator:${at}`,
+    { advice: "Contact support to find out why." }), now);
   return true;
 }

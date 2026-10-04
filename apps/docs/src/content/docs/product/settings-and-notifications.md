@@ -24,6 +24,8 @@ Every notice shows in the app, under the bell at the top of the screen. You can 
 
 Security notices, like a lock or a new recipient, are always sent: in the app, and by email if your account has one.
 
+A notice reads like the receipt it opens: the same amount, who it was to or from, and why it failed if it did. A bank transfer gets one notice, when it reaches your bank or if it comes back. Money you withdraw from perps or predictions says it's back from Hyperliquid or Polymarket.
+
 ## Your data
 
 **Download my data** gives you a file with everything Aura holds about your account, straight away. To close your account, move your money out first, then select **Contact support**. We close an account once it holds nothing and nothing is in progress. There's no way to delete your records yourself; see [data and privacy](/safety/data-and-privacy/#how-long-we-keep-things).

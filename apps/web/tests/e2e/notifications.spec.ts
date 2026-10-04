@@ -114,7 +114,7 @@ test("with transaction emails off, money received isn't emailed, but a security 
   await expect(toast(page, "Controls updated")).toBeVisible({ timeout: 20_000 });
   await expect.poll(() => emailsTo(customer), { timeout: 20_000 }).toEqual(["Your account is locked"]);
   const email = (await outbox()).emails.find((item) => item.to.includes(customer.email))!;
-  expect(email.text).toContain("If this wasn't you, lock your account in Settings and contact support.");
+  expect(email.text).toContain("If you didn't lock it, contact support.");
   // The security notice reaches the bell too.
   await returnToTab(page);
   await expect(count(page)).toHaveText("2", { timeout: 10_000 });
