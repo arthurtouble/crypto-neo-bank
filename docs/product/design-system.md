@@ -298,7 +298,7 @@ On the raised surface with shadow 2, a status icon, a title, one line, and a clo
 - **Desktop top bar.** 60px: the page title or search (⌘K) on the left, the bell and the avatar menu on the right. The bell's unread count is a small accent pill on the bell's top-right corner, never over the bell. The avatar shows the first letter of the account's email or name; with no letter (an email like 3@…), a person icon.
 - **Phone header.** 56px: the section title, and the bell on the right. In a step, a back button on the left and the step's title instead.
 - **Phone menu button.** A 56px circle, filled with the text colour, floating bottom centre with shadow 2. It hides during a step, and otherwise stays put: no hiding on scroll, focus, or overlap. Every page ends with 100px clear plus the safe area, so the customer can always scroll any button above it (owner, 2 October). Hiding it on focus moved it under the finger as the field lost focus, and hiding it on scroll or overlap didn't hold up on a real phone.
-- **Phone menu sheet.** From the bottom, `--radius-sheet` top corners, a grab handle. "Menu" and the email at the top, the twelve sections as tiles three per row (a 22px icon above the name, the current tile outlined in accent), and Log out at the bottom.
+- **Phone menu sheet.** From the bottom, `--radius-sheet` top corners, a grab handle. "Menu" and the email at the top, the twelve sections as tiles three per row (a 22px icon above the name, the current tile outlined in accent), and Sign out at the bottom.
 
 ### Overlays
 
@@ -356,6 +356,8 @@ Notice emails (`apps/web/src/lib/notifications/email.ts`) follow the same system
 ## Quality bar
 
 Every screen meets this on desktop and phone, in light and dark, before it ships. Agreed on 4 October 2026 for the polish pass; the [review checklist](#review-checklist) below is the short version.
+
+`pnpm sweep` checks the parts a machine can: it opens every page in the menu and the landing page, as a guest and signed in, in light and dark, at each width below plus 640px (1280px at 200% zoom), and writes what it finds to `output/sweep/report.md`: sideways scrolling, clipped text, touch targets under 44px, content under the floating menu button, axe issues (at 390 and 1280px), console errors, and failed requests. `AURA_SWEEP_ONLY=/app/send,/app/swap pnpm sweep` checks just those pages; `AURA_SWEEP=strict` fails on any finding. The rest (states, money, copy, keyboard) is checked by hand and by each feature's e2e spec.
 
 **Layout and touch**
 

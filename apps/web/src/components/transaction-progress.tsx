@@ -70,7 +70,7 @@ export function TransactionProgress({ label, phase, action, outcomeUnknown }: Pr
       <div><strong>{title}</strong><small>{detail}</small></div>
     </div>
     {!failed && <div className="transactionSteps" aria-label={`${label} progress`}>
-      {["Prepare", "Confirm", "Submitted", "Complete"].map((name, index) => <span className={index <= step ? "done" : ""} key={name}><i>{index < step || complete ? <Check size={10} /> : index + 1}</i>{name}</span>)}
+      {["Prepared", "Confirmed", "Submitted", "Completed"].map((name, index) => <span className={index <= step ? "done" : ""} key={name}><i>{index < step || complete ? <Check size={10} /> : index + 1}</i>{name}</span>)}
     </div>}
     {failed && <div className="transactionFailureHint"><CircleAlert size={14} /> Nothing was retried automatically.</div>}
     {links.length > 0 && <div className="transactionLinks">{links.map((link) => link.internal ? <Link href={link.url} key={link.name}>{link.name}</Link>

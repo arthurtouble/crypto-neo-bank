@@ -73,7 +73,7 @@ export function TermsGate({ children }: { children: React.ReactNode }) {
       {leave("Not now")}</div></AccountScreen>;
   if (query.isError) return <AccountScreen title="We couldn’t load your account"><p>Check your connection, then try again. If it keeps happening, contact support.</p>
     <div className="appScreenActions"><button type="button" className="appButton appButtonPrimary appButtonLarge" onClick={() => void query.refetch()}>Try again</button>
-      {leave("Log out")}</div></AccountScreen>;
+      {leave("Sign out")}</div></AccountScreen>;
   if (!hasEmail && !query.isError) {
     const addEmail = () => {
       setLinking(true); setLinkError("");
@@ -84,7 +84,7 @@ export function TermsGate({ children }: { children: React.ReactNode }) {
     return <AccountScreen title="Add your email"><p>Aura sends security notices and receipts by email. We&apos;ll send a code to check it&apos;s yours.</p>
       {linkError ? <p className="appFieldError" role="alert">{linkError}</p> : null}
       <div className="appScreenActions"><button type="button" className="appButton appButtonPrimary appButtonLarge" disabled={linking} onClick={addEmail}>{linking ? "Adding…" : "Add email"}</button>
-        {leave("Log out")}</div></AccountScreen>;
+        {leave("Sign out")}</div></AccountScreen>;
   }
   async function accept() {
     setSubmitting(true); setError("");
@@ -108,6 +108,6 @@ export function TermsGate({ children }: { children: React.ReactNode }) {
       <span>I agree to the Terms of use and have read the Privacy notice and Risk disclosure.</span></label>
     {error ? <p className="appFieldError" role="alert">{error}</p> : null}
     <div className="appScreenActions"><button type="button" className="appButton appButtonPrimary appButtonLarge" disabled={!agreed || submitting} onClick={() => void accept()}>{submitting ? "Saving…" : "Continue"}</button>
-      {leave("Log out")}</div>
+      {leave("Sign out")}</div>
   </AccountScreen>;
 }

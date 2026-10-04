@@ -50,7 +50,7 @@ Bank payouts are coming soon.
 
 ## After you confirm
 
-Send shows the steps as you go: **Submitted** once a transaction hash exists, then **Complete** once it's in a block and matches what you reviewed. A send to another network shows as **sent** once it leaves Base. In Transactions, it's **Pending**, **Completed**, **Failed**, or **Not sent**; see [transactions and their status](/product/transaction-lifecycle/#what-each-status-means).
+Send shows the steps as you go: **Submitted** once a transaction hash exists, then **Completed** once it's in a block and matches what you reviewed. A send to another network shows as **sent** once it leaves Base. In Transactions, it's **Pending**, **Completed**, **Failed**, or **Not sent**; see [transactions and their status](/product/transaction-lifecycle/#what-each-status-means).
 
 Your [account controls](/safety/account-controls/) apply to every send: a daily limit, saved recipients only, and the emergency lock. They're off until you turn them on.
 

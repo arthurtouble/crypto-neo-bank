@@ -231,13 +231,13 @@ test("the server refuses the account until the current terms are accepted, and r
   await expect(acceptTerms(page, noEmail)).rejects.toThrow("accepting terms failed: 403");
 });
 
-test("a customer who doesn't accept the terms can log out to the example data", async ({ page }) => {
+test("a customer who doesn't accept the terms can sign out to the example data", async ({ page }) => {
   const customer = await newCustomer();
   await setIdentity(page, customer);
   await page.goto("/app");
   await page.getByRole("button", { name: "Create account or sign in" }).click();
   await expect(page.getByRole("heading", { name: "Review Aura’s terms" })).toBeVisible();
-  await page.getByRole("button", { name: "Log out" }).click();
+  await page.getByRole("button", { name: "Sign out" }).click();
   await expect(page.getByRole("heading", { name: "Review Aura’s terms" })).toHaveCount(0);
   await expect(page.getByText("Example data", { exact: true })).toBeVisible();
 });
@@ -258,9 +258,9 @@ test("signing out returns to the example Overview", async ({ page }) => {
   const customer = await newCustomer();
   await openOverview(page, customer);
   await expect(page.getByTestId("portfolio-total")).toBeVisible({ timeout: 30_000 });
-  // Log out is in the account menu on desktop and in the menu sheet on the phone.
+  // Sign out is in the account menu on desktop and in the menu sheet on the phone.
   await page.getByRole("button", { name: page.viewportSize()!.width < 768 ? "Open menu" : "Account" }).click();
-  await page.getByRole("button", { name: "Log out of Aura" }).click();
+  await page.getByRole("button", { name: "Sign out of Aura" }).click();
   await expect(page.getByText("Example data", { exact: true })).toBeVisible();
   await expect(page.getByTestId("portfolio-total")).toHaveCount(0);
 });

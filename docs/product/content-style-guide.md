@@ -32,7 +32,7 @@ Agreed on 4 October 2026 for the polish pass. The left column is what the app sa
 | Protocol, liquidity | Aave or Morpho by name; "Withdrawals depend on how much is available" | Never |
 | Provider | The partner's name, or drop it | Never |
 | Tokenized stocks, token | "Stocks", or the asset's name | Legal disclosures that must name the instrument |
-| Settled, settling, settlement, finality | "Complete", "Pending" | Card holds ("not final yet, can change") |
+| Settled, settling, settlement, finality | "Completed", "Pending" | Card holds ("not final yet, can change") |
 | Transaction hash, tx | "Transaction" (the link is View transaction) | Never |
 | Slippage | "Price can move by up to 0.5%" | Explained once on review screens |
 | Leverage, margin, liquidation price | Keep, each with one plain line the first time it appears | Perps only |
@@ -50,6 +50,8 @@ Agreed on 4 October 2026 for the polish pass. The left column is what the app sa
 These never appear in customer copy: the app, notices, emails, public docs, and marketing. Operators' screens in the ops app may keep precise terms.
 
 rail, intent, orchestration, provider, protocol, route (as a noun), cross-chain, onchain, settlement, projection, nonce, control plane, posture.
+
+`pnpm copy:check` (`scripts/check-copy.mjs`) finds these, the glossary's other old terms, and "we" in errors, in the web app's strings and the public docs (not the legal documents, whose wording the owner decides). Each file may have no more than `scripts/copy-baseline.json` allows, and `test:unit` fails if one gains a finding. When a feature's copy is fixed, `pnpm copy:check --update` lowers its count. A line that needs the term on purpose ends with a `copy-check: allow` comment.
 
 ## The same word for the same action
 

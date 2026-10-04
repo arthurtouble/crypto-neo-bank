@@ -33,7 +33,7 @@ Decided on 29 September 2026: keep the ten sections, not grouped. Markets became
 | How to get there | A sidebar listing all twelve, each with an icon and its name, always visible, no group headings | No tab bar. A round menu button floats at the bottom centre of every section page. It opens a sheet from the bottom with the twelve sections as tiles, three per row, each with an icon and its name. It hides during a step. Every page ends with room below the last button, so the customer can always scroll a button clear of it. |
 | Search | ⌘K from anywhere: pages and actions (B4) | Search inside Transactions |
 | Notifications | Bell in the top bar, opens a popover | Bell in the header of each section page, opens a screen |
-| Account | Avatar menu: email, theme, log out | Log out in the menu sheet's footer |
+| Account | Avatar menu: email, theme, sign out | Sign out in the menu sheet's footer |
 
 Deposit, Send, and Swap stay full pages. There's no separate Move money drawer or button; the sidebar and menu reach them, and Overview's quick buttons open them.
 
@@ -60,7 +60,7 @@ Each journey is drawn step by step in the storyboards. The frame numbers (J5.3 a
 
 - **J0 Get around.** The desktop sidebar with the twelve sections. On the phone, the floating menu button and the sheet of twelve tiles.
 - **J1 Explore as a guest.** Every section with example data and a banner. Any action opens sign-in (a dialog on desktop, a sheet on the phone).
-- **J2 Sign in and accept the terms.** Sign-in (Privy: email, Google, Telegram, or wallet); a Telegram or wallet sign-in adds an email next, verified by Privy; then the terms on their own full screen, with Log out as the way out. There's no app shell behind it; the three documents are rows and the checkbox is required. Then:
+- **J2 Sign in and accept the terms.** Sign-in (Privy: email, Google, Telegram, or wallet); a Telegram or wallet sign-in adds an email next, verified by Privy; then the terms on their own full screen, with Sign out as the way out. There's no app shell behind it; the three documents are rows and the checkbox is required. Then:
   - A first Overview with the four ways to deposit, each opening that way on Deposit.
   - A "Secure your account" checklist: add a passkey.
   - A session that expires shows one banner on the current page.

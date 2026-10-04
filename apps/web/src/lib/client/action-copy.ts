@@ -6,5 +6,5 @@ export function failureText(reason: string | null): string {
   if (reason === "delivery_below_minimum" || reason === "effect_missing_erc20_credit_min" || reason === "effect_missing_native_credit_min") return "Less than the minimum arrived. Contact support.";
   if (reason === "delivery_failed" || reason.startsWith("destination_")) return "Delivery failed. Contact support before you try again.";
   if (reason === "operation_reverted" || reason === "transaction_reverted") return "The network rejected it. Nothing moved.";
-  return "We couldn't match this transaction to what you confirmed. Contact support.";
+  return "What happened on the network doesn't match what you confirmed. Contact support before you try again.";
 }

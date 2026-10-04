@@ -39,6 +39,10 @@ Use the helpers in `support/session.ts`:
 
 Each feature has one spec named after it, covering every step and failure listed in its pull request.
 
+## The quality-bar sweep
+
+`sweep.spec.ts` checks every page against the quality bar in `docs/product/design-system.md#quality-bar` at widths from 320 to 1440px, light and dark, guest and signed in. It skips unless `AURA_SWEEP` is set, so CI's selection never runs it: use `pnpm sweep` from the repo root (report mode, then `output/sweep/report.md`), or `AURA_SWEEP=strict` to fail on findings. `AURA_SWEEP_ONLY` takes a comma-separated list of paths.
+
 ## What CI runs
 
 A pull request runs only the specs for the features it changes, plus `sign-in-overview` as a smoke test. `scripts/e2e-select.mjs` maps changed paths to specs. Shared code (`lib/actions`, `lib/auth`, `lib/http`, the shell, `support/`, config, migrations, and any app file the map doesn't recognise) runs every spec. Run `node scripts/e2e-select.mjs` to see what your branch will run, and run the same specs locally with `pnpm test:e2e tests/e2e/<feature>.spec.ts`.
