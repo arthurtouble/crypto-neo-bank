@@ -18,7 +18,7 @@ Settings has six sections.
 
 Every notice shows in the app, under the bell at the top of the screen. You can also get:
 
-- **Transaction emails:** money you receive, and when a send, swap, or Earn move completes or fails. You need an email on your account.
+- **Transaction emails:** money you receive, card payments, and when a send, swap, bank transfer, or Earn move completes or fails. You need an email on your account.
 - **Browser notifications:** turned on for each browser separately, in up to 10 browsers. Turning them on in another browser turns them off in the one you turned them on in longest ago. On iPhone and iPad, add Aura to your Home Screen first, then turn them on there.
 - **Product news:** occasional emails about what's new in Aura. Off unless you turn it on.
 
