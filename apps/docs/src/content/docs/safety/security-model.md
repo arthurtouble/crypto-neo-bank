@@ -3,7 +3,7 @@ title: Security model
 description: How Aura protects sign-in, checks each transaction before you confirm, and verifies it on the blockchain after.
 ---
 
-No single safeguard stops every loss, so we use several layers. We assume browsers, software libraries, partners, protocols, and people can all make mistakes or be attacked. None of these checks gives us control of your wallet or makes a transaction reversible.
+No single safeguard stops every loss, so we use several layers. We assume browsers, software libraries, partners, and people can all make mistakes or be attacked. None of these checks gives us control of your wallet or makes a transaction reversible.
 
 ## Signing in
 
@@ -18,11 +18,11 @@ Our server builds every money movement. It checks that the feature is on and the
 If you have a daily limit, we value the amount in US dollars:
 
 - USDC counts as $1.
-- EURC, tokenized stocks, and Tether Gold use their Chainlink price feed, if it's recent enough.
+- EURC, stocks, and Tether Gold use their Chainlink price feed, if it's recent enough.
 - ETH and WETH use a recent ETH price from Kraken, and cbBTC a recent BTC price.
 - Anything else uses the value in the quote for the swap or move.
 
-If we can't find a value, we stop the action. An unknown value never passes as a small one, and we never use an estimate from your browser.
+If there's no value, Aura stops the action. An unknown value never passes as a small one, and Aura never uses an estimate from your browser.
 
 You confirm any token approval together with the action it allows, as one step. Swap quotes stay on our server, so your browser can't change the transaction.
 
@@ -32,7 +32,7 @@ You review the transaction in Aura, then confirm with your passkey or cancel. We
 
 ## After you submit
 
-A transaction hash means something was sent to the network, not that you got the result you expected. The blockchain, or the partner, decides whether a movement settles. We read the blockchain ourselves and mark a movement **Completed** only when:
+**Submitted** means the transaction was sent to the network, not that you got the result you expected. The blockchain, or the partner, decides whether a movement goes through. We read the blockchain ourselves and mark a movement **Completed** only when:
 
 - it came from your wallet and contains exactly what we prepared;
 - it's in a block on the network; and
@@ -42,7 +42,7 @@ On Base that's usually within seconds, as in mainstream wallets. We keep checkin
 
 For a move between networks, we also wait for LI.FI to report delivery, and check that at least the minimum amount reached your wallet on the other network.
 
-If we don't get a transaction hash in time, the action shows as **Not sent**, not failed. Check your activity before you try again. What each status means: [transactions and their status](/product/transaction-lifecycle/). Our database is never the final record of your balance.
+If the transaction isn't sent to the network in time, the action shows as **Not sent**, not failed. Check your activity before you try again. What each status means: [transactions and their status](/product/transaction-lifecycle/). Our database is never the final record of your balance.
 
 ## How we separate access
 
@@ -54,12 +54,12 @@ If we don't get a transaction hash in time, the action shows as **Not sent**, no
 
 ## Records and monitoring
 
-Changes that matter for security leave a record we can review after an incident. Every money movement keeps its transaction hash and the checks we ran. Scheduled checks flag stuck movements and failed partner updates. Monitoring can't prevent every attack, and we can't promise to spot one straight away.
+Changes that matter for security leave a record we can review after an incident. Every money movement keeps its blockchain record and the checks we ran. Scheduled checks flag stuck movements and failed partner updates. Monitoring can't prevent every attack or always spot one straight away.
 
-Your ownership of your assets doesn't depend on our database. If we can't trust our records, the affected features pause; see [sources of truth](/concepts/sources-of-truth/#if-something-goes-wrong).
+Your ownership of your assets doesn't depend on our database. If our records can't be trusted, the affected features pause; see [sources of truth](/concepts/sources-of-truth/#if-something-goes-wrong).
 
 ## Where Aura's protection ends
 
 Our controls only apply to money movements we prepare. They can't stop a transaction signed in another app or with an exported key, and they don't freeze your wallet. Controls built into the wallet itself are planned, not live.
 
-They also can't remove risk from smart contracts, stablecoins, price feeds, bridges, networks, partners, phishing, malware, or your own decisions. See [what could go wrong](/safety/threat-model/). To report a problem, see [report a security issue](/safety/report-a-security-issue/).
+They also can't remove risk from smart contracts, stablecoins, price feeds, transfer services, networks, partners, phishing, malware, or your own decisions. See [what could go wrong](/safety/threat-model/). To report a problem, see [report a security issue](/safety/report-a-security-issue/).

@@ -132,7 +132,10 @@ test("predictions home: categories, search, events with each outcome's chance, U
   await expect(page.getByText("bridge reopen")).toHaveCount(0);
   const categories = page.getByRole("group", { name: "Categories" });
   await expect(categories.getByRole("button")).toHaveText(["All", "Up or Down", "Politics", "Economy", "Crypto", "Tech", "Culture"]);
-  await expect(page.getByText("No positions yet. Pick a market below.")).toBeVisible();
+  // Not set up yet: one line and Deposit, with nothing to withdraw, sell, or cancel.
+  const account = page.getByRole("region", { name: "Predictions account" });
+  await expect(account.getByTestId("predictions-not-set-up")).toContainText("Your first deposit or buy sets up your predictions account, once.");
+  await expect(account.getByRole("button")).toHaveText(["Deposit"]);
   await shot(page, info, "predictions-home");
 
   // Search asks Polymarket for matching titles.
@@ -147,14 +150,14 @@ test("predictions home: categories, search, events with each outcome's chance, U
   await expect(page.getByRole("article", { name: "Rate decision in June" })).toBeVisible();
   await categories.getByRole("button", { name: "Up or Down" }).click();
   const bitcoin = page.getByRole("article", { name: /Bitcoin Up or Down/ });
-  await expect(bitcoin).toContainText("Price to beat $64,210.50", { timeout: 20_000 });
+  await expect(bitcoin).toContainText("Starting price $64,210.50", { timeout: 20_000 });
   await expect(bitcoin).toContainText(/Ends in \d+:\d{2}/);
   await expect(bitcoin).toContainText("15 min");
   await expect(bitcoin.getByRole("link", { name: /^Up\s*54%$/ })).toBeVisible();
   await expect(page.getByRole("group", { name: "Window" }).getByRole("button")).toHaveText(["Any length", "5 min", "15 min", "1 hour", "4 hours", "Daily"]);
 });
 
-test("a market page: the odds chart and its ranges, the order panel beside it (a sheet on the phone), and a buy that sets up in steps, adds money, and signs", async ({ page }, info) => {
+test("a market page: the chance chart and its ranges, the order panel beside it (a sheet on the phone), and a buy that sets up in steps, adds money, and signs", async ({ page }, info) => {
   await signIn(page);
   let stage: "new" | "approved" | "ready" = "new";
   let pusd = 0;
@@ -217,9 +220,10 @@ test("a market page: the odds chart and its ranges, the order panel beside it (a
   }
   await expect(form.getByRole("group", { name: "Amount shortcuts" }).getByRole("button")).toHaveText(["+$1", "+$20", "+$100", "Max"]);
   await enterAmount(form, info, "10");
-  await expect(form.getByTestId("prediction-payout")).toHaveText("To win$15.63");
-  await expect(form).toContainText("Shares");
-  await expect(form).toContainText("$10.00 from your USDC, then cash");
+  // Shares and what they pay match to the cent ($10 at 64¢ is 15.62 shares, $15.62 if Yes wins).
+  await expect(form.getByTestId("prediction-payout")).toHaveText("To win$15.62");
+  await expect(form).toContainText("SharesAbout 15.62");
+  await expect(form).toContainText("Your USDC on Base");
   // What the buy can spend, under where it's paid from: no predictions account yet, so only the USDC on Base.
   await expect(form.getByTestId("prediction-available")).toHaveText("$250.00 USDC on Base available");
   await expect(form).toContainText("Your first buy sets up your predictions account");
@@ -229,14 +233,17 @@ test("a market page: the odds chart and its ranges, the order panel beside it (a
   await form.getByRole("button", { name: "Buy Yes" }).click();
   await expect(flow(page)).toContainText("Create your predictions account");
   await expect(flow(page)).toContainText("Allow it to trade");
-  await expect(flow(page)).toContainText("Order placed. You bought 15.38 Yes shares for $10.00.", { timeout: 40_000 });
-  await expect(form).toContainText("If Yes wins$15.38");
+  await expect(flow(page)).toContainText("You bought 15.38 Yes shares for $10.00. If Yes wins, they pay $15.38.", { timeout: 40_000 });
+  // Each finished step says it's done, not what it was waiting on, and the result is said once.
+  await expect(flow(page)).toContainText("In your predictions cash.");
+  await expect(flow(page)).not.toContainText("Confirming");
+  await expect(form.getByText("Deposit complete")).toHaveCount(0);
   await shot(page, info, "prediction-order-placed");
   expect(calls).toEqual(["setup new", "signatures", "setup approved", "deposit 10.00",
     `buy ${JSON.stringify({ marketId: "5001", outcome: 0, amountUsd: 10 })}`, "signatures"]);
 });
 
-test("an Up or Down market: the live price streamed from Polymarket, the price to beat, and the time left", async ({ page }, info) => {
+test("an Up or Down market: the live price streamed from Polymarket, the starting price, and the time left", async ({ page }, info) => {
   await signIn(page);
   await streamBitcoin(page);
   await page.goto("/app/predictions/6001");
@@ -245,10 +252,10 @@ test("an Up or Down market: the live price streamed from Polymarket, the price t
   await expect(page.getByTestId("prediction-current-price")).toHaveText("$64,250.25 ▲ $39.75", { timeout: 20_000 });
   await expect(page.getByTestId("prediction-time-left")).toHaveText(/^\d{1,2}:\d{2}$/);
   const chart = page.getByTestId("prediction-live-chart");
-  await expect(chart.getByRole("img", { name: "Bitcoin price, live: $64,250.25, at or above the price to beat of $64,210.50" })).toBeVisible();
-  await expect(chart).toContainText("Price to beat");
+  await expect(chart.getByRole("img", { name: "Bitcoin price, live: $64,250.25, at or above the starting price of $64,210.50" })).toBeVisible();
+  await expect(chart).toContainText("Starting price");
   await expect(page.getByText(/^Live from Chainlink, through Polymarket, at /)).toBeVisible();
-  await expect(page.getByRole("region", { name: "About" })).toContainText("Up wins if Bitcoin's price for this window, as Chainlink reports it, ends at or above the price to beat.");
+  await expect(page.getByRole("region", { name: "About" })).toContainText("Up wins if Bitcoin's price for this window, as Chainlink reports it, ends at or above the starting price.");
   if (!isPhone(info)) await expect(panel(page).getByRole("radio", { name: /^Up / })).toBeVisible();
   else await expect(page.getByRole("button", { name: /^Buy Down / })).toBeVisible();
   await shot(page, info, "prediction-up-or-down");
@@ -347,12 +354,12 @@ test("Polygon not answering: cash shows as unavailable and setup says why in pla
   await edge("/__state", { down: ["rpc:137"] });
   await page.goto("/app/predictions");
   await expect(page.getByTestId("predictions-cash")).toHaveText("Unavailable", { timeout: 30_000 });
-  await expect(page.getByTestId("predictions-cash-unavailable")).toHaveText("We couldn't read your cash from Polygon just now. Try again in a minute.");
+  await expect(page.getByTestId("predictions-cash-unavailable")).toHaveText("Your predictions cash can't be loaded right now. Try again in a minute.");
   await page.goto("/app/predictions/5001");
   const form = await openTrade(page, info, "Yes");
   await enterAmount(form, info, "5");
   await form.getByRole("button", { name: "Buy Yes" }).click();
-  await expect(flow(page)).toContainText("We couldn't reach Polygon, where your predictions account is, just now. Nothing was sent. Try again in a minute.", { timeout: 30_000 });
+  await expect(flow(page)).toContainText("Your predictions account can't be reached right now. Nothing was sent. Try again in a minute.", { timeout: 30_000 });
   await expect(flow(page)).not.toContainText("could not be read");
 });
 
@@ -373,7 +380,7 @@ test("Polymarket not answering shows unavailable", async ({ page }) => {
   await expect(page.getByTestId("predictions-unavailable")).toBeVisible({ timeout: 30_000 });
   // Cash is read from Polygon, which still answers; positions come from Polymarket, so the total can't be shown.
   await expect(page.getByTestId("predictions-value")).toHaveText("Unavailable");
-  await expect(page.getByText("We couldn't read your positions from Polymarket.")).toBeVisible();
+  await expect(page.getByText("Your positions can't be loaded from Polymarket right now.")).toBeVisible();
 });
 
 test("guests see a labelled example Up or Down market with a moving price, and trading asks them to sign in", async ({ page }, info) => {
@@ -430,4 +437,18 @@ test("on the phone, nothing on the Predictions pages sits under the menu button"
         .map(({ name }) => name);
     }), { message: path, timeout: 10_000 }).toEqual([]);
   }
+});
+
+test("with no USDC to spend, Deposit and Buy say so before you type, with Add money", async ({ page }, info) => {
+  await signIn(page, "0");
+  await page.goto("/app/predictions");
+  await page.getByRole("region", { name: "Predictions account" }).getByRole("button", { name: "Deposit" }).click({ timeout: 30_000 });
+  await expect(sheet(page).getByRole("heading", { name: "Deposit to predictions" })).toBeVisible();
+  await expect(sheet(page).getByTestId("predictions-no-usdc")).toContainText("You have no USDC in your Aura account to use here yet.");
+  await expect(sheet(page).getByRole("link", { name: "Add money" })).toHaveAttribute("href", "/app/deposit");
+  await sheet(page).getByRole("button", { name: "Close" }).click();
+  await page.goto("/app/predictions/5001");
+  const form = await openTrade(page, info, "Yes");
+  await expect(form.getByTestId("predictions-no-usdc")).toBeVisible();
+  await expect(form.getByRole("link", { name: "Add money" })).toHaveAttribute("href", "/app/deposit");
 });

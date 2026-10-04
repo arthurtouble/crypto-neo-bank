@@ -45,9 +45,9 @@ export function PredictionsHome() {
         </div> : <label className="mkSearch pdSearch"><Search aria-hidden="true" size={16} />
           <input type="search" placeholder="Search markets" aria-label="Search markets" value={search} maxLength={100} onChange={(event) => setSearch(event.target.value)} /></label>}
       </div>
-      {list.isPending ? <LoadingState label="Reading Polymarket's markets" />
+      {list.isPending ? <LoadingState label="Loading Polymarket's markets" />
         : list.error || !list.events ? <Notice tone="warning" role="alert" onRetry={list.refetch} data-testid="predictions-unavailable">
-          <span className="appUnavailable">Unavailable.</span> We couldn&apos;t read Polymarket&apos;s markets just now.</Notice>
+          Polymarket&apos;s markets can&apos;t be loaded right now.</Notice>
           : list.events.length === 0 ? <p className="mxHint mkEmptyLine">{search.trim() && !upOrDown ? `No open markets match "${search.trim()}".` : "No open markets here right now."}</p>
             : <div className="pdEventGrid">{list.events.map((event) => <EventCard key={event.id} event={event} />)}</div>}
       {list.hasMore && <button type="button" className="appButton pdMore" disabled={list.loadingMore} onClick={list.loadMore}>{list.loadingMore ? "Loading…" : "Show more"}</button>}
@@ -83,7 +83,7 @@ function EventCard({ event }: { event: PolymarketEvent }) {
         <Link href={predictionHref(market.id)}><span>{market.question}</span><strong>{formatChance(market.outcomes[0].price) ?? "—"}</strong></Link></li>)}
     </ul>}
     <p className="pdEventFoot">
-      {event.upOrDown ? <>{event.upOrDown.priceToBeat !== null ? `Price to beat ${formatPrice(event.upOrDown.priceToBeat)} · ` : ""}{event.endDate ? <EndsIn endDate={event.endDate} /> : null}</>
+      {event.upOrDown ? <>{event.upOrDown.priceToBeat !== null ? `Starting price ${formatPrice(event.upOrDown.priceToBeat)} · ` : ""}{event.endDate ? <EndsIn endDate={event.endDate} /> : null}</>
         : <>{formatCompactUsd(event.volume) ?? "—"} volume{event.endDate ? ` · Ends ${formatShortDateTime(event.endDate)}` : ""}</>}
     </p>
   </article>;
@@ -99,30 +99,36 @@ function PredictionsAccountCard({ account, isExample, isPending, failed, onRetry
   const orders = account?.orders?.status === "observed" ? account.orders.data : null;
   const positionsValue = positions?.reduce((sum, item) => sum + item.value, 0) ?? null;
   const pending = account?.connection?.status === "pending";
+  // A customer who hasn't set up predictions has nothing to withdraw, sell, or cancel: one line and Deposit, so the markets come up sooner.
+  const fresh = !isExample && !account?.connection && balance === 0 && positions?.length === 0;
   const open = (mode: "add" | "withdraw" | "setup") => isExample ? login() : setSheet(mode);
   const act = (position: PredictionPosition, mode: "sell" | "redeem") => isExample ? login() : setPositionSheet({ position, mode });
+  const depositButton = <button type="button" className="appButton" onClick={() => open("add")}><Plus aria-hidden="true" />Deposit</button>;
   return <section className="mxCard mkAccount" aria-labelledby="predictions-account">
     <div className="mkCardHead"><h2 id="predictions-account">Predictions account</h2>
       {account && <SourceLine source="polymarket" observedAt={account.balance.observedAt} example={isExample} />}</div>
-    {isPending ? <LoadingState label="Reading your predictions account" />
-      : failed && !account ? <Notice tone="warning" role="alert" onRetry={onRetry}><span className="appUnavailable">Unavailable.</span> We couldn&apos;t read your predictions account.</Notice>
+    {isPending ? <LoadingState label="Loading your predictions account" />
+      : failed && !account ? <Notice tone="warning" role="alert" onRetry={onRetry}>Your predictions account can&apos;t be loaded right now.</Notice>
+        : fresh ? <div className="pdFresh" data-testid="predictions-not-set-up">
+          <p className="mxHint">Deposit from your USDC, or pick a market and buy. Your first deposit or buy sets up your predictions account, once.</p>
+          {depositButton}
+        </div>
         : <>
           <p className="mkHero" data-testid="predictions-value">{balance !== null && positionsValue !== null ? formatUsd(balance + positionsValue) : <span className="appUnavailable">Unavailable</span>}</p>
           <div className="mkAvailable">
             <span><small>Cash</small><strong data-testid="predictions-cash">{balance !== null ? formatUsd(balance) : <span className="appUnavailable">Unavailable</span>}</strong></span>
             <span className="mkAvailableActions">
               <button type="button" className="appButton" onClick={() => open("withdraw")}><Minus aria-hidden="true" />Withdraw</button>
-              <button type="button" className="appButton" onClick={() => open("add")}><Plus aria-hidden="true" />Add money</button>
+              {depositButton}
             </span>
           </div>
-          {account?.balance.status === "unavailable" && <p className="mxHint" data-testid="predictions-cash-unavailable">{unavailableReason(account.balance.reason, "cash")} Try again in a minute.</p>}
+          {account?.balance.status === "unavailable" && <p className="mxHint" data-testid="predictions-cash-unavailable">{unavailableReason("cash")} Try again in a minute.</p>}
           {pending && <Notice tone="warning" data-testid="predictions-setup-pending">Setting up your predictions account isn&apos;t finished.{" "}
             <button type="button" className="appTextButton mxInlineButton" onClick={() => open("setup")}>Finish setup</button></Notice>}
-          {!account?.connection && !isExample && balance === 0 && positions?.length === 0 && <p className="mxHint">Not set up yet. Adding money or your first buy sets it up, once.</p>}
           <ListTabs label="Your predictions" value={tab} onChange={setTab}
             options={[{ value: "positions", label: "Positions", count: positions?.length }, { value: "orders", label: "Open orders", count: orders?.length }]} />
           {tab === "positions" ? positions === null
-            ? <p className="mxHint"><span className="appUnavailable">Unavailable.</span> {unavailableReason(account?.positions.status === "unavailable" ? account.positions.reason : undefined, "positions")}</p>
+            ? <p className="mxHint"><span className="appUnavailable">Unavailable.</span> {unavailableReason("positions")}</p>
             : positions.length === 0 ? <p className="mxHint mkEmptyLine">No positions yet. Pick a market below.</p>
               : <ul className="mkRows" aria-label="Your prediction positions">{positions.map((position) => <PositionRow key={position.tokenId} position={position} onAction={act} />)}</ul>
             : <OpenOrders account={account} orders={orders} isExample={isExample} />}
@@ -156,7 +162,7 @@ function OpenOrders({ account, orders, isExample }: { account: PredictionsAccoun
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   if (!account?.connection || account.connection.status !== "ready") return <p className="mxHint mkEmptyLine">No open orders.</p>;
-  if (orders === null) return <p className="mxHint"><span className="appUnavailable">Unavailable.</span> {unavailableReason(account.orders?.status === "unavailable" ? account.orders.reason : undefined, "orders")}</p>;
+  if (orders === null) return <p className="mxHint"><span className="appUnavailable">Unavailable.</span> {unavailableReason("orders")}</p>;
   if (orders.length === 0) return <p className="mxHint mkEmptyLine">No open orders.</p>;
   async function cancel(order: PredictionOrder) {
     if (isExample) { login(); return; }
