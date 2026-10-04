@@ -1,9 +1,9 @@
 ---
-title: Tokenized stocks and gold
-description: The tokenized stocks and gold Aura supports, what a token gives you, and how prices work.
+title: Stocks and gold
+description: The stocks and gold Aura supports, what a stock token gives you, and how prices work.
 ---
 
-Aura supports ten tokenized stocks issued by Coinbase on Base, and Tether Gold. You can hold them, send them, and buy or sell them through Swap. They show in Overview under **Stocks** and **Metals**.
+Aura supports ten stocks, as tokens Coinbase issues on Base, and Tether Gold. You can hold them, send them, and buy or sell them through Swap. They show in Overview under **Stocks** and **Metals**.
 
 | Asset | Token | Network |
 | --- | --- | --- |
@@ -32,7 +32,7 @@ A Coinbase tokenized stock is a token on Base that tracks a US company's shares.
 
 ## What Tether Gold is
 
-One XAUt is backed by one troy ounce of physical gold held for Tether. It's issued on Ethereum, so your account holds it there, at the same address as on Base. Buying it moves your money from Base to Ethereum through LI.FI; the route's fees come out of the amount. Aura pays the Ethereum network fee when you send or sell it.
+One XAUt is backed by one troy ounce of physical gold held for Tether. It's issued on Ethereum, so your account holds it there, at the same address as on Base. Buying it moves your money from Base to Ethereum, and the fee for that move comes out of the amount. Aura pays the Ethereum network fee when you send or sell it.
 
 ## Prices
 
@@ -45,4 +45,4 @@ Aura values stocks and gold with Chainlink price feeds.
 
 ## Risks
 
-Prices can move quickly, and markets for these tokens can be thinner than for the shares or gold themselves. The issuer, the network, and the route you trade through each add their own risk. See the [risk disclosure](/legal/risk-disclosure/).
+Prices can move quickly, and markets for these tokens can be thinner than for the shares or gold themselves. The issuer, the network, and the exchanges you trade through each add their own risk. See the [risk disclosure](/legal/risk-disclosure/).

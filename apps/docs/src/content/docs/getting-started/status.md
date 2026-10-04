@@ -1,16 +1,16 @@
 ---
 title: Product status
-description: What you can use in Aura now (deposit, send, swap, and earn with crypto on Base), and what's still waiting on a partner, like bank transfers and cards.
+description: What you can use in Aura now (add money, send, swap, and earn with crypto on Base), and what's still waiting on a partner, like bank transfers and cards.
 ---
 
 Aura is in preview. Signed out, you can explore every section with labeled example data. Anyone can sign in; you accept the terms of use the first time. See [get started](/getting-started/setup/) for how your account works.
 
 Each feature below stays switched off until it has been tested with real funds. On our development version, we've made these real transactions:
 
-- a deposit from Ethereum to Base;
+- money added from Ethereum to Base;
 - a send on Base;
 - a send from Base to Ethereum;
-- a swap from USDC to a tokenized stock;
+- a swap from USDC to a stock;
 - a deposit into and a withdrawal from a Morpho vault;
 - a deposit into Aave, a partial withdrawal, and **Withdraw all**;
 - a send from Base to Arbitrum;
@@ -45,4 +45,4 @@ Seeing a feature in the app doesn't mean it's live. We won't offer a bank accoun
 
 Related: [sources of truth](/concepts/sources-of-truth/), [account controls](/safety/account-controls/), [who does what](/company/provider-responsibilities/).
 
-Last reviewed: 30 September 2026.
+Last reviewed: 4 October 2026.
