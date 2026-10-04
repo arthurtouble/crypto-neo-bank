@@ -89,6 +89,7 @@ Buttons are verbs, and one primary button leads each screen or panel. A disabled
 
 - Every amount shows its currency or asset: "$25.00", "0.01 ETH". Dollar amounts have two decimals.
 - Fees, minimums, and what the customer gets appear on the review screen before the customer pays.
+- Every review screen has one **Fees** row with the dollar total of what's charged. When there's more than one fee, the parts sit under it, each with its dollar amount: Network fee, Moving fee (between networks), Card fee, Exchange fee. A difference in price caused by the trade's size isn't charged by anyone, so it's never called a fee: Swap shows it as its own **Price difference** row after Fees, and leaves the row out when there's none.
 - On the phone, addresses show "0x", the next 4 characters, and the last 4 ("0x12ab…cdef", from `shortAddress` in `apps/web/src/lib/format`), with a Copy button that copies the full address.
 
 ## Rewrite prompt

@@ -326,6 +326,7 @@
 /* Touch targets: at least 44 × 44px on the phone and other touch screens */
 @media (max-width: 767px), (pointer: coarse) {
   .mkChip, .mkSegmented button { min-height: var(--touch-min); }
+  .mkChip { min-width: var(--touch-min); justify-content: center; }
   .appFrame .mkListTabs [role="tab"] { min-height: var(--touch-min); }
 }
 

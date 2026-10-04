@@ -32,7 +32,7 @@ function copy(label: string, phase: ActionPhase, action: ActionView | null) {
       : { step: 3, title: `${label} complete`, detail: `${networkName(action.chainId)} makes it final in about 20 minutes. You can close this.` };
     case "confirmed": return { step: 3, title: `${label} complete`, detail: "The network confirmed it." };
     case "failed": return { step: 3, title: `${label} failed`, detail: failureText(action.failureReason) };
-    case "expired": return { step: 3, title: `${label} not confirmed`, detail: "We didn't receive it in time. If you confirmed it in your wallet, check Transactions." };
+    case "expired": return { step: 3, title: `${label} not confirmed`, detail: "Time ran out before it was sent. If you approved it in your wallet, check Transactions before you try again." };
     default: return { step: 2, title: `${label} submitted`, detail: "We're waiting for the network. You can leave this screen." };
   }
 }

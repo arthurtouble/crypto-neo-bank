@@ -8,6 +8,7 @@ const flagged = (text) => banned.filter((rule) => rule.pattern.test(text)).map((
 test("flags the glossary's banned words and error phrasing, not the plain words that replace them", () => {
   assert.deepEqual(flagged("We couldn't read your positions."), ["We couldn't"]);
   assert.deepEqual(flagged("We couldn&apos;t load your Aura tag."), ["We couldn&apos;t"]);
+  assert.deepEqual(flagged("We didn't receive it in time."), ["We didn't"]);
   assert.deepEqual(flagged("The bridge fee comes out of the amount."), ["bridge fee"]);
   assert.deepEqual(flagged("Supplied to the protocol, settled onchain."), ["protocol", "onchain", "settled"]);
   assert.deepEqual(flagged("Polymarket's markets can't be loaded right now."), []);

@@ -3,7 +3,8 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { Page } from "@playwright/test";
 import { expect, test } from "./support/fixtures";
-import { acceptTerms, ASSETS, newCustomer, setBalances, setIdentity } from "./support/session";
+import { acceptTerms, ASSETS, newCustomer, setBalances, setFeature, setIdentity } from "./support/session";
+import { featureKeys } from "../../src/lib/features/flags";
 import { navigation } from "../../src/lib/product-map";
 
 /**
@@ -49,6 +50,8 @@ for (const path of pages) for (const identity of identities) for (const theme of
 
     await page.addInitScript((value) => localStorage.setItem("aurel-theme", value), theme);
     if (identity === "signed-in") {
+      // Every switch on, as on dev, so a feature is swept as customers will see it rather than as "not available yet".
+      for (const key of featureKeys) await setFeature(page, key, true);
       const customer = await newCustomer();
       await setBalances(customer.wallet, { 8453: { [ASSETS.usdc]: "1234567890", native: "2000000000000000000", [ASSETS.cbbtc]: "1000000" } });
       await acceptTerms(page, customer);
@@ -130,7 +133,11 @@ function layoutFindings(page: Page, phone: boolean) {
       // A field's tappable area is its bordered box when it sits alone inside one (a search box with an icon).
       const parent = element.parentElement;
       const field = element.matches("input, select, textarea") && parent && parent.querySelectorAll("input, select, textarea, button").length === 1;
-      const box = field && parent.getBoundingClientRect().height > element.getBoundingClientRect().height ? parent.getBoundingClientRect() : element.getBoundingClientRect();
+      const own = field && parent.getBoundingClientRect().height > element.getBoundingClientRect().height ? parent.getBoundingClientRect() : element.getBoundingClientRect();
+      // An invisible ::after can widen the tap area of a button inside a sentence without changing its line.
+      const after = getComputedStyle(element, "::after");
+      const area = after.content !== "none" && after.position === "absolute" ? { width: parseFloat(after.width) || 0, height: parseFloat(after.height) || 0 } : { width: 0, height: 0 };
+      const box = { width: Math.max(own.width, area.width), height: Math.max(own.height, area.height) };
       if (box.width < 43.5 || box.height < 43.5) out.push({ check: "small touch target", detail: `${label(element)} is ${Math.round(box.width)} × ${Math.round(box.height)}` });
     }
 

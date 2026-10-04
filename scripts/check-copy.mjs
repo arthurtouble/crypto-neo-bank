@@ -31,7 +31,7 @@ export const banned = [
   { pattern: /\bposture\b/i, instead: "drop it" },
   { pattern: /\bslippage\b/i, instead: "\"Price can move by up to …\"" },
   { pattern: /\bbridg(e fee|ing)\b/i, instead: "move from another network, Moving fee" },
-  { pattern: /\bwe (couldn['’]t|could not|can['’]t|cannot|were unable)\b|\bwe couldn&apos;t\b|\bwe can&apos;t\b/i, instead: "\"X can't be loaded right now.\" (no \"we\" in errors)" },
+  { pattern: /\bwe (couldn['’]t|could not|can['’]t|cannot|were unable|didn['’]t|did not)\b|\bwe (couldn|can|didn)&apos;t\b/i, instead: "\"X can't be loaded right now.\" (no \"we\" in errors)" },
   { pattern: /\binsufficient (balance|funds)\b/i, instead: "\"Not enough [asset]. You have [amount].\"" },
   { pattern: /\b(please|oops|sorry)\b/i, instead: "drop it" }
 ];
