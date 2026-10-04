@@ -9,10 +9,12 @@ test("landing introduces Aura and its provider boundaries", async ({ page }) => 
   // Header (or the phone's pinned button), hero, closing section, and footer.
   await expect(page.getByRole("link", { name: "Get started" })).toHaveCount(4);
   await expect(page.locator('a[href="/apply"], a[href="/tour"]')).toHaveCount(0);
-  for (const title of ["Add money", "Send", "Swap", "Earn", "Aura tag", "Card"]) {
+  for (const title of ["Add money", "Send", "Swap", "Earn", "Perps", "Predictions", "Aura tag", "Card"]) {
     await expect(page.locator("#features h3").filter({ hasText: new RegExp(`^${title}`) })).toHaveCount(1);
   }
-  await expect(page.locator("#features h3").filter({ hasText: "Card" })).toContainText("Coming soon");
+  // Not switched on in production yet; each partner decides where it's offered.
+  for (const title of ["Card", "Perps", "Predictions"]) await expect(page.locator("#features h3").filter({ hasText: title })).toContainText("Coming soon");
+  await expect(page.getByRole("link", { name: "Where Perps is available" })).toHaveAttribute("href", /\/product\/markets\/#where-they-work$/);
   await expect(page.getByRole("heading", { name: "Only you can move your money" })).toBeVisible();
   await expect(page.locator("#faq details")).toHaveCount(4);
   await page.locator("#faq summary").filter({ hasText: "Can I use bank transfers and cards?" }).click();
