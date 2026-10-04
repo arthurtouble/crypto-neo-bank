@@ -157,16 +157,16 @@ export async function quoteRoute(request: RouteQuoteRequest, dependencies: { fet
       headers: process.env.LIFI_API_KEY ? { "x-lifi-api-key": process.env.LIFI_API_KEY } : undefined,
       signal: AbortSignal.timeout(12_000)
     });
-  } catch { throw new RouteQuoteError("provider_unavailable", "We can't get a price right now. Try again in a few minutes."); }
+  } catch { throw new RouteQuoteError("provider_unavailable", "Prices can't be loaded right now. Try again in a few minutes."); }
   if (!response.ok) {
     await response.body?.cancel().catch(() => undefined);
     // LI.FI answers 404 when no route exists; an outage or rate limit isn't a statement about the route.
-    if (response.status === 429 || response.status >= 500) throw new RouteQuoteError("provider_unavailable", "We can't get a price right now. Try again in a few minutes.");
+    if (response.status === 429 || response.status >= 500) throw new RouteQuoteError("provider_unavailable", "Prices can't be loaded right now. Try again in a few minutes.");
     throw new RouteQuoteError("no_route", "We can't find a way to do this for that amount right now.");
   }
   let body: unknown;
   try { body = await readBoundedJson(response, MAX_RESPONSE_BYTES); }
-  catch { throw new RouteQuoteError("provider_unavailable", "We can't get a price right now. Try again in a few minutes."); }
+  catch { throw new RouteQuoteError("provider_unavailable", "Prices can't be loaded right now. Try again in a few minutes."); }
   const route = validateRoute(body, request, (dependencies.now ?? Date.now)());
   if (!route) {
     const estimate = (body as { estimate?: { fromAmountUSD?: string; toAmountUSD?: string } } | null)?.estimate;
