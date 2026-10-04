@@ -15,7 +15,7 @@ export function SwapPage() {
   return <MoneyPage title="Swap" guest={isExample || !ready} onSignIn={login} ready={ready}>
     {!ready ? <LoadingState><strong>Setting up your account</strong></LoadingState>
       : isExample ? <SignedOutPanel title="Swap assets" ariaLabel="Swap form" action="Sign in to swap" onSignIn={login}>
-        Exchange assets or move them to another network. You see what you get, the fees, and the price impact before you confirm with your passkey.</SignedOutPanel>
+        Buy and sell crypto, stocks, and gold, or move money to another network. You see what you get and what it costs before you confirm with your passkey.</SignedOutPanel>
         : <SwapWorkspace />}
   </MoneyPage>;
 }

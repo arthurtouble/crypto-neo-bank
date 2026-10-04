@@ -7,7 +7,7 @@ Worried about your own account? Turn on the emergency lock in **Settings → Sec
 
 To report a vulnerability in Aura, sign in and chat with us from **Support**. Say it's a security report. We don't have a dedicated security email address yet.
 
-## Please include
+## What to include
 
 - the page or feature affected;
 - the steps to reproduce the issue;
@@ -23,4 +23,4 @@ To report a vulnerability in Aura, sign in and chat with us from **Support**. Sa
 
 ## Test responsibly
 
-Don't access other people's data, move assets, disrupt the service, or trick people into giving you access. Aura doesn't run a public bug bounty yet, and we can't promise a reward.
+Don't access other people's data, move assets, disrupt the service, or trick people into giving you access. Aura doesn't run a public bug bounty yet, so there's no reward.

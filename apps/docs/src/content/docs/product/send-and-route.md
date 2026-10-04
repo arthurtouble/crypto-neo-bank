@@ -15,7 +15,7 @@ Send has two tabs: **To a person or wallet** for crypto, and **To a bank account
 
 Send tells you before you start if something would stop the payment: sending is paused, your account is locked, an asset is paused, or your settings only allow saved recipients. If you have a daily limit, Send shows how much more you can send today. If sending to other networks is paused, only the network your account holds the asset on is offered. If Aura still can't send it, the reason shows above the button and nothing is sent.
 
-Aura checks that sending is switched on and applies your controls. It won't send to your own Aura address or to a token's contract address. These checks don't vouch for the recipient or guarantee the payment settles.
+Aura checks that sending is switched on and applies your controls. It won't send to your own Aura address or to a token's contract address. These checks don't vouch for the recipient or guarantee the payment goes through.
 
 ## Before you send
 
@@ -38,13 +38,13 @@ You can name and save a new address as you send, and remove saved recipients in 
 
 ## Sending to another network
 
-Choose the network in Send. Aura finds a route through LI.FI, an independent service that uses third-party bridges. Route fees come out of the amount, so the recipient gets a little less than you send. The review shows about how much they'll receive, the least they'll receive, and the fees. Aura still pays the network fee on Base.
+Choose the network in Send. Aura gets a quote from third-party transfer services. A moving fee comes out of the amount, so the recipient gets a little less than you send. The review shows about how much they'll receive, the least they'll receive, and **Fees**, with the moving fee underneath. Aura still pays the network fee on Base.
 
 If the quote runs out before you confirm, Aura gets a new one and shows it to you first.
 
-Delivery usually takes up to 30 minutes, because many bridges wait for Base to finalize the block. Once the payment leaves Base, Send shows it as sent and you can close it. Follow the rest in Transactions.
+Delivery usually takes up to 30 minutes, because many transfer services wait until the block on Base is final. Once the payment leaves Base, Send shows it as sent and you can close it. Follow the rest in Transactions.
 
-The payment is complete only when LI.FI reports delivery and Aura finds the transfer to the recipient on that network. If the bridge refunds it, the money comes back to your account on Base. See [moves between networks](/product/cross-chain-routing/).
+The payment is complete only when the transfer service reports delivery and Aura finds the transfer to the recipient on that network. If the transfer service refunds it, the money comes back to your account on Base. See [moves between networks](/product/cross-chain-routing/).
 
 ## Sending to a bank
 

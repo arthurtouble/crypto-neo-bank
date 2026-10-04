@@ -7,7 +7,7 @@ The controls are in **Settings → Security**. Switches save as soon as you chan
 
 | Control | Starts as | What it does |
 | --- | --- | --- |
-| Emergency lock | Off | Stops every send, swap, and Earn move, including ones you started but haven't confirmed |
+| Emergency lock | Off | Stops every send, swap, Earn move, and deposit to perps or predictions, including ones you started but haven't confirmed |
 | Daily limit | Off | Caps the US dollar value you send in any 24 hours, including to your own linked wallets |
 | Saved recipients only | Off | Lets you send only to recipients and bank accounts you've saved |
 | Wait before new recipients | 4 hours | When saved recipients only is on, a newly saved recipient or bank account can't receive until the wait ends |
@@ -22,7 +22,7 @@ You confirm each money action with it, and each change that loosens a control. U
 
 Turn on the lock if something looks wrong: an unexpected prompt, a recipient you don't recognize, or signs that someone else has access. Lock first, then secure your sign-in methods and tell us from **Support → Report a problem**.
 
-While the lock is on, we don't prepare or send any money movement, including one you haven't confirmed yet. The lock doesn't freeze your wallet, reverse a transaction already sent, or stop activity in another app. Unlocking needs your passkey.
+While the lock is on, we don't prepare or send any money movement, including one you haven't confirmed yet. The lock doesn't freeze your wallet, reverse a transaction already sent, stop trades with money already in your perps or predictions account, or stop activity in another app. Unlocking needs your passkey.
 
 Once cards are live, locking also tries to freeze your Aura card, and you can't unfreeze it while you're locked. Check the Cards page to make sure it's frozen.
 
@@ -32,7 +32,7 @@ Our team can lock your account to protect it, for example if someone else seems 
 
 ## Daily limit
 
-The limit counts every send, including to your own linked wallets, and swaps that pay someone else. It doesn't count swaps within your own account, Earn deposits and withdrawals, or setting a card allowance (the card has its own daily limit; see [cards and controls](/product/cards-and-controls/)).
+The limit counts every send, including to your own linked wallets, and swaps that pay someone else. It doesn't count swaps within your own account, Earn deposits and withdrawals, deposits to your perps or predictions account, or setting a card allowance (the card has its own daily limit; see [cards and controls](/product/cards-and-controls/)).
 
 If we can't work out the value of an amount, we block the action rather than skip the check. Prices move, so the dollar value is approximate.
 
