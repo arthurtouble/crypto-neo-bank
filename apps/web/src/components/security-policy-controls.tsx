@@ -86,19 +86,16 @@ export function TransactionControls() {
       <input type="checkbox" className="appSwitch" checked={current.accountLocked} disabled={update.isPending} onChange={(event) => update.mutate({ accountLocked: event.target.checked })} /></SettingRow>
     <SettingRow title={<label htmlFor="daily-limit">Daily transfer limit</label>} detail="In US dollars. Leave empty for no limit.">
       <form className="stInline" onSubmit={(event) => { event.preventDefault(); saveDailyLimit(current.dailyLimitUsd); }}>
-        {/* "$" stands by the amount; with no limit the placeholder says so, and the "$" keeps its place so the field doesn't jump. */}
-        <span className="stUnit" aria-hidden="true" data-empty={(dailyDraft ?? current.dailyLimitUsd ?? "") === "" || undefined}>$</span>
-        <input id="daily-limit" type="number" inputMode="numeric" autoComplete="off" className="stNumber" min="1" step="1" placeholder="No limit" disabled={update.isPending}
-          value={dailyDraft ?? (current.dailyLimitUsd === null ? "" : String(current.dailyLimitUsd))} onChange={(event) => setDailyDraft(event.target.value)} />
+        <span className="stNumberField"><span aria-hidden="true">$</span><input id="daily-limit" type="number" inputMode="numeric" autoComplete="off" className="stNumber" min="1" step="1" placeholder="No limit" disabled={update.isPending}
+          value={dailyDraft ?? (current.dailyLimitUsd === null ? "" : String(current.dailyLimitUsd))} onChange={(event) => setDailyDraft(event.target.value)} /></span>
         {dailyDraft !== null && <button type="submit" className="appButton appButtonPrimary" aria-label="Save daily limit" disabled={update.isPending}>Save</button>}
       </form></SettingRow>
     <SettingRow label title="Saved recipients only" detail="Only send to people you've saved, once their wait is over.">
       <input type="checkbox" className="appSwitch" checked={current.enforceAddressBook} disabled={update.isPending} onChange={(event) => update.mutate({ enforceAddressBook: event.target.checked })} /></SettingRow>
     {current.enforceAddressBook && <SettingRow title={<label htmlFor="recipient-wait">Wait before new recipients</label>} detail="Hours before someone you save can receive. Up to 168.">
       <form className="stInline" onSubmit={(event) => { event.preventDefault(); saveDelay(current.newAddressDelayHours); }}>
-        <input id="recipient-wait" type="number" inputMode="numeric" autoComplete="off" className="stNumber" min="0" max="168" step="1" disabled={update.isPending}
-          value={delayDraft ?? String(current.newAddressDelayHours)} onChange={(event) => setDelayDraft(event.target.value)} />
-        <span className="stUnit" aria-hidden="true">hours</span>
+        <span className="stNumberField"><input id="recipient-wait" type="number" inputMode="numeric" autoComplete="off" className="stNumber" min="0" max="168" step="1" disabled={update.isPending}
+          value={delayDraft ?? String(current.newAddressDelayHours)} onChange={(event) => setDelayDraft(event.target.value)} /><span aria-hidden="true">hours</span></span>
         {delayDraft !== null && <button type="submit" className="appButton appButtonPrimary" aria-label="Save wait" disabled={update.isPending}>Save</button>}
       </form></SettingRow>}
     <p className="mxHint">Making a control stricter applies right away. Loosening one needs your passkey.</p>
