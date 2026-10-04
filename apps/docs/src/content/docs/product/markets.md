@@ -21,7 +21,7 @@ Aura charges no fee on perps or predictions. Each venue charges its own trading 
 
 ## Where they work
 
-Perps follow Hyperliquid's terms, so they aren't available in the United States or Ontario. Predictions follow Polymarket's rules, so they aren't available where Polymarket doesn't take new orders, such as the United States, the United Kingdom, France, Germany, Australia, and Singapore. From those places you can't set up, add money, or open a position, but you can always close, sell, and withdraw. See [access and availability](/getting-started/access/).
+Perps follow Hyperliquid's terms, so they aren't available in the United States or Ontario. Predictions follow Polymarket's rules, so they aren't available where Polymarket doesn't take new orders, such as the United States, the United Kingdom, France, Germany, Australia, and Singapore, and they aren't available in the United Arab Emirates. From those places you can't set up, add money, or open a position, but you can always close, sell, and withdraw. See [access and availability](/getting-started/access/).
 
 ## Perps
 

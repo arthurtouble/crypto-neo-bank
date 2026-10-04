@@ -38,11 +38,12 @@ On 3 October 2026 the owner chose to apply each provider's own list of places fo
 | Feature | Provider's rule | Refused from |
 |---|---|---|
 | Perps | Hyperliquid's terms of use restrict US and Ontario persons | The United States and its territories; Ontario |
-| Predictions | Polymarket's [geographic restrictions](https://docs.polymarket.com/api-reference/geoblock), which builders must apply | Every place Polymarket makes close-only on its site or API: the United States and its territories, the United Kingdom, France, Germany, Italy, Belgium, the Netherlands, Ireland, Poland, Slovakia, Australia, New Zealand, Singapore, Japan, South Korea, Taiwan, Thailand, Brazil, Russia, Belarus, and others; Alberta, British Columbia, Ontario, and Quebec |
+| Predictions | Polymarket's [geographic restrictions](https://docs.polymarket.com/api-reference/geoblock), which builders must apply | Every place Polymarket makes close-only on its site or API: the United States and its territories, the United Kingdom, France, Germany, Italy, Belgium, the Netherlands, Ireland, Poland, Slovakia, Australia, New Zealand, Singapore, Japan, South Korea, Taiwan, Thailand, Brazil, Russia, Belarus, and others; Alberta, British Columbia, Ontario, and Quebec. Aura also adds the United Arab Emirates (owner, 4 October 2026): betting is unlawful there, and Aura's founders and development company are based there |
 | Buying stock tokens | Coinbase offers them under Regulation S, not to the US or the UK | The United States and its territories; the United Kingdom |
 
 - Only new things are refused (setup, adding money, opening or adding to a position, buying), with 451 `place_restricted` and a message saying what still works. Selling, closing, cancelling, redeeming, and withdrawing always work, so nobody's money is stuck.
 - It's the same control as the sanctions block: Cloudflare's geolocation of the request, so a VPN gets around it. Each provider's terms still bind the customer.
+- Aura can add a place to a provider's list on its own, as it did for the United Arab Emirates in Predictions, never remove one.
 - When a provider changes its list, change `places.ts` in a reviewed change and update this table.
 
 ## Offshore incorporation

@@ -92,10 +92,11 @@ const unitedStates: Record<string, string> = {
 
 const providerPlaces: Record<ProviderPlaceRule, { countries: Record<string, string>; regions: Record<string, string> }> = {
   // Polymarket: close-only on its site and API, plus the places it's close-only on its site (docs.polymarket.com/api-reference/geoblock,
-  // 3 October 2026). Malta is close-only for sports alone, which Aura doesn't list.
+  // 3 October 2026). Malta is close-only for sports alone, which Aura doesn't list. Aura adds the United Arab Emirates on
+  // its own (owner, 4 October 2026): betting is unlawful there, and Aura's founders and development company are there.
   predictions: {
     countries: {
-      ...unitedStates, AU: "Australia", BE: "Belgium", BI: "Burundi", BR: "Brazil", BY: "Belarus", CD: "the Democratic Republic of the Congo",
+      ...unitedStates, AE: "the United Arab Emirates", AU: "Australia", BE: "Belgium", BI: "Burundi", BR: "Brazil", BY: "Belarus", CD: "the Democratic Republic of the Congo",
       CF: "the Central African Republic", DE: "Germany", ET: "Ethiopia", FR: "France", GB: "the United Kingdom", IE: "Ireland", IQ: "Iraq",
       IT: "Italy", JP: "Japan", KR: "South Korea", LB: "Lebanon", LY: "Libya", MM: "Myanmar", NI: "Nicaragua", NL: "the Netherlands",
       NZ: "New Zealand", PL: "Poland", RU: "Russia", SD: "Sudan", SG: "Singapore", SK: "Slovakia", SO: "Somalia", SS: "South Sudan",
