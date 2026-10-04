@@ -274,7 +274,8 @@
 :is(.mkSheet, .mkOrderPanel) .mkSides button { height: auto; min-height: var(--control-height-lg); padding-block: var(--space-1); }
 /* Long and Short with what each means under them, in the side switch and the phone's trade bar */
 .mkSideLabel { display: inline-grid; justify-items: center; gap: 2px; line-height: 1.1; }
-.mkSideLabel small { font-size: var(--text-caption-size); font-weight: var(--weight-regular); }
+/* The page-wide caption colour (.mxPage small) would grey it out on the filled Long button */
+.mkSideLabel small, .appFrame .mxPage .mkSideLabel small { color: inherit; font-size: var(--text-caption-size); line-height: var(--text-caption-line); font-weight: var(--weight-regular); }
 .appFrame .mkTradeBar .appButton { height: auto; min-height: var(--control-height-lg); padding-block: var(--space-2); }
 :is(.mkSheet, .mkOrderPanel) .mkLabelRow { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
 :is(.mkSheet, .mkOrderPanel) .mkSelect { position: relative; display: inline-flex; align-items: center; }
@@ -307,9 +308,17 @@
   .appFrame .mkAvailableActions { width: 100%; }
   .appFrame .mkAvailableActions .appButton { flex: 1; height: var(--control-height-lg); }
   .appFrame .mkRowActions { width: 100%; }
+  /* The chart's ranges take their own row and share it equally (six on the phone), so none is narrower than a fingertip */
+  .appFrame .mkChartTools .mkRanges { flex: 1 1 100%; display: flex; min-width: 0; }
+  .appFrame .mkChartTools .mkRanges button { flex: 1 1 0; min-width: 0; padding: 0; }
+  .appFrame .mkStyles button { min-width: var(--touch-min); }
+  .appFrame .mkCrumbs a { display: inline-flex; align-items: center; min-block-size: var(--touch-min); min-inline-size: var(--touch-min); }
+  .appFrame .mkSwitchButton { min-block-size: var(--touch-min); }
   .appFrame .mkRowActions .appButton { flex: 1; height: var(--touch-min); }
   .appFrame .mkPerpPositionFacts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .appFrame .mkPerpPosition .mkRowActions { justify-self: stretch; }
+  /* "Take profit / Stop loss" wraps to two lines on the narrowest phones rather than overflowing */
+  .appFrame .mkPerpPosition .mkRowActions .appButton { height: auto; min-height: var(--touch-min); padding-block: var(--space-1); white-space: normal; line-height: 1.2; text-align: center; }
   .appFrame .mkGroupButton, .appFrame .mkGroupOptions button { height: var(--touch-min); }
   .appFrame .mkBookRow { min-height: 32px; }
   .mkSheet .mkPriceInput input { font-size: var(--text-input-phone); }

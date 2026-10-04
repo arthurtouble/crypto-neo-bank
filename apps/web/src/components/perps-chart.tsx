@@ -5,10 +5,13 @@ import { useState } from "react";
 import { formatShortDateTime } from "@/lib/format";
 import { formatPrice, PERP_RANGES, type PerpRange } from "@/lib/markets/view";
 import { usePerpCandles, type Candle } from "./markets-data";
-import { Segmented, SourceLine } from "./markets-parts";
+import { Segmented, SourceLine, useIsPhone } from "./markets-parts";
 import { LoadingState, Notice } from "./states";
 
 type Style = "line" | "candles";
+
+/** Ranges the phone leaves out, so the six it shows (Live, 1D, 1W, 1M, 1Y, All) are each at least 42px wide at 320px. */
+const PHONE_HIDDEN = new Set<PerpRange>(["1h", "3m"]);
 
 /**
  * A perp's price over a range (Live, 1H … All) as a line or as candles, read
@@ -18,12 +21,13 @@ type Style = "line" | "candles";
 export function PerpsChart({ coin, name }: { coin: string; name: string }) {
   const [range, setRange] = useState<PerpRange>("1d");
   const [style, setStyle] = useState<Style>("line");
+  const phone = useIsPhone();
   const query = usePerpCandles(coin, range);
   const data = query.data;
   return <section className="mxCard mkPriceChart" aria-label={`${name} price chart`}>
     <div className="mkChartTools">
       <Segmented label="Chart range" value={range} onChange={setRange} className="mkRanges"
-        options={PERP_RANGES.map((item) => ({ value: item.value, label: item.label }))} />
+        options={PERP_RANGES.filter((item) => !phone || !PHONE_HIDDEN.has(item.value)).map((item) => ({ value: item.value, label: item.label }))} />
       <Segmented label="Chart style" value={style} onChange={setStyle} className="mkStyles" options={[
         { value: "line", label: <><ChartLine aria-hidden="true" /><span className="srOnly">Line</span></> },
         { value: "candles", label: <><CandlestickChart aria-hidden="true" /><span className="srOnly">Candles</span></> }]} />

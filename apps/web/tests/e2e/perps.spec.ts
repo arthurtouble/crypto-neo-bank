@@ -274,7 +274,8 @@ test("a perps market page: price and stats, chart ranges, the order book with gr
   const chart = page.getByRole("region", { name: "BTC price chart" });
   await expect(chart.getByTestId("perps-chart")).toBeVisible({ timeout: 20_000 });
   const ranges = chart.getByRole("radiogroup", { name: "Chart range" });
-  await expect(ranges.getByRole("radio")).toHaveText(["Live", "1H", "1D", "1W", "1M", "3M", "1Y", "All"]);
+  // The phone shows six ranges, so each is wide enough to tap.
+  await expect(ranges.getByRole("radio")).toHaveText(isPhone(info) ? ["Live", "1D", "1W", "1M", "1Y", "All"] : ["Live", "1H", "1D", "1W", "1M", "3M", "1Y", "All"]);
   await expect(ranges.getByRole("radio", { name: "1D" })).toHaveAttribute("aria-checked", "true");
   await ranges.getByRole("radio", { name: "1W" }).click();
   await expect.poll(() => candleRanges.includes("1w")).toBe(true);
