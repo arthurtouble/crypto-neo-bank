@@ -210,13 +210,14 @@
 .appFrame .erName strong { font-weight: var(--weight-semibold); }
 .appFrame .erValue, .appFrame .erRate { display: grid; justify-items: end; text-align: right; }
 .appFrame .erValue strong { font-weight: var(--weight-medium); }
+.appFrame .erValue small { white-space: nowrap; }
 .appFrame .erHeld { display: grid; justify-items: end; }
 .appFrame .erHeld small { font-weight: var(--weight-regular); }
-.appFrame .erRate strong { font-size: var(--text-title-2-size); line-height: var(--text-title-2-line); font-weight: var(--weight-semibold); color: var(--color-positive); }
+.appFrame .erRate strong { font-size: var(--text-title-2-size); line-height: var(--text-title-2-line); font-weight: var(--weight-semibold); }
 .appFrame .erRate strong.appUnavailable { color: var(--color-warning); }
 .appFrame .erOptions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); align-items: start; }
 .appFrame .erOptions > h2, .appFrame .erOptions > .appState { grid-column: 1 / -1; }
-.appFrame .erOption { gap: var(--space-3); }
+.appFrame .erOption { gap: var(--space-3); scroll-margin-top: calc(var(--topbar-height) + var(--space-4)); }
 .appFrame .erOptionTop { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-3); }
 .appFrame .erToggle { justify-self: stretch; }
 .appFrame .erChevron { margin-left: auto; transition: transform var(--duration-fast) var(--ease-enter); }
