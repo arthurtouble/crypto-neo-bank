@@ -47,7 +47,7 @@ async function reviewSend(page: Page) {
 
 async function reviewAndConfirm(page: Page) {
   await reviewSend(page);
-  await dialog(page).getByRole("button", { name: "Confirm and send" }).click();
+  await dialog(page).getByRole("button", { name: "Send", exact: true }).click();
 }
 
 test.beforeEach(async ({ page }) => {
@@ -77,7 +77,7 @@ test("a first-time address is checked in chunks before the review; once used, it
   await dialog(page).getByRole("button", { name: "Review" }).click();
   await addressCheck(page).getByRole("button", { name: "It's correct" }).click();
   await expect(page.getByTestId("send-review").locator(`[title="${RECIPIENT}"]`)).toHaveCount(1);
-  await dialog(page).getByRole("button", { name: "Confirm and send" }).click();
+  await dialog(page).getByRole("button", { name: "Send", exact: true }).click();
   await expect(outcome(page, "Transfer complete")).toBeVisible({ timeout: 30_000 });
 
   // Sent to once, it's no longer new: the next transfer goes straight to the review.
@@ -101,7 +101,7 @@ test("USDC goes to an address after a review, with the fee paid by Aura, and the
   await expect(review).toContainText("Paid by Aura");
   expect(await relayed()).toEqual([]);
 
-  await dialog(page).getByRole("button", { name: "Confirm and send" }).click();
+  await dialog(page).getByRole("button", { name: "Send", exact: true }).click();
   await expect(outcome(page, "Transfer complete")).toBeVisible({ timeout: 30_000 });
   const [operation] = await relayed();
   expect(operation).toMatchObject({ from: customer.wallet.toLowerCase(), success: true });
@@ -179,7 +179,7 @@ test("the customer can send to their own connected wallet in one tap", async ({ 
   await expect(page.getByTestId("recipient-status")).toHaveText("Your wallet");
   await reviewSend(page);
   await expect(page.getByTestId("send-review")).toContainText("Your wallet");
-  await dialog(page).getByRole("button", { name: "Confirm and send" }).click();
+  await dialog(page).getByRole("button", { name: "Send", exact: true }).click();
   await expect(outcome(page, "Transfer complete")).toBeVisible({ timeout: 30_000 });
 });
 
@@ -195,7 +195,7 @@ test("a saved recipient can be picked by name", async ({ page }) => {
   await expect(dialog(page).getByLabel("Save as a recipient")).toHaveCount(0);
   await reviewSend(page);
   await expect(page.getByTestId("send-review")).toContainText("Sam");
-  await dialog(page).getByRole("button", { name: "Confirm and send" }).click();
+  await dialog(page).getByRole("button", { name: "Send", exact: true }).click();
   await expect(outcome(page, "Transfer complete")).toBeVisible({ timeout: 30_000 });
 });
 
@@ -211,7 +211,7 @@ test("an Aura tag is found, checked again before signing, and shown in the revie
   await reviewSend(page);
   await expect(page.getByTestId("send-review")).toContainText(`${payee.wallet.slice(0, 6)}…${payee.wallet.slice(-4)}`);
   await expect(page.getByTestId("send-review")).toContainText(`@${tag}`);
-  await dialog(page).getByRole("button", { name: "Confirm and send" }).click();
+  await dialog(page).getByRole("button", { name: "Send", exact: true }).click();
   await expect(outcome(page, "Transfer complete")).toBeVisible({ timeout: 30_000 });
   expect(await balance(page, payee, `8453:${ASSETS.usdc}`)).toBe("4000000");
 });
@@ -220,30 +220,100 @@ test("an unknown Aura tag isn't found", async ({ page }) => {
   await openSend(page);
   await fillSend(page, { amount: "1", to: "@nobody-here" });
   await reviewSend(page);
-  await expect(dialog(page).getByText("We couldn't find @nobody-here.")).toBeVisible({ timeout: 20_000 });
+  await expect(dialog(page).getByText("@nobody-here wasn't found.")).toBeVisible({ timeout: 20_000 });
   await expect(page.getByTestId("send-review")).toHaveCount(0);
 });
 
-test("the customer's controls are enforced on the server: daily limit, saved recipients only, waiting period, and lock", async ({ page }) => {
-  // Four full attempts, each with a reload.
+test("the customer's controls show on the form before anything is filled in, and the server still enforces them", async ({ page }) => {
+  // Four controls, each with a reload.
   test.setTimeout(60_000);
   const customer = await openSend(page);
-  const attempt = async (message: string) => {
-    await fillSend(page, { amount: "12.5", to: RECIPIENT });
-    await reviewAndConfirm(page);
-    await expect(dialog(page).getByRole("alert")).toContainText(message, { timeout: 20_000 });
-    await page.keyboard.press("Escape");
+  const review = () => dialog(page).getByRole("button", { name: "Review" });
+  // The form says what's in the way, and Review stays off.
+  const shows = async (changes: Record<string, unknown>, check: () => Promise<void>) => {
+    if (Object.keys(changes).length) await setControls(page, customer, changes);
     await page.reload();
+    await expect(page.getByRole("heading", { name: "Send crypto" })).toBeVisible({ timeout: 30_000 });
+    await check();
   };
-  await setControls(page, customer, { dailyLimitUsd: 10 });
-  await attempt("This would go over your daily limit.");
-  await setControls(page, customer, { dailyLimitUsd: null, enforceAddressBook: true });
-  await attempt("Your settings only allow sending to saved recipients.");
+  // The server refuses the same send, whatever the page shows.
+  const refused = async (code: string) => {
+    const response = await page.request.post("/api/actions", { headers: { Authorization: `Bearer ${customer.token}`, Connection: "close" },
+      data: { kind: "transfer", assetId: `8453:${ASSETS.usdc}`, amount: "12.5", to: RECIPIENT } });
+    expect(response.status()).toBe(409);
+    expect((await response.json()).error).toBe(code);
+  };
+
+  await shows({ dailyLimitUsd: 10 }, async () => {
+    await expect(page.getByTestId("daily-limit-left")).toHaveText("You can send up to $10.00 more today.");
+    await fillSend(page, { amount: "12.5", to: RECIPIENT });
+    await review().click();
+    await expect(dialog(page).getByRole("alert")).toHaveText("That's over your daily limit. You can send up to $10.00 more today.");
+    await expect(page.getByTestId("send-review")).toHaveCount(0);
+  });
+  await refused("daily_limit");
+
+  await shows({ dailyLimitUsd: null, enforceAddressBook: true }, async () => {
+    await fillSend(page, { amount: "1", to: RECIPIENT });
+    await expect(page.getByTestId("recipient-status")).toContainText("Your settings only allow sending to saved recipients.");
+    await expect(dialog(page).getByLabel("Save as a recipient")).toHaveCount(0);
+    await expect(review()).toBeDisabled();
+  });
+  await refused("recipient_not_saved");
+
   await asCustomer(page, customer, "POST", "/api/security/addresses", { address: RECIPIENT, label: "Sam" });
-  await attempt("This saved recipient is still in its waiting period.");
-  await setControls(page, customer, { enforceAddressBook: false, accountLocked: true });
-  await attempt("Your account is locked.");
+  await shows({}, async () => {
+    // Only saved recipients are offered, and one still in its waiting period says when it can receive.
+    await dialog(page).getByRole("group", { name: "Recipients" }).getByRole("button", { name: /^Sam/ }).click();
+    await expect(page.getByTestId("recipient-status")).toContainText("Sam can receive from");
+    await expect(review()).toBeDisabled();
+  });
+  await refused("recipient_cooling");
+
+  await shows({ enforceAddressBook: false, accountLocked: true }, async () => {
+    await expect(page.getByTestId("account-locked")).toContainText("Your account is locked, so nothing can be sent.");
+    await expect(page.getByTestId("account-locked").getByRole("link", { name: "Unlock it in Settings" })).toHaveAttribute("href", "/app/settings#emergency-lock");
+    await expect(review()).toBeDisabled();
+  });
+  await refused("account_locked");
   expect(await relayed()).toEqual([]);
+});
+
+test("the people row puts whoever was paid last first, and picking them brings back what they were sent", async ({ page }) => {
+  test.setTimeout(90_000);
+  const customer = await openSend(page, { balances: { [ASSETS.usdc]: "50000000", native: "1000000000000000000" } });
+  await setControls(page, customer, { newAddressDelayHours: 0 });
+  await asCustomer(page, customer, "POST", "/api/security/addresses", { address: RECIPIENT, label: "Sam" });
+  await asCustomer(page, customer, "POST", "/api/security/addresses", { address: "0x7777777777777777777777777777777777777777", label: "Mum" });
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Send crypto" })).toBeVisible({ timeout: 30_000 });
+  await fillSend(page, { asset: "ETH", amount: "0.01" });
+  await dialog(page).getByRole("group", { name: "Recipients" }).getByRole("button", { name: /^Sam/ }).click();
+  await reviewAndConfirm(page);
+  await expect(outcome(page, "Transfer complete")).toBeVisible({ timeout: 30_000 });
+  await dialog(page).getByRole("button", { name: "New transfer" }).click();
+  await fillSend(page, { asset: "USDC", amount: "1", to: "0x6666666666666666666666666666666666666666" });
+  await reviewAndConfirm(page);
+  await expect(outcome(page, "Transfer complete")).toBeVisible({ timeout: 30_000 });
+
+  await page.reload();
+  await expect(dialog(page).getByRole("group", { name: "Recipients" })).toBeVisible({ timeout: 30_000 });
+  const people = dialog(page).getByRole("group", { name: "Recipients" }).getByRole("button");
+  // Last paid first; an unnamed address says when it was paid; Mum, saved but never paid, comes after.
+  await expect(people.nth(0)).toContainText("0x6666…6666");
+  await expect(people.nth(0)).toContainText(/Sent \w{3} \d{1,2}/);
+  await expect(people.nth(1)).toContainText("Sam");
+  await expect(people.nth(2)).toContainText("Mum");
+  // Sam was last sent ETH, so picking Sam picks ETH again, and says so.
+  await people.nth(1).click();
+  await expect(dialog(page).getByLabel("Asset")).toHaveValue("ETH");
+  await expect(page.getByTestId("recipient-status")).toHaveText("Saved recipient: Sam · Last time: ETH on Base");
+  // With an amount typed, picking someone leaves the asset alone.
+  await dialog(page).getByLabel("Asset").selectOption("USDC");
+  await dialog(page).getByLabel("Amount").fill("5");
+  await people.nth(2).click();
+  await people.nth(1).click();
+  await expect(dialog(page).getByLabel("Asset")).toHaveValue("USDC");
 });
 
 test("without a passkey nothing is sent, and Privy's passkey setup opens", async ({ page }) => {
@@ -279,12 +349,18 @@ test("while sending is switched off, the customer is told up front, and the serv
   expect(await relayed()).toEqual([]);
 });
 
-test("a paused asset can't be sent", async ({ page }) => {
-  await openSend(page);
+test("a paused asset can't be sent: the form says so first, and the server refuses it", async ({ page }) => {
+  const customer = await openSend(page);
   await pauseAsset(page, `8453:${ASSETS.usdc}`, true);
+  await page.reload();
+  await expect(page.getByTestId("asset-paused")).toHaveText("USDC is paused right now. Choose another asset, or try again later.", { timeout: 20_000 });
+  await expect(dialog(page).getByLabel("Asset").locator("option", { hasText: "USDC (paused)" })).toHaveCount(1);
   await fillSend(page, { amount: "1", to: RECIPIENT });
-  await reviewAndConfirm(page);
-  await expect(dialog(page).getByRole("alert")).toContainText("USDC is paused right now", { timeout: 20_000 });
+  await expect(dialog(page).getByRole("button", { name: "Review" })).toBeDisabled();
+  const response = await page.request.post("/api/actions", { headers: { Authorization: `Bearer ${customer.token}`, Connection: "close" },
+    data: { kind: "transfer", assetId: `8453:${ASSETS.usdc}`, amount: "1", to: RECIPIENT } });
+  expect(response.ok()).toBe(false);
+  expect((await response.json()).error).toBe("asset_paused");
   await pauseAsset(page, `8453:${ASSETS.usdc}`, false);
   expect(await relayed()).toEqual([]);
 });
@@ -334,7 +410,7 @@ test("a new address can be saved as a recipient, with a name, as it's sent to", 
   await dialog(page).getByLabel("Name").fill("Alex");
   await reviewSend(page);
   await expect(page.getByTestId("send-review")).toContainText("Save asAlex");
-  await dialog(page).getByRole("button", { name: "Confirm and send" }).click();
+  await dialog(page).getByRole("button", { name: "Send", exact: true }).click();
   await expect(toast(page, "Recipient saved")).toBeVisible({ timeout: 20_000 });
   await expect(outcome(page, "Transfer complete")).toBeVisible({ timeout: 30_000 });
   // The security notice goes to the bell (and email), but this browser isn't toasted about what the customer just did.
@@ -343,11 +419,12 @@ test("a new address can be saved as a recipient, with a name, as it's sent to", 
   expect(JSON.stringify(await (await inbox).json())).toContain("New saved recipient");
   await expect(toast(page, "New saved recipient")).toHaveCount(0);
 
-  // Next time it's one tap. New recipients start with the waiting period, which only matters with saved-recipients-only on.
+  // Next time it's one tap. New recipients start with the waiting period, which only matters with saved-recipients-only
+  // on, so it isn't mentioned here.
   await dialog(page).getByRole("button", { name: "New transfer" }).click();
   await fillSend(page, { amount: "1" });
   await dialog(page).getByRole("group", { name: "Recipients" }).getByRole("button", { name: /^Alex/ }).click();
-  await expect(page.getByTestId("recipient-status")).toContainText("Saved recipient: Alex. In its waiting period until");
+  await expect(page.getByTestId("recipient-status")).toHaveText("Saved recipient: Alex");
 });
 
 test("USDC can be sent to another network: LI.FI's fees come out of the amount, and delivery is checked there", async ({ page }) => {
@@ -362,13 +439,13 @@ test("USDC can be sent to another network: LI.FI's fees come out of the amount, 
   const review = page.getByTestId("send-review");
   await expect(review).toContainText("10 USDC");
   await expect(review).toContainText("NetworkArbitrum");
-  await expect(review).toContainText("They receiveAbout 9.95 USDC");
-  await expect(review).toContainText("At least9.9 USDC");
+  await expect(review).toContainText("They receive about9.95 USDC");
+  await expect(review).toContainText("They get at least9.9 USDC");
   await expect(review).toContainText("About $0.50, taken from the amount");
   await expect(review).toContainText("Network feePaid by Aura");
   expect(await relayed()).toEqual([]);
 
-  await dialog(page).getByRole("button", { name: "Confirm and send" }).click();
+  await dialog(page).getByRole("button", { name: "Send", exact: true }).click();
   await expect.poll(async () => (await relayed()).length, { timeout: 30_000 }).toBe(1);
   const [operation] = await relayed();
   expect(operation.calls!.map((call) => call.to.toLowerCase())).toEqual([ASSETS.usdc, LIFI_DIAMOND]);
@@ -472,7 +549,7 @@ test("a tokenized stock can be sent on Base, and Tether Gold on Ethereum, where 
   await reviewSend(page);
   await expect(page.getByTestId("send-review")).toContainText("NetworkEthereum");
   await expect(page.getByTestId("send-review")).toContainText("Network feePaid by Aura");
-  await dialog(page).getByRole("button", { name: "Confirm and send" }).click();
+  await dialog(page).getByRole("button", { name: "Send", exact: true }).click();
   await expect.poll(async () => (await relayed()).find((item) => item.chainId === 1)?.success, { timeout: 30_000 }).toBe(true);
   await expect.poll(async () => balance(page, customer, `1:${ASSETS.xaut}`), { timeout: 30_000 }).toBe("750000");
 });

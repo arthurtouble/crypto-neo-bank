@@ -11,9 +11,9 @@ Your money is held on Base. You can choose the network it arrives on:
 - USDC can go to those and Polygon.
 - Other assets are sent on the network where your account holds them: Base, or Ethereum for Tether Gold.
 
-Send has two tabs: **To a person or wallet** for crypto, and **To a bank account** for dollars to a US bank. Enter the amount, then who it's for: paste an address, or type an Aura tag like `@sam`, and Aura finds its address when you select **Review**. Then review the asset, amount, recipient, network, and fee. The network fee shows as **Paid by Aura**. You confirm with your passkey.
+Send has two tabs: **To a person or wallet** for crypto, and **To a bank account** for dollars to a US bank. Start with who it's for: tap someone you've paid before, paste an address, or type an Aura tag like `@sam`, and Aura finds its address when you select **Review**. Then enter the amount. Review what you send, who to, the network, and any fee. The network fee shows as **Paid by Aura**. Select **Send** and confirm with your passkey.
 
-If Aura can't send it, for example because it's over your daily limit, the reason shows above the button and nothing is sent. If sending is paused, Send says so before you start. If sending to other networks is paused, only the network your account holds the asset on is offered.
+Send tells you before you start if something would stop the payment: sending is paused, your account is locked, an asset is paused, or your settings only allow saved recipients. If you have a daily limit, Send shows how much more you can send today. If sending to other networks is paused, only the network your account holds the asset on is offered. If Aura still can't send it, the reason shows above the button and nothing is sent.
 
 Aura checks that sending is switched on and applies your controls. It won't send to your own Aura address or to a token's contract address. These checks don't vouch for the recipient or guarantee the payment settles.
 
@@ -28,7 +28,9 @@ A payment sent to the wrong but valid address usually can't be reversed.
 
 ## Saved recipients
 
-Saved recipients show above the address field in Send. When you enter an address, Aura tells you whether it's a saved recipient, one of your own wallets, or a new address.
+The people you've paid show at the top of Send, the most recent first, with your saved recipients and your own wallets. An address you haven't saved shows the date you last paid it. When you tap someone you've paid before, Send also picks the asset and network you used last time, and says so. You can change them. When you enter an address, Aura tells you whether it's a saved recipient, one of your own wallets, or a new address.
+
+If your settings only allow saved recipients, Send offers only those, and a new address must be saved in Settings first. A newly saved recipient can receive once its waiting period ends, and Send shows when that is.
 
 The first time you send to an address, Aura shows it in full before the review, in groups of four, with the network, so you can check it against the address you were given. Select **It's correct** to go on, or **Edit** to change it. This check is skipped for saved recipients, addresses you've sent to before, your own wallets, and addresses from an Aura tag.
 
