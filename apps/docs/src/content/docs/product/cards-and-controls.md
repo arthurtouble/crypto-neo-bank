@@ -17,7 +17,7 @@ Until you have a card, the Cards page shows the steps as a checklist, ending wit
 2. **Apply for the card.** On the Cards page, select **Apply for a card**. Bridge checks you're eligible on its own page. Select **Check status** to see its decision, or what it still needs.
 3. **Create your card.** Once approved, select **Create my card**. You need a passkey on your account, and your account can't be locked. Bridge's approval lasts 24 hours. If it runs out first, Bridge asks you to confirm your details again.
 
-Your card starts with a daily limit of 500 USD. You can raise it to 10,000 USD a day.
+Your card starts with a daily limit of $500. You can raise it to $10,000 a day.
 
 ## How card payments work
 
