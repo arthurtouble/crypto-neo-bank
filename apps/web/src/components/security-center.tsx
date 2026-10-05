@@ -2,7 +2,7 @@
 
 import { LoaderCircle } from "lucide-react";
 import { useMemo, useState } from "react";
-import { accountEmail } from "@/lib/client/account-email";
+import { accountEmail, linkEmailFailure } from "@/lib/client/account-email";
 import { useAuth } from "@/lib/client/auth";
 import { useWallet } from "@/lib/client/wallet-context";
 import { SettingRow, useSettingsToast } from "./setting-row";
@@ -23,7 +23,7 @@ export function SecurityCenter() {
   const [confirmingExport, setConfirmingExport] = useState(false);
   const linkEmail = () => startLinkEmail({
     onSuccess: ({ linkMethod }) => { if (linkMethod === "email") toast.success("Email added"); },
-    onError: (error) => { if (error !== "exited_link_flow") toast.error("Email not added", "Try again."); }
+    onError: (error) => { const message = linkEmailFailure(error); if (message) toast.error("Email not added", message); }
   });
   const wallet = useMemo(() => wallets.find((item) => item.walletClientType === "privy") ?? wallets[0], [wallets]);
   // The server accepts a passkey or an authenticator app for money (`requireMoneyMfa`), so either counts here.

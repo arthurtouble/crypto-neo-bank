@@ -17,7 +17,7 @@ export function accountEmail(user: AuthUser | null): { address: string; source: 
  */
 export function linkEmailFailure(code: string): string | null {
   if (code === "exited_link_flow") return null;
-  if (code === "linked_to_another_user") return "That email is already on another Aura account. Add a different email, or log out and sign in with that one.";
+  if (code === "linked_to_another_user") return "That email is already on another Aura account. Add a different email, or sign out and sign in with that one.";
   if (code === "too_many_requests") return "Too many tries. Wait a minute, then try again.";
   if (code === "invalid_credentials") return "That code didn't match. Add your email again to get a new code.";
   return "That email couldn't be added. Try again.";
