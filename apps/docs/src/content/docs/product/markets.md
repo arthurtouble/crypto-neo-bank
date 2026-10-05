@@ -31,17 +31,17 @@ Each market's page shows its price chart, from the last few minutes to all time,
 
 - **Your balance.** Your perps account shows its value, what's available to trade, and what you can withdraw. Available to trade is the value less the money your open positions use. While positions are open, Hyperliquid keeps more back from withdrawals than from trading.
 - **Amount.** You put in a dollar amount. The order panel shows what's available to trade, and how much of your USDC on Base it can add in the same tap. Max counts both.
-- **Leverage.** Leverage starts at the market's maximum, such as 40x for bitcoin. Lower it to take less risk. At 5x, $20 controls a $100 position. If you already hold a position in that market, the order starts at its leverage, and a change applies to it too.
-- **Liquidation.** If the price moves against you far enough, Hyperliquid closes your position and you lose the money behind it. The order panel shows an estimated liquidation price before you confirm. With leverage, a small price move can lose everything you put in.
+- **Leverage.** Leverage multiplies what you trade: at 5x, $20 trades like $100, and gains and losses grow 5 times as fast. It starts at the market's maximum, such as 40x for bitcoin. Lower it to take less risk. If you already hold a position in that market, the order starts at its leverage, and a change applies to it too.
+- **Margin and liquidation.** Margin is the money you put in. If the price moves against you far enough, to the liquidation price, Hyperliquid closes your position and you lose that margin. The order panel shows an estimated liquidation price before you confirm. With leverage, a small price move can lose everything you put in.
 - **Isolated or cross.** Isolated risks only the money behind this position. Cross can use your whole perps balance to keep positions open.
-- **Market or limit.** A market order fills now, near the current price. A limit order waits for your price.
-- **Take profit and stop loss (TP/SL).** Set a price to close at a profit and one to close at a loss, when you place the order or later from the position's TP/SL button. Each shows roughly what you'd make or lose. A new one replaces the old one.
+- **Market or limit.** A market order fills now, at most 1% from the price shown; if the price moves further first, nothing is traded. A limit order waits for your price.
+- **Take profit and stop loss.** Set a price to close at a profit and one to close at a loss, when you place the order or later from the position's Take profit / Stop loss button. Each shows roughly what you'd make or lose. A new one replaces the old one.
 - **Closing.** Close all of a position or part of it (25%, 50%, or 75%), now at the market price or at a limit price you choose.
 - **Your positions.** Each shows its size and value, entry price, the price now, profit or loss in dollars and percent, liquidation price, margin, and its take profit and stop loss.
 - **Fees.** Before you confirm, the order shows Hyperliquid's estimated fee for your account. Stock perps cost more to trade than crypto ones.
 - **Funding.** Every hour, longs and shorts pay each other a small funding fee. When the rate is positive, longs pay shorts. Each market's page shows it.
 
-If your perps balance is short, Aura adds the difference from your USDC on Base first, then places the order, in one tap. Adding money takes at least $6, because Hyperliquid needs at least $5 to arrive. It usually arrives in a few seconds. You can close the window while it moves; your Transactions show when it lands.
+If your perps balance is short, Aura deposits the difference from your USDC on Base first, then places the order, in one tap. A deposit to perps is at least $6, because Hyperliquid needs at least $5 to arrive. It usually arrives in a few seconds. You can close the window while it moves; your Transactions show when it lands.
 
 ## Predictions
 

@@ -14,7 +14,7 @@ The controls are in **Settings → Security**. Switches save as soon as you chan
 
 ## Passkey
 
-You need a passkey or an authenticator app before money can leave your account. The two work the same way. Add one in **Settings → Security**; otherwise we ask the first time you move money.
+A passkey confirms it's you with your face, fingerprint, or screen lock. You need a passkey or an authenticator app before money can leave your account. The two work the same way. Add one in **Settings → Security**; otherwise we ask the first time you move money.
 
 You confirm each money action with it, and each change that loosens a control. Unlike the controls above, it isn't optional if you want to move money.
 
@@ -34,7 +34,7 @@ Our team can lock your account to protect it, for example if someone else seems 
 
 The limit counts every send, including to your own linked wallets, and swaps that pay someone else. It doesn't count swaps within your own account, Earn deposits and withdrawals, deposits to your perps or predictions account, or setting a card allowance (the card has its own daily limit; see [cards and controls](/product/cards-and-controls/)).
 
-If we can't work out the value of an amount, we block the action rather than skip the check. Prices move, so the dollar value is approximate.
+If the value of an amount can't be worked out, Aura blocks the action rather than skip the check. Prices move, so the dollar value is approximate.
 
 ## Saved recipients
 

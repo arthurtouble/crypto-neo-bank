@@ -12,7 +12,7 @@ import { formatToken, formatUsd } from "@/lib/format";
 import type { PerpPosition } from "@/lib/markets/hyperliquid/info";
 import type { TypedData } from "@/lib/markets/types";
 import {
-  cleanDecimal, closeSize, formatPrice, formatSignedUsd, orderKind, parseDollars, parsePrice, perpName, pnlAt, positionSide, PERPS_MINIMUM_DEPOSIT,
+  cleanDecimal, closeSize, formatPrice, formatSignedUsd, orderKind, orderRefusal, parseDollars, parsePrice, perpName, pnlAt, positionSide, PERPS_MINIMUM_DEPOSIT,
   triggerProblem
 } from "@/lib/markets/view";
 import { perpsTotals, useBaseUsdc, type PerpMarket, type PerpOrder, type PerpsAccount } from "./markets-data";
@@ -148,7 +148,7 @@ export async function addToPerps(options: { api: ReturnType<typeof useApi>; depo
 /** A price field: digits and one decimal point only, "$" before it, and an optional line under it. */
 export function PriceField({ label, value, onChange, placeholder, hint, error, action }: {
   label: string; value: string; onChange: (value: string) => void; placeholder?: string; hint?: React.ReactNode; error?: string | null;
-  /** A small button after the label, such as "Mid". */
+  /** A small button after the label, such as "Price now". */
   action?: { label: string; onClick: () => void };
 }) {
   const id = useId();
@@ -163,7 +163,7 @@ export function PriceField({ label, value, onChange, placeholder, hint, error, a
 }
 
 /**
- * Add money (USDC from the Aura account on Base) or withdraw (back to
+ * Deposit (USDC from the Aura account on Base) or withdraw (back to
  * USDC on Base, signed by the wallet with the passkey). The sheet can always
  * be closed: once sent, the money keeps moving and Transactions tracks it.
  */
@@ -186,13 +186,13 @@ export function PerpsMoneySheet({ mode, account, onClose }: { mode: "add" | "wit
     if (value === null || problem) return;
     try {
       if (mode === "add") {
-        start([{ key: "add", label: "Adding money…", detail: ADD_MONEY_DETAIL }]);
+        start([{ key: "add", label: "Depositing…", detail: ADD_MONEY_DETAIL }]);
         let fee: number | null = null;
         await addToPerps({ api, deposit, amount: value, baseline: totals?.value ?? null,
           onPrepared: (action) => { fee = depositFee(action); if (fee !== null) at("add", `${ADD_MONEY_DETAIL} ${feeText(fee)}.`); },
           onSlow: () => at("add", "This is taking longer than usual. The money is on its way; you can close this and follow it in Transactions.") });
         const arrived: number | null = fee;
-        finish(arrived === null ? `${formatUsd(value)} added to perps, less the network fee.` : `${formatUsd(value - arrived)} added to perps (${formatUsd(value)} less a ${formatUsd(arrived)} network fee).`);
+        finish(arrived === null ? `${formatUsd(value)} deposited to perps, less the network fee.` : `${formatUsd(value - arrived)} deposited to perps (${formatUsd(value)} less a ${formatUsd(arrived)} network fee).`);
       } else {
         start([{ key: "sign", label: "Confirm with your passkey" }, { key: "send", label: "Sending to your Aura account" }]);
         const request = await api<SignRequest>("/api/perps/withdraw", { method: "POST", json: { amount: value.toFixed(2) } });
@@ -209,7 +209,7 @@ export function PerpsMoneySheet({ mode, account, onClose }: { mode: "add" | "wit
     }
   }
 
-  const title = mode === "add" ? "Add money to perps" : "Withdraw from perps";
+  const title = mode === "add" ? "Deposit to perps" : "Withdraw from perps";
   const depositFailed = deposit.action?.status === "failed" || deposit.action?.status === "expired" || deposit.outcomeUnknown;
   return <Sheet onOpenChange={(open) => { if (!open) onClose(); }} className="mkSheet">
     <div className="mxDialogHead"><Dialog.Title>{title}</Dialog.Title><Dialog.Close className="appTextButton">Close</Dialog.Close></div>
@@ -225,7 +225,7 @@ export function PerpsMoneySheet({ mode, account, onClose }: { mode: "add" | "wit
         <div><dt>Arrives in</dt><dd>Your Aura account on Base</dd></div></dl>}
       {mode === "withdraw" && main !== null && totals && main < totals.value - 0.01 && <p className="mxHint">
         While positions are open, Hyperliquid keeps part of your balance back to support them. Close a position to withdraw more.</p>}
-      <button type="submit" className="appButton appButtonPrimary appButtonLarge" disabled={value === null || problem !== null}>{mode === "add" ? "Add money" : "Withdraw"}</button>
+      <button type="submit" className="appButton appButtonPrimary appButtonLarge" disabled={value === null || problem !== null}>{mode === "add" ? "Deposit" : "Withdraw"}</button>
       <p className="mxHint">{mode === "add" ? `Moves USDC from your Aura account on Base to your perps balance. The network fee is a few cents; Aura charges none. At least $${PERPS_MINIMUM_DEPOSIT}.`
         : "Your wallet signs the withdrawal with your passkey. A small network fee comes out of it; Aura charges none."}</p>
     </form>}
@@ -275,7 +275,7 @@ export function PositionCloseSheet({ position, market, onClose }: { position: Pe
         : await perpsAction<{ statuses: ExchangeStatus[] }>("/api/perps/orders", { coin: position.coin, side: side === "long" ? "sell" : "buy",
           size, type, reduceOnly: true, ...(limit ? { limitPrice: limit } : {}) });
       const refused = orderError(response.statuses);
-      if (refused) throw new Error(`Hyperliquid didn't accept it: ${refused}`);
+      if (refused) throw new Error(orderRefusal(refused));
       const filled = response.statuses.find((status) => status.kind === "filled");
       setResult({ ok: true, text: filled && filled.kind === "filled" ? `Closed ${formatToken(filled.totalSz, name)} at ${formatPrice(filled.avgPx)}.`
         : `Close order placed at ${formatPrice(limit)}. It waits on Hyperliquid until the price is reached.` });
@@ -301,7 +301,7 @@ export function PositionCloseSheet({ position, market, onClose }: { position: Pe
           {item === 1 ? "All" : `${item * 100}%`}</button>)}
       </div>}
       {type === "limit" && <PriceField label="Limit price" value={price} onChange={setPrice} placeholder={formatPrice(market?.midPx ?? market?.markPx)?.replace("$", "") ?? ""}
-        action={market?.midPx ? { label: "Mid", onClick: () => setPrice(cleanDecimal(market.midPx!)) } : undefined} />}
+        action={market?.midPx ? { label: "Price now", onClick: () => setPrice(cleanDecimal(market.midPx!)) } : undefined} />}
       <dl className="mxSummary">
         <div><dt>Closing</dt><dd>{size ? `${formatToken(Number(size), name)} of ${formatToken(whole, name)}` : "—"}</dd></div>
         <div><dt>Entry price</dt><dd>{formatPrice(position.entryPx)}</dd></div>
@@ -354,7 +354,7 @@ export function PositionTpslSheet({ position, market, orders, onClose }: { posit
       const response = await perpsAction<{ statuses: ExchangeStatus[] }>("/api/perps/positions/tpsl", { coin: position.coin,
         ...(tp ? { takeProfit: { triggerPrice: tp } } : {}), ...(sl ? { stopLoss: { triggerPrice: sl } } : {}) });
       const refused = orderError(response.statuses);
-      if (refused) throw new Error(`Hyperliquid didn't accept it: ${refused}`);
+      if (refused) throw new Error(orderRefusal(refused));
       // The new one is in place; remove the ones it replaces, so a position never has two of a kind.
       await Promise.all([...(tp ? existing.takeProfit : []), ...(sl ? existing.stopLoss : [])].map(cancel));
       setResult({ ok: true, text: tp && sl ? "Take profit and stop loss set." : tp ? "Take profit set." : "Stop loss set." });
@@ -379,7 +379,7 @@ export function PositionTpslSheet({ position, market, orders, onClose }: { posit
     }
   }
 
-  const title = `TP/SL for ${name} ${side}`;
+  const title = `Take profit and stop loss, ${name} ${side}`;
   const current = [...existing.takeProfit, ...existing.stopLoss];
   return <Sheet onOpenChange={(open) => { if (!open) onClose(); }} className="mkSheet" describedBy="perps-tpsl-note">
     <div className="mxDialogHead"><Dialog.Title>{title}</Dialog.Title><Dialog.Close className="appTextButton">Close</Dialog.Close></div>
@@ -387,7 +387,7 @@ export function PositionTpslSheet({ position, market, orders, onClose }: { posit
       <p className="mkFlowDone" role="status"><strong>{result.text}</strong></p>
       <button type="button" className="appButton appButtonPrimary appButtonLarge" onClick={onClose}>Done</button>
     </> : <form className="mkSheetBody" aria-label={title} onSubmit={(event) => { event.preventDefault(); void submit(); }}>
-      <p className="mxDialogNote" id="perps-tpsl-note">Take profit (TP) and stop loss (SL) close the whole position at the market price when {name} reaches the price you set.</p>
+      <p className="mxDialogNote" id="perps-tpsl-note">Take profit and stop loss close the whole position at the market price when {name} reaches the price you set: take profit to keep a gain, stop loss to limit a loss.</p>
       <dl className="mxSummary">
         <div><dt>Entry price</dt><dd>{formatPrice(position.entryPx)}</dd></div>
         <div><dt>Price now</dt><dd>{mark ? formatPrice(mark) : <span className="appUnavailable">Unavailable</span>}</dd></div>
@@ -402,7 +402,7 @@ export function PositionTpslSheet({ position, market, orders, onClose }: { posit
       <PriceField label="Stop loss at" value={stopLoss} onChange={setStopLoss} error={slProblem} hint={estimate(sl)}
         placeholder={existing.stopLoss[0] ? formatPrice(existing.stopLoss[0].triggerPx)?.replace("$", "") : undefined} />
       {result && !result.ok && <p className="mkFlowFailed" role="alert">{result.text}</p>}
-      <button type="submit" className="appButton appButtonPrimary appButtonLarge" disabled={busy || !ready}>{busy ? "Sending…" : "Set TP/SL"}</button>
+      <button type="submit" className="appButton appButtonPrimary appButtonLarge" disabled={busy || !ready}>{busy ? "Sending…" : "Set"}</button>
     </form>}
   </Sheet>;
 }

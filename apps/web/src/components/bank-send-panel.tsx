@@ -80,6 +80,8 @@ function AddBankAccountForm({ onSaved, onCancel }: { onSaved: (name: string) => 
 }
 
 const usd = (value: string) => formatUsd(value);
+/** Shown under Speed while choosing, and again on the review. */
+const arrival = (wire: boolean) => wire ? "Usually within 1 business day" : "Usually 1 to 3 business days";
 
 function PayoutForm({ banks, onReviewing }: { banks: Recipient[]; onReviewing: (reviewing: boolean) => void }) {
   const api = useApi();
@@ -120,13 +122,13 @@ function PayoutForm({ banks, onReviewing }: { banks: Recipient[]; onReviewing: (
       {usdc !== undefined && <div><dt>Available</dt><dd>{formatUsd(formatUnits(usdc, 6))}</dd></div>}
       <div><dt>To</dt><dd>{bankLabel(bank)}</dd></div>
       <div><dt>Speed</dt><dd>{wire ? "Wire" : "Bank transfer"}</dd></div>
-      <div><dt>Arrives</dt><dd>{wire ? "Usually within 1 business day" : "Usually 1 to 3 business days"}</dd></div>
+      <div><dt>Arrives</dt><dd>{arrival(wire)}</dd></div>
     </dl>
-    <p className="mxHint">You sign a USDC transfer to Bridge. Bridge sends the dollars to your bank after it receives the USDC. Delivery times are estimates, and a bank or Bridge can still hold or return a transfer.</p>
+    <p className="mxHint">Your USDC goes to Bridge, our banking partner, and Bridge sends the dollars to your bank. Arrival times are estimates, and a bank or Bridge can still hold or return a transfer.</p>
     <TransactionProgress label="Bank transfer" phase={phase} action={action} outcomeUnknown={outcomeUnknown} />
     <div className="mxActions mxActionsStack">
       <button type="button" className="appButton appButtonPrimary appButtonLarge" disabled={busy || tracking} onClick={() => void confirm()}>
-        {phase === "preparing" ? "Checking…" : phase === "signing" ? "Confirm with your passkey" : "Confirm and send"}</button>
+        {phase === "preparing" ? "Checking…" : phase === "signing" ? "Confirm with your passkey" : "Send"}</button>
       <button type="button" className="appButton appButtonLarge" disabled={busy || tracking} onClick={() => setReviewing(false)}>Edit</button>
     </div>
   </section>;
@@ -147,6 +149,7 @@ function PayoutForm({ banks, onReviewing }: { banks: Recipient[]; onReviewing: (
         <button type="button" role="radio" aria-checked={!wire} onClick={() => setWire(false)}>Bank transfer</button>
         <button type="button" role="radio" aria-checked={wire} onClick={() => setWire(true)}>Wire</button>
       </div>
+      <span className="mxHint">{arrival(wire)}</span>
     </div>
     <button type="submit" className="appButton appButtonPrimary appButtonLarge" disabled={!bank || !amountValid}>Review</button>
   </form>;
@@ -180,7 +183,7 @@ function ActiveBankSend() {
   }
 
   if (recipients.isPending) return <LoadingState label="Loading your bank accounts…" />;
-  if (recipients.isError) return <Notice tone="error" role="alert" onRetry={() => void recipients.refetch()}>Your bank accounts are unavailable right now.</Notice>;
+  if (recipients.isError) return <Notice tone="error" role="alert" onRetry={() => void recipients.refetch()}>Your saved bank accounts can&apos;t be loaded right now.</Notice>;
 
   return <>
     {banks.length > 0 && !reviewing && <dl className="mxSummary" aria-label="Saved bank accounts">
@@ -210,7 +213,7 @@ export function BankSendPanel() {
     {account.isPending && <LoadingState label="Loading…" />}
     {account.isError && <Notice tone="error" role="alert" onRetry={() => void account.refetch()}>Bank transfers are unavailable right now.</Notice>}
     {stage === "unavailable" && <p className="mxHint">Coming soon. You&apos;ll be able to send dollars from your Aura account to a US bank account.</p>}
-    {stage && stage !== "unavailable" && stage !== "active" && <p className="mxHint">Set up your bank account on <Link className="appTextButton mxInlineButton" href="/app/deposit#bank">Deposit</Link> first.</p>}
+    {stage && stage !== "unavailable" && stage !== "active" && <p className="mxHint">Set up your bank account under <Link className="appTextButton mxInlineButton" href="/app/deposit#bank">Add money</Link> first.</p>}
     {stage === "active" && <ActiveBankSend />}
   </section>;
 }

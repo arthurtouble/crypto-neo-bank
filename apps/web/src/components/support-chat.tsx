@@ -10,8 +10,8 @@ type MessengerSession = { appId: string | null; userId?: string; token?: string;
 type IntercomFn = ((command: string, ...args: unknown[]) => void) & { q?: unknown[][]; c?: (args: unknown[]) => void };
 declare global { interface Window { Intercom?: IntercomFn; intercomSettings?: Record<string, unknown> } }
 
-type SupportChat = { status: "loading" | "ready" | "unavailable"; open: (message?: string) => void };
-const SupportChatContext = createContext<SupportChat>({ status: "unavailable", open: () => undefined });
+type SupportChat = { status: "loading" | "ready" | "unavailable"; open: (message?: string) => void; retry: () => void };
+const SupportChatContext = createContext<SupportChat>({ status: "unavailable", open: () => undefined, retry: () => undefined });
 
 type Widget = "loading" | "loaded" | "failed";
 
@@ -38,7 +38,9 @@ function loadIntercom(appId: string, done: (widget: Widget) => void) {
  * answering first and the team taking over. The customer is identified by a
  * token the server signs, refreshed before it expires. Signing out ends the
  * Intercom session, so the next person on the device starts clean. Chat
- * counts as ready only once Intercom's script has loaded.
+ * counts as ready only once Intercom's script has loaded. When it isn't,
+ * `retry` asks for a new session and loads the script again, without
+ * reloading the page.
  */
 export function SupportChatProvider({ children }: { children: ReactNode }) {
   const { user, getAccessToken } = useAuth();
@@ -46,9 +48,10 @@ export function SupportChatProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const bootedFor = useRef<string | null>(null);
   const [widget, setWidget] = useState<Widget>("loading");
+  const [attempt, setAttempt] = useState(0);
   const session = useQuery({ queryKey: ["support-messenger", user?.id], queryFn: () => api<MessengerSession>("/api/support/messenger"),
     enabled: Boolean(user), staleTime: 50 * 60_000, refetchInterval: 50 * 60_000, retry: 1 });
-  const data = session.data;
+  const { data, refetch } = session;
   const identified = Boolean(data?.appId && data.token && data.userId);
   const ready = identified && widget === "loaded";
 
@@ -64,7 +67,7 @@ export function SupportChatProvider({ children }: { children: ReactNode }) {
     loadIntercom(data.appId, setWidget);
     window.Intercom?.("boot", settings);
     bootedFor.current = data.userId;
-  }, [data]);
+  }, [data, attempt]);
 
   // End the Intercom session when the customer signs out or leaves the app.
   useEffect(() => { if (!user && bootedFor.current) { window.Intercom?.("shutdown"); bootedFor.current = null; } }, [user]);
@@ -78,8 +81,16 @@ export function SupportChatProvider({ children }: { children: ReactNode }) {
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       body: JSON.stringify({ eventName: "support_opened", surface: pathname, properties: { prefilled: Boolean(message) } }) }) : null).catch(() => undefined);
   }, [ready, getAccessToken, pathname]);
-  const status: SupportChat["status"] = !user || session.isPending || (identified && widget === "loading") ? "loading" : ready ? "ready" : "unavailable";
-  const value = useMemo(() => ({ status, open }), [status, open]);
+  const retry = useCallback(() => {
+    // Boot again from scratch: a script that failed to load was removed, so it's fetched again.
+    bootedFor.current = null;
+    setWidget("loading");
+    setAttempt((value) => value + 1);
+    void refetch();
+  }, [refetch]);
+  const status: SupportChat["status"] = !user || session.isPending || (session.isFetching && !ready) || (identified && widget === "loading") ? "loading"
+    : ready ? "ready" : "unavailable";
+  const value = useMemo(() => ({ status, open, retry }), [status, open, retry]);
   return <SupportChatContext.Provider value={value}>{children}</SupportChatContext.Provider>;
 }
 

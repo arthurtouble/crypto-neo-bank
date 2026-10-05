@@ -9,6 +9,11 @@ import { docsOrigin } from "@/lib/site/seo";
 import { SettingRow, useSettingsToast } from "./setting-row";
 
 const docs = docsOrigin();
+const dated = (version: string) => new Date(`${version}T00:00:00Z`).toLocaleDateString("en-US", { dateStyle: "long", timeZone: "UTC" });
+const { terms, privacy } = legalDocuments;
+// The app asks again whenever a version changes (components/terms-gate.tsx), so the current versions are the ones this customer accepted.
+const accepted = terms.version === privacy.version ? `Both dated ${dated(terms.version)}.`
+  : `Terms dated ${dated(terms.version)}, privacy notice dated ${dated(privacy.version)}.`;
 
 /** The customer's data and account: download everything, read the documents, or ask to close the account. */
 export function DataRightsPanel() {
@@ -31,9 +36,9 @@ export function DataRightsPanel() {
   return <section className="mxCard stCard" aria-labelledby="account-heading"><h2 id="account-heading">Your data and account</h2>
     <SettingRow title="Download my data" detail="A copy of everything Aura holds about you, as a file.">
       <button type="button" className="appButton" disabled={working} onClick={() => void exportData()}>{working ? <LoaderCircle className="spin" aria-hidden="true" /> : "Download"}</button></SettingRow>
-    <SettingRow title="Terms and privacy" detail="The terms of use and privacy notice you accepted.">
-      <span className="mxActions"><a className="appButton" href={`${docs}${legalDocuments.terms.path}`} target="_blank" rel="noreferrer">Terms</a>
-        <a className="appButton" href={`${docs}${legalDocuments.privacy.path}`} target="_blank" rel="noreferrer">Privacy</a></span></SettingRow>
+    <SettingRow title="Terms and privacy" detail={`The terms of use and privacy notice you accepted. ${accepted}`}>
+      <span className="mxActions"><a className="appButton" href={`${docs}${terms.path}`} target="_blank" rel="noreferrer">Terms</a>
+        <a className="appButton" href={`${docs}${privacy.path}`} target="_blank" rel="noreferrer">Privacy</a></span></SettingRow>
     <SettingRow title="Close your account" detail="Move your money out first, then contact support. We close accounts with no funds left.">
       <Link className="appButton" href="/app/support?topic=close-account">Contact support</Link></SettingRow>
   </section>;

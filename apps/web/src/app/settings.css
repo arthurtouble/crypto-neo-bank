@@ -39,10 +39,13 @@
 .appFrame .stRowControl { flex: none; display: flex; align-items: center; gap: var(--space-2); }
 .appFrame .stRowControl .mxActions { justify-content: flex-end; }
 .appFrame .stState { color: var(--color-positive); font-size: var(--text-small-size); font-weight: var(--weight-medium); }
-.appFrame .stNumber { width: 120px; height: var(--input-height); padding: 0 var(--space-3); border: 1px solid var(--color-line-strong); border-radius: var(--radius-sm); background: var(--color-surface); color: var(--color-text); font: var(--weight-regular) var(--text-body-size) / 1 var(--font-sans); font-variant-numeric: tabular-nums; text-align: right; }
-.appFrame .stNumber:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; border-color: var(--color-focus); }
+/* A typed number and its unit ($ before, hours after) in one box, so every field lines up on the right. */
+.appFrame .stNumberField { display: inline-flex; align-items: center; gap: var(--space-1); width: 132px; height: var(--input-height); padding: 0 var(--space-3); border: 1px solid var(--color-line-strong); border-radius: var(--radius-sm); background: var(--color-surface); color: var(--color-text-secondary); font-variant-numeric: tabular-nums; }
+.appFrame .stNumberField:focus-within { outline: 2px solid var(--color-focus); outline-offset: 1px; border-color: var(--color-focus); }
+.appFrame .stNumberField:has(input:disabled) { background: var(--color-muted); }
+.appFrame .stNumber { flex: 1; min-width: 0; height: 100%; padding: 0; border: 0; background: none; color: var(--color-text); font: var(--weight-regular) var(--text-body-size) / 1 var(--font-sans); font-variant-numeric: tabular-nums; outline: none; }
+.appFrame .stNumber:disabled { color: var(--color-text-secondary); }
 .appFrame .stInline { display: flex; align-items: center; gap: var(--space-2); }
-.appFrame .stNumber:disabled { background: var(--color-muted); color: var(--color-text-secondary); }
 
 /* Saved recipients */
 .appFrame .stList { margin: 0; padding: 0; list-style: none; display: grid; }
@@ -75,6 +78,8 @@
   .appFrame .stRow .stRowText { flex: 1 1 200px; }
   /* Support's rows all put their buttons under the text, so a row with two buttons matches a row with one. */
   .appFrame .suPage .stRowControl { flex-basis: 100%; }
+  /* Keep and Remove go under the recipient, so the name and address keep the row's full width. */
+  .appFrame .stListRow > .stRowControl { grid-column: 2 / -1; justify-content: flex-end; }
   .appFrame .stNumber { font-size: var(--text-input-phone); }
   .appFrame .stCard .appButton { height: var(--control-height-lg); }
 }

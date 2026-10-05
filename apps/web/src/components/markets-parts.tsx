@@ -156,7 +156,7 @@ export function useSettledAction(label: string) {
     const waiting = pending.current;
     pending.current = null;
     if (!waiting) return;
-    if (settled.status === "failed" || settled.status === "expired") waiting.reject(new Error("Adding money didn't go through. Nothing else was sent."));
+    if (settled.status === "failed" || settled.status === "expired") waiting.reject(new Error("The deposit didn't go through. Nothing else was sent."));
     else waiting.resolve(settled);
   } });
   useEffect(() => {

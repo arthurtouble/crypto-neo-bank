@@ -70,7 +70,7 @@ test("someone else using the account: Support points to the lock in Settings, an
 test("money sent to a scam: Aura says it can't be reversed, and opens a chat to report it", async ({ page }) => {
   const customer = await openSupport(page);
   await expectIdentified(page, customer);
-  await expect(page.getByText(/Blockchain transfers can't be reversed by Aura or anyone else\./)).toBeVisible();
+  await expect(page.getByText(/Crypto transfers can't be reversed by Aura or anyone else\./)).toBeVisible();
   await page.getByRole("listitem").filter({ hasText: "I sent money to a scam" }).getByRole("button", { name: "Tell us" }).click();
   await expect.poll(async () => (await calls(page)).find((call) => call[0] === "showNewMessage")?.[1]).toMatch(/^I sent money to a scam or the wrong address\./);
 });
@@ -82,16 +82,35 @@ test("closing an account starts from Settings and opens a chat asking for it", a
   await expectIdentified(page, customer);
   await page.getByRole("button", { name: "Ask to close" }).click();
   await expect.poll(async () => (await calls(page)).find((call) => call[0] === "showNewMessage")?.[1])
-    .toBe("Please close my Aura account. I've moved all my money out.");
+    .toBe("I'd like to close my Aura account. I've moved all my money out.");
 });
 
-test("chat that can't load says so, instead of buttons that do nothing", async ({ page }) => {
+test("chat that can't load says so, instead of buttons that do nothing, and Try again loads it", async ({ page }) => {
   // An ad blocker, the network, or the Content Security Policy can stop Intercom's script.
-  await page.route("https://widget.intercom.io/**", (route) => route.abort("blockedbyclient"));
-  await openSupport(page);
-  await expect(page.getByText("Chat isn't available right now. Try again later, or read the help articles.")).toBeVisible({ timeout: 20_000 });
-  await expect(page.getByRole("button", { name: "Chat", exact: true })).toBeDisabled();
+  let blocked = true;
+  await page.route("https://widget.intercom.io/**", (route) => blocked ? route.abort("blockedbyclient") : route.fallback());
+  const customer = await openSupport(page);
+  await expect(page.getByText("Chat can't be loaded right now. Try again, or read the help articles.")).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("button", { name: "Chat", exact: true })).toHaveCount(0);
   for (const button of await page.getByRole("button", { name: "Tell us" }).all()) await expect(button).toBeDisabled();
+  await expect(page.getByText(/Chat is unavailable right now\./)).toHaveCount(2);
+  // Once the script can load, Try again brings chat back without reloading the page.
+  blocked = false;
+  await page.getByRole("button", { name: "Try again" }).click();
+  await expect(page.getByRole("button", { name: "Chat", exact: true })).toBeEnabled({ timeout: 20_000 });
+  await expectIdentified(page, customer);
+  for (const button of await page.getByRole("button", { name: "Tell us" }).all()) await expect(button).toBeEnabled();
+});
+
+test("an account that can't load offers chat on the screen that blocks the app", async ({ page }) => {
+  const customer = await newCustomer({ mfa: ["passkey"] });
+  await setIdentity(page, customer, { signedIn: true });
+  await page.route("**/api/terms", (route) => route.fulfill({ status: 500, json: { error: "unavailable" } }));
+  await page.goto("/app");
+  await expect(page.getByRole("heading", { name: "Your account can’t be loaded right now" })).toBeVisible({ timeout: 30_000 });
+  await page.getByRole("button", { name: "Chat with support" }).click({ timeout: 20_000 });
+  await expect.poll(async () => (await calls(page)).find((call) => call[0] === "showNewMessage")).toEqual(["showNewMessage", "My Aura account won't load."]);
+  await expectIdentified(page, customer);
 });
 
 test("a closed account's Support page says the account is closed", async ({ page }) => {
@@ -104,4 +123,7 @@ test("a closed account's Support page says the account is closed", async ({ page
   await page.getByTestId("account-closed").getByRole("link", { name: "Contact support" }).click({ timeout: 30_000 });
   await expect(page.getByText("Your account is closed. Chat with us if you think this is a mistake.")).toBeVisible({ timeout: 30_000 });
   await expect(page.getByRole("button", { name: "Chat", exact: true })).toBeEnabled({ timeout: 20_000 });
+  // Settings shows the closed screen, so Support doesn't send the customer there.
+  await expect(page.getByRole("link", { name: "Lock in Settings" })).toHaveCount(0);
+  await expect(page.getByText("Tell us what happened.", { exact: true })).toBeVisible();
 });
