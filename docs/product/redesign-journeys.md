@@ -100,7 +100,7 @@ Each journey is drawn step by step in the storyboards. The frame numbers (J5.3 a
 
 ### Records
 
-- **J12 Find and understand a transaction.** The Transactions page: search, type chips, status filter, and Export. A missing source is named in a banner. A row opens its receipt with its timeline and network links.
+- **J12 Find and understand a transaction.** The Transactions page: search, type chips, status filter, and Export. A missing source is named in a banner. A row opens its receipt with its timeline, network links, and Get help with this, which opens chat with the transaction already written in.
 - **J13 Export and statements.** This list and the monthly statement. (The tax-support preview was cut on 3 October 2026: it was the same list with two columns that always said "Review required" and "Unavailable".)
 - **J14 See where my money went.** The summary at the top of Transactions (the Insights page until 4 October 2026, which now redirects there): periods, money in and out, added to Earn, and swapped, each narrowing the list to its transactions; a chart with a table view and top card merchants behind one remembered toggle.
 
