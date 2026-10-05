@@ -16,12 +16,14 @@ const labels: Record<Direction, string> = { deposit: "Deposit", withdraw: "Withd
  * Deposit to or withdraw from one Earn option, on two tabs (withdraw only, without tabs, for an option closed to deposits). Deposit shows what the account holds, with Max; Withdraw
  * shows what's in this option, with "Withdraw all", which takes out everything, interest included: the whole Aave
  * balance, or every vault share. A deposit approves and deposits in one confirmation. Balances are null when they
- * can't be read, and then say so. The amount clears once the money has moved.
+ * can't be read, and then say so. The amount clears once the money has moved. A link from the Overview can open it on
+ * Withdraw.
  */
-export function EarnAction({ option, symbol, decimals, hasPosition, walletRaw, positionRaw, withdrawOnly = false }: {
+export function EarnAction({ option, symbol, decimals, hasPosition, walletRaw, positionRaw, withdrawOnly = false, initialDirection = "deposit" }: {
   option: EarnOption; symbol: string; decimals: number; hasPosition: boolean; walletRaw: string | null; positionRaw: string | null; withdrawOnly?: boolean;
+  initialDirection?: Direction;
 }) {
-  const [direction, setDirection] = useState<Direction>(withdrawOnly ? "withdraw" : "deposit");
+  const [direction, setDirection] = useState<Direction>(withdrawOnly ? "withdraw" : initialDirection);
   const earn = useAction({ label: labels[direction] });
   const [amount, setAmount] = useState("");
   // Once it has left the account it's sent; Transactions tracks the rest, as in Send and Swap.

@@ -77,7 +77,7 @@ test("⌘K finds actions as well as pages, and opens where each happens (B4)", a
 
 test("every Aura section is browsable with labeled fictional data", async ({ page }) => {
   test.setTimeout(90_000);
-  for (const section of ["deposit", "send", "swap", "earn", "cards", "transactions", "insights", "settings", "support"]) {
+  for (const section of ["deposit", "send", "swap", "earn", "cards", "transactions", "settings", "support"]) {
     await page.goto(`/app/${section}`);
     // /app/deposit is titled Add money.
     const title = section === "deposit" ? "Add money" : section[0].toUpperCase() + section.slice(1);
@@ -90,7 +90,7 @@ test("every Aura section is browsable with labeled fictional data", async ({ pag
 test("on the phone, every section scrolls far enough that nothing tappable is left under the menu button", async ({ page }) => {
   test.skip(page.viewportSize()!.width >= 768, "The floating menu button is phone only");
   test.setTimeout(90_000);
-  for (const section of ["", "deposit", "send", "swap", "earn", "cards", "transactions", "insights", "settings", "support"]) {
+  for (const section of ["", "deposit", "send", "swap", "earn", "cards", "transactions", "settings", "support"]) {
     await page.goto(`/app/${section}`);
     await expect(page.getByText("Example data", { exact: true })).toBeVisible();
     // Scrolled to the end once the page has finished growing (example rows, prices).

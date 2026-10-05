@@ -5,6 +5,7 @@ import { requireActionWallet } from "@/lib/auth/wallet";
 import { requireUnlocked } from "@/lib/actions/controls";
 import { cardsProvider, cardView, MAX_DAILY_LIMIT_USD, readCardState, refreshCardProjection, storedCardId } from "@/lib/cards/service";
 import { errorResponse, route, readJsonBody } from "@/lib/http/route";
+import { formatUsd } from "@/lib/format";
 import { announce } from "@/lib/notifications/deliver";
 import { securityNotice } from "@/lib/notifications/store";
 import { getCard, updateCard } from "@/lib/providers/stripe/issuing";
@@ -38,7 +39,7 @@ export const PATCH = route("cards.controls", { unavailable: "card_unavailable", 
   const now = new Date();
   if (unfreezing) await requireUnlocked(env.PROJECTION_DB, subject.subjectReference, now, "Your account is locked. Unlock it in Settings first.");
   if (unfreezing || raising) {
-    const reasons = [unfreezing ? "unfreeze your card" : "", raising ? `raise your card's daily limit to ${change.dailyLimitUsd} USD` : ""].filter(Boolean);
+    const reasons = [unfreezing ? "unfreeze your card" : "", raising ? `raise your card's daily limit to ${formatUsd(change.dailyLimitUsd ?? 0)}` : ""].filter(Boolean);
     const asked = await confirmWithPasskey(env.PROJECTION_DB, { subject: subject.subjectReference, purpose: "card_controls",
       payload: { cardId, change, from: { status: current?.status, dailyLimitUsd: current?.dailyLimitUsd } }, summary: reasons.join(" and "), confirmation, traceId: context.traceId });
     if (asked) return asked;
@@ -47,7 +48,7 @@ export const PATCH = route("cards.controls", { unavailable: "card_unavailable", 
     dailyLimitCents: change.dailyLimitUsd === undefined ? undefined : change.dailyLimitUsd * 100 }, crypto.randomUUID());
   await refreshCardProjection(env.PROJECTION_DB, subject.subjectReference, card, now);
   if (unfreezing) await announce(env.PROJECTION_DB, subject.subjectReference, securityNotice("card_unfrozen", `Your card ending ${card.last4} can be used again.`, `${cardId}:${now.toISOString()}`), now);
-  if (raising) await announce(env.PROJECTION_DB, subject.subjectReference, securityNotice("card_limit_raised", `Your card can now spend up to ${change.dailyLimitUsd} USD a day.`, `${cardId}:${now.toISOString()}`), now);
+  if (raising) await announce(env.PROJECTION_DB, subject.subjectReference, securityNotice("card_limit_raised", `Your card can now spend up to ${formatUsd(change.dailyLimitUsd ?? 0)} a day.`, `${cardId}:${now.toISOString()}`), now);
   const wallet = await requireActionWallet(subject.subjectReference);
   return Response.json({ ...await readCardState(env.PROJECTION_DB, subject.subjectReference, wallet, now), traceId: context.traceId }, { headers: { "Cache-Control": "private, no-store" } });
 });

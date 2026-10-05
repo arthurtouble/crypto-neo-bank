@@ -14,7 +14,7 @@ import { BASE_CHAIN_ID, registeredAsset } from "@/lib/assets/registry";
 import { useOverview } from "@/lib/client/queries";
 import Link from "next/link";
 import type { AssetId, CatalogAsset } from "@/lib/swap/assets";
-import { assetNetwork } from "@/lib/swap/picker-model";
+import { assetNetwork, isStock } from "@/lib/swap/picker-model";
 import { displayRawAmount, formatEstimatedFeeUsd, marketPriceText, priceDifferenceText, rateText } from "@/lib/swap/review-model";
 import { parseSwapDeepLink } from "@/lib/swap/links";
 import { SwapAssetSelect } from "./swap-asset-select";
@@ -90,7 +90,7 @@ export function SwapWorkspace() {
     return () => window.clearInterval(timer);
   }, [quote]);
 
-  const readAsset = (id: AssetId) => api<{ asset: CatalogAsset; switches?: SwapSwitches }>(`/api/swap/assets?import=${encodeURIComponent(id)}`)
+  const readAsset = (id: AssetId) => api<{ asset: CatalogAsset; switches?: SwapSwitches; places?: { stocks: string | null } }>(`/api/swap/assets?import=${encodeURIComponent(id)}`)
     .catch((reason) => { if (reason instanceof ApiError && reason.status === 404) return null; throw reason; });
   const fromAsset = useQuery({ queryKey: ["swap-asset", fromAssetId], queryFn: () => readAsset(fromAssetId), staleTime: 30_000 });
   const toAsset = useQuery({ queryKey: ["swap-asset", toAssetId], queryFn: () => readAsset(toAssetId), staleTime: 30_000 });
@@ -100,6 +100,9 @@ export function SwapWorkspace() {
   const switches = fromAsset.data?.switches ?? toAsset.data?.switches;
   const otherNetwork = Boolean(source && destination && source.chainId !== destination.chainId);
   const switchedOff = switches ? !(otherNetwork ? switches.otherNetwork : switches.sameNetwork) : false;
+  // Buying a stock is refused where the customer is (the quote checks again); say so before an amount is typed.
+  const stocksNotHere = fromAsset.data?.places?.stocks ?? toAsset.data?.places?.stocks ?? null;
+  const placeBlocked = Boolean(stocksNotHere && destination && isStock(destination));
   const sourceChainId = SUPPORTED_CHAINS.find((chain) => chain.id === source?.chainId)?.id;
   const nativeBalance = useNativeBalance(address, sourceChainId, Boolean(source && source.address === null));
   const tokenBalance = useTokenBalance(source?.address as `0x${string}` | undefined, address, sourceChainId, Boolean(source?.address));
@@ -189,10 +192,11 @@ export function SwapWorkspace() {
             <strong className="mxSwapAmount mxSwapEstimate">{showQuote ? displayRawAmount(quote.toAmountRaw, quote.to.decimals) : "—"}</strong>
             <span className="mxHint">{showQuote ? quote.toAmountUsd ? `About ${formatUsd(quote.toAmountUsd)}` : "Estimated" : "Enter an amount"}</span>
           </div>
+          {placeBlocked && <Notice tone="warning" data-testid="swap-place-blocked">{stocksNotHere}</Notice>}
           {switchedOff && <Notice tone="warning">{otherNetwork ? "Swaps to or from another network aren't available right now." : "Swaps aren't available right now."}</Notice>}
           {error && <p className="mxFieldError" role="alert">{error}</p>}
           {/* One primary action at a time: once there's a quote, its Swap button is it. */}
-          {!showQuote && !done && <button className="appButton appButtonPrimary appButtonLarge" type="submit" disabled={quoting || inFlight || switchedOff || !address || !source || !destination}>
+          {!showQuote && !done && <button className="appButton appButtonPrimary appButtonLarge" type="submit" disabled={quoting || inFlight || switchedOff || placeBlocked || !address || !source || !destination}>
             {quoting ? <><LoaderCircle className="spin" aria-hidden="true" /> Getting quote</> : !address ? "Preparing your wallet" : "Get quote"}
           </button>}
         </form>

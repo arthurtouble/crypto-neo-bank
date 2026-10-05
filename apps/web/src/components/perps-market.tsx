@@ -11,7 +11,7 @@ import { GuestBanner } from "./guest-banner";
 import { PerpsBook } from "./perps-book";
 import { PerpsChart } from "./perps-chart";
 import { perpHref, PerpsActivity } from "./perps-home";
-import { PerpsOrderForm, PerpsOrderSheet, type OrderPreset } from "./perps-order";
+import { PerpsOrderForm, PerpsOrderSheet, SideLabel, type OrderPreset } from "./perps-order";
 import { LoadingState, Notice } from "./states";
 
 /**
@@ -47,7 +47,7 @@ export function PerpsMarketPage({ coin }: { coin: string }) {
 
   const body = markets.switchedOff ? <NotAvailableYet name="Perps" />
     : markets.isPending ? <LoadingState label={`Reading ${name}`} />
-      : !list || list.status !== "observed" ? <Notice tone="warning" role="alert" onRetry={() => void markets.refetch()}><span className="appUnavailable">Unavailable.</span> We couldn&apos;t read this market from Hyperliquid.</Notice>
+      : !list || list.status !== "observed" ? <Notice tone="warning" role="alert" onRetry={() => void markets.refetch()}><span className="appUnavailable">Unavailable.</span> This market can&apos;t be loaded from Hyperliquid right now. Try again.</Notice>
         : !market ? <section className="mkEmpty"><h2>This market isn&apos;t available</h2><p>Hyperliquid doesn&apos;t list {name} right now.</p></section>
           : <>
             <div className="mkTrade">
@@ -62,9 +62,10 @@ export function PerpsMarketPage({ coin }: { coin: string }) {
                 <PerpsOrderForm key={market.coin} market={market} side={side} onSide={setSide} account={account.data} variant="panel" onDone={() => undefined} preset={preset} />
               </aside>}
             </div>
+            {phone && !guest && account.data?.blocked && <Notice tone="warning" data-testid="perps-trade-blocked">{account.data.blocked.message}</Notice>}
             {phone && <div className="mkTradeBar">
-              <button type="button" className="appButton appButtonPrimary appButtonLarge" onClick={() => openSheet("long")}>Long</button>
-              <button type="button" className="appButton appButtonLarge" onClick={() => openSheet("short")}>Short</button>
+              <button type="button" className="appButton appButtonPrimary appButtonLarge" disabled={!guest && Boolean(account.data?.blocked)} onClick={() => openSheet("long")}><SideLabel side="long" /></button>
+              <button type="button" className="appButton appButtonLarge" disabled={!guest && Boolean(account.data?.blocked)} onClick={() => openSheet("short")}><SideLabel side="short" /></button>
             </div>}
             {phone && sheet && <PerpsOrderSheet market={market} side={side} account={account.data} preset={preset} onClose={() => setSheet(false)} />}
           </>;
@@ -97,7 +98,7 @@ function Quote({ market, observedAt, isExample }: { market: PerpMarket; observed
       {change === null || percent === null ? <span className="appUnavailable">Unavailable</span>
         : <span className={change > 0 ? "mkUp" : "mkFlat"} data-testid="perps-market-change">{formatSignedPrice(change)} ({formatSignedPercent(percent)}) today</span>}</p>
     <dl className="mkStats" data-testid="perps-market-stats">
-      <div><dt>24h volume</dt><dd>{formatCompactUsd(market.dayNtlVlm) ?? "Unavailable"}</dd></div>
+      <div><dt>Traded in 24h</dt><dd>{formatCompactUsd(market.dayNtlVlm) ?? "Unavailable"}</dd></div>
       <div><dt>Open interest</dt><dd>{formatCompactUsd(Number(market.openInterest) * Number(market.markPx)) ?? "Unavailable"}</dd></div>
       <div><dt>Funding, hourly</dt><dd>{formatFunding(market.funding) ?? "Unavailable"}</dd></div>
     </dl>

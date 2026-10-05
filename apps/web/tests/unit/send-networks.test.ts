@@ -100,20 +100,43 @@ describe("recent recipients", () => {
   beforeEach(() => { sqlite = schemaDatabase(); state.db = d1(sqlite); });
   afterEach(() => sqlite.close());
 
-  function action(kind: "transfer" | "route", summary: Record<string, unknown>, createdAt: string) {
+  function action(kind: "transfer" | "route", summary: Record<string, unknown>, createdAt: string, destinationChainId: number | null = null) {
     sqlite.prepare(`INSERT INTO actions (action_id, subject_reference, wallet_address, kind, chain_id, summary_json, calls_json, calls_fingerprint,
-        effects_json, counts_toward_limit, status, created_at, expires_at, updated_at)
-      VALUES (?, 'did:privy:alice', ?, ?, 8453, ?, '[{"to":"0x1","value":"0","data":"0x"}]', ?, '[]', 1, 'confirmed', ?, ?, ?)`)
-      .run(crypto.randomUUID(), wallet, kind, JSON.stringify(summary), crypto.randomUUID(), createdAt, createdAt, createdAt);
+        effects_json, counts_toward_limit, status, created_at, expires_at, updated_at, destination_chain_id)
+      VALUES (?, 'did:privy:alice', ?, ?, 8453, ?, '[{"to":"0x1","value":"0","data":"0x"}]', ?, '[]', 1, 'confirmed', ?, ?, ?, ?)`)
+      .run(crypto.randomUUID(), wallet, kind, JSON.stringify(summary), crypto.randomUUID(), createdAt, createdAt, createdAt, destinationChainId);
   }
+  // What lib/actions builds: a transfer names the address in $.to; a route names the asset it delivers in $.to.
+  const transfer = (to: string) => ({ assetId: baseUsdc, symbol: "USDC", to });
+  const route = (recipient: string) => ({ from: { id: baseUsdc, symbol: "USDC", decimals: 6 }, to: { id: arbUsdc, symbol: "USDC", decimals: 6 }, recipient });
+  type Listed = { destination: string; name: string; recent?: boolean; lastUsedAt: string | null; lastAssetId: string | null; lastChainId: number | null };
+  const list = async () => ((await (await listRecipients(new Request("https://aura.test/api/recipients"))).json()) as { recipients: Listed[] }).recipients;
 
   it("include sends to other networks, but not moves to the customer's own account", async () => {
     await ensureSubjectProfile(state.db!, "did:privy:alice");
     const onBase = "0x3333333333333333333333333333333333333333";
-    action("transfer", { to: onBase }, "2026-09-27T09:00:00.000Z");
-    action("route", { recipient: friend }, "2026-09-27T10:00:00.000Z");
-    action("route", { recipient: wallet }, "2026-09-27T11:00:00.000Z");
-    const body = await (await listRecipients(new Request("https://aura.test/api/recipients"))).json() as { recipients: Array<{ destination: string; recent?: boolean }> };
-    expect(body.recipients.filter((item) => item.recent).map((item) => item.destination)).toEqual([friend, onBase]);
+    action("transfer", transfer(onBase), "2026-09-27T09:00:00.000Z");
+    action("route", route(friend), "2026-09-27T10:00:00.000Z", 42161);
+    action("route", route(wallet), "2026-09-27T11:00:00.000Z", 42161);
+    const recipients = await list();
+    expect(recipients.filter((item) => item.recent).map((item) => item.destination)).toEqual([friend, onBase]);
+    expect(recipients[0]).toMatchObject({ destination: friend, lastUsedAt: "2026-09-27T10:00:00.000Z", lastAssetId: baseUsdc, lastChainId: 42161 });
+    expect(recipients[1]).toMatchObject({ destination: onBase, lastAssetId: baseUsdc, lastChainId: 8453 });
+  });
+
+  it("put the person paid most recently first, saved or not, then saved people never paid", async () => {
+    await ensureSubjectProfile(state.db!, "did:privy:alice");
+    const sam = "0x5555555555555555555555555555555555555555", mum = "0x7777777777777777777777777777777777777777";
+    sqlite.prepare(`INSERT INTO address_book_entries (entry_id, subject_reference, address, label, created_at, available_at) VALUES
+      ('e-sam', 'did:privy:alice', ?, 'Sam', '2026-09-01T00:00:00.000Z', '2026-09-01T00:00:00.000Z'),
+      ('e-mum', 'did:privy:alice', ?, 'Mum', '2026-09-20T00:00:00.000Z', '2026-09-20T00:00:00.000Z')`).run(sam, mum);
+    action("transfer", transfer(sam), "2026-09-27T08:00:00.000Z");
+    action("route", route(sam), "2026-09-27T12:00:00.000Z", 42161);
+    action("transfer", transfer(friend), "2026-09-27T10:00:00.000Z");
+    const recipients = await list();
+    expect(recipients.map((item) => item.name)).toEqual(["Sam", "Recent address", "Mum"]);
+    // Sam's latest send went to Arbitrum, so that's what a repeat payment starts from; Sam shows once.
+    expect(recipients[0]).toMatchObject({ lastUsedAt: "2026-09-27T12:00:00.000Z", lastChainId: 42161 });
+    expect(recipients[2]).toMatchObject({ lastUsedAt: null, lastAssetId: null, lastChainId: null });
   });
 });

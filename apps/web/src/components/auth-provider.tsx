@@ -35,11 +35,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // From a guest's Sign in until Privy's sign-in opens: Privy is still downloading, so say so.
   const [opening, setOpening] = useState<"loading" | "failed" | null>(null);
 
+  // The browser remembers a failed download of the runtime for this page load, so asking again would fail the same
+  // way at once. Loading the page again with `?sign-in` downloads it afresh and opens sign-in on arrival.
+  const [loadFailed, setLoadFailed] = useState(false);
+  const retrySignIn = useCallback(() => {
+    const url = new URL(window.location.href);
+    url.searchParams.set("sign-in", "");
+    window.location.assign(url);
+  }, []);
   // A guest's Sign in: fetch the runtime while the page stays as it is, then mount it and open Privy's sign-in.
   const login = useCallback(() => {
+    if (loadFailed) return retrySignIn();
     setOpening("loading");
-    void loadRuntime().then(() => startTransition(() => { setLoginRequested(true); setSigningIn(true); }), () => setOpening("failed"));
-  }, []);
+    void loadRuntime().then(() => startTransition(() => { setLoginRequested(true); setSigningIn(true); }),
+      () => { setLoadFailed(true); setOpening("failed"); });
+  }, [loadFailed, retrySignIn]);
   const onLoginOpened = useCallback(() => { setLoginRequested(false); setOpening(null); }, []);
 
   // A link with `?sign-in` (the landing's Sign in, a pay page's Send with Aura) opens sign-in on arrival for a guest, once
@@ -64,7 +74,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // One boundary for every state, so switching a guest to the runtime (in a transition) keeps their page on screen.
   return <QueryClientProvider client={queryClient}><ToastProvider><Suspense fallback={loading}>{content}</Suspense>
     {opening === "loading" && <div className="appSignInStatus" role="status"><LoaderCircle className="spin" aria-hidden="true" />Opening sign-in</div>}
-    {opening === "failed" && <div className="appSignInStatus" role="alert">Sign-in couldn&apos;t load. Check your connection and try again.
+    {opening === "failed" && <div className="appSignInStatus" role="alert"><span>Sign-in couldn&apos;t load. Check your connection, then try again.</span>
+      <button type="button" className="appButton appButtonPrimary" onClick={retrySignIn}>Try again</button>
       <button type="button" className="appButton appButtonSecondary" onClick={() => setOpening(null)}>Close</button></div>}
   </ToastProvider></QueryClientProvider>;
 }

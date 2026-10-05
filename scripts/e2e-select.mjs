@@ -62,7 +62,7 @@ export const features = {
   cards: ["card"],
   deposit: ["deposit", "add-from-wallet", "move-previous-account"],
   earn: ["earn", "defi"],
-  insights: ["insights"],
+  insights: ["insights", "transactions-summary"],
   // Perps and predictions share the markets parts (markets-*.ts(x), markets.css, lib/markets/), so those run both.
   perps: ["perps", "markets", "hyperliquid"],
   predictions: ["prediction", "polymarket", "markets"],
@@ -74,6 +74,8 @@ export const features = {
   settings: ["settings", "setting-row", "security", "preferences", "profile", "privacy", "data-rights", "theme", "passkey", "account-closed", "api/account/", "lib/account/"],
   [smokeSpec]: ["overview", "dashboard", "terms", "auth-provider", "account-menu", "api/auth/", "app/app/page.tsx"],
   support: ["support"],
+  // The quality-bar sweep covers every page and runs only when asked (AURA_SWEEP), so no path selects it.
+  sweep: [],
   swap: ["swap", "api/routes/"],
   transactions: ["transaction", "activity", "statements", "records.css"]
 };

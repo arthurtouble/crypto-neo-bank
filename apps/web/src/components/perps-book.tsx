@@ -35,7 +35,7 @@ export function PerpsBook({ market, name, depth = 10, framed = true, onPick, gro
   const tools = options.length > 1 && grouping && <GroupingMenu options={options} value={grouping} onChange={(option) => setStep(option.step)} />;
   const content = query.isPending ? <LoadingState label="Reading the order book" />
     : !data || data.status !== "observed" || !rows ? <Notice tone="warning" role="alert" onRetry={() => void query.refetch()} data-testid="perps-book-unavailable">
-      <span className="appUnavailable">Unavailable.</span> We couldn&apos;t read the order book from Hyperliquid.</Notice>
+      <span className="appUnavailable">Unavailable.</span> The order book can&apos;t be loaded from Hyperliquid right now. Try again.</Notice>
       : <div className="mkBook" role="table" aria-label={`${name} order book`} data-testid="perps-book">
         <div role="rowgroup"><div className="mkBookRow mkBookHead" role="row">
           <span role="columnheader">Price (USD)</span><span role="columnheader">Amount ({name})</span><span role="columnheader">Total (USD)</span></div></div>

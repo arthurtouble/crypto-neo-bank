@@ -4,23 +4,26 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { useAuth } from "@/lib/client/auth";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowDownToLine, ArrowDownUp, ArrowLeft, ArrowUpFromLine, CandlestickChart, CirclePercent, CreditCard, Download, ExternalLink, FileText, LoaderCircle, Search, SlidersHorizontal, TrendingUp, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useApi } from "@/lib/client/api";
 import { explorerTx } from "@/lib/client/explorer";
 import type { ActionView } from "@/lib/client/use-action";
 import type { History } from "@/lib/activity/history";
-import { CATEGORIES, entriesCsv, entryCategory, entryLabel, statusLabel, STATUSES, type ActivityEntry } from "@/lib/activity/entries";
-import { BASE_CHAIN_ID, networkName } from "@/lib/assets/registry";
+import { CATEGORIES, entriesCsv, entryCategory, entryDirection, entryLabel, statusLabel, STATUSES, type ActivityEntry } from "@/lib/activity/entries";
+import { ASSETS, BASE_CHAIN_ID, networkName } from "@/lib/assets/registry";
 import { failureText } from "@/lib/client/action-copy";
-import { exampleActivity } from "@/lib/example/data";
+import { exampleHistory, exampleNow } from "@/lib/example/data";
 import { formatDateTime, formatTime, formatToken, formatUsd, shortAddress } from "@/lib/format";
+import { buildInsights } from "@/lib/insights/presentation";
 import { ActionJourney, type ActionEvent } from "./action-journey";
+import { CopyButton } from "./copy-button";
 import { GuestBanner } from "./guest-banner";
 import { LoadingState, Notice } from "./states";
 import { entryTone, StatusDot } from "./status-dot";
 import { Sheet } from "./sheet";
+import { periodName, totalName, TransactionsSummary, type Period, type Summary, type SummaryTotal } from "./transactions-summary";
 
 /** An Aura action's journey, re-read every few seconds while it's still moving. Reading it also advances the check. */
 function ReceiptJourney({ id }: { id: string }) {
@@ -133,6 +136,35 @@ function save(name: string, csv: string | Blob) {
   const anchor = document.createElement("a"); anchor.href = url; anchor.download = name; anchor.click(); URL.revokeObjectURL(url);
 }
 
+/** A dollar coin (USDC, or a card amount in dollars): its value in dollars is the amount itself. */
+const dollars = (asset?: string) => asset === "USD" || ASSETS.some((item) => item.symbol === asset && item.price.kind === "usd");
+
+/** Money that came to the account from somewhere: received, refunded, borrowed, or withdrawn from Earn, Perps, or Predictions. */
+const fromSomewhere = (entry: ActivityEntry) => incoming(entry) || ["earn_withdraw", "perps_withdraw", "predictions_withdraw", "borrow"].includes(entry.type);
+
+/**
+ * What happened, in one line, worded the same for every kind of transaction:
+ * nothing moved, still on its way, or done (and then only what's worth knowing).
+ * "No money moved" only where that's certain: a failed Aura action can have
+ * moved money (refunded, partly delivered), and then its Reason says what happened.
+ */
+function receiptNote(entry: ActivityEntry) {
+  if (entry.status === "not_confirmed") return "No money moved.";
+  if (entry.status === "failed") {
+    if (entry.origin === "card") return "No money moved.";
+    if (entry.origin === "deposit") return "Nothing arrived in your Aura account.";
+    return entry.origin === "aura" && !entry.transactionHash && !entry.failureReason ? "No money moved." : undefined;
+  }
+  if (entry.origin === "card") return entry.status === "pending"
+    ? "The merchant hasn't finished this payment yet, so the amount can still change or be released."
+    : entry.type === "card_refund" ? "The merchant refunded this to your USDC." : "Paid with your card from your USDC.";
+  if (entry.origin === "deposit") return entry.status === "pending" ? "On its way from your wallet. It usually arrives in a few minutes." : undefined;
+  if (entry.origin === "incoming") return entry.final ? undefined : "Received. It's fully confirmed in about 20 minutes.";
+  return undefined;
+}
+
+const noteTestId: Partial<Record<ActivityEntry["origin"], string>> = { card: "card-payment-note", deposit: "deposit-note", incoming: "incoming-finality" };
+
 /** Journey J12: a transaction's receipt, with its progress. A side panel on desktop, with the list still in view; a pushed screen on the phone. */
 function Receipt({ entry, onClose, isExample }: { entry: ActivityEntry; onClose: () => void; isExample: boolean }) {
   const links = [{ name: "View on the network", url: explorerTx(entry.chainId, entry.transactionHash) },
@@ -143,14 +175,15 @@ function Receipt({ entry, onClose, isExample }: { entry: ActivityEntry; onClose:
   const reason = entry.status === "failed" ? (entry.origin === "aura" ? failureText(entry.failureReason ?? null) : entry.failureReason) : undefined;
   const facts: Array<[string, React.ReactNode, string?]> = [
     ["Date", formatDateTime(entry.createdAt)],
+    ...(who ? [[fromSomewhere(entry) ? "From" : setting(entry) ? "For" : "To", who] as [string, React.ReactNode]] : []),
     ...(where ? [["Network", where] as [string, React.ReactNode]] : []),
-    ...(who ? [[incoming(entry) ? "From" : setting(entry) ? "For" : "To", who] as [string, React.ReactNode]] : []),
     ...(entry.bankStatus ? [["Bank", entry.bankStatus, "bank-status"] as [string, React.ReactNode, string]] : []),
     ...(entry.cardDispute ? [["Dispute", entry.cardDispute === "submitted" ? "Under review" : entry.cardDispute === "won" ? "Won" : entry.cardDispute === "lost" ? "Lost" : entry.cardDispute] as [string, React.ReactNode]] : []),
-    ...(entry.estimatedUsd !== undefined && entry.asset !== "USD" ? [[entry.origin === "incoming" ? "Value today" : "Value", formatUsd(entry.estimatedUsd)] as [string, React.ReactNode]] : []),
+    // A dollar coin's value is its amount; anything else (ETH, gold, stocks) shows what it was worth.
+    ...(entry.estimatedUsd !== undefined && !dollars(entry.asset) ? [[entry.origin === "incoming" ? "Value today" : "Value", formatUsd(entry.estimatedUsd)] as [string, React.ReactNode]] : []),
     ...(reason ? [["Reason", reason] as [string, React.ReactNode]] : [])
   ];
-  const stopped = entry.status === "failed" || entry.status === "not_confirmed";
+  const note = receiptNote(entry);
   return <Sheet variant="panel" className="txReceipt" onOpenChange={(open) => { if (!open) onClose(); }}>
         <div className="ovPanelHead">
           <Dialog.Close className="appIconButton ovPanelBack" aria-label="Back"><ArrowLeft aria-hidden="true" /></Dialog.Close>
@@ -159,21 +192,15 @@ function Receipt({ entry, onClose, isExample }: { entry: ActivityEntry; onClose:
         </div>
         <div className="txReceiptAmount"><strong className={incoming(entry) && entry.status === "completed" ? "txIn" : undefined}>{receiptAmount(entry)}</strong><Status entry={entry} /></div>
         <dl className="ovFacts">{facts.map(([label, value, testId]) => <div key={label}><dt>{label}</dt><dd data-testid={testId}>{value}</dd></div>)}</dl>
-        {entry.origin === "aura" && !isExample ? <ReceiptJourney id={entry.id} />
-          : entry.origin === "incoming" ? <p className="ovNote" data-testid="incoming-finality">{entry.final
-            ? `Final on ${networkName(entry.chainId)}.` : `Received. ${networkName(entry.chainId)} makes it final in about 20 minutes.`}</p>
-            : entry.origin === "deposit" ? <p className="ovNote" data-testid="deposit-note">{entry.status === "pending"
-              ? "On its way from your wallet. It usually arrives in a few minutes, and the amount that arrives is read from Base."
-              : entry.status === "failed" ? "Nothing arrived in your Aura account." : "It arrived in your Aura account."}</p>
-            : entry.origin === "card" ? <p className="ovNote" data-testid="card-payment-note">{entry.status === "pending"
-              ? "The merchant hasn't settled this yet. The amount can change or be released." : entry.status === "failed"
-                ? "No money moved." : "Paid with your card from your USDC on Base. Manage or dispute it on Cards."}</p> : null}
-        {!isExample && <div className="ovPanelActions">
+        {note && <p className="ovNote" data-testid={noteTestId[entry.origin] ?? "receipt-note"}>{note}</p>}
+        {entry.origin === "aura" && !isExample && <ReceiptJourney id={entry.id} />}
+        {!isExample && (entry.origin === "card" || links.length > 0) && <div className="ovPanelActions">
           {entry.origin === "card" && <Link className="appButton appButtonLarge" href="/app/cards">Open Cards</Link>}
           {links.map((link) => <a className="appButton appButtonLarge" key={link.name} href={link.url!} target="_blank" rel="noreferrer">{link.name} <ExternalLink aria-hidden="true" /></a>)}
-          {!links.length && entry.origin === "aura" && <p className="ovNote">{stopped ? "Nothing was sent." : "It hasn't reached the network yet."}</p>}
         </div>}
-        <p className="txReceiptRef">{entry.origin === "aura" ? <>Reference <span className="mxBreak">{entry.id}</span></> : `Record from ${entry.source}`}</p>
+        {/* The same last line on every receipt: one thing to give Support, whatever kind of transaction it is. */}
+        <div className="txReceiptRef"><span>Reference <span className="mxBreak" data-testid="receipt-reference">{entry.id}</span></span>
+          {!isExample && <CopyButton value={entry.id} ariaLabel="Copy reference" className="appTextButton" />}</div>
   </Sheet>;
 }
 
@@ -217,7 +244,7 @@ function ExportDialog({ entries, onClose }: { entries: ActivityEntry[]; onClose:
   </Sheet>;
 }
 
-/** Journey J12: every transaction, searchable, with type chips and a status filter. Guests see labelled examples. */
+/** Journey J12: a summary of the period on top, then every transaction, searchable, with type chips and a status filter. Guests see labelled examples. */
 export function ActivityWorkspace() {
   const { user, ready, authenticated, login } = useAuth();
   const api = useApi();
@@ -226,6 +253,10 @@ export function ActivityWorkspace() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<(typeof CATEGORIES)[number]>("All");
   const [status, setStatus] = useState<(typeof STATUSES)[number]>("All");
+  const [days, setDays] = useState<Period>(30);
+  // A total tapped in the summary: the list shows the completed transactions that add up to it.
+  const [total, setTotal] = useState<SummaryTotal | null>(null);
+  const listRef = useRef<HTMLElement>(null);
   const [chosen, setChosen] = useState<ActivityEntry | null>(null);
   // A link from Send, Swap, or the Overview opens the transaction straight away: /app/transactions?open=<id>.
   const [openId, setOpenId] = useState(useSearchParams().get("open"));
@@ -236,7 +267,7 @@ export function ActivityWorkspace() {
   const [olderState, setOlderState] = useState<"idle" | "loading" | "error">("idle");
   const pages = useMemo(() => olderPages.owner === user?.id ? olderPages.pages : [], [olderPages, user?.id]);
   const entries = useMemo(() => {
-    if (isExample) return exampleActivity;
+    if (isExample) return exampleHistory;
     const seen = new Set<string>();
     return [...query.data?.entries ?? [], ...pages.flatMap((page) => page.entries)].filter((entry) => !seen.has(entry.id) && Boolean(seen.add(entry.id)));
   }, [isExample, query.data, pages]);
@@ -254,38 +285,79 @@ export function ActivityWorkspace() {
       setOlderState("idle");
     } catch { setOlderState("error"); }
   }
+
+  // The summary is read again when a new transaction completes, and otherwise kept for a few minutes: totals change slowly.
+  const latestCompleted = query.data?.entries.find((entry) => entry.status === "completed")?.id ?? "none";
+  const summaryQuery = useQuery<Summary>({
+    queryKey: ["insights", user?.id, days, latestCompleted],
+    queryFn: () => api<Summary>(`/api/insights?days=${days}`),
+    enabled: authenticated && Boolean(user) && query.isSuccess,
+    staleTime: 5 * 60_000,
+    placeholderData: (previous, previousQuery) => previousQuery?.queryKey[2] === days ? previous : undefined
+  });
+  const exampleSummary = useMemo<Summary | null>(() => isExample
+    ? { ...buildInsights(exampleHistory, exampleNow, days), incomingComplete: true, outgoingComplete: true } : null, [isExample, days]);
+  const summary = exampleSummary ?? summaryQuery.data;
+  // Guests' example year is counted as of its own date, so their totals and list agree.
+  const asOf = isExample ? exampleNow.getTime() : query.dataUpdatedAt;
+  const since = useMemo(() => new Date(asOf - days * 86_400_000).toISOString(), [asOf, days]);
+
   const selected = chosen ? entries.find((entry) => entry.id === chosen.id) ?? chosen : entries.find((entry) => entry.id === openId) ?? null;
   const close = () => { setChosen(null); setOpenId(null); };
   const filtered = useMemo(() => entries.filter((entry) => {
     const needle = search.trim().toLowerCase();
+    if (total && (entry.status !== "completed" || entryDirection(entry.type) !== total || entry.createdAt < since)) return false;
     return (category === "All" || entryCategory(entry.type) === category) && (status === "All" || statusLabel(entry.status) === status)
       && (!needle || [entryLabel(entry.type), entry.asset, entry.toAsset, entry.amount, entry.counterparty, entry.transactionHash].some((value) => value?.toLowerCase().includes(needle)));
-  }), [entries, category, status, search]);
+  }), [entries, category, status, search, total, since]);
   const sources = isExample ? undefined : query.data?.sources;
   const listLoading = loading || (!isExample && query.isPending);
   const missing = [sources?.incoming.status === "unavailable" && "money you received", sources?.card.status === "unavailable" && "card payments",
     sources?.aave.status === "unavailable" && "Aave history"].filter((item): item is string => Boolean(item));
-  const days = useMemo(() => byDay(filtered, new Date()), [filtered]);
+  const dayGroups = useMemo(() => byDay(filtered, new Date()), [filtered]);
+  // A new account has nothing to sum up: one empty state with a way to add money, not a row of $0.
+  const noActivity = !isExample && query.isSuccess && entries.length === 0 && missing.length === 0;
+
+  /** Narrow the list to a total's transactions (a second tap on the same total clears it), then show the list. */
+  function showTotal(next: SummaryTotal) {
+    setTotal(total === next ? null : next);
+    setCategory("All"); setStatus("All"); setSearch("");
+    requestAnimationFrame(() => listRef.current?.focus({ preventScroll: true }));
+    listRef.current?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+  }
+  function showMerchant(name: string) {
+    setTotal(null); setStatus("All"); setCategory("Card"); setSearch(name);
+    listRef.current?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+  }
 
   return <div className="mxPage txPage">
     {(isExample || loading) && <GuestBanner onSignIn={login} ready={ready} />}
     <header className="txHead"><h1>Transactions</h1>
       <button type="button" className="appButton" onClick={() => isExample ? login() : setExportOpen(true)} disabled={loading || (!isExample && !query.data)}><Download aria-hidden="true" /> Export</button></header>
+    {!noActivity && !(!isExample && query.isError) && <TransactionsSummary data={summary ?? undefined} days={days} onDays={setDays}
+      loading={loading || (!isExample && (query.isPending || (summaryQuery.isPending && !summaryQuery.isError)))}
+      error={!isExample && summaryQuery.isError} onRetry={() => void summaryQuery.refetch()} total={total} onTotal={showTotal} onMerchant={showMerchant} />}
     {missing.length > 0 && <Notice tone="warning" role="status">{missing[0][0].toUpperCase() + listOf(missing).slice(1)} can&apos;t be read right now, so some activity may be missing.</Notice>}
-    <div className="txFilters">
+    {!noActivity && <div className="txFilters">
       <label className="txSearch"><Search aria-hidden="true" /><span className="srOnly">Search activity</span>
         <input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search activity" /></label>
       <div className="ovChips txChips" role="group" aria-label="Category">{CATEGORIES.map((item) =>
         <button key={item} type="button" className="ovChip" aria-pressed={category === item} onClick={() => setCategory(item)}>{item}</button>)}</div>
       <label className="mxField txStatusFilter"><span className="srOnly">Status</span>
         <select value={status} onChange={(event) => setStatus(event.target.value as typeof status)}>{STATUSES.map((item) => <option key={item} value={item}>{item === "All" ? "Any status" : item}</option>)}</select></label>
-    </div>
-    <section className="mxCard txList" aria-label="Transaction list">
+    </div>}
+    {total && <div className="txFocus" role="status">
+      <span>Showing <strong>{totalName[total].toLowerCase()}</strong> in the last {periodName(days)}</span>
+      <button type="button" className="appButton" onClick={() => setTotal(null)}><X aria-hidden="true" /> Show all</button></div>}
+    <section className="mxCard txList" aria-label="Transaction list" ref={listRef} tabIndex={-1}>
       {listLoading ? <LoadingState label="Checking activity" />
         : !isExample && query.isError ? <Notice tone="error" role="alert" onRetry={() => void query.refetch()}>Activity couldn&apos;t be loaded. If this keeps happening, contact Support.</Notice>
-          : filtered.length === 0 ? <div className="txEmpty"><strong>{entries.length ? "No matching activity" : "No activity yet"}</strong>
-            <span>{entries.length ? "Try changing the filters." : "Money you send, receive, swap, or earn will appear here."}</span></div>
-            : days.map((day) => <section className="txDay" key={day.label} aria-label={day.label}><h2>{day.label}</h2>
+          : noActivity ? <div className="txEmpty"><strong>No transactions yet</strong>
+            <span>Money you add, send, swap, or earn will appear here.</span>
+            <Link className="appButton appButtonPrimary" href="/app/deposit">Add money</Link></div>
+          : filtered.length === 0 ? <div className="txEmpty"><strong>No matching activity</strong>
+            <span>{total ? `No ${totalName[total].toLowerCase()} in the last ${periodName(days)}${more ? " among the transactions loaded so far" : ""}.` : "Try changing the filters."}</span></div>
+            : dayGroups.map((day) => <section className="txDay" key={day.label} aria-label={day.label}><h2>{day.label}</h2>
               <ul className="txRows">{day.entries.map((entry) => { const amount = rowAmount(entry); return <li key={entry.id}>
                 <button type="button" className="activityRow txRow" data-testid={`entry-${entry.id}`} onClick={() => setChosen(entry)}>
                   <EntryIcon entry={entry} />

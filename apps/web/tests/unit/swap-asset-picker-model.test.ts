@@ -17,6 +17,7 @@ describe("Swap asset dropdown", () => {
     expect(optionLabel(usdc, "50000000")).toBe("USD Coin · USDC · 50 available");
     expect(optionLabel(usdc, null)).toBe("USD Coin · USDC · balance unavailable");
     expect(optionLabel({ ...apple, eligibility: "unavailable" })).toBe("Apple · AAPLc · paused");
+    expect(optionLabel(apple, undefined, true)).toBe("Apple · AAPLc · not available where you are");
   });
 
   it("groups the list like the Overview, keeping the order within each group and leaving out empty groups", () => {

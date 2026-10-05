@@ -1,6 +1,6 @@
 export const customerSections = [
   "deposit", "send", "swap", "earn", "perps", "predictions", "cards",
-  "transactions", "insights", "settings", "support"
+  "transactions", "settings", "support"
 ] as const;
 
 export type CustomerSection = (typeof customerSections)[number];
@@ -19,8 +19,7 @@ export const navigation = [
   ] },
   { group: "Everyday", items: [
     { label: "Cards", href: "/app/cards" },
-    { label: "Transactions", href: "/app/transactions" },
-    { label: "Insights", href: "/app/insights" }
+    { label: "Transactions", href: "/app/transactions" }
   ] },
   { group: "Account", items: [
     { label: "Settings", href: "/app/settings" },

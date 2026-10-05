@@ -17,7 +17,7 @@ Until you have a card, the Cards page shows the steps as a checklist, ending wit
 2. **Apply for the card.** On the Cards page, select **Apply for a card**. Bridge checks you're eligible on its own page. Select **Check status** to see its decision, or what it still needs.
 3. **Create your card.** Once approved, select **Create my card**. You need a passkey on your account, and your account can't be locked. Bridge's approval lasts 24 hours. If it runs out first, Bridge asks you to confirm your details again.
 
-Your card starts with a daily limit of 500 USD. You can raise it to 10,000 USD a day.
+Your card starts with a daily limit of $500. You can raise it to $10,000 a day.
 
 ## How card payments work
 
@@ -62,11 +62,11 @@ Adding the card to your phone's wallet is built but switched off. It needs Strip
 
 ## Card activity
 
-The Cards page lists pending holds, declines, payments, refunds, and disputes. Transactions lists them too; filter by **Card** to see only card activity. A payment's receipt links to the Base transaction in which Bridge took your USDC.
+The Cards page lists pending holds, declines, payments, refunds, and disputes. A pending hold isn't final yet, and the merchant can still change the amount. When a merchant releases a hold, nothing is taken. Transactions lists them too; filter by **Card** to see only card activity. A payment's receipt links to the Base transaction in which Bridge took your USDC.
 
 ## Disputes
 
-You can dispute a settled card payment within 110 days. Select **Dispute** next to it in card activity, then choose a reason:
+You can dispute a completed card payment within 110 days. Select **Dispute** next to it in card activity, then choose a reason:
 
 - I didn't make this payment;
 - I didn't get what I paid for;
@@ -78,4 +78,4 @@ You can send a dispute only once, so include everything. If you think someone el
 
 ## Where card records come from
 
-Stripe owns the card itself: its controls, approving and settling payments, and disputes. Bridge owns your approval and takes payments from your USDC. Aura keeps only which card is yours and reads everything else from Stripe and Base each time. If Aura can't read Stripe, it says so. It never makes up a status.
+Stripe owns the card itself: its controls, approving and completing payments, and disputes. Bridge owns your approval and takes payments from your USDC. Aura keeps only which card is yours and reads everything else from Stripe and Base each time. If Aura can't read Stripe, it says so. It never makes up a status.
