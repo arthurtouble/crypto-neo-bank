@@ -79,7 +79,9 @@ test("every Aura section is browsable with labeled fictional data", async ({ pag
   test.setTimeout(90_000);
   for (const section of ["deposit", "send", "swap", "earn", "cards", "transactions", "settings", "support"]) {
     await page.goto(`/app/${section}`);
-    await expect(page.getByRole("heading", { name: section[0].toUpperCase() + section.slice(1), exact: true })).toBeVisible();
+    // /app/deposit is titled Add money.
+    const title = section === "deposit" ? "Add money" : section[0].toUpperCase() + section.slice(1);
+    await expect(page.getByRole("heading", { name: title, exact: true })).toBeVisible();
     await expect(page.getByText("Example data", { exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "Create account or sign in" })).toBeVisible();
   }
@@ -126,6 +128,7 @@ test("Rewards was cut: old links open Cards", async ({ page }) => {
 test("unknown Aura tags do not expose recipient information", async ({ page }) => {
   await page.goto("/pay/unknown_aura_tag");
   await expect(page.getByRole("heading", { name: "Payment page unavailable" })).toBeVisible();
+  await expect(page.getByText("Check the tag with the person who gave it to you.")).toBeVisible();
   await expect(page.getByText("Bank transfer", { exact: true })).toHaveCount(0);
 });
 

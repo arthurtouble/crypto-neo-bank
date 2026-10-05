@@ -82,6 +82,7 @@ Buttons are verbs, and one primary button leads each screen or panel. A disabled
 - **Error:** what failed, then what to do. "Polymarket's markets can't be loaded right now." with a Try again button. Don't repeat "Try again" in the sentence when the button is there. Put it next to the part that failed.
 - **Unavailable:** a value that can't be read says "Unavailable", never an old number or zero, and names what's missing nearby.
 - **Blocked before starting:** say why, and the one thing to do: "Add a passkey to send money." Show it before the customer fills a form, not after they pay.
+- **Needs a person:** when only support can sort it out, say "Contact support" in the sentence. Write it as plain words; in the app, `SupportText` (`states.tsx`) turns them into a link to Support wherever a notice, toast, progress card, or receipt shows the message, so the same text still reads right in an email.
 - **Empty:** what will appear here, and the one button that fills it: "Your transactions will show here." Add money.
 - **Guest:** example data is labelled "Example" and is the same across features (the $12.00 card payment at Corner Cafe appears in Cards and Transactions alike).
 

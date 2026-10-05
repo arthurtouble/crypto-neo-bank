@@ -1,11 +1,11 @@
 ---
 title: Terms of use
-description: The terms for using the Aura website and app to hold, send, swap, and earn with crypto assets, stablecoins, tokenized stocks, and gold.
+description: The terms for using the Aura website and app to hold, send, swap, and earn with crypto assets, stablecoins, tokenized stocks, and gold, and to trade perps and predictions.
 sidebar:
   order: 2
 ---
 
-**Version:** 2026-10-01
+**Version:** 2026-10-05
 
 These terms cover your use of Aura's website, app, and software.
 
@@ -57,6 +57,8 @@ With Aura you can:
 - buy and sell crypto, the euro stablecoin, tokenized stocks, and Tether Gold through those same routes;
 - supply assets to Aave, a lending protocol on Base, and withdraw them;
 - deposit USDC into reviewed Morpho vaults on Base, and withdraw it;
+- trade perpetual futures ("perps") on Hyperliquid, from a Hyperliquid account your wallet owns;
+- buy and sell shares in prediction markets ("predictions") on Polymarket, from a Polymarket wallet your wallet owns;
 - create a public Aura tag payment page; and
 - manage your settings and data, and chat with support.
 
@@ -106,6 +108,8 @@ These are independent of us:
 - LI.FI, and the bridges and exchanges it routes through;
 - Aave;
 - Morpho and the vault curators;
+- Hyperliquid;
+- Polymarket;
 - Base, Ethereum, and other networks;
 - token issuers; and
 - any partner we add later.
@@ -114,7 +118,19 @@ Their own terms and privacy notices apply. We don't control their availability, 
 
 When Aura shows a quote, route, asset, or protocol, we are not endorsing it or saying it suits you.
 
-## 9. Transactions
+## 9. Perps and predictions
+
+Perps and predictions are markets run by Hyperliquid and Polymarket. They are not Aura products, and Aura is not a party to your trades.
+
+- **Your accounts.** Your Aura wallet owns your Hyperliquid account and your Polymarket wallet. Aura never holds money in them and can't withdraw from them. Only your wallet can withdraw.
+- **Trading key.** For perps, you approve a trading key with your passkey. It stays on your device. Aura never has it. Hyperliquid doesn't let it withdraw or move money out of your account.
+- **Their rules.** Hyperliquid's and Polymarket's own terms apply to your trades, including how orders fill, how positions are liquidated, how markets resolve, and their fees. Polymarket decides each market's result. Aura can't change or reverse a fill, a liquidation, or a result.
+- **Where they work.** Perps aren't available in the United States or Ontario. Predictions aren't available where Polymarket doesn't take new orders, or in the United Arab Emirates. From those places you can't open a new position or buy, but you can always close, sell, and withdraw. You must not use a VPN or other means to get around these limits.
+- **Moving money in.** Aura prepares each deposit from your Aura account to these accounts, and your account lock applies to it. These deposits don't count toward your daily limit. Your lock and limit don't apply to trades with money already in those accounts.
+- **No Aura fee.** Aura doesn't charge a fee on perps or predictions. Hyperliquid's and Polymarket's fees, and perps funding, apply.
+- **Risk.** With leverage, you can lose all the money behind a position quickly. A prediction share can be worth nothing. Read the [risk disclosure](/legal/risk-disclosure/) before you trade.
+
+## 10. Transactions
 
 Blockchain transactions usually can't be reversed.
 
@@ -122,23 +138,23 @@ A preview can be out of date by the time you sign. Fees, rates, price impact, li
 
 "Submitted" means a transaction hash exists. It doesn't guarantee the transaction will settle, or that it will arrive on another network.
 
-## 10. Fees
+## 11. Fees
 
 We will show you any Aura fee before it applies. Network, protocol, bridge, exchange, and partner costs can apply on top. See [fees and alignment](/company/fees-and-alignment/).
 
-## 11. No advice and no guarantees
+## 12. No advice and no guarantees
 
 Information in Aura is general. It is not personal investment, legal, tax, or accounting advice. Rates can change.
 
 We don't guarantee profit, liquidity, uninterrupted access, or recovery. We don't guarantee the value or stability of any asset.
 
-## 12. Your data
+## 13. Your data
 
 The [privacy notice](/legal/privacy-notice/) explains what we collect and why.
 
 You can download your data and manage email choices in Settings. To close your account, contact support once the account holds no funds.
 
-## 13. Suspending or ending access
+## 14. Suspending or ending access
 
 You can stop using Aura at any time.
 
@@ -150,9 +166,9 @@ We may restrict or end your access if:
 - a partner requires it; or
 - we discontinue a product.
 
-Ending your access to Aura doesn't close your wallet. It doesn't settle an open position with a protocol either. Your assets stay in your wallet. You may be able to keep using the wallet with other compatible software, using Privy's export and recovery tools.
+Ending your access to Aura doesn't close your wallet. It doesn't close an open position with a protocol, Hyperliquid, or Polymarket either. Your assets stay in your wallet. You may be able to keep using the wallet with other compatible software, using Privy's export and recovery tools.
 
-## 14. Intellectual property
+## 15. Intellectual property
 
 Aurel and its licensors own the software, the brand, and the original content.
 
@@ -160,7 +176,7 @@ We give you a limited, personal right to use Aura as intended. We can take this 
 
 You may not misuse, copy, resell, disrupt, or reverse engineer Aura, except where the law expressly allows it.
 
-## 15. Liability
+## 16. Liability
 
 To the extent the governing law allows, Aura is provided "as available".
 
@@ -179,13 +195,13 @@ Nothing in these terms excludes liability that the law doesn't allow us to exclu
 
 **Our lawyers must set the liability cap, consumer-rights wording, governing law, courts, and any arbitration terms for each launch country. These terms don't take effect until they do.**
 
-## 16. Changes to these terms
+## 17. Changes to these terms
 
 We will tell you about material changes before they apply. The exception is a change we need to make right away for legal or security reasons.
 
 We'll ask you to accept the new version the next time you sign in.
 
-## 17. Contact and complaints
+## 18. Contact and complaints
 
 **We will add our legal notice address and support contact here before launch.**
 

@@ -29,7 +29,7 @@ Open any item to see its receipt: beside the list on a computer, on its own scre
 
 A bank payout also lists Bridge's updates, up to delivery to your bank. If something failed, the receipt says why in plain words. Setting your card's spending allowance moves no money, so it shows without an amount.
 
-Every receipt reads the same way: the amount and status, then the date, who it was to or from, the network if it isn't Base, and the US dollar value for anything that isn't a dollar coin. One line says what happened when there's something to know, such as **No money moved** for a declined card payment or a transfer that wasn't sent. Every receipt ends with a **Reference** you can copy and give to Support.
+Every receipt reads the same way: the amount and status, then the date, who it was to or from, the network if it isn't Base, and the US dollar value for anything that isn't a dollar coin. One line says what happened when there's something to know, such as **No money moved** for a declined card payment or a transfer that wasn't sent. Every receipt ends with a **Reference** you can copy and give to Support. **Get help with this** opens a chat with Support with the transaction and its reference already written in, ready for you to add what went wrong.
 
 ## Money you receive
 

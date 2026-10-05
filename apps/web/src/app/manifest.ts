@@ -10,7 +10,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Aura",
     short_name: "Aura",
-    description: "Hold stablecoins, crypto, tokenized stocks, and gold, then send, swap, and earn.",
+    description: "Hold stablecoins, crypto, stocks, and gold, then send, swap, and earn.",
     id: "/app",
     start_url: "/app",
     scope: "/",
