@@ -1,7 +1,7 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ExternalLink } from "lucide-react";
-import { useEffect, useState } from "react";
-import { api, short, when, words } from "./api";
+import { useEffect, useRef, useState } from "react";
+import { api, cents, short, when, words } from "./api";
 import { ErrorNotice } from "./Notice";
 
 type Row = { id: string; origin: "aura" | "incoming" | "card"; label: string; amountText: string | null; statusText: string; status: string; subject: string;
@@ -26,12 +26,30 @@ function Journey({ id, onClose }: { id: string; onClose: () => void }) {
   const data = detail.data;
   const source = data && txLink(data.action.chainId, data.action.transactionHash);
   const delivery = data && txLink(data.action.destinationChainId, data.action.destinationTransactionHash);
+  const drawer = useRef<HTMLElement>(null);
   useEffect(() => {
-    const close = (event: KeyboardEvent) => { if (event.key === "Escape") onClose(); };
+    const close = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+      // Tab stays inside the drawer while it's open.
+      if (event.key !== "Tab" || !drawer.current) return;
+      const stops = [...drawer.current.querySelectorAll<HTMLElement>("a[href], button:not(:disabled)")];
+      const first = stops[0]; const last = stops.at(-1);
+      if (!first || !last) return;
+      const inside = drawer.current.contains(document.activeElement);
+      if (event.shiftKey && (document.activeElement === first || document.activeElement === drawer.current || !inside)) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && (document.activeElement === last || !inside)) { event.preventDefault(); first.focus(); }
+    };
     window.addEventListener("keydown", close);
     return () => window.removeEventListener("keydown", close);
   }, [onClose]);
-  return <><div className="scrim" aria-hidden="true" onClick={onClose} /><aside className="drawer" role="dialog" aria-modal="false" aria-labelledby="journey-heading">
+  // Focus moves into the drawer when it opens, so keyboard and screen-reader users land on it rather than behind the
+  // scrim, and goes back to what opened it when it closes.
+  useEffect(() => {
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    drawer.current?.focus();
+    return () => { if (opener?.isConnected) opener.focus(); };
+  }, []);
+  return <><div className="scrim" aria-hidden="true" onClick={onClose} /><aside ref={drawer} tabIndex={-1} className="drawer" role="dialog" aria-modal="true" aria-labelledby="journey-heading">
     <header><h2 id="journey-heading">Action journey</h2><button type="button" className="button quiet" onClick={onClose}>Close</button></header>
     {detail.isError && <ErrorNotice error={detail.error} onRetry={() => void detail.refetch()} />}
     {data && <>
@@ -41,7 +59,7 @@ function Journey({ id, onClose }: { id: string; onClose: () => void }) {
         {data.entry.bankStatus && <div><dt>Bank</dt><dd>{data.entry.bankStatus}</dd></div>}
         <div><dt>Customer</dt><dd><code>{data.action.subject}</code></dd></div>
         <div><dt>Reference</dt><dd><code>{data.action.id}</code></dd></div>
-        <div><dt>Value at the time</dt><dd>{data.action.usdCents === null ? "Unknown" : `$${(data.action.usdCents / 100).toFixed(2)}`}</dd></div>
+        <div><dt>Value at the time</dt><dd>{data.action.usdCents === null ? "Unknown" : cents(data.action.usdCents)}</dd></div>
         <div><dt>Created</dt><dd>{when(data.action.createdAt)}</dd></div>
         <div><dt>Submitted</dt><dd>{when(data.action.submittedAt)}</dd></div>
         <div><dt>Settled</dt><dd>{when(data.action.settledAt)}</dd></div>
@@ -103,7 +121,9 @@ export function Movement({ subject, action, onClearSubject }: { subject: string 
   const list = useInfiniteQuery({
     queryKey: ["actions", filter.toString()], initialPageParam: null as string | null,
     queryFn: ({ pageParam }) => api<Page>(`movement?${new URLSearchParams({ ...Object.fromEntries(filter), ...(pageParam ? { before: pageParam } : {}) })}`),
-    getNextPageParam: (last) => last.next
+    getNextPageParam: (last) => last.next,
+    // One customer's page reads their history instead.
+    enabled: !subject
   });
   const rows = list.data?.pages.flatMap((page) => page.rows) ?? [];
   if (subject) return <section className="panel" aria-labelledby="movement-heading">
@@ -125,6 +145,7 @@ export function Movement({ subject, action, onClearSubject }: { subject: string 
       {subject && <span className="chip">Customer <code>{short(subject)}</code><button type="button" className="button quiet" onClick={onClearSubject}>Show everyone</button></span>}
     </div>
     {list.isError && <ErrorNotice error={list.error} onRetry={() => void list.refetch()} />}
+    {list.isPending && <p className="muted">Loading…</p>}
     {rows.length > 0 && <div className="tableWrap"><table>
       <thead><tr><th scope="col">When</th><th scope="col">What</th><th scope="col">Amount</th><th scope="col">Status</th><th scope="col">Customer</th><th scope="col">Source</th></tr></thead>
       <tbody>{rows.map((row) => {

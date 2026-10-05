@@ -24,6 +24,7 @@ function Switches() {
   return <section className="panel" aria-labelledby="switches-heading"><h2 id="switches-heading">Feature switches</h2>
     <p className="muted">Off stops new actions at once, on the server. Anything already on its way keeps settling.</p>
     {flags.isError && <ErrorNotice error={flags.error} onRetry={() => void flags.refetch()} />}
+    {flags.isPending && <p className="muted">Loading…</p>}
     {toggle.isError && <ErrorNotice error={toggle.error} />}
     <ul className="rows">{flags.data?.flags.map((flag) => { const name = flagText[flag.flag_key] ?? flag.flag_key; return <li key={flag.flag_key}>
       <div><strong>{name}</strong><span className="muted">Changed {when(flag.updated_at)} by {flag.updated_by}{flag.reason ? `: ${flag.reason}` : ""}</span></div>
@@ -47,6 +48,7 @@ function Pauses() {
   return <section className="panel" aria-labelledby="pauses-heading"><h2 id="pauses-heading">Asset pauses</h2>
     <p className="muted">A paused asset can&apos;t be deposited, sent, swapped, or bought. Customers still see what they hold. Adding an asset is a reviewed code change.</p>
     {assets.isError && <ErrorNotice error={assets.error} onRetry={() => void assets.refetch()} />}
+    {assets.isPending && <p className="muted">Loading…</p>}
     {change.isError && <ErrorNotice error={change.error} />}
     <ul className="rows">{assets.data?.assets.map((asset) => <li key={asset.id} data-testid="ops-asset">
       <div><strong>{asset.symbol} <span className="muted">on {networks[asset.chainId] ?? asset.chainId}</span></strong>

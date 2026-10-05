@@ -1,7 +1,7 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Copy } from "lucide-react";
-import { useState, type FormEvent } from "react";
-import { api, cents, short, tokens, when, words } from "./api";
+import { useEffect, useState, type FormEvent } from "react";
+import { api, cents, money, short, tokens, when, words } from "./api";
 import { ErrorNotice } from "./Notice";
 
 type Holding = { label: string; symbol: string; decimals: number; amountRaw: string | null; usdCents: number | null; status: string };
@@ -62,20 +62,31 @@ function AllCustomers({ onOpen }: { onOpen: (subject: string) => void }) {
   </section>;
 }
 
+/**
+ * The customer being looked at lives in the address (`#customers?subject=…`), so reloading, Back, and a copied link all
+ * reopen it. The page remounts when it changes.
+ */
+const show = (query: string) => { location.hash = query ? `customers?subject=${encodeURIComponent(query)}` : "customers"; };
+
 export function Customers({ subject, onMovement }: { subject: string | null; onMovement: (subject: string) => void }) {
   const client = useQueryClient();
   const [input, setInput] = useState(subject ?? "");
-  const [query, setQuery] = useState(subject ?? "");
+  const query = subject ?? "";
   const [copied, setCopied] = useState<"" | "copied" | "failed">("");
+  // "Copied" is a moment's confirmation, not a lasting state.
+  useEffect(() => {
+    if (copied !== "copied") return;
+    const timer = setTimeout(() => setCopied(""), 3000);
+    return () => clearTimeout(timer);
+  }, [copied]);
   const lookup = useQuery({ queryKey: ["customer", query], queryFn: () => api<Lookup>(`accounts?q=${encodeURIComponent(query)}`), enabled: query.length > 0 });
   const act = useMutation({
     mutationFn: ({ action, reason }: { action: "lock" | "close" | "reopen"; reason: string }) =>
       api(`accounts/${encodeURIComponent(lookup.data!.account.subjectReference)}/${action}`, { method: "POST", json: { reason } }),
     onSuccess: () => { void client.invalidateQueries({ queryKey: ["customer", query] }); void client.invalidateQueries({ queryKey: ["customers"] }); }
   });
-  const open = (subject: string) => { act.reset(); setInput(subject); setQuery(subject); };
-  const showAll = () => { act.reset(); setInput(""); setQuery(""); };
-  function find(event: FormEvent) { event.preventDefault(); act.reset(); if (input.trim() === query) void lookup.refetch(); else setQuery(input.trim()); }
+  const showAll = () => show("");
+  function find(event: FormEvent) { event.preventDefault(); act.reset(); if (input.trim() === query) void lookup.refetch(); else show(input.trim()); }
   const data = lookup.data;
   const profile = data?.profile;
 
@@ -86,7 +97,7 @@ export function Customers({ subject, onMovement }: { subject: string | null; onM
       <button type="submit" className="button primary" disabled={input.trim().length < 3}>Find</button>
       {query && <button type="button" className="button quiet" onClick={showAll}>All customers</button>}
     </form>
-    {!query && <AllCustomers onOpen={open} />}
+    {!query && <AllCustomers onOpen={show} />}
     {lookup.isFetching && <p className="muted">Looking up…</p>}
     {lookup.isError && <ErrorNotice error={lookup.error} onRetry={(lookup.error as { status?: number }).status === 404 ? undefined : () => void lookup.refetch()} />}
     {data && profile && <article className="customer" data-testid="ops-customer">
@@ -104,7 +115,7 @@ export function Customers({ subject, onMovement }: { subject: string | null; onM
         <div><dt>Wallet</dt><dd><code>{data.account.wallet}</code></dd></div>
         <div><dt>Bank (Bridge)</dt><dd>{profile.bank ? `${words(profile.bank.status)}${profile.bank.kycStatus ? `, identity ${profile.bank.kycStatus.replaceAll("_", " ")}` : ""}` : "Not started"}</dd></div>
         <div><dt>Card</dt><dd>{profile.card ? `${words(profile.card.status)}${profile.card.lastFour ? `, ending ${profile.card.lastFour}` : ""}` : "None"}</dd></div>
-        <div><dt>Daily limit</dt><dd>{profile.controls.dailyLimitUsd === null ? "None" : `$${profile.controls.dailyLimitUsd}`}{profile.controls.enforceAddressBook ? ", saved recipients only" : ""}</dd></div>
+        <div><dt>Daily limit</dt><dd>{profile.controls.dailyLimitUsd === null ? "None" : money(profile.controls.dailyLimitUsd)}{profile.controls.enforceAddressBook ? ", saved recipients only" : ""}</dd></div>
         <div><dt>Transactions</dt><dd>{profile.actions.total} ({profile.actions.completed} completed, {profile.actions.failed} failed, {profile.actions.open} open)</dd></div>
         <div><dt>Intercom user ID</dt><dd><code>{profile.intercomUserId}</code>
           <button type="button" className="icon" aria-label="Copy Intercom user ID" onClick={() => {
