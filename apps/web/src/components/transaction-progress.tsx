@@ -5,6 +5,7 @@ import Link from "next/link";
 import { SUPPORTED_CHAINS } from "@/config/supported-chains";
 import { networkName } from "@/lib/assets/registry";
 import { failureText } from "@/lib/client/action-copy";
+import { SupportText } from "@/components/states";
 import { actionSettled, type ActionPhase, type ActionView } from "@/lib/client/use-action";
 
 type Props = {
@@ -67,7 +68,7 @@ export function TransactionProgress({ label, phase, action, outcomeUnknown }: Pr
   return <div className={`transactionProgress ${failed ? "failed" : complete || sent ? "complete" : "active"}`} role={failed ? "alert" : "status"} aria-live="polite">
     <div className="transactionProgressHeadline">
       <span>{failed ? <X size={17} /> : complete ? <Check size={17} /> : sent ? <Clock3 size={17} /> : <LoaderCircle className="spin" size={17} />}</span>
-      <div><strong>{title}</strong><small>{detail}</small></div>
+      <div><strong>{title}</strong><small><SupportText text={detail} /></small></div>
     </div>
     {!failed && <div className="transactionSteps" aria-label={`${label} progress`}>
       {["Prepared", "Confirmed", "Submitted", "Completed"].map((name, index) => <span className={index <= step ? "done" : ""} key={name}><i>{index < step || complete ? <Check size={10} /> : index + 1}</i>{name}</span>)}
