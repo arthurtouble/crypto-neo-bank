@@ -118,6 +118,6 @@ export function walletDepositEntry(deposit: WalletDeposit): ActivityEntry {
     chainId: deposit.sourceChainId, destinationChainId: BASE_CHAIN_ID, asset: deposit.symbol,
     amount: formatUnits(BigInt(deposit.expectedAmountRaw), deposit.decimals), counterparty: `Your wallet on ${networkName(deposit.sourceChainId)}`,
     transactionHash: deposit.sourceHash, destinationTransactionHash: deposit.destinationHash ?? undefined,
-    failureReason: deposit.status === "refunded" ? "The bridge sent it back to your wallet" : deposit.status === "failed" ? "It didn't complete. Check your wallet's activity." : undefined,
+    failureReason: deposit.status === "refunded" ? "It couldn't reach Base, so it went back to your wallet" : deposit.status === "failed" ? "It didn't complete. Check your wallet's activity." : undefined,
     source: "LI.FI" };
 }

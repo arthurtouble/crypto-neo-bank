@@ -25,7 +25,7 @@ Money only leaves your account after you add a passkey or an authenticator app i
 
 ## Add money and send
 
-Aura uses real networks and real assets. **Deposit** shows your address and QR code on Base, and lets you add money from a connected wallet or by card. Start with a small amount. See [add money](/product/add-money/).
+Aura uses real networks and real assets. **Add money** shows your address and QR code on Base, and lets you add money from a connected wallet or by card. Start with a small amount. See [add money](/product/add-money/).
 
 **Send** pays an address, a saved recipient, an Aura tag, or one of your linked wallets, on Base or another network. You can name and save a new address as you send.
 
