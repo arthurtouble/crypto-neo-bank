@@ -155,8 +155,8 @@ describe("getting a card", () => {
   it("asks for identity verification first, then a card application with Bridge", async () => {
     sqlite.exec("UPDATE provider_customer_links SET status = 'pending'");
     expect(await read()).toMatchObject({ state: "verify_first" });
-    expect(await (await apply(request("/api/cards/apply", "POST"))).json()).toMatchObject({ error: "verification_required" });
-    expect(await (await create()).json()).toMatchObject({ error: "verification_required" });
+    expect(await (await apply(request("/api/cards/apply", "POST"))).json()).toMatchObject({ error: "verification_required", message: "Verify your identity under Add money first." });
+    expect(await (await create()).json()).toMatchObject({ error: "verification_required", message: "Verify your identity under Add money first." });
     sqlite.exec("UPDATE provider_customer_links SET status = 'active'");
     endorsement = { status: "none", cardholder: null };
     expect(await read()).toMatchObject({ state: "apply", approval: "none" });
@@ -247,11 +247,12 @@ describe("card controls", () => {
     expect(await (await patch({ frozen: true })()).json()).toMatchObject({ card: { status: "frozen" } });
     expect(await (await patch({ dailyLimitUsd: 100 })()).json()).toMatchObject({ card: { dailyLimitUsd: 100 } });
     const asked = await patch({ frozen: false, dailyLimitUsd: 800 })();
-    expect(await asked.json()).toMatchObject({ error: "confirmation_required", message: "Confirm with your passkey to unfreeze your card and raise your card's daily limit to 800 USD." });
+    expect(await asked.json()).toMatchObject({ error: "confirmation_required", message: "Confirm with your passkey to unfreeze your card and raise your card's daily limit to $800.00." });
     expect(stripeCard).toMatchObject({ status: "inactive" });
     expect(await (await confirmed(patch({ frozen: false, dailyLimitUsd: 800 }))).json()).toMatchObject({ card: { status: "active", dailyLimitUsd: 800 } });
     expect(sqlite.prepare("SELECT title FROM notifications ORDER BY created_at, title").all().map((row) => (row as { title: string }).title))
       .toEqual(expect.arrayContaining(["Your card is unfrozen", "Your card limit went up"]));
+    expect(sqlite.prepare("SELECT body FROM notifications WHERE title = 'Your card limit went up'").get()).toEqual({ body: expect.stringMatching(/^Your card can now spend up to \$800\.00 a day\. /) });
     expect(sqlite.prepare("SELECT status, daily_limit FROM card_account_projections").get()).toEqual({ status: "active", daily_limit: "800.00" });
   });
 

@@ -35,7 +35,7 @@ export const POST = route("cards.create", { unavailable: "card_unavailable" }, a
   await requireUnlocked(env.PROJECTION_DB, subject.subjectReference, now);
   if (await storedCardId(env.PROJECTION_DB, subject.subjectReference)) return errorResponse(409, "card_exists", context, { message: "You already have a card." });
   const customer = await activeBridgeCustomer(env.PROJECTION_DB, subject.subjectReference);
-  if (!customer) return errorResponse(409, "verification_required", context, { message: "Verify your identity on Deposit first." });
+  if (!customer) return errorResponse(409, "verification_required", context, { message: "Verify your identity under Add money first." });
   const approval = await readCardsApproval(bridge, customer);
   if (approval.status !== "approved" || !approval.cardholderId) return errorResponse(409, "card_approval_required", context, { message: "Apply for a card first." });
   // One request ID per cardholder: a double submit gets Stripe's first answer back, not a second card.

@@ -165,7 +165,7 @@ test("a payout the bank returns shows as failed with what Bridge is doing about 
   const row = page.locator(".activityRow").filter({ hasText: "Sent to bank" });
   await expect(row).toContainText("Failed", { timeout: 30_000 });
   await row.click();
-  await expect(page.getByTestId("bank-status")).toHaveText("Your bank returned it. Bridge is sending the money back");
+  await expect(page.getByTestId("bank-status")).toHaveText("Your bank sent it back. The money is coming back to your Aura account");
 });
 
 test("the server refuses a payout while the account is locked, before Bridge creates anything", async ({ page }) => {
