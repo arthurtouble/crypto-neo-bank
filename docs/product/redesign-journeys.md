@@ -60,7 +60,7 @@ Each journey is drawn step by step in the storyboards. The frame numbers (J5.3 a
 
 - **J0 Get around.** The desktop sidebar with the twelve sections. On the phone, the floating menu button and the sheet of twelve tiles.
 - **J1 Explore as a guest.** Every section with example data and a banner. Any action opens sign-in (a dialog on desktop, a sheet on the phone).
-- **J2 Sign in and accept the terms.** Sign-in (Privy: email, Google, Telegram, or wallet); a Telegram or wallet sign-in adds an email next, verified by Privy; then the terms on their own full screen, with Log out as the way out. There's no app shell behind it; the three documents are rows and the checkbox is required. Then:
+- **J2 Sign in and accept the terms.** Sign-in (Privy: email, Google, Telegram, or wallet); a Telegram or wallet sign-in adds an email next, verified by Privy; then the terms on their own full screen, with Log out as the way out. There's no app shell behind it; the three documents are rows and the checkbox is required. If the terms change while they're open, Continue becomes Reload, which brings the new version (an app on the home screen has no reload button). Then:
   - A first Overview with the four ways to deposit, each opening that way on Deposit.
   - A "Secure your account" checklist: add a passkey.
   - A session that expires shows one banner on the current page.
@@ -108,7 +108,7 @@ Each journey is drawn step by step in the storyboards. The frame numbers (J5.3 a
 
 - **J15 Keep my account safe.** Settings › Security: the passkey first, then email, emergency lock, daily limit, saved-recipients-only, and the account key (export asks once more and warns that the controls stop applying). Saved recipients are their own area. Tightening is instant; loosening needs the passkey.
 - **J16 My profile and preferences.** Settings › Aura tag and payment page, notifications, this device, and your data (download, terms, close the account).
-- **J17 Get help.** The Support page: chat, articles, and report a problem.
+- **J17 Get help.** The Support page: chat, articles, and report a problem. Support is in the same place on every page (last in the sidebar and the phone menu). When chat can't load, it offers Try again. The account screen that blocks the app when the account can't load has its own Chat with support.
 - **J18 Notifications.** An inbox that marks itself read. Each notice opens where it happened. Toasts only for money received and security changes.
 
 ### Public

@@ -12,17 +12,19 @@ Settings has six sections.
 | **Aura tag** | Choose your public name and show or hide its payment page. See [Aura tag](/product/aura-tag/) |
 | **Notifications** | Choose transaction emails, browser notifications, and product news |
 | **This device** | Hide balances on this screen, and choose light, dark, or your device's theme |
-| **Your data** | Download your data, open the terms of use and privacy notice, and ask to close your account |
+| **Your data** | Download your data, open the terms of use and privacy notice you accepted (with the date of each version), and ask to close your account |
 
 ## Notifications
 
 Every notice shows in the app, under the bell at the top of the screen. You can also get:
 
-- **Transaction emails:** money you receive, and when a send, swap, or Earn move completes or fails. You need an email on your account.
+- **Transaction emails:** money you receive, card payments, and when a send, swap, bank transfer, or Earn move completes or fails. You need an email on your account.
 - **Browser notifications:** turned on for each browser separately, in up to 10 browsers. Turning them on in another browser turns them off in the one you turned them on in longest ago. On iPhone and iPad, add Aura to your Home Screen first, then turn them on there.
 - **Product news:** occasional emails about what's new in Aura. Off unless you turn it on.
 
 Security notices, like a lock or a new recipient, are always sent: in the app, and by email if your account has one.
+
+A notice reads like the receipt it opens: the same amount, who it was to or from, and why it failed if it did. A bank transfer gets one notice, when it reaches your bank or if it comes back. Money you withdraw from perps or predictions says it's back from Hyperliquid or Polymarket.
 
 ## Your data
 
