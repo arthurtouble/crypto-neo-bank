@@ -82,7 +82,7 @@ describe("quoting a deposit from another network", () => {
     sqlite.exec("UPDATE feature_flags SET enabled = 0 WHERE flag_key = 'cross_chain'");
     const off = await post({ chainId: 42161, symbol: "USDC", amount: "25", from: metamask });
     expect(off.status).toBe(503);
-    expect(await off.json()).toMatchObject({ error: "feature_unavailable", message: expect.stringContaining("aren't available right now") });
+    expect(await off.json()).toMatchObject({ error: "feature_unavailable", message: expect.stringContaining("isn't available right now") });
     expect(state.quotes).toHaveLength(0);
   });
 

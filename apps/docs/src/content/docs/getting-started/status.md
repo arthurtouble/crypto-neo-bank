@@ -21,7 +21,7 @@ Each feature below stays switched off until it has been tested with real funds. 
 | Area | What it does | Good to know |
 | --- | --- | --- |
 | Overview | Your balances on Base, and your Aave and Morpho positions | Values come from live reads. A failed read shows as unavailable |
-| Deposit | Your address and QR code on Base. Add money from a connected wallet on Base, Ethereum, Arbitrum, Optimism, or Polygon, or pay by card through Privy | From another network, money moves to the same asset on Base. Bank deposits are coming soon |
+| Add money | Your address and QR code on Base. Add money from a connected wallet on Base, Ethereum, Arbitrum, Optimism, or Polygon, or pay by card through Privy | From another network, money moves to the same asset on Base. Bank deposits are coming soon |
 | Send | Send any [supported asset](/product/networks-and-assets/#supported-assets) to an address, a saved recipient, an Aura tag, or your own linked wallet, on Base or, for ETH and USDC, another network. Name and save new recipients as you send | Your controls apply, and you confirm with your passkey. Bank payouts are coming soon |
 | Swap | Buy and sell crypto, the euro stablecoin, stocks, and Tether Gold, and move assets to another network | Quotes last 45 seconds. Aura pays the network fee. Fees come out of the amount. A move to another network is complete only when it arrives. Coinbase says its stocks are only for eligible people outside the US, so you can't buy them from the US or the UK. Tether Gold is held on Ethereum |
 | Earn | Supply USDC to Aave, or deposit USDC in one of two Morpho vaults, all on Base. Withdraw when you like | Rates change. Withdrawals depend on how much is available. None is a bank deposit |

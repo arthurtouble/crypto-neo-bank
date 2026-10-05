@@ -8,7 +8,7 @@ export type CustomerSection = (typeof customerSections)[number];
 export const navigation = [
   { group: "Home", items: [
     { label: "Overview", href: "/app" },
-    { label: "Deposit", href: "/app/deposit" },
+    { label: "Add money", href: "/app/deposit" },
     { label: "Send", href: "/app/send" },
     { label: "Swap", href: "/app/swap" }
   ] },

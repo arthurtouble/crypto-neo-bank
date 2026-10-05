@@ -5,7 +5,7 @@ description: The networks (Base, Ethereum, Arbitrum, Optimism, Polygon) and asse
 
 Aura always shows the network when you receive, send, swap, or earn. The same address can hold different balances on different networks. Your address and QR code in Add money are for Base only.
 
-- To add money from another network, use **Deposit > From a wallet**. Aura moves it to the same asset on Base.
+- To add money from another network, use **Add money > From a wallet**. Aura moves it to the same asset on Base.
 - To send to someone on another network, choose the network in **Send**.
 - To move assets between networks from your Aura account, use Swap.
 
