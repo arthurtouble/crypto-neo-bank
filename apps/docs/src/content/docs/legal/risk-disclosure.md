@@ -1,11 +1,11 @@
 ---
 title: Risk disclosure
-description: The main risks of self-custody, stablecoins, DeFi, swaps, and cross-network moves.
+description: The main risks of self-custody, stablecoins, DeFi, swaps, moves between networks, perps, and predictions.
 sidebar:
   order: 4
 ---
 
-**Version:** 2026-10-01
+**Version:** 2026-10-05
 
 Digital assets can lose most or all of their value. Only use assets you can afford to lose. Get independent advice when you need it.
 
@@ -58,6 +58,25 @@ Swaps and moves between networks use routes found by LI.FI. LI.FI chooses among 
 
 A route can depend on several contracts, liquidity sources, relayers, and networks. Confirmation on the first network doesn't prove the asset arrived on the second. If something goes wrong, recovery can be slow or impossible.
 
+## Perps
+
+Perps are high risk. You can lose all the money you put in, quickly.
+
+- **Leverage.** Leverage multiplies gains and losses. At 40x, a move of less than 2.5% against you can lose all the money behind a position.
+- **Liquidation.** If the price reaches your liquidation price, Hyperliquid closes your position and you lose its margin. The liquidation price Aura shows is an estimate. Prices can jump past it, so you can lose more than you expected from a stop loss or a limit order.
+- **Cross margin.** With cross margin, a loss on one position can use your whole perps balance and close other positions.
+- **Funding.** Open positions pay or receive funding every hour. Over time, funding can cost more than the trade makes.
+- **Stock perps.** A stock perp follows a company's share price but gives you no share, vote, or dividend. It keeps trading when the stock market is closed, so its price can move far from the share price, and jump when the market opens.
+- **Hyperliquid.** Hyperliquid runs its own network, order book, and price feeds. It can have outages, bugs, or rule changes, and can pause markets, change margin rules, or close positions. While Hyperliquid is down, you may not be able to close a position or withdraw.
+
+## Predictions
+
+- **You can lose everything you pay.** A share pays $1 if its outcome happens and nothing if it doesn't.
+- **Results.** Polymarket decides each result from the source named on the market, after the market ends. A result can be disputed, delayed, or decided in a way you don't expect. Aura can't change it.
+- **Selling.** Before a market ends, you can only sell at what buyers offer. There may be few buyers, or none.
+- **Prices aren't forecasts.** A share's price shows what traders will pay, not the real chance of the outcome.
+- **Polymarket.** Polymarket runs its own markets, order book, and contracts on Polygon. It can have outages, bugs, or rule changes, and can pause or close a market. Laws on prediction markets differ by country and can change.
+
 ## Markets, liquidity, and prices
 
 Prices can move fast or be manipulated. A quote can go out of date, and liquidity can disappear. Large trades can move the price. A value shown in Aura may not be a price you can actually sell at.
@@ -70,6 +89,7 @@ These can change, suspend, or end their services:
 - Base and Ethereum;
 - Aave;
 - Morpho and the vault curators;
+- Hyperliquid and Polymarket;
 - LI.FI, and the bridges and exchanges it uses;
 - stablecoin issuers; and
 - future partners.

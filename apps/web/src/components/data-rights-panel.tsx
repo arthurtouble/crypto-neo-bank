@@ -12,7 +12,7 @@ const docs = docsOrigin();
 const dated = (version: string) => new Date(`${version}T00:00:00Z`).toLocaleDateString("en-US", { dateStyle: "long", timeZone: "UTC" });
 const { terms, privacy } = legalDocuments;
 // The app asks again whenever a version changes (components/terms-gate.tsx), so the current versions are the ones this customer accepted.
-const accepted = terms.version === privacy.version ? `Both dated ${dated(terms.version)}.`
+const accepted = (terms.version as string) === privacy.version ? `Both dated ${dated(terms.version)}.`
   : `Terms dated ${dated(terms.version)}, privacy notice dated ${dated(privacy.version)}.`;
 
 /** The customer's data and account: download everything, read the documents, or ask to close the account. */
