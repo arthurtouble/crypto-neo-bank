@@ -3,7 +3,7 @@ title: Moves between networks
 description: How Aura moves assets like USDC and ETH between Base, Ethereum, Arbitrum, Optimism, and Polygon, and how each move is quoted, confirmed, and tracked.
 ---
 
-To withdraw to a network other than Base, use Swap to move an asset to that network, or choose another network in Send. To add money from another network, use **Deposit > From a wallet**; Aura moves it to the same asset on Base, using a route LI.FI finds.
+To withdraw to a network other than Base, use Swap to move an asset to that network, or choose another network in Send. To add money from another network, use **Add money > From a wallet**; Aura moves it to the same asset on Base.
 
 The moving fee comes out of the amount, and the review shows it under **Fees**. For moves from your Aura account, Aura pays the network fee. When you add money from your wallet, your wallet pays it on the network you send from.
 

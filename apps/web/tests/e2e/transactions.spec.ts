@@ -212,7 +212,7 @@ test("an empty account says so", async ({ page }) => {
   await signIn(page);
   await page.goto("/app/transactions");
   await expect(page.getByText("No transactions yet")).toBeVisible({ timeout: 30_000 });
-  await expect(page.getByRole("link", { name: "Add money" })).toHaveAttribute("href", "/app/deposit");
+  await expect(page.getByRole("main").getByRole("link", { name: "Add money" })).toHaveAttribute("href", "/app/deposit");
 });
 
 test("when received money can't be read, the list says deposits may be missing and still shows what it has", async ({ page }) => {

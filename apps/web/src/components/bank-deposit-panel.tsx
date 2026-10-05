@@ -34,7 +34,7 @@ function VerificationForm({ onStarted }: { onStarted: () => void }) {
     try {
       const result = await api<{ verificationUrl: string; termsUrl: string }>("/api/money/onboarding", { method: "POST", json: { fullName: fullName.trim(), email: email.trim() } });
       const link = httpsUrl(result.verificationUrl);
-      if (!link) throw new Error("The link we got back isn't safe to open. Try again.");
+      if (!link) throw new Error("Bridge's link can't be opened safely. Try again.");
       if (tab) { tab.opener = null; tab.location.href = link; }
       onStarted();
     } catch (reason) {
@@ -53,7 +53,7 @@ function VerificationForm({ onStarted }: { onStarted: () => void }) {
   </form>;
 }
 
-/** Deposit from a bank: Bridge setup, then the customer's USD deposit details. */
+/** Add money from a bank: Bridge setup, then the customer's USD deposit details. */
 export function BankDepositPanel() {
   const account = useBankAccount();
   const stage = account.data ? bankStage(account.data) : null;
@@ -66,11 +66,11 @@ export function BankDepositPanel() {
     { label: "Get your US bank details", done: stage === "active", current: false }
   ];
   return <section className="mxPanel" aria-labelledby="deposit-bank">
-    <div className="mxPanelHead"><h2 id="deposit-bank">Deposit from a bank</h2>
+    <div className="mxPanelHead"><h2 id="deposit-bank">From your bank</h2>
       {stage === "unavailable" ? <span className="mxBadge">Coming soon</span> : <span className="mxHint">US bank transfer</span>}</div>
     {account.isPending && <LoadingState label="Loading your bank details…" />}
     {account.isError && <Notice tone="error" role="alert" onRetry={() => void account.refetch()}>Bank details are unavailable right now.</Notice>}
-    {stage === "unavailable" && <p className="mxHint">You&apos;ll get US bank details, and deposits will arrive as USDC in your Aura account.</p>}
+    {stage === "unavailable" && <p className="mxHint">You&apos;ll get US bank details, and money you send to them will arrive as USDC in your Aura account.</p>}
     {stage && stage !== "unavailable" && stage !== "rejected" && stage !== "active" && <ol className="mxChecklist" aria-label="Bank setup">
       {steps.map((step) => <li key={step.label} className={step.done ? "isDone" : step.current ? "isCurrent" : undefined}>{step.label}</li>)}
     </ol>}
@@ -88,7 +88,7 @@ export function BankDepositPanel() {
     </>}
     {stage === "rejected" && <Notice tone="error">Bridge couldn&apos;t verify your identity. <Link className="appTextButton mxInlineButton" href="/app/support">Contact support</Link></Notice>}
     {stage === "active" && instructions && <>
-      <p className="mxHint">Send USD from your bank to these details. Deposits arrive as USDC in your Aura account.</p>
+      <p className="mxHint">Send USD from your bank to these details. It arrives as USDC in your Aura account.</p>
       <dl className="mxSummary">
         <div><dt>Bank</dt><dd>{instructions.bankName}</dd></div>
         <div><dt>Beneficiary</dt><dd>{instructions.beneficiaryName}</dd></div>

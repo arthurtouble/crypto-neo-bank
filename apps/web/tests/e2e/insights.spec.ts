@@ -118,7 +118,7 @@ test("with no transactions yet, Transactions says so once and points to Add mone
   await signIn(page);
   await page.goto("/app/transactions");
   await expect(page.getByText("No transactions yet")).toBeVisible({ timeout: 30_000 });
-  await expect(page.getByRole("link", { name: "Add money" })).toHaveAttribute("href", "/app/deposit");
+  await expect(page.getByRole("main").getByRole("link", { name: "Add money" })).toHaveAttribute("href", "/app/deposit");
   await expect(page.getByRole("region", { name: "Summary" })).toHaveCount(0);
 });
 

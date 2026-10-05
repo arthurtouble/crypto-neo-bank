@@ -95,7 +95,7 @@ describe("deposits bridged from the customer's own wallet", () => {
     const [deposit] = await readWalletDeposits(state.db!, "alice", later);
     expect(deposit).toMatchObject({ status: "refunded" });
     expect(walletDepositEntry(deposit)).toMatchObject({ origin: "deposit", type: "received", status: "failed", asset: "USDC", amount: "39.8",
-      counterparty: "Your wallet on Arbitrum", failureReason: "The bridge sent it back to your wallet" });
+      counterparty: "Your wallet on Arbitrum", failureReason: "It couldn't reach Base, so it went back to your wallet" });
   });
 
   it("shows a deposit in Transactions until its transfer on Base does, then labels that transfer as from the customer's wallet", async () => {
