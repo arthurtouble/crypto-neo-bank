@@ -65,6 +65,11 @@ test("the Overview values every holding in dollars and totals cash, crypto, and 
   await expect(page.getByTestId("total-cash")).toHaveText("$125.50");
   await expect(page.getByTestId("total-crypto")).toHaveText("$5,850.00");
   await expect(page.getByTestId("total-earn")).toHaveText("$155.00");
+  // Each group chip keeps its full width, so its name and total never overlap; on the phone the row scrolls instead.
+  const chips = page.getByRole("group", { name: "Show" }).getByRole("button");
+  for (const chip of await chips.all()) {
+    expect(await chip.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+  }
 
   await expect(row(page, `8453:${ASSETS.usdc}`)).toContainText("125.5 USDC");
   await expect(row(page, "8453:native")).toContainText("2 ETH");
