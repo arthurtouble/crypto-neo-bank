@@ -6,6 +6,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { useEffect, useState } from "react";
 import { HOME_CHAIN } from "@/config/supported-chains";
 import { assetsFor } from "@/lib/assets/registry";
+import { ADD_MONEY_WAYS, type AddMoneyWay } from "@/lib/deposits/ways";
 import { useQuery } from "@tanstack/react-query";
 import { useApi } from "@/lib/client/api";
 import { useAuth } from "@/lib/client/auth";
@@ -23,13 +24,9 @@ import { LoadingState, Notice } from "./states";
 const RECEIVABLE = assetsFor("hold", HOME_CHAIN.id);
 const DEFAULT_RECEIVE = RECEIVABLE.find((asset) => asset.symbol === "USDC") ?? RECEIVABLE[0];
 const EXAMPLE_ADDRESS = "0x000000000000000000000000000000000000e0a1";
-const tabs = [
-  { id: "receive", label: "Receive", detail: "From an exchange or another wallet", icon: QrCode },
-  { id: "wallet", label: "From a wallet", detail: "From a wallet you connected, like MetaMask", icon: Wallet },
-  { id: "card", label: "Card", detail: "Buy USDC with a debit or credit card", icon: CreditCard },
-  { id: "bank", label: "Bank", detail: "US bank transfer", icon: Building2 }
-] as const;
-type Tab = (typeof tabs)[number]["id"];
+const icons = { receive: QrCode, wallet: Wallet, card: CreditCard, bank: Building2 } as const;
+const tabs = ADD_MONEY_WAYS.map((way) => ({ ...way, icon: icons[way.id] }));
+type Tab = AddMoneyWay;
 
 /** Guests see what each way does, with one way to sign in. */
 function SignInToAdd({ onSignIn }: { onSignIn: () => void }) {
@@ -54,7 +51,7 @@ function AddressGroups({ address }: { address: string }) {
 
 /** A link for a step that isn't this page's: the payment page in Settings, or sign-in for a guest. */
 function TagLink({ isExample, onSignIn }: { isExample: boolean; onSignIn: () => void }) {
-  return <p className="mxHint">Want people to pay you? {isExample
+  return <p className="mxHint mxTagLink">Want people to pay you? {isExample
     ? <button type="button" className="mxInlineLink" onClick={onSignIn}>Sign in to share your payment page</button>
     : <Link className="mxInlineLink" href="/app/settings#tag">Share your payment page</Link>}</p>;
 }
@@ -64,7 +61,7 @@ function ReceivePanel({ address, isExample, onSignIn }: { address: string; isExa
   const asset = RECEIVABLE.find((item) => item.id === assetId) ?? DEFAULT_RECEIVE;
   return <section className="mxPanel" aria-labelledby="deposit-receive">
     <div className="mxPanelHead"><h2 id="deposit-receive">Receive</h2>
-      <p>Send to your Aura account from an exchange or another wallet, on the Base network.</p></div>
+      <p>Send to your Aura account from an exchange or another wallet.</p></div>
     <label className="mxField">What you&apos;re sending
       <select value={asset.id} onChange={(event) => setAssetId(event.target.value)} aria-describedby="deposit-receive-note">
         {RECEIVABLE.map((item) => <option key={item.id} value={item.id}>{item.symbol} · {item.name}</option>)}
@@ -82,7 +79,7 @@ function ReceivePanel({ address, isExample, onSignIn }: { address: string; isExa
         <p className="mxHint">Your balance updates once the money arrives.</p>
       </div>
     </div>
-    <Notice tone="warning"><span id="deposit-receive-note">Only send {asset.symbol} on the Base network. Money sent on another network, or a token not in this list, won&apos;t show in Aura. To add from another network, use From a wallet.</span></Notice>
+    <Notice tone="warning"><span id="deposit-receive-note">Choose Base as the network when you send {asset.symbol}. Money sent on another network, or an asset not in this list, won&apos;t show in Aura. To add from another network, use From a wallet.</span></Notice>
     <TagLink isExample={isExample} onSignIn={onSignIn} />
   </section>;
 }
@@ -110,7 +107,9 @@ function CardPanel({ address, isExample, onSignIn }: { address: string | undefin
   return <section className="mxPanel" aria-labelledby="deposit-card">
     <div className="mxPanelHead"><h2 id="deposit-card">Pay by card</h2>
       <p>Buy USDC with a debit or credit card. It arrives in your Aura account.</p></div>
-    <p className="mxHint">A card payment partner takes the payment. It shows its fee and limits before you pay.</p>
+    {/* Privy picks the card partner (MoonPay, Coinbase Onramp, or Stripe, as its dashboard allows) and names it in its own window. */}
+    <p className="mxHint" data-testid="card-processor">Privy opens a checkout where its card partner charges your card. Before you pay, you see the
+      partner&apos;s name, its fee, its limits, and how much USDC you get. Aura doesn&apos;t add a fee.</p>
     {isExample ? <SignInToAdd onSignIn={onSignIn} />
       : methods.isPending ? <LoadingState label="Checking card payments…" />
       : methods.isError ? <Notice tone="error" role="alert" onRetry={() => void methods.refetch()}>Card payments are unavailable right now.</Notice>
@@ -126,7 +125,7 @@ function initialTab(): Tab {
 }
 
 /**
- * Every way to add money to the Aura account (journey J4): receive on Base at the account address, move it from a
+ * Add money: every way to add money to the Aura account (journey J4): receive on Base at the account address, move it from a
  * connected wallet, pay by card, or a US bank transfer through Bridge. Tabs on desktop, rows on the phone. Balances
  * come from the chain; nothing here records a deposit.
  */
@@ -151,9 +150,9 @@ export function DepositPage() {
   }
 
   const needsWallet = loading || (!isExample && (!walletReady || !address));
-  return <MoneyPage title="Deposit" guest={isExample || loading} onSignIn={login} ready={ready}>
+  return <MoneyPage title="Add money" guest={isExample || loading} onSignIn={login} ready={ready}>
     <div className="mxWaysLayout">
-      <div className="mxTabs mxWays" role="tablist" aria-label="Ways to deposit">
+      <div className="mxTabs mxWays" role="tablist" aria-label="Ways to add money">
         {tabs.map(({ id, label, detail, icon: Icon }) => <button key={id} type="button" role="tab" id={`deposit-tab-${id}`} aria-controls={`deposit-panel-${id}`}
           aria-labelledby={`deposit-tab-${id}-label`} aria-describedby={`deposit-tab-${id}-detail`}
           aria-selected={tab === id} tabIndex={tab === id ? 0 : -1} onClick={() => choose(id)}
@@ -180,8 +179,8 @@ export function DepositPage() {
         </section>}
         {tab === "card" && (needsWallet ? <SettingUp /> : <CardPanel address={account} isExample={isExample} onSignIn={login} />)}
         {tab === "bank" && (loading ? <SettingUp /> : isExample ? <section className="mxPanel" aria-labelledby="deposit-bank">
-          <div className="mxPanelHead"><h2 id="deposit-bank">Deposit from a bank</h2>
-            <p>Get US bank details. Deposits arrive as USDC in your Aura account.</p></div>
+          <div className="mxPanelHead"><h2 id="deposit-bank">From your bank</h2>
+            <p>Get US bank details. Money you send to them arrives as USDC in your Aura account.</p></div>
           <SignInToAdd onSignIn={login} />
         </section> : <BankDepositPanel />)}
       </div>

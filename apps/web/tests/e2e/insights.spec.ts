@@ -3,13 +3,22 @@ import { BRIDGE } from "./support/fake-edge.mjs";
 import { expect, test } from "./support/fixtures";
 import { acceptTerms, asCustomer, ASSETS, edge, newCustomer, setBalances, setFeature, setIdentity, type Customer } from "./support/session";
 
-// Feature 11 in docs/overview/feature-readiness.md: Insights (Rewards was cut).
-// The chain and Alchemy's transfer index over it, Privy, Bridge, and Stripe
-// are the local fake; Aura's pages, API routes, and D1 run for real.
+// Feature 11 in docs/overview/feature-readiness.md: Insights, since 4 October 2026
+// the summary at the top of Transactions (Rewards was cut). The chain and
+// Alchemy's transfer index over it, Privy, Bridge, and Stripe are the local
+// fake; Aura's pages, API routes, and D1 run for real.
 
 const FRIEND = "0x5555555555555555555555555555555555555555";
 const chart = (page: Page) => page.getByRole("region", { name: "Money in and out" });
 const merchants = (page: Page) => page.getByRole("region", { name: "Top card merchants" });
+
+/** Transactions, with the summary's chart and merchants opened (closed until asked for, then remembered). */
+async function openSummary(page: Page) {
+  await page.goto("/app/transactions");
+  const toggle = page.getByRole("button", { name: /chart and merchants$/ });
+  await expect(toggle).toBeVisible({ timeout: 30_000 });
+  if (await toggle.getAttribute("aria-expanded") === "false") await toggle.click();
+}
 
 async function signIn(page: Page) {
   const customer = await newCustomer({ mfa: ["passkey"] });
@@ -45,12 +54,17 @@ test.afterAll(async ({ browser }) => {
   await page.close();
 });
 
-test("Insights shows money in and out over time, and the card merchants paid most", async ({ page }) => {
+test("the summary shows money in and out over time, and the card merchants paid most", async ({ page }) => {
   test.setTimeout(90_000);
   const customer = await signIn(page);
   await cardPayments(page, customer);
   await edge("/__receive", { chainId: 8453, to: customer.wallet, token: ASSETS.usdc, amount: "20000000", from: FRIEND });
-  await page.goto("/app/insights");
+  await page.goto("/app/transactions");
+  // The chart and merchants open on request, and stay open after a reload.
+  await expect(page.getByTestId("money-out")).toHaveText("$50", { timeout: 30_000 });
+  await expect(chart(page)).toHaveCount(0);
+  await page.getByRole("button", { name: "Show chart and merchants" }).click();
+  await page.reload();
   await expect(page.getByTestId("money-out")).toHaveText("$50", { timeout: 30_000 });
   await expect(page.getByTestId("money-in")).toHaveText("$20");
 
@@ -77,6 +91,10 @@ test("Insights shows money in and out over time, and the card merchants paid mos
   await expect(merchants(page).getByTestId("top-merchant").nth(1)).toContainText("Corner Cafe");
   await expect(merchants(page).getByTestId("top-merchant").nth(1)).toContainText("2 payments");
   await expect(merchants(page).getByTestId("top-merchant").nth(1)).toContainText("$20.00");
+  // Tapping a merchant shows its card payments in the list.
+  await merchants(page).getByRole("button", { name: /Corner Cafe/ }).click();
+  await expect(page.locator(".activityRow")).toHaveCount(2);
+  await expect(page.getByPlaceholder("Search activity")).toHaveValue("Corner Cafe");
 
   // A year is shown by month.
   await page.getByRole("button", { name: "1 year" }).click();
@@ -89,26 +107,25 @@ test("when card payments can't be read from Stripe, money in and out show as una
   const customer = await signIn(page);
   await cardPayments(page, customer);
   await edge("/__state", { down: ["stripe"] });
-  await page.goto("/app/insights");
+  await openSummary(page);
   await expect(page.getByTestId("money-out")).toHaveText("Unavailable", { timeout: 30_000 });
   await expect(page.getByTestId("money-in")).toHaveText("Unavailable");
   await expect(chart(page).getByText("Money in and out can't all be read right now.")).toBeVisible();
   await expect(merchants(page).getByText("Card payments can't all be read right now.")).toBeVisible();
 });
 
-test("with nothing completed in the period, Insights says so and points to Deposit", async ({ page }) => {
+test("with no transactions yet, Transactions says so once and points to Add money instead of showing $0 totals", async ({ page }) => {
   await signIn(page);
-  await page.goto("/app/insights");
-  const empty = page.getByRole("region", { name: "No transactions in this period" });
-  await expect(empty).toBeVisible({ timeout: 30_000 });
-  await expect(empty.getByRole("link", { name: "Deposit" })).toHaveAttribute("href", "/app/deposit");
-  await expect(chart(page)).toHaveCount(0);
+  await page.goto("/app/transactions");
+  await expect(page.getByText("No transactions yet")).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole("main").getByRole("link", { name: "Add money" })).toHaveAttribute("href", "/app/deposit");
+  await expect(page.getByRole("region", { name: "Summary" })).toHaveCount(0);
 });
 
-test("without a card, Insights still shows money in and out, and says there are no card payments", async ({ page }) => {
+test("without a card, the summary still shows money in and out, and says there are no card payments", async ({ page }) => {
   const customer = await signIn(page);
   await edge("/__receive", { chainId: 8453, to: customer.wallet, token: ASSETS.usdc, amount: "20000000", from: FRIEND });
-  await page.goto("/app/insights");
+  await openSummary(page);
   await expect(page.getByTestId("money-in")).toHaveText("$20", { timeout: 30_000 });
   await expect(page.getByTestId("money-out")).toHaveText("$0");
   await expect(merchants(page).getByText("No card payments in this period.")).toBeVisible();

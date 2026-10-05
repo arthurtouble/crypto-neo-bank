@@ -22,16 +22,16 @@ The root layout loads `design-tokens.css` for the whole app, and every area is s
 | --- | --- | --- |
 | App shell: sidebar, top bar, phone header, menu button and sheet, account menu, notifications, toasts, terms and account screens | `apps/web/src/app/shell.css`, classes prefixed `app` | Rebuilt |
 | Overview: total, group chips, holdings table or list, holding detail, recent transactions, guest example, empty account | `apps/web/src/app/overview.css`, classes prefixed `ov`; the shared guest banner is in `shell.css` | Rebuilt |
-| Deposit: the four ways as tabs (desktop) or rows (phone), receive, from a wallet, card, bank checklist and details | `apps/web/src/app/money.css`, classes prefixed `mx`, shared with Send and Swap | Rebuilt |
-| Send: two tabs (to a person or wallet, to a bank account), amount and asset, recipient faces, one To field for an address or @tag, a review step, and progress in place, in one column | `money.css` | Rebuilt |
-| Swap: you pay and you receive, each with an asset dropdown (what you hold and its balance first on the side that pays), Max, reverse, how far the price can move, and the quote with its countdown, dollar values, rate, fees, and reference prices beside the form. Once it's sent, the quote gives way to the progress and New swap | `money.css` | Rebuilt |
-| Earn: your positions in dollars as last read, then markets and vaults, each opening to Deposit and Withdraw tabs | `money.css`, classes prefixed `er` | Rebuilt |
-| Cards: the setup checklist beside a "Not issued" card, then the card (filled with the text colour; muted when frozen), details in a dialog (a sheet on the phone), controls, the allowance, and card activity | `apps/web/src/app/cards.css`, classes prefixed `cd`, on the `mx` parts in `money.css` (including the shared `mxDialog`) | Rebuilt |
-| Transactions and Insights: search, type chips, and a status filter over the list, grouped under day headings; the receipt in the Overview's side panel (a pushed screen on the phone) with the action's steps and bank updates; Export in a dialog (a sheet on the phone); Insights' four numbers, the money in and out chart with its table, and top card merchants; one empty state with Deposit when nothing completed in the period. Money in is green, money out neutral | `apps/web/src/app/records.css`, classes prefixed `tx` and `in`, on the `mx` parts, the Overview's chips and side panel, and the shared `mxDialog` | Rebuilt |
-| Settings and Support: Settings one area at a time (Security, Saved recipients, Aura tag, Notifications, This device, Your data), a side list on desktop and a row per area on the phone; setting rows with On/Off toggles and switches; Support's help and report-a-problem rows. Every section now shows its own labelled example data to guests; the shared example page is gone | `apps/web/src/app/settings.css`, classes prefixed `st`; the toggle and switch are `appToggle` and `appSwitch` in `shell.css` | Rebuilt |
-| Perps: the perps account (value, then available to trade and you can withdraw as a two-figure line, `mkBalances`) with Add money and Withdraw; positions, orders, and history tabs, each position a block (`mkPerpPosition`: name, side and leverage and margin-mode badges, profit with percent at the right, then a four-column grid of caption-and-value facts, two columns on the phone, and TP/SL and Close); the market list with search and each market's max leverage; a perp's trading screen: breadcrumb with a market switcher, price and stats, a line or candle chart with ranges, the order book with depth bars (bids on the positive soft colour, asks on the muted fill, never red), a grouping menu (a small outlined button with the step, opening a raised list of steps, `mkGroupMenu`), and rows that highlight on hover and can be picked; and the order panel (Market or Limit, Cross or Isolated with a caption saying what it risks, Long or Short, amount with 25%, 50%, 75%, Max, what's available to trade beside the label and what Base USDC adds under the shortcuts, leverage slider and number, take profit and stop loss as price fields with a caption under each, size, margin, estimated fee, liquidation price, one button). Price fields (`mkPriceField`): a label with an optional text action (Mid), "$" inside the field, and a caption or error under it. The same form in a sheet on the phone with a keypad and Pay with USDC, and its steps in place; the Close sheet (Market or Limit, 25%, 50%, 75%, All as chips filling the row) and the TP/SL sheet. Gains are green, losses neutral | `apps/web/src/app/markets.css`, classes prefixed `mk`, on the `mx` parts and the shared `mxDialog`; sheets restate their styles under `.mkSheet` because dialogs render outside `.appFrame` | New
-| Predictions: the predictions account (cash, positions with Sell and Collect, open orders with Cancel, a "Finish setup" note when setup was left part way); categories, search, and Show more over the event cards, each binary card with its two outcomes and chances, a multi-outcome card with every outcome in a short scrolling list, and Up or Down cards with their window and a countdown; a market's page laid out like Polymarket's: the question, the odds chart with ranges 1H to All and what the chance was at the start, or for Up or Down the price to beat, the current price with its distance above or below, the time left, and the live chart; the position and the rules on the left and the order panel on the right, always open (Buy or Sell, the outcome as two large choices with their price in cents, the amount with +$1, +$20, +$100, and Max, price, shares, pay from with what's available to spend in a caption under it (cash plus USDC on Base), To win in positive, one button); on the phone, Buy buttons under the chart open the same form in a bottom sheet with the amount at 52px centred and the keypad. The first outcome (Yes, Up) selected is filled positive, the second (No, Down) filled with the text colour; never red | `apps/web/src/app/predictions.css`, classes prefixed `pd`, on the `mk` parts in `markets.css` (the panel is also `mkOrderPanel`) and the shared `mxDialog` | New |
-| Landing and public pages: the landing page with the app's own guest screens (regenerated at 1280 × 800, labelled example data), an Aura tag's payment page, and the docs site, whose Starlight colours and fonts come from `design-tokens.css`. The favicons and the docs logo use the placeholder ring mark | `apps/web/src/app/public.css`, classes prefixed `ld` (landing) and `py` (pay page); `apps/docs/src/styles/aurel.css` | Rebuilt |
+| Add money: the four ways as tabs (desktop) or rows (phone), receive, from a wallet, card, bank checklist and details | `apps/web/src/app/money.css`, classes prefixed `mx`, shared with Send and Swap | Rebuilt |
+| Send: two tabs (to a person or wallet, to a bank account), the people you paid most recently first, one To field for an address or @tag, then amount and asset; what would stop a send (lock, saved recipients only, daily limit, paused asset) shows before you start; a review step, and progress in place, in one column | `money.css` | Rebuilt |
+| Swap: you pay and you receive, each with an asset dropdown grouped like the Overview (what you hold and its balance first on the side that pays), Max, reverse, and the quote with its countdown, dollar values, rate, fees and price difference, how far the price can move, and market prices beside the form. Once it's sent, the quote gives way to the progress and New swap | `money.css` | Rebuilt |
+| Earn: your positions in dollars as last read, then ways to earn (a position row only on what you hold), each opening to Deposit and Withdraw tabs; rates in the normal text colour | `money.css`, classes prefixed `er` | Rebuilt |
+| Cards: the setup checklist beside a "Not issued" card (secondary text on the muted fill, dashed line), then the card (filled with the text colour; muted when frozen), details in a dialog (a sheet on the phone), controls, the allowance, and card activity, where a hold says it isn't final yet and a released hold that nothing was taken | `apps/web/src/app/cards.css`, classes prefixed `cd`, on the `mx` parts in `money.css` (including the shared `mxDialog`) | Rebuilt |
+| Transactions: the summary on top (four totals for 7D/30D/90D/1Y that narrow the list when tapped; the money in and out chart with its table and top card merchants behind one remembered toggle), then search, type chips, and a status filter over the list, grouped under day headings; the receipt in the Overview's side panel (a pushed screen on the phone) with the action's steps and bank updates, a Get help with this button that closes the receipt and opens chat with the transaction written in, ending with a Reference and Copy; Export in a dialog (a sheet on the phone); one empty state with Add money when the account has no transactions. Money in is green, money out neutral | `apps/web/src/app/records.css`, classes prefixed `tx` and `in`, on the `mx` parts, the Overview's chips and side panel, and the shared `mxDialog` | Rebuilt |
+| Settings and Support: Settings one area at a time (Security, Saved recipients, Aura tag, Notifications, This device, Your data), a side list on desktop and a row per area on the phone; setting rows with one kind of on/off control, the switch; typed values show their unit inside the field (`$`, `hours`, class `stNumberField`); an area that can't load keeps its heading and says so with Try again; on the phone, a recipient's Keep and Remove go under the name; Support's help and report-a-problem rows. Every section now shows its own labelled example data to guests; the shared example page is gone | `apps/web/src/app/settings.css`, classes prefixed `st`; the switch is `appSwitch` in `shell.css` | Rebuilt |
+| Perps: the perps account (value, then available to trade and you can withdraw as a two-figure line, `mkBalances`) with Deposit and Withdraw (an empty account shows Deposit alone, as the primary button); positions, orders, and history tabs, each position a block (`mkPerpPosition`: name, side and leverage and margin-mode badges, profit with percent at the right, then a four-column grid of caption-and-value facts, two columns on the phone, and Take profit / Stop loss and Close; the market name is a 44px target); the market list with search and each market's max leverage; a perp's trading screen: breadcrumb with a market switcher, price and stats, a line or candle chart with ranges (all eight on desktop; Live, 1D, 1W, 1M, 1Y, and All sharing one row on the phone, with the breadcrumb, market switcher, and chart style buttons at 44px), the order book with depth bars (bids on the positive soft colour, asks on the muted fill, never red), a grouping menu (a small outlined button with the step, opening a raised list of steps, `mkGroupMenu`), and rows that highlight on hover and can be picked; and the order panel (Market or Limit, Cross or Isolated with a caption saying what it risks, Long or Short with "Price goes up" or "Price goes down" under each (`mkSideLabel`, also on the phone's Long and Short buttons), amount with 25%, 50%, 75%, Max, what's available to trade beside the label and what Base USDC adds under the shortcuts, leverage slider and number with a caption working the leverage through, take profit and stop loss as price fields with a caption under each, size, margin, estimated fee, liquidation price, one button, and a line saying what margin and liquidation mean). Price fields (`mkPriceField`): a label with an optional text action (Price now), "$" inside the field, and a caption or error under it. The same form in a sheet on the phone with a keypad and Pay with USDC, and its steps in place; the Close sheet (Market or Limit, 25%, 50%, 75%, All as chips filling the row) and the take profit and stop loss sheet. Gains are green, losses neutral | `apps/web/src/app/markets.css`, classes prefixed `mk`, on the `mx` parts and the shared `mxDialog`; sheets restate their styles under `.mkSheet` because dialogs render outside `.appFrame` | New |
+| Predictions: the predictions account (cash, positions with Sell and Collect, open orders with Cancel, a "Finish setup" note when setup was left part way; before setup, one line and Deposit only, so the markets come up sooner); categories, search, and Show more over the event cards, each binary card with its two outcomes and chances, a multi-outcome card with every outcome in a short scrolling list, and Up or Down cards with their window and a countdown; a market's page laid out like Polymarket's: the question, the chance chart with ranges 1H to All and what the chance was at the start, or for Up or Down the starting price, the current price with its distance above or below, the time left, and the live chart; the position and the rules on the left and the order panel on the right, always open (Buy or Sell, the outcome as two large choices with their price in cents, the amount with +$1, +$20, +$100, and Max, price, shares, pay from with what's available to spend in a caption under it (cash plus USDC on Base), To win in positive and equal to the shares to the cent, one button; with no USDC, a line with Add money); on the phone, Buy buttons under the chart open the same form in a bottom sheet with the amount at 52px centred and the keypad, and the Buy button held at the bottom of the sheet. Chips, the back link, chart periods, market titles, and the source link are 44px to tap on touch screens. The first outcome (Yes, Up) selected is filled positive, the second (No, Down) filled with the text colour; never red | `apps/web/src/app/predictions.css`, classes prefixed `pd`, on the `mk` parts in `markets.css` (the panel is also `mkOrderPanel`) and the shared `mxDialog` | New |
+| Landing and public pages: the landing page with the app's own guest screens (labelled example data, made by `tests/inventory/landing-screens.spec.ts` at 1280 × 800 and on a 390px phone; phones see the phone screens, and the security section shows the phone's at every width so its text reads at full size), an Aura tag's payment page, and the docs site, whose Starlight colours and fonts come from `design-tokens.css`. The favicons and the docs logo use the placeholder ring mark | `apps/web/src/app/public.css`, classes prefixed `ld` (landing) and `py` (pay page); `apps/docs/src/styles/aurel.css` | Rebuilt |
 | Operations console (`apps/ops`): the new look only, same layout. Its variables map to the tokens, Geist and Geist Mono, the sidebar's current page as a muted fill with an accent icon, the shared button, toggle, segmented, and chip looks, and dark mode with the device | `apps/ops/src/styles.css`, which imports `design-tokens.css` | Rebuilt |
 
 ## Principles
@@ -213,7 +213,7 @@ Phone and desktop are different layouts, not one layout squeezed. Components bel
 
 Each component is one per device where the devices differ. The reference page renders them all; class names there are prefixed `ds-` so they can't clash with the current screens.
 
-In the app, the shared parts are React components in `apps/web/src/components`, so each is built once: `StatusDot` (a status), `LoadingState`, `LoadingScreen` (the whole screen, before the app can draw), `Notice` (with an optional Try again), and `Unavailable` (`states.tsx`), `CopyButton`, `MoneyPage` and `SignedOutPanel` (a money section's page and its guest panel), and `Sheet` (every dismissible dialog: the dialog that is a bottom sheet on the phone, and the side panel for a holding or a receipt). Their styles are in `shell.css` (`appStatus`, `appState`, `appUnavailable`, `appIconDisc` for the 32px round icons) and `money.css` (`mxNote`, `mxDialog`). Money, amounts, dates, and addresses are written by `apps/web/src/lib/format`, in one locale, and the operations console uses the same formatters.
+In the app, the shared parts are React components in `apps/web/src/components`, so each is built once: `StatusDot` (a status), `LoadingState`, `LoadingScreen` (the whole screen, before the app can draw), `Notice` (with an optional Try again), `Unavailable`, and `SupportText` (links "Contact support" in a message to Support; `Notice` applies it to plain text) (`states.tsx`), `CopyButton`, `MoneyPage` and `SignedOutPanel` (a money section's page and its guest panel), and `Sheet` (every dismissible dialog: the dialog that is a bottom sheet on the phone, and the side panel for a holding or a receipt). Their styles are in `shell.css` (`appStatus`, `appState`, `appUnavailable`, `appIconDisc` for the 32px round icons) and `money.css` (`mxNote`, `mxDialog`). Money, amounts, dates, and addresses are written by `apps/web/src/lib/format`, in one locale, and the operations console uses the same formatters.
 
 ### Buttons
 
@@ -227,7 +227,7 @@ In the app, the shared parts are React components in `apps/web/src/components`, 
 - Desktop: 36px high, sized to the label, 14px medium. Primary actions in a side column or review are full width at 44px.
 - Phone: 44px, and the step's main action is full width at the bottom of the screen, above the safe area.
 - Disabled: 45% opacity, not clickable, and the reason is shown next to it. Busy: the label stays, a small spinner replaces the icon, and the button ignores taps.
-- An icon only when it helps recognition (Send, Deposit). Never an arrow at the end.
+- An icon only when it helps recognition (Send, Add money). Never an arrow at the end.
 
 ### Inputs
 
@@ -245,11 +245,11 @@ In the app, the shared parts are React components in `apps/web/src/components`, 
 
 ### Segmented control
 
-Two to four options that switch a view in place: Send's "To a person or wallet" and "To a bank account", Insights periods. A muted track, the selected option on the surface with a hairline shadow.
+Two to four options that switch a view in place: Send's "To a person or wallet" and "To a bank account", the Transactions summary's periods. A muted track, the selected option on the surface with a hairline shadow.
 
-### Toggles and switches
+### Switches
 
-A setting that saves as soon as it changes: a checkbox drawn as a 40 × 24 switch (`appSwitch`) inside a row that labels it. Settings uses it for every on/off choice. The On/Off pill button (`appToggle`, `aria-pressed`), filled with the accent when on, is only for the card's freeze. Tightening applies at once; loosening asks for the passkey first, so the control only moves once that succeeds.
+A setting that saves as soon as it changes: a checkbox drawn as a 40 × 24 switch (`appSwitch`) inside a row that labels it. Settings uses it for every on/off choice. The card's freeze is a plain button that says what it does (Freeze card, Unfreeze card). Tightening applies at once; loosening asks for the passkey first, so the control only moves once that succeeds.
 
 ### Filter chips
 
@@ -268,7 +268,7 @@ A surface with a line border, `--radius-lg`, and shadow 1. A card groups things 
 - A row: a 32px icon or logo circle, a title and a small secondary line, and on the right the amount and, below it, a status or time.
 - 56px minimum on desktop, 60px on the phone. Hover fills with `--color-hover` on desktop. The whole row is the tap target.
 - Rows are separated by a line, inside a card or directly on the page.
-- A list of choices that open in place uses rows too: Deposit's four ways, each with what it's for, sit beside the open one on desktop and above it on tablet and phone. The selected row has the accent-soft fill.
+- A list of choices that open in place uses rows too: Add money's four ways, each with what it's for, sit beside the open one on desktop and above it on tablet and phone. The selected row has the accent-soft fill.
 
 ### Tables (desktop)
 
@@ -294,11 +294,11 @@ On the raised surface with shadow 2, a status icon, a title, one line, and a clo
 
 ### Navigation
 
-- **Desktop sidebar.** 232px, the surface colour, a line on its right. The wordmark at the top, then the twelve sections as 36px items: an 18px icon and the name. The current item has a muted fill, text colour, and an accent icon. Tablet: 72px, icons only, names in tooltips.
+- **Desktop sidebar.** 232px, the surface colour, a line on its right. The wordmark at the top, then the eleven sections as 36px items: an 18px icon and the name. The current item has a muted fill, text colour, and an accent icon. Tablet: 72px, icons only, names in tooltips.
 - **Desktop top bar.** 60px: the page title or search (⌘K) on the left, the bell and the avatar menu on the right. The bell's unread count is a small accent pill on the bell's top-right corner, never over the bell. The avatar shows the first letter of the account's email or name; with no letter (an email like 3@…), a person icon.
 - **Phone header.** 56px: the section title, and the bell on the right. In a step, a back button on the left and the step's title instead.
 - **Phone menu button.** A 56px circle, filled with the text colour, floating bottom centre with shadow 2. It hides during a step, and otherwise stays put: no hiding on scroll, focus, or overlap. Every page ends with 100px clear plus the safe area, so the customer can always scroll any button above it (owner, 2 October). Hiding it on focus moved it under the finger as the field lost focus, and hiding it on scroll or overlap didn't hold up on a real phone.
-- **Phone menu sheet.** From the bottom, `--radius-sheet` top corners, a grab handle. "Menu" and the email at the top, the twelve sections as tiles three per row (a 22px icon above the name, the current tile outlined in accent), and Log out at the bottom.
+- **Phone menu sheet.** From the bottom, `--radius-sheet` top corners, a grab handle. "Menu" and the email at the top, the eleven sections as tiles three per row (a 22px icon above the name, the current tile outlined in accent), and Sign out at the bottom.
 
 ### Overlays
 
@@ -314,7 +314,7 @@ Every overlay traps focus, closes with Escape and a visible close button, return
 ### Money flow parts
 
 - **Steps (phone).** A thin progress bar of segments under the header, one per step.
-- **Review.** "You send" and the amount at 32px, then the summary rows, then any note (irreversible, other network), then the primary button: "Confirm and send". It opens the device's passkey prompt.
+- **Review.** "You send" and the amount at 32px, then the summary rows, then any note (irreversible, other network), then the primary button: "Send". It opens the device's passkey prompt.
 - **Timeline.** A vertical list of steps: done in positive (filled), current in accent (ring), to come in line-strong (ring), each with a time or estimate.
 - **Address check (B2).** The address in full in Geist Mono, groups of four, the network, and a hint to send a small test amount first.
 
@@ -353,6 +353,54 @@ Notice emails (`apps/web/src/lib/notifications/email.ts`) follow the same system
 - Respect `prefers-reduced-motion` and `prefers-color-scheme`. The theme choice (`aurel-theme` in local storage, `data-theme` on `<html>`) overrides the device.
 - `axe` finds no serious or critical issues on the reference page (`tests/e2e/product.spec.ts`), and each rebuilt screen keeps its e2e checks.
 
+## Quality bar
+
+Every screen meets this on desktop and phone, in light and dark, before it ships. Agreed on 4 October 2026 for the polish pass; the [review checklist](#review-checklist) below is the short version.
+
+`pnpm sweep` checks the parts a machine can: it opens every page in the menu and the landing page, as a guest and signed in, in light and dark, at each width below plus 640px (1280px at 200% zoom), and writes what it finds to `output/sweep/report.md`: sideways scrolling, clipped text, touch targets under 44px, content under the floating menu button, axe issues (at 390 and 1280px), console errors, and failed requests. `AURA_SWEEP_ONLY=/app/send,/app/swap pnpm sweep` checks just those pages; `AURA_SWEEP=strict` fails on any finding. The rest (states, money, copy, keyboard) is checked by hand and by each feature's e2e spec.
+
+**Layout and touch**
+
+- No sideways scrolling and no clipped text at 320, 375, 390, 430, 768, 1024, 1280, and 1440px wide.
+- Touch targets at least 44 × 44px on the phone (`--touch-min`), with space between neighbours.
+- Nothing under the notch, the home bar, or the floating menu button: pages use the safe-area insets and end 100px clear of the button.
+- At 200% browser zoom, text still reads and nothing overlaps.
+- Long values (large balances, long names, addresses) wrap or shorten on purpose, never by accident.
+
+**States**
+
+- Loading is a skeleton of the real layout.
+- Empty has one button that fills it.
+- A value that can't be read says Unavailable, never an old number.
+- An error sits next to the part that failed and says what to do.
+- Paused, locked, blocked, and over-limit show before the customer starts, not on the review screen.
+- The guest view shows labelled example data, and the same example appears the same way in every feature.
+
+**Money**
+
+- Every amount shows its currency or asset, in tabular figures.
+- Fees, minimums, and what the customer gets are on the review screen, above its button.
+- Every payment that can't be undone keeps its review screen.
+- The result is shown once, on the progress card.
+
+**Controls and copy**
+
+- One primary button per screen or panel; a disabled button says why.
+- Every string follows the [content guide](content-style-guide.md) and its [glossary](content-style-guide.md#glossary); buttons are verbs.
+- The same action uses [the same word](content-style-guide.md#the-same-word-for-the-same-action) in every feature.
+
+**Accessibility**
+
+- axe finds no issues; text contrast is 4.5:1 in both themes.
+- Everything works by keyboard with a visible focus ring, and focus is never hidden under the floating menu button (WCAG 2.4.11). Dialogs and sheets keep focus inside and close with Escape.
+- Icon buttons, statuses, and amounts have names a screen reader reads.
+- Reduced motion is honoured.
+
+**Design system**
+
+- Tokens only, and styles in the area stylesheet. Nothing new in `globals.css`, `identity.css`, or `product-system.css`.
+- No console errors and no failed requests on any screen.
+
 ## Don'ts
 
 From the owner's brief and the [Impeccable](https://impeccable.style) anti-pattern list:
@@ -375,5 +423,6 @@ From the owner's brief and the [Impeccable](https://impeccable.style) anti-patte
 - Is every number tabular, with its currency or asset, and does unread data say Unavailable?
 - Does it follow its journey in [redesign-journeys.md](redesign-journeys.md) on both devices?
 - Are loading, empty, error, unavailable, disabled, and blocked designed?
-- Does it work at 390px and 1440px, in light and dark, with a keyboard and a screen reader?
+- Does it meet the [quality bar](#quality-bar) at every width from 320px to 1440px, in light and dark, at 200% zoom, with a keyboard and a screen reader?
+- Does every string pass the [glossary](content-style-guide.md#glossary)?
 - Are only tokens used, and do the reference page, `DESIGN.md`, and this document still agree?

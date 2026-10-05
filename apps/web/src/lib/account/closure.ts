@@ -82,7 +82,7 @@ export async function closeAccount(db: D1Database, subject: string, operator: st
     db.prepare("UPDATE aura_tags SET public_enabled = 0, public_bank_enabled = 0, updated_at = ? WHERE subject_reference = ?").bind(at, subject)
   ]);
   if ((closed.meta.changes ?? 0) !== 1) return false;
-  await announce(db, subject, securityNotice("closed", "Your Aura account was closed at your request. You can still download your data and contact support.", at));
+  await announce(db, subject, securityNotice("closed", "Your Aura account was closed at your request. You can still download your data.", at));
   return true;
 }
 

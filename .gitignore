@@ -25,6 +25,7 @@ output/playwright-report/
 output/events-dry-run/
 output/inventory/
 output/inventory-results/
+output/sweep/
 .playwright-cli/
 playwright-report/
 test-results/

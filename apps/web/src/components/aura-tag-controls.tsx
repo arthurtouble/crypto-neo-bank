@@ -22,7 +22,7 @@ export function AuraTagControls() {
   const saved = useQuery({ queryKey: ["aura-tag", user?.id], enabled: Boolean(user), queryFn: () => api<{ tag: Tag | null }>("/api/aura-tags") });
   if (saved.isPending) return <section className="mxCard stCard"><LoadingState label="Loading your Aura tag…" /></section>;
   if (saved.isError) return <section className="mxCard stCard" aria-labelledby="tag-heading"><h2 id="tag-heading">Aura tag and payment page</h2>
-    <Notice tone="error" role="alert" onRetry={() => void saved.refetch()}>We couldn&apos;t load your Aura tag.</Notice></section>;
+    <Notice tone="error" role="alert" onRetry={() => void saved.refetch()}>Your Aura tag can&apos;t be loaded right now.</Notice></section>;
   return <AuraTagForm key={saved.data.tag?.tag ?? ""} current={saved.data.tag} />;
 }
 

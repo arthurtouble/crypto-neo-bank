@@ -3,15 +3,16 @@ title: Sources of truth
 description: "Which system has the final word on your balances, identity, controls, and transaction records: the blockchain, Privy, partners, or Aura."
 ---
 
-Aura isn't the record of your balance. Ownership and settlement live on public blockchains, in protocol contracts, and, later, with approved partners. Aura's own records still need protecting: your security settings, consent records, and transaction evidence.
+Aura isn't the record of your balance. What you own, and whether a payment went through, is recorded on public blockchains, by services like Aave, Morpho, Hyperliquid, and Polymarket, and, later, by approved partners. Aura's own records still need protecting: your security settings, consent records, and transaction evidence.
 
 ## Who has the final word
 
 | Data | Final word | What Aura does |
 | --- | --- | --- |
 | Wallet balance | The blockchain | Reads it, formats it, and shows it |
-| Earn position | The protocol contract | Reads it and prepares supported actions |
-| Whether a transaction settled | The blockchain, or the partner | Tracks it, checks it, and explains problems |
+| Earn position | Aave's or Morpho's contract | Reads it and prepares supported actions |
+| Perps and predictions accounts | Hyperliquid and Polymarket | Reads them and shows your balance and positions |
+| Whether a transaction completed | The blockchain, or the partner | Tracks it, checks it, and explains problems |
 | Who you are when you sign in | Privy | Protects your records and sessions |
 | Control of your wallet | You, through Privy | Asks you to sign. Never holds a key |
 | Your security settings | Your choices, stored by Aura | Applies them inside Aura and records changes |
@@ -22,7 +23,7 @@ Aura isn't the record of your balance. Ownership and settlement live on public b
 
 ## What can be rebuilt
 
-Balances, protocol positions, and confirmed transactions can always be reread from the blockchain. Aura may keep a copy to load pages faster. Rebuilding can be slow, sources can disagree or be down, and past context is harder to recover than current balances.
+Balances, Earn positions, and confirmed transactions can always be reread from the blockchain. Aura may keep a copy to load pages faster. Rebuilding can be slow, sources can disagree or be down, and past context is harder to recover than current balances.
 
 ## What can't be thrown away
 

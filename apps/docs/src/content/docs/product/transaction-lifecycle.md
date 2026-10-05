@@ -1,13 +1,13 @@
 ---
 title: Transactions and their status
-description: What Transactions lists, what pending, completed, failed, and not sent mean, and how exports and statements work.
+description: What Transactions lists, what pending, completed, failed, and not sent mean, the summary of money in and out, and how exports and statements work.
 ---
 
 Transactions lists the money you send, swap, move, and put in Earn with Aura, your card payments, and the money you receive. Getting a quote doesn't add anything. If you start something and don't confirm it in time, it shows as **Not sent**.
 
-The list is grouped by day, newest first. You can search, pick a type (**All**, **Sent**, **Received**, **Card**, **Swaps**, **Earn**, **Markets**, or **Other**), or filter by status. If part of your history can't be read, one note above the list names what's missing, and the rest still shows. **Show more**, under the list, loads older activity.
+At the top, a [summary](#summary) adds up money in and out for a period. Below it, the list is grouped by day, newest first. You can search, pick a type (**All**, **Sent**, **Received**, **Card**, **Swaps**, **Earn**, **Markets**, or **Other**), or filter by status. If part of your history can't be read, one note above the list names what's missing, and the rest still shows. **Show more**, under the list, loads older activity.
 
-For the steps from asking to settling, see [how Aura works](/concepts/architecture/). You can cancel any time before you confirm.
+For the steps from asking to completed, see [how Aura works](/concepts/architecture/). You can cancel any time before you confirm.
 
 ## What each status means
 
@@ -15,25 +15,27 @@ For the steps from asking to settling, see [how Aura works](/concepts/architectu
 | --- | --- |
 | **Pending** | You confirmed it, and Aura is waiting for it to be included on the network. A move between networks stays pending until it arrives. |
 | **Completed** | It's in a block and matches what you reviewed: the expected transfer or deposit appeared. A move between networks must also arrive. Your balance already includes it. |
-| **Failed** | The network rejected it, the route failed, or the result didn't match what you reviewed. The receipt shows the reason. |
+| **Failed** | The network rejected it, the move to another network failed, or the result didn't match what you reviewed. The receipt shows the reason. |
 | **Not sent** | You didn't confirm it in time, so nothing was sent. Check your activity before you try again. This isn't the same as failed. |
 
-A transaction on Base is usually completed within seconds and **final** about 20 minutes later, once it's settled on Ethereum. Until then, a block could very rarely be rewritten, so Aura keeps checking. The receipt and exports show when it's final. What Aura checks: [after you submit](/safety/security-model/#after-you-submit).
+A transaction on Base is usually completed within seconds and **final** about 20 minutes later, once Base has recorded it on Ethereum. Until then, a block could very rarely be rewritten, so Aura keeps checking. The receipt and exports show when it's final. What Aura checks: [after you submit](/safety/security-model/#after-you-submit).
 
 ## Receipts
 
 Open any item to see its receipt: beside the list on a computer, on its own screen on a phone. For something you did in Aura, the receipt shows each step with its time, and updates while you watch:
 
 - A send on Base goes from sent, to complete on Base, to final on Base.
-- A send to another network goes from sent from Base, to confirmed on Base, to delivered on the other network, to complete.
+- A send to another network goes from sent from Base, to confirmed on Base, to delivered on the other network, to completed.
 
 A bank payout also lists Bridge's updates, up to delivery to your bank. If something failed, the receipt says why in plain words. Setting your card's spending allowance moves no money, so it shows without an amount.
+
+Every receipt reads the same way: the amount and status, then the date, who it was to or from, the network if it isn't Base, and the US dollar value for anything that isn't a dollar coin. One line says what happened when there's something to know, such as **No money moved** for a declined card payment or a transfer that wasn't sent. Every receipt ends with a **Reference** you can copy and give to Support. **Get help with this** opens a chat with Support with the transaction and its reference already written in, ready for you to add what went wrong.
 
 ## Money you receive
 
 Money sent to your Aura address shows as **Received**: a deposit from an exchange, a payment from someone else, or a transfer from your own wallet. Aura lists the assets it supports on the networks where your account holds them: Base, and Ethereum for Tether Gold. Unsupported tokens are left out, so unsolicited tokens don't clutter your list.
 
-A deposit is **Completed** as soon as it's in a block. The receipt shows who sent it, a link to the network, and whether it's final yet.
+A deposit is **Completed** as soon as it's in a block. The receipt shows who sent it and a link to the network. Until it's final, the receipt says it's fully confirmed in about 20 minutes.
 
 - Aura reads received money from Alchemy's record of the network and doesn't store it. If that record can't be read, Transactions says some deposits may be missing, rather than showing none.
 - **Show more** loads older deposits. A monthly statement covers a whole month.
@@ -44,7 +46,7 @@ A deposit is **Completed** as soon as it's in a block. The receipt shows who sen
 
 Card payments come from Stripe, which issues the card.
 
-- A purchase is **Pending** while the merchant holds the amount, and **Completed** once the merchant settles it.
+- A purchase is **Pending** while the merchant holds the amount, and **Completed** once the merchant takes the final amount.
 - A declined purchase shows as **Failed**. No money moved.
 - Refunds show as money in.
 
@@ -63,20 +65,22 @@ Transactions can also show your Aave history, from Aave. Each record shows where
 
 Aura doesn't guess a purchase price, gain or loss, or tax treatment. These files support your records. They aren't bank statements, tax returns, or tax advice.
 
-## Insights
+## Summary
 
-Insights adds up your completed transactions for a period:
+The summary at the top of Transactions adds up your completed transactions for a period. It used to be a separate Insights page, and old Insights links open Transactions.
 
 - money in: received, and card refunds;
 - money out: sent, and card payments;
 - added to Earn;
 - swapped: swaps and moves between networks.
 
+Tap a total to list just the transactions that make it up for that period. Tap it again, or choose **Show all**, to see everything.
+
 Anything without a US dollar value is counted separately, never as zero. If received money can't all be read, money in shows as **Unavailable**. If card payments can't all be read, both money in and money out show as **Unavailable**.
 
-Pick a period: **7D**, **30D**, **90D**, or **1Y**. If nothing completed in the period, Insights says so and offers **Deposit**. **Money in and out** charts both, by day over 7 days, by week (starting Monday) over 30 or 90 days, and by month over a year. Days start at midnight UTC. Point at a bar to see its amounts, or choose **Show as a table**. If only one of money in or money out can be read, the chart shows that one and tells you. If neither can, it says so.
+Pick a period: **7D**, **30D**, **90D**, or **1Y**. If you have no transactions yet, Transactions says so once and offers **Add money**. Choose **Show chart and merchants** to see more, and Aura remembers that choice on your device. **Money in and out** charts both, by day over 7 days, by week (starting Monday) over 30 or 90 days, and by month over a year. Days start at midnight UTC. Point at a bar to see its amounts, or choose **Show as a table**. If only one of money in or money out can be read, the chart shows that one and tells you. If neither can, it says so.
 
-**Top card merchants** lists the five merchants you paid most by card in the period, with the number of payments to each. It counts settled payments only, not declines or refunds. If card payments can't all be read, it says so.
+**Top card merchants** lists the five merchants you paid most by card in the period, with the number of payments to each. It counts completed payments only, not declines or refunds. Tap a merchant to list its payments. If card payments can't all be read, it says so.
 
 ## Moves between networks
 
@@ -88,4 +92,4 @@ Our operations team is alerted if a transaction is still waiting for the network
 
 Check Transactions and a block explorer before retrying anything uncertain. Repeating a transfer can mean paying twice.
 
-Blockchain transactions generally can't be reversed once settled. Aura can't recall funds sent to the wrong address, or cancel a confirmed move between networks.
+Blockchain transactions generally can't be reversed once completed. Aura can't recall funds sent to the wrong address, or cancel a confirmed move between networks.

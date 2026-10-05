@@ -3,6 +3,7 @@
 import { Check, LoaderCircle, X } from "lucide-react";
 import { networkName } from "@/lib/assets/registry";
 import { failureText } from "@/lib/client/action-copy";
+import { SupportText } from "@/components/states";
 import type { ActionView } from "@/lib/client/use-action";
 import { formatDateTime } from "@/lib/format";
 
@@ -45,7 +46,7 @@ export function ActionJourney({ action, events }: { action: ActionView; events: 
       return <li key={step.key} className={state} aria-current={state === "current" ? "step" : undefined}>
         <i>{state === "done" ? <Check size={11} /> : state === "failed" ? <X size={11} /> : state === "current" ? <LoaderCircle className="spin" size={11} /> : null}</i>
         <span><strong>{step.label}</strong>
-          <small>{state === "failed" ? (action.status === "expired" ? "Not confirmed in time." : failureText(action.failureReason))
+          <small>{state === "failed" ? (action.status === "expired" ? "Not confirmed in time." : <SupportText text={failureText(action.failureReason)} />)
             : step.at ? formatDateTime(step.at) : state === "current" ? "In progress" : ""}</small></span>
       </li>;
     })}

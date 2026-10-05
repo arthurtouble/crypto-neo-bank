@@ -35,7 +35,7 @@ async function send(page: Page) {
   await form.getByRole("button", { name: "Review" }).click();
   // A first-time address is checked before the review (B2).
   await form.getByRole("button", { name: "It's correct" }).click();
-  await form.getByRole("button", { name: "Confirm and send" }).click();
+  await form.getByRole("button", { name: "Send", exact: true }).click();
   await expect(outcome(page, "Transfer complete")).toBeVisible({ timeout: 30_000 });
 }
 
@@ -54,7 +54,26 @@ test.beforeEach(async ({ page }) => {
 test.beforeAll(async ({ request }) => {
   await edge("/__reset");
   const customer = await newCustomer();
-  for (const path of ["/app/transactions", "/app/insights", "/app/send", "/api/activity"]) await request.get(path, { headers: { Authorization: `Bearer ${customer.token}` }, timeout: 120_000 });
+  for (const path of ["/app/transactions", "/app/send", "/api/activity", "/api/insights"]) await request.get(path, { headers: { Authorization: `Bearer ${customer.token}` }, timeout: 120_000 });
+});
+
+test("Get help with this opens chat with the transaction already described", async ({ page }) => {
+  const customer = await signIn(page);
+  await receive(customer, "20000000");
+  await page.goto("/app/transactions");
+  await expect(rows(page)).toHaveCount(1, { timeout: 30_000 });
+  await rows(page).nth(0).click();
+  const reference = (await dialog(page).getByTestId("receipt-reference").textContent())!;
+  const help = dialog(page).getByRole("button", { name: "Get help with this" });
+  await expect(help).toBeEnabled({ timeout: 20_000 });
+  await help.click();
+  // The receipt closes, so the chat on top of the page can be used.
+  await expect(dialog(page)).toHaveCount(0);
+  const calls = () => page.evaluate(() => (window as unknown as { __intercomCalls?: [string, ...unknown[]][] }).__intercomCalls ?? []);
+  await expect.poll(async () => (await calls()).some((call) => call[0] === "showNewMessage")).toBe(true);
+  const message = String((await calls()).find((call) => call[0] === "showNewMessage")![1]);
+  expect(message).toMatch(/^I need help with this transaction: Received, \+20[.0]* USDC, /);
+  expect(message.endsWith(`. Reference: ${reference}`)).toBe(true);
 });
 
 test("money sent and money received both show, with who, where, and a link to the network", async ({ page }) => {
@@ -74,8 +93,11 @@ test("money sent and money received both show, with who, where, and a link to th
 
   await rows(page).nth(0).click();
   await expect(dialog(page)).toContainText(`From${FRIEND}`);
-  await expect(dialog(page)).toContainText("Alchemy, Base");
-  await expect(dialog(page).getByTestId("incoming-finality")).toHaveText("Final on Base.");
+  // Every receipt ends with the same reference line, never the name of a tool behind the scenes.
+  await expect(dialog(page).getByTestId("receipt-reference")).not.toBeEmpty();
+  await expect(dialog(page)).not.toContainText("Alchemy");
+  // Once final, a received transfer needs no extra line: it's Completed.
+  await expect(dialog(page).getByTestId("incoming-finality")).toHaveCount(0);
   await expect(dialog(page).getByRole("link", { name: /View on the network/ })).toHaveAttribute("href", /^https:\/\/basescan\.org\/tx\/0x[0-9a-f]{64}$/);
   await closeReceipt(page);
 
@@ -114,18 +136,28 @@ test("a failed action says why in plain words, and a card allowance moves no mon
   await page.route("**/api/activity", (route) => route.fulfill({ json: { observedAt: at, sources, entries: [
     { id: "failed-swap", origin: "aura", type: "swap", status: "failed", createdAt: at, chainId: 8453, asset: "USDC", amount: "100", toAsset: "cbBTC", toAmount: "0.00104",
       failureReason: "operation_reverted", source: "Aura" },
-    { id: "allowance", origin: "aura", type: "card_allowance", status: "completed", createdAt: at, chainId: 8453, asset: "USDC", amount: "500", counterparty: "Aura card", source: "Aura" }
+    { id: "allowance", origin: "aura", type: "card_allowance", status: "completed", createdAt: at, chainId: 8453, asset: "USDC", amount: "500", counterparty: "Aura card", source: "Aura" },
+    { id: "expired", origin: "aura", type: "sent", status: "not_confirmed", createdAt: at, chainId: 8453, asset: "USDC", amount: "15", counterparty: FRIEND, source: "Aura" }
   ] } }));
   await page.route("**/api/actions/*", (route) => route.fulfill({ status: 404, json: { error: "not_found" } }));
   await page.goto("/app/transactions");
-  await expect(rows(page)).toHaveCount(2, { timeout: 30_000 });
+  await expect(rows(page)).toHaveCount(3, { timeout: 30_000 });
   await expect(rows(page).nth(1).locator(".txAmount strong")).toHaveCount(0);
 
   await rows(page).nth(0).click();
   await expect(dialog(page)).toContainText("100 USDC for 0.00104 cbBTC");
   await expect(dialog(page)).toContainText("The network rejected it. Nothing moved.");
   await expect(dialog(page)).not.toContainText("operation_reverted");
-  await expect(dialog(page)).toContainText("Nothing was sent.");
+  await closeReceipt(page);
+
+  // A finished allowance never says it's still on its way.
+  await rows(page).nth(1).click();
+  await expect(dialog(page)).not.toContainText("hasn't");
+  await closeReceipt(page);
+
+  // A transfer that wasn't confirmed in time says nothing moved, in the same words as every other receipt.
+  await rows(page).nth(2).click();
+  await expect(dialog(page).getByTestId("receipt-note")).toHaveText("No money moved.");
 });
 
 test("Show more loads older activity, once each, until there's none left", async ({ page }) => {
@@ -158,13 +190,13 @@ test("a deposit is completed once in a block, and final when Base finalizes it",
   await expect(rows(page)).toHaveCount(1, { timeout: 30_000 });
   await expect(rows(page)).toContainText("Completed");
   await rows(page).click();
-  await expect(dialog(page).getByTestId("incoming-finality")).toHaveText("Received. Base makes it final in about 20 minutes.");
+  await expect(dialog(page).getByTestId("incoming-finality")).toHaveText("Received. It's fully confirmed in about 20 minutes.");
   await closeReceipt(page);
 
   await edge("/__state", { finalizeAll: true });
   await page.reload();
   await rows(page).first().click();
-  await expect(dialog(page).getByTestId("incoming-finality")).toHaveText("Final on Base.", { timeout: 30_000 });
+  await expect(dialog(page).getByTestId("incoming-finality")).toHaveCount(0, { timeout: 30_000 });
 });
 
 test("Tether Gold received on Ethereum is listed too", async ({ page }) => {
@@ -179,7 +211,8 @@ test("Tether Gold received on Ethereum is listed too", async ({ page }) => {
 test("an empty account says so", async ({ page }) => {
   await signIn(page);
   await page.goto("/app/transactions");
-  await expect(page.getByText("No activity yet")).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText("No transactions yet")).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole("main").getByRole("link", { name: "Add money" })).toHaveAttribute("href", "/app/deposit");
 });
 
 test("when received money can't be read, the list says deposits may be missing and still shows what it has", async ({ page }) => {
@@ -216,15 +249,35 @@ test("the list exports as CSV, and a month downloads as a statement, or is refus
   await expect(dialog(page).getByRole("alert")).toContainText("activity can't be read right now");
 });
 
-test("Insights counts money in and money out, and says when money in can't be known", async ({ page }) => {
-  // Signing in, sending, and receiving take most of the default 30 s before Insights is even opened.
+test("the summary counts money in and money out, and says when money in can't be known", async ({ page }) => {
+  // Signing in, sending, and receiving take most of the default 30 s before Transactions is even opened.
   test.setTimeout(90_000);
   const customer = await signIn(page);
   await send(page);
   await receive(customer, "20000000");
-  await page.goto("/app/insights");
+  await page.goto("/app/transactions");
   await expect(page.getByTestId("money-in")).toHaveText("$20", { timeout: 30_000 });
   await expect(page.getByTestId("money-out")).toHaveText("$10");
+
+  // Tapping a total shows the transactions that add up to it; Show all, or the same total again, brings the rest back.
+  await expect(rows(page)).toHaveCount(2);
+  await page.getByRole("button", { name: /^Money in \$20/ }).click();
+  await expect(page.getByText("Showing money in in the last 30 days")).toBeVisible();
+  await expect(rows(page)).toHaveCount(1);
+  await expect(rows(page)).toContainText("Received");
+  await page.getByRole("button", { name: /^Money out \$10/ }).click();
+  await expect(rows(page)).toHaveCount(1);
+  await expect(rows(page)).toContainText("Sent");
+  await page.getByRole("button", { name: /^Money out \$10/ }).click();
+  await expect(rows(page)).toHaveCount(2);
+  await page.getByRole("button", { name: /^Money in \$20/ }).click();
+  await page.getByRole("button", { name: "Show all" }).click();
+  await expect(rows(page)).toHaveCount(2);
+
+  // The old Insights page opens Transactions, where its summary now is.
+  await page.goto("/app/insights");
+  await expect(page).toHaveURL(/\/app\/transactions$/);
+  await expect(page.getByTestId("money-in")).toHaveText("$20", { timeout: 30_000 });
 
   await edge("/__state", { down: ["transfers"] });
   await page.reload();

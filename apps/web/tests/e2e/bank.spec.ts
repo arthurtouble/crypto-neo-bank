@@ -9,7 +9,7 @@ import { acceptTerms, asCustomer, ASSETS, edge, newCustomer, setBalances, setCon
 // actions, and D1 run for real.
 
 const toast = (page: Page, title: string) => page.locator(".toastRegion").getByText(title, { exact: true });
-const depositPanel = (page: Page) => page.getByRole("region", { name: "Deposit from a bank" });
+const depositPanel = (page: Page) => page.getByRole("region", { name: "From your bank" });
 const sendPanel = (page: Page) => page.getByRole("region", { name: "Send to a bank" });
 
 async function signIn(page: Page, usdc = "0") {
@@ -81,7 +81,8 @@ test("verification Bridge rejects says so and offers no account", async ({ page 
   await expect(depositPanel(page).getByText("Bridge couldn't verify your identity.")).toBeVisible({ timeout: 30_000 });
   await expect(depositPanel(page).getByRole("link", { name: "Contact support" })).toHaveAttribute("href", "/app/support");
   await page.goto("/app/send#bank");
-  await expect(sendPanel(page).getByText(/Set up your bank account on/)).toBeVisible({ timeout: 30_000 });
+  await expect(sendPanel(page).getByText(/Set up your bank account under/)).toBeVisible({ timeout: 30_000 });
+  await expect(sendPanel(page).getByRole("link", { name: "Add money" })).toHaveAttribute("href", "/app/deposit#bank");
 });
 
 test("a customer saves a bank account and sends to it; Transactions follows Bridge until the bank has it", async ({ page }) => {
@@ -105,6 +106,11 @@ test("a customer saves a bank account and sends to it; Transactions follows Brid
   const payout = sendPanel(page).getByRole("form", { name: "Send to a bank" });
   await expect(payout.getByLabel("To")).toContainText("Chase •••• 6789");
   await payout.getByLabel("Amount in USD").fill("25");
+  // How long each speed takes shows while choosing, not only on the review.
+  await expect(payout).toContainText("Usually 1 to 3 business days");
+  await payout.getByRole("radio", { name: "Wire" }).click();
+  await expect(payout).toContainText("Usually within 1 business day");
+  await payout.getByRole("radio", { name: "Bank transfer" }).click();
   // A review comes before the passkey (B1): nothing is prepared or sent until the customer confirms.
   await payout.getByRole("button", { name: "Review" }).click();
   const review = sendPanel(page).getByRole("region", { name: "Review bank transfer" });
@@ -116,7 +122,7 @@ test("a customer saves a bank account and sends to it; Transactions follows Brid
   await review.getByRole("button", { name: "Edit" }).click();
   await expect(payout.getByLabel("Amount in USD")).toHaveValue("25");
   await payout.getByRole("button", { name: "Review" }).click();
-  await review.getByRole("button", { name: "Confirm and send" }).click();
+  await review.getByRole("button", { name: "Send", exact: true }).click();
   await expect(outcome(page, "Bank transfer sent")).toBeVisible({ timeout: 30_000 });
   // Exactly the payout amount went to the address Bridge named.
   const { sent } = await edge("/__sent");
@@ -152,14 +158,14 @@ test("a payout the bank returns shows as failed with what Bridge is doing about 
   const payout = sendPanel(page).getByRole("form", { name: "Send to a bank" });
   await payout.getByLabel("Amount in USD").fill("10");
   await payout.getByRole("button", { name: "Review" }).click();
-  await sendPanel(page).getByRole("region", { name: "Review bank transfer" }).getByRole("button", { name: "Confirm and send" }).click();
+  await sendPanel(page).getByRole("region", { name: "Review bank transfer" }).getByRole("button", { name: "Send", exact: true }).click();
   await expect(outcome(page, "Bank transfer sent")).toBeVisible({ timeout: 30_000 });
   await edge("/__bridge/transfer", { state: "returned" });
   await page.goto("/app/transactions");
   const row = page.locator(".activityRow").filter({ hasText: "Sent to bank" });
   await expect(row).toContainText("Failed", { timeout: 30_000 });
   await row.click();
-  await expect(page.getByTestId("bank-status")).toHaveText("Your bank returned it. Bridge is sending the money back");
+  await expect(page.getByTestId("bank-status")).toHaveText("Your bank sent it back. The money is coming back to your Aura account");
 });
 
 test("the server refuses a payout while the account is locked, before Bridge creates anything", async ({ page }) => {

@@ -1,4 +1,5 @@
 import { LoaderCircle } from "lucide-react";
+import Link from "next/link";
 
 /**
  * Something loading in place: a spinner and what is being read. `children`
@@ -28,11 +29,21 @@ type NoticeProps = {
 export function Notice({ tone = "info", role, onRetry, className, children, ...rest }: NoticeProps) {
   const toneClass = tone === "warning" ? " mxNoteWarning" : tone === "error" ? " mxNoteError" : "";
   return <p className={`mxNote${toneClass}${className ? ` ${className}` : ""}`} role={role} data-testid={rest["data-testid"]}>
-    {children}{onRetry && <>{" "}<button type="button" className="appTextButton mxInlineButton" onClick={onRetry}>Try again</button></>}
+    {typeof children === "string" ? <SupportText text={children} /> : children}{onRetry && <>{" "}<button type="button" className="appTextButton mxInlineButton" onClick={onRetry}>Try again</button></>}
   </p>;
 }
 
 /** A value that couldn't be read: the word, in the warning colour. Never the last value, never zero. */
 export function Unavailable({ children = "Unavailable" }: { children?: React.ReactNode }) {
   return <span className="appUnavailable">{children}</span>;
+}
+
+/**
+ * Text that may tell the customer to contact support, with those words as a link to Support, so help is one
+ * tap away. The words stay plain text where they're written (server errors, failure reasons, email).
+ */
+export function SupportText({ text }: { text: string }) {
+  const match = /contact support/i.exec(text);
+  if (!match) return text;
+  return <>{text.slice(0, match.index)}<Link className="appTextButton mxInlineButton" href="/app/support">{match[0]}</Link>{text.slice(match.index + match[0].length)}</>;
 }

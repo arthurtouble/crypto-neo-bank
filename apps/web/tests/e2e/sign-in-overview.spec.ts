@@ -65,6 +65,11 @@ test("the Overview values every holding in dollars and totals cash, crypto, and 
   await expect(page.getByTestId("total-cash")).toHaveText("$125.50");
   await expect(page.getByTestId("total-crypto")).toHaveText("$5,850.00");
   await expect(page.getByTestId("total-earn")).toHaveText("$155.00");
+  // Each group chip keeps its full width, so its name and total never overlap; on the phone the row scrolls instead.
+  const chips = page.getByRole("group", { name: "Show" }).getByRole("button");
+  for (const chip of await chips.all()) {
+    expect(await chip.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+  }
 
   await expect(row(page, `8453:${ASSETS.usdc}`)).toContainText("125.5 USDC");
   await expect(row(page, "8453:native")).toContainText("2 ETH");
@@ -82,10 +87,10 @@ test("the Overview values every holding in dollars and totals cash, crypto, and 
 
   // Where each holding is kept shows in its detail.
   await row(page, `morpho:8453:${VAULTS.gauntlet}`).click();
-  await expect(page.getByRole("dialog")).toContainText("Morpho on Base");
+  await expect(page.getByRole("dialog").getByRole("definition").nth(2)).toHaveText("Morpho");
   await page.keyboard.press("Escape");
   await row(page, `aave:8453:${ASSETS.usdc}`).click();
-  await expect(page.getByRole("dialog")).toContainText("Aave on Base");
+  await expect(page.getByRole("dialog").getByRole("definition").nth(2)).toHaveText("Aave");
 });
 
 test("stocks, the euro, and Tether Gold on Ethereum are valued from their feeds, with the price time shown", async ({ page }) => {
@@ -132,7 +137,7 @@ test("a returning customer goes straight to the Overview", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Review Aura’s terms" })).toHaveCount(0);
 });
 
-test("an empty account says so and points to Deposit", async ({ page }) => {
+test("an empty account says so and points to Add money", async ({ page }) => {
   const customer = await newCustomer();
   await openOverview(page, customer);
   await expect(page.getByText("Your account is empty")).toBeVisible({ timeout: 30_000 });
@@ -140,12 +145,40 @@ test("an empty account says so and points to Deposit", async ({ page }) => {
   // Recent transactions show on the phone as well as on desktop.
   await expect(page.getByRole("region", { name: "Recent transactions" })).toContainText("No transactions yet");
   // Each way to add money opens that way on Deposit.
-  await page.getByRole("link", { name: /^Card Buy with/ }).click();
+  const empty = page.getByRole("region", { name: "Your account is empty" });
+  // A way that can't be used yet says so before it's tapped (bank transfers are switched off here).
+  await expect(empty.getByRole("link", { name: /^Bank/ })).toContainText("Coming soon");
+  await empty.getByRole("link", { name: /^Card Buy/ }).click();
   await expect(page).toHaveURL(/\/app\/deposit#card$/);
   await expect(page.getByRole("tab", { name: "Card", exact: true })).toHaveAttribute("aria-selected", "true");
   await page.goto("/app");
-  await page.getByRole("link", { name: "Deposit" }).last().click();
+  await page.getByRole("link", { name: "Add money", exact: true }).last().click();
   await expect(page).toHaveURL(/\/app\/deposit$/);
+});
+
+test("each holding offers what can be done with it, set up for that asset", async ({ page }) => {
+  const customer = await newCustomer();
+  await setBalances(customer.wallet, { 8453: { [ASSETS.usdc]: "10000000", [ASSETS.apple]: "250000000", [ASSETS.aaveUsdc]: "50000000" } });
+  await openOverview(page, customer);
+  const panel = page.getByRole("dialog");
+  const buttons = () => panel.locator(".ovPanelActions a");
+
+  // A stock is bought with, or sold for, USDC, and Swap opens set up for it.
+  await row(page, `8453:${ASSETS.apple}`).click({ timeout: 30_000 });
+  await expect(buttons()).toHaveText(["Buy", "Sell", "Send"]);
+  await panel.getByRole("link", { name: "Sell", exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(`/app/swap\\?from=8453%3A${ASSETS.apple}&to=8453%3A${ASSETS.usdc}$`));
+
+  await page.goto("/app");
+  await row(page, `8453:${ASSETS.usdc}`).click({ timeout: 30_000 });
+  await expect(buttons()).toHaveText(["Send", "Add money", "Swap"]);
+  await page.keyboard.press("Escape");
+
+  // An Earn position opens on Earn, to withdraw or deposit.
+  await row(page, `aave:8453:${ASSETS.usdc}`).click();
+  await expect(buttons()).toHaveText(["Withdraw", "Deposit"]);
+  await panel.getByRole("link", { name: "Withdraw", exact: true }).click();
+  await expect(page).toHaveURL(/\/app\/earn\?position=aave%3A8453%3A0x[0-9a-f]{40}&action=withdraw$/);
 });
 
 test("a balance that can't be read shows as unavailable, never as a number", async ({ page }) => {
@@ -218,6 +251,39 @@ test("a customer who signs in with a wallet adds an email before the terms", asy
   await expect(page.getByText("Your account is empty")).toBeVisible({ timeout: 30_000 });
 });
 
+test("when sign-in can't load, Try again loads it afresh and opens it", async ({ page }) => {
+  const customer = await newCustomer();
+  await setIdentity(page, customer);
+  await page.goto("/app");
+  await expect(page.getByText("Example data", { exact: true })).toBeVisible({ timeout: 30_000 });
+  // The connection drops while sign-in downloads; the browser then remembers that failure for this page load.
+  await page.route(/web3-runtime-provider/, (route) => route.abort(), { times: 1 });
+  await page.getByRole("button", { name: "Create account or sign in" }).click();
+  await expect(page.getByRole("alert")).toContainText("Sign-in couldn't load. Check your connection, then try again.");
+  await page.getByRole("button", { name: "Try again" }).click();
+  await expect(page.getByRole("heading", { name: "Review Aura’s terms" })).toBeVisible({ timeout: 30_000 });
+});
+
+test("terms updated while the customer reads them: Reload brings the new version", async ({ page }) => {
+  const customer = await newCustomer();
+  await setIdentity(page, customer, { signedIn: true });
+  // The server's answer when the version accepted isn't the current one (a new version since the page loaded).
+  let updated = false;
+  await page.route("**/api/terms", (route) => {
+    if (route.request().method() !== "POST" || updated) return route.fallback();
+    updated = true;
+    return route.fulfill({ status: 409, contentType: "application/json", body: JSON.stringify({ error: "terms_changed" }) });
+  });
+  await page.goto("/app");
+  await page.getByRole("checkbox").check({ timeout: 30_000 });
+  await page.getByRole("button", { name: "Continue" }).click();
+  await expect(page.getByRole("alert")).toHaveText("The terms were just updated. Reload to read the new version.");
+  await page.getByRole("button", { name: "Reload" }).click();
+  // A fresh page load, which the dev server can take a while to hydrate.
+  await expect(page.getByRole("button", { name: "Continue" })).toBeDisabled({ timeout: 30_000 });
+  await expect(page.getByRole("alert")).toHaveCount(0);
+});
+
 test("the server refuses the account until the current terms are accepted, and refuses them without an email", async ({ page }) => {
   const customer = await newCustomer();
   const headers = { Authorization: `Bearer ${customer.token}` };
@@ -231,13 +297,13 @@ test("the server refuses the account until the current terms are accepted, and r
   await expect(acceptTerms(page, noEmail)).rejects.toThrow("accepting terms failed: 403");
 });
 
-test("a customer who doesn't accept the terms can log out to the example data", async ({ page }) => {
+test("a customer who doesn't accept the terms can sign out to the example data", async ({ page }) => {
   const customer = await newCustomer();
   await setIdentity(page, customer);
   await page.goto("/app");
   await page.getByRole("button", { name: "Create account or sign in" }).click();
   await expect(page.getByRole("heading", { name: "Review Aura’s terms" })).toBeVisible();
-  await page.getByRole("button", { name: "Log out" }).click();
+  await page.getByRole("button", { name: "Sign out" }).click();
   await expect(page.getByRole("heading", { name: "Review Aura’s terms" })).toHaveCount(0);
   await expect(page.getByText("Example data", { exact: true })).toBeVisible();
 });
@@ -258,9 +324,9 @@ test("signing out returns to the example Overview", async ({ page }) => {
   const customer = await newCustomer();
   await openOverview(page, customer);
   await expect(page.getByTestId("portfolio-total")).toBeVisible({ timeout: 30_000 });
-  // Log out is in the account menu on desktop and in the menu sheet on the phone.
+  // Sign out is in the account menu on desktop and in the menu sheet on the phone.
   await page.getByRole("button", { name: page.viewportSize()!.width < 768 ? "Open menu" : "Account" }).click();
-  await page.getByRole("button", { name: "Log out of Aura" }).click();
+  await page.getByRole("button", { name: "Sign out of Aura" }).click();
   await expect(page.getByText("Example data", { exact: true })).toBeVisible();
   await expect(page.getByTestId("portfolio-total")).toHaveCount(0);
 });

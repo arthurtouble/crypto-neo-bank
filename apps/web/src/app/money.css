@@ -51,10 +51,13 @@
 .appFrame .mxActions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 
 /* Receive */
-.appFrame .mxReceive { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--space-6); align-items: center; }
+/* The address sits beside the QR code while there's room for it, and moves under it in a narrow panel (desktop at 1024px) */
+.appFrame .mxReceive { display: flex; flex-wrap: wrap; gap: var(--space-6); align-items: center; }
 /* Dark on light in both themes, like the payment page: many wallets can't scan an inverted code */
-.appFrame .mxQr { padding: var(--space-3); border: 1px solid var(--color-line); border-radius: var(--radius-lg); background: var(--color-qr-background); color: var(--color-qr); line-height: 0; }
-.appFrame .mxReceiveAddress { display: grid; gap: var(--space-2); justify-items: start; min-width: 0; }
+.appFrame .mxQr { flex: none; padding: var(--space-3); border: 1px solid var(--color-line); border-radius: var(--radius-lg); background: var(--color-qr-background); color: var(--color-qr); line-height: 0; }
+.appFrame .mxReceiveAddress { flex: 1 1 14rem; display: grid; gap: var(--space-2); justify-items: start; min-width: 0; }
+/* "Share your payment page" is a link inside a sentence; on touch screens it gets a full-size target */
+.appFrame .mxTagLink .mxInlineLink { display: inline-flex; align-items: center; }
 .appFrame .mxAddress { max-width: 100%; font-family: var(--font-mono); font-size: var(--text-body-size); line-height: var(--text-body-line); color: var(--color-text); }
 /* Desktop: the whole address in groups of four. Phone: the first and last four, which is what people compare. */
 .appFrame .mxAddressFull { display: flex; flex-wrap: wrap; column-gap: var(--space-2); }
@@ -85,6 +88,10 @@
 .appFrame .mxSummary dd { margin: 0; text-align: right; font-weight: var(--weight-medium); overflow-wrap: anywhere; }
 .appFrame .mxSummary .mxAddressFull { justify-content: flex-end; }
 .appFrame .mxSummary .mxAddressShort { font-size: inherit; }
+/* A part of the row above it (the fees that make up "Fees"): indented, smaller, no rule between them */
+.appFrame .mxSummary > .mxSummaryPart { min-height: 32px; padding: 0 0 var(--space-2) var(--space-4); margin-top: calc(-1 * var(--space-2)); border-bottom: 0; font-size: var(--text-small-size); }
+.appFrame .mxSummary > div:has(+ .mxSummaryPart) { border-bottom: 0; }
+.appFrame .mxSummary > .mxSummaryPart:not(:has(+ .mxSummaryPart)) { border-bottom: 1px solid var(--color-line); }
 .appFrame .mxCopy { display: inline-flex; align-items: center; gap: var(--space-2); }
 .appFrame .mxCopyButton { height: 28px; padding: 0 var(--space-2); font-size: var(--text-small-size); }
 
@@ -170,7 +177,6 @@
 .appFrame .mxSwapEstimate { display: block; overflow: hidden; text-overflow: ellipsis; }
 .appFrame .mxSwapReverse { justify-self: center; width: 36px; height: 36px; margin: calc(-1 * var(--space-5)) 0; position: relative; z-index: 1; display: grid; place-items: center; border: 1px solid var(--color-line-strong); border-radius: var(--radius-pill); background: var(--color-surface); color: var(--color-text-secondary); box-shadow: var(--shadow-1); cursor: pointer; }
 .appFrame .mxSwapReverse:hover { color: var(--color-text); background: var(--color-hover); }
-.appFrame .mxSwapSettings { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
 .appFrame .mxQuoteHead { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
 .appFrame .mxBadgeWarning { background: var(--color-warning-soft); color: var(--color-warning); }
 .appFrame .mxQuote .appButton, .appFrame .mxQuoteEmpty .appButton { justify-self: stretch; }
@@ -211,13 +217,14 @@
 .appFrame .erName strong { font-weight: var(--weight-semibold); }
 .appFrame .erValue, .appFrame .erRate { display: grid; justify-items: end; text-align: right; }
 .appFrame .erValue strong { font-weight: var(--weight-medium); }
+.appFrame .erValue small { white-space: nowrap; }
 .appFrame .erHeld { display: grid; justify-items: end; }
 .appFrame .erHeld small { font-weight: var(--weight-regular); }
-.appFrame .erRate strong { font-size: var(--text-title-2-size); line-height: var(--text-title-2-line); font-weight: var(--weight-semibold); color: var(--color-positive); }
+.appFrame .erRate strong { font-size: var(--text-title-2-size); line-height: var(--text-title-2-line); font-weight: var(--weight-semibold); }
 .appFrame .erRate strong.appUnavailable { color: var(--color-warning); }
 .appFrame .erOptions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); align-items: start; }
 .appFrame .erOptions > h2, .appFrame .erOptions > .appState { grid-column: 1 / -1; }
-.appFrame .erOption { gap: var(--space-3); }
+.appFrame .erOption { gap: var(--space-3); scroll-margin-top: calc(var(--topbar-height) + var(--space-4)); }
 .appFrame .erOptionTop { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-3); }
 .appFrame .erToggle { justify-self: stretch; }
 .appFrame .erChevron { margin-left: auto; transition: transform var(--duration-fast) var(--ease-enter); }
@@ -248,8 +255,8 @@
   .appFrame .mxTabText small { display: block; font-weight: var(--weight-regular); }
   .appFrame .mxTabChevron { display: block; color: var(--color-text-tertiary); }
   .appFrame .mxPanel { padding: var(--space-5) var(--space-4); }
-  .appFrame .mxReceive { grid-template-columns: minmax(0, 1fr); justify-items: center; text-align: center; }
-  .appFrame .mxReceiveAddress { justify-items: center; }
+  .appFrame .mxReceive { flex-direction: column; text-align: center; }
+  .appFrame .mxReceiveAddress { flex: none; width: 100%; justify-items: center; }
   .appFrame .mxAddressFull { display: none; }
   .appFrame .mxAddressShort { display: inline; font-size: var(--text-title-3-size); }
   .appFrame .mxReceiveAddress .appButton { width: 100%; height: var(--control-height-lg); }
@@ -257,6 +264,8 @@
   .appFrame .mxField input, .appFrame .mxField select, .appFrame .mxField textarea { font-size: var(--text-input-phone); }
   .appFrame .mxCard .appButton { justify-self: stretch; height: var(--control-height-lg); }
   .appFrame .mxAmountRow { grid-template-columns: minmax(0, 1fr) 110px; }
+  /* Send's people row: a part of the next person always shows past the edge, so the row reads as one that scrolls */
+  .appFrame .mxFaces button { width: max(88px, calc((100% - 3 * var(--space-2)) / 3.4)); }
   /* Send's tabs stay a two-part switch, full width; only Deposit's ways are rows */
   .appFrame .mxTabs:not(.mxWays) { grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); padding: 2px; gap: 2px; border: 0; border-radius: var(--radius-md); background: var(--color-muted); }
   .appFrame .mxTabs:not(.mxWays) [role="tab"] { justify-content: center; padding: var(--space-2); border-radius: var(--radius-sm); text-align: center; }
@@ -269,10 +278,18 @@
 
 /* Touch targets: at least 44 × 44px on the phone and other touch screens; desktop keeps its density */
 @media (max-width: 767px), (pointer: coarse) {
-  .appFrame .mxCopyButton, .appFrame .mxSwapSelect { min-height: var(--touch-min); }
+  .appFrame .mxCopyButton, .appFrame .mxSwapSelect, .appFrame .mxTagLink .mxInlineLink { min-height: var(--touch-min); }
+  /* Send's Max sits in the balance line; its target grows to 44px without moving the line */
+  .appFrame .mxBalanceHint .mxInlineButton { display: inline-flex; align-items: center; justify-content: center; min-width: var(--touch-min); min-height: var(--touch-min); margin-block: calc((var(--touch-min) - 1lh) / -2); }
+  /* A button inside a sentence (Max, Try again, Remove) keeps its line height; an invisible area around it takes the 44px tap */
+  .appFrame .mxInlineButton { position: relative; }
+  .appFrame .mxInlineButton::after { content: ""; position: absolute; left: 50%; top: 50%; width: max(100%, var(--touch-min)); height: var(--touch-min); transform: translate(-50%, -50%); }
 }
 /* Tablets are touch screens too: Deposit's tabs get the full target there */
 @media (max-width: 1023px) {
   .appFrame .mxTabs [role="tab"] { min-height: var(--touch-min); }
   .appFrame .mxSwapReverse { width: var(--touch-min); height: var(--touch-min); }
 }
+/* The quote's "Price can move up to" choices: 44px touch targets on the phone. */
+.appFrame .mxQuote .appSegmented button { min-width: 44px; min-height: 44px; white-space: nowrap; }
+.appFrame .mxQuote .mxSwapPriceMove { flex-wrap: wrap; }

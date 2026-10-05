@@ -2,6 +2,7 @@
 
 import { Check, CircleAlert, Info, X } from "lucide-react";
 import Link from "next/link";
+import { SupportText } from "./states";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 
 export type ToastTone = "success" | "error" | "info";
@@ -60,9 +61,9 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
   return <ToastContext.Provider value={api}>
     {children}
-    <div className="toastRegion" aria-label="Notifications">
+    <section className="toastRegion" aria-label="Notifications">
       {toasts.map((toast) => <ToastItem key={toast.id} toast={toast} onClose={close} />)}
-    </div>
+    </section>
   </ToastContext.Provider>;
 }
 
@@ -80,7 +81,7 @@ function ToastItem({ toast, onClose }: { toast: Toast; onClose: (id: number) => 
     <span className="toastIcon"><Icon size={16} /></span>
     <div className="toastText">
       <strong>{toast.title}</strong>
-      {toast.detail && <small>{toast.detail}</small>}
+      {toast.detail && <small><SupportText text={toast.detail} /></small>}
       {toast.link && <Link href={toast.link.href} onClick={() => onClose(toast.id)}>{toast.link.label}</Link>}
     </div>
     <button type="button" className="toastClose" aria-label="Close" onClick={() => onClose(toast.id)}><X size={15} /></button>

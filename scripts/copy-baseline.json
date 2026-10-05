@@ -1,0 +1,14 @@
+{
+  "apps/web/src/app/api/actions/[id]/submit/route.ts": 3,
+  "apps/web/src/app/api/recipients/route.ts": 2,
+  "apps/web/src/app/llms.txt/route.ts": 1,
+  "apps/web/src/components/account-closed.tsx": 1,
+  "apps/web/src/components/terms-gate.tsx": 1,
+  "apps/web/src/lib/account/closure.ts": 1,
+  "apps/web/src/lib/actions/controls.ts": 2,
+  "apps/web/src/lib/defi/aave.ts": 1,
+  "apps/web/src/lib/markets/hyperliquid/orders.ts": 1,
+  "apps/web/src/lib/markets/polymarket/orders.ts": 1,
+  "apps/web/src/lib/privacy/subject-data.ts": 7,
+  "apps/web/src/lib/providers/service-catalog.ts": 3
+}

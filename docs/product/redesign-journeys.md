@@ -25,23 +25,23 @@ The journeys are drawn from what the app does today (the screen inventory from [
 
 ## Navigation
 
-Decided on 29 September 2026: keep the ten sections, not grouped. Markets became the eleventh, after Earn, on 3 October 2026, and later that day split into Perps and Predictions, making twelve.
+Decided on 29 September 2026: keep the ten sections, not grouped. Markets became the eleventh, after Earn, on 3 October 2026, and later that day split into Perps and Predictions, making twelve. On 4 October 2026 Insights became the summary at the top of Transactions and left the menu, making eleven.
 
 | | Desktop | Phone |
 | --- | --- | --- |
-| Sections | Overview, Deposit, Send, Swap, Earn, Cards, Transactions, Insights, Settings, Support | The same ten |
-| How to get there | A sidebar listing all twelve, each with an icon and its name, always visible, no group headings | No tab bar. A round menu button floats at the bottom centre of every section page. It opens a sheet from the bottom with the twelve sections as tiles, three per row, each with an icon and its name. It hides during a step. Every page ends with room below the last button, so the customer can always scroll a button clear of it. |
+| Sections | Overview, Add money, Send, Swap, Earn, Perps, Predictions, Cards, Transactions, Settings, Support | The same eleven |
+| How to get there | A sidebar listing all eleven, each with an icon and its name, always visible, no group headings | No tab bar. A round menu button floats at the bottom centre of every section page. It opens a sheet from the bottom with the eleven sections as tiles, three per row, each with an icon and its name. It hides during a step. Every page ends with room below the last button, so the customer can always scroll a button clear of it. |
 | Search | ⌘K from anywhere: pages and actions (B4) | Search inside Transactions |
 | Notifications | Bell in the top bar, opens a popover | Bell in the header of each section page, opens a screen |
-| Account | Avatar menu: email, theme, log out | Log out in the menu sheet's footer |
+| Account | Avatar menu: email, theme, sign out | Sign out in the menu sheet's footer |
 
-Deposit, Send, and Swap stay full pages. There's no separate Move money drawer or button; the sidebar and menu reach them, and Overview's quick buttons open them.
+Add money, Send, and Swap stay full pages. There's no separate Move money drawer or button; the sidebar and menu reach them, and Overview's quick buttons open them.
 
 ## Shared patterns
 
 These repeat across journeys. Each is one component per device in phase 4.
 
-1. **Money actions are pages.** Deposit, Send, and Swap are full pages. Desktop: the form on the left, a live summary on the right. Phone: full-screen steps, one decision per screen, with the menu button hidden until the step ends.
+1. **Money actions are pages.** Add money, Send, and Swap are full pages. Desktop: the form on the left, a live summary on the right. Phone: full-screen steps, one decision per screen, with the menu button hidden until the step ends.
 2. **Amount first.** Money actions start with the amount and asset, then who or where. On the phone the amount is a keypad screen.
 3. **Review, then passkey.** Every money action ends on a review that says exactly what moves, where, and what it costs. Then the primary button opens the device's passkey prompt. Cancelling keeps the review open and says nothing moved.
 4. **Progress where it started.** After confirming, the same page or screen shows progress, then the result. Leaving is always safe. The action stays in Transactions, and the bell reports the result. The result shows once, on the progress card, not again as a toast.
@@ -58,10 +58,10 @@ Each journey is drawn step by step in the storyboards. The frame numbers (J5.3 a
 
 ### Get started
 
-- **J0 Get around.** The desktop sidebar with the twelve sections. On the phone, the floating menu button and the sheet of twelve tiles.
+- **J0 Get around.** The desktop sidebar with the eleven sections. On the phone, the floating menu button and the sheet of eleven tiles.
 - **J1 Explore as a guest.** Every section with example data and a banner. Any action opens sign-in (a dialog on desktop, a sheet on the phone).
-- **J2 Sign in and accept the terms.** Sign-in (Privy: email, Google, Telegram, or wallet); a Telegram or wallet sign-in adds an email next, verified by Privy; then the terms on their own full screen, with Log out as the way out. There's no app shell behind it; the three documents are rows and the checkbox is required. Then:
-  - A first Overview with the four ways to deposit, each opening that way on Deposit.
+- **J2 Sign in and accept the terms.** Sign-in (Privy: email, Google, Telegram, or wallet); a Telegram or wallet sign-in adds an email next, verified by Privy; then the terms on their own full screen, with Sign out as the way out. There's no app shell behind it; the three documents are rows and the checkbox is required. If the terms change while they're open, Continue becomes Reload, which brings the new version (an app on the home screen has no reload button). Then:
+  - A first Overview with the four ways to deposit, each opening that way on Add money.
   - A "Secure your account" checklist: add a passkey.
   - A session that expires shows one banner on the current page.
   - A closed account replaces every page except Support.
@@ -72,12 +72,13 @@ Each journey is drawn step by step in the storyboards. The frame numbers (J5.3 a
 - **J3 Check my money.** Total value, with when it was read and what it leaves out. Then:
   - Group filters with their totals, and one holdings table (desktop) or list (phone).
   - Recent transactions: beside the table on desktop, the last three below the list on the phone.
-  - Deposit, Send, Swap, and Earn in that order: buttons in the header on desktop, round quick buttons on the phone.
-  - A holding opens its detail, with Send, Swap, and Deposit for that asset.
+  - Add money, Send, Swap, and Earn in that order: buttons in the header on desktop, round quick buttons on the phone. Send is the main button, or Add money while the account is empty.
+  - A holding opens its detail, with buttons for what that asset can do: Buy, Sell, and Send for stocks, gold, and crypto (Swap opens set up from or to USDC); Send, Add money, and Swap for cash; Withdraw and Deposit for an Earn position (Earn opens at that position).
+  - An empty account lists the four ways to add money, each opening its tab on Add money, with Coming soon or Not available right now on a way that can't be used yet.
 
 ### Money
 
-- **J4 Deposit.** A page with four ways in: Receive, From a wallet, Card, and Bank. They're tabs on desktop and rows on the phone.
+- **J4 Add money** (called Deposit until October 2026). A page with four ways in: Receive, From a wallet, Card, and Bank. They're tabs on desktop and rows on the phone.
   - **Receive:** QR code and address, plus the assets that show up, from the registry (B3).
   - **From a wallet:** fees are reviewed for other networks.
   - **Card:** our short screen first, then the provider's flow.
@@ -88,8 +89,8 @@ Each journey is drawn step by step in the storyboards. The frame numbers (J5.3 a
   - **Another network:** the summary shows what arrives after fees.
   - **Review:** always its own step, then the passkey, then the result.
 - **J6 Send to a bank.** The second tab of Send. Choose or add a bank, then amount in USD and speed, then a review (B1) and the passkey. The result is a timeline of Bridge's steps.
-- **J7 Swap.** A page. You pay (what you hold, from a dropdown with balances, and Max) and You receive (every supported asset, from a dropdown), with how far the price can move as a small setting. The quote has a countdown, dollar values, the rate, the fees, and reference-price warnings. When there's no quote, or Swap is switched off, or the account is empty, the page says why.
-- **J8 Earn.** Positions first, in dollars as last read, then every vault. A vault opens with Deposit and Withdraw tabs, the balance for each, and Max. Review and passkey work as in Send.
+- **J7 Swap.** A page. You pay (what you hold, from a dropdown with balances, and Max) and You receive (every supported asset, from a dropdown), both dropdowns grouped like the Overview (Cash, Crypto, Stocks, Metals) and named as it names them ("Apple · AAPLc"). The quote has a countdown, dollar values, the rate (priced in cash when one side is cash), the fees, any price difference on its own line, how far the price can move (0.5% unless changed there; changing it re-quotes in place), and market-price warnings. When there's no quote, or Swap is switched off, or the account is empty, the page says why.
+- **J8 Earn.** Positions first, in dollars as last read, then every way to earn ("Ways to earn"), a position row only on what you hold. A vault opens with Deposit and Withdraw tabs, the balance for each, and Max. Review and passkey work as in Send.
 
 ### Cards
 
@@ -99,15 +100,15 @@ Each journey is drawn step by step in the storyboards. The frame numbers (J5.3 a
 
 ### Records
 
-- **J12 Find and understand a transaction.** The Transactions page: search, type chips, status filter, and Export. A missing source is named in a banner. A row opens its receipt with its timeline and network links.
+- **J12 Find and understand a transaction.** The Transactions page: search, type chips, status filter, and Export. A missing source is named in a banner. A row opens its receipt with its timeline, network links, and Get help with this, which opens chat with the transaction already written in.
 - **J13 Export and statements.** This list and the monthly statement. (The tax-support preview was cut on 3 October 2026: it was the same list with two columns that always said "Review required" and "Unavailable".)
-- **J14 See where my money went.** The Insights page: periods, money in and out, a chart with a table view, and top card merchants.
+- **J14 See where my money went.** The summary at the top of Transactions (the Insights page until 4 October 2026, which now redirects there): periods, money in and out, added to Earn, and swapped, each narrowing the list to its transactions; a chart with a table view and top card merchants behind one remembered toggle.
 
 ### Settings and support
 
 - **J15 Keep my account safe.** Settings › Security: the passkey first, then email, emergency lock, daily limit, saved-recipients-only, and the account key (export asks once more and warns that the controls stop applying). Saved recipients are their own area. Tightening is instant; loosening needs the passkey.
 - **J16 My profile and preferences.** Settings › Aura tag and payment page, notifications, this device, and your data (download, terms, close the account).
-- **J17 Get help.** The Support page: chat, articles, and report a problem.
+- **J17 Get help.** The Support page: chat, articles, and report a problem. Support is in the same place on every page (last in the sidebar and the phone menu). When chat can't load, it offers Try again. The account screen that blocks the app when the account can't load has its own Chat with support.
 - **J18 Notifications.** An inbox that marks itself read. Each notice opens where it happened. Toasts only for money received and security changes.
 
 ### Public
@@ -133,8 +134,8 @@ Answered by the owner on 29 September 2026.
 
 | Question | Decision |
 | --- | --- |
-| Navigation | Keep twelve sections (ten until Markets on 3 October 2026, which then split into Perps and Predictions), not grouped. Desktop: a sidebar, with an icon and a name for each. Phone: no bottom navigation. A floating button at the bottom centre opens a sheet of twelve tiles, three per row. |
-| Deposit, Send, and Swap | Full pages. No Move money drawer or top-bar button. |
+| Navigation | Keep eleven sections (ten until Markets on 3 October 2026, which then split into Perps and Predictions; Insights moved into Transactions on 4 October), not grouped. Desktop: a sidebar, with an icon and a name for each. Phone: no bottom navigation. A floating button at the bottom centre opens a sheet of eleven tiles, three per row. |
+| Add money, Send, and Swap | Full pages. No Move money drawer or top-bar button. |
 | Review in Send on desktop | Its own step, as on the phone. |
 | Scan a QR code on the phone | Yes, later. The place for it is kept in Send, and it's built after launch. |
 | Guests | Every section, with labeled example data. |
