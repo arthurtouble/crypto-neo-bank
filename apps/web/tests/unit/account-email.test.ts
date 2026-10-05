@@ -7,7 +7,7 @@ describe("linkEmailFailure", () => {
   });
 
   it("says what to do for each failure Privy reports", () => {
-    expect(linkEmailFailure("linked_to_another_user")).toBe("That email is already on another Aura account. Add a different email, or log out and sign in with that one.");
+    expect(linkEmailFailure("linked_to_another_user")).toBe("That email is already on another Aura account. Add a different email, or sign out and sign in with that one.");
     expect(linkEmailFailure("too_many_requests")).toBe("Too many tries. Wait a minute, then try again.");
     expect(linkEmailFailure("invalid_credentials")).toBe("That code didn't match. Add your email again to get a new code.");
     expect(linkEmailFailure("unknown_error")).toBe("That email couldn't be added. Try again.");
