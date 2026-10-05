@@ -20,7 +20,7 @@ import { buildInsights } from "@/lib/insights/presentation";
 import { ActionJourney, type ActionEvent } from "./action-journey";
 import { CopyButton } from "./copy-button";
 import { GuestBanner } from "./guest-banner";
-import { LoadingState, Notice } from "./states";
+import { LoadingState, Notice, SupportText } from "./states";
 import { entryTone, StatusDot } from "./status-dot";
 import { Sheet } from "./sheet";
 import { periodName, totalName, TransactionsSummary, type Period, type Summary, type SummaryTotal } from "./transactions-summary";
@@ -177,11 +177,11 @@ function Receipt({ entry, onClose, isExample }: { entry: ActivityEntry; onClose:
     ["Date", formatDateTime(entry.createdAt)],
     ...(who ? [[fromSomewhere(entry) ? "From" : setting(entry) ? "For" : "To", who] as [string, React.ReactNode]] : []),
     ...(where ? [["Network", where] as [string, React.ReactNode]] : []),
-    ...(entry.bankStatus ? [["Bank", entry.bankStatus, "bank-status"] as [string, React.ReactNode, string]] : []),
+    ...(entry.bankStatus ? [["Bank", <SupportText text={entry.bankStatus} key="bank" />, "bank-status"] as [string, React.ReactNode, string]] : []),
     ...(entry.cardDispute ? [["Dispute", entry.cardDispute === "submitted" ? "Under review" : entry.cardDispute === "won" ? "Won" : entry.cardDispute === "lost" ? "Lost" : entry.cardDispute] as [string, React.ReactNode]] : []),
     // A dollar coin's value is its amount; anything else (ETH, gold, stocks) shows what it was worth.
     ...(entry.estimatedUsd !== undefined && !dollars(entry.asset) ? [[entry.origin === "incoming" ? "Value today" : "Value", formatUsd(entry.estimatedUsd)] as [string, React.ReactNode]] : []),
-    ...(reason ? [["Reason", reason] as [string, React.ReactNode]] : [])
+    ...(reason ? [["Reason", <SupportText text={reason} key="reason" />] as [string, React.ReactNode]] : [])
   ];
   const note = receiptNote(entry);
   return <Sheet variant="panel" className="txReceipt" onOpenChange={(open) => { if (!open) onClose(); }}>
