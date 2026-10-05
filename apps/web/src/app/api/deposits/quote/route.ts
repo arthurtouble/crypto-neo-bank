@@ -32,9 +32,9 @@ async (request, { traceId }) => {
   const input = schema.parse(await readJsonBody(request));
   const source = depositSource(input.chainId, input.symbol);
   const destination = depositDestination(input.symbol);
-  if (!source || !destination || source.chainId === destination.chainId) throw new RouteQuoteError("invalid_request", "Choose another network to deposit from.");
+  if (!source || !destination || source.chainId === destination.chainId) throw new RouteQuoteError("invalid_request", "Choose another network to add from.");
   if (!await featureEnabled(env.PROJECTION_DB, "cross_chain")) return Response.json({ error: "feature_unavailable",
-    message: "Deposits from other networks aren't available right now. You can still add money on Base.", traceId }, { status: 503 });
+    message: "Adding money from other networks isn't available right now. You can still add it from Base.", traceId }, { status: 503 });
   // The sender must be a wallet the customer linked; the recipient is always their Aura account.
   const [from, account] = await Promise.all([
     requireLinkedEvmWallet(subject.subjectReference, input.from),
