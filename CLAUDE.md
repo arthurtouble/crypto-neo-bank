@@ -24,6 +24,8 @@ pnpm test:unit           # vitest (web) + scripts/mainnet-readiness.test.mjs
 pnpm test:e2e            # builds, then Playwright desktop + mobile Chromium
 pnpm build
 pnpm production:check   # what the production Worker config still lacks (exits 1 until ready)
+pnpm copy:check          # banned words in customer copy (test:unit fails if a file gains one)
+pnpm sweep               # every page at 320-1440px, light and dark: output/sweep/report.md
 ```
 
 A single unit test: `pnpm --filter @aurel/web exec vitest run tests/unit/<file>.test.ts`.

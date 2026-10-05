@@ -240,13 +240,13 @@ Soft and subtle: 6px for buttons and inputs, 8px for notes, segmented controls, 
 - **Inputs:** label above, help or error below; errors get a red border and message tied with `aria-describedby`.
 - **Amount entry:** desktop, a 32px amount field with the asset pill inside; phone, its own screen with a 52px amount and a keypad.
 - **Segmented control** switches a view in place; **filter chips** filter a list and may carry totals.
-- **Toggles and switches** save a setting as soon as it changes: an On/Off pill, accent when on, or a 40 × 24 switch inside a labelled row.
+- **Switches** save a setting as soon as it changes: a 40 × 24 switch inside a labelled row.
 - **Cards** group related things with a line border and 10px radius; never nested, never decorative.
 - **Rows:** icon or logo, title and secondary line, amount and status on the right. Tables on desktop become lists on the phone.
 - **Statuses:** a dot and a literal word.
 - **Notes** (soft status background, icon, short text) and **banners** (page-wide: guest example data, expired session, missing source).
 - **Toasts:** raised, one line, close button; bottom right on desktop, top on the phone. A new one stacks under those still showing, never replaces them.
-- **Navigation:** desktop sidebar with ten sections, each an icon and a name, current item muted with an accent icon. Phone: no tab bar; the menu button opens a sheet of ten tiles, three per row, with Log out at the bottom.
+- **Navigation:** desktop sidebar with eleven sections, each an icon and a name, current item muted with an accent icon. Phone: no tab bar; the menu button opens a sheet of eleven tiles, three per row, with Sign out at the bottom.
 - **Overlays:** details in a side panel on desktop, a pushed screen on the phone; short choices in a popover or bottom sheet; confirmations in a dialog or bottom sheet. All trap focus and close with Escape.
 - **Money flows:** who (in Send, the people paid most recently first), then amount, then a review whose button is the action's own verb ("Send", "Swap") and the passkey; progress as a timeline in place.
 
@@ -260,3 +260,4 @@ Soft and subtle: 6px for buttons and inputs, 8px for notes, segmented controls, 
 - Don't nest cards or build rows of identical feature cards.
 - Don't hide actions behind hover, and don't put arrow icons inside buttons.
 - Don't animate for decoration; honour reduced motion.
+- Do check every screen against the quality bar in `docs/product/design-system.md#quality-bar` (widths 320 to 1440px, both themes, 200% zoom, every state) and every string against the glossary in `docs/product/content-style-guide.md#glossary`.

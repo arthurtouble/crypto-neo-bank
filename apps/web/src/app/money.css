@@ -278,6 +278,9 @@
   .appFrame .mxCopyButton, .appFrame .mxSwapSelect { min-height: var(--touch-min); }
   /* Send's Max sits in the balance line; its target grows to 44px without moving the line */
   .appFrame .mxBalanceHint .mxInlineButton { display: inline-flex; align-items: center; justify-content: center; min-width: var(--touch-min); min-height: var(--touch-min); margin-block: calc((var(--touch-min) - 1lh) / -2); }
+  /* A button inside a sentence (Max, Try again, Remove) keeps its line height; an invisible area around it takes the 44px tap */
+  .appFrame .mxInlineButton { position: relative; }
+  .appFrame .mxInlineButton::after { content: ""; position: absolute; left: 50%; top: 50%; width: max(100%, var(--touch-min)); height: var(--touch-min); transform: translate(-50%, -50%); }
 }
 /* Tablets are touch screens too: Deposit's tabs get the full target there */
 @media (max-width: 1023px) {

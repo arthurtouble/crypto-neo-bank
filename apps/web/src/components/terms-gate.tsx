@@ -85,7 +85,7 @@ export function TermsGate({ children }: { children: React.ReactNode }) {
     <div className="appScreenActions"><button type="button" className="appButton appButtonPrimary appButtonLarge" onClick={() => void query.refetch()}>Try again</button>
       {chat.status !== "unavailable" && <button type="button" className="appButton appButtonLarge" disabled={chat.status !== "ready"}
         onClick={() => { setChatting(true); chat.open("My Aura account won't load."); }}>Chat with support</button>}
-      {leave("Log out")}</div></AccountScreen>;
+      {leave("Sign out")}</div></AccountScreen>;
   if (!hasEmail && !query.isError) {
     const addEmail = () => {
       setLinking(true); setLinkError("");
@@ -96,7 +96,7 @@ export function TermsGate({ children }: { children: React.ReactNode }) {
     return <AccountScreen title="Add your email"><p>Aura sends security notices and receipts by email. You’ll get a code by email to confirm it’s yours.</p>
       {linkError ? <p className="appFieldError" role="alert">{linkError}</p> : null}
       <div className="appScreenActions"><button type="button" className="appButton appButtonPrimary appButtonLarge" disabled={linking} onClick={addEmail}>{linking ? "Adding…" : "Add email"}</button>
-        {leave("Log out")}</div></AccountScreen>;
+        {leave("Sign out")}</div></AccountScreen>;
   }
   async function accept() {
     setSubmitting(true); setError(""); setOutdated(false);
@@ -123,6 +123,6 @@ export function TermsGate({ children }: { children: React.ReactNode }) {
     <div className="appScreenActions">{outdated
       ? <button type="button" className="appButton appButtonPrimary appButtonLarge" onClick={() => window.location.reload()}>Reload</button>
       : <button type="button" className="appButton appButtonPrimary appButtonLarge" disabled={!agreed || submitting} onClick={() => void accept()}>{submitting ? "Saving…" : "Continue"}</button>}
-      {leave("Log out")}</div>
+      {leave("Sign out")}</div>
   </AccountScreen>;
 }

@@ -247,9 +247,9 @@ In the app, the shared parts are React components in `apps/web/src/components`, 
 
 Two to four options that switch a view in place: Send's "To a person or wallet" and "To a bank account", the Transactions summary's periods. A muted track, the selected option on the surface with a hairline shadow.
 
-### Toggles and switches
+### Switches
 
-A setting that saves as soon as it changes: a checkbox drawn as a 40 × 24 switch (`appSwitch`) inside a row that labels it. Settings uses it for every on/off choice. The On/Off pill button (`appToggle`, `aria-pressed`), filled with the accent when on, is only for the card's freeze. Tightening applies at once; loosening asks for the passkey first, so the control only moves once that succeeds.
+A setting that saves as soon as it changes: a checkbox drawn as a 40 × 24 switch (`appSwitch`) inside a row that labels it. Settings uses it for every on/off choice. The card's freeze is a plain button that says what it does (Freeze card, Unfreeze card). Tightening applies at once; loosening asks for the passkey first, so the control only moves once that succeeds.
 
 ### Filter chips
 
@@ -294,11 +294,11 @@ On the raised surface with shadow 2, a status icon, a title, one line, and a clo
 
 ### Navigation
 
-- **Desktop sidebar.** 232px, the surface colour, a line on its right. The wordmark at the top, then the twelve sections as 36px items: an 18px icon and the name. The current item has a muted fill, text colour, and an accent icon. Tablet: 72px, icons only, names in tooltips.
+- **Desktop sidebar.** 232px, the surface colour, a line on its right. The wordmark at the top, then the eleven sections as 36px items: an 18px icon and the name. The current item has a muted fill, text colour, and an accent icon. Tablet: 72px, icons only, names in tooltips.
 - **Desktop top bar.** 60px: the page title or search (⌘K) on the left, the bell and the avatar menu on the right. The bell's unread count is a small accent pill on the bell's top-right corner, never over the bell. The avatar shows the first letter of the account's email or name; with no letter (an email like 3@…), a person icon.
 - **Phone header.** 56px: the section title, and the bell on the right. In a step, a back button on the left and the step's title instead.
 - **Phone menu button.** A 56px circle, filled with the text colour, floating bottom centre with shadow 2. It hides during a step, and otherwise stays put: no hiding on scroll, focus, or overlap. Every page ends with 100px clear plus the safe area, so the customer can always scroll any button above it (owner, 2 October). Hiding it on focus moved it under the finger as the field lost focus, and hiding it on scroll or overlap didn't hold up on a real phone.
-- **Phone menu sheet.** From the bottom, `--radius-sheet` top corners, a grab handle. "Menu" and the email at the top, the twelve sections as tiles three per row (a 22px icon above the name, the current tile outlined in accent), and Log out at the bottom.
+- **Phone menu sheet.** From the bottom, `--radius-sheet` top corners, a grab handle. "Menu" and the email at the top, the eleven sections as tiles three per row (a 22px icon above the name, the current tile outlined in accent), and Sign out at the bottom.
 
 ### Overlays
 
@@ -353,6 +353,54 @@ Notice emails (`apps/web/src/lib/notifications/email.ts`) follow the same system
 - Respect `prefers-reduced-motion` and `prefers-color-scheme`. The theme choice (`aurel-theme` in local storage, `data-theme` on `<html>`) overrides the device.
 - `axe` finds no serious or critical issues on the reference page (`tests/e2e/product.spec.ts`), and each rebuilt screen keeps its e2e checks.
 
+## Quality bar
+
+Every screen meets this on desktop and phone, in light and dark, before it ships. Agreed on 4 October 2026 for the polish pass; the [review checklist](#review-checklist) below is the short version.
+
+`pnpm sweep` checks the parts a machine can: it opens every page in the menu and the landing page, as a guest and signed in, in light and dark, at each width below plus 640px (1280px at 200% zoom), and writes what it finds to `output/sweep/report.md`: sideways scrolling, clipped text, touch targets under 44px, content under the floating menu button, axe issues (at 390 and 1280px), console errors, and failed requests. `AURA_SWEEP_ONLY=/app/send,/app/swap pnpm sweep` checks just those pages; `AURA_SWEEP=strict` fails on any finding. The rest (states, money, copy, keyboard) is checked by hand and by each feature's e2e spec.
+
+**Layout and touch**
+
+- No sideways scrolling and no clipped text at 320, 375, 390, 430, 768, 1024, 1280, and 1440px wide.
+- Touch targets at least 44 × 44px on the phone (`--touch-min`), with space between neighbours.
+- Nothing under the notch, the home bar, or the floating menu button: pages use the safe-area insets and end 100px clear of the button.
+- At 200% browser zoom, text still reads and nothing overlaps.
+- Long values (large balances, long names, addresses) wrap or shorten on purpose, never by accident.
+
+**States**
+
+- Loading is a skeleton of the real layout.
+- Empty has one button that fills it.
+- A value that can't be read says Unavailable, never an old number.
+- An error sits next to the part that failed and says what to do.
+- Paused, locked, blocked, and over-limit show before the customer starts, not on the review screen.
+- The guest view shows labelled example data, and the same example appears the same way in every feature.
+
+**Money**
+
+- Every amount shows its currency or asset, in tabular figures.
+- Fees, minimums, and what the customer gets are on the review screen, above its button.
+- Every payment that can't be undone keeps its review screen.
+- The result is shown once, on the progress card.
+
+**Controls and copy**
+
+- One primary button per screen or panel; a disabled button says why.
+- Every string follows the [content guide](content-style-guide.md) and its [glossary](content-style-guide.md#glossary); buttons are verbs.
+- The same action uses [the same word](content-style-guide.md#the-same-word-for-the-same-action) in every feature.
+
+**Accessibility**
+
+- axe finds no issues; text contrast is 4.5:1 in both themes.
+- Everything works by keyboard with a visible focus ring, and focus is never hidden under the floating menu button (WCAG 2.4.11). Dialogs and sheets keep focus inside and close with Escape.
+- Icon buttons, statuses, and amounts have names a screen reader reads.
+- Reduced motion is honoured.
+
+**Design system**
+
+- Tokens only, and styles in the area stylesheet. Nothing new in `globals.css`, `identity.css`, or `product-system.css`.
+- No console errors and no failed requests on any screen.
+
 ## Don'ts
 
 From the owner's brief and the [Impeccable](https://impeccable.style) anti-pattern list:
@@ -375,5 +423,6 @@ From the owner's brief and the [Impeccable](https://impeccable.style) anti-patte
 - Is every number tabular, with its currency or asset, and does unread data say Unavailable?
 - Does it follow its journey in [redesign-journeys.md](redesign-journeys.md) on both devices?
 - Are loading, empty, error, unavailable, disabled, and blocked designed?
-- Does it work at 390px and 1440px, in light and dark, with a keyboard and a screen reader?
+- Does it meet the [quality bar](#quality-bar) at every width from 320px to 1440px, in light and dark, at 200% zoom, with a keyboard and a screen reader?
+- Does every string pass the [glossary](content-style-guide.md#glossary)?
 - Are only tokens used, and do the reference page, `DESIGN.md`, and this document still agree?

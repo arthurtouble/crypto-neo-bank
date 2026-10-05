@@ -74,6 +74,8 @@ export const features = {
   settings: ["settings", "setting-row", "security", "preferences", "profile", "privacy", "data-rights", "theme", "passkey", "account-closed", "api/account/", "lib/account/"],
   [smokeSpec]: ["overview", "dashboard", "terms", "auth-provider", "account-menu", "api/auth/", "app/app/page.tsx"],
   support: ["support"],
+  // The quality-bar sweep covers every page and runs only when asked (AURA_SWEEP), so no path selects it.
+  sweep: [],
   swap: ["swap", "api/routes/"],
   transactions: ["transaction", "activity", "statements", "records.css"]
 };
