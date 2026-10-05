@@ -30,16 +30,6 @@ export const exampleRecipients = [
   { id: "example-recipient", kind: "wallet" as const, name: "Sam (example)", destination: "0x000000000000000000000000000000000000e0b2", detail: "0x0000…e0b2", verified: true }
 ];
 
-/** A few fictional transactions, for the Overview's recent list. */
-export const exampleActivity: ActivityEntry[] = [
-  { id: "example-received", origin: "incoming", type: "received", status: "completed", createdAt: "2026-01-15T11:40:00.000Z", chainId: 8453,
-    asset: "USDC", amount: "500", counterparty: "0x000000000000000000000000000000000000e0b2", source: "example" },
-  { id: "example-card", origin: "card", type: "card_payment", status: "completed", createdAt: "2026-01-15T09:12:00.000Z", chainId: 8453,
-    asset: "USD", amount: "12.00", counterparty: "Corner Cafe", source: "example" },
-  { id: "example-sent", origin: "aura", type: "sent", status: "completed", createdAt: "2026-01-14T18:05:00.000Z", chainId: 8453,
-    asset: "USDC", amount: "250", counterparty: "0x000000000000000000000000000000000000e0b2", source: "example" }
-];
-
 /** A fictional card, for the guest Cards page: no real card number, key, or merchant. */
 export const exampleCard: Extract<CardState, { state: "card" }> = {
   state: "card",
@@ -56,26 +46,44 @@ export const exampleCard: Extract<CardState, { state: "card" }> = {
   activityStatus: "available", publishableKey: null, walletsEnabled: false, observedAt: at
 };
 
-/** When the example insights are "read": they're built from exampleInsightActivity as of this date. */
-export const exampleInsightsNow = new Date(at);
+/** When the example history is "read": guest totals are counted as of this date. */
+export const exampleNow = new Date(at);
 
-/** A fictional year of completed activity, valued in dollars, for the guest Insights page. */
-export const exampleInsightActivity: ActivityEntry[] = ([
-  ["received", "2026-01-15T11:40:00.000Z", "500", 500, "0x000000000000000000000000000000000000e0b2"],
-  ["card_payment", "2026-01-15T09:12:00.000Z", "12.40", 12.4, "Corner Cafe"],
-  ["sent", "2026-01-14T18:05:00.000Z", "250", 250, "0x000000000000000000000000000000000000e0b2"],
-  ["card_payment", "2026-01-12T16:40:00.000Z", "30", 30, "Bookshop"],
-  ["earn_deposit", "2026-01-09T10:00:00.000Z", "155", 155, "Aave"],
-  ["card_payment", "2026-01-06T08:30:00.000Z", "7.60", 7.6, "Corner Cafe"],
-  ["received", "2026-01-02T12:00:00.000Z", "1200", 1200, "0x000000000000000000000000000000000000e0b2"],
-  ["swap", "2025-12-28T15:20:00.000Z", "100", 100, undefined],
-  ["card_payment", "2025-12-20T19:10:00.000Z", "64", 64, "Grocer"],
-  ["sent", "2025-12-12T09:00:00.000Z", "180", 180, "0x000000000000000000000000000000000000e0b2"],
-  ["received", "2025-11-30T12:00:00.000Z", "900", 900, "0x000000000000000000000000000000000000e0b2"],
-  ["card_payment", "2025-10-18T13:45:00.000Z", "42", 42, "Bookshop"],
-  ["received", "2025-09-01T12:00:00.000Z", "650", 650, "0x000000000000000000000000000000000000e0b2"],
-  ["sent", "2025-06-10T12:00:00.000Z", "320", 320, "0x000000000000000000000000000000000000e0b2"]
-] as const).map(([type, createdAt, amount, estimatedUsd, counterparty], index) => ({
-  id: `example-insight-${index}`, origin: type === "card_payment" ? "card" : type === "received" ? "incoming" : "aura", type, status: "completed",
-  createdAt, chainId: 8453, asset: "USDC", amount, estimatedUsd, counterparty, source: "example"
-}));
+const FRIEND = "0x000000000000000000000000000000000000e0b2";
+
+/**
+ * A fictional year of activity, newest first, for every guest screen: the
+ * Transactions list and its summary, and the Overview's recent list. The card
+ * payments are the ones the guest Cards page shows ($12.00 at Corner Cafe,
+ * $30.00 at Bookshop, a declined $400.00), so the same example reads the same
+ * everywhere.
+ */
+export const exampleHistory: ActivityEntry[] = ([
+  ["received", "completed", "2026-01-15T11:40:00.000Z", "500", FRIEND],
+  ["card_payment", "completed", "2026-01-15T09:12:00.000Z", "12.00", "Corner Cafe"],
+  ["sent", "completed", "2026-01-14T18:05:00.000Z", "250", FRIEND],
+  ["card_payment", "completed", "2026-01-14T16:40:00.000Z", "30.00", "Bookshop"],
+  ["card_payment", "failed", "2026-01-14T11:05:00.000Z", "400.00", "Electronics"],
+  ["earn_deposit", "completed", "2026-01-09T10:00:00.000Z", "155", "Aave"],
+  ["card_payment", "completed", "2026-01-06T08:30:00.000Z", "7.60", "Corner Cafe"],
+  ["received", "completed", "2026-01-02T12:00:00.000Z", "1200", FRIEND],
+  ["swap", "completed", "2025-12-28T15:20:00.000Z", "100", undefined],
+  ["card_payment", "completed", "2025-12-20T19:10:00.000Z", "64.00", "Grocer"],
+  ["sent", "completed", "2025-12-12T09:00:00.000Z", "180", FRIEND],
+  ["received", "completed", "2025-11-30T12:00:00.000Z", "900", FRIEND],
+  ["card_payment", "completed", "2025-10-18T13:45:00.000Z", "42.00", "Bookshop"],
+  ["received", "completed", "2025-09-01T12:00:00.000Z", "650", FRIEND],
+  ["sent", "completed", "2025-06-10T12:00:00.000Z", "320", FRIEND]
+] as const).map(([type, status, createdAt, amount, counterparty], index): ActivityEntry => {
+  const card = type === "card_payment";
+  return {
+    id: `example-${index + 1}`, origin: card ? "card" : type === "received" ? "incoming" : "aura", type, status, createdAt, chainId: 8453,
+    asset: card ? "USD" : "USDC", amount, counterparty, source: "example",
+    // A declined payment moved no money, so it has no value; everything else is in dollars already.
+    ...(status === "completed" ? { estimatedUsd: Number(amount), final: true } : { failureReason: "Declined" }),
+    ...(type === "swap" ? { toAsset: "cbBTC", toAmount: "0.00104" } : {})
+  };
+});
+
+/** The newest few, for the Overview's recent list. */
+export const exampleActivity = exampleHistory.slice(0, 3);

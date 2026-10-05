@@ -22,20 +22,20 @@ export const FAILED_PAYOUT_STATES = new Set(["undeliverable", "returned", "missi
 export function payoutStateText(state: string): string {
   const text: Record<string, string> = {
     awaiting_funds: "Waiting for your USDC to reach Bridge",
-    in_review: "Bridge is reviewing this payout",
+    in_review: "Bridge is reviewing this transfer",
     funds_received: "Bridge received your USDC",
     payment_submitted: "Sent to your bank",
     payment_processed: "Arrived at your bank",
-    undeliverable: "Your bank couldn't accept it. Bridge will return the money",
-    returned: "Your bank returned it. Bridge is sending the money back",
-    refund_in_flight: "Bridge is sending the money back to your account",
+    undeliverable: "Your bank couldn't accept it. The money is coming back to your Aura account",
+    returned: "Your bank sent it back. The money is coming back to your Aura account",
+    refund_in_flight: "The money is coming back to your Aura account",
     refunded: "Returned to your Aura account",
     refund_failed: "Bridge couldn't return the money. Contact support",
-    missing_return_policy: "Bridge needs a return address. Contact support",
+    missing_return_policy: "Bridge can't return the money yet. Contact support",
     canceled: "Canceled",
-    error: "Bridge is looking into this payout. Contact support"
+    error: "Bridge is looking into this transfer. Contact support"
   };
-  return text[state] ?? "Bridge is processing this payout";
+  return text[state] ?? "Bridge is working on this transfer";
 }
 
 const accountSchema = z.object({ id: z.string(), status: z.string().optional(),

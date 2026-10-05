@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/client/auth";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  ArrowDownToLine, ArrowDownUp, ArrowUpFromLine, CandlestickChart, ChartNoAxesColumn, CircleHelp, CreditCard,
+  ArrowDownToLine, ArrowDownUp, ArrowUpFromLine, CandlestickChart, CircleHelp, CreditCard,
   LayoutGrid, List, LogIn, CirclePercent, Settings, TrendingUp, type LucideIcon
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -18,11 +18,11 @@ import { NotificationBell } from "./notification-bell";
 import { SupportChatProvider } from "./support-chat";
 import { ThemeChoice } from "./theme-choice";
 
-/** The twelve sections, in order, not grouped (redesign-journeys.md, Navigation). */
+/** The eleven sections, in order, not grouped (redesign-journeys.md, Navigation). */
 const sections: { label: string; href: string }[] = navigation.flatMap((group) => [...group.items]);
 const iconFor: Record<string, LucideIcon> = {
   Overview: LayoutGrid, Deposit: ArrowDownToLine, Send: ArrowUpFromLine, Swap: ArrowDownUp, Earn: TrendingUp, Perps: CandlestickChart, Predictions: CirclePercent,
-  Cards: CreditCard, Transactions: List, Insights: ChartNoAxesColumn, Settings, Support: CircleHelp
+  Cards: CreditCard, Transactions: List, Settings, Support: CircleHelp
 };
 
 function isCurrent(pathname: string, href: string) {

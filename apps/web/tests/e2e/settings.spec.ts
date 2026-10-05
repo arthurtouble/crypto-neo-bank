@@ -81,7 +81,7 @@ test("without a passkey, loosening asks the customer to add one and changes noth
 
 test("an authenticator app counts as the passkey", async ({ page }) => {
   await openSettings(page, { mfa: ["totp"] });
-  await expect(page.getByText(/^Added\. Needed to move money/)).toBeVisible();
+  await expect(page.getByText(/^You confirm money moves and looser controls with your authenticator app/)).toBeVisible();
   await expect(page.getByRole("button", { name: "Add passkey" })).toHaveCount(0);
 });
 
@@ -175,10 +175,21 @@ test("an area that can't load says so with Try again, and the Aura tag form neve
   let fail = true;
   await page.route("**/api/aura-tags", (route) => fail ? route.fulfill({ status: 503, json: { error: "aura_tag_unavailable" } }) : route.fallback());
   await openSettings(page, { area: "tag", heading: "Aura tag and payment page" });
-  await expect(page.getByRole("alert").filter({ hasText: "We couldn't load your Aura tag." })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("alert").filter({ hasText: "Your Aura tag can't be loaded right now." })).toBeVisible({ timeout: 20_000 });
   await expect(page.getByLabel("Tag", { exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Save Aura tag" })).toHaveCount(0);
   fail = false;
   await page.getByRole("button", { name: "Try again" }).click();
   await expect(page.getByLabel("Tag", { exact: true })).toBeVisible({ timeout: 20_000 });
+});
+
+test("controls and saved recipients that can't load keep their heading and say what to do", async ({ page }) => {
+  await page.route("**/api/security/policy", (route) => route.fulfill({ status: 503, json: { error: "security_policy_unavailable" } }));
+  await openSettings(page, { area: "security", heading: "Passkey and sign-in" });
+  const controls = page.getByRole("region", { name: "Transaction controls" });
+  await expect(controls.getByRole("alert")).toContainText("Your controls can't be loaded right now. Your lock and limits still apply.", { timeout: 20_000 });
+  await expect(controls.getByRole("button", { name: "Try again" })).toBeVisible();
+  await page.goto("/app/settings#recipients");
+  const recipients = page.getByRole("region", { name: "Saved recipients" });
+  await expect(recipients.getByRole("alert")).toContainText("Your saved recipients can't be loaded right now.", { timeout: 20_000 });
 });

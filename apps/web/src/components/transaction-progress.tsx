@@ -32,7 +32,7 @@ function copy(label: string, phase: ActionPhase, action: ActionView | null) {
       : { step: 3, title: `${label} complete`, detail: `${networkName(action.chainId)} makes it final in about 20 minutes. You can close this.` };
     case "confirmed": return { step: 3, title: `${label} complete`, detail: "The network confirmed it." };
     case "failed": return { step: 3, title: `${label} failed`, detail: failureText(action.failureReason) };
-    case "expired": return { step: 3, title: `${label} not confirmed`, detail: "We didn't receive it in time. If you confirmed it in your wallet, check Transactions." };
+    case "expired": return { step: 3, title: `${label} not confirmed`, detail: "Time ran out before it was sent. If you approved it in your wallet, check Transactions before you try again." };
     default: return { step: 2, title: `${label} submitted`, detail: "We're waiting for the network. You can leave this screen." };
   }
 }
@@ -70,7 +70,7 @@ export function TransactionProgress({ label, phase, action, outcomeUnknown }: Pr
       <div><strong>{title}</strong><small>{detail}</small></div>
     </div>
     {!failed && <div className="transactionSteps" aria-label={`${label} progress`}>
-      {["Prepare", "Confirm", "Submitted", "Complete"].map((name, index) => <span className={index <= step ? "done" : ""} key={name}><i>{index < step || complete ? <Check size={10} /> : index + 1}</i>{name}</span>)}
+      {["Prepared", "Confirmed", "Submitted", "Completed"].map((name, index) => <span className={index <= step ? "done" : ""} key={name}><i>{index < step || complete ? <Check size={10} /> : index + 1}</i>{name}</span>)}
     </div>}
     {failed && <div className="transactionFailureHint"><CircleAlert size={14} /> Nothing was retried automatically.</div>}
     {links.length > 0 && <div className="transactionLinks">{links.map((link) => link.internal ? <Link href={link.url} key={link.name}>{link.name}</Link>

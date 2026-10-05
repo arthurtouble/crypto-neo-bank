@@ -60,9 +60,9 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
   return <ToastContext.Provider value={api}>
     {children}
-    <div className="toastRegion" aria-label="Notifications">
+    <section className="toastRegion" aria-label="Notifications">
       {toasts.map((toast) => <ToastItem key={toast.id} toast={toast} onClose={close} />)}
-    </div>
+    </section>
   </ToastContext.Provider>;
 }
 

@@ -4,7 +4,7 @@ import type { Locator, Page, Route, TestInfo } from "@playwright/test";
 import { recoverTypedDataAddress } from "viem";
 import { perpPosition } from "./support/fake-markets.mjs";
 import { expect, test } from "./support/fixtures";
-import { acceptTerms, ASSETS, edge, newCustomer, setBalances, setFeature, setIdentity, type Customer } from "./support/session";
+import { acceptTerms, ASSETS, edge, newCustomer, setBalances, setControls, setFeature, setIdentity, type Customer } from "./support/session";
 
 // Perps on Hyperliquid. Hyperliquid's read API is the local fake (support/fake-markets.mjs), so every screen reads
 // through Aura's real routes, switches, and D1. Placing a trade needs signatures Hyperliquid verifies, so the trade
@@ -50,12 +50,12 @@ async function enterAmount(scope: Locator, info: TestInfo, amount: string) {
 async function openOrder(page: Page, info: TestInfo, side: "long" | "short"): Promise<Locator> {
   const label = side === "long" ? "Long" : "Short";
   if (isPhone(info)) {
-    await page.getByRole("button", { name: label, exact: true }).click({ timeout: 30_000 });
+    await page.getByRole("button", { name: new RegExp(`^${label} Price goes`) }).click({ timeout: 30_000 });
     await expect(sheet(page).getByRole("heading", { name: new RegExp(`^${label} `) })).toBeVisible();
     return sheet(page);
   }
   const panel = page.getByRole("complementary", { name: "Place an order" });
-  await panel.getByRole("radio", { name: label, exact: true }).click({ timeout: 30_000 });
+  await panel.getByRole("radio", { name: new RegExp(`^${label} Price goes`) }).click({ timeout: 30_000 });
   return panel;
 }
 
@@ -108,7 +108,7 @@ test("guests see labelled example perps, and trading asks them to sign in", asyn
   await expect(page.getByRole("list", { name: "Perp markets" }).getByRole("link", { name: /^SPCX/ })).toBeVisible();
   await expect(page.getByText("Example data, shaped like Hyperliquid's").first()).toBeVisible();
   // The example position shows what a real one does: TP/SL and Close, which ask a guest to sign in.
-  await expect(page.getByRole("listitem", { name: "BTC long" }).getByRole("button")).toHaveText(["TP/SL", "Close"]);
+  await expect(page.getByRole("listitem", { name: "BTC long" }).getByRole("button")).toHaveText(["Take profit / Stop loss", "Close"]);
   await shot(page, info, "guest-perps");
 });
 
@@ -142,6 +142,59 @@ test("with the switch off, Perps says it isn't available yet", async ({ page }) 
   await expect(page.getByTestId("perps-account-value")).toHaveCount(0);
 });
 
+test("a new customer, switch on: an empty perps account with Deposit as the one action, not an error", async ({ page }, info) => {
+  const failed: string[] = [];
+  page.on("response", (response) => { if (response.url().includes("/api/perps/") && response.status() >= 500) failed.push(`${response.status()} ${response.url()}`); });
+  await signIn(page);
+  await page.goto("/app/perps");
+  await expect(page.getByTestId("perps-account-value")).toHaveText("$0.00", { timeout: 30_000 });
+  await expect(page.getByTestId("perps-empty")).toHaveText("Deposit USDC from your Aura account to start trading. At least $6.");
+  const account = page.getByRole("region", { name: "Perps account" });
+  await expect(account.getByRole("button")).toHaveText(["Deposit"]);
+  await expect(account.getByRole("button", { name: "Deposit" })).toHaveClass(/appButtonPrimary/);
+  await expect(page.getByText("No open positions.")).toBeVisible();
+  await expect(page.getByRole("list", { name: "Perp markets" }).getByRole("link")).toHaveCount(5);
+  await shot(page, info, "perps-new-customer");
+  expect(failed).toEqual([]);
+});
+
+test("where Hyperliquid doesn't serve, Perps says so before anything is filled in, and closing still works", async ({ page }, info) => {
+  const customer = await signIn(page);
+  await edge("/__markets", { hyperliquid: { [customer.wallet]: { accountValue: "400.00", withdrawable: "100.00",
+    positions: [perpPosition({ coin: "BTC", size: "0.05", entryPx: "62900.0", positionValue: "3212.50", unrealizedPnl: "67.50", marginUsed: "321.25" })] } } });
+  await page.setExtraHTTPHeaders({ "CF-IPCountry": "US" });
+  await page.goto("/app/perps");
+  const notice = "Perps aren't available where you are. You can still close positions and withdraw.";
+  await expect(page.getByTestId("perps-blocked")).toHaveText(notice, { timeout: 30_000 });
+  const account = page.getByRole("region", { name: "Perps account" });
+  await expect(account.getByRole("button", { name: "Deposit" })).toBeDisabled();
+  await expect(account.getByRole("button", { name: "Withdraw" })).toBeEnabled();
+  await expect(page.getByRole("listitem", { name: "BTC long" }).getByRole("button", { name: "Close" })).toBeEnabled();
+  await page.goto("/app/perps/BTC");
+  if (isPhone(info)) {
+    await expect(page.getByTestId("perps-trade-blocked")).toHaveText(notice, { timeout: 30_000 });
+    await expect(page.getByRole("button", { name: /^Long Price goes/ })).toBeDisabled();
+  } else {
+    const panel = page.getByRole("complementary", { name: "Place an order" });
+    await expect(panel.getByTestId("perps-order-blocked")).toHaveText(notice, { timeout: 30_000 });
+    await expect(panel.getByRole("button", { name: "Long BTC" })).toBeDisabled();
+  }
+  await shot(page, info, "perps-place-blocked");
+});
+
+test("a locked account says so on Perps, and every trade, add, and withdrawal waits", async ({ page }) => {
+  const customer = await signIn(page);
+  await edge("/__markets", { hyperliquid: { [customer.wallet]: { accountValue: "400.00", withdrawable: "100.00",
+    positions: [perpPosition({ coin: "BTC", size: "0.05", entryPx: "62900.0", positionValue: "3212.50", unrealizedPnl: "67.50", marginUsed: "321.25" })] } } });
+  await setControls(page, customer, { accountLocked: true });
+  await page.goto("/app/perps");
+  await expect(page.getByTestId("perps-blocked")).toHaveText("Your account is locked. Unlock it in Settings to trade, add money, or withdraw.", { timeout: 30_000 });
+  const account = page.getByRole("region", { name: "Perps account" });
+  await expect(account.getByRole("button", { name: "Deposit" })).toBeDisabled();
+  await expect(account.getByRole("button", { name: "Withdraw" })).toBeDisabled();
+  await expect(page.getByRole("listitem", { name: "BTC long" }).getByRole("button", { name: "Close" })).toBeDisabled();
+});
+
 test("perps home: the account, positions with TP/SL, orders, and history from Hyperliquid, and markets with search", async ({ page }, info) => {
   const customer = await signIn(page);
   await edge("/__markets", { hyperliquid: { [customer.wallet]: {
@@ -168,7 +221,7 @@ test("perps home: the account, positions with TP/SL, orders, and history from Hy
   await expect(position).toContainText("Liquidation price$50,820.00");
   await expect(position).toContainText("Take profit$70,000.00");
   await expect(position).toContainText("Stop loss—");
-  await expect(position.getByRole("button")).toHaveText(["TP/SL", "Close"]);
+  await expect(position.getByRole("button")).toHaveText(["Take profit / Stop loss", "Close"]);
   await shot(page, info, "perps-home");
   await page.getByRole("tab", { name: /Open orders/ }).click();
   await expect(page.getByText("Limit buy ETH")).toBeVisible();
@@ -211,7 +264,7 @@ test("a perps market page: price and stats, chart ranges, the order book with gr
   await expect(crumbs.getByRole("link", { name: "Perps" })).toHaveAttribute("href", "/app/perps");
   await expect(page.getByTestId("perps-market-change")).toHaveText("+$1,140.00 (+1.81%) today");
   const stats = page.getByTestId("perps-market-stats");
-  await expect(stats).toContainText("24h volume$2.1B");
+  await expect(stats).toContainText("Traded in 24h$2.1B");
   await expect(stats).toContainText("Open interest");
   await expect(stats).toContainText(/Funding, hourly\+0\.001\d%/);
   await expect(page.getByText("Funding: longs pay shorts")).toBeVisible();
@@ -221,7 +274,8 @@ test("a perps market page: price and stats, chart ranges, the order book with gr
   const chart = page.getByRole("region", { name: "BTC price chart" });
   await expect(chart.getByTestId("perps-chart")).toBeVisible({ timeout: 20_000 });
   const ranges = chart.getByRole("radiogroup", { name: "Chart range" });
-  await expect(ranges.getByRole("radio")).toHaveText(["Live", "1H", "1D", "1W", "1M", "3M", "1Y", "All"]);
+  // The phone shows six ranges, so each is wide enough to tap.
+  await expect(ranges.getByRole("radio")).toHaveText(isPhone(info) ? ["Live", "1D", "1W", "1M", "1Y", "All"] : ["Live", "1H", "1D", "1W", "1M", "3M", "1Y", "All"]);
   await expect(ranges.getByRole("radio", { name: "1D" })).toHaveAttribute("aria-checked", "true");
   await ranges.getByRole("radio", { name: "1W" }).click();
   await expect.poll(() => candleRanges.includes("1w")).toBe(true);
@@ -310,7 +364,7 @@ test("a perps market page: price and stats, chart ranges, the order book with gr
   await expect(form.getByRole("button", { name: "Long BTC" })).toBeEnabled();
   await shot(page, info, "perps-order-tpsl");
   if (!isPhone(info)) {
-    await form.getByRole("radio", { name: "Short" }).click();
+    await form.getByRole("radio", { name: /^Short Price goes/ }).click();
     await expect(form.getByRole("button", { name: "Short BTC" })).toBeVisible();
   } else {
     await sheet(page).getByRole("button", { name: "Close" }).first().click();
@@ -322,7 +376,7 @@ test("a perps market page: price and stats, chart ranges, the order book with gr
   await asks.last().click();
   const picked = isPhone(info) ? sheet(page) : page.getByRole("complementary", { name: "Place an order" });
   if (isPhone(info)) await expect(picked.getByRole("heading", { name: "Long BTC" })).toBeVisible();
-  else await expect(picked.getByRole("radio", { name: "Long", exact: true })).toHaveAttribute("aria-checked", "true");
+  else await expect(picked.getByRole("radio", { name: /^Long Price goes/ })).toHaveAttribute("aria-checked", "true");
   await expect(picked.getByRole("radio", { name: "Limit" })).toHaveAttribute("aria-checked", "true");
   await expect(picked.getByLabel("Limit price")).toHaveValue("64255");
   await picked.getByLabel("Limit price").fill("64,2a50.5");
@@ -335,7 +389,7 @@ test("a perps market page: price and stats, chart ranges, the order book with gr
     await page.getByRole("tab", { name: /Positions/ }).click();
   } else {
     await bids.first().click();
-    await expect(picked.getByRole("radio", { name: "Short", exact: true })).toHaveAttribute("aria-checked", "true");
+    await expect(picked.getByRole("radio", { name: /^Short Price goes/ })).toHaveAttribute("aria-checked", "true");
     await expect(picked.getByLabel("Limit price")).toHaveValue("64250");
   }
 
@@ -403,9 +457,9 @@ test("one tap opens a long: adds money through the action flow, connects this de
   await page.goto("/app/perps/BTC");
   const form = await openOrder(page, info, "long");
   await enterAmount(form, info, "15");
-  await expect(form).toContainText("Added from USDC first$16.00", { timeout: 20_000 });
+  await expect(form).toContainText("Deposited from USDC first$16.00", { timeout: 20_000 });
   // The button says what the tap does: add money first, then go long.
-  await form.getByRole("button", { name: "Add money and long" }).click();
+  await form.getByRole("button", { name: "Deposit and long BTC" }).click();
   await expect(flow(page)).toContainText("Order placed. 0.0015 BTC at $64,250.00.", { timeout: 30_000 });
   await shot(page, info, "perps-order-placed");
   // Leverage defaults to the market's maximum, 40x for BTC.
@@ -425,29 +479,29 @@ test("adding money finishes when the perps account shows it, and the sheet close
     { tool: "relay_direct", fromAmountRaw: "8000000", toAmountRaw: "7980000" });
   await page.route("**/api/perps/deposit", async (route) => { await json(route, { action: deposit }, 201); });
   await page.goto("/app/perps");
-  await page.getByRole("button", { name: "Add money" }).click({ timeout: 30_000 });
-  const add = page.getByRole("dialog", { name: "Add money to perps" });
+  await page.getByRole("button", { name: "Deposit" }).click({ timeout: 30_000 });
+  const add = page.getByRole("dialog", { name: "Deposit to perps" });
   // Closing before anything is sent.
   await add.getByRole("button", { name: "Close" }).first().click();
   await expect(add).toHaveCount(0);
-  await page.getByRole("button", { name: "Add money" }).click();
+  await page.getByRole("button", { name: "Deposit" }).click();
   await enterAmount(add, info, "8");
-  await add.getByRole("button", { name: "Add money", exact: true }).click();
-  await expect(add.locator(".mkFlow")).toContainText("Adding money", { timeout: 20_000 });
+  await add.getByRole("button", { name: "Deposit", exact: true }).click();
+  await expect(add.locator(".mkFlow")).toContainText("Depositing", { timeout: 20_000 });
   await shot(page, info, "perps-add-money");
   await expect(add.getByRole("button", { name: "Close" }).first()).toBeEnabled();
   funded = true;
   await expect(add.locator(".mkFlow")).toContainText("Network fee $0.02", { timeout: 20_000 });
-  await expect(add.locator(".mkFlow")).toContainText("$7.98 added to perps ($8.00 less a $0.02 network fee).", { timeout: 30_000 });
+  await expect(add.locator(".mkFlow")).toContainText("$7.98 deposited to perps ($8.00 less a $0.02 network fee).", { timeout: 30_000 });
   await add.getByRole("button", { name: "Done" }).click();
   await expect(add).toHaveCount(0);
   await expect(page.getByTestId("perps-account-value")).toHaveText("$7.94", { timeout: 30_000 });
 
   // While it's still moving, Close works and leaves it to finish.
   funded = false;
-  await page.getByRole("button", { name: "Add money" }).click();
+  await page.getByRole("button", { name: "Deposit" }).click();
   await enterAmount(add, info, "8");
-  await add.getByRole("button", { name: "Add money", exact: true }).click();
+  await add.getByRole("button", { name: "Deposit", exact: true }).click();
   await expect(add.getByText("You can close this. The money keeps moving")).toBeVisible({ timeout: 20_000 });
   await add.getByRole("button", { name: "Close" }).first().click();
   await expect(add).toHaveCount(0);
@@ -469,15 +523,15 @@ test("a position: TP/SL replaces the old one, and Close takes part of it at a li
   await expect(row).toBeVisible({ timeout: 30_000 });
   await shot(page, info, "perps-position");
 
-  await row.getByRole("button", { name: "TP/SL" }).click({ timeout: 30_000 });
-  const tpsl = page.getByRole("dialog", { name: "TP/SL for BTC long" });
+  await row.getByRole("button", { name: "Take profit / Stop loss" }).click({ timeout: 30_000 });
+  const tpsl = page.getByRole("dialog", { name: "Take profit and stop loss, BTC long" });
   await expect(tpsl).toContainText("Take profit at $70,000.00");
   await tpsl.getByLabel("Take profit at").fill("72000");
   await expect(tpsl.getByText(/^Profit of about \$455\.00 on the whole position$/)).toBeVisible();
   await tpsl.getByLabel("Stop loss at").fill("66000");
   await expect(tpsl.getByText("Stop loss must be below the price.")).toBeVisible();
   await tpsl.getByLabel("Stop loss at").fill("60000");
-  await tpsl.getByRole("button", { name: "Set TP/SL" }).click();
+  await tpsl.getByRole("button", { name: "Set", exact: true }).click();
   await expect(tpsl).toContainText("Take profit and stop loss set.");
   await tpsl.getByRole("button", { name: "Done" }).click();
 

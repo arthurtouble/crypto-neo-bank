@@ -32,14 +32,14 @@ function Initial({ value }: { value: string }) {
 
 const walletText = (address?: string) => address ? shortAddress(address) : "Wallet preparing";
 
-/** Who is signed in, the theme, and Log out. Shared by the desktop account menu and the phone menu sheet. */
+/** Who is signed in, the theme, and Sign out. Shared by the desktop account menu and the phone menu sheet. */
 export function AccountDetails() {
   const { user, logout } = useAuth();
   const { address } = useAuraWallet();
   return <div className="appAccount">
     <div className="appAccountWho"><strong>{accountLabel(user)}</strong><span className="appMono">{walletText(address)}</span></div>
     <div className="appAccountRow"><span>Theme</span><ThemeChoice /></div>
-    <button type="button" className="appButton" aria-label="Log out of Aura" onClick={() => void logout()}><LogOut aria-hidden="true" />Log out</button>
+    <button type="button" className="appButton" aria-label="Sign out of Aura" onClick={() => void logout()}><LogOut aria-hidden="true" />Sign out</button>
   </div>;
 }
 

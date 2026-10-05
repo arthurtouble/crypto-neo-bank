@@ -50,8 +50,8 @@ export function PredictionMarketPage({ id }: { id: string }) {
   const openSheet = (next: { outcome: 0 | 1; side: TradeSide }) => guest || account.isExample ? login() : setSheet(next);
 
   const body = view.switchedOff ? <NotAvailableYet name="Predictions" />
-    : view.isPending ? <LoadingState label="Reading this market" />
-      : !market ? <Notice tone="warning" role="alert" onRetry={() => void view.refetch()}><span className="appUnavailable">Unavailable.</span> We couldn&apos;t read this market from Polymarket.</Notice>
+    : view.isPending ? <LoadingState label="Loading this market" />
+      : !market ? <Notice tone="warning" role="alert" onRetry={() => void view.refetch()}>This market can&apos;t be loaded from Polymarket right now.</Notice>
         : <div className="pdLayout">
           <div className="pdMain">
             {info ? <UpOrDownBoard market={market} info={info} published={view.data?.upOrDown?.priceToBeat ?? null} isExample={view.isExample} />
@@ -109,14 +109,14 @@ function OddsCard({ market, observedAt, isExample }: { market: PolymarketMarket;
   const history = usePredictionHistory(market.yesTokenId, range);
   const then = history.data ? chanceThen(history.data.history, range) : null;
   const winner = winningOutcome(market);
-  return <section className="mxCard pdOdds" aria-label="Odds">
+  return <section className="mxCard pdOdds" aria-label="Chance">
     <div className="pdOddsHead">
       <p className="pdChance">{winner !== null ? <strong>{market.outcomes[winner].name} won</strong>
         : <><strong data-testid="prediction-chance">{formatChance(market.outcomes[0].price) ?? "—"}</strong> <span>chance of {market.outcomes[0].name}</span></>}</p>
       {then && winner === null && <p className="pdThen">{then}</p>}
     </div>
-    {history.isPending ? <LoadingState label="Reading the odds" />
-      : !history.data ? <p className="mxHint" data-testid="prediction-history-unavailable"><span className="appUnavailable">Unavailable.</span> We couldn&apos;t read the odds history.</p>
+    {history.isPending ? <LoadingState label="Loading the chart" />
+      : !history.data ? <p className="mxHint" data-testid="prediction-history-unavailable"><span className="appUnavailable">Unavailable.</span> The chart can&apos;t be loaded right now.</p>
         : <OddsChart points={history.data.history} label={market.outcomes[0].name} />}
     <div className="pdChartFoot">
       <Segmented label="Chart period" value={range} onChange={setRange} className="pdRanges" options={RANGES} />
@@ -146,23 +146,23 @@ function UpOrDownBoard({ market, info, published, isExample }: { market: Polymar
   const winner = winningOutcome(market);
   return <section className="mxCard pdLive" aria-label="Live price">
     <dl className="pdLiveStats">
-      <div><dt>Price to beat</dt><dd data-testid="prediction-price-to-beat">{beat ? formatAssetPrice(beat.price)
+      <div><dt>Starting price</dt><dd data-testid="prediction-price-to-beat">{beat ? formatAssetPrice(beat.price)
         : phase === "before" ? <span className="pdMuted">Set when it starts</span> : <span className="appUnavailable">Unavailable</span>}</dd></div>
       <div><dt>Current price</dt><dd data-testid="prediction-current-price">{current !== null ? <>{formatAssetPrice(current)}{difference !== null &&
         <small className={difference >= 0 ? "mkUp" : "mkFlat"}> {difference >= 0 ? "▲" : "▼"} {formatSignedUsd(difference).replace(/^[+−]/, "")}</small>}</>
-        : stream.status === "connecting" ? <span className="pdMuted">Connecting…</span> : <span className="appUnavailable">Unavailable</span>}</dd></div>
+        : stream.status === "connecting" ? <span className="pdMuted">Loading…</span> : <span className="appUnavailable">Unavailable</span>}</dd></div>
       <div className="pdCountdown"><dt>{phase === "before" ? "Starts in" : phase === "ended" ? "Ended" : "Time left"}</dt>
         <dd data-testid="prediction-time-left">{phase === "before" ? formatCountdown(start - now)
           : phase === "ended" ? (winner !== null ? `${market.outcomes[winner].name} won` : "Deciding…")
             : Number.isFinite(end) ? formatCountdown(end - now) : "—"}</dd></div>
     </dl>
     {stream.ticks.length >= 2 ? <LivePriceChart ticks={stream.ticks} priceToBeat={beat?.price ?? null} asset={asset} />
-      : stream.status === "unavailable" || !info.symbol ? <p className="mxHint pdChartEmpty" data-testid="prediction-live-unavailable"><span className="appUnavailable">Unavailable.</span> We couldn&apos;t reach the live {info.asset ?? ""} price.</p>
-        : <LoadingState label={`Connecting to the live ${info.asset ?? ""} price`} />}
+      : stream.status === "unavailable" || !info.symbol ? <p className="mxHint pdChartEmpty" data-testid="prediction-live-unavailable"><span className="appUnavailable">Unavailable.</span> The live {info.asset ?? ""} price can&apos;t be loaded right now.</p>
+        : <LoadingState label={`Loading the live ${info.asset ?? ""} price`} />}
     <small className="mkSource">{isExample ? "Example data, shaped like Polymarket's"
       : stream.lastAt ? `Live from Chainlink, through Polymarket, at ${new Date(stream.lastAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", second: "2-digit" })}`
         : "Live from Chainlink, through Polymarket"}
-      {beat?.from === "stream" && market.startTime ? ` · Price to beat is Chainlink's price at ${formatTime(market.startTime)}` : ""}</small>
+      {beat?.from === "stream" && market.startTime ? ` · Starting price is Chainlink's price at ${formatTime(market.startTime)}` : ""}</small>
   </section>;
 }
 
@@ -177,8 +177,8 @@ function PositionCard({ market, held, isPending, onAction, onSell }: {
 }) {
   return <section className="mxCard" aria-labelledby="prediction-position">
     <h2 id="prediction-position">Your position</h2>
-    {isPending ? <LoadingState label="Reading your positions" />
-      : held === null ? <p className="mxHint"><span className="appUnavailable">Unavailable.</span> We couldn&apos;t read your positions from Polymarket.</p>
+    {isPending ? <LoadingState label="Loading your positions" />
+      : held === null ? <p className="mxHint"><span className="appUnavailable">Unavailable.</span> Your positions can&apos;t be loaded from Polymarket right now.</p>
         : held.length === 0 ? <p className="mxHint mkEmptyLine">You don&apos;t hold any shares in this market.</p>
           : <ul className="mkRows">{held.map((position) => {
             const state = positionState(position);
@@ -201,7 +201,7 @@ function AboutCard({ market, info }: { market: PolymarketMarket; info: UpOrDownI
   return <section className="mxCard" aria-labelledby="prediction-about">
     <h2 id="prediction-about">About</h2>
     <p className="pdRules">{info
-      ? `${first.name} wins if ${info.asset ?? "the asset"}'s price for this window, as Chainlink reports it, ends at or above the price to beat. Otherwise ${second.name} wins.`
+      ? `${first.name} wins if ${info.asset ?? "the asset"}'s price for this window, as Chainlink reports it, ends at or above the starting price. Otherwise ${second.name} wins.`
       : `Each ${first.name} share pays $1 if the answer is ${first.name}, and nothing if it isn't. ${second.name} shares pay the other way.`}
       {" "}Polymarket decides the result after the market ends, by its rules and the source below.</p>
     <dl className="mxSummary">
@@ -209,7 +209,7 @@ function AboutCard({ market, info }: { market: PolymarketMarket; info: UpOrDownI
       <div><dt>24h volume</dt><dd>{formatCompactUsd(market.volume24h) ?? "Unavailable"}</dd></div>
       {market.startTime && info && <div><dt>Starts</dt><dd>{formatDateTime(market.startTime)}</dd></div>}
       <div><dt>Ends</dt><dd>{market.endDate ? formatDateTime(market.endDate) : "Not set"}</dd></div>
-      <div><dt>Resolves by</dt><dd>{source ? <a href={source.href} target="_blank" rel="noreferrer">{source.host}</a> : market.resolutionSource ?? "Polymarket's rules"}</dd></div>
+      <div className="pdSource"><dt>Result from</dt><dd>{source ? <a href={source.href} target="_blank" rel="noreferrer">{source.host}</a> : market.resolutionSource ?? "Polymarket's rules"}</dd></div>
     </dl>
   </section>;
 }

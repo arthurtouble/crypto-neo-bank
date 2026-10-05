@@ -18,13 +18,13 @@ export const emailTokens = {
 const labels: Record<NotificationKind, { text: string; tone: "text" | "positive" | "negative" | "accent" }> = {
   received: { text: "Money received", tone: "positive" },
   completed: { text: "Completed", tone: "text" },
-  failed: { text: "Didn't go through", tone: "negative" },
+  failed: { text: "Failed", tone: "negative" },
   security: { text: "Security", tone: "accent" }
 };
 
 const footer = (kind: NotificationKind) => kind === "security"
   ? "Security notices are always sent, so you know about every change to your account."
-  : "You can choose which transaction notices you get in Settings, under Notifications. Security notices are always sent.";
+  : "You can turn off transaction emails in Settings, under Notifications. Security notices are always sent.";
 
 function escapeHtml(value: string) {
   return value.replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]!);

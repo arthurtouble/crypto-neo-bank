@@ -8,6 +8,7 @@ import { pausedAssets } from "@/lib/assets/pauses";
 import { assetFor } from "@/lib/assets/registry";
 import { route, errorResponse } from "@/lib/http/route";
 import { featureEnabled } from "@/lib/features/flags";
+import { providerPlaceNotice } from "@/lib/legal/places";
 
 const noStore = { "Cache-Control": "no-store" };
 const supportedIds = new Set<number>(SUPPORTED_CHAINS.map((chain) => chain.id));
@@ -47,9 +48,15 @@ async function switches(db: D1Database) {
   return { sameNetwork, otherNetwork };
 }
 
+/** Buying a stock is refused in some places (lib/legal/places.ts); selling one stays open. Null where buying is allowed. */
+function places(request: Request) {
+  return { stocks: providerPlaceNotice(request, "stocks") };
+}
+
 /**
  * Swap's asset list: the registry's swappable assets, searchable. A contract outside the registry is never found.
- * Every answer also carries the swap switches; the quote and the action check them again on the server.
+ * Every answer also carries the swap switches, and whether stocks can be bought from where the request comes from, so
+ * the page can say so before a quote; the quote checks both again on the server.
  */
 export const GET = route("swap.assets", { unavailable: "asset_catalog_unavailable",
   onError: (error, context) => error instanceof InvalidSearch ? errorResponse(400, "invalid_search", context, { message: error.message }) : undefined },
@@ -61,9 +68,9 @@ async (request: Request, { traceId }) => {
     const asset = assetFor(input.id, "swap");
     if (!asset) return json({ error: "asset_not_found", message: "This asset isn't supported.", traceId }, 404);
     const [paused, enabled] = await Promise.all([pausedAssets(env.PROJECTION_DB), switches(env.PROJECTION_DB)]);
-    return json({ asset: catalogAsset(asset, paused.get(asset.id)), switches: enabled });
+    return json({ asset: catalogAsset(asset, paused.get(asset.id)), switches: enabled, places: places(request) });
   }
   const [page, enabled] = await Promise.all([getCatalogPage(env.PROJECTION_DB, { query: input.query, chainIds: input.chainIds, held: input.held }),
     switches(env.PROJECTION_DB)]);
-  return json({ ...page, switches: enabled });
+  return json({ ...page, switches: enabled, places: places(request) });
 });

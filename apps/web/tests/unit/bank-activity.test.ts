@@ -39,8 +39,8 @@ describe("Bridge transfer and deposit reads", () => {
 
   it("describes every payout state in plain words", () => {
     expect(payoutStateText("payment_processed")).toBe("Arrived at your bank");
-    expect(payoutStateText("returned")).toMatch(/returned/);
-    expect(payoutStateText("something_new")).toBe("Bridge is processing this payout");
+    expect(payoutStateText("returned")).toBe("Your bank sent it back. The money is coming back to your Aura account");
+    expect(payoutStateText("something_new")).toBe("Bridge is working on this transfer");
   });
 });
 
@@ -115,7 +115,7 @@ describe("refreshing payouts from Bridge", () => {
     expect(sqlite.prepare("SELECT COUNT(*) AS n FROM action_events WHERE event_type = 'bank_payout'").get()).toEqual({ n: 0 });
     await refreshBankPayouts(db, { now, read: async () => "returned" });
     expect(sqlite.prepare("SELECT kind, title, body FROM notifications").get())
-      .toEqual({ kind: "failed", title: "25 USDC didn't reach your bank", body: "Your bank returned it. Bridge is sending the money back." });
+      .toEqual({ kind: "failed", title: "25 USDC didn't reach your bank", body: "Your bank sent it back. The money is coming back to your Aura account." });
   });
 
   it("does nothing while bank accounts are off", async () => {

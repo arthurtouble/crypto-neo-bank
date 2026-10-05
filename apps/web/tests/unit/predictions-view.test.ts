@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  addDollars, chanceThen, formatAssetPrice, formatCountdown, formatWindow, mergeTicks, parseShares, predictionErrorCopy, priceStreamSubscription,
+  addDollars, buyEstimate, chanceThen, formatAssetPrice, formatCountdown, formatWindow, mergeTicks, parseShares, predictionErrorCopy, priceStreamSubscription,
   priceToBeatFrom, sellProceeds, setupStepOf, sharesText, streamTicks, typedDecimal, upOrDownInfo, windowPhase, winningOutcome
 } from "@/lib/markets/predictions-view";
 
@@ -130,10 +130,32 @@ describe("predictions view helpers", () => {
   });
 
   it("puts failures in plain words, and keeps the server's sentence otherwise", () => {
-    expect(predictionErrorCopy("chain_unavailable", "Polygon could not be read.")).toMatch(/^We couldn't reach Polygon/);
+    expect(predictionErrorCopy("chain_unavailable", "Polygon could not be read.")).toBe("Your predictions account can't be reached right now. Nothing was sent. Try again in a minute.");
     expect(predictionErrorCopy("fak_not_filled", "x")).toBe("No one sold at this price in time, so nothing was bought. Try again.");
     expect(predictionErrorCopy("amount_too_small", "Add at least 2 USDC.")).toBe("Add at least 2 USDC.");
     expect(predictionErrorCopy("something_new", "Polymarket said no.")).toBe("Polymarket said no.");
     expect(predictionErrorCopy(null, "Plain words.")).toBe("Plain words.");
+  });
+});
+
+describe("buyEstimate", () => {
+  it("rounds shares and what they pay down to the cent, so the two always match", () => {
+    expect(buyEstimate(10, 0.64)).toEqual({ shares: 15.62, toWin: 15.62 });
+    expect(buyEstimate(10, 0.5)).toEqual({ shares: 20, toWin: 20 });
+  });
+  it("has no estimate without an amount or a usable price", () => {
+    expect(buyEstimate(null, 0.5)).toBeNull();
+    expect(buyEstimate(0, 0.5)).toBeNull();
+    expect(buyEstimate(10, null)).toBeNull();
+    expect(buyEstimate(10, 1)).toBeNull();
+  });
+});
+
+describe("predictionErrorCopy wording", () => {
+  it("never says \"we\" or names Polygon in a failure", () => {
+    const codes = ["chain_unavailable", "unavailable", "markets_unavailable", "rate_limited", "invalid_response", "not_configured", "predictions_not_connected",
+      "market_closed", "not_found", "no_buyers", "insufficient_liquidity", "fak_not_filled", "unmatched", "below_minimum", "amount_too_small", "nothing_to_redeem",
+      "unsupported_asset", "insufficient_balance", "signature_expired", "signature_rejected", "feature_unavailable"];
+    for (const code of codes) expect(predictionErrorCopy(code, "server words"), code).not.toMatch(/\bwe\b|\bour\b|Polygon|server words/i);
   });
 });
