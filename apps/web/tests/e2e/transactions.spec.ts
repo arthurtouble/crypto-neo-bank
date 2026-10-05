@@ -57,6 +57,25 @@ test.beforeAll(async ({ request }) => {
   for (const path of ["/app/transactions", "/app/send", "/api/activity", "/api/insights"]) await request.get(path, { headers: { Authorization: `Bearer ${customer.token}` }, timeout: 120_000 });
 });
 
+test("Get help with this opens chat with the transaction already described", async ({ page }) => {
+  const customer = await signIn(page);
+  await receive(customer, "20000000");
+  await page.goto("/app/transactions");
+  await expect(rows(page)).toHaveCount(1, { timeout: 30_000 });
+  await rows(page).nth(0).click();
+  const reference = (await dialog(page).getByTestId("receipt-reference").textContent())!;
+  const help = dialog(page).getByRole("button", { name: "Get help with this" });
+  await expect(help).toBeEnabled({ timeout: 20_000 });
+  await help.click();
+  // The receipt closes, so the chat on top of the page can be used.
+  await expect(dialog(page)).toHaveCount(0);
+  const calls = () => page.evaluate(() => (window as unknown as { __intercomCalls?: [string, ...unknown[]][] }).__intercomCalls ?? []);
+  await expect.poll(async () => (await calls()).some((call) => call[0] === "showNewMessage")).toBe(true);
+  const message = String((await calls()).find((call) => call[0] === "showNewMessage")![1]);
+  expect(message).toMatch(/^I need help with this transaction: Received, \+20[.0]* USDC, /);
+  expect(message.endsWith(`. Reference: ${reference}`)).toBe(true);
+});
+
 test("money sent and money received both show, with who, where, and a link to the network", async ({ page }) => {
   const customer = await signIn(page);
   await send(page);

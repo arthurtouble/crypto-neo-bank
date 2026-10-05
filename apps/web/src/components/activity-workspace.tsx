@@ -3,7 +3,7 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { useAuth } from "@/lib/client/auth";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowDownToLine, ArrowDownUp, ArrowLeft, ArrowUpFromLine, CandlestickChart, CirclePercent, CreditCard, Download, ExternalLink, FileText, LoaderCircle, Search, SlidersHorizontal, TrendingUp, X } from "lucide-react";
+import { ArrowDownToLine, ArrowDownUp, ArrowLeft, ArrowUpFromLine, CandlestickChart, CirclePercent, CreditCard, Download, ExternalLink, FileText, LoaderCircle, MessageCircle, Search, SlidersHorizontal, TrendingUp, X } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -23,6 +23,7 @@ import { GuestBanner } from "./guest-banner";
 import { LoadingState, Notice } from "./states";
 import { entryTone, StatusDot } from "./status-dot";
 import { Sheet } from "./sheet";
+import { useSupportChat } from "./support-chat";
 import { periodName, totalName, TransactionsSummary, type Period, type Summary, type SummaryTotal } from "./transactions-summary";
 
 /** An Aura action's journey, re-read every few seconds while it's still moving. Reading it also advances the check. */
@@ -184,6 +185,13 @@ function Receipt({ entry, onClose, isExample }: { entry: ActivityEntry; onClose:
     ...(reason ? [["Reason", reason] as [string, React.ReactNode]] : [])
   ];
   const note = receiptNote(entry);
+  const chat = useSupportChat();
+  const help = !isExample && chat.status !== "unavailable";
+  function getHelp() {
+    // The receipt closes first: it holds focus while open, so the chat window couldn't be used on top of it.
+    onClose();
+    chat.open(`I need help with this transaction: ${entryLabel(entry.type)}, ${receiptAmount(entry)}, ${formatDateTime(entry.createdAt)}. Reference: ${entry.id}`);
+  }
   return <Sheet variant="panel" className="txReceipt" onOpenChange={(open) => { if (!open) onClose(); }}>
         <div className="ovPanelHead">
           <Dialog.Close className="appIconButton ovPanelBack" aria-label="Back"><ArrowLeft aria-hidden="true" /></Dialog.Close>
@@ -194,9 +202,12 @@ function Receipt({ entry, onClose, isExample }: { entry: ActivityEntry; onClose:
         <dl className="ovFacts">{facts.map(([label, value, testId]) => <div key={label}><dt>{label}</dt><dd data-testid={testId}>{value}</dd></div>)}</dl>
         {note && <p className="ovNote" data-testid={noteTestId[entry.origin] ?? "receipt-note"}>{note}</p>}
         {entry.origin === "aura" && !isExample && <ReceiptJourney id={entry.id} />}
-        {!isExample && (entry.origin === "card" || links.length > 0) && <div className="ovPanelActions">
+        {!isExample && (entry.origin === "card" || links.length > 0 || help) && <div className="ovPanelActions">
           {entry.origin === "card" && <Link className="appButton appButtonLarge" href="/app/cards">Open Cards</Link>}
           {links.map((link) => <a className="appButton appButtonLarge" key={link.name} href={link.url!} target="_blank" rel="noreferrer">{link.name} <ExternalLink aria-hidden="true" /></a>)}
+          {/* Chat opens with this transaction already described, so there's nothing to copy across. Hidden when chat can't load. */}
+          {help && <button type="button" className="appButton appButtonLarge" disabled={chat.status !== "ready"} onClick={getHelp}>
+            {chat.status === "loading" ? <LoaderCircle className="spin" aria-hidden="true" /> : <MessageCircle aria-hidden="true" />} Get help with this</button>}
         </div>}
         {/* The same last line on every receipt: one thing to give Support, whatever kind of transaction it is. */}
         <div className="txReceiptRef"><span>Reference <span className="mxBreak" data-testid="receipt-reference">{entry.id}</span></span>
