@@ -11,9 +11,9 @@ export function GET(request: Request) {
   const page = (path: string) => `${docs}${path}`;
   const body = `# Aura
 
-> Aura is a money app. Hold stablecoins, crypto, tokenized stocks, and gold, then send, swap, and earn from one wallet. You confirm every payment with your passkey. We never hold your keys or your money. What you can use depends on where you live.
+> Aura is a money app. Hold stablecoins, crypto, stocks, and gold, then send, swap, and earn from one wallet. You confirm every payment with your passkey. We never hold your keys or your money. What you can use depends on where you live.
 
-Aura is in preview. Signed out, every screen works with example data, clearly labelled. Balances come from the blockchains and protocols that hold the money, read each time the app opens. Bank transfers and cards aren't available yet: both need approved partners.
+Aura is in preview. Signed out, every screen works with example data, clearly labelled. Balances come from the blockchains and partners that hold the money, read each time the app opens. Bank transfers and cards aren't available yet: both need approved partners.
 
 ## What Aura does
 

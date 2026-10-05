@@ -6,13 +6,15 @@ test("landing introduces Aura and its provider boundaries", async ({ page }) => 
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Money you control, in one simple app" })).toBeVisible();
   await expect(page.getByText("Send, swap, and earn from one wallet", { exact: false })).toBeVisible();
-  // Header (or the phone's pinned button), hero, and closing section.
-  await expect(page.getByRole("link", { name: "Get started" })).toHaveCount(3);
+  // Header (or the phone's pinned button), hero, closing section, and footer.
+  await expect(page.getByRole("link", { name: "Get started" })).toHaveCount(4);
   await expect(page.locator('a[href="/apply"], a[href="/tour"]')).toHaveCount(0);
-  for (const title of ["Deposit", "Send", "Swap", "Earn", "Aura tag", "Card"]) {
+  for (const title of ["Add money", "Send", "Swap", "Earn", "Perps", "Predictions", "Aura tag", "Card"]) {
     await expect(page.locator("#features h3").filter({ hasText: new RegExp(`^${title}`) })).toHaveCount(1);
   }
-  await expect(page.locator("#features h3").filter({ hasText: "Card" })).toContainText("Coming soon");
+  // Not switched on in production yet; each partner decides where it's offered.
+  for (const title of ["Card", "Perps", "Predictions"]) await expect(page.locator("#features h3").filter({ hasText: title })).toContainText("Coming soon");
+  await expect(page.getByRole("link", { name: "Where Perps is available" })).toHaveAttribute("href", /\/product\/markets\/#where-they-work$/);
   await expect(page.getByRole("heading", { name: "Only you can move your money" })).toBeVisible();
   await expect(page.locator("#faq details")).toHaveCount(4);
   await page.locator("#faq summary").filter({ hasText: "Can I use bank transfers and cards?" }).click();
@@ -20,10 +22,14 @@ test("landing introduces Aura and its provider boundaries", async ({ page }) => 
   await expect(page.locator(".ldDisclosure")).toContainText("Screens show example data, not real accounts.");
   await expect(page.locator(".ldDisclosure")).toContainText("Bank transfers and cards need approved partners.");
   await expect(page.getByText(`© ${new Date().getFullYear()} Aura`)).toBeVisible();
-  // Contact opens the support page, not the security report.
-  await expect(page.locator(".ldFooter").getByRole("link", { name: "Contact" })).toHaveAttribute("href", /\/help\/contact-and-support\/$/);
-  // The app's screens come in both themes; only the page's theme shows.
+  // Contact opens Support in the app, where Chat is, not the security report or a page about it.
+  await expect(page.locator(".ldFooter").getByRole("link", { name: "Contact" })).toHaveAttribute("href", "/app/support");
+  // The app's screens come in both themes; only the page's theme shows. A phone gets the phone's screens, which it can read.
   await expect(page.locator(".ldScreen img:visible")).toHaveCount(2);
+  const phone = page.viewportSize()!.width < 768;
+  await expect.poll(() => page.locator(".ldShowcase img:visible").evaluate((image: HTMLImageElement) => new URL(image.currentSrc).pathname))
+    .toBe(phone ? "/images/aura-overview-phone.webp" : "/images/aura-overview.webp");
+  await expect(page.locator("#security img:visible")).toHaveAttribute("src", "/images/aura-settings-phone.webp");
 });
 
 test("a returning customer signs in from the landing page's header", async ({ page }) => {
@@ -98,7 +104,7 @@ test("search engines may index the landing page, not the app or payment pages", 
   for (const rule of ["Allow: /", "Disallow: /api/", "Disallow: /pay/"]) expect(robots).toContain(rule);
   expect(robots).not.toContain("Disallow: /app");
   await page.goto("/");
-  await expect(page).toHaveTitle(/^Aura: stablecoins, crypto, tokenized stocks, and gold/);
+  await expect(page).toHaveTitle(/^Aura: stablecoins, crypto, stocks, and gold/);
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /^index/);
   await expect(page.locator('meta[property="og:image"]')).toHaveAttribute("content", /\/images\/aura-og\.png$/);
   const structured = JSON.parse(await page.locator('script[type="application/ld+json"]').textContent() ?? "");

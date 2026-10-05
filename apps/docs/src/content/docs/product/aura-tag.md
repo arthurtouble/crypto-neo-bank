@@ -11,7 +11,7 @@ Anyone can open your page, with or without an Aura account, and copy your Base a
 
 The page leads with your tag. The display name you chose shows under it, marked as the name you chose, because anyone can type any name.
 
-The page lists the assets that show in Aura on Base. The QR code names the Base network, so a wallet that reads it sends on Base. Anyone paying you should still check they're sending on Base, in one of those assets. A payment on another network, or in a token Aura doesn't support, may not show in Aura.
+The page lists the assets that show in Aura on Base, with one stock named as an example. The QR code names the Base network, so a wallet that reads it sends on Base. Anyone paying you should still check they're sending on Base, in one of those assets. A payment on another network, or in an asset Aura doesn't support, won't show in Aura.
 
 The page shows only the ways to pay that work:
 
@@ -19,7 +19,7 @@ The page shows only the ways to pay that work:
 - Your bank details show only if your Bridge bank account is active and you've chosen to show them. They list the ways your account accepts dollars in the payer's bank's own terms, such as ACH and wire.
 - Card payment isn't offered.
 
-Someone who opens a lot of payment pages in a short time is asked to try again in a minute.
+If a tag doesn't exist or its page isn't public, the page says it can't be paid there and asks the payer to check the tag with you. It looks the same in every case, so nobody can tell which tags exist. Someone who opens a lot of payment pages in a short time is asked to try again in a minute.
 
 Someone with Aura can select **Send with Aura** to pay in the app, with your tag filled in. If they aren't signed in, sign-in opens straight away. Aura checks the tag's address again before they confirm.
 
