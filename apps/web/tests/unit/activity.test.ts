@@ -114,6 +114,28 @@ describe("reading money that arrived without an action", () => {
       expect(calls).toBe(2);
     });
 
+    it("shares one read of the latest page per wallet for a short while, keeping when it was read, and never shares a failed read", async () => {
+      const owner = "0x3333333333333333333333333333333333333333";
+      const raw = (overrides: Partial<Raw> = {}) => ({ ...erc20(usdc, 5_000_000n), to: owner, ...overrides });
+      vi.stubGlobal("fetch", node({ base: [raw(), raw({ hash: hash(2), uniqueId: `${hash(2)}:log:0` })] }));
+      try {
+        const first = await readIncoming(owner, { now: new Date("2026-10-09T12:00:00.000Z") });
+        const second = await readIncoming(owner.toUpperCase().replace("0X", "0x"), { exclude: [hash(2)], now: new Date("2026-10-09T12:00:20.000Z") });
+        // One read: the finalized block and the transfers, on each network.
+        expect(vi.mocked(fetch)).toHaveBeenCalledTimes(4);
+        expect(first.transfers).toHaveLength(2);
+        expect(second.transfers.map((item) => item.transactionHash)).toEqual([hash(1)]);
+        expect(second.observedAt).toBe("2026-10-09T12:00:00.000Z");
+        // A network that couldn't be read is read again by the next caller.
+        const other = "0x4444444444444444444444444444444444444444";
+        vi.stubGlobal("fetch", node({ base: [], eth: "down" }));
+        expect(await readIncoming(other)).toMatchObject({ status: "unavailable" });
+        await readIncoming(other);
+        // Three calls per read: the finalized block and transfers on Base, then Ethereum's failure.
+        expect(vi.mocked(fetch)).toHaveBeenCalledTimes(6);
+      } finally { vi.unstubAllGlobals(); }
+    });
+
     it("is unavailable without a transfer index, never empty", async () => {
       vi.stubEnv("RPC_URL_1", "https://ethereum-rpc.publicnode.com");
       expect(await readIncoming(wallet, { fetcher: node({ base: [] }) })).toMatchObject({ status: "unavailable" });

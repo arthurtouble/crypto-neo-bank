@@ -77,7 +77,7 @@ sequenceDiagram
 
 - When the customer reads the action.
 - When Transactions opens: up to 3 open actions not checked in the last 30 seconds.
-- Every 2 minutes by the web Worker's cron (`apps/web/worker/index.ts`, `lib/actions/recheck.ts`): up to 20 submitted or settling actions not checked in the last minute, least recently checked first, one at a time. It also expires prepared actions past their signing window, checks up to 20 watched accounts for money received, and delivers up to 50 pending notices. Each of these runs on its own, so one failing doesn't stop the others.
+- Every 2 minutes by the web Worker's cron (`apps/web/worker/index.ts`, `lib/actions/recheck.ts`): up to 20 submitted or settling actions not checked in the last minute, least recently checked first, one at a time. It also expires prepared actions past their signing window, checks up to 20 watched accounts for money received (an account at most every 30 seconds while its customer was in the app in the last 15 minutes, every 10 minutes otherwise, since each check is a paid Alchemy read), and delivers up to 50 pending notices. Each of these runs on its own, so one failing doesn't stop the others.
 - A check only writes over the status it read (`applyVerification`), so a slower check that started earlier can't move an action backwards or record an event twice.
 - Each action is checked on its own. If one check throws, the cron counts it in `failedChecks` and moves on, and Transactions shows that action as stored. One bad action can't stop the others.
 

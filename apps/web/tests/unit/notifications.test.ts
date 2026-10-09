@@ -300,6 +300,27 @@ describe("noticing money received", () => {
       .toEqual([["99 USDC is back in your account", "Withdrawn from perps at Hyperliquid."], ["Received 1 USDC", "From 0xabe0…6b54."]]);
   });
 
+  it("checks an account every 30 seconds while the app is in use, and every 10 minutes once the customer has been away 15 minutes", async () => {
+    await watchAccount(db, "alice", wallet, now);
+    let reads = 0;
+    const read: Read = async () => { reads += 1; return { transfers: [], status: "available", partial: false, observedAt: "t" }; };
+    const at = (minutes: number, seconds = 0) => new Date(now.getTime() + minutes * 60_000 + seconds * 1000);
+    await scanIncoming(db, { now: at(0), read });
+    await scanIncoming(db, { now: at(0, 40), read });
+    expect(reads).toBe(2);
+    // Away: the last check was at 14:40 (still recent then), so the next is due at 24:40.
+    await scanIncoming(db, { now: at(14, 40), read });
+    await scanIncoming(db, { now: at(16), read });
+    await scanIncoming(db, { now: at(24), read });
+    expect(reads).toBe(3);
+    await scanIncoming(db, { now: at(24, 40), read });
+    expect(reads).toBe(4);
+    // Back in the app: every 30 seconds again.
+    await watchAccount(db, "alice", wallet, at(25));
+    await scanIncoming(db, { now: at(25, 10), read });
+    expect(reads).toBe(5);
+  });
+
   it("stops watching accounts not used for 30 days, and never watches an unknown customer", async () => {
     await watchAccount(db, "nobody", wallet, now);
     await watchAccount(db, "alice", wallet, now);
