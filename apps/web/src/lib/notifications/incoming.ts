@@ -14,9 +14,15 @@ import { notify, receivedNotice } from "./store";
  * announced, so past deposits never arrive as new notifications, even after
  * their old notice was cleaned up (lib/privacy/retention.ts). The cron checks the least recently checked accounts; opening
  * the app checks the customer's own account at once.
+ *
+ * Each check is a paid read of Alchemy's transfer index on two networks, so
+ * an account is checked every 30 seconds only while its customer has the app
+ * open (or did in the last RECENT_MS), and every IDLE_RECHECK_MS otherwise.
  */
 const ACTIVE_MS = 30 * 24 * 3600_000;
 const RECHECK_MS = 30_000;
+const RECENT_MS = 15 * 60_000;
+const IDLE_RECHECK_MS = 10 * 60_000;
 const ANNOUNCE_WINDOW_MS = RECEIVED_NOTICE_WINDOW_DAYS * 24 * 3600_000;
 
 export async function watchAccount(db: D1Database, subject: string, wallet: string, now = new Date()) {
@@ -33,12 +39,13 @@ type Watch = { subject_reference: string; wallet_address: string; watched_since:
 export async function scanIncoming(db: D1Database, options: { subject?: string; limit?: number; now?: Date; read?: typeof readIncoming; bankDeposits?: typeof readBankDeposits;
   marketWithdrawals?: typeof readMarketWithdrawals } = {}): Promise<string[]> {
   const now = options.now ?? new Date();
-  const due = new Date(now.getTime() - RECHECK_MS).toISOString();
+  const ago = (ms: number) => new Date(now.getTime() - ms).toISOString();
   const rows = await db.prepare(`SELECT w.subject_reference, w.wallet_address, w.watched_since FROM incoming_watches w
     JOIN subject_profiles p ON p.subject_reference = w.subject_reference
-    WHERE p.closed_at IS NULL AND w.last_active_at > ?1 AND (w.checked_at IS NULL OR w.checked_at <= ?2) ${options.subject ? "AND w.subject_reference = ?3" : ""}
+    WHERE p.closed_at IS NULL AND w.last_active_at > ?1
+      AND (w.checked_at IS NULL OR w.checked_at <= CASE WHEN w.last_active_at > ?2 THEN ?3 ELSE ?4 END) ${options.subject ? "AND w.subject_reference = ?5" : ""}
     ORDER BY COALESCE(w.checked_at, '') ASC LIMIT ${Math.min(options.limit ?? 20, 100)}`)
-    .bind(new Date(now.getTime() - ACTIVE_MS).toISOString(), due, ...(options.subject ? [options.subject] : [])).all<Watch>();
+    .bind(ago(ACTIVE_MS), ago(RECENT_MS), ago(RECHECK_MS), ago(IDLE_RECHECK_MS), ...(options.subject ? [options.subject] : [])).all<Watch>();
   const notified = new Set<string>();
   for (const watch of rows.results) {
     await db.prepare("UPDATE incoming_watches SET checked_at = ? WHERE subject_reference = ?").bind(now.toISOString(), watch.subject_reference).run();
