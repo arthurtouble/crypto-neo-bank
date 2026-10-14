@@ -90,6 +90,40 @@ export function parseTransfer(raw: RawTransfer, chainId: number, wallet: string,
  */
 export async function readIncoming(wallet: string, options: { exclude?: Iterable<string>; since?: Date; until?: Date; maxPages?: number;
   fetcher?: typeof fetch; now?: Date } = {}): Promise<IncomingRead> {
+  if (!options.since && !options.until && !options.fetcher && !localEdgeUrl(`RPC_URL_${BASE_CHAIN_ID}`)) return readLatestShared(wallet, options);
+  return readFromIndex(wallet, options);
+}
+
+/**
+ * How long a read of the latest page is shared. Transactions, Overview, the
+ * notification bell, and the cron all ask for it (each every 30 seconds while
+ * the app is open), and every read is a paid call to Alchemy on two networks,
+ * so they share one read per wallet for this long. The result keeps the time
+ * it was read as its `observedAt`.
+ */
+const SHARED_MS = 25_000;
+const shared = new Map<string, { at: number; read: Promise<IncomingRead> }>();
+
+async function readLatestShared(wallet: string, options: { exclude?: Iterable<string>; now?: Date }): Promise<IncomingRead> {
+  const key = wallet.toLowerCase();
+  const at = Date.now();
+  for (const [other, entry] of shared) if (at - entry.at >= SHARED_MS) shared.delete(other);
+  let entry = shared.get(key);
+  if (!entry) {
+    const fresh = { at, read: readFromIndex(wallet, { now: options.now }) };
+    shared.set(key, fresh);
+    // A failed read is never shared: the next caller reads again.
+    const forget = () => { if (shared.get(key) === fresh) shared.delete(key); };
+    fresh.read.then((read) => { if (read.status !== "available") forget(); }, forget);
+    entry = fresh;
+  }
+  const read = await entry.read;
+  const exclude = new Set([...(options.exclude ?? [])].map((hash) => hash.toLowerCase()));
+  return { ...read, transfers: read.transfers.filter((transfer) => !exclude.has(transfer.transactionHash)) };
+}
+
+async function readFromIndex(wallet: string, options: { exclude?: Iterable<string>; since?: Date; until?: Date; maxPages?: number;
+  fetcher?: typeof fetch; now?: Date }): Promise<IncomingRead> {
   const fetcher = options.fetcher ?? fetch;
   const now = options.now ?? new Date();
   const exclude = new Set([...(options.exclude ?? [])].map((hash) => hash.toLowerCase()));
